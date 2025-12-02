@@ -1,0 +1,143 @@
+from django.test import TestCase
+from django.utils import timezone
+from datetime import date, timedelta
+from rest_framework.test import APITestCase
+from rest_framework import status
+from .models import Location, Field, Bed, Culture, PlantingPlan, Task
+
+
+class LocationModelTest(TestCase):
+    def test_location_creation(self):
+        location = Location.objects.create(
+            name="Main Farm",
+            address="123 Farm Road"
+        )
+        self.assertEqual(str(location), "Main Farm")
+        self.assertEqual(location.name, "Main Farm")
+
+
+class FieldModelTest(TestCase):
+    def setUp(self):
+        self.location = Location.objects.create(name="Test Location")
+
+    def test_field_creation(self):
+        field = Field.objects.create(
+            name="North Field",
+            location=self.location,
+            area_sqm=1000.50
+        )
+        self.assertEqual(str(field), "Test Location - North Field")
+
+
+class BedModelTest(TestCase):
+    def setUp(self):
+        self.location = Location.objects.create(name="Test Location")
+        self.field = Field.objects.create(name="Test Field", location=self.location)
+
+    def test_bed_creation(self):
+        bed = Bed.objects.create(
+            name="Bed A",
+            field=self.field,
+            length_m=10.0,
+            width_m=1.2
+        )
+        self.assertEqual(str(bed), "Test Field - Bed A")
+
+
+class CultureModelTest(TestCase):
+    def test_culture_creation_with_variety(self):
+        culture = Culture.objects.create(
+            name="Tomato",
+            variety="Cherry",
+            days_to_harvest=60
+        )
+        self.assertEqual(str(culture), "Tomato (Cherry)")
+
+    def test_culture_creation_without_variety(self):
+        culture = Culture.objects.create(
+            name="Lettuce",
+            days_to_harvest=30
+        )
+        self.assertEqual(str(culture), "Lettuce")
+
+
+class PlantingPlanModelTest(TestCase):
+    def setUp(self):
+        self.location = Location.objects.create(name="Test Location")
+        self.field = Field.objects.create(name="Test Field", location=self.location)
+        self.bed = Bed.objects.create(name="Test Bed", field=self.field)
+        self.culture = Culture.objects.create(name="Carrot", days_to_harvest=70)
+
+    def test_auto_harvest_date(self):
+        planting_date = date(2024, 3, 1)
+        plan = PlantingPlan.objects.create(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=planting_date,
+            quantity=100
+        )
+        expected_harvest = planting_date + timedelta(days=70)
+        self.assertEqual(plan.harvest_date, expected_harvest)
+
+    def test_manual_harvest_date(self):
+        planting_date = date(2024, 3, 1)
+        manual_harvest = date(2024, 5, 15)
+        plan = PlantingPlan.objects.create(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=planting_date,
+            harvest_date=manual_harvest,
+            quantity=100
+        )
+        self.assertEqual(plan.harvest_date, manual_harvest)
+
+
+class TaskModelTest(TestCase):
+    def test_task_creation(self):
+        task = Task.objects.create(
+            title="Water plants",
+            description="Water all beds in field A",
+            status="pending"
+        )
+        self.assertEqual(str(task), "Water plants (pending)")
+        self.assertEqual(task.status, "pending")
+
+
+class APITestCase(APITestCase):
+    def setUp(self):
+        self.location = Location.objects.create(name="API Test Location")
+        self.field = Field.objects.create(name="API Test Field", location=self.location)
+        self.bed = Bed.objects.create(name="API Test Bed", field=self.field)
+        self.culture = Culture.objects.create(name="API Test Culture", days_to_harvest=50)
+
+    def test_culture_list(self):
+        response = self.client.get('/api/cultures/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+
+    def test_culture_create(self):
+        data = {
+            'name': 'New Culture',
+            'variety': 'Test Variety',
+            'days_to_harvest': 45
+        }
+        response = self.client.post('/api/cultures/', data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Culture.objects.count(), 2)
+
+    def test_bed_list(self):
+        response = self.client.get('/api/beds/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+
+    def test_planting_plan_create(self):
+        data = {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'quantity': 50
+        }
+        response = self.client.post('/api/planting-plans/', data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn('harvest_date', response.data)
+
