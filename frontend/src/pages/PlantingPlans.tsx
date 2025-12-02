@@ -83,7 +83,7 @@ function PlantingPlans() {
               Culture:
               <select
                 value={formData.culture}
-                onChange={(e) => setFormData({ ...formData, culture: parseInt(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, culture: parseInt(e.target.value) || 0 })}
                 required
                 style={{ marginLeft: '10px', width: '200px' }}
               >
@@ -101,7 +101,7 @@ function PlantingPlans() {
               Bed:
               <select
                 value={formData.bed}
-                onChange={(e) => setFormData({ ...formData, bed: parseInt(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, bed: parseInt(e.target.value) || 0 })}
                 required
                 style={{ marginLeft: '10px', width: '200px' }}
               >
@@ -132,7 +132,7 @@ function PlantingPlans() {
               <input
                 type="number"
                 value={formData.quantity || ''}
-                onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value ? parseInt(e.target.value) : undefined })}
                 style={{ marginLeft: '10px', width: '200px' }}
               />
             </label>

@@ -98,7 +98,7 @@ function Cultures() {
               <input
                 type="number"
                 value={formData.days_to_harvest}
-                onChange={(e) => setFormData({ ...formData, days_to_harvest: parseInt(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, days_to_harvest: parseInt(e.target.value) || 0 })}
                 required
                 style={{ marginLeft: '10px', width: '200px' }}
               />

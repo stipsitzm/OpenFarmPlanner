@@ -112,7 +112,7 @@ function Beds() {
                 type="number"
                 step="0.01"
                 value={formData.length_m || ''}
-                onChange={(e) => setFormData({ ...formData, length_m: parseFloat(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, length_m: e.target.value ? parseFloat(e.target.value) : undefined })}
                 style={{ marginLeft: '10px', width: '200px' }}
               />
             </label>
@@ -124,7 +124,7 @@ function Beds() {
                 type="number"
                 step="0.01"
                 value={formData.width_m || ''}
-                onChange={(e) => setFormData({ ...formData, width_m: parseFloat(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, width_m: e.target.value ? parseFloat(e.target.value) : undefined })}
                 style={{ marginLeft: '10px', width: '200px' }}
               />
             </label>

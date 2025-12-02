@@ -1,2 +1,218 @@
-# CSA_FarmPlanner
-A Django-based CSA farm planning tool for managing cultures, beds, fields, planting plans, and tasks. Includes authentication, REST API, and a clean data model inspired by my Airtable schema.
+# CSA Farm Planner
+
+A full-stack web application for managing CSA (Community Supported Agriculture) farm operations. The application helps manage cultures (crops), beds, fields, planting plans, and tasks with an intuitive interface and automatic harvest date calculations.
+
+## Features
+
+- **Culture Management**: Track different crop varieties with their growing characteristics
+- **Farm Organization**: Organize your farm into locations, fields, and beds
+- **Planting Plans**: Schedule plantings with automatic harvest date calculation based on crop characteristics
+- **Task Management**: Track farm tasks and activities
+- **RESTful API**: Full CRUD operations for all resources
+- **Admin Interface**: Django admin panel for easy data management
+- **Responsive UI**: Modern React interface for managing farm operations
+
+## Tech Stack
+
+### Backend
+- **Django 5.2.9**: Web framework
+- **Django REST Framework 3.16**: API framework
+- **django-cors-headers**: CORS support for frontend integration
+- **SQLite**: Database (development)
+- **Python 3.12+**: Programming language
+
+### Frontend
+- **Vite**: Build tool
+- **React 19**: UI library
+- **TypeScript**: Type-safe JavaScript
+- **React Router**: Client-side routing
+- **Axios**: HTTP client
+- **Vitest**: Testing framework
+
+## Project Structure
+
+```
+CSA_FarmPlanner/
+├── backend/              # Django backend
+│   ├── config/          # Django project settings
+│   ├── farm/            # Main farm app
+│   │   ├── models.py    # Data models
+│   │   ├── serializers.py # DRF serializers
+│   │   ├── views.py     # API views
+│   │   ├── admin.py     # Admin configuration
+│   │   ├── urls.py      # URL routing
+│   │   └── tests.py     # Tests
+│   ├── manage.py        # Django management script
+│   └── requirements.txt # Python dependencies
+└── frontend/            # React frontend
+    ├── src/
+    │   ├── api/         # API client
+    │   ├── pages/       # Page components
+    │   ├── __tests__/   # Test files
+    │   └── App.tsx      # Main app component
+    ├── package.json     # Node dependencies
+    └── vite.config.ts   # Vite configuration
+```
+
+## Setup Instructions
+
+### Prerequisites
+- Python 3.12 or higher
+- Node.js 20 or higher
+- npm 10 or higher
+
+### Backend Setup
+
+1. Navigate to the backend directory:
+```bash
+cd backend
+```
+
+2. Create and activate a virtual environment:
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Run migrations:
+```bash
+python manage.py migrate
+```
+
+5. Create a superuser (optional, for admin access):
+```bash
+python manage.py createsuperuser
+```
+
+6. Run the development server:
+```bash
+python manage.py runserver
+```
+
+The API will be available at `http://localhost:8000/api/`
+
+### Frontend Setup
+
+1. Navigate to the frontend directory:
+```bash
+cd frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the development server:
+```bash
+npm run dev
+```
+
+The frontend will be available at `http://localhost:5173/`
+
+## Running Tests
+
+### Backend Tests
+```bash
+cd backend
+source venv/bin/activate
+python manage.py test
+```
+
+### Frontend Tests
+```bash
+cd frontend
+npm test
+```
+
+## API Endpoints
+
+The backend provides the following REST API endpoints:
+
+- `/api/locations/` - Location management
+- `/api/fields/` - Field management
+- `/api/beds/` - Bed management
+- `/api/cultures/` - Culture (crop) management
+- `/api/planting-plans/` - Planting plan management
+- `/api/tasks/` - Task management
+
+Each endpoint supports:
+- `GET` - List all items
+- `POST` - Create new item
+- `GET /<id>/` - Retrieve specific item
+- `PUT /<id>/` - Update specific item
+- `DELETE /<id>/` - Delete specific item
+
+## Data Models
+
+### Location
+Physical location where farming occurs
+- name, address, notes
+
+### Field
+A field within a location
+- name, location (FK), area_sqm, notes
+
+### Bed
+A bed within a field
+- name, field (FK), length_m, width_m, notes
+
+### Culture
+A crop or plant type
+- name, variety, days_to_harvest, notes
+
+### PlantingPlan
+Plan for planting a specific culture in a bed
+- culture (FK), bed (FK), planting_date, harvest_date (auto-calculated), quantity, notes
+
+### Task
+Farm management tasks
+- title, description, planting_plan (FK, optional), due_date, status
+
+## Key Features
+
+### Automatic Harvest Date Calculation
+When creating a planting plan, the harvest date is automatically calculated by adding the culture's `days_to_harvest` to the `planting_date`. This can be overridden manually if needed.
+
+### Admin Interface
+Access the Django admin at `http://localhost:8000/admin/` to manage all data through a user-friendly interface.
+
+## Development
+
+### Backend Development
+- Models are defined in `backend/farm/models.py`
+- API views use Django REST Framework's ViewSets in `backend/farm/views.py`
+- Admin interface is configured in `backend/farm/admin.py`
+
+### Frontend Development
+- Pages are in `frontend/src/pages/`
+- API client is in `frontend/src/api/client.ts`
+- Tests are in `frontend/src/__tests__/`
+
+## Building for Production
+
+### Backend
+```bash
+cd backend
+source venv/bin/activate
+python manage.py collectstatic
+# Configure production settings (SECRET_KEY, DEBUG=False, etc.)
+```
+
+### Frontend
+```bash
+cd frontend
+npm run build
+```
+
+The built files will be in `frontend/dist/`
+
+## License
+
+This project is open source and available for use.
+
