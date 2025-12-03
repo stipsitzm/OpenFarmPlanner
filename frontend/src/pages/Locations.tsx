@@ -11,7 +11,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DataGrid, GridRowModes, GridRowEditStopReasons } from '@mui/x-data-grid';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridEventListener, GridRowId } from '@mui/x-data-grid';
-import { Box, Button, Alert } from '@mui/material';
+import { Box, Button, Alert, IconButton } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { locationAPI, type Location } from '../api/client';
 
 /**
@@ -161,6 +162,30 @@ function Locations(): React.ReactElement {
   };
 
   /**
+   * Custom footer component with add button
+   */
+  const CustomFooter = (): React.ReactElement => {
+    return (
+      <Box sx={{ 
+        p: 1, 
+        display: 'flex', 
+        justifyContent: 'center',
+        borderTop: '1px solid',
+        borderColor: 'divider'
+      }}>
+        <IconButton
+          onClick={handleAddClick}
+          color="primary"
+          size="small"
+          aria-label="Neuen Standort hinzufügen"
+        >
+          <AddIcon />
+        </IconButton>
+      </Box>
+    );
+  };
+
+  /**
    * Define columns for the Data Grid with inline editing
    */
   const columns: GridColDef[] = [
@@ -213,16 +238,6 @@ function Locations(): React.ReactElement {
       <h1>Standorte</h1>
       
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      
-      <Box sx={{ mb: 2 }}>
-        <Button
-          variant="contained"
-          onClick={handleAddClick}
-          sx={{ mb: 2 }}
-        >
-          Neuen Standort hinzufügen
-        </Button>
-      </Box>
 
       {/* MUI Data Grid for Excel-like editing experience */}
       <Box sx={{ height: 500, width: '100%' }}>
@@ -241,6 +256,9 @@ function Locations(): React.ReactElement {
             pagination: {
               paginationModel: { pageSize: 10 },
             },
+          }}
+          slots={{
+            footer: CustomFooter,
           }}
           sx={{
             '& .MuiDataGrid-cell--editable': {
