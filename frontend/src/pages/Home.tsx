@@ -3,6 +3,7 @@
  * 
  * Landing page for the CSA Farm Planner application.
  * Displays quick links to main features and a feature overview.
+ * UI text is in German, code comments remain in English.
  * 
  * @returns The Home page component
  */
@@ -13,36 +14,51 @@ function Home(): React.ReactElement {
   return (
     <div className="page-container">
       <h1>CSA Farm Planner</h1>
-      <p>Welcome to the CSA Farm Planning Tool</p>
+      <p>Willkommen beim CSA Farm Planner</p>
       
       <div className="home-section">
-        <h2>Quick Links</h2>
+        <h2>Schnellzugriff</h2>
         <ul className="quick-links">
           <li>
-            <Link to="/cultures" className="quick-link">
-              Manage Cultures
+            <Link to="/locations" className="quick-link">
+              Standorte verwalten
+            </Link>
+          </li>
+          <li>
+            <Link to="/fields" className="quick-link">
+              Schläge verwalten
             </Link>
           </li>
           <li>
             <Link to="/beds" className="quick-link">
-              Manage Beds
+              Beete verwalten
+            </Link>
+          </li>
+          <li>
+            <Link to="/cultures" className="quick-link">
+              Kulturen verwalten
             </Link>
           </li>
           <li>
             <Link to="/planting-plans" className="quick-link">
-              Manage Planting Plans
+              Anbaupläne verwalten
+            </Link>
+          </li>
+          <li>
+            <Link to="/tasks" className="quick-link">
+              Aufgaben verwalten
             </Link>
           </li>
         </ul>
       </div>
 
       <div className="features-box">
-        <h3>Features</h3>
+        <h3>Funktionen</h3>
         <ul>
-          <li>Manage crops and plant varieties (Cultures)</li>
-          <li>Organize your farm layout (Locations, Fields, Beds)</li>
-          <li>Plan your planting schedule with automatic harvest date calculation</li>
-          <li>Track tasks and activities</li>
+          <li>Verwalten Sie Ihre Kulturen und Pflanzensorten</li>
+          <li>Organisieren Sie Ihr Hoflayout (Standorte, Schläge, Beete)</li>
+          <li>Planen Sie Ihren Anbauzeitplan mit automatischer Erntedatumsberechnung</li>
+          <li>Verfolgen Sie Aufgaben und Aktivitäten</li>
         </ul>
       </div>
     </div>

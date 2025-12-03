@@ -21,8 +21,8 @@ describe('Home Page', () => {
       </BrowserRouter>
     );
     
-    expect(screen.getByText('Manage Cultures')).toBeInTheDocument();
-    expect(screen.getByText('Manage Beds')).toBeInTheDocument();
-    expect(screen.getByText('Manage Planting Plans')).toBeInTheDocument();
+    expect(screen.getByText('Kulturen verwalten')).toBeInTheDocument();
+    expect(screen.getByText('Beete verwalten')).toBeInTheDocument();
+    expect(screen.getByText('Anbaupläne verwalten')).toBeInTheDocument();
   });
 });
