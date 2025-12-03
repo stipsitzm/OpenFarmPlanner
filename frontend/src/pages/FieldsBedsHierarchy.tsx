@@ -134,6 +134,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
               locationId: location.id,
               fieldId: field.id,
               bedId: bed.id,
+              isNew: bed.id! < 0, // Mark as new if ID is negative
             });
           });
         });
@@ -168,6 +169,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
             notes: bed.notes,
             fieldId: field.id,
             bedId: bed.id,
+            isNew: bed.id! < 0, // Mark as new if ID is negative
           });
         });
       });
@@ -227,20 +229,13 @@ function FieldsBedsHierarchy(): React.ReactElement {
     const field = fields.find(f => f.id === fieldId);
     if (!field) return;
 
-    const newBed: HierarchyRow = {
+    const newBed: Bed = {
       id: newBedId,
-      type: 'bed',
-      level: locations.length > 1 ? 2 : 1,
-      parentId: `field-${fieldId}`,
       name: '',
       field: fieldId,
-      field_name: field.name,
       length_m: undefined,
       width_m: undefined,
       notes: '',
-      fieldId: fieldId,
-      bedId: newBedId,
-      isNew: true,
     };
 
     // Ensure field is expanded
@@ -251,18 +246,10 @@ function FieldsBedsHierarchy(): React.ReactElement {
       return newExpanded;
     });
 
-    setRows((prevRows) => {
-      // Find position to insert (after field)
-      const fieldIndex = prevRows.findIndex(r => r.id === fieldKey);
-      const insertIndex = fieldIndex + 1;
-      
-      return [
-        ...prevRows.slice(0, insertIndex),
-        newBed,
-        ...prevRows.slice(insertIndex),
-      ];
-    });
+    // Add temporary bed to beds state
+    setBeds((prevBeds) => [newBed, ...prevBeds]);
 
+    // Set edit mode for the new bed
     setRowModesModel((oldModel) => ({
       ...oldModel,
       [newBedId]: { mode: GridRowModes.Edit, fieldToFocus: 'name' },
@@ -360,12 +347,24 @@ function FieldsBedsHierarchy(): React.ReactElement {
         // Create new bed
         const response = await bedAPI.create(bedData);
         setError('');
-        await fetchData(); // Reload to get updated hierarchy
+        
+        // Remove temporary bed and add saved bed to state
+        setBeds((prevBeds) => {
+          const filteredBeds = prevBeds.filter(b => b.id !== newRow.bedId);
+          return [response.data, ...filteredBeds];
+        });
+        
         return { ...newRow, id: response.data.id!, bedId: response.data.id!, isNew: false };
       } else {
         // Update existing bed
         const response = await bedAPI.update(newRow.bedId!, bedData);
         setError('');
+        
+        // Update bed in state
+        setBeds((prevBeds) => 
+          prevBeds.map(b => b.id === newRow.bedId ? response.data : b)
+        );
+        
         return { ...newRow, ...response.data };
       }
     } catch (err) {
@@ -390,14 +389,15 @@ function FieldsBedsHierarchy(): React.ReactElement {
     if (!window.confirm('Möchten Sie dieses Beet wirklich löschen?')) return;
 
     if (bedId < 0) {
-      // Remove unsaved bed
-      setRows((prevRows) => prevRows.filter((row) => row.id !== bedId));
+      // Remove unsaved bed from state
+      setBeds((prevBeds) => prevBeds.filter((bed) => bed.id !== bedId));
       return;
     }
 
     bedAPI.delete(bedId)
       .then(() => {
-        fetchData();
+        // Remove bed from state
+        setBeds((prevBeds) => prevBeds.filter((bed) => bed.id !== bedId));
         setError('');
       })
       .catch((err) => {
