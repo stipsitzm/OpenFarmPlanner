@@ -259,6 +259,62 @@ function FieldsBedsHierarchy(): React.ReactElement {
   };
 
   /**
+   * Handle adding a new field
+   */
+  const handleAddField = async (locationId?: number): Promise<void> => {
+    // Use first location if not specified
+    const targetLocationId = locationId || (locations.length > 0 ? locations[0].id : undefined);
+    if (!targetLocationId) {
+      setError('Bitte erstellen Sie zuerst einen Standort');
+      return;
+    }
+
+    const fieldName = window.prompt('Name des neuen Schlags:');
+    if (!fieldName || fieldName.trim() === '') {
+      return; // User cancelled or entered empty name
+    }
+
+    try {
+      await fieldAPI.create({
+        name: fieldName.trim(),
+        location: targetLocationId,
+        area_sqm: undefined,
+        notes: '',
+      });
+      
+      // Reload all data to get the new field
+      await fetchData();
+      setError('');
+    } catch (err) {
+      setError('Fehler beim Erstellen des Schlags');
+      console.error('Error creating field:', err);
+    }
+  };
+
+  /**
+   * Handle field deletion
+   */
+  const handleDeleteField = (fieldId: number) => (): void => {
+    if (!window.confirm('Möchten Sie diesen Schlag wirklich löschen? Alle zugehörigen Beete werden ebenfalls gelöscht.')) return;
+
+    if (fieldId < 0) {
+      // Remove unsaved field
+      setFields(prev => prev.filter(f => f.id !== fieldId));
+      return;
+    }
+
+    fieldAPI.delete(fieldId)
+      .then(() => {
+        fetchData();
+        setError('');
+      })
+      .catch((err) => {
+        setError('Fehler beim Löschen des Schlags');
+        console.error('Error deleting field:', err);
+      });
+  };
+
+  /**
    * Handle row edit stop event
    */
   const handleRowEditStop: GridEventListener<'rowEditStop'> = (params, event): void => {
@@ -446,6 +502,38 @@ function FieldsBedsHierarchy(): React.ReactElement {
             >
               + Beet
             </button>,
+            <button
+              key="delete-field"
+              onClick={handleDeleteField(row.fieldId!)}
+              style={{
+                color: '#d32f2f',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '6px 8px',
+                fontSize: '0.8125rem',
+                marginLeft: '8px',
+              }}
+            >
+              Löschen
+            </button>,
+          ];
+        } else if (row.type === 'location') {
+          return [
+            <button
+              key="add-field"
+              onClick={() => handleAddField(row.locationId)}
+              style={{
+                color: '#1976d2',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '6px 8px',
+                fontSize: '0.8125rem',
+              }}
+            >
+              + Schlag
+            </button>,
           ];
         }
         return [];
@@ -457,16 +545,32 @@ function FieldsBedsHierarchy(): React.ReactElement {
    * Custom footer
    */
   const CustomFooter = (): React.ReactElement => {
+    const hasMultipleLocations = locations.length > 1;
+    
     return (
       <Box sx={{ 
         p: 1, 
         display: 'flex', 
         justifyContent: 'center',
+        alignItems: 'center',
+        gap: 2,
         borderTop: '1px solid',
         borderColor: 'divider'
       }}>
+        {!hasMultipleLocations && locations.length > 0 && (
+          <IconButton
+            onClick={() => handleAddField(locations[0]?.id)}
+            color="primary"
+            size="small"
+            aria-label="Neuen Schlag hinzufügen"
+          >
+            <span style={{ fontSize: '0.875rem', marginRight: '4px' }}>+ Schlag</span>
+          </IconButton>
+        )}
         <span style={{ color: '#666', fontSize: '0.875rem' }}>
-          Erweitern Sie Schläge um Beete hinzuzufügen
+          {hasMultipleLocations 
+            ? 'Erweitern Sie Standorte/Schläge um neue Schläge/Beete hinzuzufügen'
+            : 'Erweitern Sie Schläge um Beete hinzuzufügen'}
         </span>
       </Box>
     );
