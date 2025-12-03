@@ -1,16 +1,34 @@
 from django.db import models
 from datetime import timedelta
+from typing import Any
 
 
 class Location(models.Model):
-    """A physical location where farming occurs"""
+    """A physical location where farming occurs.
+    
+    This model represents a physical farm location that can contain
+    multiple fields. It stores basic information about the location
+    including name, address, and notes.
+    
+    Attributes:
+        name: The name of the location
+        address: Physical address of the location
+        notes: Additional notes about the location
+        created_at: Timestamp when the location was created
+        updated_at: Timestamp when the location was last updated
+    """
     name = models.CharField(max_length=200)
     address = models.TextField(blank=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return string representation of the location.
+        
+        Returns:
+            The name of the location
+        """
         return self.name
 
     class Meta:
@@ -18,7 +36,19 @@ class Location(models.Model):
 
 
 class Field(models.Model):
-    """A field within a location"""
+    """A field within a location.
+    
+    This model represents a field that belongs to a specific location.
+    A field can contain multiple beds and has optional area measurements.
+    
+    Attributes:
+        name: The name of the field
+        location: Foreign key reference to the parent Location
+        area_sqm: Area of the field in square meters (optional)
+        notes: Additional notes about the field
+        created_at: Timestamp when the field was created
+        updated_at: Timestamp when the field was last updated
+    """
     name = models.CharField(max_length=200)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='fields')
     area_sqm = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -26,7 +56,12 @@ class Field(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return string representation of the field.
+        
+        Returns:
+            A string combining location name and field name
+        """
         return f"{self.location.name} - {self.name}"
 
     class Meta:
@@ -34,7 +69,21 @@ class Field(models.Model):
 
 
 class Bed(models.Model):
-    """A bed within a field"""
+    """A bed within a field.
+    
+    This model represents a planting bed that belongs to a specific field.
+    Beds are the smallest organizational unit in the farm hierarchy and
+    have optional length and width measurements.
+    
+    Attributes:
+        name: The name of the bed
+        field: Foreign key reference to the parent Field
+        length_m: Length of the bed in meters (optional)
+        width_m: Width of the bed in meters (optional)
+        notes: Additional notes about the bed
+        created_at: Timestamp when the bed was created
+        updated_at: Timestamp when the bed was last updated
+    """
     name = models.CharField(max_length=200)
     field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds')
     length_m = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
@@ -43,7 +92,12 @@ class Bed(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return string representation of the bed.
+        
+        Returns:
+            A string combining field name and bed name
+        """
         return f"{self.field.name} - {self.name}"
 
     class Meta:
@@ -51,7 +105,20 @@ class Bed(models.Model):
 
 
 class Culture(models.Model):
-    """A crop or plant type that can be grown"""
+    """A crop or plant type that can be grown.
+    
+    This model represents a specific type of crop or plant variety
+    with its growing characteristics, particularly the time needed
+    from planting to harvest.
+    
+    Attributes:
+        name: The name of the crop (e.g., "Tomato", "Lettuce")
+        variety: Specific variety of the crop (optional)
+        days_to_harvest: Average days from planting to harvest
+        notes: Additional notes about the culture
+        created_at: Timestamp when the culture was created
+        updated_at: Timestamp when the culture was last updated
+    """
     name = models.CharField(max_length=200)
     variety = models.CharField(max_length=200, blank=True)
     days_to_harvest = models.IntegerField(help_text="Average days from planting to harvest")
@@ -59,7 +126,12 @@ class Culture(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return string representation of the culture.
+        
+        Returns:
+            The name of the culture, with variety in parentheses if specified
+        """
         if self.variety:
             return f"{self.name} ({self.variety})"
         return self.name
@@ -69,7 +141,22 @@ class Culture(models.Model):
 
 
 class PlantingPlan(models.Model):
-    """A plan for planting a specific culture in a specific bed"""
+    """A plan for planting a specific culture in a specific bed.
+    
+    This model represents a planting schedule that links a culture
+    to a bed with specific dates. The harvest date is automatically
+    calculated based on the planting date and the culture's days_to_harvest.
+    
+    Attributes:
+        culture: Foreign key reference to the Culture being planted
+        bed: Foreign key reference to the Bed where planting occurs
+        planting_date: The date when planting is scheduled
+        harvest_date: Calculated date for expected harvest (auto-calculated)
+        quantity: Number of plants or seeds (optional)
+        notes: Additional notes about the planting plan
+        created_at: Timestamp when the plan was created
+        updated_at: Timestamp when the plan was last updated
+    """
     culture = models.ForeignKey(Culture, on_delete=models.CASCADE, related_name='planting_plans')
     bed = models.ForeignKey(Bed, on_delete=models.CASCADE, related_name='planting_plans')
     planting_date = models.DateField()
@@ -79,13 +166,26 @@ class PlantingPlan(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def save(self, *args, **kwargs):
-        """Auto-calculate harvest_date if not set"""
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Save the planting plan and auto-calculate harvest_date if not set.
+        
+        If harvest_date is not already set, it is calculated by adding
+        the culture's days_to_harvest to the planting_date.
+        
+        Args:
+            *args: Variable length argument list passed to parent save()
+            **kwargs: Arbitrary keyword arguments passed to parent save()
+        """
         if not self.harvest_date and self.planting_date and self.culture:
             self.harvest_date = self.planting_date + timedelta(days=self.culture.days_to_harvest)
         super().save(*args, **kwargs)
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return string representation of the planting plan.
+        
+        Returns:
+            A string combining culture name, bed name, and planting date
+        """
         return f"{self.culture.name} in {self.bed.name} - {self.planting_date}"
 
     class Meta:
@@ -93,7 +193,22 @@ class PlantingPlan(models.Model):
 
 
 class Task(models.Model):
-    """A task related to farm management"""
+    """A task related to farm management.
+    
+    This model represents a farm management task that can optionally
+    be linked to a specific planting plan. Tasks track activities
+    with status and due dates.
+    
+    Attributes:
+        STATUS_CHOICES: Tuple of valid status options for tasks
+        title: Short title describing the task
+        description: Detailed description of the task
+        planting_plan: Optional foreign key to associated PlantingPlan
+        due_date: Optional due date for the task
+        status: Current status of the task (default: 'pending')
+        created_at: Timestamp when the task was created
+        updated_at: Timestamp when the task was last updated
+    """
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('in_progress', 'In Progress'),
@@ -109,7 +224,12 @@ class Task(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return string representation of the task.
+        
+        Returns:
+            A string combining task title and status
+        """
         return f"{self.title} ({self.status})"
 
     class Meta:
