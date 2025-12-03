@@ -8,6 +8,11 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.ts',
+    server: {
+      deps: {
+        inline: ['@mui/x-data-grid', '@mui/material'],
+      },
+    },
   },
 })
 
