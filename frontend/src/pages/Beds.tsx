@@ -65,17 +65,17 @@ function Beds() {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div className="page-container">
       <h1>Beds</h1>
-      {error && <div style={{ color: 'red' }}>{error}</div>}
+      {error && <div className="error-message">{error}</div>}
       
-      <button onClick={() => setShowForm(!showForm)} style={{ marginBottom: '20px' }}>
+      <button onClick={() => setShowForm(!showForm)} className="btn-primary">
         {showForm ? 'Cancel' : 'Add New Bed'}
       </button>
 
       {showForm && (
-        <form onSubmit={handleSubmit} style={{ marginBottom: '20px', padding: '20px', border: '1px solid #ccc' }}>
-          <div style={{ marginBottom: '10px' }}>
+        <form onSubmit={handleSubmit} className="form-container">
+          <div className="form-group">
             <label>
               Name:
               <input
@@ -83,18 +83,18 @@ function Beds() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               />
             </label>
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <label>
               Field:
               <select
                 value={formData.field}
                 onChange={(e) => setFormData({ ...formData, field: parseInt(e.target.value) })}
                 required
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               >
                 <option value="">Select a field</option>
                 {fields.map((field) => (
@@ -105,7 +105,7 @@ function Beds() {
               </select>
             </label>
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <label>
               Length (m):
               <input
@@ -113,11 +113,11 @@ function Beds() {
                 step="0.01"
                 value={formData.length_m || ''}
                 onChange={(e) => setFormData({ ...formData, length_m: e.target.value ? parseFloat(e.target.value) : undefined })}
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               />
             </label>
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <label>
               Width (m):
               <input
@@ -125,17 +125,17 @@ function Beds() {
                 step="0.01"
                 value={formData.width_m || ''}
                 onChange={(e) => setFormData({ ...formData, width_m: e.target.value ? parseFloat(e.target.value) : undefined })}
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               />
             </label>
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <label>
               Notes:
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               />
             </label>
           </div>
@@ -143,27 +143,27 @@ function Beds() {
         </form>
       )}
 
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <table className="data-table">
         <thead>
-          <tr style={{ borderBottom: '2px solid #ccc' }}>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Name</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Field</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Length (m)</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Width (m)</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Notes</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Actions</th>
+          <tr>
+            <th>Name</th>
+            <th>Field</th>
+            <th>Length (m)</th>
+            <th>Width (m)</th>
+            <th>Notes</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {beds.map((bed) => (
-            <tr key={bed.id} style={{ borderBottom: '1px solid #eee' }}>
-              <td style={{ padding: '10px' }}>{bed.name}</td>
-              <td style={{ padding: '10px' }}>{bed.field_name}</td>
-              <td style={{ padding: '10px' }}>{bed.length_m}</td>
-              <td style={{ padding: '10px' }}>{bed.width_m}</td>
-              <td style={{ padding: '10px' }}>{bed.notes}</td>
-              <td style={{ padding: '10px' }}>
-                <button onClick={() => handleDelete(bed.id!)} style={{ color: 'red' }}>
+            <tr key={bed.id}>
+              <td>{bed.name}</td>
+              <td>{bed.field_name}</td>
+              <td>{bed.length_m}</td>
+              <td>{bed.width_m}</td>
+              <td>{bed.notes}</td>
+              <td>
+                <button onClick={() => handleDelete(bed.id!)} className="btn-delete">
                   Delete
                 </button>
               </td>

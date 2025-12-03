@@ -59,17 +59,17 @@ function Cultures() {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div className="page-container">
       <h1>Cultures</h1>
-      {error && <div style={{ color: 'red' }}>{error}</div>}
+      {error && <div className="error-message">{error}</div>}
       
-      <button onClick={() => setShowForm(!showForm)} style={{ marginBottom: '20px' }}>
+      <button onClick={() => setShowForm(!showForm)} className="btn-primary">
         {showForm ? 'Cancel' : 'Add New Culture'}
       </button>
 
       {showForm && (
-        <form onSubmit={handleSubmit} style={{ marginBottom: '20px', padding: '20px', border: '1px solid #ccc' }}>
-          <div style={{ marginBottom: '10px' }}>
+        <form onSubmit={handleSubmit} className="form-container">
+          <div className="form-group">
             <label>
               Name:
               <input
@@ -77,22 +77,22 @@ function Cultures() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               />
             </label>
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <label>
               Variety:
               <input
                 type="text"
                 value={formData.variety}
                 onChange={(e) => setFormData({ ...formData, variety: e.target.value })}
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               />
             </label>
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <label>
               Days to Harvest:
               <input
@@ -100,17 +100,17 @@ function Cultures() {
                 value={formData.days_to_harvest}
                 onChange={(e) => setFormData({ ...formData, days_to_harvest: parseInt(e.target.value) || 0 })}
                 required
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               />
             </label>
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <label>
               Notes:
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               />
             </label>
           </div>
@@ -118,25 +118,25 @@ function Cultures() {
         </form>
       )}
 
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <table className="data-table">
         <thead>
-          <tr style={{ borderBottom: '2px solid #ccc' }}>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Name</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Variety</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Days to Harvest</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Notes</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Actions</th>
+          <tr>
+            <th>Name</th>
+            <th>Variety</th>
+            <th>Days to Harvest</th>
+            <th>Notes</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {cultures.map((culture) => (
-            <tr key={culture.id} style={{ borderBottom: '1px solid #eee' }}>
-              <td style={{ padding: '10px' }}>{culture.name}</td>
-              <td style={{ padding: '10px' }}>{culture.variety}</td>
-              <td style={{ padding: '10px' }}>{culture.days_to_harvest}</td>
-              <td style={{ padding: '10px' }}>{culture.notes}</td>
-              <td style={{ padding: '10px' }}>
-                <button onClick={() => handleDelete(culture.id!)} style={{ color: 'red' }}>
+            <tr key={culture.id}>
+              <td>{culture.name}</td>
+              <td>{culture.variety}</td>
+              <td>{culture.days_to_harvest}</td>
+              <td>{culture.notes}</td>
+              <td>
+                <button onClick={() => handleDelete(culture.id!)} className="btn-delete">
                   Delete
                 </button>
               </td>

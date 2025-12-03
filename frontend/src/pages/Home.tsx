@@ -2,32 +2,32 @@ import { Link } from 'react-router-dom';
 
 function Home() {
   return (
-    <div style={{ padding: '20px' }}>
+    <div className="page-container">
       <h1>CSA Farm Planner</h1>
       <p>Welcome to the CSA Farm Planning Tool</p>
       
-      <div style={{ marginTop: '30px' }}>
+      <div className="home-section">
         <h2>Quick Links</h2>
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          <li style={{ marginBottom: '10px' }}>
-            <Link to="/cultures" style={{ fontSize: '18px', color: '#0066cc' }}>
+        <ul className="quick-links">
+          <li>
+            <Link to="/cultures" className="quick-link">
               Manage Cultures
             </Link>
           </li>
-          <li style={{ marginBottom: '10px' }}>
-            <Link to="/beds" style={{ fontSize: '18px', color: '#0066cc' }}>
+          <li>
+            <Link to="/beds" className="quick-link">
               Manage Beds
             </Link>
           </li>
-          <li style={{ marginBottom: '10px' }}>
-            <Link to="/planting-plans" style={{ fontSize: '18px', color: '#0066cc' }}>
+          <li>
+            <Link to="/planting-plans" className="quick-link">
               Manage Planting Plans
             </Link>
           </li>
         </ul>
       </div>
 
-      <div style={{ marginTop: '30px', padding: '20px', backgroundColor: '#f5f5f5', borderRadius: '5px' }}>
+      <div className="features-box">
         <h3>Features</h3>
         <ul>
           <li>Manage crops and plant varieties (Cultures)</li>

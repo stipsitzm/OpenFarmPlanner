@@ -68,24 +68,24 @@ function PlantingPlans() {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div className="page-container">
       <h1>Planting Plans</h1>
-      {error && <div style={{ color: 'red' }}>{error}</div>}
+      {error && <div className="error-message">{error}</div>}
       
-      <button onClick={() => setShowForm(!showForm)} style={{ marginBottom: '20px' }}>
+      <button onClick={() => setShowForm(!showForm)} className="btn-primary">
         {showForm ? 'Cancel' : 'Add New Planting Plan'}
       </button>
 
       {showForm && (
-        <form onSubmit={handleSubmit} style={{ marginBottom: '20px', padding: '20px', border: '1px solid #ccc' }}>
-          <div style={{ marginBottom: '10px' }}>
+        <form onSubmit={handleSubmit} className="form-container">
+          <div className="form-group">
             <label>
               Culture:
               <select
                 value={formData.culture}
                 onChange={(e) => setFormData({ ...formData, culture: parseInt(e.target.value) || 0 })}
                 required
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               >
                 <option value="">Select a culture</option>
                 {cultures.map((culture) => (
@@ -96,14 +96,14 @@ function PlantingPlans() {
               </select>
             </label>
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <label>
               Bed:
               <select
                 value={formData.bed}
                 onChange={(e) => setFormData({ ...formData, bed: parseInt(e.target.value) || 0 })}
                 required
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               >
                 <option value="">Select a bed</option>
                 {beds.map((bed) => (
@@ -114,7 +114,7 @@ function PlantingPlans() {
               </select>
             </label>
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <label>
               Planting Date:
               <input
@@ -122,28 +122,28 @@ function PlantingPlans() {
                 value={formData.planting_date}
                 onChange={(e) => setFormData({ ...formData, planting_date: e.target.value })}
                 required
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               />
             </label>
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <label>
               Quantity:
               <input
                 type="number"
                 value={formData.quantity || ''}
                 onChange={(e) => setFormData({ ...formData, quantity: e.target.value ? parseInt(e.target.value) : undefined })}
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               />
             </label>
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <label>
               Notes:
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                style={{ marginLeft: '10px', width: '200px' }}
+                className="form-input"
               />
             </label>
           </div>
@@ -151,29 +151,29 @@ function PlantingPlans() {
         </form>
       )}
 
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <table className="data-table">
         <thead>
-          <tr style={{ borderBottom: '2px solid #ccc' }}>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Culture</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Bed</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Planting Date</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Harvest Date</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Quantity</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Notes</th>
-            <th style={{ textAlign: 'left', padding: '10px' }}>Actions</th>
+          <tr>
+            <th>Culture</th>
+            <th>Bed</th>
+            <th>Planting Date</th>
+            <th>Harvest Date</th>
+            <th>Quantity</th>
+            <th>Notes</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {plans.map((plan) => (
-            <tr key={plan.id} style={{ borderBottom: '1px solid #eee' }}>
-              <td style={{ padding: '10px' }}>{plan.culture_name}</td>
-              <td style={{ padding: '10px' }}>{plan.bed_name}</td>
-              <td style={{ padding: '10px' }}>{plan.planting_date}</td>
-              <td style={{ padding: '10px' }}>{plan.harvest_date}</td>
-              <td style={{ padding: '10px' }}>{plan.quantity}</td>
-              <td style={{ padding: '10px' }}>{plan.notes}</td>
-              <td style={{ padding: '10px' }}>
-                <button onClick={() => handleDelete(plan.id!)} style={{ color: 'red' }}>
+            <tr key={plan.id}>
+              <td>{plan.culture_name}</td>
+              <td>{plan.bed_name}</td>
+              <td>{plan.planting_date}</td>
+              <td>{plan.harvest_date}</td>
+              <td>{plan.quantity}</td>
+              <td>{plan.notes}</td>
+              <td>
+                <button onClick={() => handleDelete(plan.id!)} className="btn-delete">
                   Delete
                 </button>
               </td>

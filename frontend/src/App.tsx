@@ -9,23 +9,18 @@ function App() {
   return (
     <Router>
       <div className="app">
-        <nav style={{ 
-          padding: '10px 20px', 
-          backgroundColor: '#333', 
-          color: 'white',
-          marginBottom: '20px'
-        }}>
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-            <Link to="/" style={{ color: 'white', textDecoration: 'none', fontWeight: 'bold' }}>
+        <nav className="nav">
+          <div className="nav-links">
+            <Link to="/" className="nav-link home">
               Home
             </Link>
-            <Link to="/cultures" style={{ color: 'white', textDecoration: 'none' }}>
+            <Link to="/cultures" className="nav-link">
               Cultures
             </Link>
-            <Link to="/beds" style={{ color: 'white', textDecoration: 'none' }}>
+            <Link to="/beds" className="nav-link">
               Beds
             </Link>
-            <Link to="/planting-plans" style={{ color: 'white', textDecoration: 'none' }}>
+            <Link to="/planting-plans" className="nav-link">
               Planting Plans
             </Link>
           </div>
