@@ -9,7 +9,7 @@ describe('App', () => {
     expect(screen.getByText('Start')).toBeInTheDocument();
     expect(screen.getByText('Standorte')).toBeInTheDocument();
     expect(screen.getByText('Kulturen')).toBeInTheDocument();
-    expect(screen.getByText('Beete')).toBeInTheDocument();
+    expect(screen.getByText('Schläge & Beete')).toBeInTheDocument();
   });
 
   it('renders home page by default', () => {

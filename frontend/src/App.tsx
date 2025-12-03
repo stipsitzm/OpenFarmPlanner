@@ -11,8 +11,7 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home';
 import Locations from './pages/Locations';
-import Fields from './pages/Fields';
-import Beds from './pages/Beds';
+import FieldsBedsHierarchy from './pages/FieldsBedsHierarchy';
 import Cultures from './pages/Cultures';
 import PlantingPlans from './pages/PlantingPlans';
 import Tasks from './pages/Tasks';
@@ -30,11 +29,8 @@ function App(): React.ReactElement {
             <Link to="/locations" className="nav-link">
               Standorte
             </Link>
-            <Link to="/fields" className="nav-link">
-              Schläge
-            </Link>
-            <Link to="/beds" className="nav-link">
-              Beete
+            <Link to="/fields-beds" className="nav-link">
+              Schläge & Beete
             </Link>
             <Link to="/cultures" className="nav-link">
               Kulturen
@@ -51,8 +47,7 @@ function App(): React.ReactElement {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/locations" element={<Locations />} />
-          <Route path="/fields" element={<Fields />} />
-          <Route path="/beds" element={<Beds />} />
+          <Route path="/fields-beds" element={<FieldsBedsHierarchy />} />
           <Route path="/cultures" element={<Cultures />} />
           <Route path="/planting-plans" element={<PlantingPlans />} />
           <Route path="/tasks" element={<Tasks />} />
