@@ -1,6 +1,15 @@
+/**
+ * Home page component.
+ * 
+ * Landing page for the CSA Farm Planner application.
+ * Displays quick links to main features and a feature overview.
+ * 
+ * @returns The Home page component
+ */
+
 import { Link } from 'react-router-dom';
 
-function Home() {
+function Home(): React.ReactElement {
   return (
     <div className="page-container">
       <h1>CSA Farm Planner</h1>
