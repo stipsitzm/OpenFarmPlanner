@@ -48,6 +48,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
   const [locations, setLocations] = useState<Location[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
+  const [expandedRows, setExpandedRows] = useState<Set<string | number>>(new Set());
 
   /**
    * Fetch all data from APIs
@@ -82,7 +83,6 @@ function FieldsBedsHierarchy(): React.ReactElement {
    */
   useEffect(() => {
     const hierarchyRows: HierarchyRow[] = [];
-    const expandedState: { [key: string]: boolean } = {};
 
     // Check if we have multiple locations
     const hasMultipleLocations = locations.length > 1;
@@ -91,19 +91,21 @@ function FieldsBedsHierarchy(): React.ReactElement {
       // Show locations as top level
       locations.forEach(location => {
         const locationKey = `location-${location.id}`;
+        const isExpanded = expandedRows.has(locationKey);
         hierarchyRows.push({
           id: locationKey,
           type: 'location',
           level: 0,
           name: location.name,
           locationId: location.id,
-          expanded: expandedState[locationKey] ?? true,
+          expanded: isExpanded,
         });
 
         // Add fields under this location
         const locationFields = fields.filter(f => f.location === location.id);
         locationFields.forEach(field => {
           const fieldKey = `field-${field.id}`;
+          const isFieldExpanded = expandedRows.has(fieldKey);
           hierarchyRows.push({
             id: fieldKey,
             type: 'field',
@@ -112,7 +114,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
             parentId: locationKey,
             locationId: location.id,
             fieldId: field.id,
-            expanded: expandedState[fieldKey] ?? false,
+            expanded: isFieldExpanded,
           });
 
           // Add beds under this field
@@ -140,13 +142,14 @@ function FieldsBedsHierarchy(): React.ReactElement {
       // Single location or no location - show fields as top level
       fields.forEach(field => {
         const fieldKey = `field-${field.id}`;
+        const isFieldExpanded = expandedRows.has(fieldKey);
         hierarchyRows.push({
           id: fieldKey,
           type: 'field',
           level: 0,
           name: field.name,
           fieldId: field.id,
-          expanded: expandedState[fieldKey] ?? false,
+          expanded: isFieldExpanded,
         });
 
         // Add beds under this field
@@ -171,17 +174,21 @@ function FieldsBedsHierarchy(): React.ReactElement {
     }
 
     setRows(hierarchyRows);
-  }, [locations, fields, beds]);
+  }, [locations, fields, beds, expandedRows]);
 
   /**
    * Toggle row expansion
    */
   const handleToggleExpand = (rowId: GridRowId) => {
-    setRows((prevRows) =>
-      prevRows.map((row) =>
-        row.id === rowId ? { ...row, expanded: !row.expanded } : row
-      )
-    );
+    setExpandedRows((prevExpanded) => {
+      const newExpanded = new Set(prevExpanded);
+      if (newExpanded.has(rowId)) {
+        newExpanded.delete(rowId);
+      } else {
+        newExpanded.add(rowId);
+      }
+      return newExpanded;
+    });
   };
 
   /**
@@ -236,19 +243,23 @@ function FieldsBedsHierarchy(): React.ReactElement {
       isNew: true,
     };
 
+    // Ensure field is expanded
+    const fieldKey = `field-${fieldId}`;
+    setExpandedRows((prev) => {
+      const newExpanded = new Set(prev);
+      newExpanded.add(fieldKey);
+      return newExpanded;
+    });
+
     setRows((prevRows) => {
-      // Ensure field is expanded
-      const updatedRows = prevRows.map(r =>
-        r.id === `field-${fieldId}` ? { ...r, expanded: true } : r
-      );
-      // Find position to insert (after last bed of this field or after field)
-      const fieldIndex = updatedRows.findIndex(r => r.id === `field-${fieldId}`);
+      // Find position to insert (after field)
+      const fieldIndex = prevRows.findIndex(r => r.id === fieldKey);
       const insertIndex = fieldIndex + 1;
       
       return [
-        ...updatedRows.slice(0, insertIndex),
+        ...prevRows.slice(0, insertIndex),
         newBed,
-        ...updatedRows.slice(insertIndex),
+        ...prevRows.slice(insertIndex),
       ];
     });
 
