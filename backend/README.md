@@ -1,6 +1,6 @@
-# CSA Farm Planner - Backend
+# TinyFarm - Backend
 
-Django REST API backend for the CSA Farm Planner application.
+Django REST API backend for the TinyFarm application.
 
 ## Technology Stack
 

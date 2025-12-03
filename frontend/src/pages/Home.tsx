@@ -1,7 +1,7 @@
 /**
  * Home page component.
  * 
- * Landing page for the CSA Farm Planner application.
+ * Landing page for the TinyFarm application.
  * Displays quick links to main features and a feature overview.
  * UI text is in German, code comments remain in English.
  * 
@@ -13,8 +13,8 @@ import { Link } from 'react-router-dom';
 function Home(): React.ReactElement {
   return (
     <div className="page-container">
-      <h1>CSA Farm Planner</h1>
-      <p>Willkommen beim CSA Farm Planner</p>
+      <h1>TinyFarm</h1>
+      <p>Willkommen bei TinyFarm</p>
       
       <div className="home-section">
         <h2>Schnellzugriff</h2>
