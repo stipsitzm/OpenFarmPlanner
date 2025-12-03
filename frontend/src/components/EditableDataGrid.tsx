@@ -150,7 +150,17 @@ export function EditableDataGrid<T extends EditableRow>({
         if (!response.data.id) {
           throw new Error('API response missing ID');
         }
-        return { ...response.data, id: response.data.id } as T;
+        
+        // Remove the temporary row and add the saved row
+        const savedRow = { ...response.data, id: response.data.id } as T;
+        setRows((prevRows) => {
+          // Remove the temporary row with negative ID
+          const filteredRows = prevRows.filter(row => row.id !== newRow.id);
+          // Add the saved row at the beginning
+          return [savedRow, ...filteredRows];
+        });
+        
+        return savedRow;
       } else {
         // Update existing item via API
         const response = await api.update(newRow.id, mapToApiData(newRow));
