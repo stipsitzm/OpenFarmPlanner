@@ -103,7 +103,10 @@ function Locations(): React.ReactElement {
         });
         setError('');
         // Replace temporary row with server response
-        return { ...response.data, id: response.data.id! };
+        if (!response.data.id) {
+          throw new Error('API response missing location ID');
+        }
+        return { ...response.data, id: response.data.id };
       } else {
         // Update existing location via API
         const response = await locationAPI.update(newRow.id, {
@@ -112,7 +115,10 @@ function Locations(): React.ReactElement {
           notes: newRow.notes || '',
         });
         setError('');
-        return { ...response.data, id: response.data.id! };
+        if (!response.data.id) {
+          throw new Error('API response missing location ID');
+        }
+        return { ...response.data, id: response.data.id };
       }
     } catch (err) {
       setError('Fehler beim Speichern des Standorts');
@@ -138,14 +144,14 @@ function Locations(): React.ReactElement {
     const numericId = Number(id);
     if (numericId < 0) {
       // If it's a new unsaved row, just remove it from the grid
-      setRows(rows.filter((row) => row.id !== id));
+      setRows((prevRows) => prevRows.filter((row) => row.id !== id));
       return;
     }
 
     // Delete from API
     locationAPI.delete(numericId)
       .then(() => {
-        setRows(rows.filter((row) => row.id !== id));
+        setRows((prevRows) => prevRows.filter((row) => row.id !== id));
         setError('');
       })
       .catch((err) => {
