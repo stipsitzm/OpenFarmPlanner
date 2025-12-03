@@ -6,9 +6,10 @@ describe('App', () => {
   it('renders navigation', () => {
     render(<App />);
     
-    expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('Cultures')).toBeInTheDocument();
-    expect(screen.getByText('Beds')).toBeInTheDocument();
+    expect(screen.getByText('Start')).toBeInTheDocument();
+    expect(screen.getByText('Standorte')).toBeInTheDocument();
+    expect(screen.getByText('Kulturen')).toBeInTheDocument();
+    expect(screen.getByText('Beete')).toBeInTheDocument();
   });
 
   it('renders home page by default', () => {
