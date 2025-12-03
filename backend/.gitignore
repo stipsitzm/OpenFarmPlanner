@@ -5,13 +5,21 @@ __pycache__/
 *$py.class
 *.so
 .Python
-venv/
-env/
-ENV/
 *.egg-info/
 dist/
 build/
 .eggs/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+__pypackages__/
+
+# PDM
+.pdm-python
+pdm.lock
 
 # Django
 *.log
@@ -30,3 +38,4 @@ db.sqlite3-journal
 # OS
 .DS_Store
 Thumbs.db
+

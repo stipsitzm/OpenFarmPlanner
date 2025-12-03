@@ -20,6 +20,7 @@ A full-stack web application for managing CSA (Community Supported Agriculture) 
 - **django-cors-headers**: CORS support for frontend integration
 - **SQLite**: Database (development)
 - **Python 3.12+**: Programming language
+- **PDM**: Modern Python package manager
 
 ### Frontend
 - **Vite**: Build tool
@@ -43,7 +44,8 @@ CSA_FarmPlanner/
 │   │   ├── urls.py      # URL routing
 │   │   └── tests.py     # Tests
 │   ├── manage.py        # Django management script
-│   └── requirements.txt # Python dependencies
+│   ├── pyproject.toml   # PDM project configuration
+│   └── .venv/           # Virtual environment (auto-generated)
 └── frontend/            # React frontend
     ├── src/
     │   ├── api/         # API client
@@ -58,8 +60,23 @@ CSA_FarmPlanner/
 
 ### Prerequisites
 - Python 3.12 or higher
+- PDM (Python Dependency Manager)
 - Node.js 20 or higher
 - npm 10 or higher
+
+### Installing PDM
+
+If you don't have PDM installed:
+
+```bash
+pip install --user pdm
+```
+
+Or using pipx (recommended):
+
+```bash
+pipx install pdm
+```
 
 ### Backend Setup
 
@@ -68,30 +85,26 @@ CSA_FarmPlanner/
 cd backend
 ```
 
-2. Create and activate a virtual environment:
+2. Install dependencies with PDM:
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+pdm install
 ```
 
-3. Install dependencies:
+This will automatically create a virtual environment and install all dependencies.
+
+3. Run migrations:
 ```bash
-pip install -r requirements.txt
+pdm run migrate
 ```
 
-4. Run migrations:
+4. Create a superuser (optional, for admin access):
 ```bash
-python manage.py migrate
+pdm run createsuperuser
 ```
 
-5. Create a superuser (optional, for admin access):
+5. Run the development server:
 ```bash
-python manage.py createsuperuser
-```
-
-6. Run the development server:
-```bash
-python manage.py runserver
+pdm run runserver
 ```
 
 The API will be available at `http://localhost:8000/api/`
@@ -120,8 +133,7 @@ The frontend will be available at `http://localhost:5173/`
 ### Backend Tests
 ```bash
 cd backend
-source venv/bin/activate
-python manage.py test
+pdm run test
 ```
 
 ### Frontend Tests
