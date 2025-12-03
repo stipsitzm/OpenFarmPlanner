@@ -1,5 +1,5 @@
 /**
- * API client for the CSA Farm Planner backend.
+ * API client for the TinyFarm backend.
  * 
  * This module provides typed API functions for interacting with the Django REST API.
  * All API calls use axios and return promises with typed responses.
