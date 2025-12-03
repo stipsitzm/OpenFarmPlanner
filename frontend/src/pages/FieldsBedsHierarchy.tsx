@@ -49,6 +49,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
   const [fields, setFields] = useState<Field[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [expandedRows, setExpandedRows] = useState<Set<string | number>>(new Set());
+  const [pendingEditRow, setPendingEditRow] = useState<number | null>(null);
 
   /**
    * Fetch all data from APIs
@@ -179,6 +180,23 @@ function FieldsBedsHierarchy(): React.ReactElement {
   }, [locations, fields, beds, expandedRows]);
 
   /**
+   * Handle pending edit mode after rows are updated
+   */
+  useEffect(() => {
+    if (pendingEditRow !== null) {
+      // Check if the row exists in the current rows
+      const rowExists = rows.some(r => r.id === pendingEditRow);
+      if (rowExists) {
+        setRowModesModel((oldModel) => ({
+          ...oldModel,
+          [pendingEditRow]: { mode: GridRowModes.Edit, fieldToFocus: 'name' },
+        }));
+        setPendingEditRow(null);
+      }
+    }
+  }, [rows, pendingEditRow]);
+
+  /**
    * Toggle row expansion
    */
   const handleToggleExpand = (rowId: GridRowId) => {
@@ -249,11 +267,8 @@ function FieldsBedsHierarchy(): React.ReactElement {
     // Add temporary bed to beds state
     setBeds((prevBeds) => [newBed, ...prevBeds]);
 
-    // Set edit mode for the new bed
-    setRowModesModel((oldModel) => ({
-      ...oldModel,
-      [newBedId]: { mode: GridRowModes.Edit, fieldToFocus: 'name' },
-    }));
+    // Set pending edit mode for the new bed (will be applied after re-render)
+    setPendingEditRow(newBedId);
   };
 
   /**
