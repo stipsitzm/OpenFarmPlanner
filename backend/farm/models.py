@@ -279,7 +279,12 @@ class Culture(models.Model):
         Returns:
             Days to harvest value, or 0 if not set
         """
-        return self.maturity_days or self.days_to_harvest or 0
+        if self.maturity_days is not None:
+            return self.maturity_days
+        elif self.days_to_harvest is not None:
+            return self.days_to_harvest
+        else:
+            return 0
 
     class Meta:
         ordering = ['name', 'variety']

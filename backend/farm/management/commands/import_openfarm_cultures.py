@@ -62,8 +62,10 @@ class Command(BaseCommand):
             file_path = Path(options['file'])
         else:
             # Default to data/openfarm/plants.json relative to project root
+            # Find project root by going up from commands/ -> management/ -> farm/ -> backend/ -> project_root
             current_file = Path(__file__)
-            project_root = current_file.parent.parent.parent.parent.parent
+            backend_dir = current_file.parents[3]
+            project_root = backend_dir.parent
             file_path = project_root / 'data' / 'openfarm' / 'plants.json'
         
         if not file_path.exists():

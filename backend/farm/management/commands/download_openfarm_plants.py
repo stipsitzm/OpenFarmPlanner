@@ -57,9 +57,10 @@ class Command(BaseCommand):
             output_path = Path(options['output'])
         else:
             # Default to data/openfarm/plants.json relative to project root
-            # Find project root (where manage.py is)
+            # Find project root by going up from commands/ -> management/ -> farm/ -> backend/ -> project_root
             current_file = Path(__file__)
-            project_root = current_file.parent.parent.parent.parent.parent
+            backend_dir = current_file.parents[3]
+            project_root = backend_dir.parent
             output_path = project_root / 'data' / 'openfarm' / 'plants.json'
         
         # Create directory if it doesn't exist

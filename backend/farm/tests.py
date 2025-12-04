@@ -374,4 +374,12 @@ class OpenFarmImportTest(TestCase):
             name='Test3'
         )
         self.assertEqual(culture3.get_days_to_harvest(), 0)
+        
+        # Test with maturity_days explicitly set to 0 (edge case)
+        culture4 = Culture.objects.create(
+            name='Test4',
+            maturity_days=0,
+            days_to_harvest=60
+        )
+        self.assertEqual(culture4.get_days_to_harvest(), 0)
 
