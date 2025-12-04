@@ -108,21 +108,158 @@ class Culture(models.Model):
     """A crop or plant type that can be grown.
     
     This model represents a specific type of crop or plant variety
-    with its growing characteristics, particularly the time needed
-    from planting to harvest.
+    with its growing characteristics, labor requirements, and yield expectations.
+    It can store data from OpenFarm or be manually entered.
     
     Attributes:
         name: The name of the crop (e.g., "Tomato", "Lettuce")
-        variety: Specific variety of the crop (optional)
-        days_to_harvest: Average days from planting to harvest
+        variety: Specific variety of the crop (optional, from cultivar_name in OpenFarm)
+        days_to_harvest: Average days from planting to harvest (backward-compatible field)
         notes: Additional notes about the culture
+        
+        # CSA Farm management fields
+        plant_spacing_cm: Distance between plants in centimeters
+        row_spacing_cm: Distance between rows in centimeters
+        maturity_days: Days to maturity (alias for days_to_harvest from OpenFarm)
+        yield_kg_per_m2: Expected yield in kilograms per square meter
+        planting_labor_min_per_m2: Labor minutes per square meter for planting
+        harvest_labor_min_per_m2: Labor minutes per square meter for harvesting
+        hilling_labor_min_per_m2: Labor minutes per square meter for hilling
+        
+        # OpenFarm identifiers and fields
+        openfarm_id: OpenFarm internal ID (for upserts)
+        openfarm_slug: OpenFarm URL-friendly slug
+        binomial_name: Scientific binomial name (genus + species)
+        common_names: JSON array of common names in different languages
+        sun_requirements: Sun exposure requirements (full sun, partial, etc.)
+        sowing_method: Method of sowing (direct, transplant, etc.)
+        spread_cm: Plant spread/width in centimeters
+        height_cm: Plant height in centimeters
+        growing_degree_days: Growing degree days requirement
+        taxon: Taxonomic rank (Species, Genus, Family, etc.)
+        description: Detailed description of the crop
+        openfarm_raw: Complete raw JSON from OpenFarm (preserves all data)
+        
         created_at: Timestamp when the culture was created
         updated_at: Timestamp when the culture was last updated
     """
+    # Core fields (existing)
     name = models.CharField(max_length=200)
     variety = models.CharField(max_length=200, blank=True)
-    days_to_harvest = models.IntegerField(help_text="Average days from planting to harvest")
+    days_to_harvest = models.IntegerField(
+        help_text="Average days from planting to harvest",
+        null=True,
+        blank=True
+    )
     notes = models.TextField(blank=True)
+    
+    # CSA Farm management fields
+    plant_spacing_cm = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Distance between plants in centimeters"
+    )
+    row_spacing_cm = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Distance between rows in centimeters"
+    )
+    maturity_days = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Days to maturity"
+    )
+    yield_kg_per_m2 = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Expected yield in kilograms per square meter"
+    )
+    planting_labor_min_per_m2 = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Labor minutes per square meter for planting"
+    )
+    harvest_labor_min_per_m2 = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Labor minutes per square meter for harvesting"
+    )
+    hilling_labor_min_per_m2 = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Labor minutes per square meter for hilling"
+    )
+    
+    # OpenFarm identifiers and typed fields
+    openfarm_id = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        unique=True,
+        help_text="OpenFarm internal identifier"
+    )
+    openfarm_slug = models.SlugField(
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text="OpenFarm URL-friendly slug"
+    )
+    binomial_name = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text="Scientific binomial name"
+    )
+    common_names = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Array of common names in different languages"
+    )
+    sun_requirements = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text="Sun exposure requirements"
+    )
+    sowing_method = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text="Method of sowing (direct, transplant, etc.)"
+    )
+    spread_cm = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Plant spread/width in centimeters"
+    )
+    height_cm = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Plant height in centimeters"
+    )
+    growing_degree_days = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Growing degree days requirement"
+    )
+    taxon = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        help_text="Taxonomic rank (Species, Genus, Family, etc.)"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Detailed description of the crop"
+    )
+    openfarm_raw = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Complete raw JSON from OpenFarm (preserves all data)"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -135,9 +272,21 @@ class Culture(models.Model):
         if self.variety:
             return f"{self.name} ({self.variety})"
         return self.name
+    
+    def get_days_to_harvest(self) -> int:
+        """Get days to harvest, preferring maturity_days if set.
+        
+        Returns:
+            Days to harvest value, or 0 if not set
+        """
+        return self.maturity_days or self.days_to_harvest or 0
 
     class Meta:
         ordering = ['name', 'variety']
+        indexes = [
+            models.Index(fields=['openfarm_id']),
+            models.Index(fields=['name', 'variety']),
+        ]
 
 
 class PlantingPlan(models.Model):
@@ -170,14 +319,16 @@ class PlantingPlan(models.Model):
         """Save the planting plan and auto-calculate harvest_date if not set.
         
         If harvest_date is not already set, it is calculated by adding
-        the culture's days_to_harvest to the planting_date.
+        the culture's days to harvest to the planting_date.
         
         Args:
             *args: Variable length argument list passed to parent save()
             **kwargs: Arbitrary keyword arguments passed to parent save()
         """
         if not self.harvest_date and self.planting_date and self.culture:
-            self.harvest_date = self.planting_date + timedelta(days=self.culture.days_to_harvest)
+            days = self.culture.get_days_to_harvest()
+            if days > 0:
+                self.harvest_date = self.planting_date + timedelta(days=days)
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
