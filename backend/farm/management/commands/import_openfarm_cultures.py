@@ -110,10 +110,10 @@ class Command(BaseCommand):
                 
                 # Extract maturity days if available
                 maturity_days = extract_maturity_days(plant_data)
-                if maturity_days:
+                if maturity_days is not None:
                     culture_data['maturity_days'] = maturity_days
-                    # Also set days_to_harvest for backward compatibility
-                    if not culture_data.get('days_to_harvest'):
+                    # Also set days_to_harvest for backward compatibility if not already set
+                    if culture_data.get('days_to_harvest') is None:
                         culture_data['days_to_harvest'] = maturity_days
                 
                 # Get upsert key

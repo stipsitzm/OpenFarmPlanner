@@ -67,8 +67,9 @@ def map_openfarm_plant_to_culture(plant_data: Dict[str, Any]) -> Dict[str, Any]:
         else:
             # Unexpected type - log warning and set empty array as fallback
             logger.warning(
-                f"Unexpected type for common_names in {name}: "
-                f"{type(common_names).__name__}. Setting to empty array."
+                "Unexpected type %s for common_names in %s. Setting to empty array.",
+                type(common_names).__name__,
+                name
             )
             culture_data['common_names'] = []
     
