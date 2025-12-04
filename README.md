@@ -109,6 +109,19 @@ pdm run runserver
 
 The API will be available at `http://localhost:8000/api/`
 
+### OpenFarm Data Import (Optional)
+
+To import plant data from OpenFarm:
+
+1. The sample plants.json is included at `data/openfarm/plants.json`
+2. Import cultures:
+```bash
+cd backend
+pdm run python manage.py import_openfarm_cultures --verbose
+```
+
+For more options and details, see [backend/README_OPENFARM.md](backend/README_OPENFARM.md)
+
 ### Frontend Setup
 
 1. Navigate to the frontend directory:
@@ -175,8 +188,13 @@ A bed within a field
 - name, field (FK), length_m, width_m, notes
 
 ### Culture
-A crop or plant type
-- name, variety, days_to_harvest, notes
+A crop or plant type with comprehensive growing information
+- **Core fields**: name, variety, days_to_harvest, notes
+- **CSA farm fields**: plant_spacing_cm, row_spacing_cm, maturity_days, yield_kg_per_m2, labor fields
+- **OpenFarm fields**: openfarm_id, binomial_name, common_names, sun_requirements, sowing_method, spread_cm, height_cm, growing_degree_days, taxon, description
+- **Raw data**: openfarm_raw (complete OpenFarm JSON)
+
+See [backend/README_OPENFARM.md](backend/README_OPENFARM.md) for details on importing OpenFarm plant data.
 
 ### PlantingPlan
 Plan for planting a specific culture in a bed

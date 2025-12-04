@@ -61,15 +61,52 @@ class BedAdmin(admin.ModelAdmin):
 class CultureAdmin(admin.ModelAdmin):
     """Admin interface configuration for Culture model.
     
-    Provides a customized admin interface with search and display
-    capabilities for crop cultures.
+    Provides a customized admin interface with search, filtering,
+    and display capabilities for crop cultures. Supports both
+    traditional and OpenFarm-imported cultures.
     
     Attributes:
         list_display: Fields to display in the list view
+        list_filter: Fields to use for filtering the list
         search_fields: Fields to include in the search functionality
+        fieldsets: Organization of fields in the detail view
+        readonly_fields: Fields that cannot be edited
     """
-    list_display = ['name', 'variety', 'days_to_harvest', 'created_at']
-    search_fields = ['name', 'variety']
+    list_display = ['name', 'variety', 'binomial_name', 'maturity_days', 'openfarm_id', 'created_at']
+    list_filter = ['taxon', 'sun_requirements', 'sowing_method']
+    search_fields = ['name', 'variety', 'binomial_name', 'openfarm_id', 'description']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'variety', 'description', 'notes')
+        }),
+        ('Growing Requirements', {
+            'fields': ('maturity_days', 'days_to_harvest', 'sun_requirements', 'sowing_method')
+        }),
+        ('Spacing & Dimensions', {
+            'fields': ('plant_spacing_cm', 'row_spacing_cm', 'spread_cm', 'height_cm')
+        }),
+        ('Labor & Yield', {
+            'fields': ('yield_kg_per_m2', 'planting_labor_min_per_m2', 
+                      'harvest_labor_min_per_m2', 'hilling_labor_min_per_m2'),
+            'classes': ('collapse',)
+        }),
+        ('OpenFarm Data', {
+            'fields': ('openfarm_id', 'openfarm_slug', 'binomial_name', 'common_names',
+                      'taxon', 'growing_degree_days'),
+            'classes': ('collapse',)
+        }),
+        ('Raw Data', {
+            'fields': ('openfarm_raw',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ['created_at', 'updated_at']
 
 
 @admin.register(PlantingPlan)
