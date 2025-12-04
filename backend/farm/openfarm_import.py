@@ -59,16 +59,18 @@ def map_openfarm_plant_to_culture(plant_data: Dict[str, Any]) -> Dict[str, Any]:
     
     # Map common names (handle both array and string formats)
     common_names = plant_data.get('common_names')
-    if common_names:
+    if common_names is not None:
         if isinstance(common_names, list):
             culture_data['common_names'] = common_names
         elif isinstance(common_names, str):
             culture_data['common_names'] = [common_names]
         else:
-            # Unexpected type - log warning and skip
+            # Unexpected type - log warning and set empty array as fallback
             logger.warning(
-                f"Unexpected type for common_names in {name}: {type(common_names).__name__}"
+                f"Unexpected type for common_names in {name}: "
+                f"{type(common_names).__name__}. Setting to empty array."
             )
+            culture_data['common_names'] = []
     
     # Map description
     culture_data['description'] = plant_data.get('description', '')

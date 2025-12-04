@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError
+from django.conf import settings
 
 
 class Command(BaseCommand):
@@ -57,11 +58,9 @@ class Command(BaseCommand):
             output_path = Path(options['output'])
         else:
             # Default to data/openfarm/plants.json relative to project root
-            # Find project root by going up from commands/ -> management/ -> farm/ -> backend/ -> project_root
-            current_file = Path(__file__)
-            backend_dir = current_file.parents[3]
-            project_root = backend_dir.parent
-            output_path = project_root / 'data' / 'openfarm' / 'plants.json'
+            # Use Django's BASE_DIR setting to find project root
+            base_dir = Path(settings.BASE_DIR).parent  # backend/ -> TinyFarm/
+            output_path = base_dir / 'data' / 'openfarm' / 'plants.json'
         
         # Create directory if it doesn't exist
         output_path.parent.mkdir(parents=True, exist_ok=True)

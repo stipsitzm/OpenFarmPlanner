@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.conf import settings
 
 from farm.models import Culture
 from farm.openfarm_import import (
@@ -62,11 +63,9 @@ class Command(BaseCommand):
             file_path = Path(options['file'])
         else:
             # Default to data/openfarm/plants.json relative to project root
-            # Find project root by going up from commands/ -> management/ -> farm/ -> backend/ -> project_root
-            current_file = Path(__file__)
-            backend_dir = current_file.parents[3]
-            project_root = backend_dir.parent
-            file_path = project_root / 'data' / 'openfarm' / 'plants.json'
+            # Use Django's BASE_DIR setting to find project root
+            base_dir = Path(settings.BASE_DIR).parent  # backend/ -> TinyFarm/
+            file_path = base_dir / 'data' / 'openfarm' / 'plants.json'
         
         if not file_path.exists():
             raise CommandError(f'File not found: {file_path}')
