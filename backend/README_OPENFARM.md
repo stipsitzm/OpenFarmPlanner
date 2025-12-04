@@ -244,6 +244,28 @@ cd backend
 pdm run migrate
 ```
 
+## Troubleshooting
+
+### 500 Error when accessing /api/cultures/
+
+If you see a 500 Internal Server Error when accessing the cultures API endpoint, it's likely because the database migrations haven't been applied. The Culture model was extended with 19 new fields, and these need to be added to your database schema.
+
+**Solution:**
+```bash
+cd backend
+pdm run migrate
+```
+
+This will apply migration `0002_culture_binomial_name_culture_common_names_and_more.py` which adds all the new OpenFarm and CSA management fields to the database.
+
+**Symptoms:**
+- `OperationalError: table farm_culture has no column named plant_spacing_cm`
+- 500 error when accessing `/api/cultures/`
+- Frontend errors like "Failed to load resource: the server responded with a status of 500"
+
+**Why this happens:**
+The Django ORM expects all model fields to exist in the database. If you pull the latest code without running migrations, the Culture model definition includes the new fields, but your database schema doesn't have them yet.
+
 ## Notes
 
 1. **OpenFarm Structure**: OpenFarm uses MongoDB, not a static JSON file. The sample plants.json was created based on OpenFarm's Crop model structure.

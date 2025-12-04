@@ -97,6 +97,11 @@ This will automatically create a virtual environment and install all dependencie
 pdm run migrate
 ```
 
+**Important:** If you pull updates to the code, always run migrations to update your database schema:
+```bash
+pdm run migrate
+```
+
 4. Create a superuser (optional, for admin access):
 ```bash
 pdm run createsuperuser
