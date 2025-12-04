@@ -3,7 +3,6 @@
  * 
  * Provides the routing structure and navigation for TinyFarm.
  * Uses React Router for client-side routing with a persistent navigation bar.
- * UI text is in German, code comments remain in English.
  * 
  * @returns The main App component with routing
  */
