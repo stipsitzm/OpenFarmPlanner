@@ -116,13 +116,26 @@ class Culture(models.Model):
         variety: Specific variety of the crop (optional)
         days_to_harvest: Average days from planting to harvest
         notes: Additional notes about the culture
+        growstuff_id: Unique ID from Growstuff API (optional)
+        growstuff_slug: URL slug from Growstuff API (optional)
+        source: Source of the data ('manual', 'growstuff')
+        last_synced: Timestamp of last Growstuff sync (optional)
         created_at: Timestamp when the culture was created
         updated_at: Timestamp when the culture was last updated
     """
+    SOURCE_CHOICES = [
+        ('manual', 'Manual Entry'),
+        ('growstuff', 'Growstuff API'),
+    ]
+    
     name = models.CharField(max_length=200)
     variety = models.CharField(max_length=200, blank=True)
     days_to_harvest = models.IntegerField(help_text="Average days from planting to harvest")
     notes = models.TextField(blank=True)
+    growstuff_id = models.IntegerField(null=True, blank=True, unique=True, help_text="Growstuff API crop ID")
+    growstuff_slug = models.CharField(max_length=200, blank=True, help_text="Growstuff API crop slug")
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='manual', help_text="Source of the crop data")
+    last_synced = models.DateTimeField(null=True, blank=True, help_text="Last time synced with Growstuff API")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
