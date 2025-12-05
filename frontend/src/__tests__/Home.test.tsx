@@ -11,7 +11,7 @@ describe('Home Page', () => {
       </BrowserRouter>
     );
     
-    expect(screen.getByText('TinyFarm')).toBeInTheDocument();
+    expect(screen.getByText('OpenFarmPlanner')).toBeInTheDocument();
   });
 
   it('displays quick links', () => {

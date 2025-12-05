@@ -1,5 +1,5 @@
 /**
- * API client for the TinyFarm backend.
+ * API client for the OpenFarmPlanner backend.
  * 
  * This module provides typed API functions for interacting with the Django REST API.
  * All API calls use axios and return promises with typed responses.

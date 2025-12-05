@@ -1,4 +1,4 @@
-# TinyFarm
+# OpenFarmPlanner
 
 A full-stack web application for managing CSA (Community Supported Agriculture) farm operations. The application helps manage cultures (crops), beds, fields, planting plans, and tasks with an intuitive interface and automatic harvest date calculations.
 
@@ -33,7 +33,7 @@ A full-stack web application for managing CSA (Community Supported Agriculture) 
 ## Project Structure
 
 ```
-TinyFarm/
+OpenFarmPlanner/
 ├── backend/              # Django backend
 │   ├── config/          # Django project settings
 │   ├── farm/            # Main farm app

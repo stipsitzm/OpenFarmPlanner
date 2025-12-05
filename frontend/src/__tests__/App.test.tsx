@@ -15,6 +15,6 @@ describe('App', () => {
   it('renders home page by default', () => {
     render(<App />);
     
-    expect(screen.getByText('TinyFarm')).toBeInTheDocument();
+    expect(screen.getByText('OpenFarmPlanner')).toBeInTheDocument();
   });
 });

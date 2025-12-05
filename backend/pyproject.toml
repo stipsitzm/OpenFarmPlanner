@@ -1,9 +1,9 @@
 [project]
-name = "tinyfarm-backend"
+name = "OpenFarmPlanner-backend"
 version = "1.0.0"
-description = "TinyFarm - Django REST API backend for managing farm operations"
+description = "OpenFarmPlanner - Django REST API backend for managing farm operations"
 authors = [
-    {name = "TinyFarm Team", email = "info@tinyfarm.com"},
+    {name = "OpenFarmPlanner Team", email = "info@OpenFarmPlanner.com"},
 ]
 dependencies = [
     "django==5.2.9",

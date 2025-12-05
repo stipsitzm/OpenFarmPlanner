@@ -1,7 +1,7 @@
 /**
  * Home page component.
  * 
- * Landing page for the TinyFarm application.
+ * Landing page for the OpenFarmPlanner application.
  * Displays quick links to main features and a feature overview.
  * UI text is in German, code comments remain in English.
  * 
@@ -13,8 +13,8 @@ import { Link } from 'react-router-dom';
 function Home(): React.ReactElement {
   return (
     <div className="page-container">
-      <h1>TinyFarm</h1>
-      <p>Willkommen bei TinyFarm</p>
+      <h1>OpenFarmPlanner</h1>
+      <p>Willkommen bei OpenFarmPlanner</p>
       
       <div className="home-section">
         <h2>Schnellzugriff</h2>

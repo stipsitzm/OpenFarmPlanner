@@ -1,7 +1,7 @@
 /**
  * Main application component.
  * 
- * Provides the routing structure and navigation for TinyFarm.
+ * Provides the routing structure and navigation for OpenFarmPlanner.
  * Uses React Router for client-side routing with a persistent navigation bar.
  * UI text is in German, code comments remain in English.
  * 

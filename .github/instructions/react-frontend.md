@@ -18,7 +18,7 @@ Example component:
  * Displays a list of crops with optional filtering.
  *
  * @remarks
- * Used in the TinyFarm frontend to present aggregated crop data.
+ * Used in the OpenFarmPlanner frontend to present aggregated crop data.
  *
  * @param props - Component properties.
  * @param props.items - Array of crop objects.

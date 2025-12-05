@@ -1,6 +1,6 @@
-# TinyFarm - Backend
+# OpenFarmPlanner - Backend
 
-Django REST API backend for the TinyFarm application.
+Django REST API backend for the OpenFarmPlanner application.
 
 ## Technology Stack
 
