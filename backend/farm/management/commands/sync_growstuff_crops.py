@@ -23,9 +23,10 @@ from datetime import datetime, timezone
 
 from django.core.management.base import BaseCommand, CommandParser
 from django.db import transaction
+from django.db.models import Exists, OuterRef
 from django.utils import timezone as django_timezone
 
-from farm.models import Culture
+from farm.models import Culture, PlantingPlan
 from farm.growstuff_client import GrowstuffClient, GrowstuffAPIError
 
 
@@ -270,27 +271,51 @@ class Command(BaseCommand):
         """
         Delete crops that are no longer in Growstuff API and not in use.
         
+        Uses optimized queries with prefetch_related and Exists subquery
+        to minimize database hits.
+        
         :param api_crops: List of crop dictionaries from Growstuff API
         :return: Number of crops deleted
         """
         # Get all Growstuff IDs from API
         api_ids: Set[int] = {crop.get('id') for crop in api_crops if crop.get('id')}
         
-        # Find local Growstuff crops that are no longer in API
-        deleted_count = 0
+        # Find local Growstuff crops that are no longer in API and not in use
+        # Use Exists subquery for efficient filtering
+        has_planting_plans = PlantingPlan.objects.filter(culture=OuterRef('pk'))
         
-        for culture in Culture.objects.filter(source='growstuff'):
-            if culture.growstuff_id not in api_ids:
-                # Check if this crop is used in any planting plans
-                if not culture.planting_plans.exists():
-                    logger.info(f"Deleting unused crop: {culture.name} (Growstuff ID: {culture.growstuff_id})")
-                    culture.delete()
-                    deleted_count += 1
-                else:
-                    logger.debug(
-                        f"Keeping crop {culture.name} (Growstuff ID: {culture.growstuff_id}) - "
-                        f"used in {culture.planting_plans.count()} planting plans"
-                    )
+        # Get cultures to delete: from Growstuff, not in API, and no planting plans
+        cultures_to_delete = Culture.objects.filter(
+            source='growstuff'
+        ).exclude(
+            growstuff_id__in=api_ids
+        ).exclude(
+            Exists(has_planting_plans)
+        )
+        
+        # Log what we're about to delete
+        deleted_count = 0
+        for culture in cultures_to_delete:
+            logger.info(f"Deleting unused crop: {culture.name} (Growstuff ID: {culture.growstuff_id})")
+            deleted_count += 1
+        
+        # Perform bulk delete
+        cultures_to_delete.delete()
+        
+        # Log kept cultures (those with planting plans)
+        cultures_with_plans = Culture.objects.filter(
+            source='growstuff'
+        ).exclude(
+            growstuff_id__in=api_ids
+        ).filter(
+            Exists(has_planting_plans)
+        ).prefetch_related('planting_plans')
+        
+        for culture in cultures_with_plans:
+            logger.debug(
+                f"Keeping crop {culture.name} (Growstuff ID: {culture.growstuff_id}) - "
+                f"used in {culture.planting_plans.count()} planting plans"
+            )
         
         return deleted_count
     

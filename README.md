@@ -5,6 +5,7 @@ A full-stack web application for managing CSA (Community Supported Agriculture) 
 ## Features
 
 - **Culture Management**: Track different crop varieties with their growing characteristics
+- **Growstuff Integration**: Import crop data from Growstuff.org (CC-BY-SA licensed)
 - **Farm Organization**: Organize your farm into locations, fields, and beds
 - **Planting Plans**: Schedule plantings with automatic harvest date calculation based on crop characteristics
 - **Task Management**: Track farm tasks and activities
@@ -177,6 +178,7 @@ A bed within a field
 ### Culture
 A crop or plant type
 - name, variety, days_to_harvest, notes
+- growstuff_id, growstuff_slug, source (manual/growstuff), last_synced
 
 ### PlantingPlan
 Plan for planting a specific culture in a bed
@@ -193,6 +195,18 @@ When creating a planting plan, the harvest date is automatically calculated by a
 
 ### Admin Interface
 Access the Django admin at `http://localhost:8000/admin/` to manage all data through a user-friendly interface.
+
+### Growstuff Integration
+Import crop data from [Growstuff.org](https://www.growstuff.org), a community-driven database of crops and gardening information.
+
+```bash
+cd backend
+pdm run python manage.py sync_growstuff_crops
+```
+
+**Data License**: All data from Growstuff is licensed under CC-BY-SA (Creative Commons Attribution-ShareAlike). Attribution to Growstuff.org is required when using this data.
+
+For detailed information, see [backend/GROWSTUFF_INTEGRATION.md](backend/GROWSTUFF_INTEGRATION.md).
 
 ## Development
 
