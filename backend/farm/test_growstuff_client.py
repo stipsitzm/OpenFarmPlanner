@@ -232,6 +232,34 @@ class GrowstuffClientTest(TestCase):
         mock_get.assert_called_once()
     
     @patch('farm.growstuff_client.requests.Session.get')
+    def test_get_all_crops_with_max_crops_limit(self, mock_get: Mock) -> None:
+        """Test that max_crops parameter limits the number of crops fetched."""
+        # Mock response with more crops than max_crops
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'data': [
+                {'id': str(i), 'type': 'crops', 'attributes': {'name': f'Crop {i}'}}
+                for i in range(1, 11)
+            ],
+            'meta': {'record_count': 10, 'page_count': 1},
+            'links': {
+                'first': '/api/v1/crops?page[number]=1',
+                'last': '/api/v1/crops?page[number]=1'
+            }
+        }
+        mock_get.return_value = mock_response
+        
+        # Fetch with max_crops=5
+        result = self.client.get_all_crops(max_crops=5)
+        
+        # Should stop after getting 5 crops
+        self.assertEqual(len(result), 5)
+        self.assertEqual(result[0]['attributes']['name'], 'Crop 1')
+        self.assertEqual(result[4]['attributes']['name'], 'Crop 5')
+        mock_get.assert_called_once()  # Should only call once
+    
+    @patch('farm.growstuff_client.requests.Session.get')
     def test_max_per_page_limit(self, mock_get: Mock) -> None:
         """Test that per_page is limited to max value."""
         mock_response = Mock()

@@ -276,9 +276,10 @@ class SyncGrowstuffCropsCommandTest(TestCase):
         """Test command execution with limit option."""
         # Mock the API client - JSON:API format
         mock_client = MagicMock()
+        # get_all_crops will be called with max_crops=5, so it should return only 5
         mock_client.get_all_crops.return_value = [
             {'id': str(i), 'type': 'crops', 'attributes': {'name': f'Crop {i}', 'median_days_to_first_harvest': 60}}
-            for i in range(1, 11)
+            for i in range(1, 6)
         ]
         mock_client_class.return_value.__enter__.return_value = mock_client
         
@@ -289,8 +290,11 @@ class SyncGrowstuffCropsCommandTest(TestCase):
         # Should only create 5 crops
         self.assertEqual(Culture.objects.count(), 5)
         
+        # Verify get_all_crops was called with max_crops parameter
+        mock_client.get_all_crops.assert_called_once_with(max_crops=5)
+        
         output = out.getvalue()
-        self.assertIn('Limited to first 5 crops', output)
+        self.assertIn('Fetched 5 crops', output)
     
     @patch('farm.management.commands.sync_growstuff_crops.GrowstuffClient')
     def test_command_with_delete_unused(self, mock_client_class: Mock) -> None:

@@ -146,7 +146,7 @@ class GrowstuffClient:
         logger.info(f"Fetching crops page {page} with {per_page} items per page")
         return self._make_request('/crops', params)
     
-    def get_all_crops(self, per_page: int = 100) -> List[Dict[str, Any]]:
+    def get_all_crops(self, per_page: int = 100, max_crops: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Fetch all crops from the Growstuff API across all pages.
         
@@ -154,6 +154,7 @@ class GrowstuffClient:
         This method automatically handles pagination using the 'links' in responses.
         
         :param per_page: Number of crops per page (max 100)
+        :param max_crops: Maximum number of crops to fetch (stops early if specified)
         :return: List of all crop dictionaries
         :raises GrowstuffAPIError: If any request fails
         """
@@ -176,6 +177,12 @@ class GrowstuffClient:
                     
                     all_crops.extend(crops)
                     logger.debug(f"Fetched {len(crops)} crops on page {page}, total so far: {len(all_crops)}")
+                    
+                    # Check if we've reached the max_crops limit
+                    if max_crops and len(all_crops) >= max_crops:
+                        logger.info(f"Reached max_crops limit ({max_crops}), stopping fetch")
+                        all_crops = all_crops[:max_crops]  # Trim to exact limit
+                        break
                     
                     # Check JSON:API pagination via links
                     links = response.get('links', {})

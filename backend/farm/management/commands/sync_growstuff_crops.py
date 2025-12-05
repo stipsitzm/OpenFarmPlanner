@@ -99,13 +99,11 @@ class Command(BaseCommand):
         
         try:
             with GrowstuffClient(base_url=base_url, rate_limit_delay=rate_limit) as client:
-                # Fetch all crops from Growstuff
+                # Fetch crops from Growstuff
                 self.stdout.write('Fetching crops from Growstuff API...')
-                crops = client.get_all_crops()
                 
-                if limit:
-                    crops = crops[:limit]
-                    self.stdout.write(f'Limited to first {limit} crops for testing')
+                # Pass limit to API client to avoid fetching all crops when not needed
+                crops = client.get_all_crops(max_crops=limit)
                 
                 self.stdout.write(f'Fetched {len(crops)} crops from Growstuff')
                 

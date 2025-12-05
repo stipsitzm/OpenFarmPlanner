@@ -82,7 +82,11 @@ pdm run python manage.py sync_growstuff_crops
 pdm run python manage.py sync_growstuff_crops --delete-unused
 
 # Limit number of crops (for testing)
+# This limits API calls - only fetches the specified number of crops
 pdm run python manage.py sync_growstuff_crops --limit 100
+
+# For quick testing with minimal API calls
+pdm run python manage.py sync_growstuff_crops --limit 1
 
 # Custom rate limit (2 seconds between requests)
 pdm run python manage.py sync_growstuff_crops --rate-limit 2.0
@@ -90,6 +94,8 @@ pdm run python manage.py sync_growstuff_crops --rate-limit 2.0
 # Custom API base URL
 pdm run python manage.py sync_growstuff_crops --base-url https://custom.api.url/v1
 ```
+
+**Note on `--limit`**: The limit parameter now efficiently stops fetching from the API once the limit is reached, rather than fetching all crops and then limiting. This makes testing with small limits (e.g., `--limit 1`) very fast.
 
 ### What Gets Synced
 
