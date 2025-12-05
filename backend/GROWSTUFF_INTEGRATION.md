@@ -38,9 +38,18 @@ The integration is designed to respect Growstuff's API usage policies:
 
 ### Rate Limiting
 
-- Default rate limit: 1 request per second
-- Configurable via `--rate-limit` parameter
+**Important**: As per Growstuff's Terms of Service: "Don't overload our servers. You agree to limit your access to the API in such a way as to prevent excessive load on the Service."
+
+- Default rate limit: 1 request per second (conservative to prevent server overload)
+- Configurable via `--rate-limit` parameter (increase with caution)
 - Built-in backoff and retry mechanisms
+- Growstuff reserves the right to restrict or rate-limit access if necessary
+
+**Best Practices**:
+- Use the default rate limit (1 req/sec) for regular syncs
+- Run syncs during off-peak hours when possible
+- Use `--limit` parameter for testing to avoid unnecessary API calls
+- Monitor for rate limit errors and adjust accordingly
 
 ### Privacy
 
@@ -159,6 +168,13 @@ Benefits:
 - Automatic availability in future syncs
 
 ## Troubleshooting
+
+### HTTP 406 Not Acceptable Error
+
+If you encounter a 406 error when syncing:
+- **Fixed in latest version**: The API client now automatically appends `.json` to endpoints
+- The Growstuff API requires the `.json` extension for JSON responses (Rails convention)
+- If using a custom base URL, ensure it's correct: `https://www.growstuff.org/api/v1`
 
 ### Rate Limit Errors
 

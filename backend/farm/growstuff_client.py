@@ -5,8 +5,15 @@ This module provides a client for interacting with the Growstuff API
 to fetch crop/culture information. It includes rate limiting and error
 handling to comply with the API usage policy.
 
+The Growstuff API is a Rails-based API that requires the .json extension
+on endpoints to return JSON responses. This client automatically appends
+.json to all endpoint requests.
+
 Growstuff API Documentation: https://www.growstuff.org/api-docs/index.html
 Data License: CC-BY-SA (Creative Commons Attribution-ShareAlike)
+
+API Usage Policy: "Don't overload our servers. You agree to limit your 
+access to the API in such a way as to prevent excessive load on the Service."
 """
 
 import logging
@@ -66,7 +73,7 @@ class GrowstuffClient:
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'OpenFarmPlanner/1.0 (Growstuff API Integration)',
-            'Accept': 'application/json',
+            'Accept': 'application/json, text/json, */*',
         })
     
     def _apply_rate_limit(self) -> None:
@@ -96,6 +103,10 @@ class GrowstuffClient:
         :raises GrowstuffRateLimitError: If rate limit is exceeded
         """
         self._apply_rate_limit()
+        
+        # Rails APIs typically require .json extension for JSON responses
+        if not endpoint.endswith('.json'):
+            endpoint = f"{endpoint}.json"
         
         url = f"{self.base_url}{endpoint}"
         
