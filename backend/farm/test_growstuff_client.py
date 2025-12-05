@@ -115,23 +115,29 @@ class GrowstuffClientTest(TestCase):
         self.assertEqual(len(result['data']), 2)
         mock_get.assert_called_once()
         
-        # Check that correct params were passed
+        # Check that correct params were passed - JSON:API format
         call_args = mock_get.call_args
-        self.assertEqual(call_args[1]['params']['page'], 1)
-        self.assertEqual(call_args[1]['params']['per_page'], 50)
+        self.assertEqual(call_args[1]['params']['page[number]'], 1)
+        self.assertEqual(call_args[1]['params']['page[size]'], 50)
     
     @patch('farm.growstuff_client.requests.Session.get')
     def test_get_all_crops_single_page(self, mock_get: Mock) -> None:
         """Test fetching all crops when there's only one page."""
         mock_response = Mock()
         mock_response.status_code = 200
+        # JSON:API format as per documentation
         mock_response.json.return_value = {
             'data': [
-                {'id': 1, 'name': 'Tomato'},
-                {'id': 2, 'name': 'Lettuce'}
+                {'id': '1', 'type': 'crops', 'attributes': {'name': 'Tomato'}},
+                {'id': '2', 'type': 'crops', 'attributes': {'name': 'Lettuce'}}
             ],
             'meta': {
-                'next_page': None
+                'record_count': 2,
+                'page_count': 1
+            },
+            'links': {
+                'first': '/api/v1/crops?page[number]=1',
+                'last': '/api/v1/crops?page[number]=1'
             }
         }
         mock_get.return_value = mock_response
@@ -139,25 +145,40 @@ class GrowstuffClientTest(TestCase):
         result = self.client.get_all_crops(per_page=100)
         
         self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]['name'], 'Tomato')
+        self.assertEqual(result[0]['attributes']['name'], 'Tomato')
         mock_get.assert_called_once()
     
     @patch('farm.growstuff_client.requests.Session.get')
     def test_get_all_crops_multiple_pages(self, mock_get: Mock) -> None:
         """Test fetching all crops across multiple pages."""
-        # Mock two pages of responses
+        # Mock two pages of responses - JSON:API format
         response_page1 = Mock()
         response_page1.status_code = 200
         response_page1.json.return_value = {
-            'data': [{'id': i, 'name': f'Crop {i}'} for i in range(1, 4)],
-            'meta': {'next_page': 2}
+            'data': [
+                {'id': str(i), 'type': 'crops', 'attributes': {'name': f'Crop {i}'}} 
+                for i in range(1, 4)
+            ],
+            'meta': {'record_count': 5, 'page_count': 2},
+            'links': {
+                'first': '/api/v1/crops?page[number]=1',
+                'next': '/api/v1/crops?page[number]=2',
+                'last': '/api/v1/crops?page[number]=2'
+            }
         }
         
         response_page2 = Mock()
         response_page2.status_code = 200
         response_page2.json.return_value = {
-            'data': [{'id': i, 'name': f'Crop {i}'} for i in range(4, 6)],
-            'meta': {'next_page': None}
+            'data': [
+                {'id': str(i), 'type': 'crops', 'attributes': {'name': f'Crop {i}'}}
+                for i in range(4, 6)
+            ],
+            'meta': {'record_count': 5, 'page_count': 2},
+            'links': {
+                'first': '/api/v1/crops?page[number]=1',
+                'last': '/api/v1/crops?page[number]=2'
+            }
         }
         
         mock_get.side_effect = [response_page1, response_page2]
@@ -220,6 +241,6 @@ class GrowstuffClientTest(TestCase):
         
         self.client.get_crops(page=1, per_page=200)
         
-        # Should be capped at 100
+        # Should be capped at 100 - JSON:API uses page[size]
         call_args = mock_get.call_args
-        self.assertEqual(call_args[1]['params']['per_page'], 100)
+        self.assertEqual(call_args[1]['params']['page[size]'], 100)

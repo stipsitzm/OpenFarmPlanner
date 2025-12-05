@@ -5,9 +5,9 @@ This module provides a client for interacting with the Growstuff API
 to fetch crop/culture information. It includes rate limiting and error
 handling to comply with the API usage policy.
 
-The Growstuff API is a Rails-based API that requires the .json extension
-on endpoints to return JSON responses. This client automatically appends
-.json to all endpoint requests.
+The Growstuff API follows the JSON:API specification (https://jsonapi.org/).
+It uses the .json extension on endpoints and expects/returns application/vnd.api+json
+content type. Pagination uses page[number] and page[size] parameters.
 
 Growstuff API Documentation: https://www.growstuff.org/api-docs/index.html
 Data License: CC-BY-SA (Creative Commons Attribution-ShareAlike)
@@ -73,7 +73,8 @@ class GrowstuffClient:
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'OpenFarmPlanner/1.0 (Growstuff API Integration)',
-            'Accept': 'application/json, text/json, */*',
+            'Accept': 'application/vnd.api+json',
+            'Content-Type': 'application/vnd.api+json',
         })
     
     def _apply_rate_limit(self) -> None:
@@ -129,14 +130,17 @@ class GrowstuffClient:
         """
         Fetch a page of crops from the Growstuff API.
         
+        Uses JSON:API pagination parameters (page[number] and page[size]).
+        
         :param page: Page number (1-indexed)
         :param per_page: Number of crops per page (max 100)
-        :return: Dictionary containing crop data and pagination info
+        :return: Dictionary containing crop data in JSON:API format
         :raises GrowstuffAPIError: If the request fails
         """
+        # JSON:API uses page[number] and page[size] for pagination
         params = {
-            'page': page,
-            'per_page': min(per_page, 100)  # API may have max limit
+            'page[number]': page,
+            'page[size]': min(per_page, 100)
         }
         
         logger.info(f"Fetching crops page {page} with {per_page} items per page")
@@ -146,8 +150,8 @@ class GrowstuffClient:
         """
         Fetch all crops from the Growstuff API across all pages.
         
-        This method handles pagination automatically and returns all
-        available crops. Use with caution for large datasets.
+        The Growstuff API uses JSON:API format with pagination.
+        This method automatically handles pagination using the 'links' in responses.
         
         :param per_page: Number of crops per page (max 100)
         :return: List of all crop dictionaries
@@ -162,27 +166,31 @@ class GrowstuffClient:
             try:
                 response = self.get_crops(page=page, per_page=per_page)
                 
-                # Handle different possible response structures
+                # JSON:API format: response has 'data', 'meta', and 'links'
                 if isinstance(response, dict):
-                    crops = response.get('data', response.get('crops', []))
+                    crops = response.get('data', [])
                     
                     if not crops:
+                        logger.info("No more crops to fetch")
                         break
                     
                     all_crops.extend(crops)
+                    logger.debug(f"Fetched {len(crops)} crops on page {page}, total so far: {len(all_crops)}")
                     
-                    # Check if there are more pages
-                    # Common pagination patterns:
-                    # - 'meta' with 'next_page' or 'total_pages'
-                    # - 'pagination' with 'next' or 'has_more'
+                    # Check JSON:API pagination via links
+                    links = response.get('links', {})
                     meta = response.get('meta', {})
-                    pagination = response.get('pagination', {})
                     
-                    if meta.get('next_page') is None and not pagination.get('has_more', False):
-                        # No more pages
-                        if len(crops) < per_page:
-                            # Also check if we got fewer items than requested
-                            break
+                    # If there's no 'next' link, we're done
+                    if not links.get('next'):
+                        logger.info(f"Reached last page (no 'next' link)")
+                        break
+                    
+                    # Also check meta for page_count
+                    page_count = meta.get('page_count', 0)
+                    if page_count > 0 and page >= page_count:
+                        logger.info(f"Reached last page ({page}/{page_count})")
+                        break
                     
                     page += 1
                     
@@ -191,8 +199,7 @@ class GrowstuffClient:
                         logger.warning("Reached safety limit of 1000 pages")
                         break
                 else:
-                    # If response is directly a list
-                    all_crops.extend(response)
+                    logger.warning(f"Unexpected response type: {type(response)}")
                     break
                     
             except GrowstuffAPIError as e:

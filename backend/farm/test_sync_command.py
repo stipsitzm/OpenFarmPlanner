@@ -27,35 +27,38 @@ class SyncGrowstuffCropsCommandTest(TestCase):
     
     def test_extract_days_to_harvest_direct_field(self) -> None:
         """Test extracting days_to_harvest from direct field."""
-        crop_data = {'days_to_harvest': 60}
-        result = self.command._extract_days_to_harvest(crop_data)
+        attributes = {'median_days_to_first_harvest': 60}
+        result = self.command._extract_days_to_harvest(attributes)
         self.assertEqual(result, 60)
     
     def test_extract_days_to_harvest_alternative_fields(self) -> None:
         """Test extracting from alternative field names."""
-        crop_data = {'days_to_maturity': 45}
-        result = self.command._extract_days_to_harvest(crop_data)
+        attributes = {'median_days_to_last_harvest': 45}
+        result = self.command._extract_days_to_harvest(attributes)
         self.assertEqual(result, 45)
     
     def test_extract_days_to_harvest_string_value(self) -> None:
         """Test extracting from string value."""
-        crop_data = {'days_to_harvest': '70'}
-        result = self.command._extract_days_to_harvest(crop_data)
+        attributes = {'days_to_harvest': '70'}
+        result = self.command._extract_days_to_harvest(attributes)
         self.assertEqual(result, 70)
     
     def test_extract_days_to_harvest_missing(self) -> None:
         """Test behavior when days_to_harvest is missing."""
-        crop_data = {'name': 'Tomato'}
-        result = self.command._extract_days_to_harvest(crop_data)
+        attributes = {}
+        result = self.command._extract_days_to_harvest(attributes)
         self.assertEqual(result, 0)
     
     def test_upsert_crop_create_new(self) -> None:
         """Test creating a new crop from Growstuff data."""
+        # JSON:API format
         crop_data = {
-            'id': 123,
-            'name': 'Tomato',
-            'slug': 'tomato',
-            'days_to_harvest': 60
+            'id': '123',
+            'type': 'crops',
+            'attributes': {
+                'name': 'Tomato',
+                'median_days_to_first_harvest': 60
+            }
         }
         
         result = self.command._upsert_crop(crop_data)
@@ -65,7 +68,6 @@ class SyncGrowstuffCropsCommandTest(TestCase):
         # Verify crop was created
         culture = Culture.objects.get(growstuff_id=123)
         self.assertEqual(culture.name, 'Tomato')
-        self.assertEqual(culture.growstuff_slug, 'tomato')
         self.assertEqual(culture.days_to_harvest, 60)
         self.assertEqual(culture.source, 'growstuff')
         self.assertIsNotNone(culture.last_synced)
@@ -83,11 +85,14 @@ class SyncGrowstuffCropsCommandTest(TestCase):
             days_to_harvest=50
         )
         
+        # JSON:API format
         crop_data = {
-            'id': 123,
-            'name': 'New Name',
-            'slug': 'new-slug',
-            'days_to_harvest': 70
+            'id': '123',
+            'type': 'crops',
+            'attributes': {
+                'name': 'New Name',
+                'median_days_to_first_harvest': 70
+            }
         }
         
         result = self.command._upsert_crop(crop_data)
@@ -97,7 +102,6 @@ class SyncGrowstuffCropsCommandTest(TestCase):
         # Verify crop was updated
         culture.refresh_from_db()
         self.assertEqual(culture.name, 'New Name')
-        self.assertEqual(culture.growstuff_slug, 'new-slug')
         self.assertEqual(culture.days_to_harvest, 70)
         self.assertIsNotNone(culture.last_synced)
     
@@ -111,11 +115,14 @@ class SyncGrowstuffCropsCommandTest(TestCase):
             days_to_harvest=50
         )
         
+        # JSON:API format
         crop_data = {
-            'id': 123,
-            'name': 'API Name',
-            'slug': 'api-slug',
-            'days_to_harvest': 70
+            'id': '123',
+            'type': 'crops',
+            'attributes': {
+                'name': 'API Name',
+                'median_days_to_first_harvest': 70
+            }
         }
         
         result = self.command._upsert_crop(crop_data)
@@ -129,20 +136,23 @@ class SyncGrowstuffCropsCommandTest(TestCase):
     
     def test_upsert_crop_missing_required_fields(self) -> None:
         """Test handling of crop data with missing required fields."""
-        crop_data = {'id': 123}  # Missing name
+        crop_data = {'id': '123'}  # Missing attributes
         result = self.command._upsert_crop(crop_data)
         self.assertEqual(result, 'skipped')
         
-        crop_data = {'name': 'Tomato'}  # Missing id
+        crop_data = {'attributes': {'name': 'Tomato'}}  # Missing id
         result = self.command._upsert_crop(crop_data)
         self.assertEqual(result, 'skipped')
     
     def test_upsert_crop_default_days_to_harvest(self) -> None:
         """Test that default value is used when days_to_harvest is missing."""
+        # JSON:API format without harvest days
         crop_data = {
-            'id': 456,
-            'name': 'Unknown Crop',
-            'slug': 'unknown'
+            'id': '456',
+            'type': 'crops',
+            'attributes': {
+                'name': 'Unknown Crop'
+            }
         }
         
         result = self.command._upsert_crop(crop_data)
@@ -153,10 +163,11 @@ class SyncGrowstuffCropsCommandTest(TestCase):
     
     def test_sync_crops(self) -> None:
         """Test syncing multiple crops."""
+        # JSON:API format
         crops_data = [
-            {'id': 1, 'name': 'Tomato', 'slug': 'tomato', 'days_to_harvest': 60},
-            {'id': 2, 'name': 'Lettuce', 'slug': 'lettuce', 'days_to_harvest': 30},
-            {'id': 3, 'name': 'Carrot', 'slug': 'carrot', 'days_to_harvest': 70},
+            {'id': '1', 'type': 'crops', 'attributes': {'name': 'Tomato', 'median_days_to_first_harvest': 60}},
+            {'id': '2', 'type': 'crops', 'attributes': {'name': 'Lettuce', 'median_days_to_first_harvest': 30}},
+            {'id': '3', 'type': 'crops', 'attributes': {'name': 'Carrot', 'median_days_to_first_harvest': 70}},
         ]
         
         stats = self.command._sync_crops(crops_data)
@@ -201,10 +212,10 @@ class SyncGrowstuffCropsCommandTest(TestCase):
             planting_date=date(2024, 1, 1)
         )
         
-        # API only has crop 1 and 3
+        # API only has crop 1 and 3 (JSON:API format)
         api_crops = [
-            {'id': 1, 'name': 'Keep Me'},
-            {'id': 3, 'name': 'In Use'}
+            {'id': '1', 'attributes': {'name': 'Keep Me'}},
+            {'id': '3', 'attributes': {'name': 'In Use'}}
         ]
         
         deleted = self.command._delete_unused_crops(api_crops)
@@ -237,11 +248,11 @@ class SyncGrowstuffCropsCommandTest(TestCase):
     @patch('farm.management.commands.sync_growstuff_crops.GrowstuffClient')
     def test_command_execution(self, mock_client_class: Mock) -> None:
         """Test full command execution."""
-        # Mock the API client
+        # Mock the API client - JSON:API format
         mock_client = MagicMock()
         mock_client.get_all_crops.return_value = [
-            {'id': 1, 'name': 'Tomato', 'slug': 'tomato', 'days_to_harvest': 60},
-            {'id': 2, 'name': 'Lettuce', 'slug': 'lettuce', 'days_to_harvest': 30},
+            {'id': '1', 'type': 'crops', 'attributes': {'name': 'Tomato', 'median_days_to_first_harvest': 60}},
+            {'id': '2', 'type': 'crops', 'attributes': {'name': 'Lettuce', 'median_days_to_first_harvest': 30}},
         ]
         mock_client_class.return_value.__enter__.return_value = mock_client
         
@@ -263,10 +274,10 @@ class SyncGrowstuffCropsCommandTest(TestCase):
     @patch('farm.management.commands.sync_growstuff_crops.GrowstuffClient')
     def test_command_with_limit(self, mock_client_class: Mock) -> None:
         """Test command execution with limit option."""
-        # Mock the API client
+        # Mock the API client - JSON:API format
         mock_client = MagicMock()
         mock_client.get_all_crops.return_value = [
-            {'id': i, 'name': f'Crop {i}', 'slug': f'crop-{i}', 'days_to_harvest': 60}
+            {'id': str(i), 'type': 'crops', 'attributes': {'name': f'Crop {i}', 'median_days_to_first_harvest': 60}}
             for i in range(1, 11)
         ]
         mock_client_class.return_value.__enter__.return_value = mock_client
@@ -292,10 +303,10 @@ class SyncGrowstuffCropsCommandTest(TestCase):
             days_to_harvest=60
         )
         
-        # Mock the API client (doesn't include the old crop)
+        # Mock the API client (doesn't include the old crop) - JSON:API format
         mock_client = MagicMock()
         mock_client.get_all_crops.return_value = [
-            {'id': 1, 'name': 'New Crop', 'slug': 'new-crop', 'days_to_harvest': 60}
+            {'id': '1', 'type': 'crops', 'attributes': {'name': 'New Crop', 'median_days_to_first_harvest': 60}}
         ]
         mock_client_class.return_value.__enter__.return_value = mock_client
         

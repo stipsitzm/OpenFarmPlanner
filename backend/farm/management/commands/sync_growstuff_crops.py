@@ -170,17 +170,28 @@ class Command(BaseCommand):
         """
         Create or update a single crop from Growstuff data.
         
-        :param crop_data: Crop data dictionary from Growstuff API
+        Handles JSON:API format where data is in 'id' and 'attributes' fields.
+        
+        :param crop_data: Crop data dictionary from Growstuff API (JSON:API format)
         :return: 'created', 'updated', or 'skipped'
         """
-        # Extract data from Growstuff API response
+        # Extract data from JSON:API response format
+        # JSON:API structure: {"id": "123", "attributes": {"name": "Tomato", ...}}
         growstuff_id = crop_data.get('id')
-        name = crop_data.get('name', '').strip()
-        slug = crop_data.get('slug', '')
+        attributes = crop_data.get('attributes', {})
+        
+        name = attributes.get('name', '').strip()
         
         # Validate required fields
         if not growstuff_id or not name:
             logger.warning(f"Skipping crop with missing required fields: {crop_data}")
+            return 'skipped'
+        
+        # Convert string ID to integer if needed
+        try:
+            growstuff_id = int(growstuff_id)
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid growstuff_id format: {growstuff_id}")
             return 'skipped'
         
         # Get or create the culture
@@ -192,11 +203,10 @@ class Command(BaseCommand):
                 # Update fields
                 old_name = culture.name
                 culture.name = name
-                culture.growstuff_slug = slug
+                # Note: slug is not in the attributes, use a generated one or empty
                 
-                # Try to extract days_to_harvest if available
-                # Note: Growstuff API may provide this in various formats
-                days_to_harvest = self._extract_days_to_harvest(crop_data)
+                # Try to extract days_to_harvest from attributes
+                days_to_harvest = self._extract_days_to_harvest(attributes)
                 if days_to_harvest:
                     culture.days_to_harvest = days_to_harvest
                 
@@ -215,7 +225,7 @@ class Command(BaseCommand):
                 
         except Culture.DoesNotExist:
             # Create new culture
-            days_to_harvest = self._extract_days_to_harvest(crop_data)
+            days_to_harvest = self._extract_days_to_harvest(attributes)
             if not days_to_harvest:
                 # Default to a reasonable value if not provided
                 days_to_harvest = 60
@@ -224,7 +234,7 @@ class Command(BaseCommand):
             culture = Culture.objects.create(
                 name=name,
                 growstuff_id=growstuff_id,
-                growstuff_slug=slug,
+                growstuff_slug='',  # Slug not provided in JSON:API response
                 source='growstuff',
                 days_to_harvest=days_to_harvest,
                 last_synced=django_timezone.now(),
@@ -234,17 +244,28 @@ class Command(BaseCommand):
             logger.info(f"Created new crop: {name}")
             return 'created'
     
-    def _extract_days_to_harvest(self, crop_data: Dict[str, Any]) -> int:
+    def _extract_days_to_harvest(self, attributes: Dict[str, Any]) -> int:
         """
-        Extract days to harvest from crop data.
+        Extract days to harvest from crop attributes.
         
-        Growstuff API may provide this information in various formats.
-        This method attempts to extract it intelligently.
+        Growstuff API provides median_days_to_first_harvest and median_days_to_last_harvest.
+        This method extracts the first harvest timing as days_to_harvest.
         
-        :param crop_data: Crop data dictionary from Growstuff API
+        :param attributes: Crop attributes dictionary from Growstuff API (JSON:API format)
         :return: Days to harvest, or 0 if not found
         """
-        # Try different possible field names
+        # Check for Growstuff's specific fields first
+        # median_days_to_first_harvest is the most relevant
+        first_harvest = attributes.get('median_days_to_first_harvest')
+        if first_harvest and isinstance(first_harvest, (int, float)) and first_harvest > 0:
+            return int(first_harvest)
+        
+        # Fall back to last harvest if first not available
+        last_harvest = attributes.get('median_days_to_last_harvest')
+        if last_harvest and isinstance(last_harvest, (int, float)) and last_harvest > 0:
+            return int(last_harvest)
+        
+        # Try other possible field names as fallback
         possible_fields = [
             'days_to_harvest',
             'days_to_maturity',
@@ -253,17 +274,16 @@ class Command(BaseCommand):
         ]
         
         for field in possible_fields:
-            value = crop_data.get(field)
-            if value and isinstance(value, (int, float)):
+            value = attributes.get(field)
+            if value and isinstance(value, (int, float)) and value > 0:
                 return int(value)
             elif value and isinstance(value, str):
                 try:
-                    return int(value)
+                    parsed = int(value)
+                    if parsed > 0:
+                        return parsed
                 except ValueError:
                     continue
-        
-        # If not found, try to extract from description or other text fields
-        # (This is speculative - actual API structure may differ)
         
         return 0
     

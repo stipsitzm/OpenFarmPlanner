@@ -171,10 +171,17 @@ Benefits:
 
 ### HTTP 406 Not Acceptable Error
 
-If you encounter a 406 error when syncing:
-- **Fixed in latest version**: The API client now automatically appends `.json` to endpoints
-- The Growstuff API requires the `.json` extension for JSON responses (Rails convention)
-- If using a custom base URL, ensure it's correct: `https://www.growstuff.org/api/v1`
+**FIXED**: This error occurred because the Growstuff API requires the `.json` extension for JSON responses (Rails convention).
+
+### HTTP 400 Bad Request Error
+
+**FIXED**: This error occurred because the API uses JSON:API specification format. The correct pagination parameters are `page[number]` and `page[size]` (not `page` and `per_page`).
+
+The Growstuff API follows the **JSON:API specification** (https://jsonapi.org/):
+- Content-Type: `application/vnd.api+json`
+- Pagination: `page[number]` and `page[size]` parameters
+- Response structure: `{"data": [], "meta": {}, "links": {}}`
+- Crop attributes are nested: `data[].attributes.name`, `data[].attributes.median_days_to_first_harvest`, etc.
 
 ### Rate Limit Errors
 
