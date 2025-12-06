@@ -25,7 +25,7 @@ import {
   Divider,
 } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import { Culture } from '../api/client';
+import type { Culture } from '../api/client';
 
 interface CultureDetailProps {
   cultures: Culture[];
@@ -214,6 +214,33 @@ export function CultureDetail({
                 )}
               </Box>
             </Box>
+
+            {/* Growstuff Attribution */}
+            {selectedCulture.source === 'growstuff' && (
+              <Box sx={{ mt: 3, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                <Typography variant="caption" color="text.secondary">
+                  Datenquelle: Diese Informationen stammen von{' '}
+                  <a
+                    href="https://www.growstuff.org"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'inherit' }}
+                  >
+                    Growstuff.org
+                  </a>{' '}
+                  und sind unter der{' '}
+                  <a
+                    href="https://creativecommons.org/licenses/by-sa/3.0/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'inherit' }}
+                  >
+                    CC-BY-SA 3.0 Lizenz
+                  </a>{' '}
+                  verfügbar.
+                </Typography>
+              </Box>
+            )}
           </CardContent>
         </Card>
       )}

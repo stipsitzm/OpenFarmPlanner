@@ -26,7 +26,6 @@ function Cultures(): React.ReactElement {
   const [tabValue, setTabValue] = useState(0);
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [selectedCultureId, setSelectedCultureId] = useState<number | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
 
   // Fetch cultures for detail view
   useEffect(() => {
@@ -36,8 +35,6 @@ function Cultures(): React.ReactElement {
         setCultures(response.data.results);
       } catch (error) {
         console.error('Error fetching cultures:', error);
-      } finally {
-        setLoading(false);
       }
     };
 

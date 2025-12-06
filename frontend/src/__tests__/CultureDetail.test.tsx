@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { CultureDetail } from '../components/CultureDetail';
 import type { Culture } from '../api/client';
 
@@ -114,6 +114,44 @@ describe('CultureDetail Component', () => {
     const link = screen.getByText('Mehr Infos (Wikipedia)');
     expect(link).toBeInTheDocument();
     expect(link.closest('a')).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/Tomato');
+  });
+
+  it('displays Growstuff attribution for Growstuff-sourced crops', () => {
+    const mockOnSelect = vi.fn();
+    const growstuffCulture: Culture = {
+      ...mockCultures[0],
+      source: 'growstuff',
+    };
+    
+    render(
+      <CultureDetail
+        cultures={[growstuffCulture]}
+        selectedCultureId={1}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+    
+    expect(screen.getByText(/Datenquelle:/)).toBeInTheDocument();
+    expect(screen.getByText(/Growstuff.org/)).toBeInTheDocument();
+    expect(screen.getByText(/CC-BY-SA 3.0 Lizenz/)).toBeInTheDocument();
+  });
+
+  it('does not display Growstuff attribution for manual crops', () => {
+    const mockOnSelect = vi.fn();
+    const manualCulture: Culture = {
+      ...mockCultures[0],
+      source: 'manual',
+    };
+    
+    render(
+      <CultureDetail
+        cultures={[manualCulture]}
+        selectedCultureId={1}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+    
+    expect(screen.queryByText(/Datenquelle:/)).not.toBeInTheDocument();
   });
 
   it('displays "Keine Angabe" for missing values', () => {
