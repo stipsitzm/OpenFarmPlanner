@@ -88,6 +88,12 @@ pdm run python manage.py sync_growstuff_crops --limit 100
 # For quick testing with minimal API calls
 pdm run python manage.py sync_growstuff_crops --limit 1
 
+# Sync specific crop IDs (comma-separated)
+pdm run python manage.py sync_growstuff_crops --ids 216,217,218
+
+# Sync a single crop by ID
+pdm run python manage.py sync_growstuff_crops --ids 216
+
 # Custom rate limit (2 seconds between requests)
 pdm run python manage.py sync_growstuff_crops --rate-limit 2.0
 
@@ -96,6 +102,8 @@ pdm run python manage.py sync_growstuff_crops --base-url https://custom.api.url/
 ```
 
 **Note on `--limit`**: The limit parameter now efficiently stops fetching from the API once the limit is reached, rather than fetching all crops and then limiting. This makes testing with small limits (e.g., `--limit 1`) very fast.
+
+**Note on `--ids`**: Use this option to sync specific crops by their Growstuff ID. This is useful for updating individual crops or testing with known crop IDs.
 
 ### What Gets Synced
 
@@ -114,9 +122,13 @@ Growstuff API fields are mapped to Culture model fields as follows:
 | Growstuff Field | Culture Field | Notes |
 |----------------|---------------|-------|
 | `id` | `growstuff_id` | Unique Growstuff crop ID |
-| `name` | `name` | Crop name |
-| `slug` | `growstuff_slug` | URL-friendly identifier |
-| `days_to_harvest` | `days_to_harvest` | Days from planting to harvest |
+| `attributes.name` | `name` | Crop name |
+| `attributes.en-wikipedia-url` | `en_wikipedia_url` | English Wikipedia URL |
+| `attributes.perennial` | `perennial` | Whether the crop is perennial |
+| `attributes.median-lifespan` | `median_lifespan` | Median lifespan in days |
+| `attributes.median-days-to-first-harvest` | `median_days_to_first_harvest` | Median days to first harvest |
+| `attributes.median-days-to-last-harvest` | `median_days_to_last_harvest` | Median days to last harvest |
+| - | `days_to_harvest` | Derived from median_days_to_first_harvest |
 | - | `source` | Set to 'growstuff' for API imports |
 | - | `last_synced` | Timestamp of last sync |
 
@@ -128,6 +140,11 @@ The `Culture` model has been extended with the following fields:
 - `growstuff_slug`: CharField, nullable - Growstuff URL slug
 - `source`: CharField with choices ('manual', 'growstuff') - Data source
 - `last_synced`: DateTimeField, nullable - Last sync timestamp
+- `en_wikipedia_url`: URLField, nullable - English Wikipedia URL
+- `perennial`: BooleanField, nullable - Whether the crop is perennial
+- `median_lifespan`: IntegerField, nullable - Median lifespan in days
+- `median_days_to_first_harvest`: IntegerField, nullable - Median days to first harvest
+- `median_days_to_last_harvest`: IntegerField, nullable - Median days to last harvest
 
 ## API Client
 

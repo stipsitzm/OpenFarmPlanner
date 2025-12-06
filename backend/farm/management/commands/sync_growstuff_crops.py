@@ -65,6 +65,12 @@ class Command(BaseCommand):
             help='Limit the number of crops to sync (for testing)'
         )
         parser.add_argument(
+            '--ids',
+            type=str,
+            default=None,
+            help='Comma-separated list of Growstuff crop IDs to sync (e.g., "216,217,218")'
+        )
+        parser.add_argument(
             '--base-url',
             type=str,
             default='https://www.growstuff.org/api/v1',
@@ -86,6 +92,7 @@ class Command(BaseCommand):
         """
         delete_unused = options['delete_unused']
         limit = options['limit']
+        ids = options['ids']
         base_url = options['base_url']
         rate_limit = options['rate_limit']
         
@@ -102,8 +109,26 @@ class Command(BaseCommand):
                 # Fetch crops from Growstuff
                 self.stdout.write('Fetching crops from Growstuff API...')
                 
-                # Pass limit to API client to avoid fetching all crops when not needed
-                crops = client.get_all_crops(max_crops=limit)
+                if ids:
+                    # Sync specific crop IDs
+                    crop_ids = [id.strip() for id in ids.split(',')]
+                    self.stdout.write(f'Syncing specific crop IDs: {", ".join(crop_ids)}')
+                    crops = []
+                    for crop_id in crop_ids:
+                        try:
+                            crop = client.get_crop_by_id(int(crop_id))
+                            # Wrap single crop in data structure if needed
+                            if 'data' in crop:
+                                crops.append(crop['data'])
+                            else:
+                                crops.append(crop)
+                        except Exception as e:
+                            self.stdout.write(
+                                self.style.WARNING(f'Failed to fetch crop ID {crop_id}: {str(e)}')
+                            )
+                else:
+                    # Pass limit to API client to avoid fetching all crops when not needed
+                    crops = client.get_all_crops(max_crops=limit)
                 
                 self.stdout.write(f'Fetched {len(crops)} crops from Growstuff')
                 
@@ -201,7 +226,13 @@ class Command(BaseCommand):
                 # Update fields
                 old_name = culture.name
                 culture.name = name
-                # Note: slug is not in the attributes, use a generated one or empty
+                
+                # Update all Growstuff API fields from attributes
+                culture.en_wikipedia_url = attributes.get('en-wikipedia-url') or attributes.get('en_wikipedia_url')
+                culture.perennial = attributes.get('perennial')
+                culture.median_lifespan = attributes.get('median-lifespan') or attributes.get('median_lifespan')
+                culture.median_days_to_first_harvest = attributes.get('median-days-to-first-harvest') or attributes.get('median_days_to_first_harvest')
+                culture.median_days_to_last_harvest = attributes.get('median-days-to-last-harvest') or attributes.get('median_days_to_last_harvest')
                 
                 # Try to extract days_to_harvest from attributes
                 days_to_harvest = self._extract_days_to_harvest(attributes)
@@ -236,7 +267,13 @@ class Command(BaseCommand):
                 source='growstuff',
                 days_to_harvest=days_to_harvest,
                 last_synced=django_timezone.now(),
-                notes=f"Imported from Growstuff.org. License: CC-BY-SA"
+                notes=f"Imported from Growstuff.org. License: CC-BY-SA",
+                # Growstuff API fields
+                en_wikipedia_url=attributes.get('en-wikipedia-url') or attributes.get('en_wikipedia_url'),
+                perennial=attributes.get('perennial'),
+                median_lifespan=attributes.get('median-lifespan') or attributes.get('median_lifespan'),
+                median_days_to_first_harvest=attributes.get('median-days-to-first-harvest') or attributes.get('median_days_to_first_harvest'),
+                median_days_to_last_harvest=attributes.get('median-days-to-last-harvest') or attributes.get('median_days_to_last_harvest'),
             )
             
             logger.info(f"Created new crop: {name}")

@@ -120,6 +120,11 @@ class Culture(models.Model):
         growstuff_slug: URL slug from Growstuff API (optional)
         source: Source of the data ('manual', 'growstuff')
         last_synced: Timestamp of last Growstuff sync (optional)
+        en_wikipedia_url: English Wikipedia URL for the crop (from Growstuff)
+        perennial: Whether the crop is perennial (from Growstuff)
+        median_lifespan: Median lifespan in days (from Growstuff)
+        median_days_to_first_harvest: Median days to first harvest (from Growstuff)
+        median_days_to_last_harvest: Median days to last harvest (from Growstuff)
         created_at: Timestamp when the culture was created
         updated_at: Timestamp when the culture was last updated
     """
@@ -132,10 +137,18 @@ class Culture(models.Model):
     variety = models.CharField(max_length=200, blank=True)
     days_to_harvest = models.IntegerField(help_text="Average days from planting to harvest")
     notes = models.TextField(blank=True)
+    
+    # Growstuff API fields
     growstuff_id = models.IntegerField(null=True, blank=True, unique=True, help_text="Growstuff API crop ID")
     growstuff_slug = models.CharField(max_length=200, blank=True, help_text="Growstuff API crop slug")
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='manual', help_text="Source of the crop data")
     last_synced = models.DateTimeField(null=True, blank=True, help_text="Last time synced with Growstuff API")
+    en_wikipedia_url = models.URLField(max_length=500, blank=True, null=True, help_text="English Wikipedia URL")
+    perennial = models.BooleanField(null=True, blank=True, help_text="Whether the crop is perennial")
+    median_lifespan = models.IntegerField(null=True, blank=True, help_text="Median lifespan in days")
+    median_days_to_first_harvest = models.IntegerField(null=True, blank=True, help_text="Median days to first harvest")
+    median_days_to_last_harvest = models.IntegerField(null=True, blank=True, help_text="Median days to last harvest")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
