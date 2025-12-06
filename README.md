@@ -5,6 +5,7 @@ A full-stack web application for managing CSA (Community Supported Agriculture) 
 ## Features
 
 - **Culture Management**: Track different crop varieties with their growing characteristics
+- **Growstuff Integration**: Import crop data from Growstuff.org (CC-BY-SA licensed)
 - **Farm Organization**: Organize your farm into locations, fields, and beds
 - **Planting Plans**: Schedule plantings with automatic harvest date calculation based on crop characteristics
 - **Task Management**: Track farm tasks and activities
@@ -177,6 +178,10 @@ A bed within a field
 ### Culture
 A crop or plant type
 - name, variety, days_to_harvest, notes
+- Growstuff API fields:
+  - growstuff_id, source (manual/growstuff), last_synced
+  - en_wikipedia_url, perennial, median_lifespan
+  - median_days_to_first_harvest, median_days_to_last_harvest
 
 ### PlantingPlan
 Plan for planting a specific culture in a bed
@@ -193,6 +198,61 @@ When creating a planting plan, the harvest date is automatically calculated by a
 
 ### Admin Interface
 Access the Django admin at `http://localhost:8000/admin/` to manage all data through a user-friendly interface.
+
+### Growstuff Integration
+Import crop data from [Growstuff.org](https://www.growstuff.org), a community-driven database of crops and gardening information.
+
+#### Basic Usage
+
+```bash
+cd backend
+
+# Sync all crops from Growstuff API
+pdm run python manage.py sync_growstuff_crops
+
+# Sync with a limit (useful for testing)
+pdm run python manage.py sync_growstuff_crops --limit 100
+
+# Sync specific crop IDs
+pdm run python manage.py sync_growstuff_crops --ids 216,217,218
+
+# Sync single crop by ID
+pdm run python manage.py sync_growstuff_crops --ids 216
+
+# Sync and delete unused crops
+pdm run python manage.py sync_growstuff_crops --delete-unused
+
+# Custom rate limit (seconds between requests)
+pdm run python manage.py sync_growstuff_crops --rate-limit 2.0
+```
+
+#### Command Options
+
+- `--limit N`: Fetch only first N crops (efficient for testing)
+- `--ids ID1,ID2,...`: Sync specific crops by their Growstuff IDs
+- `--delete-unused`: Remove Growstuff crops not in API and not used locally
+- `--rate-limit SECONDS`: Set delay between API requests (default: 1.0)
+- `--base-url URL`: Custom Growstuff API base URL
+
+#### What Gets Synced
+
+The integration imports complete crop data including:
+- Crop name
+- English Wikipedia URL
+- Perennial status
+- Median lifespan
+- Median days to first harvest
+- Median days to last harvest
+
+The sync operation:
+1. Creates new crops not in the local database
+2. Updates existing crops imported from Growstuff
+3. Preserves manually created crops (never overwrites)
+4. Optionally removes unused Growstuff crops
+
+**Data License**: All data from Growstuff is licensed under CC-BY-SA (Creative Commons Attribution-ShareAlike). Attribution to Growstuff.org is required when using this data.
+
+For detailed information, see [backend/GROWSTUFF_INTEGRATION.md](backend/GROWSTUFF_INTEGRATION.md).
 
 ## Development
 
