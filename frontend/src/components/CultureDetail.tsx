@@ -204,14 +204,6 @@ export function CultureDetail({
                     Mehr Infos (Wikipedia)
                   </Button>
                 )}
-                {selectedCulture.notes && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      Notizen
-                    </Typography>
-                    <Typography variant="body1">{selectedCulture.notes}</Typography>
-                  </Box>
-                )}
               </Box>
             </Box>
 
