@@ -40,6 +40,24 @@ export interface Culture {
   created_at?: string;
   /** Last update timestamp */
   updated_at?: string;
+  /** Growstuff API crop ID (optional) */
+  growstuff_id?: number | null;
+  /** Growstuff API crop slug (optional) */
+  growstuff_slug?: string;
+  /** Source of the crop data */
+  source?: 'manual' | 'growstuff';
+  /** Last time synced with Growstuff API (optional) */
+  last_synced?: string | null;
+  /** English Wikipedia URL (optional) */
+  en_wikipedia_url?: string | null;
+  /** Whether the crop is perennial (optional) */
+  perennial?: boolean | null;
+  /** Median lifespan in days (optional) */
+  median_lifespan?: number | null;
+  /** Median days to first harvest (optional) */
+  median_days_to_first_harvest?: number | null;
+  /** Median days to last harvest (optional) */
+  median_days_to_last_harvest?: number | null;
 }
 
 /**
