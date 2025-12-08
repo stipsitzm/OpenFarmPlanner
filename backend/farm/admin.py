@@ -52,7 +52,7 @@ class BedAdmin(admin.ModelAdmin):
         list_filter: Fields to use for filtering the list (includes location hierarchy)
         search_fields: Fields to include in the search functionality
     """
-    list_display = ['name', 'field', 'length_m', 'width_m', 'created_at']
+    list_display = ['name', 'field', 'area_sqm', 'created_at']
     list_filter = ['field__location', 'field']
     search_fields = ['name', 'field__name']
 

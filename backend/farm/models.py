@@ -73,21 +73,19 @@ class Bed(models.Model):
     
     This model represents a planting bed that belongs to a specific field.
     Beds are the smallest organizational unit in the farm hierarchy and
-    have optional length and width measurements.
+    have optional area measurement in square meters.
     
     Attributes:
         name: The name of the bed
         field: Foreign key reference to the parent Field
-        length_m: Length of the bed in meters (optional)
-        width_m: Width of the bed in meters (optional)
+        area_sqm: Area of the bed in square meters (optional)
         notes: Additional notes about the bed
         created_at: Timestamp when the bed was created
         updated_at: Timestamp when the bed was last updated
     """
     name = models.CharField(max_length=200)
     field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds')
-    length_m = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
-    width_m = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    area_sqm = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

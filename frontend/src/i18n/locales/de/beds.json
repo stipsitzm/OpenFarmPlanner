@@ -3,8 +3,7 @@
   "columns": {
     "name": "Name",
     "field": "Schlag",
-    "length": "Länge (m)",
-    "width": "Breite (m)",
+    "area": "Fläche (m²)",
     "notes": "Notizen"
   },
   "errors": {

@@ -70,15 +70,8 @@ export function createHierarchyColumns(
       },
     },
     {
-      field: 'length_m',
-      headerName: t('hierarchy:columns.length'),
-      width: 120,
-      type: 'number',
-      editable: true,
-    },
-    {
-      field: 'width_m',
-      headerName: t('hierarchy:columns.width'),
+      field: 'area_sqm',
+      headerName: t('hierarchy:columns.area'),
       width: 120,
       type: 'number',
       editable: true,
