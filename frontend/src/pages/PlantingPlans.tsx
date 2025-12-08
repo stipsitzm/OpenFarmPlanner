@@ -55,7 +55,7 @@ function PlantingPlans(): React.ReactElement {
       width: 200,
       editable: true,
       type: 'singleSelect',
-      valueOptions: cultures.map(c => ({ value: c.id!, label: c.variety ? `${c.name} (${c.variety})` : c.name })),
+      valueOptions: cultures.filter(c => c.id !== undefined).map(c => ({ value: c.id!, label: c.variety ? `${c.name} (${c.variety})` : c.name })),
       valueFormatter: (value) => {
         const culture = cultures.find(c => c.id === value);
         return culture ? (culture.variety ? `${culture.name} (${culture.variety})` : culture.name) : '';
@@ -71,7 +71,7 @@ function PlantingPlans(): React.ReactElement {
       width: 200,
       editable: true,
       type: 'singleSelect',
-      valueOptions: beds.map(b => ({ value: b.id!, label: b.field_name ? `${b.field_name} - ${b.name}` : b.name })),
+      valueOptions: beds.filter(b => b.id !== undefined).map(b => ({ value: b.id!, label: b.field_name ? `${b.field_name} - ${b.name}` : b.name })),
       valueFormatter: (value) => {
         const bed = beds.find(b => b.id === value);
         return bed ? (bed.field_name ? `${bed.field_name} - ${bed.name}` : bed.name) : '';
