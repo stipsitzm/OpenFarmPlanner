@@ -28,9 +28,14 @@ export function useExpandedState() {
     });
   }, []);
 
+  const expandAll = useCallback((rowIds: (string | number)[]) => {
+    setExpandedRows(new Set(rowIds));
+  }, []);
+
   return {
     expandedRows,
     toggleExpand,
     ensureExpanded,
+    expandAll,
   };
 }

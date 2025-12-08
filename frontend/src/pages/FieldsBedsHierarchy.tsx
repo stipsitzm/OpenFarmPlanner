@@ -25,12 +25,13 @@ import type { HierarchyRow } from '../components/hierarchy/utils/types';
 function FieldsBedsHierarchy(): React.ReactElement {
   const { t } = useTranslation('hierarchy');
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
+  const [hasInitiallyExpanded, setHasInitiallyExpanded] = useState(false);
   
   // Data fetching
   const { loading, error, setError, locations, fields, beds, setBeds, setFields, fetchData } = useHierarchyData();
   
   // Expansion state
-  const { expandedRows, toggleExpand, ensureExpanded } = useExpandedState();
+  const { expandedRows, toggleExpand, ensureExpanded, expandAll } = useExpandedState();
   
   // Bed operations
   const { addBed, saveBed, deleteBed, pendingEditRow, setPendingEditRow } = useBedOperations(beds, setBeds, setError);
@@ -44,6 +45,28 @@ function FieldsBedsHierarchy(): React.ReactElement {
   const rows = useMemo<GridRowsProp<HierarchyRow>>(() => {
     return buildHierarchyRows(locations, fields, beds, expandedRows);
   }, [locations, fields, beds, expandedRows]);
+
+  /**
+   * Expand all rows when data is loaded (only once on initial load)
+   */
+  useEffect(() => {
+    if (!hasInitiallyExpanded && locations.length > 0 && fields.length > 0) {
+      const allRowIds = new Set<string | number>();
+      
+      // Add all location IDs
+      locations.forEach(location => {
+        allRowIds.add(`location-${location.id}`);
+      });
+      
+      // Add all field IDs
+      fields.forEach(field => {
+        allRowIds.add(`field-${field.id}`);
+      });
+      
+      expandAll(Array.from(allRowIds));
+      setHasInitiallyExpanded(true);
+    }
+  }, [hasInitiallyExpanded, locations.length, fields.length]);
 
   /**
    * Handle pending edit mode after rows are updated
