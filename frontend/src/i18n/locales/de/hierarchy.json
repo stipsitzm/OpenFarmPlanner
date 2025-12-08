@@ -1,7 +1,7 @@
 {
   "title": "Schläge & Beete",
-  "addField": "Neuen Schlag hinzufügen",
-  "addBed": "Neues Beet hinzufügen",
+  "addField": "+ Schlag",
+  "addBed": "+ Beet",
   "columns": {
     "name": "Name",
     "location": "Standort",
@@ -19,5 +19,9 @@
   "validation": {
     "nameRequired": "Name ist ein Pflichtfeld"
   },
-  "confirmDelete": "Möchten Sie diesen Eintrag wirklich löschen?"
+  "confirmDelete": "Möchten Sie diesen Eintrag wirklich löschen?",
+  "footer": {
+    "singleLocation": "Erweitern Sie Schläge um Beete hinzuzufügen",
+    "multipleLocations": "Erweitern Sie Standorte/Schläge um neue Schläge/Beete hinzuzufügen"
+  }
 }

@@ -3,6 +3,7 @@
  */
 
 import { Box, IconButton } from '@mui/material';
+import { useTranslation } from '../../i18n';
 import type { Location } from '../../api/client';
 
 interface HierarchyFooterProps {
@@ -11,6 +12,7 @@ interface HierarchyFooterProps {
 }
 
 export function HierarchyFooter({ locations, onAddField }: HierarchyFooterProps): React.ReactElement {
+  const { t } = useTranslation('hierarchy');
   const hasMultipleLocations = locations.length > 1;
   
   return (
@@ -28,15 +30,15 @@ export function HierarchyFooter({ locations, onAddField }: HierarchyFooterProps)
           onClick={() => onAddField(locations[0]?.id)}
           color="primary"
           size="small"
-          aria-label="Neuen Schlag hinzufügen"
+          aria-label={t('addField')}
         >
-          <span style={{ fontSize: '0.875rem', marginRight: '4px' }}>+ Schlag</span>
+          <span style={{ fontSize: '0.875rem', marginRight: '4px' }}>{t('addField')}</span>
         </IconButton>
       )}
       <span style={{ color: '#666', fontSize: '0.875rem' }}>
         {hasMultipleLocations 
-          ? 'Erweitern Sie Standorte/Schläge um neue Schläge/Beete hinzuzufügen'
-          : 'Erweitern Sie Schläge um Beete hinzuzufügen'}
+          ? t('footer.multipleLocations')
+          : t('footer.singleLocation')}
       </span>
     </Box>
   );

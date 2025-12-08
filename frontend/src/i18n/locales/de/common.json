@@ -7,7 +7,8 @@
     "save": "Speichern",
     "cancel": "Abbrechen",
     "search": "Suchen",
-    "close": "Schließen"
+    "close": "Schließen",
+    "actions": "Aktionen"
   },
   "messages": {
     "loading": "Lädt...",
