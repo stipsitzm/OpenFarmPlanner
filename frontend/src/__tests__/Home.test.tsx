@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import Home from '../pages/Home';
+import translations from '@/test-utils/translations';
 
 describe('Home Page', () => {
   it('renders home page with title', () => {
@@ -11,7 +12,7 @@ describe('Home Page', () => {
       </BrowserRouter>
     );
     
-    expect(screen.getByText('OpenFarmPlanner')).toBeInTheDocument();
+    expect(screen.getByText(translations.app.title)).toBeInTheDocument();
   });
 
   it('displays quick links', () => {
@@ -21,8 +22,8 @@ describe('Home Page', () => {
       </BrowserRouter>
     );
     
-    expect(screen.getByText('Kulturen verwalten')).toBeInTheDocument();
-    expect(screen.getByText('Beete verwalten')).toBeInTheDocument();
-    expect(screen.getByText('Anbaupläne verwalten')).toBeInTheDocument();
+    expect(screen.getByText(translations.home.manageCultures)).toBeInTheDocument();
+    expect(screen.getByText(translations.home.manageBeds)).toBeInTheDocument();
+    expect(screen.getByText(translations.home.managePlantingPlans)).toBeInTheDocument();
   });
 });

@@ -1,0 +1,69 @@
+{
+  "app": {
+    "title": "OpenFarmPlanner"
+  },
+  "navigation": {
+    "start": "Start",
+    "locations": "Standorte",
+    "cultures": "Kulturen",
+    "plantingPlans": "Anbaupläne",
+    "tasks": "Aufgaben"
+  },
+  "fields": {
+    "plots": "Anbauflächen"
+  },
+  "common": {
+    "actions": {
+      "add": "Hinzufügen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "search": "Suchen",
+      "close": "Schließen",
+      "actions": "Aktionen"
+    },
+    "messages": {
+      "loading": "Lädt...",
+      "noData": "Keine Daten",
+      "error": "Fehler",
+      "success": "Erfolgreich",
+      "confirmation": "Bestätigung"
+    },
+    "fields": {
+      "name": "Name",
+      "address": "Adresse",
+      "notes": "Notizen",
+      "description": "Beschreibung"
+    }
+  },
+  "home": {
+    "welcome": "Willkommen bei OpenFarmPlanner",
+    "quickAccess": "Schnellzugriff",
+    "manageLocations": "Standorte verwalten",
+    "manageFields": "Schläge verwalten",
+    "manageBeds": "Beete verwalten",
+    "manageCultures": "Kulturen verwalten",
+    "managePlantingPlans": "Anbaupläne verwalten",
+    "manageTasks": "Aufgaben verwalten"
+  },
+  "cultures": {
+    "title": "Kulturen",
+    "searchPlaceholder": "Kultur suchen",
+    "selectPrompt": "Wählen Sie eine Kultur aus der Liste aus, um Details anzuzeigen.",
+    "perennial": "Mehrjährig",
+    "annual": "Einjährig",
+    "noData": "Keine Angabe",
+    "sections": {
+      "growthHarvest": "Wachstum & Ernte"
+    },
+    "fields": {
+      "daysToFirstHarvest": "Tage bis zur ersten Ernte",
+      "daysToLastHarvest": "Tage bis zur letzten Ernte"
+    },
+    "moreInfo": "Mehr Infos (Wikipedia)",
+    "attribution": "Datenquelle:",
+    "attributionLink": "Growstuff.org",
+    "license": "CC-BY-SA 3.0 Lizenz"
+  }
+}

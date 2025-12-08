@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { CultureDetail } from '../components/CultureDetail';
 import type { Culture } from '../api/client';
+import translations from '@/test-utils/translations';
 
 describe('CultureDetail Component', () => {
   const mockCultures: Culture[] = [
@@ -42,7 +43,7 @@ describe('CultureDetail Component', () => {
       />
     );
     
-    expect(screen.getByLabelText('Kultur suchen')).toBeInTheDocument();
+    expect(screen.getByLabelText(translations.cultures.searchPlaceholder)).toBeInTheDocument();
   });
 
   it('displays empty state when no culture is selected', () => {
@@ -54,7 +55,7 @@ describe('CultureDetail Component', () => {
       />
     );
     
-    expect(screen.getByText('Wählen Sie eine Kultur aus der Liste aus, um Details anzuzeigen.')).toBeInTheDocument();
+    expect(screen.getByText(translations.cultures.selectPrompt)).toBeInTheDocument();
   });
 
   it('displays culture details when culture is selected', () => {
@@ -68,8 +69,8 @@ describe('CultureDetail Component', () => {
     );
     
     expect(screen.getByText('Tomato (Cherry)')).toBeInTheDocument();
-    expect(screen.getByText('Einjährig')).toBeInTheDocument();
-    expect(screen.getByText('Wachstum & Ernte')).toBeInTheDocument();
+    expect(screen.getByText(translations.cultures.annual)).toBeInTheDocument();
+    expect(screen.getByText(translations.cultures.sections.growthHarvest)).toBeInTheDocument();
   });
 
   it('displays perennial badge for perennial crops', () => {
@@ -82,7 +83,7 @@ describe('CultureDetail Component', () => {
       />
     );
     
-    expect(screen.getByText('Mehrjährig')).toBeInTheDocument();
+    expect(screen.getByText(translations.cultures.perennial)).toBeInTheDocument();
   });
 
   it('displays harvest information correctly', () => {
@@ -111,7 +112,7 @@ describe('CultureDetail Component', () => {
       />
     );
     
-    const link = screen.getByText('Mehr Infos (Wikipedia)');
+    const link = screen.getByText(translations.cultures.moreInfo);
     expect(link).toBeInTheDocument();
     expect(link.closest('a')).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/Tomato');
   });
@@ -131,9 +132,9 @@ describe('CultureDetail Component', () => {
       />
     );
     
-    expect(screen.getByText(/Datenquelle:/)).toBeInTheDocument();
-    expect(screen.getByText(/Growstuff.org/)).toBeInTheDocument();
-    expect(screen.getByText(/CC-BY-SA 3.0 Lizenz/)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(translations.cultures.attribution))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(translations.cultures.attributionLink))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(translations.cultures.license))).toBeInTheDocument();
   });
 
   it('does not display Growstuff attribution for manual crops', () => {
@@ -151,7 +152,7 @@ describe('CultureDetail Component', () => {
       />
     );
     
-    expect(screen.queryByText(/Datenquelle:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(translations.cultures.attribution))).not.toBeInTheDocument();
   });
 
   it('displays "Keine Angabe" for missing values', () => {
@@ -164,7 +165,7 @@ describe('CultureDetail Component', () => {
       />
     );
     
-    const noDataElements = screen.getAllByText('Keine Angabe');
+    const noDataElements = screen.getAllByText(translations.cultures.noData);
     expect(noDataElements.length).toBeGreaterThan(0);
   });
 });
