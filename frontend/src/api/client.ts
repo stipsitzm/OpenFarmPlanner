@@ -144,6 +144,8 @@ export interface PlantingPlan {
   harvest_date?: string;
   /** Number of plants or seeds (optional) */
   quantity?: number;
+  /** Area in square meters used by this planting plan (optional) */
+  area_usage_sqm?: number;
   /** Additional notes */
   notes?: string;
   /** Creation timestamp */

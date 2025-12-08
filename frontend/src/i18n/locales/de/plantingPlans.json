@@ -5,6 +5,7 @@
     "bed": "Beet",
     "plantingDate": "Pflanzdatum",
     "harvestDate": "Erntedatum (berechnet)",
+    "areaUsage": "Flächennutzung",
     "quantity": "Menge",
     "notes": "Notizen"
   },
@@ -14,7 +15,9 @@
     "delete": "Fehler beim Löschen des Anbauplans"
   },
   "validation": {
-    "plantingDateRequired": "Pflanzdatum ist ein Pflichtfeld"
+    "plantingDateRequired": "Pflanzdatum ist ein Pflichtfeld",
+    "cultureRequired": "Kultur ist ein Pflichtfeld",
+    "bedRequired": "Beet ist ein Pflichtfeld"
   },
   "confirmDelete": "Möchten Sie diesen Anbauplan wirklich löschen?",
   "addButton": "Neuen Anbauplan hinzufügen"

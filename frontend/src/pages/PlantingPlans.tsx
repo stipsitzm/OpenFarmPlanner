@@ -7,9 +7,10 @@
  * @returns The Planting Plans page component
  */
 
+import { useState, useEffect } from 'react';
 import type { GridColDef } from '@mui/x-data-grid';
 import { useTranslation } from '../i18n';
-import { plantingPlanAPI, type PlantingPlan } from '../api/client';
+import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/client';
 import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/EditableDataGrid';
 
 /**
@@ -22,22 +23,63 @@ interface PlantingPlanRow extends PlantingPlan, EditableRow {
 
 function PlantingPlans(): React.ReactElement {
   const { t } = useTranslation(['plantingPlans', 'common']);
+  const [cultures, setCultures] = useState<Culture[]>([]);
+  const [beds, setBeds] = useState<Bed[]>([]);
+
+  /**
+   * Fetch cultures and beds for dropdowns
+   */
+  useEffect(() => {
+    const fetchData = async (): Promise<void> => {
+      try {
+        const [culturesResponse, bedsResponse] = await Promise.all([
+          cultureAPI.list(),
+          bedAPI.list(),
+        ]);
+        setCultures(culturesResponse.data.results);
+        setBeds(bedsResponse.data.results);
+      } catch (err) {
+        console.error('Error fetching cultures and beds:', err);
+      }
+    };
+    fetchData();
+  }, []);
   
   /**
    * Define columns for the Data Grid with inline editing
    */
   const columns: GridColDef[] = [
     {
-      field: 'culture_name',
+      field: 'culture',
       headerName: t('plantingPlans:columns.culture'),
       width: 200,
-      editable: false,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: cultures.map(c => ({ value: c.id!, label: c.variety ? `${c.name} (${c.variety})` : c.name })),
+      valueFormatter: (value) => {
+        const culture = cultures.find(c => c.id === value);
+        return culture ? (culture.variety ? `${culture.name} (${culture.variety})` : culture.name) : '';
+      },
+      preProcessEditCellProps: (params) => {
+        const hasError = !params.props.value || params.props.value === 0;
+        return { ...params.props, error: hasError };
+      },
     },
     {
-      field: 'bed_name',
+      field: 'bed',
       headerName: t('plantingPlans:columns.bed'),
       width: 200,
-      editable: false,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: beds.map(b => ({ value: b.id!, label: b.field_name ? `${b.field_name} - ${b.name}` : b.name })),
+      valueFormatter: (value) => {
+        const bed = beds.find(b => b.id === value);
+        return bed ? (bed.field_name ? `${bed.field_name} - ${bed.name}` : bed.name) : '';
+      },
+      preProcessEditCellProps: (params) => {
+        const hasError = !params.props.value || params.props.value === 0;
+        return { ...params.props, error: hasError };
+      },
     },
     {
       field: 'planting_date',
@@ -54,10 +96,18 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'harvest_date',
       headerName: t('plantingPlans:columns.harvestDate'),
-      width: 180,
+      width: 150,
       editable: false,
       type: 'date',
       valueGetter: (value) => value ? new Date(value) : null,
+    },
+    {
+      field: 'area_usage_sqm',
+      headerName: t('plantingPlans:columns.areaUsage'),
+      width: 130,
+      type: 'number',
+      editable: true,
+      valueFormatter: (value) => value ? `${value} m²` : '',
     },
     {
       field: 'quantity',
@@ -87,6 +137,7 @@ function PlantingPlans(): React.ReactElement {
           bed: 0,
           planting_date: '',
           quantity: undefined,
+          area_usage_sqm: undefined,
           notes: '',
           isNew: true,
         })}
@@ -100,6 +151,7 @@ function PlantingPlans(): React.ReactElement {
           planting_date: plan.planting_date,
           harvest_date: plan.harvest_date,
           quantity: plan.quantity,
+          area_usage_sqm: plan.area_usage_sqm,
           notes: plan.notes || '',
         })}
         mapToApiData={(row) => ({
@@ -107,11 +159,18 @@ function PlantingPlans(): React.ReactElement {
           bed: row.bed,
           planting_date: row.planting_date,
           quantity: row.quantity,
+          area_usage_sqm: row.area_usage_sqm,
           notes: row.notes || '',
         })}
         validateRow={(row) => {
           if (!row.planting_date) {
             return t('plantingPlans:validation.plantingDateRequired');
+          }
+          if (!row.culture || row.culture === 0) {
+            return t('plantingPlans:validation.cultureRequired');
+          }
+          if (!row.bed || row.bed === 0) {
+            return t('plantingPlans:validation.bedRequired');
           }
           return null;
         }}
