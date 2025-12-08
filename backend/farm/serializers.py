@@ -4,8 +4,10 @@ This module provides DRF serializers for converting model instances
 to and from JSON representations for the API endpoints.
 """
 
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from .models import Location, Field, Bed, Culture, PlantingPlan, Task
+
 
 
 class LocationSerializer(serializers.ModelSerializer):
@@ -89,6 +91,33 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
         model = PlantingPlan
         fields = '__all__'
         read_only_fields = ['harvest_date']
+
+    def validate(self, attrs):
+        """Validate the planting plan data.
+        
+        Creates a temporary instance to run model-level validation,
+        particularly for area usage validation.
+        
+        Args:
+            attrs: Dictionary of attributes for the planting plan
+            
+        Returns:
+            The validated attributes
+            
+        Raises:
+            serializers.ValidationError: If validation fails
+        """
+        # Create a temporary instance for validation
+        instance = PlantingPlan(**attrs)
+        if self.instance:
+            instance.pk = self.instance.pk
+        
+        try:
+            instance.clean()
+        except ValidationError as e:
+            raise serializers.ValidationError(e.message_dict)
+        
+        return attrs
 
 
 class TaskSerializer(serializers.ModelSerializer):
