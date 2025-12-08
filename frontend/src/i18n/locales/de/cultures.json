@@ -1,0 +1,29 @@
+{
+  "title": "Kulturen",
+  "searchPlaceholder": "Kultur suchen",
+  "searchInputPlaceholder": "Name der Kultur eingeben...",
+  "noOptions": "Keine Kulturen gefunden",
+  "selectPrompt": "Wählen Sie eine Kultur aus der Liste aus, um Details anzuzeigen.",
+  "perennial": "Mehrjährig",
+  "annual": "Einjährig",
+  "unknown": "Unbekannt",
+  "noData": "Keine Angabe",
+  "sections": {
+    "growthHarvest": "Wachstum & Ernte",
+    "additionalInfo": "Weitere Informationen"
+  },
+  "fields": {
+    "daysToFirstHarvest": "Tage bis zur ersten Ernte",
+    "daysToLastHarvest": "Tage bis zur letzten Ernte",
+    "harvestWindow": "Erntefenster",
+    "harvestWindowValue": "{{first}}–{{last}} Tage nach der Aussaat",
+    "lifespan": "Typische Lebensdauer",
+    "lifespanValue": "{{days}} Tage"
+  },
+  "moreInfo": "Mehr Infos (Wikipedia)",
+  "attribution": "Datenquelle: Diese Informationen stammen von",
+  "attributionLink": "Growstuff.org",
+  "license": "und sind unter der",
+  "licenseLink": "CC-BY-SA 3.0 Lizenz",
+  "licenseEnd": "verfügbar."
+}

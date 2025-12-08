@@ -9,56 +9,59 @@
  */
 
 import { Link } from 'react-router-dom';
+import { useTranslation } from '../i18n';
 
 function Home(): React.ReactElement {
+  const { t } = useTranslation(['home', 'common']);
+  
   return (
     <div className="page-container">
-      <h1>OpenFarmPlanner</h1>
-      <p>Willkommen bei OpenFarmPlanner</p>
+      <h1>{t('common:appName')}</h1>
+      <p>{t('home:welcome')}</p>
       
       <div className="home-section">
-        <h2>Schnellzugriff</h2>
+        <h2>{t('home:quickAccess')}</h2>
         <ul className="quick-links">
           <li>
             <Link to="/locations" className="quick-link">
-              Standorte verwalten
+              {t('home:manageLocations')}
             </Link>
           </li>
           <li>
             <Link to="/fields" className="quick-link">
-              Schläge verwalten
+              {t('home:manageFields')}
             </Link>
           </li>
           <li>
             <Link to="/beds" className="quick-link">
-              Beete verwalten
+              {t('home:manageBeds')}
             </Link>
           </li>
           <li>
             <Link to="/cultures" className="quick-link">
-              Kulturen verwalten
+              {t('home:manageCultures')}
             </Link>
           </li>
           <li>
             <Link to="/planting-plans" className="quick-link">
-              Anbaupläne verwalten
+              {t('home:managePlantingPlans')}
             </Link>
           </li>
           <li>
             <Link to="/tasks" className="quick-link">
-              Aufgaben verwalten
+              {t('home:manageTasks')}
             </Link>
           </li>
         </ul>
       </div>
 
       <div className="features-box">
-        <h3>Funktionen</h3>
+        <h3>{t('home:features')}</h3>
         <ul>
-          <li>Verwalten Sie Ihre Kulturen und Pflanzensorten</li>
-          <li>Organisieren Sie Ihr Hoflayout (Standorte, Schläge, Beete)</li>
-          <li>Planen Sie Ihren Anbauzeitplan mit automatischer Erntedatumsberechnung</li>
-          <li>Verfolgen Sie Aufgaben und Aktivitäten</li>
+          <li>{t('home:feature1')}</li>
+          <li>{t('home:feature2')}</li>
+          <li>{t('home:feature3')}</li>
+          <li>{t('home:feature4')}</li>
         </ul>
       </div>
     </div>

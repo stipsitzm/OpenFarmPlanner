@@ -1,0 +1,25 @@
+{
+  "appName": "OpenFarmPlanner",
+  "actions": {
+    "add": "Hinzufügen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "search": "Suchen",
+    "close": "Schließen"
+  },
+  "messages": {
+    "loading": "Lädt...",
+    "noData": "Keine Daten",
+    "error": "Fehler",
+    "success": "Erfolgreich",
+    "confirmation": "Bestätigung"
+  },
+  "fields": {
+    "name": "Name",
+    "address": "Adresse",
+    "notes": "Notizen",
+    "description": "Beschreibung"
+  }
+}

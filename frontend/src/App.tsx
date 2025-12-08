@@ -9,6 +9,7 @@
  */
 
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { useTranslation } from './i18n';
 import Home from './pages/Home';
 import Locations from './pages/Locations';
 import FieldsBedsHierarchy from './pages/FieldsBedsHierarchy';
@@ -18,28 +19,30 @@ import Tasks from './pages/Tasks';
 import './App.css';
 
 function App(): React.ReactElement {
+  const { t } = useTranslation('navigation');
+  
   return (
     <Router>
       <div className="app">
         <nav className="nav">
           <div className="nav-links">
             <Link to="/" className="nav-link home">
-              Start
+              {t('home')}
             </Link>
             <Link to="/locations" className="nav-link">
-              Standorte
+              {t('locations')}
             </Link>
             <Link to="/fields-beds" className="nav-link">
-              Schläge & Beete
+              {t('fieldsAndBeds')}
             </Link>
             <Link to="/cultures" className="nav-link">
-              Kulturen
+              {t('cultures')}
             </Link>
             <Link to="/planting-plans" className="nav-link">
-              Anbaupläne
+              {t('plantingPlans')}
             </Link>
             <Link to="/tasks" className="nav-link">
-              Aufgaben
+              {t('tasks')}
             </Link>
           </div>
         </nav>
