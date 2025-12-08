@@ -89,6 +89,14 @@ function PlantingPlans(): React.ReactElement {
       type: 'date',
       editable: true,
       valueGetter: (value) => value ? new Date(value) : null,
+      valueSetter: (params) => {
+        const newValue = params.value;
+        if (newValue instanceof Date) {
+          // Convert Date to ISO string format (YYYY-MM-DD)
+          return { ...params.row, planting_date: newValue.toISOString().split('T')[0] };
+        }
+        return { ...params.row, planting_date: newValue };
+      },
       preProcessEditCellProps: (params) => {
         const hasError = !params.props.value;
         return { ...params.props, error: hasError };
@@ -136,7 +144,7 @@ function PlantingPlans(): React.ReactElement {
           id: -Date.now(),
           culture: 0,
           bed: 0,
-          planting_date: '',
+          planting_date: null as any, // Allow null initially, will be set when user selects
           quantity: undefined,
           area_usage_sqm: undefined,
           notes: '',
@@ -155,14 +163,21 @@ function PlantingPlans(): React.ReactElement {
           area_usage_sqm: plan.area_usage_sqm,
           notes: plan.notes || '',
         })}
-        mapToApiData={(row) => ({
-          culture: row.culture,
-          bed: row.bed,
-          planting_date: row.planting_date,
-          quantity: row.quantity,
-          area_usage_sqm: row.area_usage_sqm,
-          notes: row.notes || '',
-        })}
+        mapToApiData={(row) => {
+          // Convert date from Date object to string if needed
+          const plantingDate = row.planting_date instanceof Date 
+            ? row.planting_date.toISOString().split('T')[0]
+            : row.planting_date;
+          
+          return {
+            culture: row.culture,
+            bed: row.bed,
+            planting_date: plantingDate,
+            quantity: row.quantity,
+            area_usage_sqm: row.area_usage_sqm,
+            notes: row.notes || '',
+          };
+        }}
         validateRow={(row) => {
           if (!row.planting_date) {
             return t('plantingPlans:validation.plantingDateRequired');
