@@ -89,14 +89,6 @@ function PlantingPlans(): React.ReactElement {
       type: 'date',
       editable: true,
       valueGetter: (value) => value ? new Date(value) : null,
-      valueSetter: (params) => {
-        const newValue = params.value;
-        if (newValue instanceof Date) {
-          // Convert Date to ISO string format (YYYY-MM-DD)
-          return { ...params.row, planting_date: newValue.toISOString().split('T')[0] };
-        }
-        return { ...params.row, planting_date: newValue };
-      },
       preProcessEditCellProps: (params) => {
         const hasError = !params.props.value;
         return { ...params.props, error: hasError };
