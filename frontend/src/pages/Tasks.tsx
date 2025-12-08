@@ -8,6 +8,7 @@
  */
 
 import type { GridColDef } from '@mui/x-data-grid';
+import { useTranslation } from '../i18n';
 import { taskAPI, type Task } from '../api/client';
 import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/EditableDataGrid';
 
@@ -19,27 +20,29 @@ interface TaskRow extends Task, EditableRow {
   isNew?: boolean;
 }
 
-/**
- * Get display label for status
- */
-const getStatusLabel = (status: string): string => {
-  const statusMap: Record<string, string> = {
-    'pending': 'Ausstehend',
-    'in_progress': 'In Bearbeitung',
-    'completed': 'Abgeschlossen',
-    'cancelled': 'Abgebrochen',
-  };
-  return statusMap[status] || status;
-};
-
 function Tasks(): React.ReactElement {
+  const { t } = useTranslation('tasks');
+  
+  /**
+   * Get display label for status
+   */
+  const getStatusLabel = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      'pending': t('status.pending'),
+      'in_progress': t('status.inProgress'),
+      'completed': t('status.completed'),
+      'cancelled': t('status.cancelled'),
+    };
+    return statusMap[status] || status;
+  };
+  
   /**
    * Define columns for the Data Grid with inline editing
    */
   const columns: GridColDef[] = [
     {
       field: 'title',
-      headerName: 'Titel',
+      headerName: t('columns.title'),
       width: 250,
       editable: true,
       preProcessEditCellProps: (params) => {
@@ -49,13 +52,13 @@ function Tasks(): React.ReactElement {
     },
     {
       field: 'description',
-      headerName: 'Beschreibung',
+      headerName: t('columns.description'),
       width: 300,
       editable: true,
     },
     {
       field: 'due_date',
-      headerName: 'Fälligkeitsdatum',
+      headerName: t('columns.dueDate'),
       width: 150,
       type: 'date',
       editable: true,
@@ -63,15 +66,15 @@ function Tasks(): React.ReactElement {
     },
     {
       field: 'status',
-      headerName: 'Status',
+      headerName: t('columns.status'),
       width: 150,
       editable: true,
       type: 'singleSelect',
       valueOptions: [
-        { value: 'pending', label: 'Ausstehend' },
-        { value: 'in_progress', label: 'In Bearbeitung' },
-        { value: 'completed', label: 'Abgeschlossen' },
-        { value: 'cancelled', label: 'Abgebrochen' },
+        { value: 'pending', label: t('status.pending') },
+        { value: 'in_progress', label: t('status.inProgress') },
+        { value: 'completed', label: t('status.completed') },
+        { value: 'cancelled', label: t('status.cancelled') },
       ],
       valueFormatter: (value) => getStatusLabel(value as string),
     },
@@ -79,7 +82,7 @@ function Tasks(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <h1>Aufgaben</h1>
+      <h1>{t('title')}</h1>
       
       <EditableDataGrid<TaskRow>
         columns={columns}
@@ -108,15 +111,15 @@ function Tasks(): React.ReactElement {
         })}
         validateRow={(row) => {
           if (!row.title || row.title.trim() === '') {
-            return 'Titel ist ein Pflichtfeld';
+            return t('validation.titleRequired');
           }
           return null;
         }}
-        loadErrorMessage="Fehler beim Laden der Aufgaben"
-        saveErrorMessage="Fehler beim Speichern der Aufgabe"
-        deleteErrorMessage="Fehler beim Löschen der Aufgabe"
-        deleteConfirmMessage="Möchten Sie diese Aufgabe wirklich löschen?"
-        addButtonLabel="Neue Aufgabe hinzufügen"
+        loadErrorMessage={t('errors.load')}
+        saveErrorMessage={t('errors.save')}
+        deleteErrorMessage={t('errors.delete')}
+        deleteConfirmMessage={t('confirmDelete')}
+        addButtonLabel={t('addButton')}
       />
     </div>
   );
