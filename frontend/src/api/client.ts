@@ -112,10 +112,8 @@ export interface Bed {
   field: number;
   /** Read-only field name */
   field_name?: string;
-  /** Length in meters (optional) */
-  length_m?: number;
-  /** Width in meters (optional) */
-  width_m?: number;
+  /** Area in square meters (optional) */
+  area_sqm?: number;
   /** Additional notes */
   notes?: string;
   /** Creation timestamp */

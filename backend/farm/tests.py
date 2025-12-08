@@ -38,8 +38,7 @@ class BedModelTest(TestCase):
         bed = Bed.objects.create(
             name="Bed A",
             field=self.field,
-            length_m=10.0,
-            width_m=1.2
+            area_sqm=12.0
         )
         self.assertEqual(str(bed), "Test Field - Bed A")
 
@@ -47,8 +46,7 @@ class BedModelTest(TestCase):
         bed = Bed.objects.create(
             name="Bed B",
             field=self.field,
-            length_m=10.0,
-            width_m=1.5
+            area_sqm=15.0
         )
         self.assertEqual(bed.get_total_area(), 15.0)
 
@@ -58,6 +56,7 @@ class BedModelTest(TestCase):
             field=self.field
         )
         self.assertIsNone(bed.get_total_area())
+
 
 
 
@@ -85,8 +84,7 @@ class PlantingPlanModelTest(TestCase):
         self.bed = Bed.objects.create(
             name="Test Bed", 
             field=self.field,
-            length_m=10.0,
-            width_m=2.0  # Total area: 20 sqm
+            area_sqm=20.0  # Total area: 20 sqm
         )
         self.culture = Culture.objects.create(name="Carrot", days_to_harvest=70)
 
@@ -200,8 +198,7 @@ class APITestCase(APITestCase):
         self.bed = Bed.objects.create(
             name="API Test Bed", 
             field=self.field,
-            length_m=10.0,
-            width_m=2.0  # Total area: 20 sqm
+            area_sqm=20.0  # Total area: 20 sqm
         )
         self.culture = Culture.objects.create(name="API Test Culture", days_to_harvest=50)
 

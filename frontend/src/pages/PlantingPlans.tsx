@@ -7,7 +7,7 @@
  * @returns The Planting Plans page component
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { GridColDef } from '@mui/x-data-grid';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/client';
@@ -47,8 +47,9 @@ function PlantingPlans(): React.ReactElement {
   
   /**
    * Define columns for the Data Grid with inline editing
+   * Recalculates when cultures or beds change to update dropdown options
    */
-  const columns: GridColDef[] = [
+  const columns: GridColDef[] = useMemo(() => [
     {
       field: 'culture',
       headerName: t('plantingPlans:columns.culture'),
@@ -122,7 +123,7 @@ function PlantingPlans(): React.ReactElement {
       width: 300,
       editable: true,
     },
-  ];
+  ], [cultures, beds, t]);
 
   return (
     <div className="page-container">
