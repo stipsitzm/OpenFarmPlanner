@@ -1,0 +1,27 @@
+{
+  "title": "Schläge & Beete",
+  "addField": "+ Schlag",
+  "addBed": "+ Beet",
+  "columns": {
+    "name": "Name",
+    "location": "Standort",
+    "field": "Schlag",
+    "area": "Fläche (m²)",
+    "length": "Länge (m)",
+    "width": "Breite (m)",
+    "notes": "Notizen"
+  },
+  "errors": {
+    "load": "Fehler beim Laden der Daten",
+    "save": "Fehler beim Speichern",
+    "delete": "Fehler beim Löschen"
+  },
+  "validation": {
+    "nameRequired": "Name ist ein Pflichtfeld"
+  },
+  "confirmDelete": "Möchten Sie diesen Eintrag wirklich löschen?",
+  "footer": {
+    "singleLocation": "Erweitern Sie Schläge um Beete hinzuzufügen",
+    "multipleLocations": "Erweitern Sie Standorte/Schläge um neue Schläge/Beete hinzuzufügen"
+  }
+}

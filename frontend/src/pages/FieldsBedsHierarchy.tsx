@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from '../i18n';
 import { DataGrid, GridRowModes, GridRowEditStopReasons } from '@mui/x-data-grid';
 import type { GridRowsProp, GridRowModesModel, GridEventListener } from '@mui/x-data-grid';
 import { Box, Alert } from '@mui/material';
@@ -22,6 +23,7 @@ import { HierarchyFooter } from '../components/hierarchy/HierarchyFooter';
 import type { HierarchyRow } from '../components/hierarchy/utils/types';
 
 function FieldsBedsHierarchy(): React.ReactElement {
+  const { t } = useTranslation('hierarchy');
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   
   // Data fetching
@@ -96,8 +98,8 @@ function FieldsBedsHierarchy(): React.ReactElement {
 
     // Validate
     if (!newRow.name || newRow.name.trim() === '') {
-      setError('Name ist ein Pflichtfeld');
-      throw new Error('Name ist ein Pflichtfeld');
+      setError(t('validation.nameRequired'));
+      throw new Error(t('validation.nameRequired'));
     }
 
     try {
@@ -121,7 +123,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
    */
   const handleProcessRowUpdateError = (error: Error): void => {
     console.error('Row update error:', error);
-    setError(error.message || 'Fehler beim Speichern');
+    setError(error.message || t('errors.save'));
   };
 
   /**
@@ -133,13 +135,14 @@ function FieldsBedsHierarchy(): React.ReactElement {
       handleAddBed,
       (bedId) => deleteBed(bedId),
       (locationId) => addField(locationId),
-      (fieldId) => deleteField(fieldId)
+      (fieldId) => deleteField(fieldId),
+      t
     );
-  }, [toggleExpand, handleAddBed, deleteBed, addField, deleteField]);
+  }, [toggleExpand, handleAddBed, deleteBed, addField, deleteField, t]);
 
   return (
     <div className="page-container">
-      <h1>Schläge & Beete</h1>
+      <h1>{t('title')}</h1>
       
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       

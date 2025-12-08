@@ -8,10 +8,12 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture } from '../api/client';
 import { CultureDetail } from '../components/CultureDetail';
 
 function Cultures(): React.ReactElement {
+  const { t } = useTranslation('cultures');
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [selectedCultureId, setSelectedCultureId] = useState<number | undefined>(undefined);
 
@@ -35,7 +37,7 @@ function Cultures(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <h1>Kulturen</h1>
+      <h1>{t('title')}</h1>
       
       <CultureDetail
         cultures={cultures}

@@ -9,6 +9,7 @@
  */
 
 import type { GridColDef } from '@mui/x-data-grid';
+import { useTranslation } from '../i18n';
 import { locationAPI, type Location } from '../api/client';
 import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/EditableDataGrid';
 
@@ -22,13 +23,15 @@ interface LocationRow extends Location, EditableRow {
 
 
 function Locations(): React.ReactElement {
+  const { t } = useTranslation(['locations', 'common']);
+  
   /**
    * Define columns for the Data Grid with inline editing
    */
   const columns: GridColDef[] = [
     {
       field: 'name',
-      headerName: 'Name',
+      headerName: t('common:fields.name'),
       width: 200,
       editable: true,
       // Validation: name is required
@@ -39,13 +42,13 @@ function Locations(): React.ReactElement {
     },
     {
       field: 'address',
-      headerName: 'Adresse',
+      headerName: t('common:fields.address'),
       width: 300,
       editable: true,
     },
     {
       field: 'notes',
-      headerName: 'Notizen',
+      headerName: t('common:fields.notes'),
       width: 300,
       editable: true,
     },
@@ -53,7 +56,7 @@ function Locations(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <h1>Standorte</h1>
+      <h1>{t('locations:title')}</h1>
       
       <EditableDataGrid<LocationRow>
         columns={columns}
@@ -79,15 +82,15 @@ function Locations(): React.ReactElement {
         })}
         validateRow={(row) => {
           if (!row.name || row.name.trim() === '') {
-            return 'Name ist ein Pflichtfeld';
+            return t('locations:validation.nameRequired');
           }
           return null;
         }}
-        loadErrorMessage="Fehler beim Laden der Standorte"
-        saveErrorMessage="Fehler beim Speichern des Standorts"
-        deleteErrorMessage="Fehler beim Löschen des Standorts"
-        deleteConfirmMessage="Möchten Sie diesen Standort wirklich löschen?"
-        addButtonLabel="Neuen Standort hinzufügen"
+        loadErrorMessage={t('locations:errors.load')}
+        saveErrorMessage={t('locations:errors.save')}
+        deleteErrorMessage={t('locations:errors.delete')}
+        deleteConfirmMessage={t('locations:confirmDelete')}
+        addButtonLabel={t('locations:addButton')}
       />
     </div>
   );

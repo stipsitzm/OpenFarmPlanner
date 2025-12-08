@@ -1,0 +1,25 @@
+{
+  "title": "Schläge",
+  "columns": {
+    "name": "Name",
+    "location": "Standort",
+    "area": "Fläche (m²)",
+    "notes": "Notizen"
+  },
+  "errors": {
+    "load": "Fehler beim Laden der Schläge",
+    "save": "Fehler beim Speichern des Schlags",
+    "delete": "Fehler beim Löschen des Schlags",
+    "loadLocations": "Fehler beim Laden der Standorte"
+  },
+  "validation": {
+    "nameRequired": "Name ist ein Pflichtfeld",
+    "locationRequired": "Standort ist ein Pflichtfeld"
+  },
+  "confirmDelete": "Möchten Sie diesen Schlag wirklich löschen?",
+  "addButton": "Neuen Schlag hinzufügen",
+  "createNew": "Neuen Schlag erstellen",
+  "cancel": "Abbrechen",
+  "submit": "Erstellen",
+  "selectLocation": "Standort auswählen"
+}

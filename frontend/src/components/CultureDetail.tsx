@@ -12,6 +12,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import { useTranslation } from '../i18n';
 import {
   Box,
   TextField,
@@ -36,9 +37,9 @@ interface CultureDetailProps {
 /**
  * Formats a number with fallback for null/undefined values
  */
-function formatNumber(value: number | null | undefined): string {
+function formatNumber(value: number | null | undefined, t: (key: string) => string): string {
   if (value === null || value === undefined) {
-    return 'Keine Angabe';
+    return t('cultures:noData');
   }
   return value.toString();
 }
@@ -48,12 +49,13 @@ function formatNumber(value: number | null | undefined): string {
  */
 function getHarvestWindow(
   first: number | null | undefined,
-  last: number | null | undefined
+  last: number | null | undefined,
+  t: (key: string, options?: { first?: number; last?: number }) => string
 ): string {
   if (first === null || first === undefined || last === null || last === undefined) {
-    return 'Keine Angabe';
+    return t('cultures:noData');
   }
-  return `${first}–${last} Tage nach der Aussaat`;
+  return t('cultures:fields.harvestWindowValue', { first, last });
 }
 
 export function CultureDetail({
@@ -61,6 +63,7 @@ export function CultureDetail({
   selectedCultureId,
   onCultureSelect,
 }: CultureDetailProps): React.ReactElement {
+  const { t } = useTranslation('cultures');
   const [searchText, setSearchText] = useState('');
 
   // Find the selected culture
@@ -96,12 +99,12 @@ export function CultureDetail({
           renderInput={(params) => (
             <TextField
               {...params}
-              label="Kultur suchen"
-              placeholder="Name der Kultur eingeben..."
+              label={t('searchPlaceholder')}
+              placeholder={t('searchInputPlaceholder')}
               fullWidth
             />
           )}
-          noOptionsText="Keine Kulturen gefunden"
+          noOptionsText={t('noOptions')}
           isOptionEqualToValue={(option, value) => option.id === value.id}
         />
       </Box>
@@ -120,10 +123,10 @@ export function CultureDetail({
                 <Chip
                   label={
                     selectedCulture.perennial === true
-                      ? 'Mehrjährig'
+                      ? t('perennial')
                       : selectedCulture.perennial === false
-                      ? 'Einjährig'
-                      : 'Unbekannt'
+                      ? t('annual')
+                      : t('unknown')
                   }
                   color={
                     selectedCulture.perennial === true
@@ -141,44 +144,45 @@ export function CultureDetail({
             {/* Growth & Harvest Section */}
             <Box sx={{ mb: 4 }}>
               <Typography variant="h6" gutterBottom>
-                Wachstum & Ernte
+                {t('sections.growthHarvest')}
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="body2" color="text.secondary">
-                    Tage bis zur ersten Ernte
+                    {t('fields.daysToFirstHarvest')}
                   </Typography>
                   <Typography variant="body1">
-                    {formatNumber(selectedCulture.median_days_to_first_harvest)}
+                    {formatNumber(selectedCulture.median_days_to_first_harvest, t)}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="body2" color="text.secondary">
-                    Tage bis zur letzten Ernte
+                    {t('fields.daysToLastHarvest')}
                   </Typography>
                   <Typography variant="body1">
-                    {formatNumber(selectedCulture.median_days_to_last_harvest)}
+                    {formatNumber(selectedCulture.median_days_to_last_harvest, t)}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="body2" color="text.secondary">
-                    Erntefenster
+                    {t('fields.harvestWindow')}
                   </Typography>
                   <Typography variant="body1">
                     {getHarvestWindow(
                       selectedCulture.median_days_to_first_harvest,
-                      selectedCulture.median_days_to_last_harvest
+                      selectedCulture.median_days_to_last_harvest,
+                      t
                     )}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="body2" color="text.secondary">
-                    Typische Lebensdauer
+                    {t('fields.lifespan')}
                   </Typography>
                   <Typography variant="body1">
                     {selectedCulture.median_lifespan
-                      ? `${selectedCulture.median_lifespan} Tage`
-                      : 'Keine Angabe'}
+                      ? t('fields.lifespanValue', { days: selectedCulture.median_lifespan })
+                      : t('noData')}
                   </Typography>
                 </Grid>
               </Grid>
@@ -189,7 +193,7 @@ export function CultureDetail({
             {/* Info Section */}
             <Box>
               <Typography variant="h6" gutterBottom>
-                Weitere Informationen
+                {t('sections.additionalInfo')}
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {selectedCulture.en_wikipedia_url && (
@@ -201,7 +205,7 @@ export function CultureDetail({
                     rel="noopener noreferrer"
                     sx={{ alignSelf: 'flex-start' }}
                   >
-                    Mehr Infos (Wikipedia)
+                    {t('moreInfo')}
                   </Button>
                 )}
               </Box>
@@ -211,25 +215,25 @@ export function CultureDetail({
             {selectedCulture.source === 'growstuff' && (
               <Box sx={{ mt: 3, pt: 2, borderTop: 1, borderColor: 'divider' }}>
                 <Typography variant="caption" color="text.secondary">
-                  Datenquelle: Diese Informationen stammen von{' '}
+                  {t('attribution')}{' '}
                   <a
                     href="https://www.growstuff.org"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ color: 'inherit' }}
                   >
-                    Growstuff.org
+                    {t('attributionLink')}
                   </a>{' '}
-                  und sind unter der{' '}
+                  {t('license')}{' '}
                   <a
                     href="https://creativecommons.org/licenses/by-sa/3.0/"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ color: 'inherit' }}
                   >
-                    CC-BY-SA 3.0 Lizenz
+                    {t('licenseLink')}
                   </a>{' '}
-                  verfügbar.
+                  {t('licenseEnd')}
                 </Typography>
               </Box>
             )}
@@ -242,7 +246,7 @@ export function CultureDetail({
         <Card>
           <CardContent>
             <Typography variant="body1" color="text.secondary" align="center">
-              Wählen Sie eine Kultur aus der Liste aus, um Details anzuzeigen.
+              {t('selectPrompt')}
             </Typography>
           </CardContent>
         </Card>

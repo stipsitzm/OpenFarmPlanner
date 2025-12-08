@@ -8,6 +8,7 @@
  */
 
 import type { GridColDef } from '@mui/x-data-grid';
+import { useTranslation } from '../i18n';
 import { plantingPlanAPI, type PlantingPlan } from '../api/client';
 import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/EditableDataGrid';
 
@@ -20,25 +21,27 @@ interface PlantingPlanRow extends PlantingPlan, EditableRow {
 }
 
 function PlantingPlans(): React.ReactElement {
+  const { t } = useTranslation(['plantingPlans', 'common']);
+  
   /**
    * Define columns for the Data Grid with inline editing
    */
   const columns: GridColDef[] = [
     {
       field: 'culture_name',
-      headerName: 'Kultur',
+      headerName: t('plantingPlans:columns.culture'),
       width: 200,
       editable: false,
     },
     {
       field: 'bed_name',
-      headerName: 'Beet',
+      headerName: t('plantingPlans:columns.bed'),
       width: 200,
       editable: false,
     },
     {
       field: 'planting_date',
-      headerName: 'Pflanzdatum',
+      headerName: t('plantingPlans:columns.plantingDate'),
       width: 150,
       type: 'date',
       editable: true,
@@ -50,7 +53,7 @@ function PlantingPlans(): React.ReactElement {
     },
     {
       field: 'harvest_date',
-      headerName: 'Erntedatum (berechnet)',
+      headerName: t('plantingPlans:columns.harvestDate'),
       width: 180,
       editable: false,
       type: 'date',
@@ -58,14 +61,14 @@ function PlantingPlans(): React.ReactElement {
     },
     {
       field: 'quantity',
-      headerName: 'Menge',
+      headerName: t('plantingPlans:columns.quantity'),
       width: 100,
       type: 'number',
       editable: true,
     },
     {
       field: 'notes',
-      headerName: 'Notizen',
+      headerName: t('common:fields.notes'),
       width: 300,
       editable: true,
     },
@@ -73,7 +76,7 @@ function PlantingPlans(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <h1>Anbaupläne</h1>
+      <h1>{t('plantingPlans:title')}</h1>
       
       <EditableDataGrid<PlantingPlanRow>
         columns={columns}
@@ -108,15 +111,15 @@ function PlantingPlans(): React.ReactElement {
         })}
         validateRow={(row) => {
           if (!row.planting_date) {
-            return 'Pflanzdatum ist ein Pflichtfeld';
+            return t('plantingPlans:validation.plantingDateRequired');
           }
           return null;
         }}
-        loadErrorMessage="Fehler beim Laden der Anbaupläne"
-        saveErrorMessage="Fehler beim Speichern des Anbau plans"
-        deleteErrorMessage="Fehler beim Löschen des Anbau plans"
-        deleteConfirmMessage="Möchten Sie diesen Anbauplan wirklich löschen?"
-        addButtonLabel="Neuen Anbauplan hinzufügen"
+        loadErrorMessage={t('plantingPlans:errors.load')}
+        saveErrorMessage={t('plantingPlans:errors.save')}
+        deleteErrorMessage={t('plantingPlans:errors.delete')}
+        deleteConfirmMessage={t('plantingPlans:confirmDelete')}
+        addButtonLabel={t('plantingPlans:addButton')}
         showDeleteAction={true}
       />
     </div>

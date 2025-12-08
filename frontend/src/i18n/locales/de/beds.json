@@ -1,0 +1,22 @@
+{
+  "title": "Beete",
+  "columns": {
+    "name": "Name",
+    "field": "Schlag",
+    "length": "Länge (m)",
+    "width": "Breite (m)",
+    "notes": "Notizen"
+  },
+  "errors": {
+    "load": "Fehler beim Laden der Beete",
+    "save": "Fehler beim Speichern des Beets",
+    "delete": "Fehler beim Löschen des Beets",
+    "loadFields": "Fehler beim Laden der Schläge"
+  },
+  "validation": {
+    "nameRequired": "Name ist ein Pflichtfeld",
+    "fieldRequired": "Schlag ist ein Pflichtfeld"
+  },
+  "confirmDelete": "Möchten Sie dieses Beet wirklich löschen?",
+  "addButton": "Neues Beet hinzufügen"
+}

@@ -3,6 +3,7 @@
  */
 
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
+import type { TFunction } from 'i18next';
 import { Box, IconButton } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -53,12 +54,13 @@ export function createHierarchyColumns(
   onAddBed: (fieldId: number) => void,
   onDeleteBed: (bedId: number) => void,
   onAddField: (locationId?: number) => void,
-  onDeleteField: (fieldId: number) => void
+  onDeleteField: (fieldId: number) => void,
+  t: TFunction
 ): GridColDef<HierarchyRow>[] {
   return [
     {
       field: 'name',
-      headerName: 'Name',
+      headerName: t('hierarchy:columns.name'),
       width: 300,
       editable: true,
       renderCell: (params) => renderNameCell(params, onToggleExpand),
@@ -69,28 +71,28 @@ export function createHierarchyColumns(
     },
     {
       field: 'length_m',
-      headerName: 'Länge (m)',
+      headerName: t('hierarchy:columns.length'),
       width: 120,
       type: 'number',
       editable: true,
     },
     {
       field: 'width_m',
-      headerName: 'Breite (m)',
+      headerName: t('hierarchy:columns.width'),
       width: 120,
       type: 'number',
       editable: true,
     },
     {
       field: 'notes',
-      headerName: 'Notizen',
+      headerName: t('common:fields.notes'),
       width: 300,
       editable: true,
     },
     {
       field: 'actions',
       type: 'actions',
-      headerName: 'Aktionen',
+      headerName: t('common:actions.actions'),
       width: 150,
       getActions: ({ row }) => {
         if (row.type === 'bed') {
@@ -107,7 +109,7 @@ export function createHierarchyColumns(
                 fontSize: '0.8125rem',
               }}
             >
-              Löschen
+              {t('common:actions.delete')}
             </button>,
           ];
         } else if (row.type === 'field') {
@@ -124,7 +126,7 @@ export function createHierarchyColumns(
                 fontSize: '0.8125rem',
               }}
             >
-              + Beet
+              {t('hierarchy:addBed')}
             </button>,
             <button
               key="delete-field"
@@ -139,7 +141,7 @@ export function createHierarchyColumns(
                 marginLeft: '8px',
               }}
             >
-              Löschen
+              {t('common:actions.delete')}
             </button>,
           ];
         } else if (row.type === 'location') {
@@ -156,7 +158,7 @@ export function createHierarchyColumns(
                 fontSize: '0.8125rem',
               }}
             >
-              + Schlag
+              {t('hierarchy:addField')}
             </button>,
           ];
         }

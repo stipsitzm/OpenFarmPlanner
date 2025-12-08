@@ -1,0 +1,21 @@
+{
+  "title": "Anbaupläne",
+  "columns": {
+    "culture": "Kultur",
+    "bed": "Beet",
+    "plantingDate": "Pflanzdatum",
+    "harvestDate": "Erntedatum (berechnet)",
+    "quantity": "Menge",
+    "notes": "Notizen"
+  },
+  "errors": {
+    "load": "Fehler beim Laden der Anbaupläne",
+    "save": "Fehler beim Speichern des Anbauplans",
+    "delete": "Fehler beim Löschen des Anbauplans"
+  },
+  "validation": {
+    "plantingDateRequired": "Pflanzdatum ist ein Pflichtfeld"
+  },
+  "confirmDelete": "Möchten Sie diesen Anbauplan wirklich löschen?",
+  "addButton": "Neuen Anbauplan hinzufügen"
+}

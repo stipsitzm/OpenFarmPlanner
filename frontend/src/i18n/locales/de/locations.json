@@ -1,0 +1,13 @@
+{
+  "title": "Standorte",
+  "errors": {
+    "load": "Fehler beim Laden der Standorte",
+    "save": "Fehler beim Speichern des Standorts",
+    "delete": "Fehler beim Löschen des Standorts"
+  },
+  "validation": {
+    "nameRequired": "Name ist ein Pflichtfeld"
+  },
+  "confirmDelete": "Möchten Sie diesen Standort wirklich löschen?",
+  "addButton": "Neuen Standort hinzufügen"
+}
