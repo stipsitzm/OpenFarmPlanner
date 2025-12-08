@@ -92,7 +92,7 @@ export function createHierarchyColumns(
     {
       field: 'actions',
       type: 'actions',
-      headerName: t('common:actions.actions', 'Aktionen'),
+      headerName: t('common:actions.actions'),
       width: 150,
       getActions: ({ row }) => {
         if (row.type === 'bed') {

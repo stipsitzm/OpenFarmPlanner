@@ -10,8 +10,8 @@
   },
   "errors": {
     "load": "Fehler beim Laden der Anbaupläne",
-    "save": "Fehler beim Speichern des Anbauplan",
-    "delete": "Fehler beim Löschen des Anbauplan"
+    "save": "Fehler beim Speichern des Anbauplans",
+    "delete": "Fehler beim Löschen des Anbauplans"
   },
   "validation": {
     "plantingDateRequired": "Pflanzdatum ist ein Pflichtfeld"
