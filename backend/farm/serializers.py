@@ -107,6 +107,15 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
         Raises:
             serializers.ValidationError: If validation fails
         """
+        # Only run clean() validation if we have valid foreign keys
+        # DRF converts the IDs to objects during validation
+        culture = attrs.get('culture')
+        bed = attrs.get('bed')
+        
+        # Skip model validation if foreign keys are not properly set
+        if not culture or not bed:
+            return attrs
+            
         # Create a temporary instance for validation
         instance = PlantingPlan(**attrs)
         if self.instance:

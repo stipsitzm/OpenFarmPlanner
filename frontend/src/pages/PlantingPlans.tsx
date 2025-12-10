@@ -69,13 +69,20 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'bed',
       headerName: t('plantingPlans:columns.bed'),
-      width: 200,
+      width: 250,
       editable: true,
       type: 'singleSelect',
-      valueOptions: beds.filter(b => b.id !== undefined).map(b => ({ value: b.id!, label: b.field_name ? `${b.field_name} - ${b.name}` : b.name })),
+      valueOptions: beds.filter(b => b.id !== undefined).map(b => {
+        const baseName = b.field_name ? `${b.field_name} - ${b.name}` : b.name;
+        const areaInfo = b.area_sqm ? ` (${b.area_sqm} m²)` : '';
+        return { value: b.id!, label: `${baseName}${areaInfo}` };
+      }),
       valueFormatter: (value) => {
         const bed = beds.find(b => b.id === value);
-        return bed ? (bed.field_name ? `${bed.field_name} - ${bed.name}` : bed.name) : '';
+        if (!bed) return '';
+        const baseName = bed.field_name ? `${bed.field_name} - ${bed.name}` : bed.name;
+        const areaInfo = bed.area_sqm ? ` (${bed.area_sqm} m²)` : '';
+        return `${baseName}${areaInfo}`;
       },
       preProcessEditCellProps: (params) => {
         const hasError = !params.props.value || params.props.value === 0;
