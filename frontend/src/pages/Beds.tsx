@@ -20,8 +20,7 @@ function Beds(): React.ReactElement {
   const [formData, setFormData] = useState<Bed>({
     name: '',
     field: 0,
-    length_m: undefined,
-    width_m: undefined,
+    area_sqm: undefined,
     notes: '',
   });
 
@@ -51,7 +50,7 @@ function Beds(): React.ReactElement {
     e.preventDefault();
     try {
       await bedAPI.create(formData);
-      setFormData({ name: '', field: 0, length_m: undefined, width_m: undefined, notes: '' });
+      setFormData({ name: '', field: 0, area_sqm: undefined, notes: '' });
       setShowForm(false);
       fetchData();
     } catch (err) {
@@ -114,24 +113,15 @@ function Beds(): React.ReactElement {
             </select>
           </div>
           <div className="form-group">
-            <label htmlFor="length_m">Länge (m)</label>
+            <label htmlFor="area_sqm">Fläche (m²)</label>
             <input
-              id="length_m"
+              id="area_sqm"
               type="number"
               step="0.01"
-              value={formData.length_m || ''}
-              onChange={(e) => setFormData({ ...formData, length_m: e.target.value ? parseFloat(e.target.value) : undefined })}
-              className="form-input"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="width_m">Breite (m)</label>
-            <input
-              id="width_m"
-              type="number"
-              step="0.01"
-              value={formData.width_m || ''}
-              onChange={(e) => setFormData({ ...formData, width_m: e.target.value ? parseFloat(e.target.value) : undefined })}
+              min="0.01"
+              max="10000"
+              value={formData.area_sqm || ''}
+              onChange={(e) => setFormData({ ...formData, area_sqm: e.target.value ? parseFloat(e.target.value) : undefined })}
               className="form-input"
             />
           </div>
@@ -154,8 +144,7 @@ function Beds(): React.ReactElement {
           <tr>
             <th>Name</th>
             <th>Schlag</th>
-            <th>Länge (m)</th>
-            <th>Breite (m)</th>
+            <th>Fläche (m²)</th>
             <th>Notizen</th>
             <th>Aktionen</th>
           </tr>
@@ -165,8 +154,7 @@ function Beds(): React.ReactElement {
             <tr key={bed.id}>
               <td>{bed.name}</td>
               <td>{bed.field_name || '-'}</td>
-              <td>{bed.length_m || '-'}</td>
-              <td>{bed.width_m || '-'}</td>
+              <td>{bed.area_sqm || '-'}</td>
               <td>{bed.notes || '-'}</td>
               <td>
                 <button onClick={() => handleDelete(bed.id!)} className="delete-btn">

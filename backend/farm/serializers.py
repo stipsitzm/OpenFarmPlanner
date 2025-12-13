@@ -39,6 +39,24 @@ class FieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Field
         fields = '__all__'
+    
+    def validate_area_sqm(self, value):
+        """Validate that area_sqm is within realistic bounds.
+        
+        :param value: The area value to validate
+        :return: The validated area value
+        :raises serializers.ValidationError: If area is outside bounds
+        """
+        if value is not None:
+            if value < Field.MIN_AREA_SQM:
+                raise serializers.ValidationError(
+                    f'Area must be at least {Field.MIN_AREA_SQM} sqm.'
+                )
+            if value > Field.MAX_AREA_SQM:
+                raise serializers.ValidationError(
+                    f'Area must not exceed {Field.MAX_AREA_SQM} sqm (100 hectares).'
+                )
+        return value
 
 
 class BedSerializer(serializers.ModelSerializer):
@@ -56,6 +74,24 @@ class BedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bed
         fields = '__all__'
+    
+    def validate_area_sqm(self, value):
+        """Validate that area_sqm is within realistic bounds.
+        
+        :param value: The area value to validate
+        :return: The validated area value
+        :raises serializers.ValidationError: If area is outside bounds
+        """
+        if value is not None:
+            if value < Bed.MIN_AREA_SQM:
+                raise serializers.ValidationError(
+                    f'Area must be at least {Bed.MIN_AREA_SQM} sqm.'
+                )
+            if value > Bed.MAX_AREA_SQM:
+                raise serializers.ValidationError(
+                    f'Area must not exceed {Bed.MAX_AREA_SQM} sqm (1 hectare).'
+                )
+        return value
 
 
 class CultureSerializer(serializers.ModelSerializer):

@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from datetime import timedelta
+from decimal import Decimal
 from typing import Any
 from decimal import Decimal
 
@@ -52,12 +53,35 @@ class Field(models.Model):
         created_at: Timestamp when the field was created
         updated_at: Timestamp when the field was last updated
     """
+    # Constants for validation
+    MIN_AREA_SQM = Decimal('0.01')  # Minimum 0.01 sqm (10cm x 10cm)
+    MAX_AREA_SQM = Decimal('1000000.00')  # Maximum 100 hectares (safe value within DecimalField constraints)
+    
     name = models.CharField(max_length=200)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='fields')
     area_sqm = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self) -> None:
+        """Validate the field data.
+        
+        Validates that area_sqm is within realistic bounds if provided.
+        
+        Raises:
+            ValidationError: If area_sqm is outside realistic bounds
+        """
+        super().clean()
+        if self.area_sqm is not None:
+            if self.area_sqm < self.MIN_AREA_SQM:
+                raise ValidationError({
+                    'area_sqm': f'Area must be at least {self.MIN_AREA_SQM} sqm.'
+                })
+            if self.area_sqm > self.MAX_AREA_SQM:
+                raise ValidationError({
+                    'area_sqm': f'Area must not exceed {self.MAX_AREA_SQM} sqm (100 hectares).'
+                })
 
     def __str__(self) -> str:
         """Return string representation of the field.
@@ -86,6 +110,10 @@ class Bed(models.Model):
         created_at: Timestamp when the bed was created
         updated_at: Timestamp when the bed was last updated
     """
+    # Constants for validation
+    MIN_AREA_SQM = Decimal('0.01')  # Minimum 0.01 sqm (10cm x 10cm)
+    MAX_AREA_SQM = Decimal('10000.00')  # Maximum 10,000 sqm (~1 hectare, reasonable for a bed)
+    
     name = models.CharField(max_length=200)
     field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds')
     area_sqm = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
