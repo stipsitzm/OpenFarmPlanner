@@ -81,8 +81,6 @@ class Field(models.Model):
                     'area_sqm': f'Area must not exceed {self.MAX_AREA_SQM} sqm (100 hectares).'
                 })
 
-
-
     def __str__(self) -> str:
         """Return string representation of the field.
         
@@ -139,8 +137,6 @@ class Bed(models.Model):
                 raise ValidationError({
                     'area_sqm': f'Area must not exceed {self.MAX_AREA_SQM} sqm (1 hectare).'
                 })
-
-
 
     def __str__(self) -> str:
         """Return string representation of the bed.
