@@ -3,6 +3,129 @@
 from django.db import migrations, models
 
 
+def remove_old_fields_add_new(apps, schema_editor):
+    """
+    Safely transition from length_m/width_m to area_sqm.
+    Handles cases where fields might not exist.
+    """
+    from django.db import connection
+    
+    with connection.cursor() as cursor:
+        # Check which columns exist
+        cursor.execute("PRAGMA table_info(farm_bed)")
+        columns = {row[1] for row in cursor.fetchall()}
+        
+        has_length_m = 'length_m' in columns
+        has_width_m = 'width_m' in columns
+        has_area_sqm = 'area_sqm' in columns
+        
+        # Add area_sqm if it doesn't exist
+        if not has_area_sqm:
+            cursor.execute("""
+                ALTER TABLE farm_bed 
+                ADD COLUMN area_sqm DECIMAL(10, 2) NULL
+            """)
+        
+        # For SQLite, we need to recreate the table to remove columns
+        if has_length_m or has_width_m:
+            # Backup existing data
+            cursor.execute("""
+                SELECT id, name, field_id, notes, created_at, updated_at,
+                       {} as length_m, {} as width_m, {} as area_sqm
+                FROM farm_bed
+            """.format(
+                'length_m' if has_length_m else 'NULL',
+                'width_m' if has_width_m else 'NULL',
+                'area_sqm' if has_area_sqm else 'NULL'
+            ))
+            beds = cursor.fetchall()
+            
+            # Create new table without old columns
+            cursor.execute("DROP TABLE IF EXISTS farm_bed_temp")
+            cursor.execute("""
+                CREATE TABLE farm_bed_temp (
+                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    name VARCHAR(200) NOT NULL,
+                    field_id INTEGER NOT NULL REFERENCES farm_field(id) DEFERRABLE INITIALLY DEFERRED,
+                    area_sqm DECIMAL(10, 2) NULL,
+                    notes TEXT NOT NULL,
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL
+                )
+            """)
+            
+            # Migrate data, calculating area from length*width if available
+            for bed in beds:
+                bed_id, name, field_id, notes, created_at, updated_at, length_m, width_m, area_sqm = bed
+                
+                # Calculate area_sqm from length_m and width_m if not already set
+                if area_sqm is None and length_m is not None and width_m is not None:
+                    area_sqm = float(length_m) * float(width_m)
+                
+                cursor.execute("""
+                    INSERT INTO farm_bed_temp (id, name, field_id, area_sqm, notes, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, [bed_id, name, field_id, area_sqm, notes, created_at, updated_at])
+            
+            # Replace old table
+            cursor.execute("DROP TABLE farm_bed")
+            cursor.execute("ALTER TABLE farm_bed_temp RENAME TO farm_bed")
+            
+            # Recreate index
+            cursor.execute("""
+                CREATE INDEX farm_bed_field_id_3f2e91d8 
+                ON farm_bed (field_id)
+            """)
+
+
+def reverse_migration(apps, schema_editor):
+    """
+    Reverse: add back length_m and width_m fields (data will be lost).
+    """
+    from django.db import connection
+    
+    with connection.cursor() as cursor:
+        # Backup data
+        cursor.execute("""
+            SELECT id, name, field_id, area_sqm, notes, created_at, updated_at
+            FROM farm_bed
+        """)
+        beds = cursor.fetchall()
+        
+        # Create new table with old structure
+        cursor.execute("DROP TABLE IF EXISTS farm_bed_temp")
+        cursor.execute("""
+            CREATE TABLE farm_bed_temp (
+                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                name VARCHAR(200) NOT NULL,
+                field_id INTEGER NOT NULL REFERENCES farm_field(id) DEFERRABLE INITIALLY DEFERRED,
+                length_m DECIMAL(6, 2) NULL,
+                width_m DECIMAL(6, 2) NULL,
+                notes TEXT NOT NULL,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL
+            )
+        """)
+        
+        # Copy data (area_sqm will be lost)
+        for bed in beds:
+            bed_id, name, field_id, area_sqm, notes, created_at, updated_at = bed
+            cursor.execute("""
+                INSERT INTO farm_bed_temp (id, name, field_id, length_m, width_m, notes, created_at, updated_at)
+                VALUES (?, ?, ?, NULL, NULL, ?, ?, ?)
+            """, [bed_id, name, field_id, notes, created_at, updated_at])
+        
+        # Replace table
+        cursor.execute("DROP TABLE farm_bed")
+        cursor.execute("ALTER TABLE farm_bed_temp RENAME TO farm_bed")
+        
+        # Recreate index
+        cursor.execute("""
+            CREATE INDEX farm_bed_field_id_3f2e91d8 
+            ON farm_bed (field_id)
+        """)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,17 +133,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='bed',
-            name='length_m',
-        ),
-        migrations.RemoveField(
-            model_name='bed',
-            name='width_m',
-        ),
-        migrations.AddField(
-            model_name='bed',
-            name='area_sqm',
-            field=models.DecimalField(blank=True, decimal_places=2, help_text='Area of the bed in square meters', max_digits=10, null=True),
+        migrations.RunPython(
+            remove_old_fields_add_new,
+            reverse_migration,
         ),
     ]
