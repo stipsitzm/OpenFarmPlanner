@@ -88,7 +88,7 @@ class Bed(models.Model):
     """
     name = models.CharField(max_length=200)
     field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds')
-    area_sqm = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Area of the bed in square meters")
+    area_sqm = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
