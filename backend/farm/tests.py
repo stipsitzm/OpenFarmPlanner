@@ -27,6 +27,45 @@ class FieldModelTest(TestCase):
             area_sqm=1000.50
         )
         self.assertEqual(str(field), "Test Location - North Field")
+    
+    def test_field_area_validation_too_small(self):
+        from django.core.exceptions import ValidationError
+        field = Field(
+            name="Tiny Field",
+            location=self.location,
+            area_sqm=0.001  # Less than MIN_AREA_SQM (0.01)
+        )
+        with self.assertRaises(ValidationError) as cm:
+            field.full_clean()
+        self.assertIn('area_sqm', cm.exception.message_dict)
+    
+    def test_field_area_validation_too_large(self):
+        from django.core.exceptions import ValidationError
+        field = Field(
+            name="Huge Field",
+            location=self.location,
+            area_sqm=2000000  # Greater than MAX_AREA_SQM (1,000,000)
+        )
+        with self.assertRaises(ValidationError) as cm:
+            field.full_clean()
+        self.assertIn('area_sqm', cm.exception.message_dict)
+    
+    def test_field_area_validation_valid_range(self):
+        # Test minimum valid value
+        field_min = Field.objects.create(
+            name="Min Field",
+            location=self.location,
+            area_sqm=0.01
+        )
+        self.assertEqual(field_min.area_sqm, 0.01)
+        
+        # Test a large valid value (max_digits=10, decimal_places=2 means max 8 digits before decimal)
+        field_large = Field.objects.create(
+            name="Large Field",
+            location=self.location,
+            area_sqm=12345678.90
+        )
+        self.assertEqual(field_large.area_sqm, 12345678.90)
 
 
 class BedModelTest(TestCase):
@@ -38,10 +77,48 @@ class BedModelTest(TestCase):
         bed = Bed.objects.create(
             name="Bed A",
             field=self.field,
-            length_m=10.0,
-            width_m=1.2
+            area_sqm=12.0
         )
         self.assertEqual(str(bed), "Test Field - Bed A")
+    
+    def test_bed_area_validation_too_small(self):
+        from django.core.exceptions import ValidationError
+        bed = Bed(
+            name="Tiny Bed",
+            field=self.field,
+            area_sqm=0.001  # Less than MIN_AREA_SQM (0.01)
+        )
+        with self.assertRaises(ValidationError) as cm:
+            bed.full_clean()
+        self.assertIn('area_sqm', cm.exception.message_dict)
+    
+    def test_bed_area_validation_too_large(self):
+        from django.core.exceptions import ValidationError
+        bed = Bed(
+            name="Huge Bed",
+            field=self.field,
+            area_sqm=20000  # Greater than MAX_AREA_SQM (10,000)
+        )
+        with self.assertRaises(ValidationError) as cm:
+            bed.full_clean()
+        self.assertIn('area_sqm', cm.exception.message_dict)
+    
+    def test_bed_area_validation_valid_range(self):
+        # Test minimum valid value
+        bed_min = Bed.objects.create(
+            name="Min Bed",
+            field=self.field,
+            area_sqm=0.01
+        )
+        self.assertEqual(bed_min.area_sqm, 0.01)
+        
+        # Test a large valid value within MAX_AREA_SQM
+        bed_large = Bed.objects.create(
+            name="Large Bed",
+            field=self.field,
+            area_sqm=9999.99
+        )
+        self.assertEqual(bed_large.area_sqm, 9999.99)
 
 
 class CultureModelTest(TestCase):
@@ -140,4 +217,64 @@ class APITestCase(APITestCase):
         response = self.client.post('/api/planting-plans/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn('harvest_date', response.data)
+    
+    def test_field_create_with_valid_area(self):
+        data = {
+            'name': 'Valid Field',
+            'location': self.location.id,
+            'area_sqm': 500.50
+        }
+        response = self.client.post('/api/fields/', data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Field.objects.count(), 2)
+    
+    def test_field_create_with_invalid_area_too_small(self):
+        data = {
+            'name': 'Too Small Field',
+            'location': self.location.id,
+            'area_sqm': 0.001
+        }
+        response = self.client.post('/api/fields/', data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_sqm', response.data)
+    
+    def test_field_create_with_invalid_area_too_large(self):
+        data = {
+            'name': 'Too Large Field',
+            'location': self.location.id,
+            'area_sqm': 2000000  # Greater than MAX_AREA_SQM (1,000,000)
+        }
+        response = self.client.post('/api/fields/', data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_sqm', response.data)
+    
+    def test_bed_create_with_valid_area(self):
+        data = {
+            'name': 'Valid Bed',
+            'field': self.field.id,
+            'area_sqm': 50.25
+        }
+        response = self.client.post('/api/beds/', data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Bed.objects.count(), 2)
+    
+    def test_bed_create_with_invalid_area_too_small(self):
+        data = {
+            'name': 'Too Small Bed',
+            'field': self.field.id,
+            'area_sqm': 0.001
+        }
+        response = self.client.post('/api/beds/', data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_sqm', response.data)
+    
+    def test_bed_create_with_invalid_area_too_large(self):
+        data = {
+            'name': 'Too Large Bed',
+            'field': self.field.id,
+            'area_sqm': 20000
+        }
+        response = self.client.post('/api/beds/', data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_sqm', response.data)
 
