@@ -115,14 +115,6 @@ function PlantingPlans(): React.ReactElement {
       width: 130,
       type: 'number',
       editable: true,
-      valueFormatter: (value) => value ? `${value} m²` : '',
-    },
-    {
-      field: 'quantity',
-      headerName: t('plantingPlans:columns.quantity'),
-      width: 100,
-      type: 'number',
-      editable: true,
     },
     {
       field: 'notes',
