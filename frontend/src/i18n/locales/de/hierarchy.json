@@ -7,8 +7,6 @@
     "location": "Standort",
     "field": "Schlag",
     "area": "Fläche (m²)",
-    "length": "Länge (m)",
-    "width": "Breite (m)",
     "notes": "Notizen"
   },
   "errors": {

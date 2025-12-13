@@ -76,7 +76,7 @@ class Bed(models.Model):
     
     This model represents a planting bed that belongs to a specific field.
     Beds are the smallest organizational unit in the farm hierarchy and
-    have an optional area measurement.
+    have area measurement in square meters.
     
     Attributes:
         name: The name of the bed

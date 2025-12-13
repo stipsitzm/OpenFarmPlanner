@@ -15,8 +15,7 @@ export interface HierarchyRow {
   name?: string;
   field?: number;
   field_name?: string;
-  length_m?: number;
-  width_m?: number;
+  area_sqm?: number;
   notes?: string;
   // Location/Field metadata
   locationId?: number;

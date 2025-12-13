@@ -18,8 +18,7 @@ export function useBedOperations(
       id: newBedId,
       name: '',
       field: fieldId,
-      length_m: undefined,
-      width_m: undefined,
+      area_sqm: undefined,
       notes: '',
     };
 
@@ -37,8 +36,7 @@ export function useBedOperations(
       const payload = {
         name: bedData.name || '',
         field: bedData.field,
-        length_m: bedData.length_m,
-        width_m: bedData.width_m,
+        area_sqm: bedData.area_sqm,
         notes: bedData.notes || '',
       };
 

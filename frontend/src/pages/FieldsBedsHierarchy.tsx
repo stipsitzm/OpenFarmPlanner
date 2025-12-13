@@ -130,8 +130,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
         id: newRow.bedId!,
         name: newRow.name,
         field: newRow.field!,
-        length_m: newRow.length_m,
-        width_m: newRow.width_m,
+        area_sqm: newRow.area_sqm,
         notes: newRow.notes,
       });
 
