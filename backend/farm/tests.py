@@ -120,6 +120,23 @@ class BedModelTest(TestCase):
         )
         self.assertEqual(bed_large.area_sqm, 9999.99)
 
+    def test_bed_get_total_area(self):
+        bed = Bed.objects.create(
+            name="Bed B",
+            field=self.field,
+            area_sqm=15.0
+        )
+        self.assertEqual(bed.get_total_area(), 15.0)
+
+    def test_bed_get_total_area_no_dimensions(self):
+        bed = Bed.objects.create(
+            name="Bed C",
+            field=self.field
+        )
+        self.assertIsNone(bed.get_total_area())
+
+
+
 
 class CultureModelTest(TestCase):
     def test_culture_creation_with_variety(self):
@@ -142,7 +159,11 @@ class PlantingPlanModelTest(TestCase):
     def setUp(self):
         self.location = Location.objects.create(name="Test Location")
         self.field = Field.objects.create(name="Test Field", location=self.location)
-        self.bed = Bed.objects.create(name="Test Bed", field=self.field)
+        self.bed = Bed.objects.create(
+            name="Test Bed", 
+            field=self.field,
+            area_sqm=20.0  # Total area: 20 sqm
+        )
         self.culture = Culture.objects.create(name="Carrot", days_to_harvest=70)
 
     def test_auto_harvest_date(self):
@@ -168,6 +189,74 @@ class PlantingPlanModelTest(TestCase):
         )
         self.assertEqual(plan.harvest_date, manual_harvest)
 
+    def test_area_usage_within_bed_capacity(self):
+        """Test that planting plan with area within bed capacity is allowed"""
+        from django.core.exceptions import ValidationError
+        
+        plan = PlantingPlan(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=date(2024, 3, 1),
+            area_usage_sqm=15.0  # Within 20 sqm capacity
+        )
+        # Should not raise ValidationError
+        plan.clean()
+        plan.save()
+        self.assertEqual(plan.area_usage_sqm, 15.0)
+
+    def test_area_usage_exceeds_bed_capacity(self):
+        """Test that planting plan exceeding bed capacity raises error"""
+        from django.core.exceptions import ValidationError
+        
+        plan = PlantingPlan(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=date(2024, 3, 1),
+            area_usage_sqm=25.0  # Exceeds 20 sqm capacity
+        )
+        with self.assertRaises(ValidationError) as context:
+            plan.clean()
+        self.assertIn('area_usage_sqm', context.exception.message_dict)
+
+    def test_area_usage_total_exceeds_with_multiple_plans(self):
+        """Test that total area of multiple plans cannot exceed bed capacity"""
+        from django.core.exceptions import ValidationError
+        
+        # Create first plan using 12 sqm
+        plan1 = PlantingPlan.objects.create(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=date(2024, 3, 1),
+            area_usage_sqm=12.0
+        )
+        
+        # Try to create second plan using 10 sqm (total would be 22 sqm > 20 sqm)
+        plan2 = PlantingPlan(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=date(2024, 4, 1),
+            area_usage_sqm=10.0
+        )
+        with self.assertRaises(ValidationError) as context:
+            plan2.clean()
+        self.assertIn('area_usage_sqm', context.exception.message_dict)
+
+    def test_area_usage_no_bed_dimensions(self):
+        """Test that validation is skipped when bed has no dimensions"""
+        from django.core.exceptions import ValidationError
+        
+        bed_no_dims = Bed.objects.create(name="No Dims Bed", field=self.field)
+        plan = PlantingPlan(
+            culture=self.culture,
+            bed=bed_no_dims,
+            planting_date=date(2024, 3, 1),
+            area_usage_sqm=100.0  # Large value, but should be allowed
+        )
+        # Should not raise ValidationError since bed has no dimensions
+        plan.clean()
+        plan.save()
+
+
 
 class TaskModelTest(TestCase):
     def test_task_creation(self):
@@ -184,7 +273,11 @@ class APITestCase(APITestCase):
     def setUp(self):
         self.location = Location.objects.create(name="API Test Location")
         self.field = Field.objects.create(name="API Test Field", location=self.location)
-        self.bed = Bed.objects.create(name="API Test Bed", field=self.field)
+        self.bed = Bed.objects.create(
+            name="API Test Bed", 
+            field=self.field,
+            area_sqm=20.0  # Total area: 20 sqm
+        )
         self.culture = Culture.objects.create(name="API Test Culture", days_to_harvest=50)
 
     def test_culture_list(self):
@@ -277,4 +370,52 @@ class APITestCase(APITestCase):
         response = self.client.post('/api/beds/', data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('area_sqm', response.data)
+
+    def test_planting_plan_area_validation_success(self):
+        """Test API allows planting plan within bed capacity"""
+        data = {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 15.0
+        }
+        response = self.client.post('/api/planting-plans/', data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(float(response.data['area_usage_sqm']), 15.0)
+
+    def test_planting_plan_area_validation_failure(self):
+        """Test API rejects planting plan exceeding bed capacity"""
+        data = {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 25.0  # Exceeds 20 sqm capacity
+        }
+        response = self.client.post('/api/planting-plans/', data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_usage_sqm', response.data)
+
+    def test_planting_plan_area_validation_multiple_plans(self):
+        """Test API validates total area of multiple plans"""
+        # Create first plan using 12 sqm
+        data1 = {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 12.0
+        }
+        response1 = self.client.post('/api/planting-plans/', data1)
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
+        
+        # Try to create second plan using 10 sqm (total would be 22 sqm > 20 sqm)
+        data2 = {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-04-01',
+            'area_usage_sqm': 10.0
+        }
+        response2 = self.client.post('/api/planting-plans/', data2)
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_usage_sqm', response2.data)
+
 

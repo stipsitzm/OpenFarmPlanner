@@ -3,6 +3,8 @@ from django.core.exceptions import ValidationError
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
+from decimal import Decimal
+
 
 
 class Location(models.Model):
@@ -98,7 +100,7 @@ class Bed(models.Model):
     
     This model represents a planting bed that belongs to a specific field.
     Beds are the smallest organizational unit in the farm hierarchy and
-    have optional area measurement in square meters.
+    have area measurement in square meters.
     
     Attributes:
         name: The name of the bed
@@ -119,24 +121,15 @@ class Bed(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def clean(self) -> None:
-        """Validate the bed data.
+    def get_total_area(self) -> float | None:
+        """Get total area of the bed in square meters.
         
-        Validates that area_sqm is within realistic bounds if provided.
-        
-        Raises:
-            ValidationError: If area_sqm is outside realistic bounds
+        Returns:
+            The total area in square meters, or None if not set
         """
-        super().clean()
-        if self.area_sqm is not None:
-            if self.area_sqm < self.MIN_AREA_SQM:
-                raise ValidationError({
-                    'area_sqm': f'Area must be at least {self.MIN_AREA_SQM} sqm.'
-                })
-            if self.area_sqm > self.MAX_AREA_SQM:
-                raise ValidationError({
-                    'area_sqm': f'Area must not exceed {self.MAX_AREA_SQM} sqm (1 hectare).'
-                })
+        if self.area_sqm:
+            return float(self.area_sqm)
+        return None
 
     def __str__(self) -> str:
         """Return string representation of the bed.
@@ -225,6 +218,7 @@ class PlantingPlan(models.Model):
         planting_date: The date when planting is scheduled
         harvest_date: Calculated date for expected harvest (auto-calculated)
         quantity: Number of plants or seeds (optional)
+        area_usage_sqm: Area in square meters used by this planting plan (optional)
         notes: Additional notes about the planting plan
         created_at: Timestamp when the plan was created
         updated_at: Timestamp when the plan was last updated
@@ -234,9 +228,50 @@ class PlantingPlan(models.Model):
     planting_date = models.DateField()
     harvest_date = models.DateField(blank=True, null=True)
     quantity = models.IntegerField(null=True, blank=True, help_text="Number of plants or seeds")
+    area_usage_sqm = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        help_text="Area in square meters used by this planting plan"
+    )
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self) -> None:
+        """Validate the planting plan.
+        
+        Validates that the total area usage of all planting plans for this bed
+        does not exceed the bed's total area (if bed dimensions are set).
+        
+        Raises:
+            ValidationError: If total area usage exceeds bed area
+        """
+        super().clean()
+        
+        # Only validate if area_usage_sqm is set and bed has dimensions
+        if self.area_usage_sqm and self.bed:
+            bed_area = self.bed.get_total_area()
+            
+            if bed_area is not None:
+                # Calculate total area used by all other planting plans for this bed
+                existing_plans = PlantingPlan.objects.filter(bed=self.bed).exclude(pk=self.pk)
+                total_used_area = sum(
+                    float(plan.area_usage_sqm) 
+                    for plan in existing_plans 
+                    if plan.area_usage_sqm
+                )
+                
+                # Add current plan's area usage
+                total_area_with_current = total_used_area + float(self.area_usage_sqm)
+                
+                if total_area_with_current > bed_area:
+                    raise ValidationError({
+                        'area_usage_sqm': f'Total area usage ({total_area_with_current:.2f} sqm) '
+                                         f'exceeds bed area ({bed_area:.2f} sqm). '
+                                         f'Available: {bed_area - total_used_area:.2f} sqm.'
+                    })
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the planting plan and auto-calculate harvest_date if not set.
