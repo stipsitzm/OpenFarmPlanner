@@ -29,9 +29,10 @@ export function useKeyboardNavigation(): void {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
-      // Check if Alt+ArrowRight/Left or Ctrl+ArrowRight/Left is pressed
+      // Check if Alt+ArrowRight/Left (preferred) or Ctrl+ArrowRight/Left is pressed
+      // Use XOR logic to prevent triggering when both modifiers are pressed
       const isNavigationShortcut = 
-        (event.altKey || event.ctrlKey) && 
+        ((event.altKey && !event.ctrlKey) || (!event.altKey && event.ctrlKey)) && 
         (event.key === 'ArrowRight' || event.key === 'ArrowLeft');
       
       if (!isNavigationShortcut) {
