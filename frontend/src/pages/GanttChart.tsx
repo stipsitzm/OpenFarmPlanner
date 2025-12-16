@@ -259,8 +259,11 @@ function GanttChart(): React.ReactElement {
     
     if (span <= 0) return null;
     
+    // Skip if plan doesn't have an ID
+    if (!plan.id) return null;
+    
     return {
-      planId: plan.id!,
+      planId: plan.id,
       cultureName: plan.culture_name || '',
       startDate,
       endDate,
@@ -293,7 +296,7 @@ function GanttChart(): React.ReactElement {
     return (
       <div className="page-container">
         <h1>{t('ganttChart:title')}</h1>
-        <p>Laden...</p>
+        <p>{t('ganttChart:loading')}</p>
       </div>
     );
   }
@@ -320,10 +323,26 @@ function GanttChart(): React.ReactElement {
         </ToggleButtonGroup>
         
         <Box>
-          <span style={{ marginRight: '1rem' }}>Jahr: {displayYear}</span>
-          <button onClick={() => setDisplayYear(displayYear - 1)}>◀</button>
-          <button onClick={() => setDisplayYear(currentYear)} style={{ margin: '0 0.5rem' }}>Heute</button>
-          <button onClick={() => setDisplayYear(displayYear + 1)}>▶</button>
+          <span style={{ marginRight: '1rem' }}>{t('ganttChart:year')}: {displayYear}</span>
+          <button 
+            onClick={() => setDisplayYear(displayYear - 1)}
+            aria-label={t('ganttChart:previousYear')}
+          >
+            ◀
+          </button>
+          <button 
+            onClick={() => setDisplayYear(currentYear)} 
+            style={{ margin: '0 0.5rem' }}
+            aria-label={t('ganttChart:today')}
+          >
+            {t('ganttChart:today')}
+          </button>
+          <button 
+            onClick={() => setDisplayYear(displayYear + 1)}
+            aria-label={t('ganttChart:nextYear')}
+          >
+            ▶
+          </button>
         </Box>
       </Box>
       

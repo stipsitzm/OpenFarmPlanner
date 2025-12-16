@@ -24,6 +24,11 @@
   "field": "Schlag",
   "bed": "Beet",
   "area": "Fläche",
+  "year": "Jahr",
+  "today": "Heute",
+  "previousYear": "Vorheriges Jahr",
+  "nextYear": "Nächstes Jahr",
+  "loading": "Laden...",
   "errors": {
     "load": "Fehler beim Laden der Daten"
   },
