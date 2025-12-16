@@ -1,9 +1,9 @@
 /**
  * Custom hook for keyboard navigation between main views.
  * 
- * Provides Alt+ArrowRight and Alt+ArrowLeft shortcuts to cycle through
+ * Provides Ctrl+Shift+ArrowRight and Ctrl+Shift+ArrowLeft shortcuts to cycle through
  * the main application routes in a circular manner.
- * Alternative: Ctrl+ArrowRight and Ctrl+ArrowLeft also work.
+ * These shortcuts don't conflict with browser navigation or tab switching.
  * Shortcuts are disabled when focus is on input or textarea elements.
  * 
  * @returns void
@@ -29,10 +29,11 @@ export function useKeyboardNavigation(): void {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
-      // Check if Alt+ArrowRight/Left (preferred) or Ctrl+ArrowRight/Left is pressed
-      // Use XOR logic to prevent triggering when both modifiers are pressed
+      // Check if Ctrl+Shift+ArrowRight/Left is pressed
       const isNavigationShortcut = 
-        ((event.altKey && !event.ctrlKey) || (!event.altKey && event.ctrlKey)) && 
+        event.ctrlKey && 
+        event.shiftKey && 
+        !event.altKey &&
         (event.key === 'ArrowRight' || event.key === 'ArrowLeft');
       
       if (!isNavigationShortcut) {
@@ -67,13 +68,13 @@ export function useKeyboardNavigation(): void {
       // Calculate next index based on direction
       let nextIndex: number;
       if (event.key === 'ArrowLeft') {
-        // Alt+ArrowLeft or Ctrl+ArrowLeft: go to previous route
+        // Ctrl+Shift+ArrowLeft: go to previous route
         nextIndex = currentIndex - 1;
         if (nextIndex < 0) {
           nextIndex = ROUTES.length - 1; // Wrap to last route
         }
       } else {
-        // Alt+ArrowRight or Ctrl+ArrowRight: go to next route
+        // Ctrl+Shift+ArrowRight: go to next route
         nextIndex = currentIndex + 1;
         if (nextIndex >= ROUTES.length) {
           nextIndex = 0; // Wrap to first route
