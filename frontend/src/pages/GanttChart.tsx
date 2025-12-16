@@ -372,8 +372,10 @@ function GanttChart(): React.ReactElement {
               return (
                 <div key={row.id} className={`gantt-row gantt-row-${row.type}`}>
                   <div className={`gantt-sidebar gantt-sidebar-level-${row.level}`}>
-                    <span className="gantt-row-name">{row.name}</span>
-                    {row.area && <span className="gantt-row-area">({row.area} m²)</span>}
+                    <span className="gantt-row-name">
+                      {row.name}
+                      {row.area != null && ` (${row.area} m²)`}
+                    </span>
                   </div>
                   <div className="gantt-timeline">
                     {row.type === 'bed' && bars.length > 0 ? (
