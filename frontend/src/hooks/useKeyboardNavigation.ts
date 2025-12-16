@@ -40,7 +40,7 @@ export function useKeyboardNavigation(): void {
       if (
         activeElement instanceof HTMLInputElement ||
         activeElement instanceof HTMLTextAreaElement ||
-        activeElement?.getAttribute('contenteditable') === 'true'
+        (activeElement && 'contentEditable' in activeElement && activeElement.contentEditable === 'true')
       ) {
         return;
       }
@@ -48,8 +48,11 @@ export function useKeyboardNavigation(): void {
       // Prevent default tab behavior
       event.preventDefault();
 
+      // Normalize pathname by removing trailing slash
+      const normalizedPath = location.pathname.replace(/\/$/, '') || '/';
+      
       // Find current route index
-      const currentIndex = ROUTES.indexOf(location.pathname);
+      const currentIndex = ROUTES.indexOf(normalizedPath);
       
       // If current route is not in the list, default to home
       if (currentIndex === -1) {
