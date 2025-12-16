@@ -20,6 +20,7 @@ import tasksDE from './locales/de/tasks.json';
 import fieldsDE from './locales/de/fields.json';
 import bedsDE from './locales/de/beds.json';
 import hierarchyDE from './locales/de/hierarchy.json';
+import ganttChartDE from './locales/de/ganttChart.json';
 
 // Configure i18next
 i18n
@@ -33,7 +34,7 @@ i18n
     debug: import.meta.env.DEV,
     
     // Namespaces for organizing translations
-    ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'tasks', 'fields', 'beds', 'hierarchy'],
+    ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'tasks', 'fields', 'beds', 'hierarchy', 'ganttChart'],
     defaultNS: 'common',
     
     // Translation resources
@@ -49,6 +50,7 @@ i18n
         fields: fieldsDE,
         beds: bedsDE,
         hierarchy: hierarchyDE,
+        ganttChart: ganttChartDE,
       },
     },
     

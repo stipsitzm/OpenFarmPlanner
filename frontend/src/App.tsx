@@ -16,6 +16,7 @@ import FieldsBedsHierarchy from './pages/FieldsBedsHierarchy';
 import Cultures from './pages/Cultures';
 import PlantingPlans from './pages/PlantingPlans';
 import Tasks from './pages/Tasks';
+import GanttChart from './pages/GanttChart';
 import './App.css';
 
 function App(): React.ReactElement {
@@ -44,6 +45,9 @@ function App(): React.ReactElement {
             <Link to="/tasks" className="nav-link">
               {t('tasks')}
             </Link>
+            <Link to="/gantt-chart" className="nav-link">
+              {t('ganttChart')}
+            </Link>
           </div>
         </nav>
 
@@ -54,6 +58,7 @@ function App(): React.ReactElement {
           <Route path="/cultures" element={<Cultures />} />
           <Route path="/planting-plans" element={<PlantingPlans />} />
           <Route path="/tasks" element={<Tasks />} />
+          <Route path="/gantt-chart" element={<GanttChart />} />
         </Routes>
       </div>
     </Router>

@@ -1,0 +1,409 @@
+/**
+ * Gantt Chart page component for visualizing bed occupation over time.
+ * 
+ * Displays a timeline view of planting plans grouped by fields and beds.
+ * Shows planting to harvest periods as horizontal bars in a calendar grid.
+ * UI text is in German, code comments remain in English.
+ * 
+ * @returns The Gantt Chart page component
+ */
+
+import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from '../i18n';
+import { Box, Alert, ToggleButton, ToggleButtonGroup, Paper, Tooltip } from '@mui/material';
+import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, type PlantingPlan, type Bed, type Field, type Location } from '../api/client';
+import './GanttChart.css';
+
+type ViewMode = 'month' | 'week';
+
+interface GanttRow {
+  id: string;
+  type: 'location' | 'field' | 'bed';
+  locationId?: number;
+  fieldId?: number;
+  bedId?: number;
+  name: string;
+  area?: number;
+  level: number;
+  plans: PlantingPlan[];
+}
+
+interface TimelineBar {
+  planId: number;
+  cultureName: string;
+  startDate: Date;
+  endDate: Date;
+  areaUsage?: number;
+  notes?: string;
+  startCol: number;
+  span: number;
+}
+
+function GanttChart(): React.ReactElement {
+  const { t } = useTranslation(['ganttChart', 'common']);
+  const [viewMode, setViewMode] = useState<ViewMode>('month');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Data
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [fields, setFields] = useState<Field[]>([]);
+  const [beds, setBeds] = useState<Bed[]>([]);
+  const [plantingPlans, setPlantingPlans] = useState<PlantingPlan[]>([]);
+  
+  // Timeline configuration
+  const currentYear = new Date().getFullYear();
+  const [displayYear, setDisplayYear] = useState(currentYear);
+  
+  /**
+   * Fetch all required data
+   */
+  useEffect(() => {
+    const fetchData = async (): Promise<void> => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const [locationsRes, fieldsRes, bedsRes, plansRes] = await Promise.all([
+          locationAPI.list(),
+          fieldAPI.list(),
+          bedAPI.list(),
+          plantingPlanAPI.list(),
+        ]);
+        
+        setLocations(locationsRes.data.results);
+        setFields(fieldsRes.data.results);
+        setBeds(bedsRes.data.results);
+        setPlantingPlans(plansRes.data.results);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError(t('ganttChart:errors.load'));
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [t]);
+  
+  /**
+   * Generate timeline columns based on view mode
+   */
+  const timelineColumns = useMemo(() => {
+    const columns: { label: string; date: Date }[] = [];
+    
+    if (viewMode === 'month') {
+      // 12 months
+      const monthNames = [
+        t('ganttChart:months.jan'), t('ganttChart:months.feb'), t('ganttChart:months.mar'),
+        t('ganttChart:months.apr'), t('ganttChart:months.may'), t('ganttChart:months.jun'),
+        t('ganttChart:months.jul'), t('ganttChart:months.aug'), t('ganttChart:months.sep'),
+        t('ganttChart:months.oct'), t('ganttChart:months.nov'), t('ganttChart:months.dec'),
+      ];
+      
+      for (let i = 0; i < 12; i++) {
+        columns.push({
+          label: monthNames[i],
+          date: new Date(displayYear, i, 1),
+        });
+      }
+    } else {
+      // 52 weeks
+      for (let i = 1; i <= 52; i++) {
+        columns.push({
+          label: `${t('ganttChart:weekShort')} ${i}`,
+          date: new Date(displayYear, 0, 1 + (i - 1) * 7),
+        });
+      }
+    }
+    
+    return columns;
+  }, [viewMode, displayYear, t]);
+  
+  /**
+   * Build hierarchy rows with planting plans
+   */
+  const ganttRows = useMemo<GanttRow[]>(() => {
+    const rows: GanttRow[] = [];
+    
+    // Group beds by field
+    const bedsByField = beds.reduce((acc, bed) => {
+      if (!acc[bed.field]) {
+        acc[bed.field] = [];
+      }
+      acc[bed.field].push(bed);
+      return acc;
+    }, {} as Record<number, Bed[]>);
+    
+    // Group fields by location
+    const fieldsByLocation = fields.reduce((acc, field) => {
+      if (!acc[field.location]) {
+        acc[field.location] = [];
+      }
+      acc[field.location].push(field);
+      return acc;
+    }, {} as Record<number, Field[]>);
+    
+    // Build hierarchy
+    locations.forEach(location => {
+      const locationFields = fieldsByLocation[location.id!] || [];
+      
+      // Add location row (header only)
+      rows.push({
+        id: `location-${location.id}`,
+        type: 'location',
+        locationId: location.id,
+        name: location.name,
+        level: 0,
+        plans: [],
+      });
+      
+      locationFields.forEach(field => {
+        const fieldBeds = bedsByField[field.id!] || [];
+        
+        // Add field row (header only)
+        rows.push({
+          id: `field-${field.id}`,
+          type: 'field',
+          locationId: location.id,
+          fieldId: field.id,
+          name: field.name,
+          area: field.area_sqm ? Number(field.area_sqm) : undefined,
+          level: 1,
+          plans: [],
+        });
+        
+        fieldBeds.forEach(bed => {
+          // Get planting plans for this bed
+          const bedPlans = plantingPlans.filter(p => p.bed === bed.id);
+          
+          // Add bed row with plans
+          rows.push({
+            id: `bed-${bed.id}`,
+            type: 'bed',
+            locationId: location.id,
+            fieldId: field.id,
+            bedId: bed.id,
+            name: bed.name,
+            area: bed.area_sqm ? Number(bed.area_sqm) : undefined,
+            level: 2,
+            plans: bedPlans,
+          });
+        });
+      });
+    });
+    
+    return rows;
+  }, [locations, fields, beds, plantingPlans]);
+  
+  /**
+   * Calculate timeline bar position and span
+   */
+  const calculateBar = (plan: PlantingPlan): TimelineBar | null => {
+    if (!plan.planting_date || !plan.harvest_date) return null;
+    
+    const startDate = new Date(plan.planting_date);
+    const endDate = new Date(plan.harvest_date);
+    
+    // Find start column
+    let startCol = 0;
+    let span = 0;
+    
+    if (viewMode === 'month') {
+      // Calculate month positions
+      const startMonth = startDate.getMonth();
+      const startYear = startDate.getFullYear();
+      const endMonth = endDate.getMonth();
+      const endYear = endDate.getFullYear();
+      
+      // Only show if in the display year
+      if (startYear > displayYear || endYear < displayYear) return null;
+      
+      // Calculate column and span
+      if (startYear === displayYear) {
+        startCol = startMonth;
+      } else {
+        startCol = 0;
+      }
+      
+      if (endYear === displayYear) {
+        span = endMonth - startCol + 1;
+      } else if (endYear > displayYear) {
+        span = 12 - startCol;
+      } else {
+        return null;
+      }
+    } else {
+      // Calculate week positions
+      const startWeek = getWeekNumber(startDate);
+      const endWeek = getWeekNumber(endDate);
+      const startYear = startDate.getFullYear();
+      const endYear = endDate.getFullYear();
+      
+      // Only show if in the display year
+      if (startYear > displayYear || endYear < displayYear) return null;
+      
+      if (startYear === displayYear && endYear === displayYear) {
+        startCol = startWeek - 1;
+        span = endWeek - startWeek + 1;
+      } else if (startYear === displayYear && endYear > displayYear) {
+        startCol = startWeek - 1;
+        span = 52 - startCol;
+      } else if (startYear < displayYear && endYear === displayYear) {
+        startCol = 0;
+        span = endWeek;
+      } else {
+        return null;
+      }
+    }
+    
+    if (span <= 0) return null;
+    
+    return {
+      planId: plan.id!,
+      cultureName: plan.culture_name || '',
+      startDate,
+      endDate,
+      areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
+      notes: plan.notes,
+      startCol,
+      span,
+    };
+  };
+  
+  /**
+   * Get ISO week number
+   */
+  const getWeekNumber = (date: Date): number => {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  };
+  
+  /**
+   * Format date for tooltip
+   */
+  const formatDate = (date: Date): string => {
+    return date.toLocaleDateString('de-DE');
+  };
+  
+  if (loading) {
+    return (
+      <div className="page-container">
+        <h1>{t('ganttChart:title')}</h1>
+        <p>Laden...</p>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="page-container">
+      <h1>{t('ganttChart:title')}</h1>
+      
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <ToggleButtonGroup
+          value={viewMode}
+          exclusive
+          onChange={(_, newMode) => {
+            if (newMode !== null) {
+              setViewMode(newMode);
+            }
+          }}
+          size="small"
+        >
+          <ToggleButton value="month">{t('ganttChart:viewModes.month')}</ToggleButton>
+          <ToggleButton value="week">{t('ganttChart:viewModes.week')}</ToggleButton>
+        </ToggleButtonGroup>
+        
+        <Box>
+          <span style={{ marginRight: '1rem' }}>Jahr: {displayYear}</span>
+          <button onClick={() => setDisplayYear(displayYear - 1)}>◀</button>
+          <button onClick={() => setDisplayYear(currentYear)} style={{ margin: '0 0.5rem' }}>Heute</button>
+          <button onClick={() => setDisplayYear(displayYear + 1)}>▶</button>
+        </Box>
+      </Box>
+      
+      <Paper className="gantt-container">
+        <div className="gantt-grid">
+          {/* Header row */}
+          <div className="gantt-header">
+            <div className="gantt-sidebar-header">
+              {t('ganttChart:field')} / {t('ganttChart:bed')}
+            </div>
+            <div className="gantt-timeline-header">
+              {timelineColumns.map((col, idx) => (
+                <div key={idx} className="gantt-timeline-column-header">
+                  {col.label}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Data rows */}
+          {ganttRows.length === 0 ? (
+            <div className="gantt-no-data">{t('ganttChart:noData')}</div>
+          ) : (
+            ganttRows.map(row => {
+              const bars = row.plans.map(p => calculateBar(p)).filter(b => b !== null) as TimelineBar[];
+              
+              return (
+                <div key={row.id} className={`gantt-row gantt-row-${row.type}`}>
+                  <div className={`gantt-sidebar gantt-sidebar-level-${row.level}`}>
+                    <span className="gantt-row-name">{row.name}</span>
+                    {row.area && <span className="gantt-row-area">({row.area} m²)</span>}
+                  </div>
+                  <div className="gantt-timeline">
+                    {row.type === 'bed' && bars.length > 0 ? (
+                      <div className="gantt-bars-container">
+                        {bars.map((bar) => (
+                          <Tooltip
+                            key={bar.planId}
+                            title={
+                              <div>
+                                <div><strong>{bar.cultureName}</strong></div>
+                                <div>{t('ganttChart:tooltip.plantingDate')}: {formatDate(bar.startDate)}</div>
+                                <div>{t('ganttChart:tooltip.harvestDate')}: {formatDate(bar.endDate)}</div>
+                                {bar.areaUsage && (
+                                  <div>{t('ganttChart:tooltip.areaUsage')}: {bar.areaUsage} m²</div>
+                                )}
+                                {bar.notes && <div>{bar.notes}</div>}
+                              </div>
+                            }
+                          >
+                            <div
+                              className="gantt-bar"
+                              style={{
+                                gridColumnStart: bar.startCol + 1,
+                                gridColumnEnd: bar.startCol + bar.span + 1,
+                              }}
+                            >
+                              <span className="gantt-bar-label">
+                                {bar.cultureName}
+                                {bar.areaUsage && ` (${bar.areaUsage}m²)`}
+                              </span>
+                            </div>
+                          </Tooltip>
+                        ))}
+                      </div>
+                    ) : (
+                      // Empty timeline grid for location/field rows
+                      timelineColumns.map((_, idx) => (
+                        <div key={idx} className="gantt-timeline-cell" />
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </Paper>
+    </div>
+  );
+}
+
+export default GanttChart;
