@@ -24,6 +24,10 @@
   background-color: #555;
 }
 
+.nav-link.active {
+  background-color: #1976D2;
+}
+
 .nav-link.home {
   font-weight: bold;
 }

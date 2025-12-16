@@ -210,8 +210,15 @@ function GanttChart(): React.ReactElement {
   const calculateBar = (plan: PlantingPlan): TimelineBar | null => {
     if (!plan.planting_date || !plan.harvest_date) return null;
     
-    const startDate = new Date(plan.planting_date);
-    const endDate = new Date(plan.harvest_date);
+    // Parse dates as local dates to avoid timezone issues
+    // Date string format from API: "YYYY-MM-DD"
+    const parseDateString = (dateStr: string): Date => {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return new Date(year, month - 1, day); // month is 0-indexed
+    };
+    
+    const startDate = parseDateString(plan.planting_date);
+    const endDate = parseDateString(plan.harvest_date);
     
     // Find start column
     let startCol = 0;

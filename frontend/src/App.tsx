@@ -8,7 +8,7 @@
  * @returns The main App component with routing
  */
 
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
 import { useTranslation } from './i18n';
 import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 import Home from './pages/Home';
@@ -34,27 +34,27 @@ function AppContent(): React.ReactElement {
     <div className="app">
       <nav className="nav">
         <div className="nav-links">
-          <Link to="/" className="nav-link home">
+          <NavLink to="/" end className={({ isActive }) => isActive ? "nav-link home active" : "nav-link home"}>
             {t('home')}
-          </Link>
-          <Link to="/locations" className="nav-link">
+          </NavLink>
+          <NavLink to="/locations" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('locations')}
-          </Link>
-          <Link to="/fields-beds" className="nav-link">
+          </NavLink>
+          <NavLink to="/fields-beds" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('fieldsAndBeds')}
-          </Link>
-          <Link to="/cultures" className="nav-link">
+          </NavLink>
+          <NavLink to="/cultures" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('cultures')}
-          </Link>
-          <Link to="/planting-plans" className="nav-link">
+          </NavLink>
+          <NavLink to="/planting-plans" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('plantingPlans')}
-          </Link>
-          <Link to="/tasks" className="nav-link">
+          </NavLink>
+          <NavLink to="/tasks" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('tasks')}
-          </Link>
-          <Link to="/gantt-chart" className="nav-link">
+          </NavLink>
+          <NavLink to="/gantt-chart" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('ganttChart')}
-          </Link>
+          </NavLink>
         </div>
       </nav>
 
