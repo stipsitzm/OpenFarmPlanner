@@ -8,7 +8,7 @@
  * @returns The Gantt Chart page component
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from '../i18n';
 import { Box, Alert, ToggleButton, ToggleButtonGroup, Paper, Tooltip } from '@mui/material';
 import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, type PlantingPlan, type Bed, type Field, type Location } from '../api/client';
@@ -41,6 +41,7 @@ interface TimelineBar {
 
 function GanttChart(): React.ReactElement {
   const { t } = useTranslation(['ganttChart', 'common']);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -195,6 +196,52 @@ function GanttChart(): React.ReactElement {
     
     return rows;
   }, [locations, fields, beds, plantingPlans]);
+
+  /**
+   * Measure the widest sidebar (including header) and set a CSS variable
+   * so the first column width is consistent and fits the longest content.
+   */
+  useLayoutEffect(() => {
+    if (loading) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    const measure = () => {
+      let max = 0;
+
+      // Measure header text width + header paddings
+      const headerSpan = container.querySelector<HTMLElement>('.gantt-sidebar-header-text');
+      const headerContainer = container.querySelector<HTMLElement>('.gantt-sidebar-header');
+      if (headerSpan && headerContainer) {
+        const hc = getComputedStyle(headerContainer);
+        const headerPaddings = parseFloat(hc.paddingLeft) + parseFloat(hc.paddingRight);
+        const headerWidth = Math.ceil(headerSpan.scrollWidth + headerPaddings);
+        if (headerWidth > max) max = headerWidth;
+      }
+
+      // Measure each row's text width + its container paddings (incl. indentation)
+      const rowSpans = container.querySelectorAll<HTMLElement>('.gantt-row-name');
+      rowSpans.forEach((span) => {
+        const sidebar = span.closest('.gantt-sidebar') as HTMLElement | null;
+        let paddings = 0;
+        if (sidebar) {
+          const cs = getComputedStyle(sidebar);
+          paddings = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+        }
+        const w = Math.ceil(span.scrollWidth + paddings);
+        if (w > max) max = w;
+      });
+
+      if (max > 0) {
+        container.style.setProperty('--gantt-sidebar-width', `${max}px`);
+      }
+    };
+
+    measure();
+    const onResize = () => measure();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [loading, ganttRows, viewMode, displayYear]);
   
   /**
    * Calculate timeline bar position and span
@@ -346,12 +393,14 @@ function GanttChart(): React.ReactElement {
         </Box>
       </Box>
       
-      <Paper className="gantt-container">
+      <Paper className="gantt-container" ref={containerRef}>
         <div className="gantt-grid">
           {/* Header row */}
           <div className="gantt-header">
             <div className="gantt-sidebar-header">
-              {t('ganttChart:field')} / {t('ganttChart:bed')}
+              <span className="gantt-sidebar-header-text">
+                {t('ganttChart:field')} / {t('ganttChart:bed')}
+              </span>
             </div>
             <div className="gantt-timeline-header">
               {timelineColumns.map((col, idx) => (

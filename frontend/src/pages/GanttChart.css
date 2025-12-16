@@ -26,14 +26,19 @@
 }
 
 .gantt-sidebar-header {
-  width: 300px;
-  min-width: 300px;
+  box-sizing: border-box;
+  width: var(--gantt-sidebar-width, 300px);
+  min-width: var(--gantt-sidebar-width, 300px);
   padding: 0.75rem 1rem;
   border-right: 1px solid #1b5e20;
   background-color: #2e7d32;
   position: sticky;
   left: 0;
   z-index: 11;
+}
+
+.gantt-sidebar-header-text {
+  white-space: nowrap;
 }
 
 .gantt-timeline-header {
@@ -77,8 +82,9 @@
 }
 
 .gantt-sidebar {
-  width: 300px;
-  min-width: 300px;
+  box-sizing: border-box;
+  width: var(--gantt-sidebar-width, 300px);
+  min-width: var(--gantt-sidebar-width, 300px);
   padding: 0.5rem 1rem;
   display: flex;
   align-items: center;
@@ -103,7 +109,9 @@
 }
 
 .gantt-row-name {
-  flex: 1;
+  /* Let the text have intrinsic width so measurement is accurate */
+  flex: 0 1 auto;
+  white-space: nowrap;
 }
 
 .gantt-row-area {
@@ -180,8 +188,8 @@
 @media (max-width: 768px) {
   .gantt-sidebar,
   .gantt-sidebar-header {
-    width: 200px;
-    min-width: 200px;
+    width: var(--gantt-sidebar-width, 200px);
+    min-width: var(--gantt-sidebar-width, 200px);
   }
   
   .gantt-timeline-column-header,
