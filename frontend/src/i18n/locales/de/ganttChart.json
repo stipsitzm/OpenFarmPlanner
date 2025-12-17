@@ -36,6 +36,8 @@
     "culture": "Kultur",
     "plantingDate": "Pflanzdatum",
     "harvestDate": "Erntedatum",
+    "firstHarvest": "Erste Ernte",
+    "lastHarvest": "Letzte Ernte",
     "areaUsage": "Flächennutzung"
   },
   "noData": "Keine Anbaupläne vorhanden"
