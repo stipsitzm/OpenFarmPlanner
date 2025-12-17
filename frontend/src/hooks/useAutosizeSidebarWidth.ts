@@ -50,12 +50,28 @@ export function useAutosizeSidebarWidth(
         if (headerWidth > max) max = headerWidth;
       }
 
-      // Rows: measure entire sidebar width including expand button, gap, and text
+      // Rows: measure only the text elements, NOT the whole sidebar
+      // This prevents the width from growing when expand/collapse buttons are clicked
+      const rowTexts = container.querySelectorAll<HTMLElement>(rowTextSelector);
       const sidebars = container.querySelectorAll<HTMLElement>(sidebarSelector);
-      sidebars.forEach((sidebar) => {
-        // Use scrollWidth to get the full width including all child elements
-        const w = Math.ceil(sidebar.scrollWidth + 20); // Add 20px buffer for safety
-        if (w > max) max = w;
+      
+      rowTexts.forEach((textEl, idx) => {
+        const sidebar = sidebars[idx];
+        if (!sidebar) return;
+        
+        // Get the text width
+        const textWidth = textEl.getBoundingClientRect().width;
+        
+        // Get sidebar paddings
+        const style = getComputedStyle(sidebar);
+        const paddings = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+        
+        // Add fixed width for expand button (28px) + gap (8px) for rows with expand buttons
+        const expandButtonWidth = sidebar.querySelector('.gantt-expand-icon') ? 36 : 0;
+        
+        // Total width: text + paddings + expand button (if present)
+        const totalWidth = Math.ceil(textWidth + paddings + expandButtonWidth);
+        if (totalWidth > max) max = totalWidth;
       });
 
       if (max > 0) {

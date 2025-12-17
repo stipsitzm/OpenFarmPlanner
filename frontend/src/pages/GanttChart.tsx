@@ -253,8 +253,9 @@ function GanttChart(): React.ReactElement {
   /**
    * Measure the widest sidebar (including header) and set a CSS variable
    * so the first column width is consistent and fits the longest content.
+   * Dependencies: only re-measure when actual data changes, NOT on expand/collapse
    */
-  useAutosizeSidebarWidth(containerRef, undefined, [loading, ganttRows, displayYear]);
+  useAutosizeSidebarWidth(containerRef, undefined, [locations, fields, beds, displayYear]);
   
   /**
    * Calculate timeline bar position and span using year-clamping
@@ -411,6 +412,7 @@ function GanttChart(): React.ReactElement {
                   <div className={`gantt-sidebar gantt-sidebar-level-${row.level}`}>
                     {(row.type === 'location' || row.type === 'field') && (
                       <IconButton
+                        className="gantt-expand-icon"
                         size="small"
                         onClick={() => toggleExpand(row.id)}
                         sx={{ padding: '2px', marginRight: '4px' }}
