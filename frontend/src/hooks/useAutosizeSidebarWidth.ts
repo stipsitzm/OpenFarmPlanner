@@ -50,16 +50,11 @@ export function useAutosizeSidebarWidth(
         if (headerWidth > max) max = headerWidth;
       }
 
-      // Rows: text width + sidebar paddings (includes indentation via padding-left)
-      const rowSpans = container.querySelectorAll<HTMLElement>(rowTextSelector);
-      rowSpans.forEach((span) => {
-        const sidebar = span.closest(sidebarSelector) as HTMLElement | null;
-        let paddings = 0;
-        if (sidebar) {
-          const cs = getComputedStyle(sidebar);
-          paddings = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-        }
-        const w = Math.ceil(span.scrollWidth + paddings);
+      // Rows: measure entire sidebar width including expand button, gap, and text
+      const sidebars = container.querySelectorAll<HTMLElement>(sidebarSelector);
+      sidebars.forEach((sidebar) => {
+        // Use scrollWidth to get the full width including all child elements
+        const w = Math.ceil(sidebar.scrollWidth + 20); // Add 20px buffer for safety
         if (w > max) max = w;
       });
 

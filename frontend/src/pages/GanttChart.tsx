@@ -285,8 +285,8 @@ function GanttChart(): React.ReactElement {
     
     // Calculate positions in days (inclusive)
     const totalDays = daysBetweenInclusive(visStart, visEnd); // Should be 365 or 366
-    const leftDays = daysBetweenInclusive(visStart, s) - 1;  // 0-based
-    const spanDays = daysBetweenInclusive(s, e);
+    const leftDays = daysBetweenInclusive(visStart, s) - 1;  // 0-based (start of start day)
+    const spanDays = daysBetweenInclusive(s, e) - 1;  // Exclude end day so bar ends AT end date, not extends beyond
     
     // Calculate percentages
     const leftPct = (leftDays / totalDays) * 100;
@@ -311,7 +311,7 @@ function GanttChart(): React.ReactElement {
         const he = clampDate(harvestEndDate, visStart, visEnd);
         
         const harvestLeftDays = daysBetweenInclusive(visStart, hs) - 1;
-        const harvestSpanDays = daysBetweenInclusive(hs, he);
+        const harvestSpanDays = daysBetweenInclusive(hs, he) - 1; // Exclude end day
         
         harvestLeftPct = (harvestLeftDays / totalDays) * 100;
         harvestWidthPct = (harvestSpanDays / totalDays) * 100;
