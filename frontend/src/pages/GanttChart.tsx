@@ -293,18 +293,16 @@ function GanttChart(): React.ReactElement {
     const leftPct = (leftDays / totalDays) * 100;
     const widthPct = (spanDays / totalDays) * 100;
     
-    // Calculate harvest period if available
+    // Calculate harvest period overlay if both harvest dates are available
     let harvestStartDate: Date | undefined;
     let harvestEndDate: Date | undefined;
     let harvestLeftPct: number | undefined;
     let harvestWidthPct: number | undefined;
     
-    if (plan.median_days_to_first_harvest && plan.median_days_to_last_harvest) {
-      harvestStartDate = new Date(startDate);
-      harvestStartDate.setDate(harvestStartDate.getDate() + plan.median_days_to_first_harvest);
-      
-      harvestEndDate = new Date(startDate);
-      harvestEndDate.setDate(harvestEndDate.getDate() + plan.median_days_to_last_harvest);
+    if (plan.harvest_date && plan.harvest_end_date) {
+      // Parse harvest dates from API
+      harvestStartDate = parseDateString(plan.harvest_date);
+      harvestEndDate = parseDateString(plan.harvest_end_date);
       
       // Only calculate harvest bar if it's within the visible year
       if (!(harvestEndDate < visStart || harvestStartDate > visEnd)) {

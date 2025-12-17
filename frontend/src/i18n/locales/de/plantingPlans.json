@@ -5,6 +5,8 @@
     "bed": "Beet",
     "plantingDate": "Pflanzdatum",
     "harvestDate": "Erntedatum",
+    "harvestStartDate": "Erntebeginn",
+    "harvestEndDate": "Ernteende",
     "areaUsage": "Flächennutzung (m²)",
     "notes": "Notizen"
   },
