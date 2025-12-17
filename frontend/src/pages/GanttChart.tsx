@@ -10,12 +10,11 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from '../i18n';
-import { Box, Alert, ToggleButton, ToggleButtonGroup, Paper, Tooltip } from '@mui/material';
+import { Box, Alert, Paper, Tooltip, IconButton } from '@mui/material';
+import { ExpandMore, ChevronRight } from '@mui/icons-material';
 import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, type PlantingPlan, type Bed, type Field, type Location } from '../api/client';
 import './GanttChart.css';
 import { useAutosizeSidebarWidth } from '../hooks/useAutosizeSidebarWidth';
-
-type ViewMode = 'month' | 'week';
 
 interface GanttRow {
   id: string;
@@ -36,17 +35,37 @@ interface TimelineBar {
   endDate: Date;
   areaUsage?: number;
   notes?: string;
-  startCol: number;
-  span: number;
-  // Precise positioning within the grid (0-1 fractional values)
-  leftOffset: number;  // Fraction of first column where bar starts (0 = start of month, 1 = end of month)
-  width: number;       // Total width in columns (fractional, e.g., 2.5 means 2.5 months)
+  leftPct: number;   // Left position as percentage of year (0-100)
+  widthPct: number;  // Width as percentage of year (0-100)
+  harvestStartDate?: Date;
+  harvestEndDate?: Date;
+  harvestLeftPct?: number;
+  harvestWidthPct?: number;
+}
+
+/**
+ * Helper: Clamp a date between min and max
+ */
+function clampDate(date: Date, min: Date, max: Date): Date {
+  if (date < min) return new Date(min);
+  if (date > max) return new Date(max);
+  return new Date(date);
+}
+
+/**
+ * Helper: Calculate days between two dates (inclusive)
+ * Uses UTC midnight to avoid DST issues
+ */
+function daysBetweenInclusive(start: Date, end: Date): number {
+  const utcStart = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+  const utcEnd = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+  const days = Math.round((utcEnd - utcStart) / (1000 * 60 * 60 * 24)) + 1;
+  return Math.max(1, days); // At least 1 day
 }
 
 function GanttChart(): React.ReactElement {
   const { t } = useTranslation(['ganttChart', 'common']);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -59,6 +78,9 @@ function GanttChart(): React.ReactElement {
   // Timeline configuration
   const currentYear = new Date().getFullYear();
   const [displayYear, setDisplayYear] = useState(currentYear);
+  
+  // Expand/collapse state
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   
   /**
    * Fetch all required data
@@ -92,38 +114,59 @@ function GanttChart(): React.ReactElement {
   }, [t]);
   
   /**
-   * Generate timeline columns based on view mode
+   * Initialize all rows as expanded
+   */
+  useEffect(() => {
+    if (locations.length > 0 || fields.length > 0) {
+      const initialExpanded = new Set<string>();
+      locations.forEach(loc => {
+        if (loc.id) initialExpanded.add(`location-${loc.id}`);
+      });
+      fields.forEach(field => {
+        if (field.id) initialExpanded.add(`field-${field.id}`);
+      });
+      setExpandedRows(initialExpanded);
+    }
+  }, [locations, fields]);
+  
+  /**
+   * Toggle expand/collapse state for a row
+   */
+  const toggleExpand = (rowId: string): void => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(rowId)) {
+        next.delete(rowId);
+      } else {
+        next.add(rowId);
+      }
+      return next;
+    });
+  };
+  
+  /**
+   * Generate timeline columns (12 months only)
    */
   const timelineColumns = useMemo(() => {
     const columns: { label: string; date: Date }[] = [];
     
-    if (viewMode === 'month') {
-      // 12 months
-      const monthNames = [
-        t('ganttChart:months.jan'), t('ganttChart:months.feb'), t('ganttChart:months.mar'),
-        t('ganttChart:months.apr'), t('ganttChart:months.may'), t('ganttChart:months.jun'),
-        t('ganttChart:months.jul'), t('ganttChart:months.aug'), t('ganttChart:months.sep'),
-        t('ganttChart:months.oct'), t('ganttChart:months.nov'), t('ganttChart:months.dec'),
-      ];
-      
-      for (let i = 0; i < 12; i++) {
-        columns.push({
-          label: monthNames[i],
-          date: new Date(displayYear, i, 1),
-        });
-      }
-    } else {
-      // 52 weeks
-      for (let i = 1; i <= 52; i++) {
-        columns.push({
-          label: `${t('ganttChart:weekShort')} ${i}`,
-          date: new Date(displayYear, 0, 1 + (i - 1) * 7),
-        });
-      }
+    // 12 months
+    const monthNames = [
+      t('ganttChart:months.jan'), t('ganttChart:months.feb'), t('ganttChart:months.mar'),
+      t('ganttChart:months.apr'), t('ganttChart:months.may'), t('ganttChart:months.jun'),
+      t('ganttChart:months.jul'), t('ganttChart:months.aug'), t('ganttChart:months.sep'),
+      t('ganttChart:months.oct'), t('ganttChart:months.nov'), t('ganttChart:months.dec'),
+    ];
+    
+    for (let i = 0; i < 12; i++) {
+      columns.push({
+        label: monthNames[i],
+        date: new Date(displayYear, i, 1),
+      });
     }
     
     return columns;
-  }, [viewMode, displayYear, t]);
+  }, [displayYear, t]);
   
   /**
    * Build hierarchy rows with planting plans
@@ -163,55 +206,61 @@ function GanttChart(): React.ReactElement {
         plans: [],
       });
       
-      locationFields.forEach(field => {
-        const fieldBeds = bedsByField[field.id!] || [];
-        
-        // Add field row (header only)
-        rows.push({
-          id: `field-${field.id}`,
-          type: 'field',
-          locationId: location.id,
-          fieldId: field.id,
-          name: field.name,
-          area: field.area_sqm ? Number(field.area_sqm) : undefined,
-          level: 1,
-          plans: [],
-        });
-        
-        fieldBeds.forEach(bed => {
-          // Get planting plans for this bed
-          const bedPlans = plantingPlans.filter(p => p.bed === bed.id);
+      // Only show fields if location is expanded
+      if (expandedRows.has(`location-${location.id}`)) {
+        locationFields.forEach(field => {
+          const fieldBeds = bedsByField[field.id!] || [];
           
-          // Add bed row with plans
+          // Add field row (header only)
           rows.push({
-            id: `bed-${bed.id}`,
-            type: 'bed',
+            id: `field-${field.id}`,
+            type: 'field',
             locationId: location.id,
             fieldId: field.id,
-            bedId: bed.id,
-            name: bed.name,
-            area: bed.area_sqm ? Number(bed.area_sqm) : undefined,
-            level: 2,
-            plans: bedPlans,
+            name: field.name,
+            area: field.area_sqm ? Number(field.area_sqm) : undefined,
+            level: 1,
+            plans: [],
           });
+          
+          // Only show beds if field is expanded
+          if (expandedRows.has(`field-${field.id}`)) {
+            fieldBeds.forEach(bed => {
+              // Get planting plans for this bed
+              const bedPlans = plantingPlans.filter(p => p.bed === bed.id);
+              
+              // Add bed row with plans
+              rows.push({
+                id: `bed-${bed.id}`,
+                type: 'bed',
+                locationId: location.id,
+                fieldId: field.id,
+                bedId: bed.id,
+                name: bed.name,
+                area: bed.area_sqm ? Number(bed.area_sqm) : undefined,
+                level: 2,
+                plans: bedPlans,
+              });
+            });
+          }
         });
-      });
+      }
     });
     
     return rows;
-  }, [locations, fields, beds, plantingPlans]);
+  }, [locations, fields, beds, plantingPlans, expandedRows]);
 
   /**
    * Measure the widest sidebar (including header) and set a CSS variable
    * so the first column width is consistent and fits the longest content.
    */
-  useAutosizeSidebarWidth(containerRef, undefined, [loading, ganttRows, viewMode, displayYear]);
+  useAutosizeSidebarWidth(containerRef, undefined, [loading, ganttRows, displayYear]);
   
   /**
-   * Calculate timeline bar position and span
+   * Calculate timeline bar position and span using year-clamping
    */
   const calculateBar = (plan: PlantingPlan): TimelineBar | null => {
-    if (!plan.planting_date || !plan.harvest_date) return null;
+    if (!plan.planting_date || !plan.harvest_date || !plan.id) return null;
     
     // Parse dates as local dates to avoid timezone issues
     // Date string format from API: "YYYY-MM-DD"
@@ -223,111 +272,51 @@ function GanttChart(): React.ReactElement {
     const startDate = parseDateString(plan.planting_date);
     const endDate = parseDateString(plan.harvest_date);
     
-    // Find start column
-    let startCol = 0;
-    let span = 0;
-    let leftOffset = 0;
-    let width = 0;
+    // Define visible interval (entire display year)
+    const visStart = new Date(displayYear, 0, 1);  // Jan 1
+    const visEnd = new Date(displayYear, 11, 31);  // Dec 31
     
-    if (viewMode === 'month') {
-      // Calculate month positions with day-level precision
-      const startMonth = startDate.getMonth();
-      const startYear = startDate.getFullYear();
-      const startDay = startDate.getDate();
-      const endMonth = endDate.getMonth();
-      const endYear = endDate.getFullYear();
-      const endDay = endDate.getDate();
+    // Skip if plan is completely outside the visible year
+    if (endDate < visStart || startDate > visEnd) return null;
+    
+    // Clamp dates to visible interval
+    const s = clampDate(startDate, visStart, visEnd);
+    const e = clampDate(endDate, visStart, visEnd);
+    
+    // Calculate positions in days (inclusive)
+    const totalDays = daysBetweenInclusive(visStart, visEnd); // Should be 365 or 366
+    const leftDays = daysBetweenInclusive(visStart, s) - 1;  // 0-based
+    const spanDays = daysBetweenInclusive(s, e);
+    
+    // Calculate percentages
+    const leftPct = (leftDays / totalDays) * 100;
+    const widthPct = (spanDays / totalDays) * 100;
+    
+    // Calculate harvest period if available
+    let harvestStartDate: Date | undefined;
+    let harvestEndDate: Date | undefined;
+    let harvestLeftPct: number | undefined;
+    let harvestWidthPct: number | undefined;
+    
+    if (plan.median_days_to_first_harvest && plan.median_days_to_last_harvest) {
+      harvestStartDate = new Date(startDate);
+      harvestStartDate.setDate(harvestStartDate.getDate() + plan.median_days_to_first_harvest);
       
-      // Only show if in the display year
-      if (startYear > displayYear || endYear < displayYear) return null;
+      harvestEndDate = new Date(startDate);
+      harvestEndDate.setDate(harvestEndDate.getDate() + plan.median_days_to_last_harvest);
       
-      // Calculate column and span (for backwards compatibility)
-      if (startYear === displayYear) {
-        startCol = startMonth;
-      } else {
-        startCol = 0;
-      }
-      
-      if (endYear === displayYear) {
-        span = endMonth - startCol + 1;
-      } else if (endYear > displayYear) {
-        span = 12 - startCol;
-      } else {
-        return null;
-      }
-      
-      // Calculate precise positioning
-      // Get days in the start month to calculate offset
-      const daysInStartMonth = new Date(startYear, startMonth + 1, 0).getDate();
-      leftOffset = (startDay - 1) / daysInStartMonth; // 0-based day position (day 1 = start of month)
-      
-      // Calculate total width in fractional months
-      let totalDays = 0;
-      let currentDate = new Date(startDate);
-      while (currentDate <= endDate) {
-        totalDays++;
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-      
-      // Calculate width more precisely by counting fractional months
-      const startMonthFraction = (daysInStartMonth - startDay + 1) / daysInStartMonth;
-      const endMonthDays = new Date(endYear, endMonth + 1, 0).getDate();
-      const endMonthFraction = endDay / endMonthDays;
-      
-      // Width = fraction of start month + full months in between + fraction of end month
-      const monthsBetween = Math.max(0, (endYear - startYear) * 12 + (endMonth - startMonth) - 1);
-      width = startMonthFraction + monthsBetween + endMonthFraction;
-      
-    } else {
-      // Calculate week positions with day-level precision
-      const startWeek = getWeekNumber(startDate);
-      const endWeek = getWeekNumber(endDate);
-      const startYear = startDate.getFullYear();
-      const endYear = endDate.getFullYear();
-      const startDayOfWeek = startDate.getDay(); // 0-6
-      const endDayOfWeek = endDate.getDay();
-      
-      // Only show if in the display year
-      if (startYear > displayYear || endYear < displayYear) return null;
-      
-      if (startYear === displayYear && endYear === displayYear) {
-        startCol = startWeek - 1;
-        span = endWeek - startWeek + 1;
-      } else if (startYear === displayYear && endYear > displayYear) {
-        startCol = startWeek - 1;
-        span = 52 - startCol;
-      } else if (startYear < displayYear && endYear === displayYear) {
-        startCol = 0;
-        span = endWeek;
-      } else {
-        return null;
-      }
-      
-      // Calculate precise positioning for week view
-      // Week starts on Monday (1), Sunday is (0) which should be treated as 7
-      const adjustedStartDay = startDayOfWeek === 0 ? 7 : startDayOfWeek;
-      const adjustedEndDay = endDayOfWeek === 0 ? 7 : endDayOfWeek;
-      
-      leftOffset = (adjustedStartDay - 1) / 7; // Fraction of the first week (Monday = 0/7, Sunday = 6/7)
-      
-      // Calculate width in fractional weeks
-      if (startWeek === endWeek && startYear === endYear) {
-        // Same week: calculate fraction of days within that single week
-        width = (adjustedEndDay - adjustedStartDay + 1) / 7;
-      } else {
-        // Different weeks: sum fractions
-        const daysInFirstWeek = 7 - adjustedStartDay + 1; // Days in first week (including start day)
-        const daysInLastWeek = adjustedEndDay; // Days in last week (up to and including end day)
-        const weeksBetween = Math.max(0, span - 2); // Full weeks between first and last
+      // Only calculate harvest bar if it's within the visible year
+      if (!(harvestEndDate < visStart || harvestStartDate > visEnd)) {
+        const hs = clampDate(harvestStartDate, visStart, visEnd);
+        const he = clampDate(harvestEndDate, visStart, visEnd);
         
-        width = (daysInFirstWeek / 7) + weeksBetween + (daysInLastWeek / 7);
+        const harvestLeftDays = daysBetweenInclusive(visStart, hs) - 1;
+        const harvestSpanDays = daysBetweenInclusive(hs, he);
+        
+        harvestLeftPct = (harvestLeftDays / totalDays) * 100;
+        harvestWidthPct = (harvestSpanDays / totalDays) * 100;
       }
     }
-    
-    if (span <= 0) return null;
-    
-    // Skip if plan doesn't have an ID
-    if (!plan.id) return null;
     
     return {
       planId: plan.id,
@@ -336,22 +325,13 @@ function GanttChart(): React.ReactElement {
       endDate,
       areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
       notes: plan.notes,
-      startCol,
-      span,
-      leftOffset,
-      width,
+      leftPct,
+      widthPct,
+      harvestStartDate,
+      harvestEndDate,
+      harvestLeftPct,
+      harvestWidthPct,
     };
-  };
-  
-  /**
-   * Get ISO week number
-   */
-  const getWeekNumber = (date: Date): number => {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
   };
   
   /**
@@ -376,21 +356,7 @@ function GanttChart(): React.ReactElement {
       
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <ToggleButtonGroup
-          value={viewMode}
-          exclusive
-          onChange={(_, newMode) => {
-            if (newMode !== null) {
-              setViewMode(newMode);
-            }
-          }}
-          size="small"
-        >
-          <ToggleButton value="month">{t('ganttChart:viewModes.month')}</ToggleButton>
-          <ToggleButton value="week">{t('ganttChart:viewModes.week')}</ToggleButton>
-        </ToggleButtonGroup>
-        
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
         <Box>
           <span style={{ marginRight: '1rem' }}>{t('ganttChart:year')}: {displayYear}</span>
           <button 
@@ -443,6 +409,15 @@ function GanttChart(): React.ReactElement {
               return (
                 <div key={row.id} className={`gantt-row gantt-row-${row.type}`}>
                   <div className={`gantt-sidebar gantt-sidebar-level-${row.level}`}>
+                    {(row.type === 'location' || row.type === 'field') && (
+                      <IconButton
+                        size="small"
+                        onClick={() => toggleExpand(row.id)}
+                        sx={{ padding: '2px', marginRight: '4px' }}
+                      >
+                        {expandedRows.has(row.id) ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />}
+                      </IconButton>
+                    )}
                     <span className="gantt-row-name">
                       {row.name}
                       {row.area != null && ` (${row.area} m²)`}
@@ -459,6 +434,12 @@ function GanttChart(): React.ReactElement {
                                 <div><strong>{bar.cultureName}</strong></div>
                                 <div>{t('ganttChart:tooltip.plantingDate')}: {formatDate(bar.startDate)}</div>
                                 <div>{t('ganttChart:tooltip.harvestDate')}: {formatDate(bar.endDate)}</div>
+                                {bar.harvestStartDate && bar.harvestEndDate && (
+                                  <>
+                                    <div>{t('ganttChart:tooltip.firstHarvest')}: {formatDate(bar.harvestStartDate)}</div>
+                                    <div>{t('ganttChart:tooltip.lastHarvest')}: {formatDate(bar.harvestEndDate)}</div>
+                                  </>
+                                )}
                                 {bar.areaUsage && (
                                   <div>{t('ganttChart:tooltip.areaUsage')}: {bar.areaUsage} m²</div>
                                 )}
@@ -470,8 +451,8 @@ function GanttChart(): React.ReactElement {
                               className="gantt-bar"
                               style={{
                                 position: 'absolute',
-                                left: `${((bar.startCol + bar.leftOffset) / timelineColumns.length) * 100}%`,
-                                width: `${(bar.width / timelineColumns.length) * 100}%`,
+                                left: `${bar.leftPct}%`,
+                                width: `${bar.widthPct}%`,
                                 top: '4px',
                                 bottom: '4px',
                               }}
@@ -480,6 +461,20 @@ function GanttChart(): React.ReactElement {
                                 {bar.cultureName}
                                 {bar.areaUsage && ` (${bar.areaUsage}m²)`}
                               </span>
+                              
+                              {/* Harvest period overlay */}
+                              {bar.harvestLeftPct !== undefined && bar.harvestWidthPct !== undefined && bar.widthPct > 0 && (
+                                <div
+                                  className="gantt-bar-harvest"
+                                  style={{
+                                    position: 'absolute',
+                                    left: `${Math.max(0, ((bar.harvestLeftPct - bar.leftPct) / bar.widthPct) * 100)}%`,
+                                    width: `${Math.min(100, (bar.harvestWidthPct / bar.widthPct) * 100)}%`,
+                                    top: 0,
+                                    bottom: 0,
+                                  }}
+                                />
+                              )}
                             </div>
                           </Tooltip>
                         ))}
