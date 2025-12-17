@@ -177,17 +177,84 @@ class PlantingPlanModelTest(TestCase):
         expected_harvest = planting_date + timedelta(days=70)
         self.assertEqual(plan.harvest_date, expected_harvest)
 
-    def test_manual_harvest_date(self):
+    def test_harvest_date_recalculates_when_planting_date_changes(self):
+        """Test that harvest dates recalculate when planting_date changes"""
         planting_date = date(2024, 3, 1)
-        manual_harvest = date(2024, 5, 15)
         plan = PlantingPlan.objects.create(
             culture=self.culture,
             bed=self.bed,
             planting_date=planting_date,
-            harvest_date=manual_harvest,
             quantity=100
         )
-        self.assertEqual(plan.harvest_date, manual_harvest)
+        expected_harvest = planting_date + timedelta(days=70)
+        self.assertEqual(plan.harvest_date, expected_harvest)
+        
+        # Change planting date
+        new_planting_date = date(2024, 4, 1)
+        plan.planting_date = new_planting_date
+        plan.save()
+        
+        # Harvest date should recalculate
+        new_expected_harvest = new_planting_date + timedelta(days=70)
+        self.assertEqual(plan.harvest_date, new_expected_harvest)
+    
+    def test_harvest_date_recalculates_when_culture_changes(self):
+        """Test that harvest dates recalculate when culture changes"""
+        planting_date = date(2024, 3, 1)
+        plan = PlantingPlan.objects.create(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=planting_date,
+            quantity=100
+        )
+        expected_harvest = planting_date + timedelta(days=70)
+        self.assertEqual(plan.harvest_date, expected_harvest)
+        
+        # Create new culture with different harvest days
+        new_culture = Culture.objects.create(name="Tomato", days_to_harvest=90)
+        plan.culture = new_culture
+        plan.save()
+        
+        # Harvest date should recalculate with new culture's timing
+        new_expected_harvest = planting_date + timedelta(days=90)
+        self.assertEqual(plan.harvest_date, new_expected_harvest)
+    
+    def test_harvest_end_date_with_median_days(self):
+        """Test that harvest_end_date is calculated from median_days_to_last_harvest"""
+        culture_with_median = Culture.objects.create(
+            name="Broccoli",
+            days_to_harvest=60,
+            median_days_to_first_harvest=65,
+            median_days_to_last_harvest=90
+        )
+        planting_date = date(2024, 3, 1)
+        plan = PlantingPlan.objects.create(
+            culture=culture_with_median,
+            bed=self.bed,
+            planting_date=planting_date,
+            quantity=100
+        )
+        
+        # harvest_date should use median_days_to_first_harvest
+        expected_harvest_start = planting_date + timedelta(days=65)
+        self.assertEqual(plan.harvest_date, expected_harvest_start)
+        
+        # harvest_end_date should use median_days_to_last_harvest
+        expected_harvest_end = planting_date + timedelta(days=90)
+        self.assertEqual(plan.harvest_end_date, expected_harvest_end)
+    
+    def test_harvest_end_date_defaults_to_harvest_date(self):
+        """Test that harvest_end_date defaults to harvest_date when no median_days_to_last_harvest"""
+        planting_date = date(2024, 3, 1)
+        plan = PlantingPlan.objects.create(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=planting_date,
+            quantity=100
+        )
+        
+        # harvest_end_date should default to harvest_date (single-day window)
+        self.assertEqual(plan.harvest_end_date, plan.harvest_date)
 
     def test_area_usage_within_bed_capacity(self):
         """Test that planting plan with area within bed capacity is allowed"""

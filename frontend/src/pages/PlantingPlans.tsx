@@ -53,13 +53,19 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'culture',
       headerName: t('plantingPlans:columns.culture'),
-      width: 200,
+      flex: 1,
+      minWidth: 180,
       editable: true,
       type: 'singleSelect',
       valueOptions: cultures.filter(c => c.id !== undefined).map(c => ({ value: c.id!, label: c.variety ? `${c.name} (${c.variety})` : c.name })),
       valueFormatter: (value) => {
         const culture = cultures.find(c => c.id === value);
         return culture ? (culture.variety ? `${culture.name} (${culture.variety})` : culture.name) : '';
+      },
+      valueSetter: (value, row) => {
+        // Ensure we always store the numeric ID, not the label
+        const numericValue = typeof value === 'number' ? value : Number(value);
+        return { ...row, culture: numericValue };
       },
       preProcessEditCellProps: (params) => {
         const hasError = !params.props.value || params.props.value === 0;
@@ -69,7 +75,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'bed',
       headerName: t('plantingPlans:columns.bed'),
-      width: 250,
+      flex: 1.2,
+      minWidth: 200,
       editable: true,
       type: 'singleSelect',
       valueOptions: beds.filter(b => b.id !== undefined).map(b => {
@@ -84,6 +91,11 @@ function PlantingPlans(): React.ReactElement {
         const areaInfo = bed.area_sqm ? ` (${bed.area_sqm} m²)` : '';
         return `${baseName}${areaInfo}`;
       },
+      valueSetter: (value, row) => {
+        // Ensure we always store the numeric ID, not the label string
+        const numericValue = typeof value === 'number' ? value : Number(value);
+        return { ...row, bed: numericValue };
+      },
       preProcessEditCellProps: (params) => {
         const hasError = !params.props.value || params.props.value === 0;
         return { ...params.props, error: hasError };
@@ -92,7 +104,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'planting_date',
       headerName: t('plantingPlans:columns.plantingDate'),
-      width: 150,
+      flex: 0.8,
+      minWidth: 130,
       type: 'date',
       editable: true,
       valueGetter: (value) => value ? new Date(value) : null,
@@ -103,8 +116,18 @@ function PlantingPlans(): React.ReactElement {
     },
     {
       field: 'harvest_date',
-      headerName: t('plantingPlans:columns.harvestDate'),
-      width: 150,
+      headerName: t('plantingPlans:columns.harvestStartDate'),
+      flex: 0.8,
+      minWidth: 130,
+      editable: false,
+      type: 'date',
+      valueGetter: (value) => value ? new Date(value) : null,
+    },
+    {
+      field: 'harvest_end_date',
+      headerName: t('plantingPlans:columns.harvestEndDate'),
+      flex: 0.8,
+      minWidth: 130,
       editable: false,
       type: 'date',
       valueGetter: (value) => value ? new Date(value) : null,
@@ -112,14 +135,16 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'area_usage_sqm',
       headerName: t('plantingPlans:columns.areaUsage'),
-      width: 130,
+      flex: 0.6,
+      minWidth: 110,
       type: 'number',
       editable: true,
     },
     {
       field: 'notes',
       headerName: t('common:fields.notes'),
-      width: 300,
+      flex: 1.5,
+      minWidth: 200,
       editable: true,
     },
   ], [cultures, beds, t]);
@@ -150,19 +175,48 @@ function PlantingPlans(): React.ReactElement {
           bed_name: plan.bed_name || '',
           planting_date: plan.planting_date,
           harvest_date: plan.harvest_date,
+          harvest_end_date: plan.harvest_end_date,
           quantity: plan.quantity,
           area_usage_sqm: plan.area_usage_sqm,
           notes: plan.notes || '',
         })}
         mapToApiData={(row) => {
           // Convert date from Date object to string if needed
-          const plantingDate = row.planting_date instanceof Date 
-            ? row.planting_date.toISOString().split('T')[0]
-            : row.planting_date;
+          // Use local date string to avoid timezone offset issues
+          let plantingDate: string;
+          if (row.planting_date instanceof Date) {
+            const year = row.planting_date.getFullYear();
+            const month = String(row.planting_date.getMonth() + 1).padStart(2, '0');
+            const day = String(row.planting_date.getDate()).padStart(2, '0');
+            plantingDate = `${year}-${month}-${day}`;
+          } else {
+            plantingDate = row.planting_date;
+          }
+          
+          // Ensure culture and bed are numeric IDs, not label strings
+          // DataGrid singleSelect can sometimes provide the label instead of value
+          let cultureId: number;
+          let bedId: number;
+          
+          if (typeof row.culture === 'number') {
+            cultureId = row.culture;
+          } else {
+            // If it's a string, it's the label - should not happen but handle gracefully
+            console.warn('Culture field contains non-numeric value:', row.culture);
+            cultureId = 0; // This will cause validation error
+          }
+          
+          if (typeof row.bed === 'number') {
+            bedId = row.bed;
+          } else {
+            // If it's a string, it's the label - should not happen but handle gracefully
+            console.warn('Bed field contains non-numeric value:', row.bed);
+            bedId = 0; // This will cause validation error
+          }
           
           return {
-            culture: row.culture,
-            bed: row.bed,
+            culture: cultureId,
+            bed: bedId,
             planting_date: plantingDate,
             quantity: row.quantity,
             area_usage_sqm: row.area_usage_sqm,

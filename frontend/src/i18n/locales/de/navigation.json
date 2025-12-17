@@ -4,5 +4,6 @@
   "fieldsAndBeds": "Anbauflächen",
   "cultures": "Kulturen",
   "plantingPlans": "Anbaupläne",
-  "tasks": "Aufgaben"
+  "tasks": "Aufgaben",
+  "ganttChart": "Anbaukalender"
 }

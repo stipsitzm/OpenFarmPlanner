@@ -138,8 +138,10 @@ export interface PlantingPlan {
   bed_name?: string;
   /** Date when planting is scheduled */
   planting_date: string;
-  /** Auto-calculated harvest date (read-only) */
+  /** Auto-calculated harvest start date (read-only, Erntebeginn) */
   harvest_date?: string;
+  /** Auto-calculated harvest end date (read-only, Ernteende) */
+  harvest_end_date?: string;
   /** Number of plants or seeds (optional) */
   quantity?: number;
   /** Area in square meters used by this planting plan (optional) */

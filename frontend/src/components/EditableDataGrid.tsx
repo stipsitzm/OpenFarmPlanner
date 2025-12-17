@@ -14,6 +14,8 @@ import { DataGrid, GridRowModes, GridRowEditStopReasons } from '@mui/x-data-grid
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridEventListener, GridRowId } from '@mui/x-data-grid';
 import { Box, Alert, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
+import axios, { AxiosError } from 'axios';
 
 /**
  * Base interface for editable data grid rows
@@ -132,6 +134,78 @@ export function EditableDataGrid<T extends EditableRow>({
   };
 
   /**
+   * Extract user-friendly error message from Axios error response
+   */
+  const extractErrorMessage = (err: unknown): string => {
+    console.log('extractErrorMessage called with:', err);
+    
+    if (axios.isAxiosError(err)) {
+      const axiosError = err as AxiosError;
+      console.log('Is Axios error, status:', axiosError.response?.status);
+      console.log('Response data:', axiosError.response?.data);
+      
+      // Check if it's a 400 validation error
+      if (axiosError.response?.status === 400) {
+        const data = axiosError.response.data;
+        console.log('Data type:', typeof data);
+        
+        // If data is a string, return it directly
+        if (typeof data === 'string') {
+          console.log('Returning string data:', data);
+          return data;
+        }
+        
+        // If data is an object with error fields
+        if (data && typeof data === 'object') {
+          const errors: string[] = [];
+          
+          // Field name translations (German)
+          const fieldTranslations: Record<string, string> = {
+            'area_usage_sqm': 'Flächennutzung',
+            'planting_date': 'Pflanzdatum',
+            'harvest_date': 'Erntebeginn',
+            'harvest_end_date': 'Ernteende',
+            'culture': 'Kultur',
+            'bed': 'Beet',
+            'notes': 'Notizen',
+            'non_field_errors': 'Fehler',
+          };
+          
+          // Extract errors from all fields
+          Object.entries(data).forEach(([field, value]) => {
+            console.log(`Processing field ${field}:`, value);
+            const fieldName = fieldTranslations[field] || field;
+            
+            if (Array.isArray(value)) {
+              // If value is an array of error messages
+              value.forEach((msg: string) => {
+                const errorMsg = `${fieldName}: ${msg}`;
+                console.log('Adding error:', errorMsg);
+                errors.push(errorMsg);
+              });
+            } else if (typeof value === 'string') {
+              // If value is a single error message
+              const errorMsg = `${fieldName}: ${value}`;
+              console.log('Adding error:', errorMsg);
+              errors.push(errorMsg);
+            }
+          });
+          
+          if (errors.length > 0) {
+            const result = errors.join('\n');
+            console.log('Returning joined errors:', result);
+            return result;
+          }
+        }
+      }
+    }
+    
+    // Fallback to generic error message
+    console.log('Fallback to generic error');
+    return saveErrorMessage;
+  };
+
+  /**
    * Process row update - save to API
    */
   const processRowUpdate = async (newRow: T): Promise<T> => {
@@ -152,7 +226,7 @@ export function EditableDataGrid<T extends EditableRow>({
         }
         
         // Remove the temporary row and add the saved row
-        const savedRow = { ...response.data, id: response.data.id } as T;
+        const savedRow = mapToRow(response.data as T);
         setRows((prevRows) => {
           // Remove the temporary row with negative ID
           const filteredRows = prevRows.filter(row => row.id !== newRow.id);
@@ -168,10 +242,15 @@ export function EditableDataGrid<T extends EditableRow>({
         if (!response.data.id) {
           throw new Error('API response missing ID');
         }
-        return { ...response.data, id: response.data.id } as T;
+        // Map the response through mapToRow to ensure all fields are properly formatted
+        // This is important for auto-calculated fields like harvest dates
+        return mapToRow(response.data as T);
       }
     } catch (err) {
-      setError(saveErrorMessage);
+      // Extract user-friendly error message
+      const errorMessage = extractErrorMessage(err);
+      console.log('Extracted error message:', errorMessage);
+      setError(errorMessage);
       console.error('Error saving data:', err);
       throw err;
     }
@@ -243,26 +322,25 @@ export function EditableDataGrid<T extends EditableRow>({
         {
           field: 'actions',
           type: 'actions',
-          headerName: 'Aktionen',
-          width: 100,
+          headerName: '',
+          width: 70,
           cellClassName: 'actions',
           getActions: ({ id }) => {
             return [
-              <button
+              <IconButton
                 key={`delete-${id}`}
                 onClick={handleDeleteClick(id)}
-                style={{
+                size="small"
+                sx={{
                   color: '#d32f2f',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '6px 8px',
-                  fontSize: '0.8125rem',
-                  textTransform: 'uppercase',
+                  '&:hover': {
+                    backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                  },
                 }}
+                aria-label="Löschen"
               >
-                Löschen
-              </button>,
+                <CloseIcon />
+              </IconButton>,
             ];
           },
         },

@@ -113,7 +113,7 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
     
     Converts PlantingPlan instances to/from JSON for API responses.
     Includes all fields plus read-only fields for culture and bed names.
-    The harvest_date field is read-only as it's auto-calculated.
+    The harvest_date and harvest_end_date fields are read-only as they're auto-calculated.
     
     Attributes:
         culture_name: Read-only field showing the culture's name
@@ -126,7 +126,7 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = PlantingPlan
         fields = '__all__'
-        read_only_fields = ['harvest_date']
+        read_only_fields = ['harvest_date', 'harvest_end_date']
 
     def validate(self, attrs):
         """Validate the planting plan data.

@@ -1,0 +1,44 @@
+{
+  "title": "Anbaukalender",
+  "zoomIn": "Hineinzoomen",
+  "zoomOut": "Herauszoomen",
+  "viewModes": {
+    "month": "Monatsansicht",
+    "week": "Wochenansicht"
+  },
+  "months": {
+    "jan": "Januar",
+    "feb": "Februar",
+    "mar": "März",
+    "apr": "April",
+    "may": "Mai",
+    "jun": "Juni",
+    "jul": "Juli",
+    "aug": "August",
+    "sep": "September",
+    "oct": "Oktober",
+    "nov": "November",
+    "dec": "Dezember"
+  },
+  "weekShort": "KW",
+  "field": "Schlag",
+  "bed": "Beet",
+  "area": "Fläche",
+  "year": "Jahr",
+  "today": "Heute",
+  "previousYear": "Vorheriges Jahr",
+  "nextYear": "Nächstes Jahr",
+  "loading": "Laden...",
+  "errors": {
+    "load": "Fehler beim Laden der Daten"
+  },
+  "tooltip": {
+    "culture": "Kultur",
+    "plantingDate": "Pflanzdatum",
+    "harvestDate": "Erntedatum",
+    "firstHarvest": "Erste Ernte",
+    "lastHarvest": "Letzte Ernte",
+    "areaUsage": "Flächennutzung"
+  },
+  "noData": "Keine Anbaupläne vorhanden"
+}

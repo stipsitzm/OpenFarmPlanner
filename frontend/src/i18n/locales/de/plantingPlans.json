@@ -4,7 +4,9 @@
     "culture": "Kultur",
     "bed": "Beet",
     "plantingDate": "Pflanzdatum",
-    "harvestDate": "Erntedatum (berechnet)",
+    "harvestDate": "Erntedatum",
+    "harvestStartDate": "Erntebeginn",
+    "harvestEndDate": "Ernteende",
     "areaUsage": "Flächennutzung (m²)",
     "notes": "Notizen"
   },
