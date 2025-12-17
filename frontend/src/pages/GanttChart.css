@@ -187,6 +187,13 @@
   text-align: center;
 }
 
+.gantt-bar-harvest {
+  background: rgba(25, 118, 210, 0.4);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 2;
+}
+
 .gantt-no-data {
   padding: 2rem;
   text-align: center;

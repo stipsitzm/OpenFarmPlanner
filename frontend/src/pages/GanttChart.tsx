@@ -433,7 +433,6 @@ function GanttChart(): React.ReactElement {
                               <div>
                                 <div><strong>{bar.cultureName}</strong></div>
                                 <div>{t('ganttChart:tooltip.plantingDate')}: {formatDate(bar.startDate)}</div>
-                                <div>{t('ganttChart:tooltip.harvestDate')}: {formatDate(bar.endDate)}</div>
                                 {bar.harvestStartDate && bar.harvestEndDate && (
                                   <>
                                     <div>{t('ganttChart:tooltip.firstHarvest')}: {formatDate(bar.harvestStartDate)}</div>
