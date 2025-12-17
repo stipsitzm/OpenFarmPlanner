@@ -308,14 +308,20 @@ function GanttChart(): React.ReactElement {
       const adjustedStartDay = startDayOfWeek === 0 ? 7 : startDayOfWeek;
       const adjustedEndDay = endDayOfWeek === 0 ? 7 : endDayOfWeek;
       
-      leftOffset = (adjustedStartDay - 1) / 7; // Fraction of the first week
+      leftOffset = (adjustedStartDay - 1) / 7; // Fraction of the first week (Monday = 0/7, Sunday = 6/7)
       
       // Calculate width in fractional weeks
-      const daysInFirstWeek = 8 - adjustedStartDay; // Days remaining in first week (including start day)
-      const daysInLastWeek = adjustedEndDay; // Days in last week
-      const weeksBetween = Math.max(0, span - 2); // Full weeks between first and last
-      
-      width = (daysInFirstWeek / 7) + weeksBetween + (daysInLastWeek / 7);
+      if (startWeek === endWeek && startYear === endYear) {
+        // Same week: calculate fraction of days within that single week
+        width = (adjustedEndDay - adjustedStartDay + 1) / 7;
+      } else {
+        // Different weeks: sum fractions
+        const daysInFirstWeek = 7 - adjustedStartDay + 1; // Days in first week (including start day)
+        const daysInLastWeek = adjustedEndDay; // Days in last week (up to and including end day)
+        const weeksBetween = Math.max(0, span - 2); // Full weeks between first and last
+        
+        width = (daysInFirstWeek / 7) + weeksBetween + (daysInLastWeek / 7);
+      }
     }
     
     if (span <= 0) return null;
