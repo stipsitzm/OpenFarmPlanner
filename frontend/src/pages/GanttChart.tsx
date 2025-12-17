@@ -53,14 +53,23 @@ function clampDate(date: Date, min: Date, max: Date): Date {
 }
 
 /**
- * Helper: Calculate days between two dates (inclusive)
+ * Helper: Calculate days between two dates (exclusive end)
  * Uses UTC midnight to avoid DST issues
  */
-function daysBetweenInclusive(start: Date, end: Date): number {
+function daysBetween(start: Date, endExclusive: Date): number {
   const utcStart = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
-  const utcEnd = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
-  const days = Math.round((utcEnd - utcStart) / (1000 * 60 * 60 * 24)) + 1;
-  return Math.max(1, days); // At least 1 day
+  const utcEnd = Date.UTC(endExclusive.getFullYear(), endExclusive.getMonth(), endExclusive.getDate());
+  const days = Math.round((utcEnd - utcStart) / (1000 * 60 * 60 * 24));
+  return Math.max(0, days);
+}
+
+/**
+ * Helper: Add days to a date
+ */
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
 }
 
 function GanttChart(): React.ReactElement {
@@ -258,7 +267,7 @@ function GanttChart(): React.ReactElement {
   useAutosizeSidebarWidth(containerRef, undefined, [locations, fields, beds, displayYear]);
   
   /**
-   * Calculate timeline bar position and span using year-clamping
+   * Calculate timeline bar position and span using year-clamping with half-open intervals
    */
   const calculateBar = (plan: PlantingPlan): TimelineBar | null => {
     if (!plan.planting_date || !plan.harvest_date || !plan.id) return null;
@@ -273,47 +282,55 @@ function GanttChart(): React.ReactElement {
     const startDate = parseDateString(plan.planting_date);
     const endDate = parseDateString(plan.harvest_date);
     
-    // Define visible interval (entire display year)
+    // Define visible interval [visStart, visEndExclusive)
     const visStart = new Date(displayYear, 0, 1);  // Jan 1
-    const visEnd = new Date(displayYear, 11, 31);  // Dec 31
+    const visEndExclusive = new Date(displayYear + 1, 0, 1);  // Jan 1 of next year
+    
+    // Treat planting as [startDate, endDateExclusive) to include full end day
+    const endDateExclusive = addDays(endDate, 1);
     
     // Skip if plan is completely outside the visible year
-    if (endDate < visStart || startDate > visEnd) return null;
+    if (endDateExclusive <= visStart || startDate >= visEndExclusive) return null;
     
     // Clamp dates to visible interval
-    const s = clampDate(startDate, visStart, visEnd);
-    const e = clampDate(endDate, visStart, visEnd);
+    const s = clampDate(startDate, visStart, visEndExclusive);
+    const e = clampDate(endDateExclusive, visStart, visEndExclusive);
     
-    // Calculate positions in days (inclusive)
-    const totalDays = daysBetweenInclusive(visStart, visEnd); // Should be 365 or 366
-    const leftDays = daysBetweenInclusive(visStart, s) - 1;  // 0-based (start of start day)
-    const spanDays = daysBetweenInclusive(s, e) - 1;  // Exclude end day so bar ends AT end date, not extends beyond
+    // Calculate positions using exclusive end (NO -1 adjustments)
+    const totalDays = daysBetween(visStart, visEndExclusive); // 365 or 366
+    const leftDays = daysBetween(visStart, s);
+    const widthDays = daysBetween(s, e);
     
     // Calculate percentages
     const leftPct = (leftDays / totalDays) * 100;
-    const widthPct = (spanDays / totalDays) * 100;
+    const widthPct = (widthDays / totalDays) * 100;
     
-    // Calculate harvest period overlay if both harvest dates are available
+    // Calculate harvest period overlay
     let harvestStartDate: Date | undefined;
     let harvestEndDate: Date | undefined;
     let harvestLeftPct: number | undefined;
     let harvestWidthPct: number | undefined;
     
-    if (plan.harvest_date && plan.harvest_end_date) {
+    // Only need harvest_date to exist - harvest_end_date defaults to harvest_date
+    if (plan.harvest_date) {
       // Parse harvest dates from API
       harvestStartDate = parseDateString(plan.harvest_date);
-      harvestEndDate = parseDateString(plan.harvest_end_date);
+      // Default to harvest_date if harvest_end_date is missing (single-day harvest window)
+      harvestEndDate = plan.harvest_end_date ? parseDateString(plan.harvest_end_date) : harvestStartDate;
+      
+      // Treat harvest as [harvestStartDate, harvestEndDateExclusive)
+      const harvestEndDateExclusive = addDays(harvestEndDate, 1);
       
       // Only calculate harvest bar if it's within the visible year
-      if (!(harvestEndDate < visStart || harvestStartDate > visEnd)) {
-        const hs = clampDate(harvestStartDate, visStart, visEnd);
-        const he = clampDate(harvestEndDate, visStart, visEnd);
+      if (!(harvestEndDateExclusive <= visStart || harvestStartDate >= visEndExclusive)) {
+        const hs = clampDate(harvestStartDate, visStart, visEndExclusive);
+        const he = clampDate(harvestEndDateExclusive, visStart, visEndExclusive);
         
-        const harvestLeftDays = daysBetweenInclusive(visStart, hs) - 1;
-        const harvestSpanDays = daysBetweenInclusive(hs, he) - 1; // Exclude end day
+        const harvestLeftDays = daysBetween(visStart, hs);
+        const harvestWidthDays = daysBetween(hs, he);
         
         harvestLeftPct = (harvestLeftDays / totalDays) * 100;
-        harvestWidthPct = (harvestSpanDays / totalDays) * 100;
+        harvestWidthPct = Math.max(0.3, (harvestWidthDays / totalDays) * 100); // Minimum 0.3% width for visibility
       }
     }
     
