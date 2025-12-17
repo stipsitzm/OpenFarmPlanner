@@ -62,6 +62,11 @@ function PlantingPlans(): React.ReactElement {
         const culture = cultures.find(c => c.id === value);
         return culture ? (culture.variety ? `${culture.name} (${culture.variety})` : culture.name) : '';
       },
+      valueSetter: (value, row) => {
+        // Ensure we always store the numeric ID, not the label
+        const numericValue = typeof value === 'number' ? value : Number(value);
+        return { ...row, culture: numericValue };
+      },
       preProcessEditCellProps: (params) => {
         const hasError = !params.props.value || params.props.value === 0;
         return { ...params.props, error: hasError };
@@ -85,6 +90,11 @@ function PlantingPlans(): React.ReactElement {
         const baseName = bed.field_name ? `${bed.field_name} - ${bed.name}` : bed.name;
         const areaInfo = bed.area_sqm ? ` (${bed.area_sqm} m²)` : '';
         return `${baseName}${areaInfo}`;
+      },
+      valueSetter: (value, row) => {
+        // Ensure we always store the numeric ID, not the label string
+        const numericValue = typeof value === 'number' ? value : Number(value);
+        return { ...row, bed: numericValue };
       },
       preProcessEditCellProps: (params) => {
         const hasError = !params.props.value || params.props.value === 0;
@@ -183,9 +193,30 @@ function PlantingPlans(): React.ReactElement {
             plantingDate = row.planting_date;
           }
           
+          // Ensure culture and bed are numeric IDs, not label strings
+          // DataGrid singleSelect can sometimes provide the label instead of value
+          let cultureId: number;
+          let bedId: number;
+          
+          if (typeof row.culture === 'number') {
+            cultureId = row.culture;
+          } else {
+            // If it's a string, it's the label - should not happen but handle gracefully
+            console.warn('Culture field contains non-numeric value:', row.culture);
+            cultureId = 0; // This will cause validation error
+          }
+          
+          if (typeof row.bed === 'number') {
+            bedId = row.bed;
+          } else {
+            // If it's a string, it's the label - should not happen but handle gracefully
+            console.warn('Bed field contains non-numeric value:', row.bed);
+            bedId = 0; // This will cause validation error
+          }
+          
           return {
-            culture: row.culture,
-            bed: row.bed,
+            culture: cultureId,
+            bed: bedId,
             planting_date: plantingDate,
             quantity: row.quantity,
             area_usage_sqm: row.area_usage_sqm,
