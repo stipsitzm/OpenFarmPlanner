@@ -15,6 +15,7 @@ import type { GridColDef, GridRowsProp, GridRowModesModel, GridEventListener, Gr
 import { Box, Alert, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
+import axios, { AxiosError } from 'axios';
 
 /**
  * Base interface for editable data grid rows
@@ -133,6 +134,64 @@ export function EditableDataGrid<T extends EditableRow>({
   };
 
   /**
+   * Extract user-friendly error message from Axios error response
+   */
+  const extractErrorMessage = (err: unknown): string => {
+    if (axios.isAxiosError(err)) {
+      const axiosError = err as AxiosError;
+      
+      // Check if it's a 400 validation error
+      if (axiosError.response?.status === 400) {
+        const data = axiosError.response.data;
+        
+        // If data is a string, return it directly
+        if (typeof data === 'string') {
+          return data;
+        }
+        
+        // If data is an object with error fields
+        if (data && typeof data === 'object') {
+          const errors: string[] = [];
+          
+          // Field name translations (German)
+          const fieldTranslations: Record<string, string> = {
+            'area_usage_sqm': 'Flächennutzung',
+            'planting_date': 'Pflanzdatum',
+            'harvest_date': 'Erntebeginn',
+            'harvest_end_date': 'Ernteende',
+            'culture': 'Kultur',
+            'bed': 'Beet',
+            'notes': 'Notizen',
+            'non_field_errors': 'Fehler',
+          };
+          
+          // Extract errors from all fields
+          Object.entries(data).forEach(([field, value]) => {
+            const fieldName = fieldTranslations[field] || field;
+            
+            if (Array.isArray(value)) {
+              // If value is an array of error messages
+              value.forEach((msg: string) => {
+                errors.push(`${fieldName}: ${msg}`);
+              });
+            } else if (typeof value === 'string') {
+              // If value is a single error message
+              errors.push(`${fieldName}: ${value}`);
+            }
+          });
+          
+          if (errors.length > 0) {
+            return errors.join('\n');
+          }
+        }
+      }
+    }
+    
+    // Fallback to generic error message
+    return saveErrorMessage;
+  };
+
+  /**
    * Process row update - save to API
    */
   const processRowUpdate = async (newRow: T): Promise<T> => {
@@ -174,7 +233,9 @@ export function EditableDataGrid<T extends EditableRow>({
         return mapToRow(response.data as T);
       }
     } catch (err) {
-      setError(saveErrorMessage);
+      // Extract user-friendly error message
+      const errorMessage = extractErrorMessage(err);
+      setError(errorMessage);
       console.error('Error saving data:', err);
       throw err;
     }
