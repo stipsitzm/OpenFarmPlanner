@@ -28,7 +28,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
   const [hasInitiallyExpanded, setHasInitiallyExpanded] = useState(false);
   
   // Data fetching
-  const { loading, error, setError, locations, fields, beds, setBeds, setFields, fetchData } = useHierarchyData();
+  const { loading, error, setError, locations, fields, beds, setBeds, fetchData } = useHierarchyData();
   
   // Expansion state
   const { expandedRows, toggleExpand, ensureExpanded, expandAll } = useExpandedState();

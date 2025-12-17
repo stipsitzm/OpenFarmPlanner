@@ -8,7 +8,7 @@ import { Box, IconButton } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import FolderIcon from '@mui/icons-material/Folder';
-import type { HierarchyRow } from '../utils/types';
+import type { HierarchyRow } from './utils/types';
 
 /**
  * Render name cell with expansion controls

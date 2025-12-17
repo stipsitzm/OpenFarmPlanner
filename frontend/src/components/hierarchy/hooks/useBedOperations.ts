@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { bedAPI, type Bed } from '../../../api/client';
 
 export function useBedOperations(
-  beds: Bed[],
+  _beds: Bed[],
   setBeds: React.Dispatch<React.SetStateAction<Bed[]>>,
   setError: (error: string) => void
 ) {

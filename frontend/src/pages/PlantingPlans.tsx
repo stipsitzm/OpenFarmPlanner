@@ -181,16 +181,20 @@ function PlantingPlans(): React.ReactElement {
           notes: plan.notes || '',
         })}
         mapToApiData={(row) => {
+          const isDate = (val: unknown): val is Date => val instanceof Date;
+
           // Convert date from Date object to string if needed
           // Use local date string to avoid timezone offset issues
           let plantingDate: string;
-          if (row.planting_date instanceof Date) {
+          if (isDate(row.planting_date)) {
             const year = row.planting_date.getFullYear();
             const month = String(row.planting_date.getMonth() + 1).padStart(2, '0');
             const day = String(row.planting_date.getDate()).padStart(2, '0');
             plantingDate = `${year}-${month}-${day}`;
-          } else {
+          } else if (typeof row.planting_date === 'string') {
             plantingDate = row.planting_date;
+          } else {
+            plantingDate = '';
           }
           
           // Ensure culture and bed are numeric IDs, not label strings

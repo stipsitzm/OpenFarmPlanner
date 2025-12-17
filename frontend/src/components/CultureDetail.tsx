@@ -22,7 +22,6 @@ import {
   Typography,
   Chip,
   Button,
-  Grid,
   Divider,
 } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -146,24 +145,30 @@ export function CultureDetail({
               <Typography variant="h6" gutterBottom>
                 {t('sections.growthHarvest')}
               </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gap: 2,
+                }}
+              >
+                <Box>
                   <Typography variant="body2" color="text.secondary">
                     {t('fields.daysToFirstHarvest')}
                   </Typography>
                   <Typography variant="body1">
                     {formatNumber(selectedCulture.median_days_to_first_harvest, t)}
                   </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
+                </Box>
+                <Box>
                   <Typography variant="body2" color="text.secondary">
                     {t('fields.daysToLastHarvest')}
                   </Typography>
                   <Typography variant="body1">
                     {formatNumber(selectedCulture.median_days_to_last_harvest, t)}
                   </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
+                </Box>
+                <Box>
                   <Typography variant="body2" color="text.secondary">
                     {t('fields.harvestWindow')}
                   </Typography>
@@ -174,8 +179,8 @@ export function CultureDetail({
                       t
                     )}
                   </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
+                </Box>
+                <Box>
                   <Typography variant="body2" color="text.secondary">
                     {t('fields.lifespan')}
                   </Typography>
@@ -184,8 +189,8 @@ export function CultureDetail({
                       ? t('fields.lifespanValue', { days: selectedCulture.median_lifespan })
                       : t('noData')}
                   </Typography>
-                </Grid>
-              </Grid>
+                </Box>
+              </Box>
             </Box>
 
             <Divider sx={{ mb: 3 }} />
