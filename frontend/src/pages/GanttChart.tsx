@@ -38,6 +38,9 @@ interface TimelineBar {
   notes?: string;
   startCol: number;
   span: number;
+  // Precise positioning within the grid (0-1 fractional values)
+  leftOffset: number;  // Fraction of first column where bar starts (0 = start of month, 1 = end of month)
+  width: number;       // Total width in columns (fractional, e.g., 2.5 means 2.5 months)
 }
 
 function GanttChart(): React.ReactElement {
@@ -223,18 +226,22 @@ function GanttChart(): React.ReactElement {
     // Find start column
     let startCol = 0;
     let span = 0;
+    let leftOffset = 0;
+    let width = 0;
     
     if (viewMode === 'month') {
-      // Calculate month positions
+      // Calculate month positions with day-level precision
       const startMonth = startDate.getMonth();
       const startYear = startDate.getFullYear();
+      const startDay = startDate.getDate();
       const endMonth = endDate.getMonth();
       const endYear = endDate.getFullYear();
+      const endDay = endDate.getDate();
       
       // Only show if in the display year
       if (startYear > displayYear || endYear < displayYear) return null;
       
-      // Calculate column and span
+      // Calculate column and span (for backwards compatibility)
       if (startYear === displayYear) {
         startCol = startMonth;
       } else {
@@ -248,12 +255,37 @@ function GanttChart(): React.ReactElement {
       } else {
         return null;
       }
+      
+      // Calculate precise positioning
+      // Get days in the start month to calculate offset
+      const daysInStartMonth = new Date(startYear, startMonth + 1, 0).getDate();
+      leftOffset = (startDay - 1) / daysInStartMonth; // 0-based day position (day 1 = start of month)
+      
+      // Calculate total width in fractional months
+      let totalDays = 0;
+      let currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        totalDays++;
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      // Calculate width more precisely by counting fractional months
+      const startMonthFraction = (daysInStartMonth - startDay + 1) / daysInStartMonth;
+      const endMonthDays = new Date(endYear, endMonth + 1, 0).getDate();
+      const endMonthFraction = endDay / endMonthDays;
+      
+      // Width = fraction of start month + full months in between + fraction of end month
+      const monthsBetween = Math.max(0, (endYear - startYear) * 12 + (endMonth - startMonth) - 1);
+      width = startMonthFraction + monthsBetween + endMonthFraction;
+      
     } else {
-      // Calculate week positions
+      // Calculate week positions with day-level precision
       const startWeek = getWeekNumber(startDate);
       const endWeek = getWeekNumber(endDate);
       const startYear = startDate.getFullYear();
       const endYear = endDate.getFullYear();
+      const startDayOfWeek = startDate.getDay(); // 0-6
+      const endDayOfWeek = endDate.getDay();
       
       // Only show if in the display year
       if (startYear > displayYear || endYear < displayYear) return null;
@@ -270,6 +302,20 @@ function GanttChart(): React.ReactElement {
       } else {
         return null;
       }
+      
+      // Calculate precise positioning for week view
+      // Week starts on Monday (1), Sunday is (0) which should be treated as 7
+      const adjustedStartDay = startDayOfWeek === 0 ? 7 : startDayOfWeek;
+      const adjustedEndDay = endDayOfWeek === 0 ? 7 : endDayOfWeek;
+      
+      leftOffset = (adjustedStartDay - 1) / 7; // Fraction of the first week
+      
+      // Calculate width in fractional weeks
+      const daysInFirstWeek = 8 - adjustedStartDay; // Days remaining in first week (including start day)
+      const daysInLastWeek = adjustedEndDay; // Days in last week
+      const weeksBetween = Math.max(0, span - 2); // Full weeks between first and last
+      
+      width = (daysInFirstWeek / 7) + weeksBetween + (daysInLastWeek / 7);
     }
     
     if (span <= 0) return null;
@@ -286,6 +332,8 @@ function GanttChart(): React.ReactElement {
       notes: plan.notes,
       startCol,
       span,
+      leftOffset,
+      width,
     };
   };
   
@@ -415,8 +463,11 @@ function GanttChart(): React.ReactElement {
                             <div
                               className="gantt-bar"
                               style={{
-                                gridColumnStart: bar.startCol + 1,
-                                gridColumnEnd: bar.startCol + bar.span + 1,
+                                position: 'absolute',
+                                left: `${((bar.startCol + bar.leftOffset) / timelineColumns.length) * 100}%`,
+                                width: `${(bar.width / timelineColumns.length) * 100}%`,
+                                top: '4px',
+                                bottom: '4px',
                               }}
                             >
                               <span className="gantt-bar-label">
