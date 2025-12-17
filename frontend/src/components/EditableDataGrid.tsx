@@ -137,15 +137,21 @@ export function EditableDataGrid<T extends EditableRow>({
    * Extract user-friendly error message from Axios error response
    */
   const extractErrorMessage = (err: unknown): string => {
+    console.log('extractErrorMessage called with:', err);
+    
     if (axios.isAxiosError(err)) {
       const axiosError = err as AxiosError;
+      console.log('Is Axios error, status:', axiosError.response?.status);
+      console.log('Response data:', axiosError.response?.data);
       
       // Check if it's a 400 validation error
       if (axiosError.response?.status === 400) {
         const data = axiosError.response.data;
+        console.log('Data type:', typeof data);
         
         // If data is a string, return it directly
         if (typeof data === 'string') {
+          console.log('Returning string data:', data);
           return data;
         }
         
@@ -167,27 +173,35 @@ export function EditableDataGrid<T extends EditableRow>({
           
           // Extract errors from all fields
           Object.entries(data).forEach(([field, value]) => {
+            console.log(`Processing field ${field}:`, value);
             const fieldName = fieldTranslations[field] || field;
             
             if (Array.isArray(value)) {
               // If value is an array of error messages
               value.forEach((msg: string) => {
-                errors.push(`${fieldName}: ${msg}`);
+                const errorMsg = `${fieldName}: ${msg}`;
+                console.log('Adding error:', errorMsg);
+                errors.push(errorMsg);
               });
             } else if (typeof value === 'string') {
               // If value is a single error message
-              errors.push(`${fieldName}: ${value}`);
+              const errorMsg = `${fieldName}: ${value}`;
+              console.log('Adding error:', errorMsg);
+              errors.push(errorMsg);
             }
           });
           
           if (errors.length > 0) {
-            return errors.join('\n');
+            const result = errors.join('\n');
+            console.log('Returning joined errors:', result);
+            return result;
           }
         }
       }
     }
     
     // Fallback to generic error message
+    console.log('Fallback to generic error');
     return saveErrorMessage;
   };
 
@@ -235,6 +249,7 @@ export function EditableDataGrid<T extends EditableRow>({
     } catch (err) {
       // Extract user-friendly error message
       const errorMessage = extractErrorMessage(err);
+      console.log('Extracted error message:', errorMessage);
       setError(errorMessage);
       console.error('Error saving data:', err);
       throw err;
