@@ -53,7 +53,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'culture',
       headerName: t('plantingPlans:columns.culture'),
-      width: 200,
+      flex: 1,
+      minWidth: 180,
       editable: true,
       type: 'singleSelect',
       valueOptions: cultures.filter(c => c.id !== undefined).map(c => ({ value: c.id!, label: c.variety ? `${c.name} (${c.variety})` : c.name })),
@@ -69,7 +70,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'bed',
       headerName: t('plantingPlans:columns.bed'),
-      width: 250,
+      flex: 1.2,
+      minWidth: 200,
       editable: true,
       type: 'singleSelect',
       valueOptions: beds.filter(b => b.id !== undefined).map(b => {
@@ -92,7 +94,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'planting_date',
       headerName: t('plantingPlans:columns.plantingDate'),
-      width: 150,
+      flex: 0.8,
+      minWidth: 130,
       type: 'date',
       editable: true,
       valueGetter: (value) => value ? new Date(value) : null,
@@ -104,7 +107,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'harvest_date',
       headerName: t('plantingPlans:columns.harvestStartDate'),
-      width: 150,
+      flex: 0.8,
+      minWidth: 130,
       editable: false,
       type: 'date',
       valueGetter: (value) => value ? new Date(value) : null,
@@ -112,7 +116,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'harvest_end_date',
       headerName: t('plantingPlans:columns.harvestEndDate'),
-      width: 150,
+      flex: 0.8,
+      minWidth: 130,
       editable: false,
       type: 'date',
       valueGetter: (value) => value ? new Date(value) : null,
@@ -120,14 +125,16 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'area_usage_sqm',
       headerName: t('plantingPlans:columns.areaUsage'),
-      width: 130,
+      flex: 0.6,
+      minWidth: 110,
       type: 'number',
       editable: true,
     },
     {
       field: 'notes',
       headerName: t('common:fields.notes'),
-      width: 300,
+      flex: 1.5,
+      minWidth: 200,
       editable: true,
     },
   ], [cultures, beds, t]);

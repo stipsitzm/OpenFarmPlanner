@@ -153,7 +153,7 @@ export function EditableDataGrid<T extends EditableRow>({
         }
         
         // Remove the temporary row and add the saved row
-        const savedRow = { ...response.data, id: response.data.id } as T;
+        const savedRow = mapToRow(response.data as T);
         setRows((prevRows) => {
           // Remove the temporary row with negative ID
           const filteredRows = prevRows.filter(row => row.id !== newRow.id);
@@ -169,7 +169,9 @@ export function EditableDataGrid<T extends EditableRow>({
         if (!response.data.id) {
           throw new Error('API response missing ID');
         }
-        return { ...response.data, id: response.data.id } as T;
+        // Map the response through mapToRow to ensure all fields are properly formatted
+        // This is important for auto-calculated fields like harvest dates
+        return mapToRow(response.data as T);
       }
     } catch (err) {
       setError(saveErrorMessage);
