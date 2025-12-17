@@ -14,6 +14,7 @@ import { DataGrid, GridRowModes, GridRowEditStopReasons } from '@mui/x-data-grid
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridEventListener, GridRowId } from '@mui/x-data-grid';
 import { Box, Alert, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
 
 /**
  * Base interface for editable data grid rows
@@ -243,26 +244,25 @@ export function EditableDataGrid<T extends EditableRow>({
         {
           field: 'actions',
           type: 'actions',
-          headerName: 'Aktionen',
-          width: 100,
+          headerName: '',
+          width: 70,
           cellClassName: 'actions',
           getActions: ({ id }) => {
             return [
-              <button
+              <IconButton
                 key={`delete-${id}`}
                 onClick={handleDeleteClick(id)}
-                style={{
+                size="small"
+                sx={{
                   color: '#d32f2f',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '6px 8px',
-                  fontSize: '0.8125rem',
-                  textTransform: 'uppercase',
+                  '&:hover': {
+                    backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                  },
                 }}
+                aria-label="Löschen"
               >
-                Löschen
-              </button>,
+                <CloseIcon />
+              </IconButton>,
             ];
           },
         },
