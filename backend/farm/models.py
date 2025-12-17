@@ -276,28 +276,49 @@ class PlantingPlan(models.Model):
                     })
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        """Save the planting plan and auto-calculate harvest dates if not set.
+        """Save the planting plan and auto-calculate harvest dates.
         
         Auto-calculates harvest dates based on planting date and culture timing:
         - harvest_date: planting_date + days_to_harvest (or median_days_to_first_harvest if available)
         - harvest_end_date: planting_date + median_days_to_last_harvest (if available)
         
+        Harvest dates are recalculated whenever planting_date or culture changes.
+        
         Args:
             *args: Variable length argument list passed to parent save()
             **kwargs: Arbitrary keyword arguments passed to parent save()
         """
-        if self.planting_date and self.culture:
+        # Detect if planting_date or culture has changed
+        should_recalculate = False
+        
+        if self.pk:
+            # Existing instance - check if planting_date or culture changed
+            try:
+                prev = PlantingPlan.objects.get(pk=self.pk)
+                if prev.planting_date != self.planting_date or prev.culture_id != self.culture_id:
+                    should_recalculate = True
+            except PlantingPlan.DoesNotExist:
+                # Should not happen, but treat as new instance
+                should_recalculate = True
+        else:
+            # New instance - always calculate
+            should_recalculate = True
+        
+        # Calculate harvest dates if needed
+        if should_recalculate and self.planting_date and self.culture:
             # Calculate harvest start date
-            if not self.harvest_date:
-                # Use median_days_to_first_harvest if available, otherwise fall back to days_to_harvest
-                if self.culture.median_days_to_first_harvest:
-                    self.harvest_date = self.planting_date + timedelta(days=self.culture.median_days_to_first_harvest)
-                else:
-                    self.harvest_date = self.planting_date + timedelta(days=self.culture.days_to_harvest)
+            # Use median_days_to_first_harvest if available, otherwise fall back to days_to_harvest
+            if self.culture.median_days_to_first_harvest:
+                self.harvest_date = self.planting_date + timedelta(days=self.culture.median_days_to_first_harvest)
+            else:
+                self.harvest_date = self.planting_date + timedelta(days=self.culture.days_to_harvest)
             
             # Calculate harvest end date
-            if not self.harvest_end_date and self.culture.median_days_to_last_harvest:
+            if self.culture.median_days_to_last_harvest:
                 self.harvest_end_date = self.planting_date + timedelta(days=self.culture.median_days_to_last_harvest)
+            else:
+                # If no median_days_to_last_harvest, set to same as harvest_date (single-day window)
+                self.harvest_end_date = self.harvest_date
         
         super().save(*args, **kwargs)
 
