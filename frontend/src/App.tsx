@@ -72,8 +72,11 @@ function AppContent(): React.ReactElement {
 }
 
 function App(): React.ReactElement {
+  // Use Vite's base URL to set React Router basename so routes work under a subdirectory
+  // Vite provides BASE_URL ending with a trailing slash (e.g., "/openfarmplanner/")
+  const basename = import.meta.env.BASE_URL.replace(/\/$/, '');
   return (
-    <Router>
+    <Router basename={basename}>
       <AppContent />
     </Router>
   );

@@ -10,22 +10,36 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from BASE_DIR/.env explicitly to avoid CWD issues in production
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ov1io#b(%s+zc#ue30exe(t(sa3d7xf*i4biy7zh*yx95pzitd'
+SECRET_KEY = os.getenv(
+    'SECRET_KEY',
+    'django-insecure-ov1io#b(%s+zc#ue30exe(t(sa3d7xf*i4biy7zh*yx95pzitd'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# In production, explicitly set DEBUG=False via environment variable
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = []
+# Parse ALLOWED_HOSTS from environment variable or use sensible development defaults
+_allowed_hosts_str = os.getenv(
+    'ALLOWED_HOSTS',
+    'localhost,127.0.0.1'
+)
+ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts_str.split(',')]
 
 
 # Application definition
@@ -79,11 +93,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'farmplanner_db',
-        'USER': 'farmplanner',
-        'PASSWORD': 'farmplanner',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.getenv('DB_NAME', 'farmplanner_db'),
+        'USER': os.getenv('DB_USER', 'farmplanner'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'farmplanner'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
@@ -130,10 +144,16 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://localhost:3000',
-]
+# Parse from environment variable or use localhost defaults for development
+_cors_origins_str = os.getenv(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:5173,http://localhost:3000'
+)
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins_str.split(',')]
+
+# Parse CSRF_TRUSTED_ORIGINS from environment or use empty list for local development
+_csrf_origins_str = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins_str.split(',') if origin.strip()]
 
 # REST Framework settings
 REST_FRAMEWORK = {
