@@ -5,20 +5,12 @@
  * All API calls use axios and return promises with typed responses.
  */
 
-import axios from 'axios';
+import apiClient from './apiClient';
 
-/** Base URL for the API endpoints */
-const API_BASE_URL = 'http://localhost:8000/api';
+// ...existing code...
 
-/**
- * Configured axios instance with base URL and default headers
- */
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+// apiClient wird als zentraler Axios-Client verwendet
+const api = apiClient;
 
 // Types
 
