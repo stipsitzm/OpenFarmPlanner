@@ -1,3 +1,22 @@
+## Environment Variables (.env)
+
+### Backend
+
+Die Django-Konfiguration nutzt eine .env-Datei im Verzeichnis backend/.env, um sensible Einstellungen und Umgebungs-spezifische Werte zu verwalten. Diese Datei sollte nicht ins Repository eingecheckt werden (siehe .gitignore).
+
+**Beispiel:** Siehe [backend/.env.example](backend/.env.example)
+
+**Wichtige Variablen:**
+
+- `DEBUG` – Debug-Modus (True/False)
+- `SECRET_KEY` – Django Secret Key (unbedingt in Produktion ändern!)
+- `ALLOWED_HOSTS` – Erlaubte Hostnamen (kommagetrennt)
+- `CORS_ALLOWED_ORIGINS` – Erlaubte Ursprünge für CORS (kommagetrennt)
+- `CSRF_TRUSTED_ORIGINS` – Vertrauenswürdige Ursprünge für CSRF (kommagetrennt)
+- `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` – Datenbankverbindung
+
+Kopiere backend/.env.example nach backend/.env und passe die Werte an deine Umgebung an.
+
 # OpenFarmPlanner
 
 A full-stack web application for managing CSA (Community Supported Agriculture) farm operations. The application helps manage cultures (crops), beds, fields, planting plans, and tasks with an intuitive interface and automatic harvest date calculations.

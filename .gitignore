@@ -1,3 +1,5 @@
+# Ignore backend environment variables
+backend/.env
 # IDE
 .vscode/
 .idea/
