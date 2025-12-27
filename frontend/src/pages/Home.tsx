@@ -28,12 +28,7 @@ function Home(): React.ReactElement {
             </Link>
           </li>
           <li>
-            <Link to="/fields" className="quick-link">
-              {t('home:manageFields')}
-            </Link>
-          </li>
-          <li>
-            <Link to="/beds" className="quick-link">
+            <Link to="/fields-beds" className="quick-link">
               {t('home:manageBeds')}
             </Link>
           </li>
@@ -47,11 +42,11 @@ function Home(): React.ReactElement {
               {t('home:managePlantingPlans')}
             </Link>
           </li>
-          <li>
+          {/*<li>
             <Link to="/tasks" className="quick-link">
               {t('home:manageTasks')}
             </Link>
-          </li>
+          </li>*/}
         </ul>
       </div>
 

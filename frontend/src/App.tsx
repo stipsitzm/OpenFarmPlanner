@@ -49,9 +49,10 @@ function AppContent(): React.ReactElement {
           <NavLink to="/planting-plans" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('plantingPlans')}
           </NavLink>
+          {/*
           <NavLink to="/tasks" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('tasks')}
-          </NavLink>
+          </NavLink>*/}
           <NavLink to="/gantt-chart" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('ganttChart')}
           </NavLink>

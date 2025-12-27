@@ -268,12 +268,12 @@ class PlantingPlan(models.Model):
                 # Add current plan's area usage
                 total_area_with_current = total_used_area + float(self.area_usage_sqm)
                 
-                if total_area_with_current > bed_area:
-                    raise ValidationError({
-                        'area_usage_sqm': f'Total area usage ({total_area_with_current:.2f} sqm) '
-                                         f'exceeds bed area ({bed_area:.2f} sqm). '
-                                         f'Available: {bed_area - total_used_area:.2f} sqm.'
-                    })
+                #if total_area_with_current > bed_area:
+                #    raise ValidationError({
+                #        'area_usage_sqm': f'Total area usage ({total_area_with_current:.2f} sqm) '
+                #                         f'exceeds bed area ({bed_area:.2f} sqm). '
+                #                         f'Available: {bed_area - total_used_area:.2f} sqm.'
+                #    })
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the planting plan and auto-calculate harvest dates.
