@@ -56,7 +56,13 @@ INSTALLED_APPS = [
     'farm',
 ]
 
+# Debug Toolbar nur in Entwicklung aktivieren
+if DEBUG:
+    INSTALLED_APPS.append('debug_toolbar')
+
 MIDDLEWARE = [
+    # Debug Toolbar Middleware nur in Entwicklung aktivieren
+    *(['debug_toolbar.middleware.DebugToolbarMiddleware'] if DEBUG else []),
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -66,6 +72,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Debug Toolbar Einstellungen nur in Entwicklung
+if DEBUG:
+    INTERNAL_IPS = ['127.0.0.1']
 
 ROOT_URLCONF = 'config.urls'
 

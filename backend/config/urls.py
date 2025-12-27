@@ -16,8 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
 
 urlpatterns = [
     path('openfarmplanner/admin/', admin.site.urls),
     path('openfarmplanner/api/', include('farm.urls')),
 ]
+
+# Debug Toolbar URLs nur in Entwicklung
+if getattr(settings, 'DEBUG', False):
+    import debug_toolbar
+    urlpatterns = [
+        path('__debug__/', include(debug_toolbar.urls)),
+    ] + urlpatterns
