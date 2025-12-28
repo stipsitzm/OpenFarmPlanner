@@ -18,6 +18,7 @@ import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData
 import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState';
 import { useBedOperations } from '../components/hierarchy/hooks/useBedOperations';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
+import { fieldAPI } from '../api/client';
 import { buildHierarchyRows } from '../components/hierarchy/utils/hierarchyUtils';
 import { createHierarchyColumns } from '../components/hierarchy/HierarchyColumns';
 import { HierarchyFooter } from '../components/hierarchy/HierarchyFooter';
@@ -117,28 +118,41 @@ function FieldsBedsHierarchy(): React.ReactElement {
    * Process row update - save bed to API
    */
   const processRowUpdate = async (newRow: HierarchyRow): Promise<HierarchyRow> => {
-    // Only beds are editable
-    if (newRow.type !== 'bed') return newRow;
-
-    // Validate
+    // Name muss immer gesetzt sein
     if (!newRow.name || newRow.name.trim() === '') {
       setError(t('validation.nameRequired'));
       throw new Error(t('validation.nameRequired'));
     }
 
-    try {
-      const savedBed = await saveBed({
-        id: newRow.bedId!,
-        name: newRow.name,
-        field: newRow.field!,
-        area_sqm: newRow.area_sqm,
-        notes: newRow.notes,
-      });
-
-      return { ...newRow, id: savedBed.id!, bedId: savedBed.id!, isNew: false };
-    } catch (err) {
-      throw err;
+    if (newRow.type === 'bed') {
+      try {
+        const savedBed = await saveBed({
+          id: newRow.bedId!,
+          name: newRow.name,
+          field: newRow.field!,
+          area_sqm: newRow.area_sqm,
+          notes: newRow.notes,
+        });
+        return { ...newRow, id: savedBed.id!, bedId: savedBed.id!, isNew: false };
+      } catch (err) {
+        throw err;
+      }
+    } else if (newRow.type === 'field') {
+      try {
+        // Update Field via API
+        const updated = await fieldAPI.update(newRow.fieldId!, {
+          name: newRow.name,
+          location: newRow.locationId!,
+          area_sqm: newRow.area_sqm,
+          notes: newRow.notes,
+        });
+        return { ...newRow, name: updated.data.name, area_sqm: updated.data.area_sqm, notes: updated.data.notes };
+      } catch (err) {
+        setError(t('errors.save'));
+        throw err;
+      }
     }
+    return newRow;
   };
 
   /**
@@ -191,7 +205,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
             footer: () => <HierarchyFooter locations={locations} onAddField={addField} />,
           }}
           isRowSelectable={(params) => params.row.type === 'bed'}
-          isCellEditable={(params) => params.row.type === 'bed'}
+          isCellEditable={(params) => params.row.type === 'bed' || params.row.type === 'field'}
           sx={dataGridSx}
         />
       </Box>
