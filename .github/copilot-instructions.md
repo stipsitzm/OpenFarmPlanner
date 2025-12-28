@@ -14,6 +14,9 @@ For specific coding rules, see:
 
 ## Commit Messages (Conventional Commits)
 
+
+Commit messages must always be written in English.
+
 Always use the format:
 
 `type(scope): short description`

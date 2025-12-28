@@ -373,9 +373,12 @@ export function EditableDataGrid<T extends EditableRow>({
             footer: CustomFooter,
           }}
           sx={{
+            '& .MuiDataGrid-cell': {
+              bgcolor: '#f5f5f5',
+            },
             '& .MuiDataGrid-cell--editable': {
               bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? '#383838' : '#f5f5f5',
+                theme.palette.mode === 'dark' ? '#383838' : '#fff',
             },
           }}
         />
