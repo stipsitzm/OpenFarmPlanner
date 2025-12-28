@@ -13,6 +13,7 @@ import { useTranslation } from '../i18n';
 import { DataGrid, GridRowModes, GridRowEditStopReasons } from '@mui/x-data-grid';
 import type { GridRowsProp, GridRowModesModel, GridEventListener } from '@mui/x-data-grid';
 import { Box, Alert } from '@mui/material';
+import { dataGridSx } from '../components/dataGridStyles';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState';
 import { useBedOperations } from '../components/hierarchy/hooks/useBedOperations';
@@ -191,12 +192,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
           }}
           isRowSelectable={(params) => params.row.type === 'bed'}
           isCellEditable={(params) => params.row.type === 'bed'}
-          sx={{
-            '& .MuiDataGrid-cell--editable': {
-              bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? '#383838' : '#f5f5f5',
-            },
-          }}
+          sx={dataGridSx}
         />
       </Box>
     </div>
