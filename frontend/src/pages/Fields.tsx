@@ -159,7 +159,7 @@ function Fields(): React.ReactElement {
         </thead>
         <tbody>
           {fields.map((field) => (
-            <tr key={field.id}>
+            <tr key={field.id} className="clickable">
               <td>{field.name}</td>
               <td>{field.location_name || '-'}</td>
               <td>{field.area_sqm || '-'}</td>
