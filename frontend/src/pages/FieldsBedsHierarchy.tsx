@@ -207,6 +207,14 @@ function FieldsBedsHierarchy(): React.ReactElement {
           isRowSelectable={(params) => params.row.type === 'bed'}
           isCellEditable={(params) => params.row.type === 'bed' || params.row.type === 'field'}
           sx={dataGridSx}
+          onCellClick={(params, event) => {
+            if (params.isEditable && rowModesModel[params.id]?.mode !== GridRowModes.Edit) {
+              setRowModesModel((oldModel) => ({
+                ...oldModel,
+                [params.id]: { mode: GridRowModes.Edit, fieldToFocus: params.field },
+              }));
+            }
+          }}
         />
       </Box>
     </div>

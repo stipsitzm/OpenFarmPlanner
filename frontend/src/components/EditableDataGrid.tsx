@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { DataGrid, GridRowModes, GridRowEditStopReasons } from '@mui/x-data-grid';
+import { dataGridSx } from './dataGridStyles';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridEventListener, GridRowId } from '@mui/x-data-grid';
 import { Box, Alert, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -372,19 +373,14 @@ export function EditableDataGrid<T extends EditableRow>({
           slots={{
             footer: CustomFooter,
           }}
-          sx={{
-            '& .MuiDataGrid-cell': {
-              bgcolor: '#f5f5f5',
-              transition: 'background-color 0.15s',
-            },
-            '& .MuiDataGrid-cell--editable': {
-              bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? '#383838' : '#fff',
-              cursor: 'pointer',
-            },
-            '& .MuiDataGrid-cell--editable:hover': {
-              backgroundColor: '#e3f2fd',
-            },
+          sx={dataGridSx}
+          onCellClick={(params, event) => {
+            if (params.isEditable && rowModesModel[params.id]?.mode !== GridRowModes.Edit) {
+              setRowModesModel((oldModel) => ({
+                ...oldModel,
+                [params.id]: { mode: GridRowModes.Edit, fieldToFocus: params.field },
+              }));
+            }
           }}
         />
       </Box>
