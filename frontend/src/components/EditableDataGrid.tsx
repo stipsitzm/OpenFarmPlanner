@@ -374,7 +374,7 @@ export function EditableDataGrid<T extends EditableRow>({
             footer: CustomFooter,
           }}
           sx={dataGridSx}
-          onCellClick={(params, event) => {
+          onCellClick={(params) => {
             if (params.isEditable && rowModesModel[params.id]?.mode !== GridRowModes.Edit) {
               setRowModesModel((oldModel) => ({
                 ...oldModel,
