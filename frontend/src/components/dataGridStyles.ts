@@ -1,5 +1,11 @@
-// frontend/src/components/dataGridStyles.ts
-// Zentrales Styling für MUI DataGrid
+/**
+ * Central styling for MUI DataGrid components
+ * 
+ * This file provides common style objects that can be reused across
+ * all DataGrid instances in the application for consistent styling.
+ */
+
+import type { Theme } from '@mui/material/styles';
 
 /**
  * Common styles for MUI DataGrid components
@@ -10,7 +16,7 @@ export const dataGridSx = {
     transition: 'background-color 0.15s',
   },
   '& .MuiDataGrid-cell--editable': {
-    bgcolor: (theme: any) =>
+    bgcolor: (theme: Theme) =>
       theme.palette.mode === 'dark' ? '#383838' : '#fff',
     cursor: 'pointer',
   },
