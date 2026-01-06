@@ -10,10 +10,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../i18n';
-import { DataGrid, GridRowModes, GridRowEditStopReasons } from '@mui/x-data-grid';
-import type { GridRowsProp, GridRowModesModel, GridEventListener } from '@mui/x-data-grid';
+import { DataGrid, GridRowModes } from '@mui/x-data-grid';
+import type { GridRowsProp, GridRowModesModel } from '@mui/x-data-grid';
 import { Box, Alert } from '@mui/material';
 import { dataGridSx } from '../components/dataGridStyles';
+import { handleRowEditStop, handleEditableCellClick } from '../components/dataGridHandlers';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState';
 import { useBedOperations } from '../components/hierarchy/hooks/useBedOperations';
@@ -105,14 +106,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
     setPendingEditRow(newBedId);
   };
 
-  /**
-   * Handle row edit stop event
-   */
-  const handleRowEditStop: GridEventListener<'rowEditStop'> = (params, event): void => {
-    if (params.reason === GridRowEditStopReasons.rowFocusOut) {
-      event.defaultMuiPrevented = true;
-    }
-  };
+
 
   /**
    * Process row update - save bed to API
@@ -207,14 +201,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
           isRowSelectable={(params) => params.row.type === 'bed'}
           isCellEditable={(params) => params.row.type === 'bed' || params.row.type === 'field'}
           sx={dataGridSx}
-          onCellClick={(params) => {
-            if (params.isEditable && rowModesModel[params.id]?.mode !== GridRowModes.Edit) {
-              setRowModesModel((oldModel) => ({
-                ...oldModel,
-                [params.id]: { mode: GridRowModes.Edit, fieldToFocus: params.field },
-              }));
-            }
-          }}
+          onCellClick={(params) => handleEditableCellClick(params, rowModesModel, setRowModesModel)}
         />
       </Box>
     </div>

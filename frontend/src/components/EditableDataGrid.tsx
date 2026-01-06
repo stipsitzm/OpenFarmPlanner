@@ -10,9 +10,10 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { DataGrid, GridRowModes, GridRowEditStopReasons } from '@mui/x-data-grid';
+import { DataGrid, GridRowModes } from '@mui/x-data-grid';
 import { dataGridSx } from './dataGridStyles';
-import type { GridColDef, GridRowsProp, GridRowModesModel, GridEventListener, GridRowId } from '@mui/x-data-grid';
+import { handleRowEditStop, handleEditableCellClick } from './dataGridHandlers';
+import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId } from '@mui/x-data-grid';
 import { Box, Alert, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -125,14 +126,7 @@ export function EditableDataGrid<T extends EditableRow>({
     }));
   };
 
-  /**
-   * Handle row edit stop event
-   */
-  const handleRowEditStop: GridEventListener<'rowEditStop'> = (params, event): void => {
-    if (params.reason === GridRowEditStopReasons.rowFocusOut) {
-      event.defaultMuiPrevented = true;
-    }
-  };
+
 
   /**
    * Extract user-friendly error message from Axios error response
@@ -374,14 +368,7 @@ export function EditableDataGrid<T extends EditableRow>({
             footer: CustomFooter,
           }}
           sx={dataGridSx}
-          onCellClick={(params) => {
-            if (params.isEditable && rowModesModel[params.id]?.mode !== GridRowModes.Edit) {
-              setRowModesModel((oldModel) => ({
-                ...oldModel,
-                [params.id]: { mode: GridRowModes.Edit, fieldToFocus: params.field },
-              }));
-            }
-          }}
+          onCellClick={(params) => handleEditableCellClick(params, rowModesModel, setRowModesModel)}
         />
       </Box>
     </>
