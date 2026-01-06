@@ -4,6 +4,7 @@
  * Provides reusable handlers for consistent behavior across all DataGrid instances.
  */
 
+import type { Dispatch, SetStateAction } from 'react';
 import { GridRowModes, GridRowEditStopReasons } from '@mui/x-data-grid';
 import type { GridEventListener, GridRowModesModel, GridCellParams } from '@mui/x-data-grid';
 
@@ -21,7 +22,7 @@ import type { GridEventListener, GridRowModesModel, GridCellParams } from '@mui/
 export function handleEditableCellClick(
   params: GridCellParams,
   rowModesModel: GridRowModesModel,
-  setRowModesModel: React.Dispatch<React.SetStateAction<GridRowModesModel>>
+  setRowModesModel: Dispatch<SetStateAction<GridRowModesModel>>
 ): void {
   if (params.isEditable && rowModesModel[params.id]?.mode !== GridRowModes.Edit) {
     setRowModesModel((oldModel) => ({
