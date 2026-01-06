@@ -4,6 +4,7 @@
 
 import { Box, IconButton } from '@mui/material';
 import { useTranslation } from '../../i18n';
+import { dataGridFooterSx } from '../dataGridStyles';
 import type { Location } from '../../api/client';
 
 interface HierarchyFooterProps {
@@ -17,13 +18,9 @@ export function HierarchyFooter({ locations, onAddField }: HierarchyFooterProps)
   
   return (
     <Box sx={{ 
-      p: 1, 
-      display: 'flex', 
-      justifyContent: 'center',
+      ...dataGridFooterSx,
       alignItems: 'center',
       gap: 2,
-      borderTop: '1px solid',
-      borderColor: 'divider'
     }}>
       {!hasMultipleLocations && locations.length > 0 && (
         <IconButton

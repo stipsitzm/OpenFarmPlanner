@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
-import { dataGridSx } from './dataGridStyles';
+import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './dataGridStyles';
 import { handleRowEditStop, handleEditableCellClick } from './dataGridHandlers';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId } from '@mui/x-data-grid';
 import { Box, Alert, IconButton } from '@mui/material';
@@ -289,13 +289,7 @@ export function EditableDataGrid<T extends EditableRow>({
    */
   const CustomFooter = (): React.ReactElement => {
     return (
-      <Box sx={{ 
-        p: 1, 
-        display: 'flex', 
-        justifyContent: 'center',
-        borderTop: '1px solid',
-        borderColor: 'divider'
-      }}>
+      <Box sx={dataGridFooterSx}>
         <IconButton
           onClick={handleAddClick}
           color="primary"
@@ -326,12 +320,7 @@ export function EditableDataGrid<T extends EditableRow>({
                 key={`delete-${id}`}
                 onClick={handleDeleteClick(id)}
                 size="small"
-                sx={{
-                  color: '#d32f2f',
-                  '&:hover': {
-                    backgroundColor: 'rgba(211, 47, 47, 0.08)',
-                  },
-                }}
+                sx={deleteIconButtonSx}
                 aria-label="Löschen"
               >
                 <CloseIcon />

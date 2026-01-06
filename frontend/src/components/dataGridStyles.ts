@@ -1,6 +1,9 @@
 // frontend/src/components/dataGridStyles.ts
 // Zentrales Styling für MUI DataGrid
 
+/**
+ * Common styles for MUI DataGrid components
+ */
 export const dataGridSx = {
   '& .MuiDataGrid-cell': {
     bgcolor: '#f5f5f5',
@@ -15,3 +18,25 @@ export const dataGridSx = {
     backgroundColor: '#e3f2fd',
   },
 };
+
+/**
+ * Common styles for footer containers in DataGrid
+ */
+export const dataGridFooterSx = {
+  p: 1,
+  display: 'flex',
+  justifyContent: 'center',
+  borderTop: '1px solid',
+  borderColor: 'divider',
+};
+
+/**
+ * Common styles for delete action IconButtons
+ */
+export const deleteIconButtonSx = {
+  color: '#d32f2f',
+  '&:hover': {
+    backgroundColor: 'rgba(211, 47, 47, 0.08)',
+  },
+};
+
