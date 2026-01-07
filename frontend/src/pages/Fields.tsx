@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { fieldAPI, locationAPI, type Field, type Location } from '../api/client';
+import { fieldAPI, locationAPI, type Field, type Location } from '../api/api';
 
 function Fields(): React.ReactElement {
   const [fields, setFields] = useState<Field[]>([]);

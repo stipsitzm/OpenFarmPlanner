@@ -10,8 +10,8 @@
 
 import type { GridColDef } from '@mui/x-data-grid';
 import { useTranslation } from '../i18n';
-import { locationAPI, type Location } from '../api/client';
-import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/EditableDataGrid';
+import { locationAPI, type Location } from '../api/api';
+import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/data-grid';
 
 /**
  * Row data type for Data Grid with all optional fields for new rows

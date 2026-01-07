@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { bedAPI, fieldAPI, type Bed, type Field } from '../api/client';
+import { bedAPI, fieldAPI, type Bed, type Field } from '../api/api';
 
 function Beds(): React.ReactElement {
   const [beds, setBeds] = useState<Bed[]>([]);

@@ -10,9 +10,10 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { DataGrid, GridRowModes, GridRowEditStopReasons } from '@mui/x-data-grid';
-import { dataGridSx } from './dataGridStyles';
-import type { GridColDef, GridRowsProp, GridRowModesModel, GridEventListener, GridRowId } from '@mui/x-data-grid';
+import { DataGrid, GridRowModes } from '@mui/x-data-grid';
+import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
+import { handleRowEditStop, handleEditableCellClick } from './handlers';
+import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId } from '@mui/x-data-grid';
 import { Box, Alert, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -125,14 +126,7 @@ export function EditableDataGrid<T extends EditableRow>({
     }));
   };
 
-  /**
-   * Handle row edit stop event
-   */
-  const handleRowEditStop: GridEventListener<'rowEditStop'> = (params, event): void => {
-    if (params.reason === GridRowEditStopReasons.rowFocusOut) {
-      event.defaultMuiPrevented = true;
-    }
-  };
+
 
   /**
    * Extract user-friendly error message from Axios error response
@@ -295,13 +289,7 @@ export function EditableDataGrid<T extends EditableRow>({
    */
   const CustomFooter = (): React.ReactElement => {
     return (
-      <Box sx={{ 
-        p: 1, 
-        display: 'flex', 
-        justifyContent: 'center',
-        borderTop: '1px solid',
-        borderColor: 'divider'
-      }}>
+      <Box sx={dataGridFooterSx}>
         <IconButton
           onClick={handleAddClick}
           color="primary"
@@ -332,12 +320,7 @@ export function EditableDataGrid<T extends EditableRow>({
                 key={`delete-${id}`}
                 onClick={handleDeleteClick(id)}
                 size="small"
-                sx={{
-                  color: '#d32f2f',
-                  '&:hover': {
-                    backgroundColor: 'rgba(211, 47, 47, 0.08)',
-                  },
-                }}
+                sx={deleteIconButtonSx}
                 aria-label="Löschen"
               >
                 <CloseIcon />
@@ -374,14 +357,7 @@ export function EditableDataGrid<T extends EditableRow>({
             footer: CustomFooter,
           }}
           sx={dataGridSx}
-          onCellClick={(params) => {
-            if (params.isEditable && rowModesModel[params.id]?.mode !== GridRowModes.Edit) {
-              setRowModesModel((oldModel) => ({
-                ...oldModel,
-                [params.id]: { mode: GridRowModes.Edit, fieldToFocus: params.field },
-              }));
-            }
-          }}
+          onCellClick={(params) => handleEditableCellClick(params, rowModesModel, setRowModesModel)}
         />
       </Box>
     </>

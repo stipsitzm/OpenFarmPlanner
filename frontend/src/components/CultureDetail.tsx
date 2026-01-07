@@ -25,7 +25,7 @@ import {
   Divider,
 } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import type { Culture } from '../api/client';
+import type { Culture } from '../api/api';
 
 interface CultureDetailProps {
   cultures: Culture[];

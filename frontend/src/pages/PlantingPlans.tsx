@@ -10,8 +10,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { GridColDef } from '@mui/x-data-grid';
 import { useTranslation } from '../i18n';
-import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/client';
-import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/EditableDataGrid';
+import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
+import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/data-grid';
 
 /**
  * Row data type for Data Grid
