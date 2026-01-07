@@ -15,6 +15,10 @@ import csv
 from datetime import datetime, timedelta
 from collections import defaultdict
 from github import Github
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Initialize GitHub API
 g = Github(os.environ['GITHUB_TOKEN'])
