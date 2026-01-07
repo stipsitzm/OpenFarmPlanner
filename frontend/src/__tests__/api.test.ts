@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cultureAPI, bedAPI, plantingPlanAPI } from '../api/client';
+import { cultureAPI, bedAPI, plantingPlanAPI } from '../api/api';
 
 describe('API Client', () => {
   it('has culture API methods', () => {

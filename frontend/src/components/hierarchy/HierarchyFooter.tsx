@@ -5,7 +5,7 @@
 import { Box, IconButton } from '@mui/material';
 import { useTranslation } from '../../i18n';
 import { dataGridFooterSx } from '../dataGridStyles';
-import type { Location } from '../../api/client';
+import type { Location } from '../../api/api';
 
 interface HierarchyFooterProps {
   locations: Location[];

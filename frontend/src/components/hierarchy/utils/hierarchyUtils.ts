@@ -2,7 +2,7 @@
  * Utility functions for building hierarchical data structures
  */
 
-import type { Location, Field, Bed } from '../../../api/client';
+import type { Location, Field, Bed } from '../../../api/api';
 import type { HierarchyRow } from './types';
 
 /**

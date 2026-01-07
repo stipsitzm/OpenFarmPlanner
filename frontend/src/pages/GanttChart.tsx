@@ -12,7 +12,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from '../i18n';
 import { Box, Alert, Paper, Tooltip, IconButton } from '@mui/material';
 import { ExpandMore, ChevronRight } from '@mui/icons-material';
-import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, type PlantingPlan, type Bed, type Field, type Location } from '../api/client';
+import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, type PlantingPlan, type Bed, type Field, type Location } from '../api/api';
 import './GanttChart.css';
 import { useAutosizeSidebarWidth } from '../hooks/useAutosizeSidebarWidth';
 

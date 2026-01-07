@@ -9,7 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from '../i18n';
-import { cultureAPI, type Culture } from '../api/client';
+import { cultureAPI, type Culture } from '../api/api';
 import { CultureDetail } from '../components/CultureDetail';
 
 function Cultures(): React.ReactElement {

@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react';
-import { bedAPI, type Bed } from '../../../api/client';
+import { bedAPI, type Bed } from '../../../api/api';
 
 export function useBedOperations(
   _beds: Bed[],

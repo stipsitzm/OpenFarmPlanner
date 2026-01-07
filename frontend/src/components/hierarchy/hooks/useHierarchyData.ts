@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { locationAPI, fieldAPI, bedAPI, type Location, type Field, type Bed } from '../../../api/client';
+import { locationAPI, fieldAPI, bedAPI, type Location, type Field, type Bed } from '../../../api/api';
 
 export function useHierarchyData() {
   const [loading, setLoading] = useState<boolean>(false);

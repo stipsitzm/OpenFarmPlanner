@@ -19,7 +19,7 @@ import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData
 import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState';
 import { useBedOperations } from '../components/hierarchy/hooks/useBedOperations';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
-import { fieldAPI } from '../api/client';
+import { fieldAPI } from '../api/api';
 import { buildHierarchyRows } from '../components/hierarchy/utils/hierarchyUtils';
 import { createHierarchyColumns } from '../components/hierarchy/HierarchyColumns';
 import { HierarchyFooter } from '../components/hierarchy/HierarchyFooter';

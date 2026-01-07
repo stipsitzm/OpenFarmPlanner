@@ -2,7 +2,7 @@
  * Custom hook for field operations (CRUD)
  */
 
-import { fieldAPI, type Location } from '../../../api/client';
+import { fieldAPI, type Location } from '../../../api/api';
 
 export function useFieldOperations(
   locations: Location[],
