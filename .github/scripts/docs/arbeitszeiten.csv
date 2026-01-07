@@ -1,0 +1,23 @@
+Datum,Start,Ende,Dauer (h),Mittagspause (h),Tätigkeit
+2025-12-02,15:57,16:16,0.5,0,Feature Development
+2025-12-03,07:28,16:42,8.2,1,Feature Development
+2025-12-04,07:17,07:53,0.6,0,Discussion & Planning
+2025-12-05,08:02,11:41,3.7,0,Feature Development
+2025-12-06,08:08,11:26,3.3,0,Feature Development
+2025-12-08,08:54,11:46,2.9,0,Feature Development
+2025-12-08,15:46,17:15,1.5,0,Feature Development
+2025-12-10,18:35,18:46,0.5,0,Feature Development
+2025-12-13,12:35,14:55,2.3,0,Feature Development
+2025-12-16,07:19,09:05,1.8,0,Feature Development
+2025-12-16,14:25,16:05,1.7,0,Feature Development
+2025-12-17,07:09,14:19,6.2,1,Feature Development
+2025-12-19,15:55,16:14,0.5,0,Feature Development
+2025-12-26,16:23,16:38,0.5,0,Feature Development
+2025-12-27,13:01,13:27,0.5,0,Feature Development
+2025-12-28,14:34,14:44,0.5,0,Feature Development
+2025-12-29,16:43,17:21,0.6,0,Feature Development
+2025-12-30,09:48,09:48,0.5,0,Development & Fixes
+2026-01-06,07:04,07:50,0.8,0,Feature Development
+2026-01-06,14:04,14:04,0.5,0,Code Refactoring
+2026-01-07,07:15,10:33,3.3,0,Code Refactoring
+2026-01-07,15:29,15:40,0.5,0,Code Refactoring
