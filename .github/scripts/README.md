@@ -59,10 +59,6 @@ You can manually edit the work hours in `docs/arbeitszeiten_editable.csv`:
 
 See `example_arbeitszeiten_editable.csv` for the expected format.
 
-### `update_arbeitszeiten.py` (Legacy)
-
-Original script that only tracked commits. **Deprecated** - use `track_work_hours.py` instead.
-
 ### `test_track_work_hours.py`
 
 Test suite for the activity bridging logic.
