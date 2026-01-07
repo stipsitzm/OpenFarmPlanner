@@ -45,4 +45,3 @@ export const deleteIconButtonSx = {
     backgroundColor: 'rgba(211, 47, 47, 0.08)',
   },
 };
-
