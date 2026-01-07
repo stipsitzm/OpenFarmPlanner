@@ -9,8 +9,10 @@ import os
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-# Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '.github', 'scripts'))
+# Add parent directory to path using absolute path
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(script_dir, '..', '..'))
+sys.path.insert(0, os.path.join(parent_dir, '.github', 'scripts'))
 
 # Mock the github module to avoid API calls
 class MockGithub:

@@ -23,6 +23,23 @@ repo = g.get_repo('stipsitzm/OpenFarmPlanner')
 # Configuration
 GAP_THRESHOLD_HOURS = 3  # Gaps >= 3 hours are considered breaks
 MIN_SESSION_DURATION_HOURS = 0.5  # Minimum duration for a work session
+LUNCH_BREAK_THRESHOLD_HOURS = 5  # Sessions >= 5 hours get 1 hour lunch break deducted
+LUNCH_BREAK_DURATION_HOURS = 1  # Duration of automatic lunch break
+
+
+def is_manually_edited(value):
+    """
+    Check if a manual edit flag is set to true.
+    
+    Args:
+        value: The value to check (e.g., 'Yes', 'true', '1', 'x')
+        
+    Returns:
+        bool: True if the value indicates manual edit
+    """
+    if not value:
+        return False
+    return str(value).lower() in ['yes', 'true', '1', 'x']
 
 
 def get_all_activities():
@@ -30,7 +47,10 @@ def get_all_activities():
     Fetch all activities from GitHub: commits, PR comments, issue comments, and review comments.
     
     Returns:
-        list: List of activity dictionaries with 'timestamp', 'type', and 'description'
+        list: List of activity dictionaries with the following keys:
+            - timestamp (datetime): When the activity occurred
+            - type (str): Type of activity ('commit', 'pr_comment', 'issue_comment', 'review', etc.)
+            - description (str): Brief description of the activity
     """
     activities = []
     
@@ -211,13 +231,16 @@ def merge_activity_timeline(activities):
     # Calculate durations and extract activity descriptions
     for session in work_sessions:
         duration = (session['end'] - session['start']).total_seconds() / 3600
+        
+        # Enforce minimum session duration (ensures even single commits count as work)
+        # Note: This may show 0.5h even if actual time gap is smaller
         duration = max(MIN_SESSION_DURATION_HOURS, duration)
         
-        # Subtract 1 hour lunch break for sessions >= 5 hours
+        # Subtract lunch break for long sessions
         lunch_break = 0
-        if duration >= 5:
-            duration -= 1
-            lunch_break = 1
+        if duration >= LUNCH_BREAK_THRESHOLD_HOURS:
+            duration -= LUNCH_BREAK_DURATION_HOURS
+            lunch_break = LUNCH_BREAK_DURATION_HOURS
         
         session['duration'] = round(duration, 1)
         session['lunch_break'] = lunch_break
@@ -301,7 +324,7 @@ def load_existing_editable_csv(filename='docs/arbeitszeiten_editable.csv'):
         with open(filename, 'r', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                if row.get('Manually Edited?', '').lower() in ['yes', 'true', '1', 'x']:
+                if is_manually_edited(row.get('Manually Edited?', '')):
                     # Preserve manually edited entries
                     date = row['Date']
                     start = row['Start']
@@ -468,8 +491,15 @@ Overview of work hours on the OpenFarmPlanner project based on Git commits and G
         notes = session.get('notes', '')
         manually_edited = session.get('manually_edited', 'No')
         
-        # Add indicator for manually edited entries
-        notes_display = f"{notes} *[manually edited]*" if manually_edited.lower() in ['yes', 'true', '1', 'x'] and notes else notes if notes else ""
+        # Format notes display with manual edit indicator
+        notes_display = ""
+        if notes:
+            if is_manually_edited(manually_edited):
+                notes_display = f"{notes} *[manually edited]*"
+            else:
+                notes_display = notes
+        elif is_manually_edited(manually_edited):
+            notes_display = "*[manually edited]*"
         
         md_content += f"| **{date_str}** | {start_str} | {end_str} | ~{session['duration']} | {session['activity']} | {notes_display} |\n"
     
