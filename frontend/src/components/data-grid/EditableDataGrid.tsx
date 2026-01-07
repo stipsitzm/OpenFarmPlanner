@@ -11,8 +11,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
-import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './dataGridStyles';
-import { handleRowEditStop, handleEditableCellClick } from './dataGridHandlers';
+import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
+import { handleRowEditStop, handleEditableCellClick } from './handlers';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId } from '@mui/x-data-grid';
 import { Box, Alert, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
