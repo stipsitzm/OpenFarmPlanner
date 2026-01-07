@@ -1,4 +1,4 @@
-name: Update Arbeitszeiten
+name: Update Work Hours
 
 on: 
   schedule:
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  update-arbeitszeiten: 
+  update-work-hours: 
     runs-on: ubuntu-latest
     
     steps:
@@ -28,22 +28,23 @@ jobs:
         run: |
           pip install PyGithub python-dateutil
           
-      - name: Run update script
+      - name: Run work hour tracking script
         env:
-          GITHUB_TOKEN: ${{ secrets. GITHUB_TOKEN }}
-        run:  |
-          python .github/scripts/update_arbeitszeiten. py
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python .github/scripts/track_work_hours.py
           
-      - name:  Check for changes
+      - name: Check for changes
         id: git-check
         run: |
-          git diff --exit-code docs/ARBEITSZEITEN.md || echo "changed=true" >> $GITHUB_OUTPUT
+          git add -N docs/
+          git diff --exit-code docs/ || echo "changed=true" >> $GITHUB_OUTPUT
           
       - name: Commit and push if changed
-        if: steps. git-check.outputs.changed == 'true'
-        run:  |
-          git config --local user.email "github-actions[bot]@users.noreply. github.com"
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add docs/ARBEITSZEITEN.md
-          git commit -m "chore: update Arbeitszeiten (automated weekly update)"
+          git add docs/ARBEITSZEITEN.md docs/arbeitszeiten.csv docs/arbeitszeiten_editable.csv
+          git commit -m "chore: update work hours (automated weekly update)"
           git push
