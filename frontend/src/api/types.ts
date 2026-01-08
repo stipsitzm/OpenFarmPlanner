@@ -47,7 +47,7 @@ export interface Culture {
   /** Allow deviating delivery weeks (optional) */
   allow_deviation_delivery_weeks?: boolean;
   
-  // Planting distances
+  // Planting distances (API exposes in cm, stored internally in meters)
   /** Distance within row in cm (optional) */
   distance_within_row_cm?: number;
   /** Row spacing in cm (optional) */
@@ -110,7 +110,7 @@ export interface Field {
   location: number;
   /** Read-only location name */
   location_name?: string;
-  /** Area in square meters (optional) */
+  /** Area in square meters (optional, stored in SI units) */
   area_sqm?: number;
   /** Additional notes */
   notes?: string;
@@ -132,7 +132,7 @@ export interface Bed {
   field: number;
   /** Read-only field name */
   field_name?: string;
-  /** Area in square meters (optional) */
+  /** Area in square meters (optional, stored in SI units) */
   area_sqm?: number;
   /** Additional notes */
   notes?: string;
@@ -164,7 +164,7 @@ export interface PlantingPlan {
   harvest_end_date?: string;
   /** Number of plants or seeds (optional) */
   quantity?: number;
-  /** Area in square meters used by this planting plan (optional) */
+  /** Area in square meters used by this planting plan (optional, stored in SI units) */
   area_usage_sqm?: number;
   /** Additional notes */
   notes?: string;

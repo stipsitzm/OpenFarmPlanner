@@ -173,10 +173,10 @@ class Culture(models.Model):
         expected_yield: Expected yield amount (optional)
         allow_deviation_delivery_weeks: Allow deviating delivery weeks (boolean, optional)
         
-        # Planting distances
-        distance_within_row_cm: Distance within row in cm (optional)
-        row_spacing_cm: Row spacing in cm (optional)
-        sowing_depth_cm: Sowing depth in cm (optional)
+        # Planting distances (stored internally in meters - SI units)
+        distance_within_row_m: Distance within row in meters (optional)
+        row_spacing_m: Row spacing in meters (optional)
+        sowing_depth_m: Sowing depth in meters (optional)
         
         # Display settings
         display_color: Display color for cultivation calendar (hex color, optional)
@@ -285,27 +285,21 @@ class Culture(models.Model):
         help_text="Allow deviating delivery weeks"
     )
     
-    # Planting distances
-    distance_within_row_cm = models.DecimalField(
-        max_digits=6,
-        decimal_places=2,
+    # Planting distances (stored in meters - SI units)
+    distance_within_row_m = models.FloatField(
         null=True,
         blank=True,
-        help_text="Distance within row in cm"
+        help_text="Distance within row in meters (stored in SI units)"
     )
-    row_spacing_cm = models.DecimalField(
-        max_digits=6,
-        decimal_places=2,
+    row_spacing_m = models.FloatField(
         null=True,
         blank=True,
-        help_text="Row spacing in cm"
+        help_text="Row spacing in meters (stored in SI units)"
     )
-    sowing_depth_cm = models.DecimalField(
-        max_digits=6,
-        decimal_places=2,
+    sowing_depth_m = models.FloatField(
         null=True,
         blank=True,
-        help_text="Sowing depth in cm"
+        help_text="Sowing depth in meters (stored in SI units)"
     )
     
     # Display settings
@@ -360,14 +354,14 @@ class Culture(models.Model):
         if self.expected_yield is not None and self.expected_yield < 0:
             errors['expected_yield'] = 'Expected yield must be non-negative.'
         
-        if self.distance_within_row_cm is not None and self.distance_within_row_cm < 0:
-            errors['distance_within_row_cm'] = 'Distance within row must be non-negative.'
+        if self.distance_within_row_m is not None and self.distance_within_row_m < 0:
+            errors['distance_within_row_m'] = 'Distance within row must be non-negative.'
         
-        if self.row_spacing_cm is not None and self.row_spacing_cm < 0:
-            errors['row_spacing_cm'] = 'Row spacing must be non-negative.'
+        if self.row_spacing_m is not None and self.row_spacing_m < 0:
+            errors['row_spacing_m'] = 'Row spacing must be non-negative.'
         
-        if self.sowing_depth_cm is not None and self.sowing_depth_cm < 0:
-            errors['sowing_depth_cm'] = 'Sowing depth must be non-negative.'
+        if self.sowing_depth_m is not None and self.sowing_depth_m < 0:
+            errors['sowing_depth_m'] = 'Sowing depth must be non-negative.'
         
         # Validate hex color format if provided
         if self.display_color:
