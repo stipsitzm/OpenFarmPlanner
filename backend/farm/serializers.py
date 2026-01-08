@@ -170,12 +170,24 @@ class CultureSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         """Validate the culture data.
         
-        Runs model-level validation via clean() method.
+        Runs model-level validation via clean() method and checks required fields.
         
         :param attrs: Dictionary of attributes for the culture
         :return: The validated attributes
         :raises serializers.ValidationError: If validation fails
         """
+        errors = {}
+        
+        # Check required fields for create operations
+        if not self.instance:  # Only for create, not update
+            if 'growth_duration_weeks' not in attrs or attrs['growth_duration_weeks'] is None:
+                errors['growth_duration_weeks'] = 'Growth duration is required.'
+            if 'harvest_duration_weeks' not in attrs or attrs['harvest_duration_weeks'] is None:
+                errors['harvest_duration_weeks'] = 'Harvest duration is required.'
+        
+        if errors:
+            raise serializers.ValidationError(errors)
+        
         # Create a temporary instance for validation
         instance = Culture(**attrs)
         if self.instance:

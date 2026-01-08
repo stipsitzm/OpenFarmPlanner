@@ -143,16 +143,210 @@ class CultureModelTest(TestCase):
         culture = Culture.objects.create(
             name="Tomato",
             variety="Cherry",
-            days_to_harvest=60
+            days_to_harvest=60,
+            growth_duration_weeks=8,
+            harvest_duration_weeks=4
         )
         self.assertEqual(str(culture), "Tomato (Cherry)")
 
     def test_culture_creation_without_variety(self):
         culture = Culture.objects.create(
             name="Lettuce",
-            days_to_harvest=30
+            days_to_harvest=30,
+            growth_duration_weeks=4,
+            harvest_duration_weeks=2
         )
         self.assertEqual(str(culture), "Lettuce")
+    
+    def test_culture_creation_with_all_manual_fields(self):
+        """Test creating a culture with all manual planning fields"""
+        culture = Culture.objects.create(
+            name="Broccoli",
+            variety="Calabrese",
+            days_to_harvest=70,
+            notes="Great for winter growing",
+            crop_family="Brassicaceae",
+            nutrient_demand="high",
+            cultivation_type="transplant",
+            germination_rate=85.5,
+            safety_margin=20.0,
+            internal_article_number="BRO-001",
+            growth_duration_weeks=10,
+            harvest_duration_weeks=3,
+            propagation_time_weeks=4,
+            harvest_method="per_plant",
+            expected_yield=500.0,
+            required_yield_per_share_per_week=2.5,
+            allow_deviation_delivery_weeks=True,
+            distance_within_row_cm=40.0,
+            row_spacing_cm=60.0,
+            sowing_depth_cm=1.5,
+        )
+        self.assertEqual(culture.name, "Broccoli")
+        self.assertEqual(culture.crop_family, "Brassicaceae")
+        self.assertEqual(culture.nutrient_demand, "high")
+        self.assertEqual(culture.cultivation_type, "transplant")
+        self.assertEqual(float(culture.germination_rate), 85.5)
+        self.assertEqual(float(culture.safety_margin), 20.0)
+        self.assertEqual(culture.internal_article_number, "BRO-001")
+        self.assertEqual(float(culture.growth_duration_weeks), 10)
+        self.assertEqual(float(culture.harvest_duration_weeks), 3)
+        self.assertEqual(float(culture.propagation_time_weeks), 4)
+        self.assertEqual(culture.harvest_method, "per_plant")
+        self.assertEqual(float(culture.expected_yield), 500.0)
+        self.assertEqual(float(culture.required_yield_per_share_per_week), 2.5)
+        self.assertTrue(culture.allow_deviation_delivery_weeks)
+        self.assertEqual(float(culture.distance_within_row_cm), 40.0)
+        self.assertEqual(float(culture.row_spacing_cm), 60.0)
+        self.assertEqual(float(culture.sowing_depth_cm), 1.5)
+    
+    def test_display_color_auto_generation(self):
+        """Test that display color is automatically generated on creation"""
+        culture = Culture.objects.create(
+            name="Carrot",
+            days_to_harvest=70,
+            growth_duration_weeks=10,
+            harvest_duration_weeks=3
+        )
+        self.assertIsNotNone(culture.display_color)
+        self.assertTrue(culture.display_color.startswith('#'))
+        self.assertEqual(len(culture.display_color), 7)
+    
+    def test_display_color_custom_value(self):
+        """Test that custom display color is preserved"""
+        custom_color = "#FF5733"
+        culture = Culture.objects.create(
+            name="Lettuce",
+            days_to_harvest=30,
+            growth_duration_weeks=4,
+            harvest_duration_weeks=2,
+            display_color=custom_color
+        )
+        self.assertEqual(culture.display_color, custom_color)
+    
+    def test_display_color_distinct_for_multiple_cultures(self):
+        """Test that generated colors are distinct"""
+        colors = set()
+        for i in range(10):
+            culture = Culture.objects.create(
+                name=f"Culture {i}",
+                days_to_harvest=30 + i,
+                growth_duration_weeks=4,
+                harvest_duration_weeks=2
+            )
+            colors.add(culture.display_color)
+        
+        # All colors should be unique
+        self.assertEqual(len(colors), 10)
+    
+    def test_germination_rate_validation_valid(self):
+        """Test that valid germination rate (0-100) is accepted"""
+        from django.core.exceptions import ValidationError
+        
+        culture = Culture(
+            name="Tomato",
+            days_to_harvest=60,
+            growth_duration_weeks=8,
+            harvest_duration_weeks=4,
+            germination_rate=75.5
+        )
+        culture.clean()  # Should not raise
+    
+    def test_germination_rate_validation_too_high(self):
+        """Test that germination rate > 100 is rejected"""
+        from django.core.exceptions import ValidationError
+        
+        culture = Culture(
+            name="Tomato",
+            days_to_harvest=60,
+            growth_duration_weeks=8,
+            harvest_duration_weeks=4,
+            germination_rate=150.0
+        )
+        with self.assertRaises(ValidationError) as context:
+            culture.clean()
+        self.assertIn('germination_rate', context.exception.message_dict)
+    
+    def test_germination_rate_validation_negative(self):
+        """Test that negative germination rate is rejected"""
+        from django.core.exceptions import ValidationError
+        
+        culture = Culture(
+            name="Tomato",
+            days_to_harvest=60,
+            growth_duration_weeks=8,
+            harvest_duration_weeks=4,
+            germination_rate=-10.0
+        )
+        with self.assertRaises(ValidationError) as context:
+            culture.clean()
+        self.assertIn('germination_rate', context.exception.message_dict)
+    
+    def test_safety_margin_validation(self):
+        """Test safety margin validation (0-100)"""
+        from django.core.exceptions import ValidationError
+        
+        # Valid safety margin
+        culture1 = Culture(
+            name="Carrot",
+            days_to_harvest=70,
+            growth_duration_weeks=10,
+            harvest_duration_weeks=3,
+            safety_margin=25.0
+        )
+        culture1.clean()  # Should not raise
+        
+        # Invalid safety margin > 100
+        culture2 = Culture(
+            name="Carrot",
+            days_to_harvest=70,
+            growth_duration_weeks=10,
+            harvest_duration_weeks=3,
+            safety_margin=150.0
+        )
+        with self.assertRaises(ValidationError) as context:
+            culture2.clean()
+        self.assertIn('safety_margin', context.exception.message_dict)
+    
+    def test_negative_numeric_fields_validation(self):
+        """Test that negative values for numeric fields are rejected"""
+        from django.core.exceptions import ValidationError
+        
+        culture = Culture(
+            name="Lettuce",
+            days_to_harvest=30,
+            growth_duration_weeks=-1,
+            harvest_duration_weeks=2
+        )
+        with self.assertRaises(ValidationError) as context:
+            culture.clean()
+        self.assertIn('growth_duration_weeks', context.exception.message_dict)
+    
+    def test_display_color_format_validation(self):
+        """Test that display color must be in hex format"""
+        from django.core.exceptions import ValidationError
+        
+        # Invalid color format
+        culture = Culture(
+            name="Tomato",
+            days_to_harvest=60,
+            growth_duration_weeks=8,
+            harvest_duration_weeks=4,
+            display_color="invalid"
+        )
+        with self.assertRaises(ValidationError) as context:
+            culture.clean()
+        self.assertIn('display_color', context.exception.message_dict)
+        
+        # Valid color format
+        culture2 = Culture(
+            name="Tomato",
+            days_to_harvest=60,
+            growth_duration_weeks=8,
+            harvest_duration_weeks=4,
+            display_color="#FF5733"
+        )
+        culture2.clean()  # Should not raise
 
 
 class PlantingPlanModelTest(TestCase):
@@ -164,7 +358,12 @@ class PlantingPlanModelTest(TestCase):
             field=self.field,
             area_sqm=20.0  # Total area: 20 sqm
         )
-        self.culture = Culture.objects.create(name="Carrot", days_to_harvest=70)
+        self.culture = Culture.objects.create(
+            name="Carrot",
+            days_to_harvest=70,
+            growth_duration_weeks=10,
+            harvest_duration_weeks=3
+        )
 
     def test_auto_harvest_date(self):
         planting_date = date(2024, 3, 1)
@@ -345,10 +544,15 @@ class APITestCase(APITestCase):
             field=self.field,
             area_sqm=20.0  # Total area: 20 sqm
         )
-        self.culture = Culture.objects.create(name="API Test Culture", days_to_harvest=50)
+        self.culture = Culture.objects.create(
+            name="API Test Culture",
+            days_to_harvest=50,
+            growth_duration_weeks=7,
+            harvest_duration_weeks=2
+        )
 
     def test_culture_list(self):
-        response = self.client.get('/api/cultures/')
+        response = self.client.get('/openfarmplanner/api/cultures/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
 
@@ -356,14 +560,134 @@ class APITestCase(APITestCase):
         data = {
             'name': 'New Culture',
             'variety': 'Test Variety',
-            'days_to_harvest': 45
+            'days_to_harvest': 45,
+            'growth_duration_weeks': 6,
+            'harvest_duration_weeks': 2
         }
-        response = self.client.post('/api/cultures/', data)
+        response = self.client.post('/openfarmplanner/api/cultures/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Culture.objects.count(), 2)
+        # Check that display color was auto-generated
+        self.assertIn('display_color', response.data)
+        self.assertTrue(response.data['display_color'].startswith('#'))
+    
+    def test_culture_create_with_all_fields(self):
+        """Test creating culture with all manual planning fields"""
+        data = {
+            'name': 'Comprehensive Culture',
+            'variety': 'Special Edition',
+            'days_to_harvest': 60,
+            'notes': 'Test notes',
+            'crop_family': 'Solanaceae',
+            'nutrient_demand': 'high',
+            'cultivation_type': 'transplant',
+            'germination_rate': 85.0,
+            'safety_margin': 20.0,
+            'internal_article_number': 'TEST-001',
+            'growth_duration_weeks': 8,
+            'harvest_duration_weeks': 3,
+            'propagation_time_weeks': 4,
+            'harvest_method': 'per_plant',
+            'expected_yield': 500.0,
+            'required_yield_per_share_per_week': 2.5,
+            'allow_deviation_delivery_weeks': True,
+            'distance_within_row_cm': 40.0,
+            'row_spacing_cm': 60.0,
+            'sowing_depth_cm': 1.5,
+            'display_color': '#FF5733'
+        }
+        response = self.client.post('/openfarmplanner/api/cultures/', data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['name'], 'Comprehensive Culture')
+        self.assertEqual(response.data['crop_family'], 'Solanaceae')
+        self.assertEqual(response.data['nutrient_demand'], 'high')
+        self.assertEqual(response.data['display_color'], '#FF5733')
+    
+    def test_culture_create_missing_required_fields(self):
+        """Test that creating culture without required fields fails"""
+        data = {
+            'name': 'Incomplete Culture',
+            'days_to_harvest': 45,
+            # Missing growth_duration_weeks and harvest_duration_weeks
+        }
+        response = self.client.post('/openfarmplanner/api/cultures/', data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('growth_duration_weeks', response.data)
+        self.assertIn('harvest_duration_weeks', response.data)
+    
+    def test_culture_create_invalid_germination_rate(self):
+        """Test that invalid germination rate is rejected"""
+        data = {
+            'name': 'Test Culture',
+            'days_to_harvest': 45,
+            'growth_duration_weeks': 6,
+            'harvest_duration_weeks': 2,
+            'germination_rate': 150.0  # > 100
+        }
+        response = self.client.post('/openfarmplanner/api/cultures/', data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('germination_rate', response.data)
+    
+    def test_culture_create_invalid_safety_margin(self):
+        """Test that invalid safety margin is rejected"""
+        data = {
+            'name': 'Test Culture',
+            'days_to_harvest': 45,
+            'growth_duration_weeks': 6,
+            'harvest_duration_weeks': 2,
+            'safety_margin': -10.0  # < 0
+        }
+        response = self.client.post('/openfarmplanner/api/cultures/', data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('safety_margin', response.data)
+    
+    def test_culture_create_invalid_display_color(self):
+        """Test that invalid display color format is rejected"""
+        data = {
+            'name': 'Test Culture',
+            'days_to_harvest': 45,
+            'growth_duration_weeks': 6,
+            'harvest_duration_weeks': 2,
+            'display_color': 'invalid'  # Not hex format
+        }
+        response = self.client.post('/openfarmplanner/api/cultures/', data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('display_color', response.data)
+    
+    def test_culture_update(self):
+        """Test updating a culture"""
+        data = {
+            'name': 'Updated Culture',
+            'days_to_harvest': 55,
+            'growth_duration_weeks': 8,
+            'harvest_duration_weeks': 3,
+            'crop_family': 'Updated Family',
+            'nutrient_demand': 'medium'
+        }
+        response = self.client.put(f'/openfarmplanner/api/cultures/{self.culture.id}/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'Updated Culture')
+        self.assertEqual(response.data['crop_family'], 'Updated Family')
+    
+    def test_culture_growstuff_fields_readonly(self):
+        """Test that Growstuff fields cannot be modified via API"""
+        data = {
+            'name': 'Test Culture',
+            'days_to_harvest': 45,
+            'growth_duration_weeks': 6,
+            'harvest_duration_weeks': 2,
+            'growstuff_id': 12345,  # Should be ignored
+            'source': 'growstuff',  # Should be ignored
+            'perennial': True  # Should be ignored
+        }
+        response = self.client.post('/openfarmplanner/api/cultures/', data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # Growstuff fields should not be set via API (should remain default/None)
+        self.assertIsNone(response.data['growstuff_id'])
+        self.assertEqual(response.data['source'], 'manual')  # Default value
 
     def test_bed_list(self):
-        response = self.client.get('/api/beds/')
+        response = self.client.get('/openfarmplanner/api/beds/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
 
@@ -374,7 +698,7 @@ class APITestCase(APITestCase):
             'planting_date': '2024-03-01',
             'quantity': 50
         }
-        response = self.client.post('/api/planting-plans/', data)
+        response = self.client.post('/openfarmplanner/api/planting-plans/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn('harvest_date', response.data)
     
@@ -384,7 +708,7 @@ class APITestCase(APITestCase):
             'location': self.location.id,
             'area_sqm': 500.50
         }
-        response = self.client.post('/api/fields/', data)
+        response = self.client.post('/openfarmplanner/api/fields/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Field.objects.count(), 2)
     
@@ -394,7 +718,7 @@ class APITestCase(APITestCase):
             'location': self.location.id,
             'area_sqm': 0.001
         }
-        response = self.client.post('/api/fields/', data)
+        response = self.client.post('/openfarmplanner/api/fields/', data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('area_sqm', response.data)
     
@@ -404,7 +728,7 @@ class APITestCase(APITestCase):
             'location': self.location.id,
             'area_sqm': 2000000  # Greater than MAX_AREA_SQM (1,000,000)
         }
-        response = self.client.post('/api/fields/', data)
+        response = self.client.post('/openfarmplanner/api/fields/', data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('area_sqm', response.data)
     
@@ -414,7 +738,7 @@ class APITestCase(APITestCase):
             'field': self.field.id,
             'area_sqm': 50.25
         }
-        response = self.client.post('/api/beds/', data)
+        response = self.client.post('/openfarmplanner/api/beds/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Bed.objects.count(), 2)
     
@@ -424,7 +748,7 @@ class APITestCase(APITestCase):
             'field': self.field.id,
             'area_sqm': 0.001
         }
-        response = self.client.post('/api/beds/', data)
+        response = self.client.post('/openfarmplanner/api/beds/', data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('area_sqm', response.data)
     
@@ -434,7 +758,7 @@ class APITestCase(APITestCase):
             'field': self.field.id,
             'area_sqm': 20000
         }
-        response = self.client.post('/api/beds/', data)
+        response = self.client.post('/openfarmplanner/api/beds/', data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('area_sqm', response.data)
 
@@ -446,7 +770,7 @@ class APITestCase(APITestCase):
             'planting_date': '2024-03-01',
             'area_usage_sqm': 15.0
         }
-        response = self.client.post('/api/planting-plans/', data)
+        response = self.client.post('/openfarmplanner/api/planting-plans/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(float(response.data['area_usage_sqm']), 15.0)
 
@@ -458,7 +782,7 @@ class APITestCase(APITestCase):
             'planting_date': '2024-03-01',
             'area_usage_sqm': 25.0  # Exceeds 20 sqm capacity
         }
-        response = self.client.post('/api/planting-plans/', data)
+        response = self.client.post('/openfarmplanner/api/planting-plans/', data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('area_usage_sqm', response.data)
 
@@ -471,7 +795,7 @@ class APITestCase(APITestCase):
             'planting_date': '2024-03-01',
             'area_usage_sqm': 12.0
         }
-        response1 = self.client.post('/api/planting-plans/', data1)
+        response1 = self.client.post('/openfarmplanner/api/planting-plans/', data1)
         self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
         
         # Try to create second plan using 10 sqm (total would be 22 sqm > 20 sqm)
@@ -481,7 +805,7 @@ class APITestCase(APITestCase):
             'planting_date': '2024-04-01',
             'area_usage_sqm': 10.0
         }
-        response2 = self.client.post('/api/planting-plans/', data2)
+        response2 = self.client.post('/openfarmplanner/api/planting-plans/', data2)
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('area_usage_sqm', response2.data)
 
