@@ -9,6 +9,45 @@ from rest_framework import serializers
 from .models import Location, Field, Bed, Culture, PlantingPlan, Task
 
 
+class CentimetersField(serializers.FloatField):
+    """Custom field that converts between meters (DB) and centimeters (API).
+    
+    Internally, the database stores spacing values in meters (SI units).
+    However, the API exposes these values in centimeters for user convenience.
+    
+    This field handles the conversion:
+    - On serialization (DB -> API): meters * 100 = centimeters
+    - On deserialization (API -> DB): centimeters / 100 = meters
+    """
+    
+    def to_representation(self, value):
+        """Convert from meters (DB) to centimeters (API) for output.
+        
+        Args:
+            value: Value in meters (float or None)
+            
+        Returns:
+            Value in centimeters (float or None)
+        """
+        if value is None:
+            return None
+        return float(value) * 100.0
+    
+    def to_internal_value(self, data):
+        """Convert from centimeters (API) to meters (DB) for input.
+        
+        Args:
+            data: Value in centimeters (from API)
+            
+        Returns:
+            Value in meters (float)
+        """
+        # First validate as a float using parent class
+        cm_value = super().to_internal_value(data)
+        # Convert to meters for internal storage
+        return cm_value / 100.0
+
+
 
 class LocationSerializer(serializers.ModelSerializer):
     """Serializer for the Location model.
@@ -101,9 +140,37 @@ class CultureSerializer(serializers.ModelSerializer):
     Includes all fields from the Culture model. Growstuff fields are
     read-only and cannot be modified via the API.
     
+    Note on units:
+    - Spacing fields are stored internally in meters (SI units)
+    - API exposes these fields in centimeters for user convenience
+    - Conversion is handled automatically by CentimetersField
+    
     Attributes:
+        distance_within_row_cm: Distance within row in cm (API), stored as meters internally
+        row_spacing_cm: Row spacing in cm (API), stored as meters internally
+        sowing_depth_cm: Sowing depth in cm (API), stored as meters internally
         Meta: Configuration class specifying model and fields
     """
+    # Use custom field to convert between meters (internal) and centimeters (API)
+    distance_within_row_cm = CentimetersField(
+        source='distance_within_row_m',
+        required=False,
+        allow_null=True,
+        help_text='Distance within row in centimeters'
+    )
+    row_spacing_cm = CentimetersField(
+        source='row_spacing_m',
+        required=False,
+        allow_null=True,
+        help_text='Row spacing in centimeters'
+    )
+    sowing_depth_cm = CentimetersField(
+        source='sowing_depth_m',
+        required=False,
+        allow_null=True,
+        help_text='Sowing depth in centimeters'
+    )
+    
     class Meta:
         model = Culture
         fields = '__all__'
