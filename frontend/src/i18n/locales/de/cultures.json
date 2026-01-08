@@ -101,7 +101,8 @@
     "createSuccess": "Kultur erfolgreich erstellt",
     "updateSuccess": "Kultur erfolgreich aktualisiert",
     "createError": "Fehler beim Erstellen der Kultur",
-    "updateError": "Fehler beim Aktualisieren der Kultur"
+    "updateError": "Fehler beim Aktualisieren der Kultur",
+    "fetchError": "Fehler beim Laden der Kulturen"
   },
   "buttons": {
     "addNew": "Neue Kultur hinzufügen",

@@ -41,7 +41,7 @@ function Cultures(): React.ReactElement {
       setCultures(response.data.results);
     } catch (error) {
       console.error('Error fetching cultures:', error);
-      showSnackbar(t('messages.createError'), 'error');
+      showSnackbar(t('messages.fetchError'), 'error');
     }
   };
 

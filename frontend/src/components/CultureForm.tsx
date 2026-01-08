@@ -42,6 +42,9 @@ interface FormErrors {
   [key: string]: string;
 }
 
+// Default color for display color picker
+const DEFAULT_DISPLAY_COLOR = '#3498db';
+
 export function CultureForm({
   culture,
   onSave,
@@ -112,7 +115,9 @@ export function CultureForm({
          name === 'row_spacing_cm' || name === 'sowing_depth_cm') && 
         value !== undefined && value !== null && value !== '') {
       if (numericValue < 0) {
-        return t(`form.${name}Error`);
+        // Fallback to generic error if translation key doesn't exist
+        const errorKey = `form.${name}Error`;
+        return t(errorKey, { defaultValue: t('form.growthDurationWeeksError') });
       }
     }
 
@@ -481,7 +486,7 @@ export function CultureForm({
               fullWidth
               type="color"
               label={t('form.displayColor')}
-              value={formData.display_color || '#3498db'}
+              value={formData.display_color || DEFAULT_DISPLAY_COLOR}
               onChange={(e) => handleChange('display_color', e.target.value)}
               onBlur={() => handleBlur('display_color')}
               error={Boolean(errors.display_color)}

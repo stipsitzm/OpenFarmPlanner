@@ -422,14 +422,16 @@ class Culture(models.Model):
     def _generate_display_color(self) -> str:
         """Generate a display color using Golden Angle HSL strategy.
         
-        Uses the current count of cultures as the index to ensure
+        Uses a deterministic approach based on database count to ensure
         visually distinct colors across all cultures.
         
         Returns:
             Hex color string in format #RRGGBB
         """
-        # Get the current count of cultures to use as index
-        index = Culture.objects.count()
+        # Use the max ID as index to avoid race conditions
+        # For the first culture, this will be None, so we use 0
+        max_id = Culture.objects.aggregate(models.Max('id'))['id__max']
+        index = max_id if max_id is not None else 0
         
         # Golden Angle HSL strategy
         # hue = (index × 137.508) % 360

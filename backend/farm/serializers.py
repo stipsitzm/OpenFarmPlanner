@@ -5,6 +5,7 @@ to and from JSON representations for the API endpoints.
 """
 
 from django.core.exceptions import ValidationError
+from django.forms.models import model_to_dict
 from rest_framework import serializers
 from .models import Location, Field, Bed, Culture, PlantingPlan, Task
 
@@ -178,20 +179,27 @@ class CultureSerializer(serializers.ModelSerializer):
         """
         errors = {}
         
-        # Check required fields for create operations
-        if not self.instance:  # Only for create, not update
-            if 'growth_duration_weeks' not in attrs or attrs['growth_duration_weeks'] is None:
+        # Check required fields
+        # For updates, only validate if the field is being explicitly set to None
+        if not self.instance or 'growth_duration_weeks' in attrs:
+            if attrs.get('growth_duration_weeks') is None:
                 errors['growth_duration_weeks'] = 'Growth duration is required.'
-            if 'harvest_duration_weeks' not in attrs or attrs['harvest_duration_weeks'] is None:
+        
+        if not self.instance or 'harvest_duration_weeks' in attrs:
+            if attrs.get('harvest_duration_weeks') is None:
                 errors['harvest_duration_weeks'] = 'Harvest duration is required.'
         
         if errors:
             raise serializers.ValidationError(errors)
         
         # Create a temporary instance for validation
-        instance = Culture(**attrs)
+        # For updates, merge with existing data
         if self.instance:
+            instance_data = {**model_to_dict(self.instance), **attrs}
+            instance = Culture(**instance_data)
             instance.pk = self.instance.pk
+        else:
+            instance = Culture(**attrs)
         
         try:
             instance.clean()
