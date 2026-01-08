@@ -77,12 +77,17 @@ function Cultures(): React.ReactElement {
 
   const handleSave = async (culture: Culture) => {
     try {
+      let savedCulture: Culture;
       if (editingCulture) {
-        await cultureAPI.update(editingCulture.id!, culture);
+        const response = await cultureAPI.update(editingCulture.id!, culture);
+        savedCulture = response.data;
         showSnackbar(t('messages.updateSuccess'), 'success');
       } else {
-        await cultureAPI.create(culture);
+        const response = await cultureAPI.create(culture);
+        savedCulture = response.data;
         showSnackbar(t('messages.createSuccess'), 'success');
+        // Auto-select the newly created culture
+        setSelectedCultureId(savedCulture.id);
       }
       await fetchCultures();
       setShowForm(false);
