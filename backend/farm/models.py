@@ -153,8 +153,35 @@ class Culture(models.Model):
     Attributes:
         name: The name of the crop (e.g., "Tomato", "Lettuce")
         variety: Specific variety of the crop (optional)
-        days_to_harvest: Average days from planting to harvest
+        days_to_harvest: Average days from planting to harvest (kept for backwards compatibility)
         notes: Additional notes about the culture
+        
+        # Manual planning fields
+        crop_family: Crop family for rotation planning (optional)
+        nutrient_demand: Nutrient demand level (low/medium/high, optional)
+        cultivation_type: Type of cultivation (pre-cultivation/direct sowing, optional)
+        germination_rate: Germination rate percentage (0-100, optional)
+        safety_margin: Safety margin percentage for planning (0-100, optional)
+        
+        # Timing fields (in days)
+        growth_duration_days: Growth duration in days (from planting to first harvest, required)
+        harvest_duration_days: Harvest duration in days (from first to last harvest, required)
+        propagation_duration_days: Propagation duration in days (optional)
+        
+        # Harvest information
+        harvest_method: Harvest method (per plant, per m², optional)
+        expected_yield: Expected yield amount (optional)
+        allow_deviation_delivery_weeks: Allow deviating delivery weeks (boolean, optional)
+        
+        # Planting distances
+        distance_within_row_cm: Distance within row in cm (optional)
+        row_spacing_cm: Row spacing in cm (optional)
+        sowing_depth_cm: Sowing depth in cm (optional)
+        
+        # Display settings
+        display_color: Display color for cultivation calendar (hex color, optional)
+        
+        # Growstuff API fields (read-only via form)
         growstuff_id: Unique ID from Growstuff API (optional)
         growstuff_slug: URL slug from Growstuff API (optional)
         source: Source of the data ('manual', 'growstuff')
@@ -162,8 +189,7 @@ class Culture(models.Model):
         en_wikipedia_url: English Wikipedia URL for the crop (from Growstuff)
         perennial: Whether the crop is perennial (from Growstuff)
         median_lifespan: Median lifespan in days (from Growstuff)
-        median_days_to_first_harvest: Median days to first harvest (from Growstuff)
-        median_days_to_last_harvest: Median days to last harvest (from Growstuff)
+        
         created_at: Timestamp when the culture was created
         updated_at: Timestamp when the culture was last updated
     """
@@ -172,10 +198,122 @@ class Culture(models.Model):
         ('growstuff', 'Growstuff API'),
     ]
     
+    NUTRIENT_DEMAND_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    ]
+    
+    CULTIVATION_TYPE_CHOICES = [
+        ('pre_cultivation', 'Pre-cultivation'),  # Anzucht
+        ('direct_sowing', 'Direct Sowing'),  # Direktsaat
+    ]
+    
+    HARVEST_METHOD_CHOICES = [
+        ('per_plant', 'Per Plant'),
+        ('per_sqm', 'Per m²'),
+    ]
+    
+    # Basic information
     name = models.CharField(max_length=200)
     variety = models.CharField(max_length=200, blank=True)
     days_to_harvest = models.IntegerField(help_text="Average days from planting to harvest")
     notes = models.TextField(blank=True)
+    
+    # Manual planning fields
+    crop_family = models.CharField(max_length=200, blank=True, help_text="Crop family for rotation planning")
+    nutrient_demand = models.CharField(
+        max_length=20, 
+        choices=NUTRIENT_DEMAND_CHOICES, 
+        blank=True,
+        help_text="Nutrient demand level"
+    )
+    cultivation_type = models.CharField(
+        max_length=30,
+        choices=CULTIVATION_TYPE_CHOICES,
+        blank=True,
+        help_text="Type of cultivation"
+    )
+    germination_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Germination rate percentage (0-100)"
+    )
+    safety_margin = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Safety margin percentage (0-100)"
+    )
+    
+    # Timing fields (in days)
+    growth_duration_days = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Growth duration in days (from planting to first harvest)"
+    )
+    harvest_duration_days = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Harvest duration in days (from first to last harvest)"
+    )
+    propagation_duration_days = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Propagation duration in days"
+    )
+    
+    # Harvest information
+    harvest_method = models.CharField(
+        max_length=20,
+        choices=HARVEST_METHOD_CHOICES,
+        blank=True,
+        help_text="Harvest method"
+    )
+    expected_yield = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Expected yield amount"
+    )
+    allow_deviation_delivery_weeks = models.BooleanField(
+        default=False,
+        help_text="Allow deviating delivery weeks"
+    )
+    
+    # Planting distances
+    distance_within_row_cm = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Distance within row in cm"
+    )
+    row_spacing_cm = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Row spacing in cm"
+    )
+    sowing_depth_cm = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Sowing depth in cm"
+    )
+    
+    # Display settings
+    display_color = models.CharField(
+        max_length=7,
+        blank=True,
+        help_text="Display color for cultivation calendar (hex format: #RRGGBB)"
+    )
     
     # Growstuff API fields
     growstuff_id = models.IntegerField(null=True, blank=True, unique=True, help_text="Growstuff API crop ID")
@@ -185,11 +323,139 @@ class Culture(models.Model):
     en_wikipedia_url = models.URLField(max_length=500, blank=True, null=True, help_text="English Wikipedia URL")
     perennial = models.BooleanField(null=True, blank=True, help_text="Whether the crop is perennial")
     median_lifespan = models.IntegerField(null=True, blank=True, help_text="Median lifespan in days")
-    median_days_to_first_harvest = models.IntegerField(null=True, blank=True, help_text="Median days to first harvest")
-    median_days_to_last_harvest = models.IntegerField(null=True, blank=True, help_text="Median days to last harvest")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self) -> None:
+        """Validate the culture data.
+        
+        Validates numeric ranges for percentages and positive values.
+        
+        Raises:
+            ValidationError: If validation fails
+        """
+        super().clean()
+        errors = {}
+        
+        # Validate percentage fields (0-100)
+        if self.germination_rate is not None:
+            if self.germination_rate < 0 or self.germination_rate > 100:
+                errors['germination_rate'] = 'Germination rate must be between 0 and 100.'
+        
+        if self.safety_margin is not None:
+            if self.safety_margin < 0 or self.safety_margin > 100:
+                errors['safety_margin'] = 'Safety margin must be between 0 and 100.'
+        
+        # Validate positive numeric fields
+        if self.growth_duration_days is not None and self.growth_duration_days < 0:
+            errors['growth_duration_days'] = 'Growth duration must be non-negative.'
+        
+        if self.harvest_duration_days is not None and self.harvest_duration_days < 0:
+            errors['harvest_duration_days'] = 'Harvest duration must be non-negative.'
+        
+        if self.propagation_duration_days is not None and self.propagation_duration_days < 0:
+            errors['propagation_duration_days'] = 'Propagation duration must be non-negative.'
+        
+        if self.expected_yield is not None and self.expected_yield < 0:
+            errors['expected_yield'] = 'Expected yield must be non-negative.'
+        
+        if self.distance_within_row_cm is not None and self.distance_within_row_cm < 0:
+            errors['distance_within_row_cm'] = 'Distance within row must be non-negative.'
+        
+        if self.row_spacing_cm is not None and self.row_spacing_cm < 0:
+            errors['row_spacing_cm'] = 'Row spacing must be non-negative.'
+        
+        if self.sowing_depth_cm is not None and self.sowing_depth_cm < 0:
+            errors['sowing_depth_cm'] = 'Sowing depth must be non-negative.'
+        
+        # Validate hex color format if provided
+        if self.display_color:
+            import re
+            if not re.match(r'^#[0-9A-Fa-f]{6}$', self.display_color):
+                errors['display_color'] = 'Display color must be in hex format (#RRGGBB).'
+        
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Save the culture and auto-generate display color if not set.
+        
+        Uses Golden Angle HSL strategy to generate visually distinct colors.
+        Color is only generated on creation if not already set.
+        
+        Args:
+            *args: Variable length argument list passed to parent save()
+            **kwargs: Arbitrary keyword arguments passed to parent save()
+        """
+        # Generate display color on creation if not set
+        if not self.pk and not self.display_color:
+            self.display_color = self._generate_display_color()
+        
+        super().save(*args, **kwargs)
+
+    def _generate_display_color(self) -> str:
+        """Generate a display color using Golden Angle HSL strategy.
+        
+        Uses a deterministic approach based on database count to ensure
+        visually distinct colors across all cultures.
+        
+        Returns:
+            Hex color string in format #RRGGBB
+        """
+        # Use the max ID as index to avoid race conditions
+        # For the first culture, this will be None, so we use 0
+        max_id = Culture.objects.aggregate(models.Max('id'))['id__max']
+        index = max_id if max_id is not None else 0
+        
+        # Golden Angle HSL strategy
+        # hue = (index × 137.508) % 360
+        # saturation = 65%
+        # lightness = 55%
+        golden_angle = 137.508
+        hue = (index * golden_angle) % 360
+        saturation = 0.65
+        lightness = 0.55
+        
+        # Convert HSL to RGB
+        rgb = self._hsl_to_rgb(hue, saturation, lightness)
+        
+        # Convert RGB to hex
+        return f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
+
+    def _hsl_to_rgb(self, h: float, s: float, l: float) -> tuple[int, int, int]:
+        """Convert HSL color to RGB.
+        
+        :param h: Hue (0-360)
+        :param s: Saturation (0-1)
+        :param l: Lightness (0-1)
+        :return: Tuple of RGB values (0-255)
+        """
+        h = h / 360.0
+        
+        def hue_to_rgb(p: float, q: float, t: float) -> float:
+            if t < 0:
+                t += 1
+            if t > 1:
+                t -= 1
+            if t < 1/6:
+                return p + (q - p) * 6 * t
+            if t < 1/2:
+                return q
+            if t < 2/3:
+                return p + (q - p) * (2/3 - t) * 6
+            return p
+        
+        if s == 0:
+            r = g = b = l
+        else:
+            q = l * (1 + s) if l < 0.5 else l + s - l * s
+            p = 2 * l - q
+            r = hue_to_rgb(p, q, h + 1/3)
+            g = hue_to_rgb(p, q, h)
+            b = hue_to_rgb(p, q, h - 1/3)
+        
+        return (int(r * 255), int(g * 255), int(b * 255))
 
     def __str__(self) -> str:
         """Return string representation of the culture.
@@ -307,17 +573,18 @@ class PlantingPlan(models.Model):
         # Calculate harvest dates if needed
         if should_recalculate and self.planting_date and self.culture:
             # Calculate harvest start date
-            # Use median_days_to_first_harvest if available, otherwise fall back to days_to_harvest
-            if self.culture.median_days_to_first_harvest:
-                self.harvest_date = self.planting_date + timedelta(days=self.culture.median_days_to_first_harvest)
+            # Use growth_duration_days if available, otherwise fall back to days_to_harvest
+            if self.culture.growth_duration_days:
+                self.harvest_date = self.planting_date + timedelta(days=self.culture.growth_duration_days)
             else:
                 self.harvest_date = self.planting_date + timedelta(days=self.culture.days_to_harvest)
             
             # Calculate harvest end date
-            if self.culture.median_days_to_last_harvest:
-                self.harvest_end_date = self.planting_date + timedelta(days=self.culture.median_days_to_last_harvest)
+            if self.culture.growth_duration_days and self.culture.harvest_duration_days:
+                # harvest_end = first_harvest + harvest_duration
+                self.harvest_end_date = self.harvest_date + timedelta(days=self.culture.harvest_duration_days)
             else:
-                # If no median_days_to_last_harvest, set to same as harvest_date (single-day window)
+                # If no harvest_duration_days, set to same as harvest_date (single-day window)
                 self.harvest_end_date = self.harvest_date
         
         super().save(*args, **kwargs)

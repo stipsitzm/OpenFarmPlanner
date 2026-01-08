@@ -18,6 +18,48 @@ export interface Culture {
   days_to_harvest: number;
   /** Additional notes */
   notes?: string;
+  
+  // Manual planning fields
+  /** Crop family for rotation planning (optional) */
+  crop_family?: string;
+  /** Nutrient demand level (optional) */
+  nutrient_demand?: 'low' | 'medium' | 'high' | '';
+  /** Type of cultivation (optional) */
+  cultivation_type?: 'pre_cultivation' | 'direct_sowing' | '';
+  /** Germination rate percentage (0-100, optional) */
+  germination_rate?: number;
+  /** Safety margin percentage (0-100, optional) */
+  safety_margin?: number;
+  
+  // Timing fields (in days)
+  /** Growth duration in days (from planting to first harvest, required) */
+  growth_duration_days: number;
+  /** Harvest duration in days (from first to last harvest, required) */
+  harvest_duration_days: number;
+  /** Propagation duration in days (optional) */
+  propagation_duration_days?: number;
+  
+  // Harvest information
+  /** Harvest method (optional) */
+  harvest_method?: 'per_plant' | 'per_sqm' | '';
+  /** Expected yield amount (optional) */
+  expected_yield?: number;
+  /** Allow deviating delivery weeks (optional) */
+  allow_deviation_delivery_weeks?: boolean;
+  
+  // Planting distances
+  /** Distance within row in cm (optional) */
+  distance_within_row_cm?: number;
+  /** Row spacing in cm (optional) */
+  row_spacing_cm?: number;
+  /** Sowing depth in cm (optional) */
+  sowing_depth_cm?: number;
+  
+  // Display settings
+  /** Display color for cultivation calendar (hex format, optional) */
+  display_color?: string;
+  
+  // Growstuff API fields (read-only)
   /** Creation timestamp */
   created_at?: string;
   /** Last update timestamp */
@@ -36,10 +78,6 @@ export interface Culture {
   perennial?: boolean | null;
   /** Median lifespan in days (optional) */
   median_lifespan?: number | null;
-  /** Median days to first harvest (optional) */
-  median_days_to_first_harvest?: number | null;
-  /** Median days to last harvest (optional) */
-  median_days_to_last_harvest?: number | null;
 }
 
 /**
