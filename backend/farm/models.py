@@ -573,17 +573,18 @@ class PlantingPlan(models.Model):
         # Calculate harvest dates if needed
         if should_recalculate and self.planting_date and self.culture:
             # Calculate harvest start date
-            # Use median_days_to_first_harvest if available, otherwise fall back to days_to_harvest
-            if self.culture.median_days_to_first_harvest:
-                self.harvest_date = self.planting_date + timedelta(days=self.culture.median_days_to_first_harvest)
+            # Use growth_duration_days if available, otherwise fall back to days_to_harvest
+            if self.culture.growth_duration_days:
+                self.harvest_date = self.planting_date + timedelta(days=self.culture.growth_duration_days)
             else:
                 self.harvest_date = self.planting_date + timedelta(days=self.culture.days_to_harvest)
             
             # Calculate harvest end date
-            if self.culture.median_days_to_last_harvest:
-                self.harvest_end_date = self.planting_date + timedelta(days=self.culture.median_days_to_last_harvest)
+            if self.culture.growth_duration_days and self.culture.harvest_duration_days:
+                # harvest_end = first_harvest + harvest_duration
+                self.harvest_end_date = self.harvest_date + timedelta(days=self.culture.harvest_duration_days)
             else:
-                # If no median_days_to_last_harvest, set to same as harvest_date (single-day window)
+                # If no harvest_duration_days, set to same as harvest_date (single-day window)
                 self.harvest_end_date = self.harvest_date
         
         super().save(*args, **kwargs)
