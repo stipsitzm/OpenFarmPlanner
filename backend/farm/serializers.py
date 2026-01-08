@@ -98,7 +98,8 @@ class CultureSerializer(serializers.ModelSerializer):
     """Serializer for the Culture model.
     
     Converts Culture instances to/from JSON for API responses.
-    Includes all fields from the Culture model.
+    Includes all fields from the Culture model. Growstuff fields are
+    read-only and cannot be modified via the API.
     
     Attributes:
         Meta: Configuration class specifying model and fields
@@ -106,6 +107,86 @@ class CultureSerializer(serializers.ModelSerializer):
     class Meta:
         model = Culture
         fields = '__all__'
+        read_only_fields = [
+            'growstuff_id',
+            'growstuff_slug',
+            'source',
+            'last_synced',
+            'en_wikipedia_url',
+            'perennial',
+            'median_lifespan',
+            'median_days_to_first_harvest',
+            'median_days_to_last_harvest',
+        ]
+    
+    def validate_growth_duration_weeks(self, value):
+        """Validate growth duration is required and non-negative.
+        
+        :param value: The growth duration value to validate
+        :return: The validated value
+        :raises serializers.ValidationError: If validation fails
+        """
+        if value is None:
+            raise serializers.ValidationError('Growth duration is required.')
+        if value < 0:
+            raise serializers.ValidationError('Growth duration must be non-negative.')
+        return value
+    
+    def validate_harvest_duration_weeks(self, value):
+        """Validate harvest duration is required and non-negative.
+        
+        :param value: The harvest duration value to validate
+        :return: The validated value
+        :raises serializers.ValidationError: If validation fails
+        """
+        if value is None:
+            raise serializers.ValidationError('Harvest duration is required.')
+        if value < 0:
+            raise serializers.ValidationError('Harvest duration must be non-negative.')
+        return value
+    
+    def validate_germination_rate(self, value):
+        """Validate germination rate is between 0 and 100.
+        
+        :param value: The germination rate to validate
+        :return: The validated value
+        :raises serializers.ValidationError: If validation fails
+        """
+        if value is not None and (value < 0 or value > 100):
+            raise serializers.ValidationError('Germination rate must be between 0 and 100.')
+        return value
+    
+    def validate_safety_margin(self, value):
+        """Validate safety margin is between 0 and 100.
+        
+        :param value: The safety margin to validate
+        :return: The validated value
+        :raises serializers.ValidationError: If validation fails
+        """
+        if value is not None and (value < 0 or value > 100):
+            raise serializers.ValidationError('Safety margin must be between 0 and 100.')
+        return value
+    
+    def validate(self, attrs):
+        """Validate the culture data.
+        
+        Runs model-level validation via clean() method.
+        
+        :param attrs: Dictionary of attributes for the culture
+        :return: The validated attributes
+        :raises serializers.ValidationError: If validation fails
+        """
+        # Create a temporary instance for validation
+        instance = Culture(**attrs)
+        if self.instance:
+            instance.pk = self.instance.pk
+        
+        try:
+            instance.clean()
+        except ValidationError as e:
+            raise serializers.ValidationError(e.message_dict)
+        
+        return attrs
 
 
 class PlantingPlanSerializer(serializers.ModelSerializer):
