@@ -176,9 +176,9 @@ class CultureModelTest(TestCase):
             harvest_method="per_plant",
             expected_yield=500.0,
             allow_deviation_delivery_weeks=True,
-            distance_within_row_cm=40.0,
-            row_spacing_cm=60.0,
-            sowing_depth_cm=1.5,
+            distance_within_row_m=0.40,  # 40 cm = 0.40 m
+            row_spacing_m=0.60,  # 60 cm = 0.60 m
+            sowing_depth_m=0.015,  # 1.5 cm = 0.015 m
         )
         self.assertEqual(culture.name, "Broccoli")
         self.assertEqual(culture.crop_family, "Brassicaceae")
@@ -192,9 +192,9 @@ class CultureModelTest(TestCase):
         self.assertEqual(culture.harvest_method, "per_plant")
         self.assertEqual(float(culture.expected_yield), 500.0)
         self.assertTrue(culture.allow_deviation_delivery_weeks)
-        self.assertEqual(float(culture.distance_within_row_cm), 40.0)
-        self.assertEqual(float(culture.row_spacing_cm), 60.0)
-        self.assertEqual(float(culture.sowing_depth_cm), 1.5)
+        self.assertAlmostEqual(culture.distance_within_row_m, 0.40, places=4)
+        self.assertAlmostEqual(culture.row_spacing_m, 0.60, places=4)
+        self.assertAlmostEqual(culture.sowing_depth_m, 0.015, places=4)
     
     def test_display_color_auto_generation(self):
         """Test that display color is automatically generated on creation"""
