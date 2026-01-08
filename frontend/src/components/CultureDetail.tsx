@@ -43,19 +43,6 @@ function formatNumber(value: number | null | undefined, t: (key: string) => stri
   return value.toString();
 }
 
-/**
- * Calculates harvest window text from first and last harvest days
- */
-function getHarvestWindow(
-  first: number | null | undefined,
-  last: number | null | undefined,
-  t: (key: string, options?: { first?: number; last?: number }) => string
-): string {
-  if (first === null || first === undefined || last === null || last === undefined) {
-    return t('cultures:noData');
-  }
-  return t('cultures:fields.harvestWindowValue', { first, last });
-}
 
 export function CultureDetail({
   cultures,
@@ -154,32 +141,121 @@ export function CultureDetail({
               >
                 <Box>
                   <Typography variant="body2" color="text.secondary">
-                    {t('fields.daysToFirstHarvest')}
+                    Wachstumszeitraum
                   </Typography>
                   <Typography variant="body1">
-                    {formatNumber(selectedCulture.median_days_to_first_harvest, t)}
+                    {formatNumber(selectedCulture.growth_duration_days, t)} Tage
                   </Typography>
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">
-                    {t('fields.daysToLastHarvest')}
+                    Erntezeitraum
                   </Typography>
                   <Typography variant="body1">
-                    {formatNumber(selectedCulture.median_days_to_last_harvest, t)}
+                    {formatNumber(selectedCulture.harvest_duration_days, t)} Tage
                   </Typography>
                 </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('fields.harvestWindow')}
-                  </Typography>
-                  <Typography variant="body1">
-                    {getHarvestWindow(
-                      selectedCulture.median_days_to_first_harvest,
-                      selectedCulture.median_days_to_last_harvest,
-                      t
-                    )}
-                  </Typography>
-                </Box>
+                {selectedCulture.propagation_duration_days && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Anzuchtdauer
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatNumber(selectedCulture.propagation_duration_days, t)} Tage
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.crop_family && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Pflanzenfamilie
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.crop_family}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.nutrient_demand && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Nährstoffbedarf
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.nutrient_demand === 'low' ? 'Niedrig' : 
+                       selectedCulture.nutrient_demand === 'medium' ? 'Mittel' : 'Hoch'}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.cultivation_type && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Anbauart
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.cultivation_type === 'pre_cultivation' ? 'Anzucht' : 'Direktsaat'}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.germination_rate && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Keimrate
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatNumber(selectedCulture.germination_rate, t)}%
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.harvest_method && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Erntemethode
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.harvest_method === 'per_plant' ? 'Pro Pflanze' : 'Pro m²'}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.expected_yield && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Erwarteter Ertrag
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatNumber(selectedCulture.expected_yield, t)}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.distance_within_row_cm && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Abstand in der Reihe
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatNumber(selectedCulture.distance_within_row_cm, t)} cm
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.row_spacing_cm && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Reihenabstand
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatNumber(selectedCulture.row_spacing_cm, t)} cm
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.sowing_depth_cm && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Saattiefe
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatNumber(selectedCulture.sowing_depth_cm, t)} cm
+                    </Typography>
+                  </Box>
+                )}
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     {t('fields.lifespan')}

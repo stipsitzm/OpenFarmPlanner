@@ -144,8 +144,8 @@ class CultureModelTest(TestCase):
             name="Tomato",
             variety="Cherry",
             days_to_harvest=60,
-            growth_duration_weeks=8,
-            harvest_duration_weeks=4
+            growth_duration_days=8,
+            harvest_duration_days=4
         )
         self.assertEqual(str(culture), "Tomato (Cherry)")
 
@@ -153,8 +153,8 @@ class CultureModelTest(TestCase):
         culture = Culture.objects.create(
             name="Lettuce",
             days_to_harvest=30,
-            growth_duration_weeks=4,
-            harvest_duration_weeks=2
+            growth_duration_days=4,
+            harvest_duration_days=2
         )
         self.assertEqual(str(culture), "Lettuce")
     
@@ -167,16 +167,14 @@ class CultureModelTest(TestCase):
             notes="Great for winter growing",
             crop_family="Brassicaceae",
             nutrient_demand="high",
-            cultivation_type="transplant",
+            cultivation_type="pre_cultivation",
             germination_rate=85.5,
             safety_margin=20.0,
-            internal_article_number="BRO-001",
-            growth_duration_weeks=10,
-            harvest_duration_weeks=3,
-            propagation_time_weeks=4,
+            growth_duration_days=10,
+            harvest_duration_days=3,
+            propagation_duration_days=4,
             harvest_method="per_plant",
             expected_yield=500.0,
-            required_yield_per_share_per_week=2.5,
             allow_deviation_delivery_weeks=True,
             distance_within_row_cm=40.0,
             row_spacing_cm=60.0,
@@ -185,16 +183,14 @@ class CultureModelTest(TestCase):
         self.assertEqual(culture.name, "Broccoli")
         self.assertEqual(culture.crop_family, "Brassicaceae")
         self.assertEqual(culture.nutrient_demand, "high")
-        self.assertEqual(culture.cultivation_type, "transplant")
+        self.assertEqual(culture.cultivation_type, "pre_cultivation")
         self.assertEqual(float(culture.germination_rate), 85.5)
         self.assertEqual(float(culture.safety_margin), 20.0)
-        self.assertEqual(culture.internal_article_number, "BRO-001")
-        self.assertEqual(float(culture.growth_duration_weeks), 10)
-        self.assertEqual(float(culture.harvest_duration_weeks), 3)
-        self.assertEqual(float(culture.propagation_time_weeks), 4)
+        self.assertEqual(culture.growth_duration_days, 10)
+        self.assertEqual(culture.harvest_duration_days, 3)
+        self.assertEqual(culture.propagation_duration_days, 4)
         self.assertEqual(culture.harvest_method, "per_plant")
         self.assertEqual(float(culture.expected_yield), 500.0)
-        self.assertEqual(float(culture.required_yield_per_share_per_week), 2.5)
         self.assertTrue(culture.allow_deviation_delivery_weeks)
         self.assertEqual(float(culture.distance_within_row_cm), 40.0)
         self.assertEqual(float(culture.row_spacing_cm), 60.0)
@@ -205,8 +201,8 @@ class CultureModelTest(TestCase):
         culture = Culture.objects.create(
             name="Carrot",
             days_to_harvest=70,
-            growth_duration_weeks=10,
-            harvest_duration_weeks=3
+            growth_duration_days=10,
+            harvest_duration_days=3
         )
         self.assertIsNotNone(culture.display_color)
         self.assertTrue(culture.display_color.startswith('#'))
@@ -218,8 +214,8 @@ class CultureModelTest(TestCase):
         culture = Culture.objects.create(
             name="Lettuce",
             days_to_harvest=30,
-            growth_duration_weeks=4,
-            harvest_duration_weeks=2,
+            growth_duration_days=4,
+            harvest_duration_days=2,
             display_color=custom_color
         )
         self.assertEqual(culture.display_color, custom_color)
@@ -231,8 +227,8 @@ class CultureModelTest(TestCase):
             culture = Culture.objects.create(
                 name=f"Culture {i}",
                 days_to_harvest=30 + i,
-                growth_duration_weeks=4,
-                harvest_duration_weeks=2
+                growth_duration_days=4,
+                harvest_duration_days=2
             )
             colors.add(culture.display_color)
         
@@ -246,8 +242,8 @@ class CultureModelTest(TestCase):
         culture = Culture(
             name="Tomato",
             days_to_harvest=60,
-            growth_duration_weeks=8,
-            harvest_duration_weeks=4,
+            growth_duration_days=8,
+            harvest_duration_days=4,
             germination_rate=75.5
         )
         culture.clean()  # Should not raise
@@ -259,8 +255,8 @@ class CultureModelTest(TestCase):
         culture = Culture(
             name="Tomato",
             days_to_harvest=60,
-            growth_duration_weeks=8,
-            harvest_duration_weeks=4,
+            growth_duration_days=8,
+            harvest_duration_days=4,
             germination_rate=150.0
         )
         with self.assertRaises(ValidationError) as context:
@@ -274,8 +270,8 @@ class CultureModelTest(TestCase):
         culture = Culture(
             name="Tomato",
             days_to_harvest=60,
-            growth_duration_weeks=8,
-            harvest_duration_weeks=4,
+            growth_duration_days=8,
+            harvest_duration_days=4,
             germination_rate=-10.0
         )
         with self.assertRaises(ValidationError) as context:
@@ -290,8 +286,8 @@ class CultureModelTest(TestCase):
         culture1 = Culture(
             name="Carrot",
             days_to_harvest=70,
-            growth_duration_weeks=10,
-            harvest_duration_weeks=3,
+            growth_duration_days=10,
+            harvest_duration_days=3,
             safety_margin=25.0
         )
         culture1.clean()  # Should not raise
@@ -300,8 +296,8 @@ class CultureModelTest(TestCase):
         culture2 = Culture(
             name="Carrot",
             days_to_harvest=70,
-            growth_duration_weeks=10,
-            harvest_duration_weeks=3,
+            growth_duration_days=10,
+            harvest_duration_days=3,
             safety_margin=150.0
         )
         with self.assertRaises(ValidationError) as context:
@@ -315,12 +311,12 @@ class CultureModelTest(TestCase):
         culture = Culture(
             name="Lettuce",
             days_to_harvest=30,
-            growth_duration_weeks=-1,
-            harvest_duration_weeks=2
+            growth_duration_days=-1,
+            harvest_duration_days=2
         )
         with self.assertRaises(ValidationError) as context:
             culture.clean()
-        self.assertIn('growth_duration_weeks', context.exception.message_dict)
+        self.assertIn('growth_duration_days', context.exception.message_dict)
     
     def test_display_color_format_validation(self):
         """Test that display color must be in hex format"""
@@ -330,8 +326,8 @@ class CultureModelTest(TestCase):
         culture = Culture(
             name="Tomato",
             days_to_harvest=60,
-            growth_duration_weeks=8,
-            harvest_duration_weeks=4,
+            growth_duration_days=8,
+            harvest_duration_days=4,
             display_color="invalid"
         )
         with self.assertRaises(ValidationError) as context:
@@ -342,8 +338,8 @@ class CultureModelTest(TestCase):
         culture2 = Culture(
             name="Tomato",
             days_to_harvest=60,
-            growth_duration_weeks=8,
-            harvest_duration_weeks=4,
+            growth_duration_days=8,
+            harvest_duration_days=4,
             display_color="#FF5733"
         )
         culture2.clean()  # Should not raise
@@ -361,8 +357,8 @@ class PlantingPlanModelTest(TestCase):
         self.culture = Culture.objects.create(
             name="Carrot",
             days_to_harvest=70,
-            growth_duration_weeks=10,
-            harvest_duration_weeks=3
+            growth_duration_days=10,
+            harvest_duration_days=3
         )
 
     def test_auto_harvest_date(self):
@@ -547,8 +543,8 @@ class APITestCase(APITestCase):
         self.culture = Culture.objects.create(
             name="API Test Culture",
             days_to_harvest=50,
-            growth_duration_weeks=7,
-            harvest_duration_weeks=2
+            growth_duration_days=7,
+            harvest_duration_days=2
         )
 
     def test_culture_list(self):
@@ -561,8 +557,8 @@ class APITestCase(APITestCase):
             'name': 'New Culture',
             'variety': 'Test Variety',
             'days_to_harvest': 45,
-            'growth_duration_weeks': 6,
-            'harvest_duration_weeks': 2
+            'growth_duration_days': 6,
+            'harvest_duration_days': 2
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -580,16 +576,14 @@ class APITestCase(APITestCase):
             'notes': 'Test notes',
             'crop_family': 'Solanaceae',
             'nutrient_demand': 'high',
-            'cultivation_type': 'transplant',
+            'cultivation_type': 'pre_cultivation',
             'germination_rate': 85.0,
             'safety_margin': 20.0,
-            'internal_article_number': 'TEST-001',
-            'growth_duration_weeks': 8,
-            'harvest_duration_weeks': 3,
-            'propagation_time_weeks': 4,
+            'growth_duration_days': 8,
+            'harvest_duration_days': 3,
+            'propagation_duration_days': 4,
             'harvest_method': 'per_plant',
             'expected_yield': 500.0,
-            'required_yield_per_share_per_week': 2.5,
             'allow_deviation_delivery_weeks': True,
             'distance_within_row_cm': 40.0,
             'row_spacing_cm': 60.0,
@@ -608,20 +602,20 @@ class APITestCase(APITestCase):
         data = {
             'name': 'Incomplete Culture',
             'days_to_harvest': 45,
-            # Missing growth_duration_weeks and harvest_duration_weeks
+            # Missing growth_duration_days and harvest_duration_days
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('growth_duration_weeks', response.data)
-        self.assertIn('harvest_duration_weeks', response.data)
+        self.assertIn('growth_duration_days', response.data)
+        self.assertIn('harvest_duration_days', response.data)
     
     def test_culture_create_invalid_germination_rate(self):
         """Test that invalid germination rate is rejected"""
         data = {
             'name': 'Test Culture',
             'days_to_harvest': 45,
-            'growth_duration_weeks': 6,
-            'harvest_duration_weeks': 2,
+            'growth_duration_days': 6,
+            'harvest_duration_days': 2,
             'germination_rate': 150.0  # > 100
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
@@ -633,8 +627,8 @@ class APITestCase(APITestCase):
         data = {
             'name': 'Test Culture',
             'days_to_harvest': 45,
-            'growth_duration_weeks': 6,
-            'harvest_duration_weeks': 2,
+            'growth_duration_days': 6,
+            'harvest_duration_days': 2,
             'safety_margin': -10.0  # < 0
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
@@ -646,8 +640,8 @@ class APITestCase(APITestCase):
         data = {
             'name': 'Test Culture',
             'days_to_harvest': 45,
-            'growth_duration_weeks': 6,
-            'harvest_duration_weeks': 2,
+            'growth_duration_days': 6,
+            'harvest_duration_days': 2,
             'display_color': 'invalid'  # Not hex format
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
@@ -659,8 +653,8 @@ class APITestCase(APITestCase):
         data = {
             'name': 'Updated Culture',
             'days_to_harvest': 55,
-            'growth_duration_weeks': 8,
-            'harvest_duration_weeks': 3,
+            'growth_duration_days': 8,
+            'harvest_duration_days': 3,
             'crop_family': 'Updated Family',
             'nutrient_demand': 'medium'
         }
@@ -674,8 +668,8 @@ class APITestCase(APITestCase):
         data = {
             'name': 'Test Culture',
             'days_to_harvest': 45,
-            'growth_duration_weeks': 6,
-            'harvest_duration_weeks': 2,
+            'growth_duration_days': 6,
+            'harvest_duration_days': 2,
             'growstuff_id': 12345,  # Should be ignored
             'source': 'growstuff',  # Should be ignored
             'perennial': True  # Should be ignored

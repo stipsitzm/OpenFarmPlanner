@@ -25,29 +25,25 @@ export interface Culture {
   /** Nutrient demand level (optional) */
   nutrient_demand?: 'low' | 'medium' | 'high' | '';
   /** Type of cultivation (optional) */
-  cultivation_type?: 'direct_sowing' | 'transplant' | 'pre_cultivation' | '';
+  cultivation_type?: 'pre_cultivation' | 'direct_sowing' | '';
   /** Germination rate percentage (0-100, optional) */
   germination_rate?: number;
   /** Safety margin percentage (0-100, optional) */
   safety_margin?: number;
-  /** Internal article/SKU number (optional) */
-  internal_article_number?: string;
   
-  // Timing fields (in weeks)
-  /** Growth duration in weeks (required) */
-  growth_duration_weeks: number;
-  /** Harvest duration in weeks (required) */
-  harvest_duration_weeks: number;
-  /** Propagation time in weeks (optional) */
-  propagation_time_weeks?: number;
+  // Timing fields (in days)
+  /** Growth duration in days (from planting to first harvest, required) */
+  growth_duration_days: number;
+  /** Harvest duration in days (from first to last harvest, required) */
+  harvest_duration_days: number;
+  /** Propagation duration in days (optional) */
+  propagation_duration_days?: number;
   
   // Harvest information
   /** Harvest method (optional) */
-  harvest_method?: 'per_plant' | 'per_sqm' | 'per_bed' | '';
+  harvest_method?: 'per_plant' | 'per_sqm' | '';
   /** Expected yield amount (optional) */
   expected_yield?: number;
-  /** Required yield per share per week (optional) */
-  required_yield_per_share_per_week?: number;
   /** Allow deviating delivery weeks (optional) */
   allow_deviation_delivery_weeks?: boolean;
   
@@ -82,10 +78,6 @@ export interface Culture {
   perennial?: boolean | null;
   /** Median lifespan in days (optional) */
   median_lifespan?: number | null;
-  /** Median days to first harvest (optional) */
-  median_days_to_first_harvest?: number | null;
-  /** Median days to last harvest (optional) */
-  median_days_to_last_harvest?: number | null;
 }
 
 /**

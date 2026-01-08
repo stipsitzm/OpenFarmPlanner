@@ -159,20 +159,18 @@ class Culture(models.Model):
         # Manual planning fields
         crop_family: Crop family for rotation planning (optional)
         nutrient_demand: Nutrient demand level (low/medium/high, optional)
-        cultivation_type: Type of cultivation (direct sowing, transplant, etc., optional)
+        cultivation_type: Type of cultivation (pre-cultivation/direct sowing, optional)
         germination_rate: Germination rate percentage (0-100, optional)
         safety_margin: Safety margin percentage for planning (0-100, optional)
-        internal_article_number: Internal article/SKU number (optional)
         
-        # Timing fields (in weeks)
-        growth_duration_weeks: Growth duration in weeks (required)
-        harvest_duration_weeks: Harvest duration in weeks (required)
-        propagation_time_weeks: Propagation time in weeks (optional)
+        # Timing fields (in days)
+        growth_duration_days: Growth duration in days (from planting to first harvest, required)
+        harvest_duration_days: Harvest duration in days (from first to last harvest, required)
+        propagation_duration_days: Propagation duration in days (optional)
         
         # Harvest information
-        harvest_method: Harvest method (per plant, per m², etc., optional)
+        harvest_method: Harvest method (per plant, per m², optional)
         expected_yield: Expected yield amount (optional)
-        required_yield_per_share_per_week: Required yield per share per week (optional)
         allow_deviation_delivery_weeks: Allow deviating delivery weeks (boolean, optional)
         
         # Planting distances
@@ -191,8 +189,6 @@ class Culture(models.Model):
         en_wikipedia_url: English Wikipedia URL for the crop (from Growstuff)
         perennial: Whether the crop is perennial (from Growstuff)
         median_lifespan: Median lifespan in days (from Growstuff)
-        median_days_to_first_harvest: Median days to first harvest (from Growstuff)
-        median_days_to_last_harvest: Median days to last harvest (from Growstuff)
         
         created_at: Timestamp when the culture was created
         updated_at: Timestamp when the culture was last updated
@@ -209,15 +205,13 @@ class Culture(models.Model):
     ]
     
     CULTIVATION_TYPE_CHOICES = [
-        ('direct_sowing', 'Direct Sowing'),
-        ('transplant', 'Transplant'),
-        ('pre_cultivation', 'Pre-cultivation'),
+        ('pre_cultivation', 'Pre-cultivation'),  # Anzucht
+        ('direct_sowing', 'Direct Sowing'),  # Direktsaat
     ]
     
     HARVEST_METHOD_CHOICES = [
         ('per_plant', 'Per Plant'),
         ('per_sqm', 'Per m²'),
-        ('per_bed', 'Per Bed'),
     ]
     
     # Basic information
@@ -254,29 +248,22 @@ class Culture(models.Model):
         blank=True,
         help_text="Safety margin percentage (0-100)"
     )
-    internal_article_number = models.CharField(max_length=100, blank=True, help_text="Internal article/SKU number")
     
-    # Timing fields (in weeks)
-    growth_duration_weeks = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
+    # Timing fields (in days)
+    growth_duration_days = models.IntegerField(
         null=True,
         blank=True,
-        help_text="Growth duration in weeks"
+        help_text="Growth duration in days (from planting to first harvest)"
     )
-    harvest_duration_weeks = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
+    harvest_duration_days = models.IntegerField(
         null=True,
         blank=True,
-        help_text="Harvest duration in weeks"
+        help_text="Harvest duration in days (from first to last harvest)"
     )
-    propagation_time_weeks = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
+    propagation_duration_days = models.IntegerField(
         null=True,
         blank=True,
-        help_text="Propagation time in weeks"
+        help_text="Propagation duration in days"
     )
     
     # Harvest information
@@ -292,13 +279,6 @@ class Culture(models.Model):
         null=True,
         blank=True,
         help_text="Expected yield amount"
-    )
-    required_yield_per_share_per_week = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        help_text="Required yield per share per week"
     )
     allow_deviation_delivery_weeks = models.BooleanField(
         default=False,
@@ -343,8 +323,6 @@ class Culture(models.Model):
     en_wikipedia_url = models.URLField(max_length=500, blank=True, null=True, help_text="English Wikipedia URL")
     perennial = models.BooleanField(null=True, blank=True, help_text="Whether the crop is perennial")
     median_lifespan = models.IntegerField(null=True, blank=True, help_text="Median lifespan in days")
-    median_days_to_first_harvest = models.IntegerField(null=True, blank=True, help_text="Median days to first harvest")
-    median_days_to_last_harvest = models.IntegerField(null=True, blank=True, help_text="Median days to last harvest")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -370,20 +348,17 @@ class Culture(models.Model):
                 errors['safety_margin'] = 'Safety margin must be between 0 and 100.'
         
         # Validate positive numeric fields
-        if self.growth_duration_weeks is not None and self.growth_duration_weeks < 0:
-            errors['growth_duration_weeks'] = 'Growth duration must be non-negative.'
+        if self.growth_duration_days is not None and self.growth_duration_days < 0:
+            errors['growth_duration_days'] = 'Growth duration must be non-negative.'
         
-        if self.harvest_duration_weeks is not None and self.harvest_duration_weeks < 0:
-            errors['harvest_duration_weeks'] = 'Harvest duration must be non-negative.'
+        if self.harvest_duration_days is not None and self.harvest_duration_days < 0:
+            errors['harvest_duration_days'] = 'Harvest duration must be non-negative.'
         
-        if self.propagation_time_weeks is not None and self.propagation_time_weeks < 0:
-            errors['propagation_time_weeks'] = 'Propagation time must be non-negative.'
+        if self.propagation_duration_days is not None and self.propagation_duration_days < 0:
+            errors['propagation_duration_days'] = 'Propagation duration must be non-negative.'
         
         if self.expected_yield is not None and self.expected_yield < 0:
             errors['expected_yield'] = 'Expected yield must be non-negative.'
-        
-        if self.required_yield_per_share_per_week is not None and self.required_yield_per_share_per_week < 0:
-            errors['required_yield_per_share_per_week'] = 'Required yield per share per week must be non-negative.'
         
         if self.distance_within_row_cm is not None and self.distance_within_row_cm < 0:
             errors['distance_within_row_cm'] = 'Distance within row must be non-negative.'

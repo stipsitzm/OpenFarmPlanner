@@ -115,11 +115,9 @@ class CultureSerializer(serializers.ModelSerializer):
             'en_wikipedia_url',
             'perennial',
             'median_lifespan',
-            'median_days_to_first_harvest',
-            'median_days_to_last_harvest',
         ]
     
-    def validate_growth_duration_weeks(self, value):
+    def validate_growth_duration_days(self, value):
         """Validate growth duration is required and non-negative.
         
         :param value: The growth duration value to validate
@@ -132,7 +130,7 @@ class CultureSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Growth duration must be non-negative.')
         return value
     
-    def validate_harvest_duration_weeks(self, value):
+    def validate_harvest_duration_days(self, value):
         """Validate harvest duration is required and non-negative.
         
         :param value: The harvest duration value to validate
@@ -180,16 +178,16 @@ class CultureSerializer(serializers.ModelSerializer):
         
         # Check required fields for create operations
         if not self.instance:
-            if 'growth_duration_weeks' not in attrs or attrs.get('growth_duration_weeks') is None:
-                errors['growth_duration_weeks'] = 'Growth duration is required.'
-            if 'harvest_duration_weeks' not in attrs or attrs.get('harvest_duration_weeks') is None:
-                errors['harvest_duration_weeks'] = 'Harvest duration is required.'
+            if 'growth_duration_days' not in attrs or attrs.get('growth_duration_days') is None:
+                errors['growth_duration_days'] = 'Growth duration is required.'
+            if 'harvest_duration_days' not in attrs or attrs.get('harvest_duration_days') is None:
+                errors['harvest_duration_days'] = 'Harvest duration is required.'
         else:
             # For updates, only validate if field is being set to None
-            if 'growth_duration_weeks' in attrs and attrs.get('growth_duration_weeks') is None:
-                errors['growth_duration_weeks'] = 'Growth duration is required.'
-            if 'harvest_duration_weeks' in attrs and attrs.get('harvest_duration_weeks') is None:
-                errors['harvest_duration_weeks'] = 'Harvest duration is required.'
+            if 'growth_duration_days' in attrs and attrs.get('growth_duration_days') is None:
+                errors['growth_duration_days'] = 'Growth duration is required.'
+            if 'harvest_duration_days' in attrs and attrs.get('harvest_duration_days') is None:
+                errors['harvest_duration_days'] = 'Harvest duration is required.'
         
         if errors:
             raise serializers.ValidationError(errors)
