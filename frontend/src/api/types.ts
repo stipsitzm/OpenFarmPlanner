@@ -18,6 +18,52 @@ export interface Culture {
   days_to_harvest: number;
   /** Additional notes */
   notes?: string;
+  
+  // Manual planning fields
+  /** Crop family for rotation planning (optional) */
+  crop_family?: string;
+  /** Nutrient demand level (optional) */
+  nutrient_demand?: 'low' | 'medium' | 'high' | '';
+  /** Type of cultivation (optional) */
+  cultivation_type?: 'direct_sowing' | 'transplant' | 'pre_cultivation' | '';
+  /** Germination rate percentage (0-100, optional) */
+  germination_rate?: number;
+  /** Safety margin percentage (0-100, optional) */
+  safety_margin?: number;
+  /** Internal article/SKU number (optional) */
+  internal_article_number?: string;
+  
+  // Timing fields (in weeks)
+  /** Growth duration in weeks (required) */
+  growth_duration_weeks: number;
+  /** Harvest duration in weeks (required) */
+  harvest_duration_weeks: number;
+  /** Propagation time in weeks (optional) */
+  propagation_time_weeks?: number;
+  
+  // Harvest information
+  /** Harvest method (optional) */
+  harvest_method?: 'per_plant' | 'per_sqm' | 'per_bed' | '';
+  /** Expected yield amount (optional) */
+  expected_yield?: number;
+  /** Required yield per share per week (optional) */
+  required_yield_per_share_per_week?: number;
+  /** Allow deviating delivery weeks (optional) */
+  allow_deviation_delivery_weeks?: boolean;
+  
+  // Planting distances
+  /** Distance within row in cm (optional) */
+  distance_within_row_cm?: number;
+  /** Row spacing in cm (optional) */
+  row_spacing_cm?: number;
+  /** Sowing depth in cm (optional) */
+  sowing_depth_cm?: number;
+  
+  // Display settings
+  /** Display color for cultivation calendar (hex format, optional) */
+  display_color?: string;
+  
+  // Growstuff API fields (read-only)
   /** Creation timestamp */
   created_at?: string;
   /** Last update timestamp */
