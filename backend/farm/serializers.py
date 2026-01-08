@@ -5,7 +5,6 @@ to and from JSON representations for the API endpoints.
 """
 
 from django.core.exceptions import ValidationError
-from django.forms.models import model_to_dict
 from rest_framework import serializers
 from .models import Location, Field, Bed, Culture, PlantingPlan, Task
 
@@ -179,30 +178,41 @@ class CultureSerializer(serializers.ModelSerializer):
         """
         errors = {}
         
-        # Check required fields
-        # For updates, only validate if the field is being explicitly set to None
-        if not self.instance or 'growth_duration_weeks' in attrs:
-            if attrs.get('growth_duration_weeks') is None:
+        # Check required fields for create operations
+        if not self.instance:
+            if 'growth_duration_weeks' not in attrs or attrs.get('growth_duration_weeks') is None:
                 errors['growth_duration_weeks'] = 'Growth duration is required.'
-        
-        if not self.instance or 'harvest_duration_weeks' in attrs:
-            if attrs.get('harvest_duration_weeks') is None:
+            if 'harvest_duration_weeks' not in attrs or attrs.get('harvest_duration_weeks') is None:
+                errors['harvest_duration_weeks'] = 'Harvest duration is required.'
+        else:
+            # For updates, only validate if field is being set to None
+            if 'growth_duration_weeks' in attrs and attrs.get('growth_duration_weeks') is None:
+                errors['growth_duration_weeks'] = 'Growth duration is required.'
+            if 'harvest_duration_weeks' in attrs and attrs.get('harvest_duration_weeks') is None:
                 errors['harvest_duration_weeks'] = 'Harvest duration is required.'
         
         if errors:
             raise serializers.ValidationError(errors)
         
-        # Create a temporary instance for validation
-        # For updates, merge with existing data
-        if self.instance:
-            instance_data = {**model_to_dict(self.instance), **attrs}
-            instance = Culture(**instance_data)
-            instance.pk = self.instance.pk
-        else:
-            instance = Culture(**attrs)
-        
+        # For model-level validation, we just need to validate the attrs themselves
+        # The model's clean() will be called when saving
+        # We create a temporary instance just for validation
         try:
-            instance.clean()
+            if self.instance:
+                # Don't modify the actual instance, just validate the new data
+                temp_attrs = {}
+                for field in Culture._meta.fields:
+                    field_name = field.name
+                    if field_name in attrs:
+                        temp_attrs[field_name] = attrs[field_name]
+                    elif hasattr(self.instance, field_name):
+                        temp_attrs[field_name] = getattr(self.instance, field_name)
+                temp_instance = Culture(**temp_attrs)
+                temp_instance.pk = self.instance.pk
+            else:
+                temp_instance = Culture(**attrs)
+            
+            temp_instance.clean()
         except ValidationError as e:
             raise serializers.ValidationError(e.message_dict)
         
