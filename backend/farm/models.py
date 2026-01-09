@@ -234,20 +234,6 @@ class Culture(models.Model):
         blank=True,
         help_text="Type of cultivation"
     )
-    germination_rate = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        help_text="Germination rate percentage (0-100)"
-    )
-    safety_margin = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        help_text="Safety margin percentage (0-100)"
-    )
     
     # Timing fields (in days)
     growth_duration_days = models.IntegerField(
@@ -324,22 +310,13 @@ class Culture(models.Model):
     def clean(self) -> None:
         """Validate the culture data.
         
-        Validates numeric ranges for percentages and positive values.
+        Validates numeric ranges for positive values.
         
         Raises:
             ValidationError: If validation fails
         """
         super().clean()
         errors = {}
-        
-        # Validate percentage fields (0-100)
-        if self.germination_rate is not None:
-            if self.germination_rate < 0 or self.germination_rate > 100:
-                errors['germination_rate'] = 'Germination rate must be between 0 and 100.'
-        
-        if self.safety_margin is not None:
-            if self.safety_margin < 0 or self.safety_margin > 100:
-                errors['safety_margin'] = 'Safety margin must be between 0 and 100.'
         
         # Validate positive numeric fields
         if self.growth_duration_days is not None and self.growth_duration_days < 0:

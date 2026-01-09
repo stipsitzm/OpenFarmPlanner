@@ -218,16 +218,6 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
-                {selectedCulture.germination_rate && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Keimrate
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatNumber(selectedCulture.germination_rate, t)}%
-                    </Typography>
-                  </Box>
-                )}
                 {selectedCulture.harvest_method && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
@@ -275,16 +265,6 @@ export function CultureDetail({
                     </Typography>
                     <Typography variant="body1">
                       {formatDistance(selectedCulture.sowing_depth_cm, t)} cm
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.safety_margin && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Sicherheitsmarge
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatNumber(selectedCulture.safety_margin, t)}%
                     </Typography>
                   </Box>
                 )}
