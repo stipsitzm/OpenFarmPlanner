@@ -93,6 +93,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const initialRowProcessedRef = useRef<boolean>(false);
+  const dataFetchedRef = useRef<boolean>(false);
 
   /**
    * Fetch data from API and populate grid
@@ -106,9 +107,11 @@ export function EditableDataGrid<T extends EditableRow>({
         .map(mapToRow);
       setRows(dataRows);
       setError('');
+      dataFetchedRef.current = true;
     } catch (err) {
       setError(loadErrorMessage);
       console.error('Error fetching data:', err);
+      dataFetchedRef.current = true;
     } finally {
       setLoading(false);
     }
@@ -123,7 +126,7 @@ export function EditableDataGrid<T extends EditableRow>({
    * Only runs once when initialRow is provided and data has finished loading
    */
   useEffect(() => {
-    if (initialRow && !initialRowProcessedRef.current && !loading) {
+    if (initialRow && !initialRowProcessedRef.current && dataFetchedRef.current && !loading) {
       initialRowProcessedRef.current = true;
       const newRow = { ...createNewRow(), ...initialRow };
       // Find first editable field for focus, or undefined if none found
