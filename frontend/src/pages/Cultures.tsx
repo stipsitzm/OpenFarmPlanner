@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture } from '../api/api';
 import { CultureDetail } from '../components/CultureDetail';
@@ -17,9 +18,11 @@ import { Box, Button, Dialog, DialogContent, Snackbar, Alert } from '@mui/materi
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AgricultureIcon from '@mui/icons-material/Agriculture';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
+  const navigate = useNavigate();
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [selectedCultureId, setSelectedCultureId] = useState<number | undefined>(undefined);
   const [showForm, setShowForm] = useState(false);
@@ -115,6 +118,12 @@ function Cultures(): React.ReactElement {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
+  const handleCreatePlantingPlan = () => {
+    if (selectedCultureId) {
+      navigate(`/planting-plans?cultureId=${selectedCultureId}`);
+    }
+  };
+
   const selectedCulture = cultures.find(c => c.id === selectedCultureId);
 
   return (
@@ -141,6 +150,13 @@ function Cultures(): React.ReactElement {
       {/* Action buttons for selected culture */}
       {selectedCulture && (
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<AgricultureIcon />}
+            onClick={handleCreatePlantingPlan}
+          >
+            {t('buttons.createPlantingPlan')}
+          </Button>
           <Button
             variant="outlined"
             startIcon={<EditIcon />}

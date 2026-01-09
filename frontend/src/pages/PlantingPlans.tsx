@@ -7,7 +7,8 @@
  * @returns The Planting Plans page component
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { GridColDef } from '@mui/x-data-grid';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
@@ -23,8 +24,49 @@ interface PlantingPlanRow extends PlantingPlan, EditableRow {
 
 function PlantingPlans(): React.ReactElement {
   const { t } = useTranslation(['plantingPlans', 'common']);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
+  const [initialCultureId, setInitialCultureId] = useState<number | null>(null);
+  const [initialBedId, setInitialBedId] = useState<number | null>(null);
+  const urlParamProcessedRef = useRef<boolean>(false);
+
+  /**
+   * Check for cultureId or bedId parameter in URL and set as initial values
+   */
+  useEffect(() => {
+    if (!urlParamProcessedRef.current) {
+      const newParams = new URLSearchParams(searchParams);
+      let hasChanges = false;
+
+      const cultureIdParam = searchParams.get('cultureId');
+      if (cultureIdParam) {
+        const cultureId = parseInt(cultureIdParam, 10);
+        if (!isNaN(cultureId)) {
+          setInitialCultureId(cultureId);
+          newParams.delete('cultureId');
+          hasChanges = true;
+        }
+      }
+
+      const bedIdParam = searchParams.get('bedId');
+      if (bedIdParam) {
+        const bedId = parseInt(bedIdParam, 10);
+        if (!isNaN(bedId)) {
+          setInitialBedId(bedId);
+          newParams.delete('bedId');
+          hasChanges = true;
+        }
+      }
+
+      // Remove parameters from URL after reading them
+      if (hasChanges) {
+        setSearchParams(newParams, { replace: true });
+      }
+
+      urlParamProcessedRef.current = true;
+    }
+  }, [searchParams, setSearchParams]);
 
   /**
    * Fetch cultures and beds for dropdowns
@@ -166,6 +208,14 @@ function PlantingPlans(): React.ReactElement {
           notes: '',
           isNew: true,
         })}
+        initialRow={
+          initialCultureId || initialBedId
+            ? {
+                ...(initialCultureId ? { culture: initialCultureId } : {}),
+                ...(initialBedId ? { bed: initialBedId } : {}),
+              }
+            : undefined
+        }
         mapToRow={(plan) => ({
           ...plan,
           id: plan.id!,

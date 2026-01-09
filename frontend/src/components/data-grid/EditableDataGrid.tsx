@@ -9,7 +9,7 @@
  * @returns A configurable editable data grid component
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
@@ -66,6 +66,8 @@ export interface EditableDataGridProps<T extends EditableRow> {
   addButtonLabel: string;
   /** Whether to show delete action column (default: true) */
   showDeleteAction?: boolean;
+  /** Optional initial row to add on mount (e.g., pre-filled from another page) */
+  initialRow?: Partial<T>;
 }
 
 /**
@@ -84,11 +86,15 @@ export function EditableDataGrid<T extends EditableRow>({
   deleteConfirmMessage,
   addButtonLabel,
   showDeleteAction = true,
+  initialRow,
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [dataFetched, setDataFetched] = useState<boolean>(false);
+  const initialRowProcessedRef = useRef<boolean>(false);
+  const initialFetchDoneRef = useRef<boolean>(false);
 
   /**
    * Fetch data from API and populate grid
@@ -102,17 +108,42 @@ export function EditableDataGrid<T extends EditableRow>({
         .map(mapToRow);
       setRows(dataRows);
       setError('');
+      setDataFetched(true);
     } catch (err) {
       setError(loadErrorMessage);
       console.error('Error fetching data:', err);
+      setDataFetched(true);
     } finally {
       setLoading(false);
     }
   }, [api, mapToRow, loadErrorMessage]);
 
   useEffect(() => {
-    fetchData();
+    // Only fetch on initial mount
+    if (!initialFetchDoneRef.current) {
+      initialFetchDoneRef.current = true;
+      fetchData();
+    }
   }, [fetchData]);
+
+  /**
+   * Add initial row if provided and not already processed
+   * Only runs once when initialRow is provided and data has finished loading
+   */
+  useEffect(() => {
+    if (initialRow && !initialRowProcessedRef.current && dataFetched && !loading) {
+      initialRowProcessedRef.current = true;
+      const newRow = { ...createNewRow(), ...initialRow };
+      setRows((oldRows) => [newRow, ...oldRows]);
+      // Set row to edit mode after a small delay to ensure row is added first
+      setTimeout(() => {
+        setRowModesModel((oldModel) => ({
+          ...oldModel,
+          [newRow.id]: { mode: GridRowModes.Edit },
+        }));
+      }, 0);
+    }
+  }, [initialRow, dataFetched, loading, createNewRow, columns]);
 
   /**
    * Handle adding a new row to the grid

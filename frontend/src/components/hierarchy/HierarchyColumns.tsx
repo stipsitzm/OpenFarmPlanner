@@ -4,10 +4,13 @@
 
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import type { TFunction } from 'i18next';
-import { Box, IconButton } from '@mui/material';
+import { Box, IconButton, Button } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import FolderIcon from '@mui/icons-material/Folder';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AgricultureIcon from '@mui/icons-material/Agriculture';
 import type { HierarchyRow } from './utils/types';
 
 /**
@@ -55,6 +58,7 @@ export function createHierarchyColumns(
   onDeleteBed: (bedId: number) => void,
   onAddField: (locationId?: number) => void,
   onDeleteField: (fieldId: number) => void,
+  onCreatePlantingPlan: (bedId: number) => void,
   t: TFunction
 ): GridColDef<HierarchyRow>[] {
   return [
@@ -86,73 +90,64 @@ export function createHierarchyColumns(
       field: 'actions',
       type: 'actions',
       headerName: t('common:actions.actions'),
-      width: 150,
+      flex: 1,
+      minWidth: 280,
       getActions: ({ row }) => {
         if (row.type === 'bed') {
           return [
-            <button
+            <Button
+              key="create-plan"
+              variant="outlined"
+              size="small"
+              startIcon={<AgricultureIcon />}
+              onClick={() => onCreatePlantingPlan(row.bedId!)}
+            >
+              {t('hierarchy:createPlantingPlan')}
+            </Button>,
+            <Button
               key="delete"
+              variant="outlined"
+              size="small"
+              color="error"
+              startIcon={<DeleteIcon />}
               onClick={() => onDeleteBed(row.bedId!)}
-              style={{
-                color: '#d32f2f',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px 8px',
-                fontSize: '0.8125rem',
-              }}
             >
               {t('common:actions.delete')}
-            </button>,
+            </Button>,
           ];
         } else if (row.type === 'field') {
           return [
-            <button
+            <Button
               key="add-bed"
+              variant="outlined"
+              size="small"
+              startIcon={<AddIcon />}
               onClick={() => onAddBed(row.fieldId!)}
-              style={{
-                color: '#1976d2',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px 8px',
-                fontSize: '0.8125rem',
-              }}
             >
               {t('hierarchy:addBed')}
-            </button>,
-            <button
+            </Button>,
+            <Button
               key="delete-field"
+              variant="outlined"
+              size="small"
+              color="error"
+              startIcon={<DeleteIcon />}
               onClick={() => onDeleteField(row.fieldId!)}
-              style={{
-                color: '#d32f2f',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px 8px',
-                fontSize: '0.8125rem',
-                marginLeft: '8px',
-              }}
             >
               {t('common:actions.delete')}
-            </button>,
+            </Button>,
           ];
         } else if (row.type === 'location') {
           return [
-            <button
+            <Button
               key="add-field"
+              variant="outlined"
+              size="small"
+              startIcon={<AddIcon />}
               onClick={() => onAddField(row.locationId)}
-              style={{
-                color: '#1976d2',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px 8px',
-                fontSize: '0.8125rem',
-              }}
             >
               {t('hierarchy:addField')}
-            </button>,
+            </Button>,
           ];
         }
         return [];

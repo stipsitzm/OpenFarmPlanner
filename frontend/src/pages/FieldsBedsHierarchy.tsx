@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
 import type { GridRowsProp, GridRowModesModel } from '@mui/x-data-grid';
@@ -27,6 +28,7 @@ import type { HierarchyRow } from '../components/hierarchy/utils/types';
 
 function FieldsBedsHierarchy(): React.ReactElement {
   const { t } = useTranslation('hierarchy');
+  const navigate = useNavigate();
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [hasInitiallyExpanded, setHasInitiallyExpanded] = useState(false);
   
@@ -106,6 +108,13 @@ function FieldsBedsHierarchy(): React.ReactElement {
     setPendingEditRow(newBedId);
   };
 
+  /**
+   * Handle creating a planting plan with pre-selected bed
+   */
+  const handleCreatePlantingPlan = (bedId: number): void => {
+    navigate(`/planting-plans?bedId=${bedId}`);
+  };
+
 
 
   /**
@@ -167,6 +176,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
       (bedId) => deleteBed(bedId),
       (locationId) => addField(locationId),
       (fieldId) => deleteField(fieldId),
+      handleCreatePlantingPlan,
       t
     );
   }, [toggleExpand, handleAddBed, deleteBed, addField, deleteField, t]);
