@@ -94,6 +94,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const [loading, setLoading] = useState<boolean>(false);
   const [dataFetched, setDataFetched] = useState<boolean>(false);
   const initialRowProcessedRef = useRef<boolean>(false);
+  const initialFetchDoneRef = useRef<boolean>(false);
 
   /**
    * Fetch data from API and populate grid
@@ -118,7 +119,11 @@ export function EditableDataGrid<T extends EditableRow>({
   }, [api, mapToRow, loadErrorMessage]);
 
   useEffect(() => {
-    fetchData();
+    // Only fetch on initial mount
+    if (!initialFetchDoneRef.current) {
+      initialFetchDoneRef.current = true;
+      fetchData();
+    }
   }, [fetchData]);
 
   /**
