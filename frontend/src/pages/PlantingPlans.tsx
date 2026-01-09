@@ -40,11 +40,11 @@ function PlantingPlans(): React.ReactElement {
         const cultureId = parseInt(cultureIdParam, 10);
         if (!isNaN(cultureId)) {
           setInitialCultureId(cultureId);
+          // Remove the parameter from URL after reading it
+          const newParams = new URLSearchParams(searchParams);
+          newParams.delete('cultureId');
+          setSearchParams(newParams, { replace: true });
         }
-        // Remove the parameter from URL after reading it
-        const newParams = new URLSearchParams(searchParams);
-        newParams.delete('cultureId');
-        setSearchParams(newParams, { replace: true });
       }
       urlParamProcessedRef.current = true;
     }

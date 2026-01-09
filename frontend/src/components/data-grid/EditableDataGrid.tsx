@@ -126,7 +126,8 @@ export function EditableDataGrid<T extends EditableRow>({
     if (initialRow && !initialRowProcessedRef.current && !loading) {
       initialRowProcessedRef.current = true;
       const newRow = { ...createNewRow(), ...initialRow };
-      const firstEditableField = columns.find(col => col.editable)?.field || columns[0]?.field;
+      // Find first editable field for focus, or undefined if none found
+      const firstEditableField = columns.find(col => col.editable)?.field;
       setRows((oldRows) => [newRow, ...oldRows]);
       setRowModesModel((oldModel) => ({
         ...oldModel,
