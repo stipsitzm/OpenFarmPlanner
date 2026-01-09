@@ -56,8 +56,6 @@ export function CultureForm({
     crop_family: '',
     nutrient_demand: '',
     cultivation_type: '',
-    germination_rate: undefined,
-    safety_margin: undefined,
     notes: '',
     growth_duration_days: undefined,
     harvest_duration_days: undefined,
@@ -97,12 +95,6 @@ export function CultureForm({
     // Numeric validations
     const numericValue = typeof value === 'string' ? parseFloat(value) : value;
     
-    if ((name === 'germination_rate' || name === 'safety_margin') && value !== undefined && value !== null && value !== '') {
-      if (numericValue < 0 || numericValue > 100) {
-        return name === 'germination_rate' ? t('form.germinationRateError') : t('form.safetyMarginError');
-      }
-    }
-
     if ((name === 'growth_duration_days' || name === 'harvest_duration_days' || 
          name === 'propagation_duration_days' || name === 'expected_yield' || 
          name === 'distance_within_row_cm' || name === 'row_spacing_cm' || name === 'sowing_depth_cm') && 

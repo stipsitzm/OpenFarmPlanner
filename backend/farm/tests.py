@@ -168,8 +168,6 @@ class CultureModelTest(TestCase):
             crop_family="Brassicaceae",
             nutrient_demand="high",
             cultivation_type="pre_cultivation",
-            germination_rate=85.5,
-            safety_margin=20.0,
             growth_duration_days=10,
             harvest_duration_days=3,
             propagation_duration_days=4,
@@ -184,8 +182,6 @@ class CultureModelTest(TestCase):
         self.assertEqual(culture.crop_family, "Brassicaceae")
         self.assertEqual(culture.nutrient_demand, "high")
         self.assertEqual(culture.cultivation_type, "pre_cultivation")
-        self.assertEqual(float(culture.germination_rate), 85.5)
-        self.assertEqual(float(culture.safety_margin), 20.0)
         self.assertEqual(culture.growth_duration_days, 10)
         self.assertEqual(culture.harvest_duration_days, 3)
         self.assertEqual(culture.propagation_duration_days, 4)
@@ -234,75 +230,6 @@ class CultureModelTest(TestCase):
         
         # All colors should be unique
         self.assertEqual(len(colors), 10)
-    
-    def test_germination_rate_validation_valid(self):
-        """Test that valid germination rate (0-100) is accepted"""
-        from django.core.exceptions import ValidationError
-        
-        culture = Culture(
-            name="Tomato",
-            days_to_harvest=60,
-            growth_duration_days=8,
-            harvest_duration_days=4,
-            germination_rate=75.5
-        )
-        culture.clean()  # Should not raise
-    
-    def test_germination_rate_validation_too_high(self):
-        """Test that germination rate > 100 is rejected"""
-        from django.core.exceptions import ValidationError
-        
-        culture = Culture(
-            name="Tomato",
-            days_to_harvest=60,
-            growth_duration_days=8,
-            harvest_duration_days=4,
-            germination_rate=150.0
-        )
-        with self.assertRaises(ValidationError) as context:
-            culture.clean()
-        self.assertIn('germination_rate', context.exception.message_dict)
-    
-    def test_germination_rate_validation_negative(self):
-        """Test that negative germination rate is rejected"""
-        from django.core.exceptions import ValidationError
-        
-        culture = Culture(
-            name="Tomato",
-            days_to_harvest=60,
-            growth_duration_days=8,
-            harvest_duration_days=4,
-            germination_rate=-10.0
-        )
-        with self.assertRaises(ValidationError) as context:
-            culture.clean()
-        self.assertIn('germination_rate', context.exception.message_dict)
-    
-    def test_safety_margin_validation(self):
-        """Test safety margin validation (0-100)"""
-        from django.core.exceptions import ValidationError
-        
-        # Valid safety margin
-        culture1 = Culture(
-            name="Carrot",
-            days_to_harvest=70,
-            growth_duration_days=10,
-            harvest_duration_days=3,
-            safety_margin=25.0
-        )
-        culture1.clean()  # Should not raise
-        
-        # Invalid safety margin > 100
-        culture2 = Culture(
-            name="Carrot",
-            days_to_harvest=70,
-            growth_duration_days=10,
-            harvest_duration_days=3,
-            safety_margin=150.0
-        )
-        with self.assertRaises(ValidationError) as context:
-            culture2.clean()
-        self.assertIn('safety_margin', context.exception.message_dict)
     
     def test_negative_numeric_fields_validation(self):
         """Test that negative values for numeric fields are rejected"""
@@ -577,8 +504,6 @@ class APITestCase(APITestCase):
             'crop_family': 'Solanaceae',
             'nutrient_demand': 'high',
             'cultivation_type': 'pre_cultivation',
-            'germination_rate': 85.0,
-            'safety_margin': 20.0,
             'growth_duration_days': 8,
             'harvest_duration_days': 3,
             'propagation_duration_days': 4,
@@ -608,32 +533,6 @@ class APITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('growth_duration_days', response.data)
         self.assertIn('harvest_duration_days', response.data)
-    
-    def test_culture_create_invalid_germination_rate(self):
-        """Test that invalid germination rate is rejected"""
-        data = {
-            'name': 'Test Culture',
-            'days_to_harvest': 45,
-            'growth_duration_days': 6,
-            'harvest_duration_days': 2,
-            'germination_rate': 150.0  # > 100
-        }
-        response = self.client.post('/openfarmplanner/api/cultures/', data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('germination_rate', response.data)
-    
-    def test_culture_create_invalid_safety_margin(self):
-        """Test that invalid safety margin is rejected"""
-        data = {
-            'name': 'Test Culture',
-            'days_to_harvest': 45,
-            'growth_duration_days': 6,
-            'harvest_duration_days': 2,
-            'safety_margin': -10.0  # < 0
-        }
-        response = self.client.post('/openfarmplanner/api/cultures/', data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('safety_margin', response.data)
     
     def test_culture_create_invalid_display_color(self):
         """Test that invalid display color format is rejected"""

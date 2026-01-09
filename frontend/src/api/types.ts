@@ -26,10 +26,6 @@ export interface Culture {
   nutrient_demand?: 'low' | 'medium' | 'high' | '';
   /** Type of cultivation (optional) */
   cultivation_type?: 'pre_cultivation' | 'direct_sowing' | '';
-  /** Germination rate percentage (0-100, optional) */
-  germination_rate?: number;
-  /** Safety margin percentage (0-100, optional) */
-  safety_margin?: number;
   
   // Timing fields (in days)
   /** Growth duration in days (from planting to first harvest, required) */
