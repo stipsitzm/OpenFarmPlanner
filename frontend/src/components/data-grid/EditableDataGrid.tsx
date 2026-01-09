@@ -120,9 +120,11 @@ export function EditableDataGrid<T extends EditableRow>({
 
   /**
    * Add initial row if provided and not already processed
+   * Only runs once when initialRow is provided and data has finished loading
    */
   useEffect(() => {
     if (initialRow && !initialRowProcessedRef.current && !loading) {
+      initialRowProcessedRef.current = true;
       const newRow = { ...createNewRow(), ...initialRow };
       const firstEditableField = columns.find(col => col.editable)?.field || columns[0]?.field;
       setRows((oldRows) => [newRow, ...oldRows]);
@@ -130,7 +132,6 @@ export function EditableDataGrid<T extends EditableRow>({
         ...oldModel,
         [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus: firstEditableField },
       }));
-      initialRowProcessedRef.current = true;
     }
   }, [initialRow, loading, createNewRow, columns]);
 
