@@ -9,7 +9,7 @@
  * @returns A configurable editable data grid component
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
@@ -92,7 +92,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-  const [initialRowAdded, setInitialRowAdded] = useState<boolean>(false);
+  const initialRowProcessedRef = useRef<boolean>(false);
 
   /**
    * Fetch data from API and populate grid
@@ -119,10 +119,10 @@ export function EditableDataGrid<T extends EditableRow>({
   }, [fetchData]);
 
   /**
-   * Add initial row if provided and not already added
+   * Add initial row if provided and not already processed
    */
   useEffect(() => {
-    if (initialRow && !initialRowAdded && !loading) {
+    if (initialRow && !initialRowProcessedRef.current && !loading) {
       const newRow = { ...createNewRow(), ...initialRow };
       const firstEditableField = columns.find(col => col.editable)?.field || columns[0]?.field;
       setRows((oldRows) => [newRow, ...oldRows]);
@@ -130,12 +130,9 @@ export function EditableDataGrid<T extends EditableRow>({
         ...oldModel,
         [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus: firstEditableField },
       }));
-      setInitialRowAdded(true);
+      initialRowProcessedRef.current = true;
     }
-  // Only run when initialRow, initialRowAdded, or loading changes
-  // createNewRow and columns are stable function/array references from props
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialRow, initialRowAdded, loading]);
+  }, [initialRow, loading, createNewRow, columns]);
 
   /**
    * Handle adding a new row to the grid

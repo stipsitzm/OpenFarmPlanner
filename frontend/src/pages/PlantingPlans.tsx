@@ -7,7 +7,7 @@
  * @returns The Planting Plans page component
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { GridColDef } from '@mui/x-data-grid';
 import { useTranslation } from '../i18n';
@@ -28,25 +28,27 @@ function PlantingPlans(): React.ReactElement {
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [initialCultureId, setInitialCultureId] = useState<number | null>(null);
+  const urlParamProcessedRef = useRef<boolean>(false);
 
   /**
    * Check for cultureId parameter in URL and set it as initial culture
    */
   useEffect(() => {
-    const cultureIdParam = searchParams.get('cultureId');
-    if (cultureIdParam) {
-      const cultureId = parseInt(cultureIdParam, 10);
-      if (!isNaN(cultureId)) {
-        setInitialCultureId(cultureId);
+    if (!urlParamProcessedRef.current) {
+      const cultureIdParam = searchParams.get('cultureId');
+      if (cultureIdParam) {
+        const cultureId = parseInt(cultureIdParam, 10);
+        if (!isNaN(cultureId)) {
+          setInitialCultureId(cultureId);
+        }
+        // Remove the parameter from URL after reading it
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('cultureId');
+        setSearchParams(newParams, { replace: true });
       }
-      // Remove the parameter from URL after reading it
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete('cultureId');
-      setSearchParams(newParams, { replace: true });
+      urlParamProcessedRef.current = true;
     }
-  // We only want this to run once on mount to read and clear the URL parameter
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams, setSearchParams]);
 
   /**
    * Fetch cultures and beds for dropdowns
