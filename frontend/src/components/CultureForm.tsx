@@ -250,33 +250,7 @@ export function CultureForm({
               <MenuItem value="direct_sowing">{t('form.cultivationTypeDirectSowing')}</MenuItem>
             </Select>
           </FormControl>
-
-          <TextField
-            sx={{ flex: '1 1 45%', minWidth: '200px' }}
-            type="number"
-            label={t('form.germinationRate')}
-            placeholder={t('form.germinationRatePlaceholder')}
-            value={formData.germination_rate ?? ''}
-            onChange={(e) => handleChange('germination_rate', e.target.value ? parseFloat(e.target.value) : undefined)}
-            onBlur={() => handleBlur('germination_rate')}
-            error={Boolean(errors.germination_rate)}
-            helperText={errors.germination_rate}
-            slotProps={{ input: { min: 0, max: 100, step: 0.01 } }}
-          />
         </Box>
-
-        <TextField
-          sx={{ flex: '1 1 45%', minWidth: '200px' }}
-          type="number"
-          label={t('form.safetyMargin')}
-          placeholder={t('form.safetyMarginPlaceholder')}
-          value={formData.safety_margin ?? ''}
-          onChange={(e) => handleChange('safety_margin', e.target.value ? parseFloat(e.target.value) : undefined)}
-          onBlur={() => handleBlur('safety_margin')}
-          error={Boolean(errors.safety_margin)}
-          helperText={errors.safety_margin}
-          slotProps={{ input: { min: 0, max: 100, step: 0.01 } }}
-        />
 
         {/* Timing */}
         <Typography variant="h6" sx={{ mt: 2 }}>Zeitplanung</Typography>
@@ -293,7 +267,7 @@ export function CultureForm({
             onBlur={() => handleBlur('growth_duration_days')}
             error={Boolean(errors.growth_duration_days)}
             helperText={errors.growth_duration_days}
-            slotProps={{ input: { min: 0, step: 1 } }}
+            slotProps={{ htmlInput: { min: 0, step: 1 } }}
           />
 
           <TextField
@@ -307,7 +281,7 @@ export function CultureForm({
             onBlur={() => handleBlur('harvest_duration_days')}
             error={Boolean(errors.harvest_duration_days)}
             helperText={errors.harvest_duration_days}
-            slotProps={{ input: { min: 0, step: 1 } }}
+            slotProps={{ htmlInput: { min: 0, step: 1 } }}
           />
 
           <TextField
@@ -320,7 +294,7 @@ export function CultureForm({
             onBlur={() => handleBlur('propagation_duration_days')}
             error={Boolean(errors.propagation_duration_days)}
             helperText={errors.propagation_duration_days}
-            slotProps={{ input: { min: 0, step: 1 } }}
+            slotProps={{ htmlInput: { min: 0, step: 1 } }}
           />
         </Box>
 
@@ -351,7 +325,7 @@ export function CultureForm({
             onBlur={() => handleBlur('expected_yield')}
             error={Boolean(errors.expected_yield)}
             helperText={errors.expected_yield}
-            slotProps={{ input: { min: 0, step: 0.01 } }}
+            slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
           />
         </Box>
 
@@ -379,7 +353,7 @@ export function CultureForm({
             onBlur={() => handleBlur('distance_within_row_cm')}
             error={Boolean(errors.distance_within_row_cm)}
             helperText={errors.distance_within_row_cm}
-            slotProps={{ input: { min: 0, step: 0.01 } }}
+            slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
           />
 
           <TextField
@@ -392,7 +366,7 @@ export function CultureForm({
             onBlur={() => handleBlur('row_spacing_cm')}
             error={Boolean(errors.row_spacing_cm)}
             helperText={errors.row_spacing_cm}
-            slotProps={{ input: { min: 0, step: 0.01 } }}
+            slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
           />
 
           <TextField
@@ -405,7 +379,7 @@ export function CultureForm({
             onBlur={() => handleBlur('sowing_depth_cm')}
             error={Boolean(errors.sowing_depth_cm)}
             helperText={errors.sowing_depth_cm}
-            slotProps={{ input: { min: 0, step: 0.01 } }}
+            slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
           />
         </Box>
 
