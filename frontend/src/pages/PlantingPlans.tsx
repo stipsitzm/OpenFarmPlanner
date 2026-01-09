@@ -40,10 +40,11 @@ function PlantingPlans(): React.ReactElement {
         setInitialCultureId(cultureId);
       }
       // Remove the parameter from URL after reading it
-      searchParams.delete('cultureId');
-      setSearchParams(searchParams, { replace: true });
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('cultureId');
+      setSearchParams(newParams, { replace: true });
     }
-  // We only want this to run once on mount, not when searchParams/setSearchParams change
+  // We only want this to run once on mount to read and clear the URL parameter
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

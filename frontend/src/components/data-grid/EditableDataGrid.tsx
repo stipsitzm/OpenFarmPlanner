@@ -132,7 +132,10 @@ export function EditableDataGrid<T extends EditableRow>({
       }));
       setInitialRowAdded(true);
     }
-  }, [initialRow, initialRowAdded, loading, createNewRow, columns]);
+  // Only run when initialRow, initialRowAdded, or loading changes
+  // createNewRow and columns are stable function/array references from props
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialRow, initialRowAdded, loading]);
 
   /**
    * Handle adding a new row to the grid
