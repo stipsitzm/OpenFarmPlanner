@@ -106,22 +106,6 @@ export function CultureDetail({
                   {selectedCulture.name}
                   {selectedCulture.variety && ` (${selectedCulture.variety})`}
                 </Typography>
-                <Chip
-                  label={
-                    selectedCulture.perennial === true
-                      ? t('perennial')
-                      : selectedCulture.perennial === false
-                      ? t('annual')
-                      : t('unknown')
-                  }
-                  color={
-                    selectedCulture.perennial === true
-                      ? 'success'
-                      : selectedCulture.perennial === false
-                      ? 'primary'
-                      : 'default'
-                  }
-                />
               </Box>
             </Box>
 
