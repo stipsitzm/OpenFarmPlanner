@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { GridColDef } from '@mui/x-data-grid';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
@@ -23,8 +24,10 @@ interface PlantingPlanRow extends PlantingPlan, EditableRow {
 
 function PlantingPlans(): React.ReactElement {
   const { t } = useTranslation(['plantingPlans', 'common']);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
+  const [initialCultureId, setInitialCultureId] = useState<number | null>(null);
 
   /**
    * Fetch cultures and beds for dropdowns
@@ -38,11 +41,24 @@ function PlantingPlans(): React.ReactElement {
         ]);
         setCultures(culturesResponse.data.results);
         setBeds(bedsResponse.data.results);
+        
+        // Check for cultureId parameter in URL
+        const cultureIdParam = searchParams.get('cultureId');
+        if (cultureIdParam) {
+          const cultureId = parseInt(cultureIdParam, 10);
+          if (!isNaN(cultureId)) {
+            setInitialCultureId(cultureId);
+          }
+          // Remove the parameter from URL after reading it
+          searchParams.delete('cultureId');
+          setSearchParams(searchParams, { replace: true });
+        }
       } catch (err) {
         console.error('Error fetching cultures and beds:', err);
       }
     };
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   /**
@@ -166,6 +182,7 @@ function PlantingPlans(): React.ReactElement {
           notes: '',
           isNew: true,
         })}
+        initialRow={initialCultureId ? { culture: initialCultureId } : undefined}
         mapToRow={(plan) => ({
           ...plan,
           id: plan.id!,

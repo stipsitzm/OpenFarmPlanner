@@ -101,6 +101,7 @@
     "addNew": "Neue Kultur hinzufügen",
     "edit": "Bearbeiten",
     "delete": "Löschen",
-    "deleteConfirm": "Möchten Sie diese Kultur wirklich löschen?"
+    "deleteConfirm": "Möchten Sie diese Kultur wirklich löschen?",
+    "createPlantingPlan": "Anbauplan erstellen"
   }
 }

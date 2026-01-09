@@ -66,6 +66,8 @@ export interface EditableDataGridProps<T extends EditableRow> {
   addButtonLabel: string;
   /** Whether to show delete action column (default: true) */
   showDeleteAction?: boolean;
+  /** Optional initial row to add on mount (e.g., pre-filled from another page) */
+  initialRow?: Partial<T>;
 }
 
 /**
@@ -84,11 +86,13 @@ export function EditableDataGrid<T extends EditableRow>({
   deleteConfirmMessage,
   addButtonLabel,
   showDeleteAction = true,
+  initialRow,
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [initialRowAdded, setInitialRowAdded] = useState<boolean>(false);
 
   /**
    * Fetch data from API and populate grid
@@ -113,6 +117,21 @@ export function EditableDataGrid<T extends EditableRow>({
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  /**
+   * Add initial row if provided and not already added
+   */
+  useEffect(() => {
+    if (initialRow && !initialRowAdded && rows.length >= 0 && !loading) {
+      const newRow = { ...createNewRow(), ...initialRow };
+      setRows((oldRows) => [newRow, ...oldRows]);
+      setRowModesModel((oldModel) => ({
+        ...oldModel,
+        [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus: columns[0]?.field },
+      }));
+      setInitialRowAdded(true);
+    }
+  }, [initialRow, initialRowAdded, rows.length, loading, createNewRow, columns]);
 
   /**
    * Handle adding a new row to the grid
