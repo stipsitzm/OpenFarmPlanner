@@ -1,7 +1,7 @@
 {
   "title": "Anbauflächen",
-  "addField": "+ Schlag",
-  "addBed": "+ Beet",
+  "addField": "Schlag",
+  "addBed": "Beet",
   "createPlantingPlan": "Anbauplan erstellen",
   "columns": {
     "name": "Name",
