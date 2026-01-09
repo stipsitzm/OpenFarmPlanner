@@ -28,24 +28,42 @@ function PlantingPlans(): React.ReactElement {
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [initialCultureId, setInitialCultureId] = useState<number | null>(null);
+  const [initialBedId, setInitialBedId] = useState<number | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
 
   /**
-   * Check for cultureId parameter in URL and set it as initial culture
+   * Check for cultureId or bedId parameter in URL and set as initial values
    */
   useEffect(() => {
     if (!urlParamProcessedRef.current) {
+      const newParams = new URLSearchParams(searchParams);
+      let hasChanges = false;
+
       const cultureIdParam = searchParams.get('cultureId');
       if (cultureIdParam) {
         const cultureId = parseInt(cultureIdParam, 10);
         if (!isNaN(cultureId)) {
           setInitialCultureId(cultureId);
-          // Remove the parameter from URL after reading it
-          const newParams = new URLSearchParams(searchParams);
           newParams.delete('cultureId');
-          setSearchParams(newParams, { replace: true });
+          hasChanges = true;
         }
       }
+
+      const bedIdParam = searchParams.get('bedId');
+      if (bedIdParam) {
+        const bedId = parseInt(bedIdParam, 10);
+        if (!isNaN(bedId)) {
+          setInitialBedId(bedId);
+          newParams.delete('bedId');
+          hasChanges = true;
+        }
+      }
+
+      // Remove parameters from URL after reading them
+      if (hasChanges) {
+        setSearchParams(newParams, { replace: true });
+      }
+
       urlParamProcessedRef.current = true;
     }
   }, [searchParams, setSearchParams]);
@@ -190,7 +208,14 @@ function PlantingPlans(): React.ReactElement {
           notes: '',
           isNew: true,
         })}
-        initialRow={initialCultureId ? { culture: initialCultureId } : undefined}
+        initialRow={
+          initialCultureId || initialBedId
+            ? {
+                ...(initialCultureId ? { culture: initialCultureId } : {}),
+                ...(initialBedId ? { bed: initialBedId } : {}),
+              }
+            : undefined
+        }
         mapToRow={(plan) => ({
           ...plan,
           id: plan.id!,

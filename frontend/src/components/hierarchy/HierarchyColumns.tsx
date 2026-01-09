@@ -55,6 +55,7 @@ export function createHierarchyColumns(
   onDeleteBed: (bedId: number) => void,
   onAddField: (locationId?: number) => void,
   onDeleteField: (fieldId: number) => void,
+  onCreatePlantingPlan: (bedId: number) => void,
   t: TFunction
 ): GridColDef<HierarchyRow>[] {
   return [
@@ -91,6 +92,20 @@ export function createHierarchyColumns(
         if (row.type === 'bed') {
           return [
             <button
+              key="create-plan"
+              onClick={() => onCreatePlantingPlan(row.bedId!)}
+              style={{
+                color: '#1976d2',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '6px 8px',
+                fontSize: '0.8125rem',
+              }}
+            >
+              {t('hierarchy:createPlantingPlan')}
+            </button>,
+            <button
               key="delete"
               onClick={() => onDeleteBed(row.bedId!)}
               style={{
@@ -100,6 +115,7 @@ export function createHierarchyColumns(
                 cursor: 'pointer',
                 padding: '6px 8px',
                 fontSize: '0.8125rem',
+                marginLeft: '8px',
               }}
             >
               {t('common:actions.delete')}
