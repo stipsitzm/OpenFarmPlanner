@@ -269,7 +269,7 @@ export function CultureForm({
             onBlur={() => handleBlur('germination_rate')}
             error={Boolean(errors.germination_rate)}
             helperText={errors.germination_rate}
-            inputProps={{ min: 0, max: 100, step: 0.01 }}
+            slotProps={{ input: { min: 0, max: 100, step: 0.01 } }}
           />
         </Box>
 
@@ -283,7 +283,7 @@ export function CultureForm({
           onBlur={() => handleBlur('safety_margin')}
           error={Boolean(errors.safety_margin)}
           helperText={errors.safety_margin}
-          inputProps={{ min: 0, max: 100, step: 0.01 }}
+          slotProps={{ input: { min: 0, max: 100, step: 0.01 } }}
         />
 
         {/* Timing */}
@@ -301,7 +301,7 @@ export function CultureForm({
             onBlur={() => handleBlur('growth_duration_days')}
             error={Boolean(errors.growth_duration_days)}
             helperText={errors.growth_duration_days}
-            inputProps={{ min: 0, step: 1 }}
+            slotProps={{ input: { min: 0, step: 1 } }}
           />
 
           <TextField
@@ -315,7 +315,7 @@ export function CultureForm({
             onBlur={() => handleBlur('harvest_duration_days')}
             error={Boolean(errors.harvest_duration_days)}
             helperText={errors.harvest_duration_days}
-            inputProps={{ min: 0, step: 1 }}
+            slotProps={{ input: { min: 0, step: 1 } }}
           />
 
           <TextField
@@ -328,7 +328,7 @@ export function CultureForm({
             onBlur={() => handleBlur('propagation_duration_days')}
             error={Boolean(errors.propagation_duration_days)}
             helperText={errors.propagation_duration_days}
-            inputProps={{ min: 0, step: 1 }}
+            slotProps={{ input: { min: 0, step: 1 } }}
           />
         </Box>
 
@@ -359,7 +359,7 @@ export function CultureForm({
             onBlur={() => handleBlur('expected_yield')}
             error={Boolean(errors.expected_yield)}
             helperText={errors.expected_yield}
-            inputProps={{ min: 0, step: 0.01 }}
+            slotProps={{ input: { min: 0, step: 0.01 } }}
           />
         </Box>
 
@@ -387,7 +387,7 @@ export function CultureForm({
             onBlur={() => handleBlur('distance_within_row_cm')}
             error={Boolean(errors.distance_within_row_cm)}
             helperText={errors.distance_within_row_cm}
-            inputProps={{ min: 0, step: 0.01 }}
+            slotProps={{ input: { min: 0, step: 0.01 } }}
           />
 
           <TextField
@@ -400,7 +400,7 @@ export function CultureForm({
             onBlur={() => handleBlur('row_spacing_cm')}
             error={Boolean(errors.row_spacing_cm)}
             helperText={errors.row_spacing_cm}
-            inputProps={{ min: 0, step: 0.01 }}
+            slotProps={{ input: { min: 0, step: 0.01 } }}
           />
 
           <TextField
@@ -413,7 +413,7 @@ export function CultureForm({
             onBlur={() => handleBlur('sowing_depth_cm')}
             error={Boolean(errors.sowing_depth_cm)}
             helperText={errors.sowing_depth_cm}
-            inputProps={{ min: 0, step: 0.01 }}
+            slotProps={{ input: { min: 0, step: 0.01 } }}
           />
         </Box>
 
@@ -429,7 +429,7 @@ export function CultureForm({
           onBlur={() => handleBlur('display_color')}
           error={Boolean(errors.display_color)}
           helperText={errors.display_color || t('form.displayColorHelp')}
-          inputProps={{ style: { height: '50px' } }}
+          slotProps={{ input: { style: { height: '50px' } } }}
         />
 
         {/* Notes */}
