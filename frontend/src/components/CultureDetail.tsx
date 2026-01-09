@@ -35,12 +35,33 @@ interface CultureDetailProps {
 
 /**
  * Formats a number with fallback for null/undefined values
+ * Handles floating point precision issues by rounding to 2 decimal places
  */
 function formatNumber(value: number | null | undefined, t: (key: string) => string): string {
   if (value === null || value === undefined) {
     return t('cultures:noData');
   }
-  return value.toString();
+  
+  // Round to 2 decimal places to avoid floating point precision issues
+  const rounded = Math.round(value * 100) / 100;
+  
+  // If the result is a whole number, return as integer
+  if (rounded === Math.floor(rounded)) {
+    return rounded.toString();
+  }
+  
+  return rounded.toString();
+}
+
+/**
+ * Formats a distance value (rounds to whole numbers since no one measures more precisely than 1cm)
+ */
+function formatDistance(value: number | null | undefined, t: (key: string) => string): string {
+  if (value === null || value === undefined) {
+    return t('cultures:noData');
+  }
+  
+  return Math.round(value).toString();
 }
 
 
@@ -102,10 +123,27 @@ export function CultureDetail({
             {/* Header with crop name and badge */}
             <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                <Typography variant="h4" component="h2">
-                  {selectedCulture.name}
-                  {selectedCulture.variety && ` (${selectedCulture.variety})`}
-                </Typography>
+                <Box>
+                  <Typography variant="h4" component="h2">
+                    {selectedCulture.name}
+                  </Typography>
+                  {selectedCulture.variety && (
+                    <Typography variant="body2" color="text.secondary">
+                      {selectedCulture.variety}
+                    </Typography>
+                  )}
+                </Box>
+                {selectedCulture.display_color && (
+                  <Box
+                    sx={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '8px',
+                      backgroundColor: selectedCulture.display_color,
+                      border: '1px solid #ccc',
+                    }}
+                  />
+                )}
               </Box>
             </Box>
 
@@ -216,7 +254,7 @@ export function CultureDetail({
                       Abstand in der Reihe
                     </Typography>
                     <Typography variant="body1">
-                      {formatNumber(selectedCulture.distance_within_row_cm, t)} cm
+                      {formatDistance(selectedCulture.distance_within_row_cm, t)} cm
                     </Typography>
                   </Box>
                 )}
@@ -226,7 +264,7 @@ export function CultureDetail({
                       Reihenabstand
                     </Typography>
                     <Typography variant="body1">
-                      {formatNumber(selectedCulture.row_spacing_cm, t)} cm
+                      {formatDistance(selectedCulture.row_spacing_cm, t)} cm
                     </Typography>
                   </Box>
                 )}
@@ -236,8 +274,31 @@ export function CultureDetail({
                       Saattiefe
                     </Typography>
                     <Typography variant="body1">
-                      {formatNumber(selectedCulture.sowing_depth_cm, t)} cm
+                      {formatDistance(selectedCulture.sowing_depth_cm, t)} cm
                     </Typography>
+                  </Box>
+                )}
+                {selectedCulture.safety_margin && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Sicherheitsmarge
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatNumber(selectedCulture.safety_margin, t)}%
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.allow_deviation_delivery_weeks && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Abweichung Lieferwochen
+                    </Typography>
+                    <Chip
+                      label="Ja"
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                    />
                   </Box>
                 )}
                 <Box>
@@ -261,6 +322,16 @@ export function CultureDetail({
                 {t('sections.additionalInfo')}
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {selectedCulture.notes && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Notizen
+                    </Typography>
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                      {selectedCulture.notes}
+                    </Typography>
+                  </Box>
+                )}
                 {selectedCulture.en_wikipedia_url && (
                   <Button
                     variant="outlined"
