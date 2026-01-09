@@ -122,16 +122,17 @@ export function EditableDataGrid<T extends EditableRow>({
    * Add initial row if provided and not already added
    */
   useEffect(() => {
-    if (initialRow && !initialRowAdded && rows.length >= 0 && !loading) {
+    if (initialRow && !initialRowAdded && !loading) {
       const newRow = { ...createNewRow(), ...initialRow };
+      const firstEditableField = columns.find(col => col.editable)?.field || columns[0]?.field;
       setRows((oldRows) => [newRow, ...oldRows]);
       setRowModesModel((oldModel) => ({
         ...oldModel,
-        [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus: columns[0]?.field },
+        [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus: firstEditableField },
       }));
       setInitialRowAdded(true);
     }
-  }, [initialRow, initialRowAdded, rows.length, loading, createNewRow, columns]);
+  }, [initialRow, initialRowAdded, loading, createNewRow, columns]);
 
   /**
    * Handle adding a new row to the grid

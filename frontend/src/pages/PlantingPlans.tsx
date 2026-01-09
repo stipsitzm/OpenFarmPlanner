@@ -30,6 +30,24 @@ function PlantingPlans(): React.ReactElement {
   const [initialCultureId, setInitialCultureId] = useState<number | null>(null);
 
   /**
+   * Check for cultureId parameter in URL and set it as initial culture
+   */
+  useEffect(() => {
+    const cultureIdParam = searchParams.get('cultureId');
+    if (cultureIdParam) {
+      const cultureId = parseInt(cultureIdParam, 10);
+      if (!isNaN(cultureId)) {
+        setInitialCultureId(cultureId);
+      }
+      // Remove the parameter from URL after reading it
+      searchParams.delete('cultureId');
+      setSearchParams(searchParams, { replace: true });
+    }
+  // We only want this to run once on mount, not when searchParams/setSearchParams change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
    * Fetch cultures and beds for dropdowns
    */
   useEffect(() => {
@@ -41,24 +59,11 @@ function PlantingPlans(): React.ReactElement {
         ]);
         setCultures(culturesResponse.data.results);
         setBeds(bedsResponse.data.results);
-        
-        // Check for cultureId parameter in URL
-        const cultureIdParam = searchParams.get('cultureId');
-        if (cultureIdParam) {
-          const cultureId = parseInt(cultureIdParam, 10);
-          if (!isNaN(cultureId)) {
-            setInitialCultureId(cultureId);
-          }
-          // Remove the parameter from URL after reading it
-          searchParams.delete('cultureId');
-          setSearchParams(searchParams, { replace: true });
-        }
       } catch (err) {
         console.error('Error fetching cultures and beds:', err);
       }
     };
     fetchData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   /**
