@@ -134,13 +134,14 @@ export function EditableDataGrid<T extends EditableRow>({
     if (initialRow && !initialRowProcessedRef.current && dataFetched && !loading) {
       initialRowProcessedRef.current = true;
       const newRow = { ...createNewRow(), ...initialRow };
-      // Find first editable field for focus, or undefined if none found
-      const firstEditableField = columns.find(col => col.editable)?.field;
       setRows((oldRows) => [newRow, ...oldRows]);
-      setRowModesModel((oldModel) => ({
-        ...oldModel,
-        [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus: firstEditableField },
-      }));
+      // Set row to edit mode after a small delay to ensure row is added first
+      setTimeout(() => {
+        setRowModesModel((oldModel) => ({
+          ...oldModel,
+          [newRow.id]: { mode: GridRowModes.Edit },
+        }));
+      }, 0);
     }
   }, [initialRow, dataFetched, loading, createNewRow, columns]);
 
