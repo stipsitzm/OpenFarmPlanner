@@ -130,6 +130,11 @@ function GanttChartPage(): React.ReactElement {
    * Filter by display year and organize by location -> field -> bed
    */
   const taskGroups = useMemo<TaskGroup[]>(() => {
+    // Guard against empty or undefined data
+    if (!locations.length || !fields.length || !beds.length || !plantingPlans.length) {
+      return [];
+    }
+    
     const groups: TaskGroup[] = [];
     
     // Define visible year interval
