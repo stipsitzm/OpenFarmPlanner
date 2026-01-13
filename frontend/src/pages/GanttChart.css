@@ -1,201 +1,12 @@
 /**
- * Styles for the Gantt Chart component
+ * Styles for the Gantt Chart component using React-Modern-Gantt
  */
 
-.gantt-container {
-  overflow-x: auto;
+.gantt-container-wrapper {
+  overflow: auto;
   width: 100%;
   margin-top: 1rem;
-}
-
-.gantt-grid {
-  display: flex;
-  flex-direction: column;
-  min-width: fit-content;
-}
-
-.gantt-header {
-  display: flex;
-  background-color: #2e7d32;
-  color: white;
-  font-weight: bold;
-  border-bottom: 2px solid #1b5e20;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.gantt-sidebar-header {
-  box-sizing: border-box;
-  width: var(--gantt-sidebar-width, 300px);
-  min-width: var(--gantt-sidebar-width, 300px);
-  flex: 0 0 var(--gantt-sidebar-width, 300px);
-  padding: 0.75rem 1rem;
-  border-right: 1px solid #1b5e20;
-  background-color: #2e7d32;
-  position: sticky;
-  left: 0;
-  z-index: 11;
-}
-
-.gantt-sidebar-header-text {
-  white-space: nowrap;
-}
-
-.gantt-timeline-header {
-  display: grid;
-  grid-auto-flow: column;
-  flex: 1;
-  background-color: #2e7d32;
-}
-
-.gantt-timeline-column-header {
-  padding: 0.75rem 0.5rem;
-  text-align: center;
-  border-right: 1px solid #4caf50;
-  min-width: 80px;
-  white-space: nowrap;
-  font-size: 0.875rem;
-}
-
-.gantt-row {
-  display: flex;
-  border-bottom: 1px solid #e0e0e0;
-  min-height: 40px;
-}
-
-.gantt-row-location {
-  background-color: #f5f5f5;
-  font-weight: bold;
-}
-
-.gantt-row-field {
-  background-color: #fafafa;
-  font-weight: 600;
-}
-
-.gantt-row-bed {
-  background-color: #ffffff;
-}
-
-.gantt-row:hover {
-  background-color: #e3f2fd;
-}
-
-.gantt-sidebar {
-  box-sizing: border-box;
-  width: var(--gantt-sidebar-width, 300px);
-  min-width: var(--gantt-sidebar-width, 300px);
-  flex: 0 0 var(--gantt-sidebar-width, 300px);
-  padding: 0.5rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-right: 1px solid #e0e0e0;
-  background-color: inherit;
-  position: sticky;
-  left: 0;
-  z-index: 2;
-}
-
-.gantt-sidebar-level-0 {
-  padding-left: 1rem;
-}
-
-.gantt-sidebar-level-1 {
-  padding-left: 2rem;
-}
-
-.gantt-sidebar-level-2 {
-  padding-left: 3rem;
-}
-
-.gantt-expand-icon {
-  /* Fixed width to prevent sidebar width changes on expand/collapse */
-  width: 28px;
-  min-width: 28px;
-  flex: 0 0 28px;
-}
-
-.gantt-row-name {
-  /* Let the text have intrinsic width so measurement is accurate */
-  flex: 0 1 auto;
-  white-space: nowrap;
-}
-
-.gantt-row-area {
-  color: #666;
-  font-size: 0.875rem;
-  white-space: nowrap;
-}
-
-.gantt-timeline {
-  display: grid;
-  grid-auto-flow: column;
-  flex: 1;
-  position: relative;
-  min-height: 40px;
-}
-
-.gantt-timeline-cell {
-  border-right: 1px solid #f0f0f0;
-  min-width: 80px;
-}
-
-.gantt-bars-container {
-  display: grid;
-  grid-auto-flow: column;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 4px 0;
-}
-
-.gantt-bar {
-  background: linear-gradient(135deg, #64b5f6 0%, #42a5f5 100%);
-  border-radius: 4px;
-  padding: 4px 8px;
-  margin: 4px 2px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible; /* Changed from hidden to allow overlay to be visible */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-  min-height: 28px;
-  position: relative;
-  z-index: 1;
-}
-
-.gantt-bar:hover {
-  background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  transform: translateY(-1px);
-  z-index: 5;
-}
-
-.gantt-bar-label {
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
-  position: relative;
-  z-index: 3; /* Ensure label is above harvest overlay */
-}
-
-.gantt-bar-harvest {
-  position: absolute;
-  background: rgba(0, 0, 0, 0.25); /* Darker overlay for better visibility */
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 2; /* Above bar background, below label */
-  min-width: 2px; /* Minimum visible width for single-day harvests */
+  min-height: 400px;
 }
 
 .gantt-no-data {
@@ -204,20 +15,10 @@
   color: #999;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .gantt-sidebar,
-  .gantt-sidebar-header {
-    width: var(--gantt-sidebar-width, 200px);
-    min-width: var(--gantt-sidebar-width, 200px);
-  }
-  
-  .gantt-timeline-column-header,
-  .gantt-timeline-cell {
-    min-width: 60px;
-  }
-  
-  .gantt-bar-label {
-    font-size: 0.7rem;
-  }
+/* Override React-Modern-Gantt default styles if needed */
+/* Keep the green theme consistent with the app */
+:root {
+  --rmg-primary-color: #2e7d32;
+  --rmg-task-color: #3b82f6;
+  --rmg-hover-color: #e3f2fd;
 }
