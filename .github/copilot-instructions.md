@@ -9,8 +9,8 @@ All comments, docstrings, logs, and output messages must be written in English.
 
 For specific coding rules, see:
 
-- `./instructions/python-backend.md`
-- `./instructions/react-frontend.md`
+- `./instructions/python-backend.instructions.md`
+- `./instructions/react-frontend.instructions.md`
 
 ## Commit Messages (Conventional Commits)
 

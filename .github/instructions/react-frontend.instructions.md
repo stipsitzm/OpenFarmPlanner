@@ -1,3 +1,7 @@
+---
+applyTo: "frontend/**/*.ts,frontend/**/*.tsx"
+---
+
 # React Frontend Instructions
 
 Language: TypeScript. Do not introduce plain JavaScript where TypeScript is possible.
