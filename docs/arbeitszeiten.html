@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenFarmPlanner - Work Hours</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            color: #667eea;
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95em;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+            cursor: pointer;
+        }
+
+        tbody tr.manually-edited {
+            background: #fff3cd;
+        }
+
+        tbody tr.manually-edited:hover {
+            background: #ffe8a1;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            background: #667eea;
+            color: white;
+        }
+
+        .badge.edited {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .monthly-summary {
+            margin-top: 30px;
+        }
+
+        .monthly-summary h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .month-card {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .month-card:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .month-card .month-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .month-card .month-hours {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9em;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .day-group {
+            margin-bottom: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+            background: white;
+        }
+
+        .day-header {
+            background: linear-gradient(135deg, #f5f5f5 0%, #fafafa 100%);
+            color: #333;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: grid;
+            grid-template-columns: auto 1fr auto 80px 200px 1fr auto;
+            gap: 15px;
+            align-items: center;
+            user-select: none;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .day-header:hover {
+            background: linear-gradient(135deg, #efefef 0%, #f5f5f5 100%);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .day-header.expanded {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom: none;
+        }
+
+        .day-header.expanded:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #663a91 100%);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .day-info {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            flex: 1;
+        }
+
+        .day-date {
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .day-stats {
+            display: grid;
+            grid-template-columns: 80px 200px 1fr;
+            gap: 0;
+            font-size: 0.95em;
+        }
+
+        .day-stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .day-stat-label {
+            font-size: 0.8em;
+            opacity: 0.8;
+            text-transform: uppercase;
+        }
+
+        .day-stat-value {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .expand-icon {
+            font-size: 1.5em;
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+            color: #667eea;
+        }
+
+        .day-header.expanded .expand-icon {
+            transform: rotate(180deg);
+            color: white;
+        }
+
+        .day-details {
+            display: none;
+            padding: 0;
+            border-top: 1px solid #e0e0e0;
+            background: white;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .day-details.expanded {
+            display: block;
+            max-height: 500px;
+        }
+
+        .day-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        .day-table thead {
+            background: #f0f0f0;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .day-table th {
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .day-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .day-table tbody tr:hover {
+            background: #fafafa;
+        }
+
+        .day-table tbody tr.edited {
+            background: #fffbf0;
+        }
+
+        .day-table tbody tr.edited:hover {
+            background: #fff9e6;
+        }
+
+        .session-time {
+            font-weight: 600;
+            color: #667eea;
+            white-space: nowrap;
+        }
+
+        .session-duration {
+            font-weight: bold;
+            color: #764ba2;
+            text-align: center;
+            width: 60px;
+        }
+
+        .session-activity {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .session-notes {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .day-header {
+                flex-wrap: wrap;
+            }
+
+            .day-info {
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+
+            .day-stats {
+                gap: 15px;
+                width: 100%;
+            }
+
+            .day-table th,
+            .day-table td {
+                padding: 10px;
+                font-size: 0.9em;
+            }
+
+            .day-table th {
+                font-size: 0.75em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌱 OpenFarmPlanner</h1>
+            <p>Work Hours Overview</p>
+        </header>
+
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <h3>Total</h3>
+                <div class="value" id="totalHours">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Work Days</h3>
+                <div class="value" id="totalDays">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Average/Day</h3>
+                <div class="value" id="avgHours">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Current Month</h3>
+                <div class="value" id="currentMonth">-</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="loading" class="loading">Loading data...</div>
+            <div id="error" class="error" style="display: none;"></div>
+            
+            <div id="tableContainer" style="display: none;">
+                <h2 style="margin-bottom: 20px; color: #333;">Detailed Time Tracking (Click to expand)</h2>
+                <div id="dayGroups"></div>
+
+                <div class="monthly-summary">
+                    <h2>Monthly Summary</h2>
+                    <div id="monthlySummary"></div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Automatically generated from arbeitszeiten_editable.csv</p>
+            <p>Last Update: <span id="lastUpdate">-</span></p>
+        </footer>
+    </div>
+
+    <script>
+        async function loadCSV() {
+            try {
+                // Add timestamp to bust cache
+                const timestamp = new Date().getTime();
+                let response = await fetch(`arbeitszeiten_editable.csv?t=${timestamp}`);
+                
+                // If fetch fails (CORS issue when opening file:// directly), 
+                // try using file input as fallback
+                if (!response.ok) {
+                    throw new Error('CSV file could not be loaded via fetch. Trying alternative...');
+                }
+                
+                const csvText = await response.text();
+                return parseCSV(csvText);
+            } catch (error) {
+                console.error('Error loading:', error);
+                
+                // Show file input alternative for local file:// protocol
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').innerHTML = 
+                    '<strong>Note:</strong> When opening the HTML file directly, browsers cannot automatically load the CSV (CORS security).<br><br>' +
+                    '<strong>Solution 1:</strong> Start a local web server:<br>' +
+                    '<code style="background: #f0f0f0; padding: 5px; display: block; margin: 10px 0;">python3 -m http.server 8000</code>' +
+                    'Then open: <a href="http://localhost:8000/arbeitszeiten.html">http://localhost:8000/arbeitszeiten.html</a><br><br>' +
+                    '<strong>Solution 2:</strong> Open arbeitszeiten_editable.csv directly in a spreadsheet program (Excel, LibreOffice).';
+                return [];
+            }
+        }
+
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            const headers = lines[0].split(',');
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header.trim()] = values[index]?.trim() || '';
+                });
+                data.push(row);
+            }
+
+            return data;
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current);
+            return result;
+        }
+
+        function isManuallyEdited(value) {
+            const v = value?.toLowerCase();
+            return v === 'yes' || v === 'true' || v === '1' || v === 'x';
+        }
+
+        function displayData(data) {
+            const dayGroupsContainer = document.getElementById('dayGroups');
+            dayGroupsContainer.innerHTML = '';
+
+            let totalHours = 0;
+            const monthlyTotals = {};
+            const dayGroups = {};
+
+            // Group data by date
+            data.forEach(row => {
+                if (!dayGroups[row.Date]) {
+                    dayGroups[row.Date] = [];
+                }
+                dayGroups[row.Date].push(row);
+            });
+
+            // Sort dates (newest first)
+            const sortedDates = Object.keys(dayGroups).sort((a, b) => 
+                new Date(b) - new Date(a)
+            );
+
+            sortedDates.forEach(date => {
+                const sessions = dayGroups[date];
+                let dayHours = 0;
+                const dayDate = new Date(date);
+                const dayName = dayDate.toLocaleDateString('en-US', { 
+                    weekday: 'short'
+                });
+
+                // Calculate day total and monthly totals
+                sessions.forEach(session => {
+                    const duration = parseFloat(session['Duration (h)']) || 0;
+                    dayHours += duration;
+                    totalHours += duration;
+                    
+                    const monthKey = date.substring(0, 7); // YYYY-MM
+                    monthlyTotals[monthKey] = (monthlyTotals[monthKey] || 0) + duration;
+                });
+
+                // Create day group
+                const dayGroup = document.createElement('div');
+                dayGroup.className = 'day-group';
+
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'day-header';
+                dayHeader.innerHTML = `
+                    <div style="font-weight: 600; min-width: 35px;">${dayName}</div>
+                    <div>${date}</div>
+                    <div></div>
+                    <div style="font-weight: bold; color: #764ba2; text-align: center;">${dayHours.toFixed(1)}h</div>
+                    <div></div>
+                    <div></div>
+                    <div class="expand-icon">▼</div>
+                `;
+
+                const dayDetails = document.createElement('div');
+                dayDetails.className = 'day-details';
+
+                // Create table for sessions
+                const table = document.createElement('table');
+                table.className = 'day-table';
+                
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+                    <tr>
+                        <th style="width: 120px;">Time</th>
+                        <th style="width: 80px;">Duration</th>
+                        <th style="width: 200px;">Activity</th>
+                        <th style="flex: 1;">Notes</th>
+                    </tr>
+                `;
+                table.appendChild(thead);
+
+                const tbody = document.createElement('tbody');
+                sessions.forEach(session => {
+                    const tr = document.createElement('tr');
+                    const edited = isManuallyEdited(session['Manually Edited?']);
+                    if (edited) {
+                        tr.classList.add('edited');
+                    }
+
+                    const notesDisplay = session.Notes 
+                        ? `${session.Notes}${edited ? ' <span class="badge edited">Manually Edited</span>' : ''}`
+                        : edited 
+                        ? '<span class="badge edited">Manually Edited</span>'
+                        : '-';
+
+                    tr.innerHTML = `
+                        <td class="session-time">${session.Start} - ${session.End}</td>
+                        <td class="session-duration">${session['Duration (h)']}h</td>
+                        <td class="session-activity">${session.Activity}</td>
+                        <td class="session-notes">${notesDisplay}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                table.appendChild(tbody);
+                dayDetails.appendChild(table);
+
+                // Toggle expand/collapse
+                dayHeader.addEventListener('click', () => {
+                    dayHeader.classList.toggle('expanded');
+                    dayDetails.classList.toggle('expanded');
+                });
+
+                dayGroup.appendChild(dayHeader);
+                dayGroup.appendChild(dayDetails);
+                dayGroupsContainer.appendChild(dayGroup);
+            });
+
+            // Update stats
+            document.getElementById('totalHours').textContent = `${totalHours.toFixed(1)}h`;
+            document.getElementById('totalDays').textContent = sortedDates.length;
+            document.getElementById('avgHours').textContent = 
+                `${(totalHours / sortedDates.length).toFixed(1)}h`;
+
+            // Current month
+            const currentMonthKey = new Date().toISOString().substring(0, 7);
+            const currentMonthHours = monthlyTotals[currentMonthKey] || 0;
+            document.getElementById('currentMonth').textContent = `${currentMonthHours.toFixed(1)}h`;
+
+            // Monthly summary
+            const monthlySummary = document.getElementById('monthlySummary');
+            monthlySummary.innerHTML = '';
+
+            Object.entries(monthlyTotals)
+                .sort((a, b) => b[0].localeCompare(a[0]))
+                .forEach(([month, hours]) => {
+                    const monthCard = document.createElement('div');
+                    monthCard.className = 'month-card';
+                    
+                    const date = new Date(month + '-01');
+                    const monthName = date.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long' 
+                    });
+                    
+                    monthCard.innerHTML = `
+                        <span class="month-name">${monthName}</span>
+                        <span class="month-hours">${hours.toFixed(1)}h</span>
+                    `;
+                    monthlySummary.appendChild(monthCard);
+                });
+
+            // Show container
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'block';
+
+            // Update timestamp
+            document.getElementById('lastUpdate').textContent = 
+                new Date().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+        }
+
+        // Load data on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            const data = await loadCSV();
+            if (data.length > 0) {
+                displayData(data);
+            }
+        });
+    </script>
+</body>
+</html>

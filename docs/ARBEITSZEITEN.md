@@ -1,51 +1,82 @@
-# Arbeitszeiten OpenFarmPlanner
+# Work Hours OpenFarmPlanner
 
-Übersicht der geleisteten Arbeitsstunden am Projekt OpenFarmPlanner basierend auf Git-Commits und Copilot-Interaktionen. 
+Overview of work hours on the OpenFarmPlanner project based on Git commits and GitHub interactions.
 
-## Detaillierte Zeiterfassung
+**Note:** This tracking system uses activity bridging with a 1-hour gap threshold. All GitHub activities (commits, PR comments, issue comments, reviews) within 1 hour are considered part of the same work session. Sessions starting with commits begin 60 minutes earlier to account for pre-commit work.
 
-| Datum | Start | Ende | Dauer (h) | Aktivität |
-|-------|-------|------|-----------|-----------|
-| **2025-12-02** | 15:57 | 16:16 | ~0,5 | Initial Setup: Django Backend + React Frontend erstellt |
-| **2025-12-03** | 07:38 | 11:01 | ~3,5 | Frontend Refactoring: Styles zentralisiert, PDM Migration |
-| **2025-12-03** | 11:13 | 16:42 | ~5,5 | MUI Data Grid für alle Seiten, Hierarchische Views, Copilot Instructions |
-| **2025-12-05** | 08:02 | 11:41 | ~3,5 | Projekt-Umbenennung + Growstuff API Integration mit Rate Limiting und Tests |
-| **2025-12-06** | 09:03 | 11:26 | ~2,5 | Crop Detail View mit Dropdown und Growstuff-Daten |
-| **2025-12-08** | 08:54 | 16:43 | ~8,0 | i18n Implementation + Bed Model Refactoring (area_sqm) + Planting Plan Editor |
-| **2025-12-10** | 18:41 | 18:41 | ~0,5 | Fix: Bed area in dropdown anzeigen |
-| **2025-12-13** | 12:46 | 14:55 | ~2,0 | Area-only Model + Field/Bed Validierung |
-| **2025-12-16** | 07:19 | 16:04 | ~9,0 | Gantt Chart Implementation + Keyboard Navigation + Shortcuts |
-| **2025-12-17** | 07:16 | 14:19 | ~7,0 | Gantt Chart Fixes + PostgreSQL Migration + Error Handling |
-| **2025-12-19** | 15:55 | 15:55 | ~0,5 | Arbeitszeiten-Tracking erstellt |
+## Detailed Time Tracking
 
-## Zusammenfassung nach Tagen
+| Date | Start | End | Duration (h) | Activity | Notes |
+|------|-------|-----|--------------|----------|-------|
+| **2025-12-02** | 14:57 | 16:16 | ~1.3 | Feature Development |  |
+| **2025-12-03** | 07:28 | 07:47 | ~0.5 | UI/UX Design |  |
+| **2025-12-03** | 09:14 | 12:24 | ~3.2 | Feature Development |  |
+| **2025-12-03** | 14:59 | 16:42 | ~1.7 | Feature Development |  |
+| **2025-12-04** | 06:17 | 07:53 | ~1.6 | Feature Development |  |
+| **2025-12-04** | 14:11 | 15:11 | ~1.0 | Development & Fixes |  |
+| **2025-12-05** | 07:02 | 08:02 | ~1.0 | Development & Fixes |  |
+| **2025-12-05** | 09:22 | 11:41 | ~2.3 | Feature Development |  |
+| **2025-12-06** | 08:08 | 11:26 | ~3.3 | Feature Development |  |
+| **2025-12-08** | 07:54 | 10:12 | ~2.3 | Feature Development |  |
+| **2025-12-08** | 10:22 | 11:46 | ~1.4 | Feature Development |  |
+| **2025-12-08** | 14:46 | 17:15 | ~2.5 | Feature Development |  |
+| **2025-12-10** | 18:35 | 18:46 | ~0.5 | Feature Development |  |
+| **2025-12-13** | 12:35 | 13:18 | ~0.7 | Feature Development |  |
+| **2025-12-13** | 13:43 | 14:55 | ~1.2 | Feature Development |  |
+| **2025-12-16** | 06:19 | 09:05 | ~2.8 | Feature Development |  |
+| **2025-12-16** | 14:25 | 14:32 | ~0.5 | Feature Development |  |
+| **2025-12-16** | 15:36 | 16:05 | ~0.5 | Feature Development |  |
+| **2025-12-17** | 07:09 | 11:06 | ~4.0 | Feature Development |  |
+| **2025-12-17** | 12:13 | 12:34 | ~0.5 | Feature Development |  |
+| **2025-12-17** | 13:12 | 14:19 | ~1.1 | Feature Development |  |
+| **2025-12-19** | 14:55 | 16:14 | ~1.3 | Feature Development |  |
+| **2025-12-26** | 15:23 | 16:38 | ~1.3 | Feature Development |  |
+| **2025-12-27** | 12:01 | 13:27 | ~1.4 | Feature Development |  |
+| **2025-12-28** | 13:34 | 14:44 | ~1.2 | Feature Development |  |
+| **2025-12-29** | 15:43 | 17:21 | ~1.6 | Feature Development |  |
+| **2025-12-30** | 08:48 | 09:48 | ~1.0 | Development & Fixes |  |
+| **2026-01-06** | 06:04 | 07:50 | ~1.8 | Feature Development |  |
+| **2026-01-06** | 13:04 | 14:04 | ~1.0 | Code Refactoring |  |
+| **2026-01-07** | 06:15 | 07:24 | ~1.2 | Feature Development |  |
+| **2026-01-07** | 08:25 | 10:33 | ~2.1 | Code Refactoring |  |
+| **2026-01-07** | 15:29 | 16:19 | ~0.8 | Feature Development |  |
+| **2026-01-08** | 06:16 | 07:48 | ~1.5 | Feature Development |  |
+| **2026-01-08** | 09:01 | 10:57 | ~1.9 | Feature Development |  |
+| **2026-01-08** | 15:34 | 16:12 | ~0.6 | Feature Development |  |
+| **2026-01-09** | 05:52 | 09:54 | ~4.0 | Feature Development |  |
+| **2026-01-09** | 14:26 | 14:31 | ~0.5 | Issue Management |  |
+| **2026-01-13** | 07:08 | 08:12 | ~1.1 | Feature Development |  |
+| **2026-01-13** | 09:15 | 10:15 | ~1.0 | Feature Development |  |
 
-- **02.12.2025**: ~0,5h (Projekt-Setup)
-- **03.12.2025**: ~9h (Frontend-Development & MUI Integration)
-- **05.12.2025**: ~3,5h (API Integration)
-- **06.12.2025**: ~2,5h (UI Features)
-- **08.12.2025**: ~8h (i18n & Model Refactoring & Planting Plans)
-- **10.12.2025**: ~0,5h (Bug Fixes)
-- **13.12.2025**: ~2h (Validierung)
-- **16.12.2025**: ~9h (Gantt Chart)
-- **17.12.2025**: ~7h (Gantt Fixes & DB Migration)
-- **19.12.2025**: ~0,5h (Documentation)
+## Monthly Summary
 
-## Gesamtsumme
+- **2025-12**: ~41.7h
+- **2026-01**: ~17.5h
 
-**Total: ~42,5 Arbeitsstunden**
+## Total
 
-## Hinweise
+**Total: ~59.2 work hours**
 
-- Zeiten sind geschätzt basierend auf Git-Commit-Timestamps
-- Zwischen Commits können Pausen oder parallele Arbeiten stattgefunden haben
-- Wenn Copilot aktiv war, wurde auch am Projekt gearbeitet
-- Die tatsächliche Arbeitszeit kann daher etwas höher liegen
-- **Hinweis:** Die API liefert maximal 100 Commits - für vollständige Historie siehe [GitHub Commits](https://github.com/stipsitzm/OpenFarmPlanner/commits/main)
+## Notes
 
-## Letzte Aktualisierung
+- Times are calculated based on GitHub activity timestamps (commits, PR comments, issue comments, reviews)
+- **Activity Bridging**: Activities within 1 hour are considered part of the same work session
+- **Commit Pre-work**: Sessions starting with commits begin 60 minutes earlier to account for coding before commit
+- **Manual Editing**: You can edit `arbeitszeiten_editable.csv` directly. Set "Manually Edited?" to "Yes" to preserve your changes
+- Machine-readable data: see `arbeitszeiten_editable.csv` (primary source) and `arbeitszeiten.csv` (legacy format)
+- Automatically generated by GitHub Actions
 
-Stand: 2025-12-19 16:00 UTC
+## How to Manually Edit Work Hours
+
+1. Open `docs/arbeitszeiten_editable.csv`
+2. Edit the Duration, Activity, or Notes fields as needed
+3. Set "Manually Edited?" to "Yes" for any rows you modify
+4. Commit and push your changes
+5. The script will preserve your manual edits on the next run
+
+## Last Update
+
+Last updated: 2026-01-13 14:08 UTC
 
 ---
-*Generiert aus Repository: stipsitzm/OpenFarmPlanner*
+*Automatically generated from repository: stipsitzm/OpenFarmPlanner*

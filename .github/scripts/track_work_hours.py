@@ -4,27 +4,29 @@ Enhanced work hour tracking script with activity bridging and Copilot Chat integ
 
 Features:
 - Activity Bridging: Combines commits, PR conversations, issue comments, and review comments
-- 3-Hour Gap Threshold: Only gaps >= 3 hours are treated as breaks
+- 1-Hour Gap Threshold: Only gaps >= 1 hour are treated as breaks
 - Copilot Chat Integration: Tracks all GitHub interactions, not just commits
 - Editable CSV Format: Users can manually edit work hours and notes
 - Manual Edit Preservation: User modifications are preserved across script runs
+- Commit Pre-work Time: Sessions starting with commits begin a configurable pre-work offset (see PRE_COMMIT_MINUTES)
 """
 
 import os
 import csv
 from datetime import datetime, timedelta
 from collections import defaultdict
-from github import Github
+from github import Github, Auth
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Initialize GitHub API
-g = Github(os.environ['GITHUB_TOKEN'])
+g = Github(auth=Auth.Token(os.environ['GITHUB_TOKEN']))
 repo = g.get_repo('stipsitzm/OpenFarmPlanner')
 
 # Configuration
+PRE_COMMIT_MINUTES = 60  # Session starts PRE_COMMIT_MINUTES minutes earlier if starting with a commit
 GAP_THRESHOLD_HOURS = 1  # Gaps >= 1 hour are considered breaks
 MIN_SESSION_DURATION_HOURS = 0.5  # Minimum duration for a work session
 LUNCH_BREAK_THRESHOLD_HOURS = 999  # Disabled: Sessions >= 999 hours get lunch break deducted (effectively never)
@@ -58,15 +60,35 @@ def get_all_activities():
     """
     activities = []
     
-    print("Fetching commits...")
-    commits = repo.get_commits()
-    for commit in commits:
-        if commit.commit.author.date:
-            activities.append({
-                'timestamp': commit.commit.author.date,
-                'type': 'commit',
-                'description': commit.commit.message.split('\n')[0]
-            })
+    print("Fetching commits across all branches...")
+    seen_commits = set()
+
+    try:
+        branches = list(repo.get_branches())
+        print(f"Found {len(branches)} branches, fetching commits...")
+    except Exception as e:
+        print(f"Warning: Could not list branches, falling back to default: {e}")
+        branches = [repo.get_branch(repo.default_branch)]
+
+    for branch_idx, branch in enumerate(branches, 1):
+        print(f"  Fetching commits from branch {branch_idx}/{len(branches)}: {branch.name}...", end='', flush=True)
+        try:
+            commit_count = 0
+            for commit in repo.get_commits(sha=branch.name):
+                sha = commit.sha
+                if sha in seen_commits:
+                    continue
+                seen_commits.add(sha)
+                if commit.commit.author.date:
+                    commit_count += 1
+                    activities.append({
+                        'timestamp': commit.commit.author.date,
+                        'type': 'commit',
+                        'description': commit.commit.message.split('\n')[0]
+                    })
+            print(f" {commit_count} new commits")
+        except Exception as e:
+            print(f" Error: {e}")
     
     print("Fetching pull request comments...")
     pull_requests = repo.get_pulls(state='all')
@@ -165,10 +187,11 @@ def get_all_activities():
 
 def merge_activity_timeline(activities):
     """
-    Merge activities into work sessions using 3-hour gap threshold.
-    
-    Activities within 3 hours of each other are considered part of the same session.
-    Gaps >= 3 hours are treated as breaks between sessions.
+    Merge activities into work sessions using 1-hour gap threshold.
+
+    Activities within 1 hour of each other are considered part of the same session.
+    Gaps >= 1 hour are treated as breaks between sessions.
+    Sessions starting with commits begin PRE_COMMIT_MINUTES earlier to account for pre-commit work.
     
     Args:
         activities: List of activity dictionaries
@@ -198,7 +221,13 @@ def merge_activity_timeline(activities):
         day_activities = sorted(day_activities, key=lambda x: x['timestamp'])
         
         # Start first session
-        current_session_start = day_activities[0]['timestamp']
+        first_activity = day_activities[0]
+        current_session_start = first_activity['timestamp']
+        
+        # If session starts with a commit, assume work started PRE_COMMIT_MINUTES earlier
+        if first_activity['type'] == 'commit':
+            current_session_start = current_session_start - timedelta(minutes=PRE_COMMIT_MINUTES)
+        
         current_session_end = day_activities[0]['timestamp']
         session_activities = [day_activities[0]]
         
@@ -220,7 +249,13 @@ def merge_activity_timeline(activities):
                 })
                 
                 # Start new session
-                current_session_start = activity['timestamp']
+                new_activity = activity
+                current_session_start = new_activity['timestamp']
+                
+                # If new session starts with a commit, assume work started PRE_COMMIT_MINUTES earlier
+                if new_activity['type'] == 'commit':
+                    current_session_start = current_session_start - timedelta(minutes=PRE_COMMIT_MINUTES)
+                
                 current_session_end = activity['timestamp']
                 session_activities = [activity]
         
@@ -309,7 +344,7 @@ def extract_activity_description(activities):
         return "Development & Fixes"
 
 
-def load_existing_editable_csv(filename='docs/arbeitszeiten_editable.csv'):
+def load_existing_editable_csv(filename='../../docs/arbeitszeiten_editable.csv'):
     """
     Load existing editable CSV to preserve manual edits.
     
@@ -339,7 +374,7 @@ def load_existing_editable_csv(filename='docs/arbeitszeiten_editable.csv'):
     return manual_entries
 
 
-def generate_editable_csv(work_sessions, filename='docs/arbeitszeiten_editable.csv'):
+def generate_editable_csv(work_sessions, filename='../../docs/arbeitszeiten_editable.csv'):
     """
     Generate editable CSV file with work sessions.
     
@@ -349,7 +384,7 @@ def generate_editable_csv(work_sessions, filename='docs/arbeitszeiten_editable.c
         work_sessions: List of work session dictionaries
         filename: Path to the output CSV file
     """
-    os.makedirs('docs', exist_ok=True)
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     
     # Load existing manual entries
     manual_entries = load_existing_editable_csv(filename)
@@ -383,7 +418,7 @@ def generate_editable_csv(work_sessions, filename='docs/arbeitszeiten_editable.c
                 })
 
 
-def generate_legacy_csv(work_sessions, filename='docs/arbeitszeiten.csv'):
+def generate_legacy_csv(work_sessions, filename='../../docs/arbeitszeiten.csv'):
     """
     Generate legacy CSV format for backwards compatibility.
     
@@ -391,25 +426,25 @@ def generate_legacy_csv(work_sessions, filename='docs/arbeitszeiten.csv'):
         work_sessions: List of work session dictionaries
         filename: Path to the output CSV file
     """
-    os.makedirs('docs', exist_ok=True)
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     
     with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['Datum', 'Start', 'Ende', 'Dauer (h)', 'Mittagspause (h)', 'Tätigkeit']
+        fieldnames = ['Date', 'Start', 'End', 'Duration (h)', 'Lunch Break (h)', 'Activity']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
         writer.writeheader()
         for session in sorted(work_sessions, key=lambda x: x['date']):
             writer.writerow({
-                'Datum': session['date'].strftime('%Y-%m-%d'),
+                'Date': session['date'].strftime('%Y-%m-%d'),
                 'Start': session['start'].strftime('%H:%M'),
-                'Ende': session['end'].strftime('%H:%M'),
-                'Dauer (h)': session['duration'],
-                'Mittagspause (h)': session['lunch_break'],
-                'Tätigkeit': session['activity']
+                'End': session['end'].strftime('%H:%M'),
+                'Duration (h)': session['duration'],
+                'Lunch Break (h)': session['lunch_break'],
+                'Activity': session['activity']
             })
 
 
-def load_csv_data(filename='docs/arbeitszeiten_editable.csv'):
+def load_csv_data(filename='../../docs/arbeitszeiten_editable.csv'):
     """
     Load work sessions from CSV file (source of truth).
     
@@ -450,7 +485,7 @@ def load_csv_data(filename='docs/arbeitszeiten_editable.csv'):
     return sessions
 
 
-def generate_markdown(csv_filename='docs/arbeitszeiten_editable.csv'):
+def generate_markdown(csv_filename='../../docs/arbeitszeiten_editable.csv'):
     """
     Generate markdown content from CSV file (source of truth).
     
@@ -475,11 +510,11 @@ def generate_markdown(csv_filename='docs/arbeitszeiten_editable.csv'):
     total_hours = sum(monthly_totals.values())
     
     # Build markdown content
-    md_content = """# Work Hours OpenFarmPlanner
+    md_content = f"""# Work Hours OpenFarmPlanner
 
 Overview of work hours on the OpenFarmPlanner project based on Git commits and GitHub interactions.
 
-**Note:** This tracking system uses activity bridging with a 1-hour gap threshold. All GitHub activities (commits, PR comments, issue comments, reviews) within 1 hour are considered part of the same work session.
+**Note:** This tracking system uses activity bridging with a 1-hour gap threshold. All GitHub activities (commits, PR comments, issue comments, reviews) within 1 hour are considered part of the same work session. Sessions starting with commits begin {PRE_COMMIT_MINUTES} minutes earlier to account for pre-commit work.
 
 ## Detailed Time Tracking
 
@@ -516,10 +551,11 @@ Overview of work hours on the OpenFarmPlanner project based on Git commits and G
     md_content += f"\n## Total\n\n**Total: ~{total_hours:.1f} work hours**\n\n"
     
     # Add notes
-    md_content += """## Notes
+    md_content += f"""## Notes
 
 - Times are calculated based on GitHub activity timestamps (commits, PR comments, issue comments, reviews)
 - **Activity Bridging**: Activities within 1 hour are considered part of the same work session
+- **Commit Pre-work**: Sessions starting with commits begin {PRE_COMMIT_MINUTES} minutes earlier to account for coding before commit
 - **Manual Editing**: You can edit `arbeitszeiten_editable.csv` directly. Set "Manually Edited?" to "Yes" to preserve your changes
 - Machine-readable data: see `arbeitszeiten_editable.csv` (primary source) and `arbeitszeiten.csv` (legacy format)
 - Automatically generated by GitHub Actions
@@ -536,7 +572,7 @@ Overview of work hours on the OpenFarmPlanner project based on Git commits and G
 
 """
     
-    md_content += f"Last updated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}\n\n"
+    md_content += f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}\n\n"
     md_content += "---\n*Automatically generated from repository: stipsitzm/OpenFarmPlanner*\n"
     
     return md_content
@@ -546,6 +582,7 @@ def main():
     """Main function to update work hour tracking files."""
     print("=== Enhanced Work Hour Tracking with Activity Bridging ===")
     print(f"Gap threshold: {GAP_THRESHOLD_HOURS} hours")
+    print(f"Commit pre-work time: {PRE_COMMIT_MINUTES} minutes")
     print()
     
     print("Step 1: Fetching all activities from GitHub...")
@@ -565,8 +602,9 @@ def main():
     markdown_content = generate_markdown()
     
     print("Step 6: Writing to docs/ARBEITSZEITEN.md...")
-    os.makedirs('docs', exist_ok=True)
-    with open('docs/ARBEITSZEITEN.md', 'w', encoding='utf-8') as f:
+    md_path = '../../docs/ARBEITSZEITEN.md'
+    os.makedirs(os.path.dirname(md_path), exist_ok=True)
+    with open(md_path, 'w', encoding='utf-8') as f:
         f.write(markdown_content)
     
     print("\n✅ Work hour tracking files updated successfully!")
