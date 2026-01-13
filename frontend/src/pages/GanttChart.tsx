@@ -185,15 +185,13 @@ function GanttChartPage(): React.ReactElement {
               const plantingDate = parseDateString(plan.planting_date);
               const harvestDate = parseDateString(plan.harvest_date!); // Already filtered for non-null
               
-              // Calculate harvest period if available
-              let harvestStartDate: Date | undefined;
-              let harvestEndDate: Date | undefined;
-              if (plan.harvest_date) {
-                harvestStartDate = parseDateString(plan.harvest_date);
-                harvestEndDate = plan.harvest_end_date 
-                  ? parseDateString(plan.harvest_end_date) 
-                  : harvestStartDate;
-              }
+              // Calculate harvest period
+              // harvestStartDate defaults to harvestDate (first harvest date)
+              // harvestEndDate defaults to harvestStartDate if harvest_end_date not provided
+              const harvestStartDate: Date = harvestDate;
+              const harvestEndDate: Date = plan.harvest_end_date 
+                ? parseDateString(plan.harvest_end_date) 
+                : harvestStartDate;
               
               return {
                 id: `plan-${plan.id}`,
