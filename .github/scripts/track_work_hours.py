@@ -8,25 +8,25 @@ Features:
 - Copilot Chat Integration: Tracks all GitHub interactions, not just commits
 - Editable CSV Format: Users can manually edit work hours and notes
 - Manual Edit Preservation: User modifications are preserved across script runs
-- Commit Pre-work Time: Sessions starting with commits begin 30 minutes earlier
+- Commit Pre-work Time: Sessions starting with commits begin a configurable pre-work offset (see PRE_COMMIT_MINUTES)
 """
 
 import os
 import csv
 from datetime import datetime, timedelta
 from collections import defaultdict
-from github import Github
+from github import Github, Auth
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Initialize GitHub API
-g = Github(os.environ['GITHUB_TOKEN'])
+g = Github(auth=Auth.Token(os.environ['GITHUB_TOKEN']))
 repo = g.get_repo('stipsitzm/OpenFarmPlanner')
 
 # Configuration
-PRE_COMMIT_MINUTES = 60  # Session starts x Minutes earlier if starting with a commit
+PRE_COMMIT_MINUTES = 60  # Session starts PRE_COMMIT_MINUTES minutes earlier if starting with a commit
 GAP_THRESHOLD_HOURS = 1  # Gaps >= 1 hour are considered breaks
 MIN_SESSION_DURATION_HOURS = 0.5  # Minimum duration for a work session
 LUNCH_BREAK_THRESHOLD_HOURS = 999  # Disabled: Sessions >= 999 hours get lunch break deducted (effectively never)
@@ -60,15 +60,35 @@ def get_all_activities():
     """
     activities = []
     
-    print("Fetching commits...")
-    commits = repo.get_commits()
-    for commit in commits:
-        if commit.commit.author.date:
-            activities.append({
-                'timestamp': commit.commit.author.date,
-                'type': 'commit',
-                'description': commit.commit.message.split('\n')[0]
-            })
+    print("Fetching commits across all branches...")
+    seen_commits = set()
+
+    try:
+        branches = list(repo.get_branches())
+        print(f"Found {len(branches)} branches, fetching commits...")
+    except Exception as e:
+        print(f"Warning: Could not list branches, falling back to default: {e}")
+        branches = [repo.get_branch(repo.default_branch)]
+
+    for branch_idx, branch in enumerate(branches, 1):
+        print(f"  Fetching commits from branch {branch_idx}/{len(branches)}: {branch.name}...", end='', flush=True)
+        try:
+            commit_count = 0
+            for commit in repo.get_commits(sha=branch.name):
+                sha = commit.sha
+                if sha in seen_commits:
+                    continue
+                seen_commits.add(sha)
+                if commit.commit.author.date:
+                    commit_count += 1
+                    activities.append({
+                        'timestamp': commit.commit.author.date,
+                        'type': 'commit',
+                        'description': commit.commit.message.split('\n')[0]
+                    })
+            print(f" {commit_count} new commits")
+        except Exception as e:
+            print(f" Error: {e}")
     
     print("Fetching pull request comments...")
     pull_requests = repo.get_pulls(state='all')
@@ -168,10 +188,10 @@ def get_all_activities():
 def merge_activity_timeline(activities):
     """
     Merge activities into work sessions using 1-hour gap threshold.
-    
+
     Activities within 1 hour of each other are considered part of the same session.
     Gaps >= 1 hour are treated as breaks between sessions.
-    Sessions starting with commits begin x minutes earlier to account for pre-commit work.
+    Sessions starting with commits begin PRE_COMMIT_MINUTES earlier to account for pre-commit work.
     
     Args:
         activities: List of activity dictionaries
@@ -204,7 +224,7 @@ def merge_activity_timeline(activities):
         first_activity = day_activities[0]
         current_session_start = first_activity['timestamp']
         
-        # If session starts with a commit, assume work started 60 minutes earlier
+        # If session starts with a commit, assume work started PRE_COMMIT_MINUTES earlier
         if first_activity['type'] == 'commit':
             current_session_start = current_session_start - timedelta(minutes=PRE_COMMIT_MINUTES)
         
@@ -232,9 +252,9 @@ def merge_activity_timeline(activities):
                 new_activity = activity
                 current_session_start = new_activity['timestamp']
                 
-                # If new session starts with a commit, assume work started 30 minutes earlier
+                # If new session starts with a commit, assume work started PRE_COMMIT_MINUTES earlier
                 if new_activity['type'] == 'commit':
-                    current_session_start = current_session_start - timedelta(minutes=30)
+                    current_session_start = current_session_start - timedelta(minutes=PRE_COMMIT_MINUTES)
                 
                 current_session_end = activity['timestamp']
                 session_activities = [activity]
@@ -490,11 +510,11 @@ def generate_markdown(csv_filename='../../docs/arbeitszeiten_editable.csv'):
     total_hours = sum(monthly_totals.values())
     
     # Build markdown content
-    md_content = """# Work Hours OpenFarmPlanner
+    md_content = f"""# Work Hours OpenFarmPlanner
 
 Overview of work hours on the OpenFarmPlanner project based on Git commits and GitHub interactions.
 
-**Note:** This tracking system uses activity bridging with a 1-hour gap threshold. All GitHub activities (commits, PR comments, issue comments, reviews) within 1 hour are considered part of the same work session. Sessions starting with commits begin 30 minutes earlier to account for pre-commit work.
+**Note:** This tracking system uses activity bridging with a 1-hour gap threshold. All GitHub activities (commits, PR comments, issue comments, reviews) within 1 hour are considered part of the same work session. Sessions starting with commits begin {PRE_COMMIT_MINUTES} minutes earlier to account for pre-commit work.
 
 ## Detailed Time Tracking
 
@@ -531,11 +551,11 @@ Overview of work hours on the OpenFarmPlanner project based on Git commits and G
     md_content += f"\n## Total\n\n**Total: ~{total_hours:.1f} work hours**\n\n"
     
     # Add notes
-    md_content += """## Notes
+    md_content += f"""## Notes
 
 - Times are calculated based on GitHub activity timestamps (commits, PR comments, issue comments, reviews)
 - **Activity Bridging**: Activities within 1 hour are considered part of the same work session
-- **Commit Pre-work**: Sessions starting with commits begin 30 minutes earlier to account for coding before commit
+- **Commit Pre-work**: Sessions starting with commits begin {PRE_COMMIT_MINUTES} minutes earlier to account for coding before commit
 - **Manual Editing**: You can edit `arbeitszeiten_editable.csv` directly. Set "Manually Edited?" to "Yes" to preserve your changes
 - Machine-readable data: see `arbeitszeiten_editable.csv` (primary source) and `arbeitszeiten.csv` (legacy format)
 - Automatically generated by GitHub Actions
@@ -562,7 +582,7 @@ def main():
     """Main function to update work hour tracking files."""
     print("=== Enhanced Work Hour Tracking with Activity Bridging ===")
     print(f"Gap threshold: {GAP_THRESHOLD_HOURS} hours")
-    print(f"Commit pre-work time: 30 minutes")
+    print(f"Commit pre-work time: {PRE_COMMIT_MINUTES} minutes")
     print()
     
     print("Step 1: Fetching all activities from GitHub...")
