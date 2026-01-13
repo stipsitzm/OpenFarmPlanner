@@ -1,3 +1,7 @@
+---
+applyTo: "backend/**/*.py"
+---
+
 # Python Backend Instructions
 
 Language: Python. Environment and packages managed with PDM.
