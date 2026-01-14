@@ -133,6 +133,76 @@ function GanttChartPage(): React.ReactElement {
   }, [t]);
   
   /**
+   * Format date to API format (YYYY-MM-DD)
+   */
+  const formatDateToAPI = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  /**
+   * Handle task updates from drag and drop
+   */
+  const handleTaskUpdate = async (_groupId: string, updatedTask: Task) => {
+    try {
+      // Extract the planting plan ID from the task ID
+      // Format is either "plan-{id}-growth" or "plan-{id}-harvest"
+      const planIdMatch = updatedTask.id.match(/^plan-(\d+)-/);
+      if (!planIdMatch) {
+        console.error('Could not extract plan ID from task:', updatedTask.id);
+        return;
+      }
+      
+      const planId = parseInt(planIdMatch[1], 10);
+      const plan = plantingPlans.find(p => p.id === planId);
+      
+      if (!plan) {
+        console.error('Could not find planting plan:', planId);
+        return;
+      }
+      
+      // Determine if this is a growth or harvest task
+      const isGrowthTask = updatedTask.id.endsWith('-growth');
+      const isHarvestTask = updatedTask.id.endsWith('-harvest');
+      
+      // Update the planting plan based on which task was moved
+      let updatedPlan: Partial<PlantingPlan> = {};
+      
+      if (isGrowthTask) {
+        // Growth task moved: update planting_date
+        // The growth task spans from planting_date to harvest_date (first harvest)
+        updatedPlan = {
+          ...plan,
+          planting_date: formatDateToAPI(updatedTask.startDate),
+          // Note: harvest_date is auto-calculated by backend based on culture's growth_duration_days
+        };
+      } else if (isHarvestTask) {
+        // Harvest task moved: update harvest_end_date
+        // The harvest task spans from harvest_date to harvest_end_date
+        updatedPlan = {
+          ...plan,
+          harvest_end_date: formatDateToAPI(updatedTask.endDate),
+        };
+      }
+      
+      // Send update to backend
+      await plantingPlanAPI.update(planId, updatedPlan as PlantingPlan);
+      
+      // Update local state
+      setPlantingPlans(prev => prev.map(p => 
+        p.id === planId ? { ...p, ...updatedPlan } : p
+      ));
+      
+      console.log('Successfully updated planting plan:', planId, updatedPlan);
+    } catch (err) {
+      console.error('Error updating planting plan:', err);
+      setError('Fehler beim Aktualisieren des Anbau plans');
+    }
+  };
+  
+  /**
    * Get color for a culture from the cultures list
    */
   const getCultureColor = (cultureId: number, cultureName: string): string => {
@@ -141,9 +211,8 @@ function GanttChartPage(): React.ReactElement {
   };
   
   /**
-   * Build hierarchical task groups with tasks from planting plans
-   * Creates a visual hierarchy: Location -> Field -> Bed
-   * with placeholder groups for location and field levels
+   * Build task groups with tasks from planting plans
+   * Sorted by location and field
    */
   const taskGroups = useMemo<TaskGroup[]>(() => {
     // Guard against empty or undefined data
@@ -175,31 +244,12 @@ function GanttChartPage(): React.ReactElement {
       return acc;
     }, {} as Record<number, Field[]>);
     
-    // Build hierarchy: Location -> Field -> Bed
+    // Build sorted list: Location -> Field -> Bed (no empty groups)
     locations.forEach(location => {
       const locationFields = fieldsByLocation[location.id!] || [];
       
-      // Add location header (empty group for visual hierarchy)
-      groups.push({
-        id: `location-${location.id}`,
-        name: `📍 ${location.name}`,
-        description: 'Standort',
-        tasks: [],
-        locationId: location.id,
-      });
-      
       locationFields.forEach(field => {
         const fieldBeds = bedsByField[field.id!] || [];
-        
-        // Add field header (empty group for visual hierarchy)
-        groups.push({
-          id: `field-${field.id}`,
-          name: `  🌾 ${field.name}`,
-          description: `${location.name} - Schlag`,
-          tasks: [],
-          locationId: location.id,
-          fieldId: field.id,
-        });
         
         fieldBeds.forEach(bed => {
           // Get planting plans for this bed that overlap with display year
@@ -270,11 +320,11 @@ function GanttChartPage(): React.ReactElement {
               }
             });
             
-            // Add bed group with tasks
+            // Add bed group with tasks (no icons, no indentation)
             groups.push({
               id: `bed-${bed.id}`,
-              name: `    🌱 ${bed.name}`,
-              description: `${location.name} / ${field.name} - Beet`,
+              name: bed.name,
+              description: `${location.name} / ${field.name}`,
               tasks,
               locationId: location.id,
               fieldId: field.id,
@@ -333,6 +383,7 @@ function GanttChartPage(): React.ReactElement {
             editMode={editMode}
             showProgress={false}
             darkMode={false}
+            onTaskUpdate={handleTaskUpdate}
           />
         )}
       </Paper>
