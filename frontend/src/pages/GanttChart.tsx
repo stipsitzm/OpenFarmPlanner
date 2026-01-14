@@ -143,6 +143,7 @@ function GanttChartPage(): React.ReactElement {
   /**
    * Build hierarchical task groups with tasks from planting plans
    * Uses description field to show hierarchy: "Location / Field"
+   * Creates separate tasks for growth and harvest periods
    */
   const taskGroups = useMemo<TaskGroup[]>(() => {
     // Guard against empty or undefined data
@@ -196,26 +197,26 @@ function GanttChartPage(): React.ReactElement {
           
           // Only create group if there are plans for this bed
           if (bedPlans.length > 0) {
-            const tasks: Task[] = bedPlans.map(plan => {
+            const tasks: Task[] = [];
+            
+            bedPlans.forEach(plan => {
               const plantingDate = parseDateString(plan.planting_date);
-              const harvestDate = parseDateString(plan.harvest_date!); // Already filtered for non-null
+              const harvestStartDate = parseDateString(plan.harvest_date!);
               
               // Get culture color
               const baseColor = getCultureColor(plan.culture, plan.culture_name || '');
               
-              // Calculate harvest period
-              // harvestStartDate defaults to harvestDate (first harvest date)
-              // harvestEndDate defaults to harvestStartDate if harvest_end_date not provided
-              const harvestStartDate: Date = harvestDate;
+              // Calculate harvest end date
               const harvestEndDate: Date = plan.harvest_end_date 
                 ? parseDateString(plan.harvest_end_date) 
                 : harvestStartDate;
               
-              return {
-                id: `plan-${plan.id}`,
+              // Growth period task (planting to first harvest)
+              tasks.push({
+                id: `plan-${plan.id}-growth`,
                 name: plan.culture_name || `Culture ${plan.culture}`,
                 startDate: plantingDate,
-                endDate: harvestEndDate, // Use harvest end date as task end
+                endDate: harvestStartDate,
                 color: baseColor,
                 percent: 100,
                 plantingPlanId: plan.id,
@@ -224,7 +225,30 @@ function GanttChartPage(): React.ReactElement {
                 notes: plan.notes,
                 harvestStartDate,
                 harvestEndDate,
-              };
+              });
+              
+              // Harvest period task (first harvest to last harvest) - only if there's a range
+              if (harvestEndDate > harvestStartDate) {
+                // Darken the color for harvest period by reducing brightness
+                const harvestColor = baseColor.startsWith('#') 
+                  ? `${baseColor}CC` // Add alpha channel for slight transparency
+                  : baseColor;
+                
+                tasks.push({
+                  id: `plan-${plan.id}-harvest`,
+                  name: `${plan.culture_name || `Culture ${plan.culture}`} (Ernte)`,
+                  startDate: harvestStartDate,
+                  endDate: harvestEndDate,
+                  color: harvestColor,
+                  percent: 100,
+                  plantingPlanId: plan.id,
+                  cultureName: plan.culture_name,
+                  areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
+                  notes: `Erntezeitraum: ${plan.notes || ''}`.trim(),
+                  harvestStartDate,
+                  harvestEndDate,
+                });
+              }
             });
             
             // Add bed group with tasks

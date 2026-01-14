@@ -22,3 +22,9 @@
   --rmg-task-color: #3b82f6;
   --rmg-hover-color: #e3f2fd;
 }
+
+/* Style harvest period tasks with darker/semi-transparent appearance */
+.rmg-task-bar[data-task-name*="(Ernte)"] {
+  opacity: 0.7;
+  filter: brightness(0.85);
+}
