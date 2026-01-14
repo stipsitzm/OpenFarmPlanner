@@ -142,8 +142,8 @@ function GanttChartPage(): React.ReactElement {
   
   /**
    * Build hierarchical task groups with tasks from planting plans
-   * Uses description field to show hierarchy: "Location / Field"
-   * Creates separate tasks for growth and harvest periods
+   * Creates a visual hierarchy: Location -> Field -> Bed
+   * with placeholder groups for location and field levels
    */
   const taskGroups = useMemo<TaskGroup[]>(() => {
     // Guard against empty or undefined data
@@ -179,8 +179,27 @@ function GanttChartPage(): React.ReactElement {
     locations.forEach(location => {
       const locationFields = fieldsByLocation[location.id!] || [];
       
+      // Add location header (empty group for visual hierarchy)
+      groups.push({
+        id: `location-${location.id}`,
+        name: `📍 ${location.name}`,
+        description: 'Standort',
+        tasks: [],
+        locationId: location.id,
+      });
+      
       locationFields.forEach(field => {
         const fieldBeds = bedsByField[field.id!] || [];
+        
+        // Add field header (empty group for visual hierarchy)
+        groups.push({
+          id: `field-${field.id}`,
+          name: `  🌾 ${field.name}`,
+          description: `${location.name} - Schlag`,
+          tasks: [],
+          locationId: location.id,
+          fieldId: field.id,
+        });
         
         fieldBeds.forEach(bed => {
           // Get planting plans for this bed that overlap with display year
@@ -195,7 +214,7 @@ function GanttChartPage(): React.ReactElement {
             return !(harvestDate < visStart || plantingDate > visEnd);
           });
           
-          // Only create group if there are plans for this bed
+          // Only add bed if it has plans
           if (bedPlans.length > 0) {
             const tasks: Task[] = [];
             
@@ -229,9 +248,9 @@ function GanttChartPage(): React.ReactElement {
               
               // Harvest period task (first harvest to last harvest) - only if there's a range
               if (harvestEndDate > harvestStartDate) {
-                // Darken the color for harvest period by reducing brightness
+                // Use semi-transparent version for harvest
                 const harvestColor = baseColor.startsWith('#') 
-                  ? `${baseColor}CC` // Add alpha channel for slight transparency
+                  ? `${baseColor}CC` // Add alpha channel
                   : baseColor;
                 
                 tasks.push({
@@ -254,8 +273,8 @@ function GanttChartPage(): React.ReactElement {
             // Add bed group with tasks
             groups.push({
               id: `bed-${bed.id}`,
-              name: bed.name,
-              description: `${location.name} / ${field.name}`,
+              name: `    🌱 ${bed.name}`,
+              description: `${location.name} / ${field.name} - Beet`,
               tasks,
               locationId: location.id,
               fieldId: field.id,

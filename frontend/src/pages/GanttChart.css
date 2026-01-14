@@ -28,3 +28,26 @@
   opacity: 0.7;
   filter: brightness(0.85);
 }
+
+/* Style hierarchy groups (location, field) */
+[class*="rmg-task-list-row"]:has([class*="rmg-task-list-group-name"]:is([class*="📍"], [class*="🌾"], [class*="🌱"])) {
+  font-weight: 600;
+}
+
+/* Location level styling */
+[class*="rmg-task-list-group-name"][class*="📍"] {
+  font-weight: bold;
+  color: #2e7d32;
+}
+
+/* Field level styling */
+[class*="rmg-task-list-group-name"][class*="🌾"] {
+  font-weight: 600;
+  color: #1976d2;
+}
+
+/* Bed level styling */
+[class*="rmg-task-list-group-name"][class*="🌱"] {
+  font-weight: normal;
+  color: #424242;
+}
