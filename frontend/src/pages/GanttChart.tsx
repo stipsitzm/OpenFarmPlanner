@@ -10,8 +10,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../i18n';
-import { Box, Alert, Paper } from '@mui/material';
-import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, type PlantingPlan, type Bed, type Field, type Location } from '../api/api';
+import { Box, Alert, Paper, FormControlLabel, Switch } from '@mui/material';
+import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, cultureAPI, type PlantingPlan, type Bed, type Field, type Location, type Culture } from '../api/api';
 import GanttChart, { ViewMode } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
@@ -44,6 +44,8 @@ interface TaskGroup {
   fieldId?: number;
   bedId?: number;
   area?: number;
+  isGroup?: boolean; // For hierarchy groups
+  level?: number; // Hierarchy level: 0=location, 1=field, 2=bed
 }
 
 /**
@@ -56,9 +58,9 @@ function parseDateString(dateStr: string): Date {
 }
 
 /**
- * Generate a color based on culture name (for consistent coloring)
+ * Generate a default color based on culture name (fallback if no display_color)
  */
-function getCultureColor(cultureName: string): string {
+function getDefaultCultureColor(cultureName: string): string {
   const colors = [
     '#3b82f6', // blue
     '#10b981', // green
@@ -88,10 +90,14 @@ function GanttChartPage(): React.ReactElement {
   const [fields, setFields] = useState<Field[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [plantingPlans, setPlantingPlans] = useState<PlantingPlan[]>([]);
+  const [cultures, setCultures] = useState<Culture[]>([]);
+  
+  // UI state
+  const [editMode, setEditMode] = useState(false);
   
   // Timeline configuration
   const currentYear = new Date().getFullYear();
-  const [displayYear, setDisplayYear] = useState(currentYear);
+  const [displayYear] = useState(currentYear);
   
   /**
    * Fetch all required data
@@ -102,17 +108,19 @@ function GanttChartPage(): React.ReactElement {
         setLoading(true);
         setError(null);
         
-        const [locationsRes, fieldsRes, bedsRes, plansRes] = await Promise.all([
+        const [locationsRes, fieldsRes, bedsRes, plansRes, culturesRes] = await Promise.all([
           locationAPI.list(),
           fieldAPI.list(),
           bedAPI.list(),
           plantingPlanAPI.list(),
+          cultureAPI.list(),
         ]);
         
         setLocations(locationsRes.data.results);
         setFields(fieldsRes.data.results);
         setBeds(bedsRes.data.results);
         setPlantingPlans(plansRes.data.results);
+        setCultures(culturesRes.data.results);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(t('ganttChart:errors.load'));
@@ -124,10 +132,17 @@ function GanttChartPage(): React.ReactElement {
     fetchData();
   }, [t]);
   
+  /**
+   * Get color for a culture from the cultures list
+   */
+  const getCultureColor = (cultureId: number, cultureName: string): string => {
+    const culture = cultures.find(c => c.id === cultureId);
+    return culture?.display_color || getDefaultCultureColor(cultureName);
+  };
   
   /**
-   * Build task groups with tasks from planting plans
-   * Filter by display year and organize by location -> field -> bed
+   * Build hierarchical task groups with tasks from planting plans
+   * Uses description field to show hierarchy: "Location / Field"
    */
   const taskGroups = useMemo<TaskGroup[]>(() => {
     // Guard against empty or undefined data
@@ -179,11 +194,14 @@ function GanttChartPage(): React.ReactElement {
             return !(harvestDate < visStart || plantingDate > visEnd);
           });
           
-          // Only create group if there are plans for this bed in this year
+          // Only create group if there are plans for this bed
           if (bedPlans.length > 0) {
             const tasks: Task[] = bedPlans.map(plan => {
               const plantingDate = parseDateString(plan.planting_date);
               const harvestDate = parseDateString(plan.harvest_date!); // Already filtered for non-null
+              
+              // Get culture color
+              const baseColor = getCultureColor(plan.culture, plan.culture_name || '');
               
               // Calculate harvest period
               // harvestStartDate defaults to harvestDate (first harvest date)
@@ -197,9 +215,9 @@ function GanttChartPage(): React.ReactElement {
                 id: `plan-${plan.id}`,
                 name: plan.culture_name || `Culture ${plan.culture}`,
                 startDate: plantingDate,
-                endDate: harvestDate,
-                color: getCultureColor(plan.culture_name || ''),
-                percent: 100, // All plans are considered 100% once planted
+                endDate: harvestEndDate, // Use harvest end date as task end
+                color: baseColor,
+                percent: 100,
                 plantingPlanId: plan.id,
                 cultureName: plan.culture_name,
                 areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
@@ -209,7 +227,7 @@ function GanttChartPage(): React.ReactElement {
               };
             });
             
-            // Create bed group with location/field context in description
+            // Add bed group with tasks
             groups.push({
               id: `bed-${bed.id}`,
               name: bed.name,
@@ -226,7 +244,7 @@ function GanttChartPage(): React.ReactElement {
     });
     
     return groups;
-  }, [locations, fields, beds, plantingPlans, displayYear]);
+  }, [locations, fields, beds, plantingPlans, cultures, displayYear]);
   
   // Calculate start and end dates for the display year
   const startDate = useMemo(() => new Date(displayYear, 0, 1), [displayYear]);
@@ -247,29 +265,17 @@ function GanttChartPage(): React.ReactElement {
       
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-        <Box>
-          <span style={{ marginRight: '1rem' }}>{t('ganttChart:year')}: {displayYear}</span>
-          <button 
-            onClick={() => setDisplayYear(displayYear - 1)}
-            aria-label={t('ganttChart:previousYear')}
-          >
-            ◀
-          </button>
-          <button 
-            onClick={() => setDisplayYear(currentYear)} 
-            style={{ margin: '0 0.5rem' }}
-            aria-label={t('ganttChart:today')}
-          >
-            {t('ganttChart:today')}
-          </button>
-          <button 
-            onClick={() => setDisplayYear(displayYear + 1)}
-            aria-label={t('ganttChart:nextYear')}
-          >
-            ▶
-          </button>
-        </Box>
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={editMode}
+              onChange={(e) => setEditMode(e.target.checked)}
+              color="primary"
+            />
+          }
+          label={editMode ? "Bearbeitungsmodus" : "Ansichtsmodus"}
+        />
       </Box>
       
       <Paper className="gantt-container-wrapper">
@@ -281,7 +287,7 @@ function GanttChartPage(): React.ReactElement {
             viewMode={ViewMode.MONTH}
             startDate={startDate}
             endDate={endDate}
-            editMode={false}
+            editMode={editMode}
             showProgress={false}
             darkMode={false}
           />
