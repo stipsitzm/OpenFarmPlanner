@@ -384,6 +384,7 @@ function GanttChartPage(): React.ReactElement {
             startDate={startDate}
             endDate={endDate}
             editMode={editMode}
+            allowTaskResize={false}
             showProgress={false}
             darkMode={false}
             onTaskUpdate={handleTaskUpdate}
