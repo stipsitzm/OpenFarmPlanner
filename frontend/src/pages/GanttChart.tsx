@@ -144,6 +144,7 @@ function GanttChartPage(): React.ReactElement {
   
   /**
    * Handle task updates from drag and drop
+   * Only updates planting_date - backend recalculates harvest dates automatically
    */
   const handleTaskUpdate = async (_groupId: string, updatedTask: Task) => {
     try {
@@ -163,39 +164,41 @@ function GanttChartPage(): React.ReactElement {
         return;
       }
       
-      // Determine if this is a growth or harvest task
+      // Calculate new planting date based on which task was moved
+      let newPlantingDate: string;
       const isGrowthTask = updatedTask.id.endsWith('-growth');
-      const isHarvestTask = updatedTask.id.endsWith('-harvest');
-      
-      // Update the planting plan based on which task was moved
-      let updatedPlan: Partial<PlantingPlan> = {};
       
       if (isGrowthTask) {
-        // Growth task moved: update planting_date
-        // The growth task spans from planting_date to harvest_date (first harvest)
-        updatedPlan = {
-          ...plan,
-          planting_date: formatDateToAPI(updatedTask.startDate),
-          // Note: harvest_date is auto-calculated by backend based on culture's growth_duration_days
-        };
-      } else if (isHarvestTask) {
-        // Harvest task moved: update harvest_end_date
-        // The harvest task spans from harvest_date to harvest_end_date
-        updatedPlan = {
-          ...plan,
-          harvest_end_date: formatDateToAPI(updatedTask.endDate),
-        };
+        // Growth task moved: use the new start date as planting date
+        newPlantingDate = formatDateToAPI(updatedTask.startDate);
+      } else {
+        // Harvest task moved: calculate backward from harvest dates
+        // We need to adjust planting date to maintain the relationship
+        const originalPlantingDate = parseDateString(plan.planting_date);
+        const originalHarvestDate = parseDateString(plan.harvest_date!);
+        const daysDifference = Math.round((originalHarvestDate.getTime() - originalPlantingDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // Calculate new planting date by going back from new harvest start
+        const newPlantingDateObj = new Date(updatedTask.startDate);
+        newPlantingDateObj.setDate(newPlantingDateObj.getDate() - daysDifference);
+        newPlantingDate = formatDateToAPI(newPlantingDateObj);
       }
       
-      // Send update to backend
-      await plantingPlanAPI.update(planId, updatedPlan as PlantingPlan);
+      // Only update planting_date - backend will recalculate harvest_date and harvest_end_date
+      const updatedPlan: Partial<PlantingPlan> = {
+        ...plan,
+        planting_date: newPlantingDate,
+      };
       
-      // Update local state
+      // Send update to backend
+      const response = await plantingPlanAPI.update(planId, updatedPlan as PlantingPlan);
+      
+      // Update local state with response from backend (includes recalculated dates)
       setPlantingPlans(prev => prev.map(p => 
-        p.id === planId ? { ...p, ...updatedPlan } : p
+        p.id === planId ? response.data : p
       ));
       
-      console.log('Successfully updated planting plan:', planId, updatedPlan);
+      console.log('Successfully updated planting plan:', planId, 'New planting_date:', newPlantingDate);
     } catch (err) {
       console.error('Error updating planting plan:', err);
       setError('Fehler beim Aktualisieren des Anbau plans');
