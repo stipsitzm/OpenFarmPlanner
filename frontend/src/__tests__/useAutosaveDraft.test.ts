@@ -7,7 +7,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAutosaveDraft } from '../hooks/useAutosaveDraft';
 import type { ValidationResult } from '../hooks/useAutosaveDraft';
 
-interface TestData {
+interface TestData extends Record<string, unknown> {
   id?: number;
   name: string;
   value: number;
