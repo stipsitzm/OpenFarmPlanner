@@ -255,24 +255,38 @@ useEffect(() => {
 
 ### React Router Navigation Blocking
 
-The `useNavigationBlocker` hook uses React Router's `useBlocker` API:
+The `useNavigationBlocker` hook provides browser navigation protection via the `beforeunload` event:
 
 ```typescript
-const blocker = useBlocker(({ currentLocation, nextLocation }) => {
-  return shouldBlock && currentLocation.pathname !== nextLocation.pathname;
-});
-
 useEffect(() => {
-  if (blocker.state === 'blocked') {
-    const proceed = window.confirm(message);
-    if (proceed) {
-      blocker.proceed();
-    } else {
-      blocker.reset();
-    }
-  }
-}, [blocker, message]);
+  if (!shouldBlock) return;
+
+  const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    e.preventDefault();
+    e.returnValue = message;
+    return message;
+  };
+
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+}, [shouldBlock, message]);
 ```
+
+**Note on Router Compatibility:**
+
+This implementation currently uses `beforeunload` for browser navigation (tab close, reload, external navigation). React Router's `useBlocker` API for in-app navigation blocking only works with data routers (`createBrowserRouter`), not with `BrowserRouter` which is currently used in this app.
+
+For full in-app navigation blocking:
+- Either upgrade to React Router's data router API (`createBrowserRouter`)
+- Or implement a custom solution with route change listeners
+
+The `beforeunload` handler provides protection for:
+- ✅ Browser tab close
+- ✅ Page reload  
+- ✅ External navigation (typing new URL)
+- ❌ In-app React Router navigation (currently not blocked)
+
+Since most data loss scenarios occur from closing the browser or reloading, and the autosave-on-blur behavior minimizes unsaved data, this provides adequate protection for most use cases.
 
 ### MUI DataGrid Integration
 
