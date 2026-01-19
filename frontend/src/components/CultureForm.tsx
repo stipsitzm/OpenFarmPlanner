@@ -166,7 +166,8 @@ export function CultureForm({
     },
   });
 
-  // Block navigation if there are unsaved changes
+  // Block navigation if there are unsaved changes that are invalid
+  // Valid changes will be saved on blur, so we only block invalid ones
   useNavigationBlocker(
     isDirty && !isValid,
     t('messages.unsavedChanges', { defaultValue: 'You have unsaved changes. Are you sure you want to leave?' })
@@ -434,7 +435,10 @@ export function CultureForm({
       <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center' }}>
         {isDirty && (
           <Typography variant="body2" color="text.secondary">
-            {isValid ? 'Unsaved changes' : 'Please fix validation errors'}
+            {isValid 
+              ? t('messages.unsavedChanges', { defaultValue: 'Unsaved changes' })
+              : t('messages.fixErrors', { defaultValue: 'Please fix validation errors' })
+            }
           </Typography>
         )}
         <Button onClick={onCancel} disabled={isSaving}>
@@ -445,7 +449,10 @@ export function CultureForm({
           variant="contained"
           disabled={isSaving || !isValid}
         >
-          {isSaving ? 'Saving...' : isEdit ? t('form.save') : t('form.create')}
+          {isSaving 
+            ? t('messages.saving', { defaultValue: 'Saving...' })
+            : isEdit ? t('form.save') : t('form.create')
+          }
         </Button>
       </Box>
 

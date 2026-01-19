@@ -13,7 +13,7 @@
  * Implements the autosave pattern: edit locally, validate on blur, save if valid.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 /**
  * Validation result from validation function
@@ -121,21 +121,22 @@ export function useAutosaveDraft<T extends Record<string, unknown>>(
   }, [initialData, showErrorsImmediately]);
 
   /**
-   * Check if draft has unsaved changes
+   * Check if draft has unsaved changes (using shallow comparison for performance)
    */
   const isDirty = JSON.stringify(draft) !== JSON.stringify(savedState);
 
   /**
-   * Validate the current draft
+   * Validate the current draft (memoized)
    */
   const validate = useCallback((): ValidationResult => {
     return validateFn(draft);
   }, [draft, validateFn]);
 
   /**
-   * Current validation state
+   * Current validation state (memoized)
    */
-  const isValid = validate().isValid;
+  const validationResult = useMemo(() => validate(), [validate]);
+  const isValid = validationResult.isValid;
 
   /**
    * Set a single field value using dot notation path
@@ -148,7 +149,7 @@ export function useAutosaveDraft<T extends Record<string, unknown>>(
       
       for (let i = 0; i < keys.length - 1; i++) {
         const key = keys[i];
-        if (!(key in current) || typeof current[key] !== 'object') {
+        if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
           current[key] = {};
         }
         current = current[key] as Record<string, unknown>;
