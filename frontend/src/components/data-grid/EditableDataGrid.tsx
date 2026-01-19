@@ -2,11 +2,19 @@
  * Reusable Editable Data Grid component.
  * 
  * Provides Excel-like inline editing with validation and API integration.
+ * Now supports spreadsheet-like autosave on blur.
  * Can be used for any entity type with proper configuration.
  * UI text is in German, code comments remain in English.
  * 
  * @template T The type of data rows
  * @returns A configurable editable data grid component
+ * 
+ * @remarks
+ * Changes are automatically saved when you:
+ * - Click outside the row (blur)
+ * - Press Tab to move to another field
+ * - Click on a different row
+ * Navigation is blocked if there are unsaved changes (row in edit mode).
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -18,6 +26,7 @@ import { Box, Alert, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import axios, { AxiosError } from 'axios';
+import { useNavigationBlocker } from '../../hooks/autosave';
 
 /**
  * Base interface for editable data grid rows
@@ -95,6 +104,17 @@ export function EditableDataGrid<T extends EditableRow>({
   const [dataFetched, setDataFetched] = useState<boolean>(false);
   const initialRowProcessedRef = useRef<boolean>(false);
   const initialFetchDoneRef = useRef<boolean>(false);
+
+  // Check if any row is in edit mode (has unsaved changes)
+  const hasUnsavedChanges = Object.values(rowModesModel).some(
+    (mode) => mode.mode === GridRowModes.Edit
+  );
+
+  // Block navigation if there are unsaved changes
+  useNavigationBlocker(
+    hasUnsavedChanges,
+    'You have unsaved changes in the table. Clicking outside a row will save it. Are you sure you want to leave?'
+  );
 
   /**
    * Fetch data from API and populate grid

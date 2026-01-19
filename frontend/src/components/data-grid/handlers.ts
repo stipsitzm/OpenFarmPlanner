@@ -2,6 +2,7 @@
  * Common event handlers for MUI DataGrid components.
  * 
  * Provides reusable handlers for consistent behavior across all DataGrid instances.
+ * Updated to support spreadsheet-like autosave on blur.
  */
 
 import type { Dispatch, SetStateAction } from 'react';
@@ -33,17 +34,23 @@ export function handleEditableCellClick(
 }
 
 /**
- * Handler for row edit stop events that prevents exiting edit mode on focus out.
+ * Handler for row edit stop events that enables autosave on blur.
  * 
- * This handler prevents the DataGrid from automatically exiting edit mode when
- * the row loses focus. This allows users to click outside the grid without
- * automatically committing changes, providing better control over the edit flow.
+ * This handler allows the DataGrid to automatically save changes when
+ * the row loses focus, implementing spreadsheet-like autosave behavior.
+ * However, it prevents exit on rowFocusOut caused by pressing Escape or Tab,
+ * allowing those keys to work as expected.
  * 
  * @param params - The row edit stop event parameters
  * @param event - The underlying DOM event
  */
 export const handleRowEditStop: GridEventListener<'rowEditStop'> = (params, event): void => {
-  if (params.reason === GridRowEditStopReasons.rowFocusOut) {
+  // Allow natural blur to trigger save (rowFocusOut)
+  // But prevent other unwanted edit stop reasons
+  if (params.reason === GridRowEditStopReasons.escapeKeyDown) {
+    // Escape should cancel editing without saving
     event.defaultMuiPrevented = true;
   }
+  // rowFocusOut will trigger processRowUpdate, implementing autosave on blur
 };
+
