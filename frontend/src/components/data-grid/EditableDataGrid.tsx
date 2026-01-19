@@ -27,6 +27,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import axios, { AxiosError } from 'axios';
 import { useNavigationBlocker } from '../../hooks/autosave';
+import { useTranslation } from '../../i18n';
 
 /**
  * Base interface for editable data grid rows
@@ -104,6 +105,8 @@ export function EditableDataGrid<T extends EditableRow>({
   const [dataFetched, setDataFetched] = useState<boolean>(false);
   const initialRowProcessedRef = useRef<boolean>(false);
   const initialFetchDoneRef = useRef<boolean>(false);
+  
+  const { t } = useTranslation('common');
 
   // Check if any row is in edit mode (has unsaved changes)
   const hasUnsavedChanges = Object.values(rowModesModel).some(
@@ -118,8 +121,8 @@ export function EditableDataGrid<T extends EditableRow>({
   useNavigationBlocker(
     hasUnsavedChanges || hasValidationError,
     hasValidationError 
-      ? 'You have validation errors that need to be fixed before navigating away. Please correct the errors or cancel editing.'
-      : 'You have unsaved changes in the table. Clicking outside a row will save it. Are you sure you want to leave?'
+      ? t('messages.validationErrors')
+      : t('messages.unsavedChanges')
   );
 
   /**
@@ -261,6 +264,10 @@ export function EditableDataGrid<T extends EditableRow>({
    * Process row update - save to API
    */
   const processRowUpdate = async (newRow: T): Promise<T> => {
+    // Clear previous error before validating
+    // This ensures dropdown selections and other changes trigger fresh validation
+    setError('');
+    
     // Validate required fields
     const validationError = validateRow(newRow);
     if (validationError) {

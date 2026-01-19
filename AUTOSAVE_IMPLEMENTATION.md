@@ -221,21 +221,25 @@ npm run test
 ### Data Grids (e.g., Planting Plans)
 
 1. User clicks on a cell → row enters edit mode
-2. User types → draft state updates locally
+2. User types or selects from dropdown → changes are tracked locally
 3. User clicks outside row, tabs to next row, or clicks another row → triggers validation
-4. If valid → automatic save to server, row exits edit mode
-5. If invalid → error shown, row stays in edit mode, **navigation is blocked**
-6. User tries to navigate away with invalid data → confirmation dialog blocks navigation
-7. User must fix errors or cancel editing (Escape key) before navigating away
+4. Validation clears previous errors and validates all required fields
+5. If valid → automatic save to server, row exits edit mode
+6. If invalid → **detailed error message** shows which specific fields are missing, row stays in edit mode, **navigation is blocked**
+7. User tries to navigate away with invalid data → confirmation dialog blocks navigation in German
+8. User must fix errors or cancel editing (Escape key) before navigating away
 
 ### Key Improvements
 
 - **No Enter key required** - More intuitive, spreadsheet-like behavior
-- **Clear validation feedback** - Errors shown immediately on blur
+- **Clear validation feedback** - Errors shown immediately on blur with specific field names
+- **Dropdown selection support** - Selecting from dropdowns properly updates validation state
 - **Complete data protection** - Cannot accidentally lose work or navigate away with invalid data
 - **Better performance** - No server calls while typing
 - **Graceful error handling** - Server errors don't lose user's work
+- **Internationalized messages** - All user-facing messages in German (or configured language)
 - **Navigation blocking on validation errors** - Prevents losing incomplete data when required fields are missing
+- **Detailed error messages** - Shows exactly which fields need to be filled
 
 ## Technical Details
 
