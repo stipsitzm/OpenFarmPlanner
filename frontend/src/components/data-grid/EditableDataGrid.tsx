@@ -110,10 +110,16 @@ export function EditableDataGrid<T extends EditableRow>({
     (mode) => mode.mode === GridRowModes.Edit
   );
 
-  // Block navigation if there are unsaved changes
+  // Check if there's a validation error (indicating incomplete/invalid data)
+  const hasValidationError = Boolean(error);
+
+  // Block navigation if there are unsaved changes OR validation errors
+  // This prevents losing incomplete data when required fields are missing
   useNavigationBlocker(
-    hasUnsavedChanges,
-    'You have unsaved changes in the table. Clicking outside a row will save it. Are you sure you want to leave?'
+    hasUnsavedChanges || hasValidationError,
+    hasValidationError 
+      ? 'You have validation errors that need to be fixed before navigating away. Please correct the errors or cancel editing.'
+      : 'You have unsaved changes in the table. Clicking outside a row will save it. Are you sure you want to leave?'
   );
 
   /**

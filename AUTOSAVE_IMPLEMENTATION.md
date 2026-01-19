@@ -159,8 +159,9 @@ Shared component used by multiple pages:
   - Clicking outside the row
   - Pressing Tab to move to another field
   - Clicking another row
-- **Navigation**: Blocked if any row is in edit mode
-- **Validation**: Invalid rows cannot be saved (error shown to user)
+- **Navigation**: Blocked if any row is in edit mode **OR if there are validation errors**
+- **Validation**: Invalid rows cannot be saved (error shown to user, row stays in edit mode)
+- **Data Protection**: Navigation is blocked when required fields are missing, preventing data loss
 
 **Pages Using EditableDataGrid:**
 1. **Locations** (`src/pages/Locations.tsx`) - Location management
@@ -168,7 +169,7 @@ Shared component used by multiple pages:
 3. **Tasks** (`src/pages/Tasks.tsx`) - Farm task management
 4. **FieldsBedsHierarchy** (`src/pages/FieldsBedsHierarchy.tsx`) - Hierarchical field/bed view
 
-All these pages now have autosave-on-blur behavior.
+All these pages now have autosave-on-blur behavior and validation error navigation blocking.
 
 ### Not Changed
 
@@ -223,16 +224,18 @@ npm run test
 2. User types → draft state updates locally
 3. User clicks outside row, tabs to next row, or clicks another row → triggers validation
 4. If valid → automatic save to server, row exits edit mode
-5. If invalid → error shown, row stays in edit mode
-6. User tries to navigate away with row in edit mode → confirmation dialog
+5. If invalid → error shown, row stays in edit mode, **navigation is blocked**
+6. User tries to navigate away with invalid data → confirmation dialog blocks navigation
+7. User must fix errors or cancel editing (Escape key) before navigating away
 
 ### Key Improvements
 
 - **No Enter key required** - More intuitive, spreadsheet-like behavior
 - **Clear validation feedback** - Errors shown immediately on blur
-- **Data protection** - Cannot accidentally lose unsaved work
+- **Complete data protection** - Cannot accidentally lose work or navigate away with invalid data
 - **Better performance** - No server calls while typing
 - **Graceful error handling** - Server errors don't lose user's work
+- **Navigation blocking on validation errors** - Prevents losing incomplete data when required fields are missing
 
 ## Technical Details
 
