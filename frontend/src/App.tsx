@@ -2,13 +2,13 @@
  * Main application component.
  * 
  * Provides the routing structure and navigation for OpenFarmPlanner.
- * Uses React Router for client-side routing with a persistent navigation bar.
+ * Uses React Router data router for client-side routing with a persistent navigation bar.
  * UI text is in German, code comments remain in English.
  * 
  * @returns The main App component with routing
  */
 
-import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, NavLink } from 'react-router-dom';
 import { useTranslation } from './i18n';
 import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 import Home from './pages/Home';
@@ -21,10 +21,10 @@ import GanttChart from './pages/GanttChart';
 import './App.css';
 
 /**
- * Inner component that uses navigation hooks.
- * Separated to use React Router hooks inside Router context.
+ * Root layout component with navigation.
+ * Wraps all routes with the persistent navigation bar.
  */
-function AppContent(): React.ReactElement {
+function RootLayout(): React.ReactElement {
   const { t } = useTranslation('navigation');
   
   // Enable keyboard navigation shortcuts
@@ -59,28 +59,63 @@ function AppContent(): React.ReactElement {
         </div>
       </nav>
 
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/locations" element={<Locations />} />
-        <Route path="/fields-beds" element={<FieldsBedsHierarchy />} />
-        <Route path="/cultures" element={<Cultures />} />
-        <Route path="/planting-plans" element={<PlantingPlans />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/gantt-chart" element={<GanttChart />} />
-      </Routes>
+      <Outlet />
     </div>
   );
+}
+
+/**
+ * Create the router with data router API
+ */
+function createAppRouter(basename: string) {
+  return createBrowserRouter([
+    {
+      path: '/',
+      element: <RootLayout />,
+      children: [
+        {
+          index: true,
+          element: <Home />,
+        },
+        {
+          path: 'locations',
+          element: <Locations />,
+        },
+        {
+          path: 'fields-beds',
+          element: <FieldsBedsHierarchy />,
+        },
+        {
+          path: 'cultures',
+          element: <Cultures />,
+        },
+        {
+          path: 'planting-plans',
+          element: <PlantingPlans />,
+        },
+        {
+          path: 'tasks',
+          element: <Tasks />,
+        },
+        {
+          path: 'gantt-chart',
+          element: <GanttChart />,
+        },
+      ],
+    },
+  ], {
+    basename,
+  });
 }
 
 function App(): React.ReactElement {
   // Use Vite's base URL to set React Router basename so routes work under a subdirectory
   // Vite provides BASE_URL ending with a trailing slash (e.g., "/openfarmplanner/")
   const basename = import.meta.env.BASE_URL.replace(/\/$/, '');
-  return (
-    <Router basename={basename}>
-      <AppContent />
-    </Router>
-  );
+  
+  const router = createAppRouter(basename);
+  
+  return <RouterProvider router={router} />;
 }
 
 export default App;

@@ -3,7 +3,7 @@
  * 
  * Uses React Router's blocker API to prevent route changes
  * when there are unsaved changes that would be lost.
- * Falls back to beforeunload handler only if not in a data router context.
+ * Also handles browser navigation via beforeunload.
  * 
  * @param shouldBlock Function that returns true if navigation should be blocked
  * @param message Optional custom message for the confirmation dialog
@@ -11,10 +11,11 @@
  * @remarks
  * Used in conjunction with useAutosaveDraft to prevent data loss.
  * Shows a confirmation dialog when user tries to navigate away.
- * Compatible with both BrowserRouter and data routers (createBrowserRouter).
+ * Works with data routers (createBrowserRouter).
  */
 
 import { useEffect } from 'react';
+import { useBlocker } from 'react-router-dom';
 
 /**
  * Hook to block navigation when there are unsaved changes
@@ -40,9 +41,21 @@ export function useNavigationBlocker(
     };
   }, [shouldBlock, message]);
 
-  // Note: React Router navigation blocking with useBlocker only works with data routers
-  // (createBrowserRouter), not with BrowserRouter. Since this app uses BrowserRouter,
-  // we rely on the beforeunload handler above for browser navigation protection.
-  // For in-app navigation blocking with BrowserRouter, consider upgrading to a data router
-  // or implementing a custom solution with route change listeners.
+  // Use React Router's blocker for in-app navigation
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    // Only block if we're actually navigating to a different location
+    return shouldBlock && currentLocation.pathname !== nextLocation.pathname;
+  });
+
+  // Handle blocker state
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      const proceed = window.confirm(message);
+      if (proceed) {
+        blocker.proceed();
+      } else {
+        blocker.reset();
+      }
+    }
+  }, [blocker, message]);
 }

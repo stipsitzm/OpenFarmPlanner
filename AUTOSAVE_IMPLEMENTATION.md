@@ -255,8 +255,9 @@ useEffect(() => {
 
 ### React Router Navigation Blocking
 
-The `useNavigationBlocker` hook provides browser navigation protection via the `beforeunload` event:
+The `useNavigationBlocker` hook provides comprehensive navigation protection:
 
+**Browser Navigation (beforeunload):**
 ```typescript
 useEffect(() => {
   if (!shouldBlock) return;
@@ -272,21 +273,47 @@ useEffect(() => {
 }, [shouldBlock, message]);
 ```
 
-**Note on Router Compatibility:**
+**In-App Navigation (useBlocker):**
+```typescript
+const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+  return shouldBlock && currentLocation.pathname !== nextLocation.pathname;
+});
 
-This implementation currently uses `beforeunload` for browser navigation (tab close, reload, external navigation). React Router's `useBlocker` API for in-app navigation blocking only works with data routers (`createBrowserRouter`), not with `BrowserRouter` which is currently used in this app.
+useEffect(() => {
+  if (blocker.state === 'blocked') {
+    const proceed = window.confirm(message);
+    if (proceed) {
+      blocker.proceed();
+    } else {
+      blocker.reset();
+    }
+  }
+}, [blocker, message]);
+```
 
-For full in-app navigation blocking:
-- Either upgrade to React Router's data router API (`createBrowserRouter`)
-- Or implement a custom solution with route change listeners
+**Router Compatibility:**
 
-The `beforeunload` handler provides protection for:
+This app now uses React Router's data router API (`createBrowserRouter`), which provides full support for:
 - ✅ Browser tab close
-- ✅ Page reload  
+- ✅ Page reload
 - ✅ External navigation (typing new URL)
-- ❌ In-app React Router navigation (currently not blocked)
+- ✅ In-app React Router navigation
 
-Since most data loss scenarios occur from closing the browser or reloading, and the autosave-on-blur behavior minimizes unsaved data, this provides adequate protection for most use cases.
+The data router structure in `App.tsx` uses a root layout with nested routes:
+
+```typescript
+createBrowserRouter([
+  {
+    path: '/',
+    element: <RootLayout />,
+    children: [
+      { index: true, element: <Home /> },
+      { path: 'locations', element: <Locations /> },
+      // ... other routes
+    ],
+  },
+], { basename });
+```
 
 ### MUI DataGrid Integration
 
