@@ -278,15 +278,24 @@ function PlantingPlans(): React.ReactElement {
           };
         }}
         validateRow={(row) => {
+          const missingFields: string[] = [];
+          
           if (!row.planting_date) {
-            return t('plantingPlans:validation.plantingDateRequired');
+            missingFields.push(t('plantingPlans:columns.plantingDate'));
           }
           if (!row.culture || row.culture === 0) {
-            return t('plantingPlans:validation.cultureRequired');
+            missingFields.push(t('plantingPlans:columns.culture'));
           }
           if (!row.bed || row.bed === 0) {
-            return t('plantingPlans:validation.bedRequired');
+            missingFields.push(t('plantingPlans:columns.bed'));
           }
+          
+          if (missingFields.length > 0) {
+            return t('plantingPlans:validation.requiredFields', { 
+              fields: missingFields.join(', ') 
+            });
+          }
+          
           return null;
         }}
         loadErrorMessage={t('plantingPlans:errors.load')}

@@ -18,7 +18,8 @@
   "validation": {
     "plantingDateRequired": "Pflanzdatum ist ein Pflichtfeld",
     "cultureRequired": "Kultur ist ein Pflichtfeld",
-    "bedRequired": "Beet ist ein Pflichtfeld"
+    "bedRequired": "Beet ist ein Pflichtfeld",
+    "requiredFields": "Folgende Pflichtfelder müssen ausgefüllt werden: {{fields}}"
   },
   "confirmDelete": "Möchten Sie diesen Anbauplan wirklich löschen?",
   "addButton": "Neuen Anbauplan hinzufügen"

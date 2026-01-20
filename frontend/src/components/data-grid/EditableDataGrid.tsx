@@ -2,14 +2,22 @@
  * Reusable Editable Data Grid component.
  * 
  * Provides Excel-like inline editing with validation and API integration.
+ * Now supports spreadsheet-like autosave on blur.
  * Can be used for any entity type with proper configuration.
  * UI text is in German, code comments remain in English.
  * 
  * @template T The type of data rows
  * @returns A configurable editable data grid component
+ * 
+ * @remarks
+ * Changes are automatically saved when you:
+ * - Click outside the row (blur)
+ * - Press Tab to move to another field
+ * - Click on a different row
+ * Navigation is blocked if there are unsaved changes (row in edit mode).
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
@@ -18,6 +26,8 @@ import { Box, Alert, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import axios, { AxiosError } from 'axios';
+import { useNavigationBlocker } from '../../hooks/autosave';
+import { useTranslation } from '../../i18n';
 
 /**
  * Base interface for editable data grid rows
@@ -95,6 +105,44 @@ export function EditableDataGrid<T extends EditableRow>({
   const [dataFetched, setDataFetched] = useState<boolean>(false);
   const initialRowProcessedRef = useRef<boolean>(false);
   const initialFetchDoneRef = useRef<boolean>(false);
+  
+  const { t } = useTranslation('common');
+
+  // Check if any row is in edit mode (has unsaved changes)
+  const hasUnsavedChanges = Object.values(rowModesModel).some(
+    (mode) => mode.mode === GridRowModes.Edit
+  );
+
+  // Check if there's a validation error (indicating incomplete/invalid data)
+  const hasValidationError = Boolean(error);
+  
+  // Check if any row in edit mode has validation errors
+  // This prevents navigation when user has incomplete data even if blur hasn't happened yet
+  const hasInvalidRowInEditMode = useMemo(() => {
+    if (!hasUnsavedChanges) return false;
+    
+    // Find rows that are in edit mode
+    const editingRowIds = Object.entries(rowModesModel)
+      .filter(([, mode]) => mode.mode === GridRowModes.Edit)
+      .map(([id]) => id);
+    
+    // Check if any of those rows have validation errors
+    return editingRowIds.some(id => {
+      const row = rows.find(r => String(r.id) === String(id));
+      if (!row) return false;
+      const validationError = validateRow(row);
+      return validationError !== null;
+    });
+  }, [hasUnsavedChanges, rowModesModel, rows, validateRow]);
+
+  // Block navigation if there are unsaved changes with invalid data OR validation errors showing
+  // This prevents losing incomplete data when required fields are missing
+  useNavigationBlocker(
+    hasUnsavedChanges || hasValidationError || hasInvalidRowInEditMode,
+    hasValidationError || hasInvalidRowInEditMode
+      ? t('messages.validationErrors')
+      : t('messages.unsavedChanges')
+  );
 
   /**
    * Fetch data from API and populate grid
@@ -235,6 +283,10 @@ export function EditableDataGrid<T extends EditableRow>({
    * Process row update - save to API
    */
   const processRowUpdate = async (newRow: T): Promise<T> => {
+    // Clear previous error before validating
+    // This ensures dropdown selections and other changes trigger fresh validation
+    setError('');
+    
     // Validate required fields
     const validationError = validateRow(newRow);
     if (validationError) {

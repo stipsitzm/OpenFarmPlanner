@@ -12,9 +12,10 @@
  * @returns JSX element rendering the culture form
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from '../i18n';
 import type { Culture } from '../api/api';
+import { useAutosaveDraft, useNavigationBlocker, type ValidationResult } from '../hooks/autosave';
 import {
   Box,
   Button,
@@ -26,6 +27,8 @@ import {
   FormControlLabel,
   Checkbox,
   Typography,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 
 interface CultureFormProps {
@@ -34,12 +37,29 @@ interface CultureFormProps {
   onCancel: () => void;
 }
 
-interface FormErrors {
-  [key: string]: string;
-}
-
 // Default color for display color picker
 const DEFAULT_DISPLAY_COLOR = '#3498db';
+
+// Empty culture template
+const EMPTY_CULTURE: Partial<Culture> = {
+  name: '',
+  variety: '',
+  crop_family: '',
+  nutrient_demand: '',
+  cultivation_type: '',
+  notes: '',
+  growth_duration_days: undefined,
+  harvest_duration_days: undefined,
+  propagation_duration_days: undefined,
+  harvest_method: '',
+  expected_yield: undefined,
+  allow_deviation_delivery_weeks: false,
+  distance_within_row_cm: undefined,
+  row_spacing_cm: undefined,
+  sowing_depth_cm: undefined,
+  display_color: '',
+  days_to_harvest: 0,
+};
 
 export function CultureForm({
   culture,
@@ -48,136 +68,130 @@ export function CultureForm({
 }: CultureFormProps): React.ReactElement {
   const { t } = useTranslation('cultures');
   const isEdit = Boolean(culture);
+  const [saveError, setSaveError] = useState<string>('');
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
-  // Initialize form data
-  const [formData, setFormData] = useState<Partial<Culture>>({
-    name: '',
-    variety: '',
-    crop_family: '',
-    nutrient_demand: '',
-    cultivation_type: '',
-    notes: '',
-    growth_duration_days: undefined,
-    harvest_duration_days: undefined,
-    propagation_duration_days: undefined,
-    harvest_method: '',
-    expected_yield: undefined,
-    allow_deviation_delivery_weeks: false,
-    distance_within_row_cm: undefined,
-    row_spacing_cm: undefined,
-    sowing_depth_cm: undefined,
-    display_color: '',
-    days_to_harvest: 0,
-  });
+  // Validation function for the autosave hook
+  const validateCulture = (draft: Partial<Culture>): ValidationResult => {
+    const errors: Record<string, string> = {};
 
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Load culture data for editing
-  useEffect(() => {
-    if (culture) {
-      setFormData(culture);
-    }
-  }, [culture]);
-
-  const validateField = (name: string, value: any): string | null => {
-    // Required fields
-    if (name === 'name' && !value) {
-      return t('form.nameRequired');
-    }
-    if (name === 'growth_duration_days' && (value === undefined || value === null || value === '')) {
-      return t('form.growthDurationDaysRequired');
-    }
-    if (name === 'harvest_duration_days' && (value === undefined || value === null || value === '')) {
-      return t('form.harvestDurationDaysRequired');
+    // Required field: name
+    if (!draft.name) {
+      errors.name = t('form.nameRequired');
     }
 
-    // Numeric validations
-    const numericValue = typeof value === 'string' ? parseFloat(value) : value;
-    
-    if ((name === 'growth_duration_days' || name === 'harvest_duration_days' || 
-         name === 'propagation_duration_days' || name === 'expected_yield' || 
-         name === 'distance_within_row_cm' || name === 'row_spacing_cm' || name === 'sowing_depth_cm') && 
-        value !== undefined && value !== null && value !== '') {
-      if (numericValue < 0) {
-        return t(`form.${name}Error`, { defaultValue: t('form.growthDurationDaysError') });
+    // Required field: growth_duration_days
+    if (draft.growth_duration_days === undefined || draft.growth_duration_days === null || (draft.growth_duration_days as unknown) === '') {
+      errors.growth_duration_days = t('form.growthDurationDaysRequired');
+    } else {
+      const numValue = typeof draft.growth_duration_days === 'string' ? parseFloat(draft.growth_duration_days as string) : draft.growth_duration_days;
+      if (numValue < 0) {
+        errors.growth_duration_days = t('form.growthDurationDaysError');
       }
     }
 
-    // Display color format validation
-    if (name === 'display_color' && value && !/^#[0-9A-Fa-f]{6}$/.test(value)) {
-      return t('form.displayColorError');
+    // Required field: harvest_duration_days
+    if (draft.harvest_duration_days === undefined || draft.harvest_duration_days === null || (draft.harvest_duration_days as unknown) === '') {
+      errors.harvest_duration_days = t('form.harvestDurationDaysRequired');
+    } else {
+      const numValue = typeof draft.harvest_duration_days === 'string' ? parseFloat(draft.harvest_duration_days as string) : draft.harvest_duration_days;
+      if (numValue < 0) {
+        errors.harvest_duration_days = t('form.harvestDurationDaysError');
+      }
     }
 
-    return null;
-  };
+    // Optional numeric fields validation
+    const numericFields = [
+      'propagation_duration_days',
+      'expected_yield',
+      'distance_within_row_cm',
+      'row_spacing_cm',
+      'sowing_depth_cm',
+    ];
 
-  const handleChange = (name: string, value: any) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
-  };
-
-  const handleBlur = (name: string) => {
-    const error = validateField(name, formData[name as keyof Culture]);
-    if (error) {
-      setErrors(prev => ({ ...prev, [name]: error }));
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    // Validate all required fields
-    const nameError = validateField('name', formData.name);
-    if (nameError) newErrors.name = nameError;
-
-    const growthError = validateField('growth_duration_days', formData.growth_duration_days);
-    if (growthError) newErrors.growth_duration_days = growthError;
-
-    const harvestError = validateField('harvest_duration_days', formData.harvest_duration_days);
-    if (harvestError) newErrors.harvest_duration_days = harvestError;
-
-    // Validate all optional fields that have values
-    Object.keys(formData).forEach(key => {
-      const value = formData[key as keyof Culture];
+    numericFields.forEach(field => {
+      const value = draft[field as keyof Culture];
       if (value !== undefined && value !== null && value !== '') {
-        const error = validateField(key, value);
-        if (error) newErrors[key] = error;
+        const numValue = typeof value === 'string' ? parseFloat(value as string) : (value as number);
+        if (numValue < 0) {
+          errors[field] = t(`form.${field}Error`, { defaultValue: t('form.growthDurationDaysError') });
+        }
       }
     });
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
+    // Display color validation
+    if (draft.display_color && !/^#[0-9A-Fa-f]{6}$/.test(draft.display_color)) {
+      errors.display_color = t('form.displayColorError');
     }
 
-    setIsSubmitting(true);
-    try {
-      // Calculate days_to_harvest from growth_duration_days if not set
-      const dataToSave = {
-        ...formData,
-        days_to_harvest: formData.days_to_harvest || formData.growth_duration_days || 0,
-      } as Culture;
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors,
+    };
+  };
 
-      await onSave(dataToSave);
-    } catch (error) {
+  // Save function for the autosave hook
+  const saveCulture = async (draft: Partial<Culture>): Promise<Partial<Culture>> => {
+    // Calculate days_to_harvest from growth_duration_days if not set
+    const dataToSave = {
+      ...draft,
+      days_to_harvest: draft.days_to_harvest || draft.growth_duration_days || 0,
+    } as Culture;
+
+    await onSave(dataToSave);
+    return dataToSave;
+  };
+
+  // Initialize autosave hook
+  const initialData = culture || EMPTY_CULTURE;
+  const {
+    draft: formData,
+    setField: handleFieldChange,
+    errors,
+    isDirty,
+    isValid,
+    isSaving,
+    saveIfValid,
+  } = useAutosaveDraft({
+    initialData,
+    validate: validateCulture,
+    save: saveCulture,
+    onSaveSuccess: () => {
+      setShowSaveSuccess(true);
+      setSaveError('');
+    },
+    onSaveError: (error) => {
       console.error('Error saving culture:', error);
-    } finally {
-      setIsSubmitting(false);
+      setSaveError(error.message || t('messages.updateError'));
+    },
+  });
+
+  // Block navigation if there are unsaved changes that are invalid
+  // Valid changes will be saved on blur, so we only block invalid ones
+  useNavigationBlocker(
+    isDirty && !isValid,
+    t('messages.unsavedChanges', { defaultValue: 'You have unsaved changes. Are you sure you want to leave?' })
+  );
+
+  // Handle field changes
+  const handleChange = (name: string, value: unknown) => {
+    handleFieldChange(name, value);
+  };
+
+  // Handle field blur - trigger autosave
+  const handleBlur = async () => {
+    if (isDirty && isValid) {
+      await saveIfValid('blur');
+    }
+  };
+
+  // Handle manual save (for Save button)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const success = await saveIfValid('manual');
+    if (success && !isDirty) {
+      // Form was saved successfully and there are no more changes
+      // Note: The dialog will be closed by the parent component after onSave completes
     }
   };
 
@@ -199,7 +213,7 @@ export function CultureForm({
             placeholder={t('form.namePlaceholder')}
             value={formData.name}
             onChange={(e) => handleChange('name', e.target.value)}
-            onBlur={() => handleBlur('name')}
+            onBlur={handleBlur}
             error={Boolean(errors.name)}
             helperText={errors.name}
           />
@@ -210,6 +224,7 @@ export function CultureForm({
             placeholder={t('form.varietyPlaceholder')}
             value={formData.variety}
             onChange={(e) => handleChange('variety', e.target.value)}
+            onBlur={handleBlur}
           />
         </Box>
 
@@ -220,6 +235,7 @@ export function CultureForm({
             placeholder={t('form.cropFamilyPlaceholder')}
             value={formData.crop_family}
             onChange={(e) => handleChange('crop_family', e.target.value)}
+            onBlur={handleBlur}
           />
 
           <FormControl sx={{ flex: '1 1 45%', minWidth: '200px' }}>
@@ -227,6 +243,7 @@ export function CultureForm({
             <Select
               value={formData.nutrient_demand || ''}
               onChange={(e) => handleChange('nutrient_demand', e.target.value)}
+              onBlur={handleBlur}
               label={t('form.nutrientDemand')}
             >
               <MenuItem value="">{t('noData')}</MenuItem>
@@ -243,6 +260,7 @@ export function CultureForm({
             <Select
               value={formData.cultivation_type || ''}
               onChange={(e) => handleChange('cultivation_type', e.target.value)}
+              onBlur={handleBlur}
               label={t('form.cultivationType')}
             >
               <MenuItem value="">{t('noData')}</MenuItem>
@@ -264,7 +282,7 @@ export function CultureForm({
             placeholder={t('form.growthDurationDaysPlaceholder')}
             value={formData.growth_duration_days ?? ''}
             onChange={(e) => handleChange('growth_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
-            onBlur={() => handleBlur('growth_duration_days')}
+            onBlur={handleBlur}
             error={Boolean(errors.growth_duration_days)}
             helperText={errors.growth_duration_days}
             slotProps={{ htmlInput: { min: 0, step: 1 } }}
@@ -278,7 +296,7 @@ export function CultureForm({
             placeholder={t('form.harvestDurationDaysPlaceholder')}
             value={formData.harvest_duration_days ?? ''}
             onChange={(e) => handleChange('harvest_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
-            onBlur={() => handleBlur('harvest_duration_days')}
+            onBlur={handleBlur}
             error={Boolean(errors.harvest_duration_days)}
             helperText={errors.harvest_duration_days}
             slotProps={{ htmlInput: { min: 0, step: 1 } }}
@@ -291,7 +309,7 @@ export function CultureForm({
             placeholder={t('form.propagationDurationDaysPlaceholder')}
             value={formData.propagation_duration_days ?? ''}
             onChange={(e) => handleChange('propagation_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
-            onBlur={() => handleBlur('propagation_duration_days')}
+            onBlur={handleBlur}
             error={Boolean(errors.propagation_duration_days)}
             helperText={errors.propagation_duration_days}
             slotProps={{ htmlInput: { min: 0, step: 1 } }}
@@ -307,6 +325,7 @@ export function CultureForm({
             <Select
               value={formData.harvest_method || ''}
               onChange={(e) => handleChange('harvest_method', e.target.value)}
+              onBlur={handleBlur}
               label={t('form.harvestMethod')}
             >
               <MenuItem value="">{t('noData')}</MenuItem>
@@ -322,7 +341,7 @@ export function CultureForm({
             placeholder={t('form.expectedYieldPlaceholder')}
             value={formData.expected_yield ?? ''}
             onChange={(e) => handleChange('expected_yield', e.target.value ? parseFloat(e.target.value) : undefined)}
-            onBlur={() => handleBlur('expected_yield')}
+            onBlur={handleBlur}
             error={Boolean(errors.expected_yield)}
             helperText={errors.expected_yield}
             slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
@@ -350,7 +369,7 @@ export function CultureForm({
             placeholder={t('form.distanceWithinRowCmPlaceholder')}
             value={formData.distance_within_row_cm ?? ''}
             onChange={(e) => handleChange('distance_within_row_cm', e.target.value ? parseFloat(e.target.value) : undefined)}
-            onBlur={() => handleBlur('distance_within_row_cm')}
+            onBlur={handleBlur}
             error={Boolean(errors.distance_within_row_cm)}
             helperText={errors.distance_within_row_cm}
             slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
@@ -363,7 +382,7 @@ export function CultureForm({
             placeholder={t('form.rowSpacingCmPlaceholder')}
             value={formData.row_spacing_cm ?? ''}
             onChange={(e) => handleChange('row_spacing_cm', e.target.value ? parseFloat(e.target.value) : undefined)}
-            onBlur={() => handleBlur('row_spacing_cm')}
+            onBlur={handleBlur}
             error={Boolean(errors.row_spacing_cm)}
             helperText={errors.row_spacing_cm}
             slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
@@ -376,7 +395,7 @@ export function CultureForm({
             placeholder={t('form.sowingDepthCmPlaceholder')}
             value={formData.sowing_depth_cm ?? ''}
             onChange={(e) => handleChange('sowing_depth_cm', e.target.value ? parseFloat(e.target.value) : undefined)}
-            onBlur={() => handleBlur('sowing_depth_cm')}
+            onBlur={handleBlur}
             error={Boolean(errors.sowing_depth_cm)}
             helperText={errors.sowing_depth_cm}
             slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
@@ -392,7 +411,7 @@ export function CultureForm({
           label={t('form.displayColor')}
           value={formData.display_color || DEFAULT_DISPLAY_COLOR}
           onChange={(e) => handleChange('display_color', e.target.value)}
-          onBlur={() => handleBlur('display_color')}
+          onBlur={handleBlur}
           error={Boolean(errors.display_color)}
           helperText={errors.display_color || t('form.displayColorHelp')}
           slotProps={{ input: { style: { height: '50px' } } }}
@@ -413,18 +432,53 @@ export function CultureForm({
       </Box>
 
       {/* Form Actions */}
-      <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-        <Button onClick={onCancel} disabled={isSubmitting}>
+      <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center' }}>
+        {isDirty && (
+          <Typography variant="body2" color="text.secondary">
+            {isValid 
+              ? t('messages.unsavedChanges', { defaultValue: 'Unsaved changes' })
+              : t('messages.fixErrors', { defaultValue: 'Please fix validation errors' })
+            }
+          </Typography>
+        )}
+        <Button onClick={onCancel} disabled={isSaving}>
           {t('form.cancel')}
         </Button>
         <Button
           type="submit"
           variant="contained"
-          disabled={isSubmitting}
+          disabled={isSaving || !isValid}
         >
-          {isEdit ? t('form.save') : t('form.create')}
+          {isSaving 
+            ? t('messages.saving', { defaultValue: 'Saving...' })
+            : isEdit ? t('form.save') : t('form.create')
+          }
         </Button>
       </Box>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={showSaveSuccess}
+        autoHideDuration={3000}
+        onClose={() => setShowSaveSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" onClose={() => setShowSaveSuccess(false)}>
+          {t('messages.updateSuccess', { defaultValue: 'Saved successfully' })}
+        </Alert>
+      </Snackbar>
+
+      {/* Error Snackbar */}
+      <Snackbar
+        open={Boolean(saveError)}
+        autoHideDuration={6000}
+        onClose={() => setSaveError('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="error" onClose={() => setSaveError('')}>
+          {saveError}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
