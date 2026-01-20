@@ -220,19 +220,23 @@ npm run test
 
 ### Data Grids (e.g., Planting Plans)
 
-1. User clicks on a cell → row enters edit mode
+1. User clicks on a cell → row enters edit mode → **navigation is immediately blocked if row is invalid**
 2. User types or selects from dropdown → changes are tracked locally
-3. User clicks outside row, tabs to next row, or clicks another row → triggers validation
-4. Validation clears previous errors and validates all required fields
-5. If valid → automatic save to server, row exits edit mode
-6. If invalid → **detailed error message** shows which specific fields are missing, row stays in edit mode, **navigation is blocked**
-7. User tries to navigate away with invalid data → confirmation dialog blocks navigation in German
-8. User must fix errors or cancel editing (Escape key) before navigating away
+3. **Validation runs continuously** - Navigation blocker checks current row state in real-time
+4. User tries to navigate away with incomplete data → **blocked immediately** with German message
+5. User clicks outside row or presses Tab → triggers save attempt
+6. Validation clears previous errors and validates all required fields
+7. If valid → automatic save to server, row exits edit mode, navigation unblocked
+8. If invalid → **detailed error message** shows ALL missing fields (e.g., "Folgende Pflichtfelder müssen ausgefüllt werden: Kultur, Beet, Pflanzdatum")
+9. Navigation remains blocked until either:
+   - All required fields are filled and saved successfully, OR
+   - User cancels editing (Escape key) to discard changes
 
 ### Key Improvements
 
 - **No Enter key required** - More intuitive, spreadsheet-like behavior
 - **Clear validation feedback** - Errors shown immediately on blur with specific field names
+- **Proactive navigation blocking** - Checks validation state in real-time, not just after save attempt
 - **Dropdown selection support** - Selecting from dropdowns properly updates validation state
 - **Complete data protection** - Cannot accidentally lose work or navigate away with invalid data
 - **Better performance** - No server calls while typing
@@ -240,6 +244,7 @@ npm run test
 - **Internationalized messages** - All user-facing messages in German (or configured language)
 - **Navigation blocking on validation errors** - Prevents losing incomplete data when required fields are missing
 - **Detailed error messages** - Shows exactly which fields need to be filled
+- **Real-time validation** - Navigation is blocked as soon as a row enters edit mode with invalid data
 
 ## Technical Details
 

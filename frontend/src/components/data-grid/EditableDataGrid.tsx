@@ -17,7 +17,7 @@
  * Navigation is blocked if there are unsaved changes (row in edit mode).
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
@@ -115,12 +115,31 @@ export function EditableDataGrid<T extends EditableRow>({
 
   // Check if there's a validation error (indicating incomplete/invalid data)
   const hasValidationError = Boolean(error);
+  
+  // Check if any row in edit mode has validation errors
+  // This prevents navigation when user has incomplete data even if blur hasn't happened yet
+  const hasInvalidRowInEditMode = useMemo(() => {
+    if (!hasUnsavedChanges) return false;
+    
+    // Find rows that are in edit mode
+    const editingRowIds = Object.entries(rowModesModel)
+      .filter(([, mode]) => mode.mode === GridRowModes.Edit)
+      .map(([id]) => id);
+    
+    // Check if any of those rows have validation errors
+    return editingRowIds.some(id => {
+      const row = rows.find(r => String(r.id) === String(id));
+      if (!row) return false;
+      const validationError = validateRow(row);
+      return validationError !== null;
+    });
+  }, [hasUnsavedChanges, rowModesModel, rows, validateRow]);
 
-  // Block navigation if there are unsaved changes OR validation errors
+  // Block navigation if there are unsaved changes with invalid data OR validation errors showing
   // This prevents losing incomplete data when required fields are missing
   useNavigationBlocker(
-    hasUnsavedChanges || hasValidationError,
-    hasValidationError 
+    hasUnsavedChanges || hasValidationError || hasInvalidRowInEditMode,
+    hasValidationError || hasInvalidRowInEditMode
       ? t('messages.validationErrors')
       : t('messages.unsavedChanges')
   );
