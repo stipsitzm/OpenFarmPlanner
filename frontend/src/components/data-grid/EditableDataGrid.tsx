@@ -2,7 +2,7 @@
  * Reusable Editable Data Grid component.
  * 
  * Provides Excel-like inline editing with validation and API integration.
- * Now supports spreadsheet-like autosave on blur.
+ * Supports spreadsheet-like autosave on blur.
  * Can be used for any entity type with proper configuration.
  * UI text is in German, code comments remain in English.
  * 

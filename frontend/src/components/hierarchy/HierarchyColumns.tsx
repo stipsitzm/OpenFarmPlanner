@@ -28,7 +28,10 @@ function renderNameCell(
       <Box sx={{ display: 'flex', alignItems: 'center', pl: `${indent}px` }}>
         <IconButton
           size="small"
-          onClick={() => onToggleExpand(row.id)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleExpand(row.id);
+          }}
           sx={{ mr: 1 }}
         >
           {row.expanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
