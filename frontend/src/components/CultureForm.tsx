@@ -193,30 +193,16 @@ export function CultureForm({
     }
   };
 
-  // (useNavigationBlocker entfernt, da nicht mehr benötigt)
-
-  // (Alte handleChange-Definition entfernt, da jetzt lokale State-Variante verwendet wird)
-
-  // Handle field blur - trigger autosave
-  const handleBlur = async () => {
-    if (isDirty && isValid) {
-      await saveIfValid('blur');
-    }
-  };
-
-  // (Alte handleSubmit-Definition entfernt, da jetzt lokale State-Variante verwendet wird)
-
   return (
     <Dialog
       open
       onClose={(_event, reason) => {
-        // Prevent closing by backdrop click or escape
-        if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+        // Prevent closing by backdrop click
+        if (reason === 'backdropClick') { // || reason === 'escapeKeyDown') {
           return;
         }
         onCancel();
       }}
-      disableEscapeKeyDown
       aria-labelledby="culture-form-dialog-title"
       maxWidth="md"
       fullWidth
