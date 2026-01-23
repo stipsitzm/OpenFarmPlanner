@@ -15,7 +15,7 @@
 import { useState } from 'react';
 import { useTranslation } from '../i18n';
 import type { Culture } from '../api/api';
-import { useAutosaveDraft, useNavigationBlocker, type ValidationResult } from '../hooks/autosave';
+import { type ValidationResult } from '../hooks/autosave';
 import {
   Box,
   Button,
@@ -142,41 +142,50 @@ export function CultureForm({
     return dataToSave;
   };
 
-  // Initialize autosave hook
-  const initialData = culture || EMPTY_CULTURE;
-  const {
-    draft: formData,
-    setField: handleFieldChange,
-    errors,
-    isDirty,
-    isValid,
-    isSaving,
-    saveIfValid,
-  } = useAutosaveDraft({
-    initialData,
-    validate: validateCulture,
-    save: saveCulture,
-    onSaveSuccess: () => {
-      setShowSaveSuccess(true);
-      setSaveError('');
-    },
-    onSaveError: (error) => {
-      console.error('Error saving culture:', error);
-      setSaveError(error.message || t('messages.updateError'));
-    },
-  });
+  // Local form state (no autosave)
+  const [formData, setFormData] = useState<Partial<Culture>>(culture || EMPTY_CULTURE);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [isValid, setIsValid] = useState(true);
 
-  // Block navigation if there are unsaved changes that are invalid
-  // Valid changes will be saved on blur, so we only block invalid ones
-  useNavigationBlocker(
-    isDirty && !isValid,
-    t('messages.unsavedChanges', { defaultValue: 'You have unsaved changes. Are you sure you want to leave?' })
-  );
+  // Validate on every change
+  const validateAndSet = (draft: Partial<Culture>) => {
+    const result = validateCulture(draft);
+    setErrors(result.errors);
+    setIsValid(result.isValid);
+    return result.isValid;
+  };
 
   // Handle field changes
   const handleChange = (name: string, value: unknown) => {
-    handleFieldChange(name, value);
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+      setIsDirty(true);
+      validateAndSet(updated);
+      return updated;
+    });
   };
+
+  // Handle manual save (for Save button)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateAndSet(formData)) return;
+    setIsSaving(true);
+    try {
+      await saveCulture(formData);
+      setShowSaveSuccess(true);
+      setIsDirty(false);
+    } catch (error: any) {
+      setSaveError(error.message || t('messages.updateError'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // (useNavigationBlocker entfernt, da nicht mehr benötigt)
+
+  // (Alte handleChange-Definition entfernt, da jetzt lokale State-Variante verwendet wird)
 
   // Handle field blur - trigger autosave
   const handleBlur = async () => {
@@ -185,15 +194,7 @@ export function CultureForm({
     }
   };
 
-  // Handle manual save (for Save button)
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const success = await saveIfValid('manual');
-    if (success && !isDirty) {
-      // Form was saved successfully and there are no more changes
-      // Note: The dialog will be closed by the parent component after onSave completes
-    }
-  };
+  // (Alte handleSubmit-Definition entfernt, da jetzt lokale State-Variante verwendet wird)
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%', maxHeight: '80vh', overflow: 'auto', p: 2 }}>
