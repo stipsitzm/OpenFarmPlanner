@@ -1,0 +1,120 @@
+/**
+ * Validation logic for CultureForm.
+ *
+ * Exports a pure function for validating a draft culture object.
+ */
+import type { Culture } from '../api/types';
+import type { TFunction } from 'i18next';
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
+/**
+ * Validates a draft culture object for the form.
+ *
+ * @param draft - Partial culture object (form state)
+ * @param t - Translation function
+ * @returns ValidationResult with errors keyed by field
+ */
+export function validateCulture(
+  draft: Partial<Culture>,
+  t: TFunction
+): ValidationResult {
+  const errors: Record<string, string> = {};
+
+  // Seed rate validation (custom rule)
+  const hasSeedRateValue = draft.seed_rate_value !== null && draft.seed_rate_value !== undefined;
+  const hasSeedRateUnit = draft.seed_rate_unit !== null && draft.seed_rate_unit !== undefined;
+  if (hasSeedRateValue && !hasSeedRateUnit) {
+    errors.seed_rate_unit = 'Wenn eine Menge angegeben wird, muss auch eine Einheit gewählt werden.';
+  }
+  if (hasSeedRateUnit && !hasSeedRateValue) {
+    errors.seed_rate_value = 'Wenn eine Einheit gewählt wird, muss auch eine Menge angegeben werden.';
+  }
+  if (hasSeedRateValue && Number(draft.seed_rate_value) <= 0) {
+    errors.seed_rate_value = 'Die Menge muss größer als 0 sein.';
+  }
+
+  // Required field: name
+  if (!draft.name) {
+    errors.name = t('form.nameRequired');
+  }
+  // Required field: growth_duration_days
+  if (
+    draft.growth_duration_days === undefined ||
+    draft.growth_duration_days === null ||
+    (draft.growth_duration_days as unknown) === ''
+  ) {
+    errors.growth_duration_days = t('form.growthDurationDaysRequired');
+  } else {
+    const numValue = typeof draft.growth_duration_days === 'string' ? parseFloat(draft.growth_duration_days as string) : draft.growth_duration_days;
+    if (numValue < 0) {
+      errors.growth_duration_days = t('form.growthDurationDaysError');
+    }
+  }
+  if (
+    draft.harvest_duration_days === undefined ||
+    draft.harvest_duration_days === null ||
+    (draft.harvest_duration_days as unknown) === ''
+  ) {
+    errors.harvest_duration_days = t('form.harvestDurationDaysRequired');
+  } else {
+    const numValue = typeof draft.harvest_duration_days === 'string' ? parseFloat(draft.harvest_duration_days as string) : draft.harvest_duration_days;
+    if (numValue < 0) {
+      errors.harvest_duration_days = t('form.harvestDurationDaysError');
+    }
+  }
+  // Pflichtfeld: propagation_duration_days, außer bei Direktsaat
+  if (draft.cultivation_type !== 'direct_sowing') {
+    if (
+      draft.propagation_duration_days === undefined ||
+      draft.propagation_duration_days === null ||
+      (draft.propagation_duration_days as unknown) === ''
+    ) {
+      errors.propagation_duration_days = t('form.propagationDurationDaysRequired');
+    } else {
+      const numValue = typeof draft.propagation_duration_days === 'string' ? parseFloat(draft.propagation_duration_days as string) : draft.propagation_duration_days;
+      if (numValue < 0) {
+        errors.propagation_duration_days = t('form.propagationDurationDaysError');
+      }
+    }
+  }
+  // Optional numeric fields validation (alle außer propagation_duration_days)
+  const numericFields = [
+    'expected_yield',
+    'distance_within_row_cm',
+    'row_spacing_cm',
+    'sowing_depth_cm',
+    'sowing_calculation_safety_percent',
+  ];
+  numericFields.forEach(field => {
+    const value = draft[field as keyof Culture];
+    if (value !== undefined && value !== null && value !== '') {
+      const numValue = typeof value === 'string' ? parseFloat(value as string) : (value as number);
+      if (numValue < 0) {
+        errors[field] = t(`form.${field}Error`, { defaultValue: t('form.growthDurationDaysError') });
+      }
+    }
+  });
+  // Display color validation
+  if (draft.display_color && !/^#[0-9A-Fa-f]{6}$/.test(draft.display_color)) {
+    errors.display_color = t('form.displayColorError');
+  }
+
+  // Wenn expected_yield gesetzt ist, muss auch harvest_method gewählt sein
+  if (
+    draft.expected_yield !== undefined &&
+    draft.expected_yield !== null &&
+    typeof draft.expected_yield === 'number' &&
+    !draft.harvest_method
+  ) {
+    errors.harvest_method = t('form.harvestMethodRequired');
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
