@@ -51,7 +51,7 @@ const EMPTY_CULTURE: Partial<Culture> = {
   variety: '',
   crop_family: '',
   nutrient_demand: '',
-  cultivation_type: '',
+  cultivation_type: 'pre_cultivation',
   notes: '',
   growth_duration_days: undefined,
   harvest_duration_days: undefined,
@@ -62,7 +62,6 @@ const EMPTY_CULTURE: Partial<Culture> = {
   row_spacing_cm: undefined,
   sowing_depth_cm: undefined,
   display_color: '',
-  days_to_harvest: 0,
 };
 
 /**
@@ -110,9 +109,23 @@ export function CultureForm({
         errors.harvest_duration_days = t('form.harvestDurationDaysError');
       }
     }
-    // Optional numeric fields validation
+    // Pflichtfeld: propagation_duration_days, außer bei Direktsaat
+    if (draft.cultivation_type !== 'direct_sowing') {
+      if (
+        draft.propagation_duration_days === undefined ||
+        draft.propagation_duration_days === null ||
+        (draft.propagation_duration_days as unknown) === ''
+      ) {
+        errors.propagation_duration_days = t('form.propagationDurationDaysRequired');
+      } else {
+        const numValue = typeof draft.propagation_duration_days === 'string' ? parseFloat(draft.propagation_duration_days as string) : draft.propagation_duration_days;
+        if (numValue < 0) {
+          errors.propagation_duration_days = t('form.propagationDurationDaysError');
+        }
+      }
+    }
+    // Optional numeric fields validation (alle außer propagation_duration_days)
     const numericFields = [
-      'propagation_duration_days',
       'expected_yield',
       'distance_within_row_cm',
       'row_spacing_cm',
@@ -131,6 +144,14 @@ export function CultureForm({
     if (draft.display_color && !/^#[0-9A-Fa-f]{6}$/.test(draft.display_color)) {
       errors.display_color = t('form.displayColorError');
     }
+
+    // Wenn expected_yield gesetzt ist, muss auch harvest_method gewählt sein
+    if (
+      draft.expected_yield !== undefined && draft.expected_yield !== null && draft.expected_yield !== '' &&
+      (!draft.harvest_method || draft.harvest_method === '')
+    ) {
+      errors.harvest_method = t('form.harvestMethodRequired');
+    }
     return {
       isValid: Object.keys(errors).length === 0,
       errors,
@@ -139,10 +160,8 @@ export function CultureForm({
 
   // Save function for the autosave hook
   const saveCulture = async (draft: Partial<Culture>): Promise<Partial<Culture>> => {
-    // Calculate days_to_harvest from growth_duration_days if not set
     const dataToSave: Culture = {
       ...(draft as Culture),
-      days_to_harvest: draft.days_to_harvest || draft.growth_duration_days || 0,
     };
     await onSave(dataToSave);
     return dataToSave;
@@ -256,21 +275,6 @@ export function CultureForm({
                 </Select>
               </FormControl>
             </Box>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <FormControl sx={{ flex: '1 1 45%', minWidth: '200px' }}>
-                <InputLabel>{t('form.cultivationType')}</InputLabel>
-                <Select
-                  value={formData.cultivation_type || ''}
-                  onChange={(e) => handleChange('cultivation_type', e.target.value)}
-                  // onBlur entfernt, handleBlur ist nicht definiert
-                  label={t('form.cultivationType')}
-                >
-                  <MenuItem value="">{t('noData')}</MenuItem>
-                  <MenuItem value="pre_cultivation">{t('form.cultivationTypePreCultivation')}</MenuItem>
-                  <MenuItem value="direct_sowing">{t('form.cultivationTypeDirectSowing')}</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
             {/* Timing */}
             <Typography variant="h6" sx={{ mt: 2 }}>Zeitplanung</Typography>
             {/* Zeitplanung UX Section */}
@@ -341,7 +345,7 @@ export function CultureForm({
                     helperText={
                       errors.propagation_duration_days
                         || ((formData.propagation_duration_days ?? 0) > (formData.growth_duration_days ?? 0)
-                          ? 'Anzuchtdauer darf nicht größer als Wachstumszeitraum sein.'
+                          ? t('form.propagationDurationDaysTooLong')
                           : undefined)
                     }
                     inputProps={{ min: 0, step: 1 }}
@@ -352,18 +356,20 @@ export function CultureForm({
             {/* Harvest Information */}
             <Typography variant="h6" sx={{ mt: 2 }}>Ernteinformationen</Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <FormControl sx={{ flex: '1 1 45%', minWidth: '200px' }}>
+              <FormControl sx={{ flex: '1 1 45%', minWidth: '200px' }} error={Boolean(errors.harvest_method)}>
                 <InputLabel>{t('form.harvestMethod')}</InputLabel>
                 <Select
                   value={formData.harvest_method || ''}
                   onChange={(e) => handleChange('harvest_method', e.target.value)}
-                  // onBlur entfernt, handleBlur ist nicht definiert
                   label={t('form.harvestMethod')}
                 >
                   <MenuItem value="">{t('noData')}</MenuItem>
                   <MenuItem value="per_plant">{t('form.harvestMethodPerPlant')}</MenuItem>
                   <MenuItem value="per_sqm">{t('form.harvestMethodPerSqm')}</MenuItem>
                 </Select>
+                {errors.harvest_method && (
+                  <Typography variant="caption" color="error">{t('form.harvestMethodRequired')}</Typography>
+                )}
               </FormControl>
               <TextField
                 sx={{ flex: '1 1 45%', minWidth: '200px' }}
@@ -378,15 +384,6 @@ export function CultureForm({
                 slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
               />
             </Box>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={formData.allow_deviation_delivery_weeks || false}
-                  onChange={(e) => handleChange('allow_deviation_delivery_weeks', e.target.checked)}
-                />
-              }
-              label={t('form.allowDeviationDeliveryWeeks')}
-            />
             {/* Planting Distances */}
             <Typography variant="h6" sx={{ mt: 2 }}>Pflanzabstände</Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>

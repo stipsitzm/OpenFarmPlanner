@@ -10,7 +10,7 @@ describe('CultureDetail Component', () => {
       id: 1,
       name: 'Tomato',
       variety: 'Cherry',
-      days_to_harvest: 60,
+
       growth_duration_days: 56,
       harvest_duration_days: 28,
       perennial: false,
@@ -20,7 +20,7 @@ describe('CultureDetail Component', () => {
     {
       id: 2,
       name: 'Lettuce',
-      days_to_harvest: 45,
+
       growth_duration_days: 42,
       harvest_duration_days: 14,
       perennial: false,
@@ -28,7 +28,7 @@ describe('CultureDetail Component', () => {
     {
       id: 3,
       name: 'Asparagus',
-      days_to_harvest: 730,
+
       growth_duration_days: 730,
       harvest_duration_days: 56,
       perennial: true,

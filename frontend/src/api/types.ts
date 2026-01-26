@@ -15,7 +15,7 @@ export interface Culture {
   /** Specific variety of the crop (optional) */
   variety?: string;
   /** Average days from planting to harvest */
-  days_to_harvest: number;
+
   /** Additional notes */
   notes?: string;
   

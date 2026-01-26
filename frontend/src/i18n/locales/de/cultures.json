@@ -73,7 +73,7 @@
     "harvestMethod": "Erntemethode",
     "harvestMethodPerPlant": "Pro Pflanze",
     "harvestMethodPerSqm": "Pro m²",
-    "expectedYield": "Erwarteter Ertrag",
+    "expectedYield": "Erwarteter Ertrag (kg)",
     "expectedYieldPlaceholder": "z.B. 500",
     "expectedYieldError": "Erwarteter Ertrag muss ≥ 0 sein",
     "allowDeviationDeliveryWeeks": "Abweichende Lieferwochen erlauben",
