@@ -5,6 +5,7 @@
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
 import type { Culture } from '../../../api/types';
 import type { TFunction } from 'i18next';
+import { FieldWrapper } from '../styles.tsx';
 
 interface HarvestSectionProps {
   formData: Partial<Culture>;

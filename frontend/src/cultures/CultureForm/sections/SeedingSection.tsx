@@ -3,6 +3,7 @@
  * @remarks Presentational, no internal state
  */
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField, Tooltip } from '@mui/material';
+import { FieldWrapper } from '../styles.tsx';
 import type { Culture } from '../../../api/types';
 import type { TFunction } from 'i18next';
 
@@ -31,7 +32,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
           </Select>
         </FormControl>
         <Tooltip title={t('form.seedingRequirementHelp', { defaultValue: 'Menge pro gewähltem Typ (g, Stück, etc.)' })} arrow>
-          <span style={{ display: 'flex', flex: 1 }}>
+          <FieldWrapper>
             <TextField
               sx={{ flex: '1 1 30%', minWidth: '200px' }}
               type="number"
@@ -42,10 +43,10 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               error={Boolean(errors.seeding_requirement)}
               slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
             />
-          </span>
+          </FieldWrapper>
         </Tooltip>
         <Tooltip title={t('form.sowingCalculationSafetyPercentHelp', { defaultValue: 'Prozentualer Zuschlag zur berechneten Saatgutmenge.' })} arrow>
-          <span style={{ display: 'flex', flex: 1 }}>
+          <FieldWrapper>
             <TextField
               sx={{ flex: '1 1 30%', minWidth: '200px', ml: 'auto' }}
               type="number"
@@ -56,7 +57,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               error={Boolean(errors.sowing_calculation_safety_percent)}
               slotProps={{ htmlInput: { min: 0, max: 100, step: 1 } }}
             />
-          </span>
+          </FieldWrapper>
         </Tooltip>
       </Box>
     </>

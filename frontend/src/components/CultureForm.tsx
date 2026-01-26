@@ -167,7 +167,7 @@ export function CultureForm({
             <TimingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <HarvestSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <SpacingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
-            <SeedRateSection formData={formData} errors={errors} onChange={handleChange} />
+            <SeedRateSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <SeedingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <ColorSection formData={formData} errors={errors} onChange={handleChange} t={t} defaultColor={DEFAULT_DISPLAY_COLOR} />
             <NotesSection formData={formData} onChange={handleChange} t={t} errors={errors} />

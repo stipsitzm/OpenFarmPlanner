@@ -5,6 +5,8 @@
 import { Typography, TextField } from '@mui/material';
 import type { Culture } from '../../../api/types';
 import type { TFunction } from 'i18next';
+// importiere FieldWrapper, falls benötigt
+// import { FieldWrapper } from '../styles.tsx';
 
 interface NotesSectionProps {
   formData: Partial<Culture>;
