@@ -8,6 +8,10 @@
  * Culture (crop) type that can be grown
  */
 export interface Culture {
+    /** Saatgutbedarf pro m² oder pro Pflanze (optional) */
+    seeding_requirement?: number;
+    /** Art des Saatgutbedarfs: pro m² oder pro Pflanze (optional) */
+    seeding_requirement_type?: 'per_sqm' | 'per_plant' | '';
   /** Unique identifier (auto-generated) */
   id?: number;
   /** Name of the crop */
@@ -50,6 +54,9 @@ export interface Culture {
   row_spacing_cm?: number;
   /** Sowing depth in cm (optional) */
   sowing_depth_cm?: number;
+
+  /** Prozentuale Sicherheit für die Berechnung der Aussaat- und Pflanzenmenge (optional, 0-100) */
+  sowing_calculation_safety_percent?: number;
   
   // Display settings
   /** Display color for cultivation calendar (hex format, optional) */

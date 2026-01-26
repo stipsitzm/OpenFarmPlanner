@@ -15,7 +15,7 @@
 import { useState } from 'react';
 import { Tooltip } from '@mui/material';
 import { useTranslation } from '../i18n';
-import type { Culture } from '../api/api';
+import type { Culture } from '../api/types';
 import { type ValidationResult } from '../hooks/autosave';
 import {
   Box,
@@ -25,8 +25,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  FormControlLabel,
-  Checkbox,
   Typography,
   Snackbar,
   Alert,
@@ -62,6 +60,9 @@ const EMPTY_CULTURE: Partial<Culture> = {
   row_spacing_cm: undefined,
   sowing_depth_cm: undefined,
   display_color: '',
+  sowing_calculation_safety_percent: 0,
+  seeding_requirement: undefined,
+  seeding_requirement_type: '',
 };
 
 /**
@@ -130,6 +131,7 @@ export function CultureForm({
       'distance_within_row_cm',
       'row_spacing_cm',
       'sowing_depth_cm',
+      'sowing_calculation_safety_percent',
     ];
     numericFields.forEach(field => {
       const value = draft[field as keyof Culture];
@@ -147,8 +149,8 @@ export function CultureForm({
 
     // Wenn expected_yield gesetzt ist, muss auch harvest_method gewählt sein
     if (
-      draft.expected_yield !== undefined && draft.expected_yield !== null && draft.expected_yield !== '' &&
-      (!draft.harvest_method || draft.harvest_method === '')
+      draft.expected_yield !== undefined && draft.expected_yield !== null && typeof draft.expected_yield === 'number' &&
+      (!draft.harvest_method)
     ) {
       errors.harvest_method = t('form.harvestMethodRequired');
     }
@@ -390,11 +392,10 @@ export function CultureForm({
               <TextField
                 sx={{ flex: '1 1 30%', minWidth: '200px' }}
                 type="number"
-                label={t('form.distanceWithinRowCm')}
-                placeholder={t('form.distanceWithinRowCmPlaceholder')}
+                label={t('form.distanceWithinRowCm', { defaultValue: 'Abstand in der Reihe (cm)' })}
+                placeholder={t('form.distanceWithinRowCmPlaceholder', { defaultValue: 'z.B. 25' })}
                 value={formData.distance_within_row_cm ?? ''}
                 onChange={(e) => handleChange('distance_within_row_cm', e.target.value ? parseFloat(e.target.value) : undefined)}
-                // onBlur entfernt, handleBlur ist nicht definiert
                 error={Boolean(errors.distance_within_row_cm)}
                 helperText={errors.distance_within_row_cm}
                 slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
@@ -402,11 +403,10 @@ export function CultureForm({
               <TextField
                 sx={{ flex: '1 1 30%', minWidth: '200px' }}
                 type="number"
-                label={t('form.rowSpacingCm')}
-                placeholder={t('form.rowSpacingCmPlaceholder')}
+                label={t('form.rowSpacingCm', { defaultValue: 'Reihenabstand (cm)' })}
+                placeholder={t('form.rowSpacingCmPlaceholder', { defaultValue: 'z.B. 40' })}
                 value={formData.row_spacing_cm ?? ''}
                 onChange={(e) => handleChange('row_spacing_cm', e.target.value ? parseFloat(e.target.value) : undefined)}
-                // onBlur entfernt, handleBlur ist nicht definiert
                 error={Boolean(errors.row_spacing_cm)}
                 helperText={errors.row_spacing_cm}
                 slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
@@ -414,15 +414,60 @@ export function CultureForm({
               <TextField
                 sx={{ flex: '1 1 30%', minWidth: '200px' }}
                 type="number"
-                label={t('form.sowingDepthCm')}
-                placeholder={t('form.sowingDepthCmPlaceholder')}
+                label={t('form.sowingDepthCm', { defaultValue: 'Saattiefe (cm)' })}
+                placeholder={t('form.sowingDepthCmPlaceholder', { defaultValue: 'z.B. 2' })}
                 value={formData.sowing_depth_cm ?? ''}
                 onChange={(e) => handleChange('sowing_depth_cm', e.target.value ? parseFloat(e.target.value) : undefined)}
-                // onBlur entfernt, handleBlur ist nicht definiert
                 error={Boolean(errors.sowing_depth_cm)}
                 helperText={errors.sowing_depth_cm}
                 slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
               />
+            </Box>
+
+            {/* Seeding Information */}
+            <Typography variant="h6" sx={{ mt: 2 }}>Saatgut & Aussaat</Typography>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <FormControl sx={{ flex: '1 1 30%', minWidth: '200px' }}>
+                <InputLabel>{t('form.seedingRequirementType', { defaultValue: 'Saatgutbedarf-Typ' })}</InputLabel>
+                <Select
+                  value={formData.seeding_requirement_type || ''}
+                  label={t('form.seedingRequirementType', { defaultValue: 'Saatgutbedarf-Typ' })}
+                  onChange={e => handleChange('seeding_requirement_type', e.target.value)}
+                >
+                  <MenuItem value="">{t('noData', { defaultValue: 'Keine Angabe' })}</MenuItem>
+                  <MenuItem value="per_sqm">{t('form.seedingRequirementPerSqm', { defaultValue: 'pro m²' })}</MenuItem>
+                  <MenuItem value="per_plant">{t('form.seedingRequirementPerPlant', { defaultValue: 'pro Pflanze' })}</MenuItem>
+                </Select>
+              </FormControl>
+              <Tooltip title={t('form.seedingRequirementHelp', { defaultValue: 'Menge pro gewähltem Typ (g, Stück, etc.)' })} arrow>
+                <span style={{ display: 'flex', flex: 1 }}>
+                  <TextField
+                    sx={{ flex: '1 1 30%', minWidth: '200px' }}
+                    type="number"
+                    label={t('form.seedingRequirement', { defaultValue: 'Saatgutbedarf' })}
+                    placeholder={t('form.seedingRequirementPlaceholder', { defaultValue: 'z.B. 0.5' })}
+                    value={formData.seeding_requirement ?? ''}
+                    onChange={(e) => handleChange('seeding_requirement', e.target.value ? parseFloat(e.target.value) : undefined)}
+                    error={Boolean(errors.seeding_requirement)}
+                    slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+                  />
+                </span>
+              </Tooltip>
+              <Tooltip title={t('form.sowingCalculationSafetyPercentHelp', { defaultValue: 'Prozentualer Zuschlag zur berechneten Saatgutmenge.' })} arrow>
+                <span style={{ display: 'flex', flex: 1 }}>
+                  <TextField
+                    sx={{ flex: '1 1 30%', minWidth: '200px', ml: 'auto' }}
+                    type="number"
+                    label={t('form.sowingCalculationSafetyPercentLabel', { defaultValue: 'Sicherheitszuschlag für Saatgut (%)' })}
+                    placeholder={t('form.sowingCalculationSafetyPercentPlaceholder', { defaultValue: 'z.B. 10' })}
+                    value={formData.sowing_calculation_safety_percent ?? ''}
+                    onChange={(e) => handleChange('sowing_calculation_safety_percent', e.target.value ? parseFloat(e.target.value) : undefined)}
+                    error={Boolean(errors.sowing_calculation_safety_percent)}
+                    slotProps={{ htmlInput: { min: 0, max: 100, step: 1 } }}
+                  />
+                </span>
+              </Tooltip>
+
             </Box>
             {/* Display Color */}
             <Typography variant="h6" sx={{ mt: 2 }}>Anzeigefarbe</Typography>
