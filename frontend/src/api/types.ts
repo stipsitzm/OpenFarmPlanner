@@ -12,6 +12,10 @@ export interface Culture {
     seeding_requirement?: number;
     /** Art des Saatgutbedarfs: pro m² oder pro Pflanze (optional) */
     seeding_requirement_type?: 'per_sqm' | 'per_plant' | '';
+  /** Saatgutmenge (Aussaatstärke, optional) */
+  seed_rate_value?: number | null;
+  /** Einheit der Saatgutmenge (optional) */
+  seed_rate_unit?: 'g_per_m2' | 'pcs_per_m2' | 'pcs_per_plant' | null;
   /** Unique identifier (auto-generated) */
   id?: number;
   /** Name of the crop */

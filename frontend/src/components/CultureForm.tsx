@@ -63,6 +63,8 @@ const EMPTY_CULTURE: Partial<Culture> = {
   sowing_calculation_safety_percent: 0,
   seeding_requirement: undefined,
   seeding_requirement_type: '',
+  seed_rate_value: null,
+  seed_rate_unit: null,
 };
 
 /**
@@ -83,6 +85,18 @@ export function CultureForm({
 
   const validateCulture = (draft: Partial<Culture>): ValidationResult => {
     const errors: Record<string, string> = {};
+    // Seed rate validation (custom rule)
+    const hasSeedRateValue = draft.seed_rate_value !== null && draft.seed_rate_value !== undefined;
+    const hasSeedRateUnit = draft.seed_rate_unit !== null && draft.seed_rate_unit !== undefined;
+    if (hasSeedRateValue && !hasSeedRateUnit) {
+      errors.seed_rate_unit = 'Wenn eine Menge angegeben wird, muss auch eine Einheit gewählt werden.';
+    }
+    if (hasSeedRateUnit && !hasSeedRateValue) {
+      errors.seed_rate_value = 'Wenn eine Einheit gewählt wird, muss auch eine Menge angegeben werden.';
+    }
+    if (hasSeedRateValue && Number(draft.seed_rate_value) <= 0) {
+      errors.seed_rate_value = 'Die Menge muss größer als 0 sein.';
+    }
 
     // Required field: name
     if (!draft.name) {
@@ -187,7 +201,15 @@ export function CultureForm({
   // Handle field changes
   const handleChange = (name: string, value: unknown) => {
     setFormData((prev) => {
-      const updated = { ...prev, [name]: value };
+      let updated = { ...prev, [name]: value };
+      // Wenn Einheit gelöscht wird, Menge auf null setzen
+      if (name === 'seed_rate_unit' && (!value || value === '')) {
+        updated = { ...updated, seed_rate_value: null };
+      }
+      // Wenn Menge gelöscht wird, Einheit auf null setzen
+      if (name === 'seed_rate_value' && (value === null || value === undefined || value === '')) {
+        updated = { ...updated, seed_rate_unit: null };
+      }
       setIsDirty(true);
       validateAndSet(updated);
       return updated;
@@ -422,6 +444,38 @@ export function CultureForm({
                 helperText={errors.sowing_depth_cm}
                 slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
               />
+            {/* Seed Rate Input */}
+            <Typography variant="h6" sx={{ mt: 2 }}>Saatgutmenge (Aussaatstärke)</Typography>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <TextField
+                sx={{ flex: '1 1 30%', minWidth: '160px' }}
+                type="number"
+                label="Menge"
+                value={formData.seed_rate_value ?? ''}
+                onChange={e => handleChange('seed_rate_value', e.target.value ? parseFloat(e.target.value) : null)}
+                onBlur={() => validateAndSet({ ...formData })}
+                error={Boolean(errors.seed_rate_value)}
+                helperText={errors.seed_rate_value || 'Wenn eine Menge angegeben wird, muss auch eine Einheit gewählt werden.'}
+                inputProps={{ min: 0, step: 0.01 }}
+              />
+              <FormControl sx={{ flex: '1 1 30%', minWidth: '180px' }} error={Boolean(errors.seed_rate_unit)}>
+                <InputLabel>Einheit</InputLabel>
+                <Select
+                  value={formData.seed_rate_unit ?? ''}
+                  label="Einheit"
+                  onChange={e => handleChange('seed_rate_unit', e.target.value)}
+                  onBlur={() => validateAndSet({ ...formData })}
+                >
+                  <MenuItem value="">-</MenuItem>
+                  <MenuItem value="g_per_m2">g / m²</MenuItem>
+                  <MenuItem value="pcs_per_m2">Stück / m²</MenuItem>
+                  <MenuItem value="pcs_per_plant">Stück / Pflanze</MenuItem>
+                </Select>
+                {errors.seed_rate_unit && (
+                  <Typography variant="caption" color="error">{errors.seed_rate_unit}</Typography>
+                )}
+              </FormControl>
+            </Box>
             </Box>
 
             {/* Seeding Information */}
