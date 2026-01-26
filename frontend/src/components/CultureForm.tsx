@@ -13,6 +13,8 @@
  */
 
 import { useState } from 'react';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { Tooltip, IconButton } from '@mui/material';
 import { useTranslation } from '../i18n';
 import type { Culture } from '../api/api';
 import { type ValidationResult } from '../hooks/autosave';
@@ -55,7 +57,6 @@ const EMPTY_CULTURE: Partial<Culture> = {
   growth_duration_days: undefined,
   harvest_duration_days: undefined,
   propagation_duration_days: undefined,
-  harvest_method: '',
   expected_yield: undefined,
   allow_deviation_delivery_weeks: false,
   distance_within_row_cm: undefined,
@@ -69,7 +70,7 @@ const EMPTY_CULTURE: Partial<Culture> = {
  * Renders the CultureForm as a modal dialog. The dialog can only be closed via Save or Cancel.
  *
  * @remarks
- * Prevents closing by clicking outside or pressing Escape.
+ * Prevents closing by clicking outside.
  */
 export function CultureForm({
   culture,
@@ -81,7 +82,6 @@ export function CultureForm({
   const [saveError, setSaveError] = useState<string>('');
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
-  // Validation function for the autosave hook
   const validateCulture = (draft: Partial<Culture>): ValidationResult => {
     const errors: Record<string, string> = {};
 
@@ -89,7 +89,11 @@ export function CultureForm({
     if (!draft.name) {
       errors.name = t('form.nameRequired');
     }
-
+                    // onBlur removed (was undefined)
+    // Required field: name
+    if (!draft.name) {
+      errors.name = t('form.nameRequired');
+    }
     // Required field: growth_duration_days
     if (draft.growth_duration_days === undefined || draft.growth_duration_days === null || (draft.growth_duration_days as unknown) === '') {
       errors.growth_duration_days = t('form.growthDurationDaysRequired');
@@ -99,8 +103,6 @@ export function CultureForm({
         errors.growth_duration_days = t('form.growthDurationDaysError');
       }
     }
-
-    // Required field: harvest_duration_days
     if (draft.harvest_duration_days === undefined || draft.harvest_duration_days === null || (draft.harvest_duration_days as unknown) === '') {
       errors.harvest_duration_days = t('form.harvestDurationDaysRequired');
     } else {
@@ -109,7 +111,6 @@ export function CultureForm({
         errors.harvest_duration_days = t('form.harvestDurationDaysError');
       }
     }
-
     // Optional numeric fields validation
     const numericFields = [
       'propagation_duration_days',
@@ -118,7 +119,6 @@ export function CultureForm({
       'row_spacing_cm',
       'sowing_depth_cm',
     ];
-
     numericFields.forEach(field => {
       const value = draft[field as keyof Culture];
       if (value !== undefined && value !== null && value !== '') {
@@ -128,12 +128,10 @@ export function CultureForm({
         }
       }
     });
-
     // Display color validation
     if (draft.display_color && !/^#[0-9A-Fa-f]{6}$/.test(draft.display_color)) {
       errors.display_color = t('form.displayColorError');
     }
-
     return {
       isValid: Object.keys(errors).length === 0,
       errors,
@@ -143,11 +141,10 @@ export function CultureForm({
   // Save function for the autosave hook
   const saveCulture = async (draft: Partial<Culture>): Promise<Partial<Culture>> => {
     // Calculate days_to_harvest from growth_duration_days if not set
-    const dataToSave = {
-      ...draft,
+    const dataToSave: Culture = {
+      ...(draft as Culture),
       days_to_harvest: draft.days_to_harvest || draft.growth_duration_days || 0,
-    } as Culture;
-
+    };
     await onSave(dataToSave);
     return dataToSave;
   };
@@ -186,8 +183,8 @@ export function CultureForm({
       await saveCulture(formData);
       setShowSaveSuccess(true);
       setIsDirty(false);
-    } catch (error: any) {
-      setSaveError(error.message || t('messages.updateError'));
+    } catch (error) {
+      setSaveError((error as Error)?.message || t('messages.updateError'));
     } finally {
       setIsSaving(false);
     }
@@ -223,7 +220,7 @@ export function CultureForm({
                 placeholder={t('form.namePlaceholder')}
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                onBlur={handleBlur}
+                // onBlur entfernt, handleBlur ist nicht definiert
                 error={Boolean(errors.name)}
                 helperText={errors.name}
               />
@@ -233,7 +230,7 @@ export function CultureForm({
                 placeholder={t('form.varietyPlaceholder')}
                 value={formData.variety}
                 onChange={(e) => handleChange('variety', e.target.value)}
-                onBlur={handleBlur}
+                // onBlur entfernt, handleBlur ist nicht definiert
               />
             </Box>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -243,14 +240,14 @@ export function CultureForm({
                 placeholder={t('form.cropFamilyPlaceholder')}
                 value={formData.crop_family}
                 onChange={(e) => handleChange('crop_family', e.target.value)}
-                onBlur={handleBlur}
+                // onBlur entfernt, handleBlur ist nicht definiert
               />
               <FormControl sx={{ flex: '1 1 45%', minWidth: '200px' }}>
                 <InputLabel>{t('form.nutrientDemand')}</InputLabel>
                 <Select
                   value={formData.nutrient_demand || ''}
                   onChange={(e) => handleChange('nutrient_demand', e.target.value)}
-                  onBlur={handleBlur}
+                  // onBlur entfernt, handleBlur ist nicht definiert
                   label={t('form.nutrientDemand')}
                 >
                   <MenuItem value="">{t('noData')}</MenuItem>
@@ -266,7 +263,7 @@ export function CultureForm({
                 <Select
                   value={formData.cultivation_type || ''}
                   onChange={(e) => handleChange('cultivation_type', e.target.value)}
-                  onBlur={handleBlur}
+                  // onBlur entfernt, handleBlur ist nicht definiert
                   label={t('form.cultivationType')}
                 >
                   <MenuItem value="">{t('noData')}</MenuItem>
@@ -277,44 +274,99 @@ export function CultureForm({
             </Box>
             {/* Timing */}
             <Typography variant="h6" sx={{ mt: 2 }}>Zeitplanung</Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            {/* Zeitplanung UX Section */}
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              {/* Anbauart */}
+              <FormControl sx={{ flex: '1 1 25%', minWidth: '180px' }}>
+                <InputLabel id="anbauart-label">Anbauart</InputLabel>
+                <Select
+                  labelId="anbauart-label"
+                  value={formData.cultivation_type || ''}
+                  label="Anbauart"
+                  onChange={e => {
+                    const val = e.target.value;
+                    handleChange('cultivation_type', val);
+                    // If Direktsaat, set propagation_duration_days to 0
+                    if (val === 'direct_sowing') {
+                      handleChange('propagation_duration_days', 0);
+                    }
+                  }}
+                  // onBlur entfernt, handleBlur ist nicht definiert
+                >
+                  <MenuItem value="">{t('noData')}</MenuItem>
+                  <MenuItem value="pre_cultivation">Anzucht</MenuItem>
+                  <MenuItem value="direct_sowing">Direktsaat</MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Wachstumszeitraum (required) */}
               <TextField
-                sx={{ flex: '1 1 30%', minWidth: '200px' }}
+                sx={{ flex: '1 1 25%', minWidth: '180px' }}
                 required
                 type="number"
-                label={t('form.growthDurationDays')}
+                label={t('form.growthDurationDays') + ' *'}
                 placeholder={t('form.growthDurationDaysPlaceholder')}
                 value={formData.growth_duration_days ?? ''}
-                onChange={(e) => handleChange('growth_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
-                onBlur={handleBlur}
+                onChange={e => handleChange('growth_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
+                // onBlur entfernt, handleBlur ist nicht definiert
                 error={Boolean(errors.growth_duration_days)}
-                helperText={errors.growth_duration_days}
-                slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                helperText={
+                  errors.growth_duration_days || (
+                    <span style={{ display: 'flex', alignItems: 'center' }}>
+                      Wachstumszeitraum = Gesamtzeit von Saat bis Ernte.
+                      <Tooltip title="Wachstumszeitraum = Gesamtzeit von Saat bis Ernte.">
+                        <IconButton size="small" sx={{ ml: 0.5 }}>
+                          <InfoOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </span>
+                  )
+                }
+                inputProps={{ min: 1, step: 1 }}
               />
+
+              {/* Anzuchtdauer (optional/conditional) */}
               <TextField
-                sx={{ flex: '1 1 30%', minWidth: '200px' }}
-                required
+                sx={{ flex: '1 1 25%', minWidth: '180px' }}
                 type="number"
-                label={t('form.harvestDurationDays')}
-                placeholder={t('form.harvestDurationDaysPlaceholder')}
-                value={formData.harvest_duration_days ?? ''}
-                onChange={(e) => handleChange('harvest_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
-                onBlur={handleBlur}
-                error={Boolean(errors.harvest_duration_days)}
-                helperText={errors.harvest_duration_days}
-                slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                label="Anzuchtdauer (Tage)"
+                value={formData.cultivation_type === 'direct_sowing' ? 0 : (formData.propagation_duration_days ?? '')}
+                onChange={e => handleChange('propagation_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
+                // onBlur entfernt, handleBlur ist nicht definiert
+                disabled={formData.cultivation_type === 'direct_sowing'}
+                error={Boolean(errors.propagation_duration_days) || ((formData.propagation_duration_days ?? 0) > (formData.growth_duration_days ?? 0))}
+                helperText={
+                  errors.propagation_duration_days
+                    || (formData.cultivation_type === 'direct_sowing'
+                      ? 'Bei Direktsaat ist keine Anzuchtdauer erforderlich.'
+                      : 'Dauer der Voranzucht (optional).')
+                    || ((formData.propagation_duration_days ?? 0) > (formData.growth_duration_days ?? 0)
+                      ? 'Anzuchtdauer darf nicht größer als Wachstumszeitraum sein.'
+                      : undefined)
+                }
+                inputProps={{ min: 0, step: 1 }}
               />
+
+              {/* Zeit am Beet (computed, read-only) */}
               <TextField
-                sx={{ flex: '1 1 30%', minWidth: '200px' }}
-                type="number"
-                label={t('form.propagationDurationDays')}
-                placeholder={t('form.propagationDurationDaysPlaceholder')}
-                value={formData.propagation_duration_days ?? ''}
-                onChange={(e) => handleChange('propagation_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
-                onBlur={handleBlur}
-                error={Boolean(errors.propagation_duration_days)}
-                helperText={errors.propagation_duration_days}
-                slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                sx={{ flex: '1 1 25%', minWidth: '180px' }}
+                label="Zeit am Beet (Tage)"
+                value={(() => {
+                  const w = formData.growth_duration_days ?? 0;
+                  const a = formData.cultivation_type === 'direct_sowing' ? 0 : (formData.propagation_duration_days ?? 0);
+                  return Math.max(0, w - a);
+                })()}
+                InputProps={{ readOnly: true }}
+                helperText={
+                  <span style={{ display: 'flex', alignItems: 'center' }}>
+                    Zeit am Beet = Wachstumszeitraum − Anzuchtdauer.
+                    <Tooltip title="Zeit am Beet = Wachstumszeitraum − Anzuchtdauer.">
+                      <IconButton size="small" sx={{ ml: 0.5 }}>
+                        <InfoOutlinedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </span>
+                }
               />
             </Box>
             {/* Harvest Information */}
@@ -325,7 +377,7 @@ export function CultureForm({
                 <Select
                   value={formData.harvest_method || ''}
                   onChange={(e) => handleChange('harvest_method', e.target.value)}
-                  onBlur={handleBlur}
+                  // onBlur entfernt, handleBlur ist nicht definiert
                   label={t('form.harvestMethod')}
                 >
                   <MenuItem value="">{t('noData')}</MenuItem>
@@ -340,7 +392,7 @@ export function CultureForm({
                 placeholder={t('form.expectedYieldPlaceholder')}
                 value={formData.expected_yield ?? ''}
                 onChange={(e) => handleChange('expected_yield', e.target.value ? parseFloat(e.target.value) : undefined)}
-                onBlur={handleBlur}
+                // onBlur entfernt, handleBlur ist nicht definiert
                 error={Boolean(errors.expected_yield)}
                 helperText={errors.expected_yield}
                 slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
@@ -365,7 +417,7 @@ export function CultureForm({
                 placeholder={t('form.distanceWithinRowCmPlaceholder')}
                 value={formData.distance_within_row_cm ?? ''}
                 onChange={(e) => handleChange('distance_within_row_cm', e.target.value ? parseFloat(e.target.value) : undefined)}
-                onBlur={handleBlur}
+                // onBlur entfernt, handleBlur ist nicht definiert
                 error={Boolean(errors.distance_within_row_cm)}
                 helperText={errors.distance_within_row_cm}
                 slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
@@ -377,7 +429,7 @@ export function CultureForm({
                 placeholder={t('form.rowSpacingCmPlaceholder')}
                 value={formData.row_spacing_cm ?? ''}
                 onChange={(e) => handleChange('row_spacing_cm', e.target.value ? parseFloat(e.target.value) : undefined)}
-                onBlur={handleBlur}
+                // onBlur entfernt, handleBlur ist nicht definiert
                 error={Boolean(errors.row_spacing_cm)}
                 helperText={errors.row_spacing_cm}
                 slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
@@ -389,7 +441,7 @@ export function CultureForm({
                 placeholder={t('form.sowingDepthCmPlaceholder')}
                 value={formData.sowing_depth_cm ?? ''}
                 onChange={(e) => handleChange('sowing_depth_cm', e.target.value ? parseFloat(e.target.value) : undefined)}
-                onBlur={handleBlur}
+                // onBlur entfernt, handleBlur ist nicht definiert
                 error={Boolean(errors.sowing_depth_cm)}
                 helperText={errors.sowing_depth_cm}
                 slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
@@ -403,7 +455,7 @@ export function CultureForm({
               label={t('form.displayColor')}
               value={formData.display_color || DEFAULT_DISPLAY_COLOR}
               onChange={(e) => handleChange('display_color', e.target.value)}
-              onBlur={handleBlur}
+              // onBlur entfernt, handleBlur ist nicht definiert
               error={Boolean(errors.display_color)}
               helperText={errors.display_color || t('form.displayColorHelp')}
               slotProps={{ input: { style: { height: '50px' } } }}
