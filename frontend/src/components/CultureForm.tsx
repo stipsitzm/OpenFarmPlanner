@@ -13,8 +13,7 @@
  */
 
 import { useState } from 'react';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import { Tooltip, IconButton } from '@mui/material';
+import { Tooltip } from '@mui/material';
 import { useTranslation } from '../i18n';
 import type { Culture } from '../api/api';
 import { type ValidationResult } from '../hooks/autosave';
@@ -275,99 +274,82 @@ export function CultureForm({
             {/* Timing */}
             <Typography variant="h6" sx={{ mt: 2 }}>Zeitplanung</Typography>
             {/* Zeitplanung UX Section */}
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              {/* Anbauart */}
-              <FormControl sx={{ flex: '1 1 25%', minWidth: '180px' }}>
-                <InputLabel id="anbauart-label">Anbauart</InputLabel>
-                <Select
-                  labelId="anbauart-label"
-                  value={formData.cultivation_type || ''}
-                  label="Anbauart"
-                  onChange={e => {
-                    const val = e.target.value;
-                    handleChange('cultivation_type', val);
-                    // If Direktsaat, set propagation_duration_days to 0
-                    if (val === 'direct_sowing') {
-                      handleChange('propagation_duration_days', 0);
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {/* Anbauart in einer Zeile */}
+              <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
+                <FormControl sx={{ minWidth: '180px' }}>
+                  <InputLabel id="anbauart-label">Anbauart</InputLabel>
+                  <Select
+                    labelId="anbauart-label"
+                    value={formData.cultivation_type || ''}
+                    label="Anbauart"
+                    onChange={e => {
+                      const val = e.target.value;
+                      handleChange('cultivation_type', val);
+                      if (val === 'direct_sowing') {
+                        handleChange('propagation_duration_days', 0);
+                      }
+                    }}
+                  >
+                    <MenuItem value="">{t('noData')}</MenuItem>
+                    <MenuItem value="pre_cultivation">Anzucht</MenuItem>
+                    <MenuItem value="direct_sowing">Direktsaat</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+              {/* Zeiten nebeneinander */}
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                {/* Wachstumszeitraum (Pflichtfeld) */}
+                <Tooltip title="Wachstumszeitraum = Gesamtzeit von Saat bis Ernte." arrow>
+                  <TextField
+                    required
+                    sx={{ flex: '1 1 25%', minWidth: '180px' }}
+                    type="number"
+                    label={t('form.growthDurationDays') + ' *'}
+                    placeholder={t('form.growthDurationDaysPlaceholder')}
+                    value={formData.growth_duration_days ?? ''}
+                    onChange={e => handleChange('growth_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
+                    error={Boolean(errors.growth_duration_days)}
+                    helperText={errors.growth_duration_days}
+                    inputProps={{ min: 1, step: 1 }}
+                  />
+                </Tooltip>
+                {/* Anzuchtdauer (Pflichtfeld außer bei Direktsaat) */}
+                <Tooltip title={formData.cultivation_type === 'direct_sowing' ? 'Bei Direktsaat ist keine Anzuchtdauer erforderlich.' : ''} arrow>
+                  <TextField
+                    required={formData.cultivation_type !== 'direct_sowing'}
+                    sx={{ flex: '1 1 25%', minWidth: '180px' }}
+                    type="number"
+                    label={"Anzuchtdauer (Tage)" + (formData.cultivation_type !== 'direct_sowing' ? ' *' : '')}
+                    value={formData.cultivation_type === 'direct_sowing' ? 0 : (formData.propagation_duration_days ?? '')}
+                    onChange={e => handleChange('propagation_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
+                    disabled={formData.cultivation_type === 'direct_sowing'}
+                    error={Boolean(errors.propagation_duration_days) || ((formData.propagation_duration_days ?? 0) > (formData.growth_duration_days ?? 0))}
+                    helperText={
+                      errors.propagation_duration_days
+                        || ((formData.propagation_duration_days ?? 0) > (formData.growth_duration_days ?? 0)
+                          ? 'Anzuchtdauer darf nicht größer als Wachstumszeitraum sein.'
+                          : undefined)
                     }
-                  }}
-                  // onBlur entfernt, handleBlur ist nicht definiert
-                >
-                  <MenuItem value="">{t('noData')}</MenuItem>
-                  <MenuItem value="pre_cultivation">Anzucht</MenuItem>
-                  <MenuItem value="direct_sowing">Direktsaat</MenuItem>
-                </Select>
-              </FormControl>
-
-              {/* Wachstumszeitraum (required) */}
-              <TextField
-                sx={{ flex: '1 1 25%', minWidth: '180px' }}
-                required
-                type="number"
-                label={t('form.growthDurationDays') + ' *'}
-                placeholder={t('form.growthDurationDaysPlaceholder')}
-                value={formData.growth_duration_days ?? ''}
-                onChange={e => handleChange('growth_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
-                // onBlur entfernt, handleBlur ist nicht definiert
-                error={Boolean(errors.growth_duration_days)}
-                helperText={
-                  errors.growth_duration_days || (
-                    <span style={{ display: 'flex', alignItems: 'center' }}>
-                      Wachstumszeitraum = Gesamtzeit von Saat bis Ernte.
-                      <Tooltip title="Wachstumszeitraum = Gesamtzeit von Saat bis Ernte.">
-                        <IconButton size="small" sx={{ ml: 0.5 }}>
-                          <InfoOutlinedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </span>
-                  )
-                }
-                inputProps={{ min: 1, step: 1 }}
-              />
-
-              {/* Anzuchtdauer (optional/conditional) */}
-              <TextField
-                sx={{ flex: '1 1 25%', minWidth: '180px' }}
-                type="number"
-                label="Anzuchtdauer (Tage)"
-                value={formData.cultivation_type === 'direct_sowing' ? 0 : (formData.propagation_duration_days ?? '')}
-                onChange={e => handleChange('propagation_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
-                // onBlur entfernt, handleBlur ist nicht definiert
-                disabled={formData.cultivation_type === 'direct_sowing'}
-                error={Boolean(errors.propagation_duration_days) || ((formData.propagation_duration_days ?? 0) > (formData.growth_duration_days ?? 0))}
-                helperText={
-                  errors.propagation_duration_days
-                    || (formData.cultivation_type === 'direct_sowing'
-                      ? 'Bei Direktsaat ist keine Anzuchtdauer erforderlich.'
-                      : 'Dauer der Voranzucht (optional).')
-                    || ((formData.propagation_duration_days ?? 0) > (formData.growth_duration_days ?? 0)
-                      ? 'Anzuchtdauer darf nicht größer als Wachstumszeitraum sein.'
-                      : undefined)
-                }
-                inputProps={{ min: 0, step: 1 }}
-              />
-
-              {/* Zeit am Beet (computed, read-only) */}
-              <TextField
-                sx={{ flex: '1 1 25%', minWidth: '180px' }}
-                label="Zeit am Beet (Tage)"
-                value={(() => {
-                  const w = formData.growth_duration_days ?? 0;
-                  const a = formData.cultivation_type === 'direct_sowing' ? 0 : (formData.propagation_duration_days ?? 0);
-                  return Math.max(0, w - a);
-                })()}
-                InputProps={{ readOnly: true }}
-                helperText={
-                  <span style={{ display: 'flex', alignItems: 'center' }}>
-                    Zeit am Beet = Wachstumszeitraum − Anzuchtdauer.
-                    <Tooltip title="Zeit am Beet = Wachstumszeitraum − Anzuchtdauer.">
-                      <IconButton size="small" sx={{ ml: 0.5 }}>
-                        <InfoOutlinedIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </span>
-                }
-              />
+                    inputProps={{ min: 0, step: 1 }}
+                  />
+                </Tooltip>
+                {/* Zeit am Beet (computed, read-only) */}
+                <Tooltip title="Zeit am Beet = Wachstumszeitraum − Anzuchtdauer." arrow>
+                  <TextField
+                    required
+                    sx={{ flex: '1 1 25%', minWidth: '180px' }}
+                    label={"Zeit am Beet (Tage) *"}
+                    value={(() => {
+                      const w = formData.growth_duration_days ?? 0;
+                      const a = formData.cultivation_type === 'direct_sowing' ? 0 : (formData.propagation_duration_days ?? 0);
+                      return Math.max(0, w - a);
+                    })()}
+                    InputProps={{ readOnly: true }}
+                    helperText={undefined}
+                  />
+                </Tooltip>
+              </Box>
             </Box>
             {/* Harvest Information */}
             <Typography variant="h6" sx={{ mt: 2 }}>Ernteinformationen</Typography>
