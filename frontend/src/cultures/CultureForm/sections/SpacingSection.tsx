@@ -5,7 +5,7 @@
 import { Box, Typography, TextField } from '@mui/material';
 import type { Culture } from '../../../api/types';
 import type { TFunction } from 'i18next';
-import { FieldWrapper } from '../styles.tsx';
+import { FieldWrapper, spacingFieldSx } from '../styles.tsx';
 
 interface SpacingSectionProps {
   formData: Partial<Culture>;
@@ -20,7 +20,7 @@ export function SpacingSection({ formData, errors, onChange, t }: SpacingSection
       <Typography variant="h6" sx={{ mt: 2 }}>Pflanzabstände</Typography>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <TextField
-          sx={{ flex: '1 1 30%', minWidth: '200px' }}
+          sx={spacingFieldSx}
           type="number"
           label={t('form.distanceWithinRowCm', { defaultValue: 'Abstand in der Reihe (cm)' })}
           placeholder={t('form.distanceWithinRowCmPlaceholder', { defaultValue: 'z.B. 25' })}
@@ -31,7 +31,7 @@ export function SpacingSection({ formData, errors, onChange, t }: SpacingSection
           slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
         />
         <TextField
-          sx={{ flex: '1 1 30%', minWidth: '200px' }}
+          sx={spacingFieldSx}
           type="number"
           label={t('form.rowSpacingCm', { defaultValue: 'Reihenabstand (cm)' })}
           placeholder={t('form.rowSpacingCmPlaceholder', { defaultValue: 'z.B. 40' })}
@@ -42,7 +42,7 @@ export function SpacingSection({ formData, errors, onChange, t }: SpacingSection
           slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
         />
         <TextField
-          sx={{ flex: '1 1 30%', minWidth: '200px' }}
+          sx={spacingFieldSx}
           type="number"
           label={t('form.sowingDepthCm', { defaultValue: 'Saattiefe (cm)' })}
           placeholder={t('form.sowingDepthCmPlaceholder', { defaultValue: 'z.B. 2' })}

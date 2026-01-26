@@ -5,7 +5,7 @@
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
 import type { Culture } from '../../../api/types';
 import type { TFunction } from 'i18next';
-import { FieldWrapper } from '../styles.tsx';
+import { FieldWrapper, fieldSx } from '../styles.tsx';
 
 interface HarvestSectionProps {
   formData: Partial<Culture>;
@@ -19,7 +19,7 @@ export function HarvestSection({ formData, errors, onChange, t }: HarvestSection
     <>
       <Typography variant="h6" sx={{ mt: 2 }}>Ernteinformationen</Typography>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <FormControl sx={{ flex: '1 1 45%', minWidth: '200px' }} error={Boolean(errors.harvest_method)}>
+        <FormControl sx={fieldSx} error={Boolean(errors.harvest_method)}>
           <InputLabel>{t('form.harvestMethod')}</InputLabel>
           <Select
             value={formData.harvest_method || ''}
@@ -35,7 +35,7 @@ export function HarvestSection({ formData, errors, onChange, t }: HarvestSection
           )}
         </FormControl>
         <TextField
-          sx={{ flex: '1 1 45%', minWidth: '200px' }}
+          sx={fieldSx}
           type="number"
           label={t('form.expectedYield')}
           placeholder={t('form.expectedYieldPlaceholder')}

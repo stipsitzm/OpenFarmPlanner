@@ -3,7 +3,7 @@
  * @remarks Presentational, no internal state
  */
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField, Tooltip } from '@mui/material';
-import { FieldWrapper } from '../styles.tsx';
+import { FieldWrapper, spacingFieldSx } from '../styles.tsx';
 import type { Culture } from '../../../api/types';
 import type { TFunction } from 'i18next';
 
@@ -19,7 +19,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
     <>
       <Typography variant="h6" sx={{ mt: 2 }}>Saatgut & Aussaat</Typography>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <FormControl sx={{ flex: '1 1 30%', minWidth: '200px' }}>
+        <FormControl sx={spacingFieldSx}>
           <InputLabel>{t('form.seedingRequirementType', { defaultValue: 'Saatgutbedarf-Typ' })}</InputLabel>
           <Select
             value={formData.seeding_requirement_type || ''}
@@ -34,7 +34,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
         <Tooltip title={t('form.seedingRequirementHelp', { defaultValue: 'Menge pro gewähltem Typ (g, Stück, etc.)' })} arrow>
           <FieldWrapper>
             <TextField
-              sx={{ flex: '1 1 30%', minWidth: '200px' }}
+              sx={spacingFieldSx}
               type="number"
               label={t('form.seedingRequirement', { defaultValue: 'Saatgutbedarf' })}
               placeholder={t('form.seedingRequirementPlaceholder', { defaultValue: 'z.B. 0.5' })}
@@ -48,7 +48,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
         <Tooltip title={t('form.sowingCalculationSafetyPercentHelp', { defaultValue: 'Prozentualer Zuschlag zur berechneten Saatgutmenge.' })} arrow>
           <FieldWrapper>
             <TextField
-              sx={{ flex: '1 1 30%', minWidth: '200px', ml: 'auto' }}
+              sx={{ ...spacingFieldSx, ml: 'auto' }}
               type="number"
               label={t('form.sowingCalculationSafetyPercentLabel', { defaultValue: 'Sicherheitszuschlag für Saatgut (%)' })}
               placeholder={t('form.sowingCalculationSafetyPercentPlaceholder', { defaultValue: 'z.B. 10' })}

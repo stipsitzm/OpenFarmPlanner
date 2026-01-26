@@ -3,6 +3,7 @@
  * @remarks Presentational, no internal state
  */
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField, Tooltip } from '@mui/material';
+import { smallFieldSx } from '../styles.tsx';
 import type { Culture } from '../../../api/types';
 import type { TFunction } from 'i18next';
 
@@ -43,7 +44,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
           <Tooltip title="Wachstumszeitraum = Gesamtzeit von Saat bis Ernte." arrow>
             <TextField
               required
-              sx={{ flex: '1 1 22%', minWidth: '150px' }}
+              sx={smallFieldSx}
               type="number"
               label={t('form.growthDurationDays') + ' *'}
               placeholder={t('form.growthDurationDaysPlaceholder')}
@@ -56,7 +57,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
           </Tooltip>
           <TextField
             required
-            sx={{ flex: '1 1 22%', minWidth: '150px' }}
+            sx={smallFieldSx}
             type="number"
             label={t('form.harvestDurationDays') + ' *'}
             placeholder={t('form.harvestDurationDaysPlaceholder')}
@@ -69,7 +70,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
           <Tooltip title={formData.cultivation_type === 'direct_sowing' ? 'Bei Direktsaat ist keine Anzuchtdauer erforderlich.' : ''} arrow>
             <TextField
               required={formData.cultivation_type !== 'direct_sowing'}
-              sx={{ flex: '1 1 22%', minWidth: '150px' }}
+              sx={smallFieldSx}
               type="number"
               label={"Anzuchtdauer (Tage)" + (formData.cultivation_type !== 'direct_sowing' ? ' *' : '')}
               value={formData.cultivation_type === 'direct_sowing' ? 0 : (formData.propagation_duration_days ?? '')}

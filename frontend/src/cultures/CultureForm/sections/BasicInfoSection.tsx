@@ -3,6 +3,7 @@
  * @remarks Presentational, no internal state
  */
 import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { fieldSx } from '../styles.tsx';
 import type { Culture } from '../../../api/types';
 import type { TFunction } from 'i18next';
 
@@ -18,7 +19,7 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
     <>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <TextField
-          sx={{ flex: '1 1 45%', minWidth: '200px' }}
+          sx={fieldSx}
           required
           label={t('form.name')}
           placeholder={t('form.namePlaceholder')}
@@ -28,7 +29,7 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
           helperText={errors.name}
         />
         <TextField
-          sx={{ flex: '1 1 45%', minWidth: '200px' }}
+          sx={fieldSx}
           label={t('form.variety')}
           placeholder={t('form.varietyPlaceholder')}
           value={formData.variety}
@@ -37,13 +38,13 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
       </Box>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <TextField
-          sx={{ flex: '1 1 45%', minWidth: '200px' }}
+          sx={fieldSx}
           label={t('form.cropFamily')}
           placeholder={t('form.cropFamilyPlaceholder')}
           value={formData.crop_family}
           onChange={e => onChange('crop_family', e.target.value)}
         />
-        <FormControl sx={{ flex: '1 1 45%', minWidth: '200px' }}>
+        <FormControl sx={fieldSx}>
           <InputLabel>{t('form.nutrientDemand')}</InputLabel>
           <Select
             value={formData.nutrient_demand || ''}
