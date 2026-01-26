@@ -22,6 +22,8 @@ export interface Culture {
   name: string;
   /** Specific variety of the crop (optional) */
   variety?: string;
+  /** Seed supplier/manufacturer (optional) */
+  seed_supplier?: string;
   /** Average days from planting to harvest */
 
   /** Additional notes */

@@ -35,6 +35,13 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
           value={formData.variety}
           onChange={e => onChange('variety', e.target.value)}
         />
+        <TextField
+          sx={fieldSx}
+          label={t('form.seedSupplier', { defaultValue: 'Saatguthersteller' })}
+          placeholder={t('form.seedSupplierPlaceholder', { defaultValue: 'z.B. Bingenheimer' })}
+          value={formData.seed_supplier ?? ''}
+          onChange={e => onChange('seed_supplier', e.target.value)}
+        />
       </Box>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <TextField

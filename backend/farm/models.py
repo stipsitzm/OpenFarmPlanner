@@ -219,6 +219,7 @@ class Culture(models.Model):
     variety = models.CharField(max_length=200, blank=True)
     # days_to_harvest entfernt, stattdessen growth_duration_days verwenden
     notes = models.TextField(blank=True)
+    seed_supplier = models.CharField(max_length=200, blank=True, help_text="Seed supplier/manufacturer")
     
     # Manual planning fields
     crop_family = models.CharField(max_length=200, blank=True, help_text="Crop family for rotation planning")
