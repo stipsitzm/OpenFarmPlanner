@@ -25,26 +25,26 @@ class SyncGrowstuffCropsCommandTest(TestCase):
         self.command = Command()
         self.command.stdout = StringIO()
     
-    def test_extract_days_to_harvest_direct_field(self) -> None:
-        """Test extracting days_to_harvest from direct field."""
+    def test_extract_growth_duration_days_direct_field(self) -> None:
+        """Test extracting growth_duration_days from direct field."""
         attributes = {'median_days_to_first_harvest': 60}
         result = self.command._extract_days_to_harvest(attributes)
         self.assertEqual(result, 60)
     
-    def test_extract_days_to_harvest_alternative_fields(self) -> None:
+    def test_extract_growth_duration_days_alternative_fields(self) -> None:
         """Test extracting from alternative field names."""
         attributes = {'median_days_to_last_harvest': 45}
         result = self.command._extract_days_to_harvest(attributes)
         self.assertEqual(result, 45)
     
-    def test_extract_days_to_harvest_string_value(self) -> None:
+    def test_extract_growth_duration_days_string_value(self) -> None:
         """Test extracting from string value."""
-        attributes = {'days_to_harvest': '70'}
+        attributes = {'growth_duration_days': '70'}
         result = self.command._extract_days_to_harvest(attributes)
         self.assertEqual(result, 70)
     
-    def test_extract_days_to_harvest_missing(self) -> None:
-        """Test behavior when days_to_harvest is missing."""
+    def test_extract_growth_duration_days_missing(self) -> None:
+        """Test behavior when growth_duration_days is missing."""
         attributes = {}
         result = self.command._extract_days_to_harvest(attributes)
         self.assertEqual(result, 0)
@@ -82,7 +82,7 @@ class SyncGrowstuffCropsCommandTest(TestCase):
             growstuff_id=123,
             growstuff_slug='old-slug',
             source='growstuff',
-            days_to_harvest=50
+            growth_duration_days=50
         )
         
         # JSON:API format
@@ -102,7 +102,7 @@ class SyncGrowstuffCropsCommandTest(TestCase):
         # Verify crop was updated
         culture.refresh_from_db()
         self.assertEqual(culture.name, 'New Name')
-        self.assertEqual(culture.days_to_harvest, 70)
+        self.assertEqual(culture.growth_duration_days, 70)
         self.assertIsNotNone(culture.last_synced)
     
     def test_upsert_crop_skip_manual(self) -> None:
@@ -112,7 +112,7 @@ class SyncGrowstuffCropsCommandTest(TestCase):
             name='Manual Entry',
             growstuff_id=123,
             source='manual',
-            days_to_harvest=50
+            growth_duration_days=50
         )
         
         # JSON:API format
@@ -159,7 +159,7 @@ class SyncGrowstuffCropsCommandTest(TestCase):
         
         self.assertEqual(result, 'created')
         culture = Culture.objects.get(growstuff_id=456)
-        self.assertEqual(culture.days_to_harvest, 60)  # Default value
+        self.assertEqual(culture.growth_duration_days, 60)  # Default value
     
     def test_sync_crops(self) -> None:
         """Test syncing multiple crops."""
@@ -185,21 +185,21 @@ class SyncGrowstuffCropsCommandTest(TestCase):
             name='Keep Me',
             growstuff_id=1,
             source='growstuff',
-            days_to_harvest=60
+            growth_duration_days=60
         )
         
         crop2 = Culture.objects.create(
             name='Delete Me',
             growstuff_id=2,
             source='growstuff',
-            days_to_harvest=60
+            growth_duration_days=60
         )
         
         crop3 = Culture.objects.create(
             name='In Use',
             growstuff_id=3,
             source='growstuff',
-            days_to_harvest=60
+            growth_duration_days=60
         )
         
         # Create a planting plan using crop3
@@ -233,7 +233,7 @@ class SyncGrowstuffCropsCommandTest(TestCase):
             name='Manual Crop',
             growstuff_id=999,
             source='manual',
-            days_to_harvest=60
+            growth_duration_days=60
         )
         
         # Empty API response
@@ -244,7 +244,7 @@ class SyncGrowstuffCropsCommandTest(TestCase):
         # Manual crop should not be deleted
         self.assertEqual(deleted, 0)
         self.assertTrue(Culture.objects.filter(growstuff_id=999).exists())
-    
+            self.assertEqual(culture.growth_duration_days, 60)
     @patch('farm.management.commands.sync_growstuff_crops.GrowstuffClient')
     def test_command_execution(self, mock_client_class: Mock) -> None:
         """Test full command execution."""
@@ -274,7 +274,7 @@ class SyncGrowstuffCropsCommandTest(TestCase):
     @patch('farm.management.commands.sync_growstuff_crops.GrowstuffClient')
     def test_command_with_limit(self, mock_client_class: Mock) -> None:
         """Test command execution with limit option."""
-        # Mock the API client - JSON:API format
+            self.assertEqual(culture.growth_duration_days, 70)
         mock_client = MagicMock()
         # get_all_crops will be called with max_crops=5, so it should return only 5
         mock_client.get_all_crops.return_value = [
@@ -291,7 +291,7 @@ class SyncGrowstuffCropsCommandTest(TestCase):
         self.assertEqual(Culture.objects.count(), 5)
         
         # Verify get_all_crops was called with max_crops parameter
-        mock_client.get_all_crops.assert_called_once_with(max_crops=5)
+            self.assertEqual(culture.days_to_harvest, 60)  # Default value
         
         output = out.getvalue()
         self.assertIn('Fetched 5 crops', output)
@@ -304,7 +304,7 @@ class SyncGrowstuffCropsCommandTest(TestCase):
             name='Old Crop',
             growstuff_id=999,
             source='growstuff',
-            days_to_harvest=60
+            growth_duration_days=60
         )
         
         # Mock the API client (doesn't include the old crop) - JSON:API format

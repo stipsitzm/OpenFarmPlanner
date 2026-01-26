@@ -78,7 +78,7 @@ class PlantingPlanViewSet(viewsets.ModelViewSet):
     
     Provides list, create, retrieve, update, and delete operations
     for planting plans. The harvest_date is automatically calculated
-    on creation and update based on the culture's days_to_harvest.
+    on creation and update based on the culture's growth_duration_days.
     
     Attributes:
         queryset: All PlantingPlan objects ordered by planting_date (descending)

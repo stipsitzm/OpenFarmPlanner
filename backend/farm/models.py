@@ -153,7 +153,7 @@ class Culture(models.Model):
     Attributes:
         name: The name of the crop (e.g., "Tomato", "Lettuce")
         variety: Specific variety of the crop (optional)
-        days_to_harvest: Average days from planting to harvest (kept for backwards compatibility)
+        growth_duration_days: Average days from planting to harvest (replaces days_to_harvest)
         notes: Additional notes about the culture
         
         # Manual planning fields
@@ -217,7 +217,7 @@ class Culture(models.Model):
     # Basic information
     name = models.CharField(max_length=200)
     variety = models.CharField(max_length=200, blank=True)
-    days_to_harvest = models.IntegerField(help_text="Average days from planting to harvest")
+    # days_to_harvest entfernt, stattdessen growth_duration_days verwenden
     notes = models.TextField(blank=True)
     
     # Manual planning fields
@@ -516,8 +516,8 @@ class PlantingPlan(models.Model):
         """Save the planting plan and auto-calculate harvest dates.
         
         Auto-calculates harvest dates based on planting date and culture timing:
-        - harvest_date: planting_date + days_to_harvest (or median_days_to_first_harvest if available)
-        - harvest_end_date: planting_date + median_days_to_last_harvest (if available)
+        - harvest_date: planting_date + growth_duration_days
+        - harvest_end_date: planting_date + growth_duration_days + harvest_duration_days (if available)
         
         Harvest dates are recalculated whenever planting_date or culture changes.
         
@@ -543,19 +543,15 @@ class PlantingPlan(models.Model):
         
         # Calculate harvest dates if needed
         if should_recalculate and self.planting_date and self.culture:
-            # Calculate harvest start date
-            # Use growth_duration_days if available, otherwise fall back to days_to_harvest
+            # Calculate harvest start date ausschließlich mit growth_duration_days
             if self.culture.growth_duration_days:
                 self.harvest_date = self.planting_date + timedelta(days=self.culture.growth_duration_days)
             else:
-                self.harvest_date = self.planting_date + timedelta(days=self.culture.days_to_harvest)
-            
+                self.harvest_date = self.planting_date  # fallback: kein Wert, kein Offset
             # Calculate harvest end date
             if self.culture.growth_duration_days and self.culture.harvest_duration_days:
-                # harvest_end = first_harvest + harvest_duration
                 self.harvest_end_date = self.harvest_date + timedelta(days=self.culture.harvest_duration_days)
             else:
-                # If no harvest_duration_days, set to same as harvest_date (single-day window)
                 self.harvest_end_date = self.harvest_date
         
         super().save(*args, **kwargs)

@@ -128,7 +128,7 @@ Growstuff API fields are mapped to Culture model fields as follows:
 | `attributes.median-lifespan` | `median_lifespan` | Median lifespan in days |
 | `attributes.median-days-to-first-harvest` | `median_days_to_first_harvest` | Median days to first harvest |
 | `attributes.median-days-to-last-harvest` | `median_days_to_last_harvest` | Median days to last harvest |
-| - | `days_to_harvest` | Derived from median_days_to_first_harvest |
+| - | `growth_duration_days` | Derived from median_days_to_first_harvest |
 | - | `source` | Set to 'growstuff' for API imports |
 | - | `last_synced` | Timestamp of last sync |
 
@@ -215,7 +215,7 @@ If you encounter rate limit errors:
 
 ### Missing Fields
 
-If `days_to_harvest` is not available from the API:
+If `growth_duration_days` is not available from the API:
 - Default value of 60 days is used
 - You can manually update the value after import
 - Consider contributing the data back to Growstuff
