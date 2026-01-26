@@ -303,7 +303,7 @@ export function CultureForm({
                 <Tooltip title="Wachstumszeitraum = Gesamtzeit von Saat bis Ernte." arrow>
                   <TextField
                     required
-                    sx={{ flex: '1 1 25%', minWidth: '180px' }}
+                    sx={{ flex: '1 1 22%', minWidth: '150px' }}
                     type="number"
                     label={t('form.growthDurationDays') + ' *'}
                     placeholder={t('form.growthDurationDaysPlaceholder')}
@@ -314,11 +314,24 @@ export function CultureForm({
                     inputProps={{ min: 1, step: 1 }}
                   />
                 </Tooltip>
+                {/* Erntezeitraum (Pflichtfeld) */}
+                <TextField
+                  required
+                  sx={{ flex: '1 1 22%', minWidth: '150px' }}
+                  type="number"
+                  label={t('form.harvestDurationDays') + ' *'}
+                  placeholder={t('form.harvestDurationDaysPlaceholder')}
+                  value={formData.harvest_duration_days ?? ''}
+                  onChange={e => handleChange('harvest_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
+                  error={Boolean(errors.harvest_duration_days)}
+                  helperText={errors.harvest_duration_days}
+                  inputProps={{ min: 0, step: 1 }}
+                />
                 {/* Anzuchtdauer (Pflichtfeld außer bei Direktsaat) */}
                 <Tooltip title={formData.cultivation_type === 'direct_sowing' ? 'Bei Direktsaat ist keine Anzuchtdauer erforderlich.' : ''} arrow>
                   <TextField
                     required={formData.cultivation_type !== 'direct_sowing'}
-                    sx={{ flex: '1 1 25%', minWidth: '180px' }}
+                    sx={{ flex: '1 1 22%', minWidth: '150px' }}
                     type="number"
                     label={"Anzuchtdauer (Tage)" + (formData.cultivation_type !== 'direct_sowing' ? ' *' : '')}
                     value={formData.cultivation_type === 'direct_sowing' ? 0 : (formData.propagation_duration_days ?? '')}
@@ -332,21 +345,6 @@ export function CultureForm({
                           : undefined)
                     }
                     inputProps={{ min: 0, step: 1 }}
-                  />
-                </Tooltip>
-                {/* Zeit am Beet (computed, read-only) */}
-                <Tooltip title="Zeit am Beet = Wachstumszeitraum − Anzuchtdauer." arrow>
-                  <TextField
-                    required
-                    sx={{ flex: '1 1 25%', minWidth: '180px' }}
-                    label={"Zeit am Beet (Tage) *"}
-                    value={(() => {
-                      const w = formData.growth_duration_days ?? 0;
-                      const a = formData.cultivation_type === 'direct_sowing' ? 0 : (formData.propagation_duration_days ?? 0);
-                      return Math.max(0, w - a);
-                    })()}
-                    InputProps={{ readOnly: true }}
-                    helperText={undefined}
                   />
                 </Tooltip>
               </Box>
