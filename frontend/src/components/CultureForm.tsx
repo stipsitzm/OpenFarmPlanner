@@ -30,7 +30,6 @@ import { BasicInfoSection } from '../cultures/CultureForm/sections/BasicInfoSect
 import { TimingSection } from '../cultures/CultureForm/sections/TimingSection';
 import { HarvestSection } from '../cultures/CultureForm/sections/HarvestSection';
 import { SpacingSection } from '../cultures/CultureForm/sections/SpacingSection';
-import { SeedRateSection } from '../cultures/CultureForm/sections/SeedRateSection';
 import { SeedingSection } from '../cultures/CultureForm/sections/SeedingSection';
 import { ColorSection } from '../cultures/CultureForm/sections/ColorSection';
 import { NotesSection } from '../cultures/CultureForm/sections/NotesSection';
@@ -167,7 +166,6 @@ export function CultureForm({
             <TimingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <HarvestSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <SpacingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
-            <SeedRateSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <SeedingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <ColorSection formData={formData} errors={errors} onChange={handleChange} t={t} defaultColor={DEFAULT_DISPLAY_COLOR} />
             <NotesSection formData={formData} onChange={handleChange} t={t} errors={errors} />

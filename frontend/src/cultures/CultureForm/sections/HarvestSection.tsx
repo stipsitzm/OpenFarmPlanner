@@ -5,7 +5,7 @@
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
 import type { Culture } from '../../../api/types';
 import type { TFunction } from 'i18next';
-import { FieldWrapper, fieldSx } from '../styles.tsx';
+import { fieldSx } from '../styles.tsx';
 
 interface HarvestSectionProps {
   formData: Partial<Culture>;
@@ -25,6 +25,7 @@ export function HarvestSection({ formData, errors, onChange, t }: HarvestSection
             value={formData.harvest_method || ''}
             onChange={e => onChange('harvest_method', e.target.value)}
             label={t('form.harvestMethod')}
+            fullWidth
           >
             <MenuItem value="">{t('noData')}</MenuItem>
             <MenuItem value="per_plant">{t('form.harvestMethodPerPlant')}</MenuItem>

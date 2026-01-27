@@ -5,7 +5,7 @@
 import { Box, Typography, TextField } from '@mui/material';
 import type { Culture } from '../../../api/types';
 import type { TFunction } from 'i18next';
-import { FieldWrapper, spacingFieldSx } from '../styles.tsx';
+import { spacingFieldSx } from '../styles.tsx';
 
 interface SpacingSectionProps {
   formData: Partial<Culture>;

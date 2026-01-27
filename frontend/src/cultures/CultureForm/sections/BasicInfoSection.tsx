@@ -57,6 +57,7 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
             value={formData.nutrient_demand || ''}
             onChange={e => onChange('nutrient_demand', e.target.value)}
             label={t('form.nutrientDemand')}
+            fullWidth
           >
             <MenuItem value="">{t('noData')}</MenuItem>
             <MenuItem value="low">{t('form.nutrientDemandLow')}</MenuItem>
