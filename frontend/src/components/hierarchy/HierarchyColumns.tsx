@@ -21,7 +21,9 @@ function renderNameCell(
   onToggleExpand: (rowId: string | number) => void
 ) {
   const row = params.row;
-  const indent = row.level * 24;
+  // Beds (type 'bed') sollen weiter eingerückt werden als Felder
+  const baseIndent = row.level * 24;
+  const indent = row.type === 'bed' ? baseIndent + 34 : baseIndent;
 
   if (row.type === 'location' || row.type === 'field') {
     return (
@@ -36,7 +38,6 @@ function renderNameCell(
         >
           {row.expanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
         </IconButton>
-        <FolderIcon sx={{ mr: 1, color: 'action.active' }} />
         <span style={{ fontWeight: row.type === 'location' ? 'bold' : 'normal' }}>
           {row.name}
         </span>
