@@ -17,7 +17,8 @@
   },
   "validation": {
     "nameRequired": "Name ist ein Pflichtfeld",
-    "bedAreaExceedsField": "Die Summe der Beetflächen ({{sum}} m²) überschreitet die Fläche des Schlags ({{max}} m²). Bitte passen Sie die Flächen an."
+    "bedAreaExceedsField": "Die Summe der Beetflächen ({{sum}} m²) überschreitet die Fläche des Schlags ({{max}} m²). Bitte passen Sie die Flächen an.",
+    "areaMustBePositive": "Die Fläche muss größer als 0 sein."
   },
   "confirmDelete": "Möchten Sie diesen Eintrag wirklich löschen?",
   "footer": {

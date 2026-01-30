@@ -124,6 +124,13 @@ function FieldsBedsHierarchy(): React.ReactElement {
       throw new Error(t('validation.nameRequired'));
     }
 
+    // Flächenwert muss > 0 sein
+    const areaValue = typeof newRow.area_sqm === 'number' ? newRow.area_sqm : parseFloat(newRow.area_sqm as any);
+    if (areaValue <= 0 || isNaN(areaValue)) {
+      setError(t('validation.areaMustBePositive'));
+      throw new Error(t('validation.areaMustBePositive'));
+    }
+
     // Debug: Zeige neuen Row-Wert im Update
     if (newRow.type === 'field') {
       console.log('[DEBUG] processRowUpdate: Field update attempt', newRow);
