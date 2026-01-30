@@ -7,7 +7,7 @@
     "harvestDate": "Erntedatum",
     "harvestStartDate": "Erntebeginn",
     "harvestEndDate": "Ernteende",
-    "areaUsage": "Flächennutzung (m²)",
+    "areaUsage": "Fläche (m²)",
     "notes": "Notizen"
   },
   "errors": {

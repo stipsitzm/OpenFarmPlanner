@@ -16,7 +16,7 @@ import Locations from './pages/Locations';
 import FieldsBedsHierarchy from './pages/FieldsBedsHierarchy';
 import Cultures from './pages/Cultures';
 import PlantingPlans from './pages/PlantingPlans';
-import Tasks from './pages/Tasks';
+// Tasks entfernt
 import GanttChart from './pages/GanttChart';
 import './App.css';
 
@@ -93,10 +93,7 @@ function createAppRouter(basename: string) {
           path: 'planting-plans',
           element: <PlantingPlans />,
         },
-        {
-          path: 'tasks',
-          element: <Tasks />,
-        },
+        // Tasks-Route entfernt
         {
           path: 'gantt-chart',
           element: <GanttChart />,
