@@ -7,7 +7,6 @@ import type { TFunction } from 'i18next';
 import { Box, IconButton, Button } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import FolderIcon from '@mui/icons-material/Folder';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';

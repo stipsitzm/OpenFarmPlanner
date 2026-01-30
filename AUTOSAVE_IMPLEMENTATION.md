@@ -166,8 +166,7 @@ Shared component used by multiple pages:
 **Pages Using EditableDataGrid:**
 1. **Locations** (`src/pages/Locations.tsx`) - Location management
 2. **PlantingPlans** (`src/pages/PlantingPlans.tsx`) - Planting plan schedules
-3. **Tasks** (`src/pages/Tasks.tsx`) - Farm task management
-4. **FieldsBedsHierarchy** (`src/pages/FieldsBedsHierarchy.tsx`) - Hierarchical field/bed view
+3. **FieldsBedsHierarchy** (`src/pages/FieldsBedsHierarchy.tsx`) - Hierarchical field/bed view
 
 All these pages now have autosave-on-blur behavior and validation error navigation blocking.
 
