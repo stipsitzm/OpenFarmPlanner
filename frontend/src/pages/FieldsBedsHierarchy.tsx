@@ -113,7 +113,6 @@ function FieldsBedsHierarchy(): React.ReactElement {
     const filteredBeds = beds.filter(b => b.field === fieldId && b.id !== excludeBedId);
     const bedAreas = filteredBeds.map(b => typeof b.area_sqm === 'number' ? b.area_sqm : parseFloat(b.area_sqm as any));
     const sum = bedAreas.reduce((sum, area) => sum + (typeof area === 'number' ? area : 0), 0) + (typeof overrideArea === 'number' ? overrideArea : parseFloat(overrideArea as any) || 0);
-    console.log('[DEBUG] getBedAreaSum:', { fieldId, excludeBedId, overrideArea, bedAreas, sum });
     return sum;
   };
 
@@ -131,10 +130,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
       throw new Error(t('validation.areaMustBePositive'));
     }
 
-    // Debug: Zeige neuen Row-Wert im Update
-    if (newRow.type === 'field') {
-      console.log('[DEBUG] processRowUpdate: Field update attempt', newRow);
-    }
+    // ...existing code...
 
     // Validierung: Summe der Beetflächen darf Feldfläche nicht überschreiten
     if (newRow.type === 'bed') {
@@ -143,7 +139,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
         const fieldArea = typeof field.area_sqm === 'number' ? field.area_sqm : parseFloat(field.area_sqm as any);
         const bedArea = typeof newRow.area_sqm === 'number' ? newRow.area_sqm : parseFloat(newRow.area_sqm as any);
         const sum = getBedAreaSum(field.id!, newRow.bedId, bedArea);
-        console.log('[DEBUG] Summenprüfung (bed):', { sum, fieldArea, bedArea, typeofFieldArea: typeof fieldArea, typeofBedArea: typeof bedArea });
+        // ...existing code...
         if (sum > fieldArea) {
           const sumStr = sum.toFixed(2);
           const maxStr = fieldArea.toFixed(2);
@@ -167,7 +163,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
       // Validierung: Summe der Beetflächen darf neue Feldfläche nicht überschreiten
       const fieldArea = typeof newRow.area_sqm === 'number' ? newRow.area_sqm : parseFloat(newRow.area_sqm as any);
       const sum = getBedAreaSum(newRow.fieldId!);
-      console.log('[DEBUG] Summenprüfung (field):', { sum, fieldArea, typeofFieldArea: typeof fieldArea });
+      // ...existing code...
       if (sum > fieldArea) {
         const sumStr = sum.toFixed(2);
         const maxStr = fieldArea.toFixed(2);
@@ -182,7 +178,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
           area_sqm: newRow.area_sqm,
           notes: newRow.notes,
         });
-        console.log('[DEBUG] API response for field update', updated.data);
+        // ...existing code...
         // Aktualisiere lokalen State direkt (optional, für sofortiges Feedback)
         setFields((prevFields) => prevFields.map(f => {
           if (f.id === newRow.fieldId) {
@@ -240,7 +236,6 @@ function FieldsBedsHierarchy(): React.ReactElement {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
       <Box sx={{ width: '100%' }}>
-        {console.log('[DEBUG] Render rows', rows)}
         <DataGrid
           rows={rows}
           columns={columns}
