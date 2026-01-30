@@ -16,7 +16,7 @@ import homeDE from './locales/de/home.json';
 import locationsDE from './locales/de/locations.json';
 import culturesDE from './locales/de/cultures.json';
 import plantingPlansDE from './locales/de/plantingPlans.json';
-import tasksDE from './locales/de/tasks.json';
+// tasksDE entfernt
 import fieldsDE from './locales/de/fields.json';
 import bedsDE from './locales/de/beds.json';
 import hierarchyDE from './locales/de/hierarchy.json';
@@ -34,7 +34,7 @@ i18n
     debug: import.meta.env.DEV,
     
     // Namespaces for organizing translations
-    ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'tasks', 'fields', 'beds', 'hierarchy', 'ganttChart'],
+    ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart'],
     defaultNS: 'common',
     
     // Translation resources
@@ -46,7 +46,7 @@ i18n
         locations: locationsDE,
         cultures: culturesDE,
         plantingPlans: plantingPlansDE,
-        tasks: tasksDE,
+        // tasks: tasksDE, entfernt
         fields: fieldsDE,
         beds: bedsDE,
         hierarchy: hierarchyDE,
