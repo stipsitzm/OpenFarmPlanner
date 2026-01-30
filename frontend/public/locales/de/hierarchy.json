@@ -1,0 +1,10 @@
+{
+  "title": "Schläge & Beete",
+  "validation": {
+    "nameRequired": "Der Name muss ausgefüllt werden.",
+    "bedAreaExceedsField": "Die Summe der Beetflächen ({{sum}} m²) überschreitet die Fläche des Schlags ({{max}} m²). Bitte passen Sie die Flächen an."
+  },
+  "errors": {
+    "save": "Fehler beim Speichern. Bitte versuchen Sie es erneut."
+  }
+}

@@ -110,9 +110,11 @@ function FieldsBedsHierarchy(): React.ReactElement {
   };
 
   const getBedAreaSum = (fieldId: number, excludeBedId?: number, overrideArea?: number) => {
-    return beds
-      .filter(b => b.field === fieldId && b.id !== excludeBedId)
-      .reduce((sum, b) => sum + (b.area_sqm || 0), 0) + (overrideArea || 0);
+    const filteredBeds = beds.filter(b => b.field === fieldId && b.id !== excludeBedId);
+    const bedAreas = filteredBeds.map(b => typeof b.area_sqm === 'number' ? b.area_sqm : parseFloat(b.area_sqm as any));
+    const sum = bedAreas.reduce((sum, area) => sum + (typeof area === 'number' ? area : 0), 0) + (typeof overrideArea === 'number' ? overrideArea : parseFloat(overrideArea as any) || 0);
+    console.log('[DEBUG] getBedAreaSum:', { fieldId, excludeBedId, overrideArea, bedAreas, sum });
+    return sum;
   };
 
   const processRowUpdate = async (newRow: HierarchyRow): Promise<HierarchyRow> => {
@@ -130,11 +132,16 @@ function FieldsBedsHierarchy(): React.ReactElement {
     // Validierung: Summe der Beetflächen darf Feldfläche nicht überschreiten
     if (newRow.type === 'bed') {
       const field = fields.find(f => f.id === newRow.field);
-      if (field && typeof field.area_sqm === 'number' && typeof newRow.area_sqm === 'number') {
-        const sum = getBedAreaSum(field.id!, newRow.bedId, newRow.area_sqm);
-        if (sum > field.area_sqm) {
-          setError(t('validation.bedAreaExceedsField', { sum, max: field.area_sqm }));
-          throw new Error(t('validation.bedAreaExceedsField', { sum, max: field.area_sqm }));
+      if (field) {
+        const fieldArea = typeof field.area_sqm === 'number' ? field.area_sqm : parseFloat(field.area_sqm as any);
+        const bedArea = typeof newRow.area_sqm === 'number' ? newRow.area_sqm : parseFloat(newRow.area_sqm as any);
+        const sum = getBedAreaSum(field.id!, newRow.bedId, bedArea);
+        console.log('[DEBUG] Summenprüfung (bed):', { sum, fieldArea, bedArea, typeofFieldArea: typeof fieldArea, typeofBedArea: typeof bedArea });
+        if (sum > fieldArea) {
+          const sumStr = sum.toFixed(2);
+          const maxStr = fieldArea.toFixed(2);
+          setError(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
+          throw new Error(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
         }
       }
       try {
@@ -151,12 +158,14 @@ function FieldsBedsHierarchy(): React.ReactElement {
       }
     } else if (newRow.type === 'field') {
       // Validierung: Summe der Beetflächen darf neue Feldfläche nicht überschreiten
-      if (typeof newRow.area_sqm === 'number') {
-        const sum = getBedAreaSum(newRow.fieldId!);
-        if (sum > newRow.area_sqm) {
-          setError(t('validation.bedAreaExceedsField', { sum, max: newRow.area_sqm }));
-          throw new Error(t('validation.bedAreaExceedsField', { sum, max: newRow.area_sqm }));
-        }
+      const fieldArea = typeof newRow.area_sqm === 'number' ? newRow.area_sqm : parseFloat(newRow.area_sqm as any);
+      const sum = getBedAreaSum(newRow.fieldId!);
+      console.log('[DEBUG] Summenprüfung (field):', { sum, fieldArea, typeofFieldArea: typeof fieldArea });
+      if (sum > fieldArea) {
+        const sumStr = sum.toFixed(2);
+        const maxStr = fieldArea.toFixed(2);
+        setError(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
+        throw new Error(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
       }
       try {
         // Update Field via API
@@ -188,10 +197,6 @@ function FieldsBedsHierarchy(): React.ReactElement {
         setError(t('errors.save'));
         throw err;
       }
-      // Debug: Logge alle geladenen Felder nach jedem Render
-      useEffect(() => {
-        console.log('[DEBUG] Aktuelle fields aus useHierarchyData:', fields);
-      }, [fields]);
     }
     return newRow;
   };
