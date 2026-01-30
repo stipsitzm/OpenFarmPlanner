@@ -48,7 +48,6 @@ return (
 - `locations` - Locations page
 - `cultures` - Cultures page  
 - `plantingPlans` - Planting Plans page
-- `tasks` - Tasks page
 - `fields` - Fields page
 - `beds` - Beds page
 - `hierarchy` - Hierarchical Fields/Beds view
@@ -73,7 +72,6 @@ frontend/src/i18n/
         ├── locations.json
         ├── cultures.json
         ├── plantingPlans.json
-        ├── tasks.json
         ├── fields.json
         ├── beds.json
         └── hierarchy.json
@@ -123,7 +121,6 @@ import homeEN from './locales/en/home.json';
 import locationsEN from './locales/en/locations.json';
 import culturesEN from './locales/en/cultures.json';
 import plantingPlansEN from './locales/en/plantingPlans.json';
-import tasksEN from './locales/en/tasks.json';
 import fieldsEN from './locales/en/fields.json';
 import bedsEN from './locales/en/beds.json';
 import hierarchyEN from './locales/en/hierarchy.json';
@@ -140,7 +137,6 @@ resources: {
     locations: locationsEN,
     cultures: culturesEN,
     plantingPlans: plantingPlansEN,
-    tasks: tasksEN,
     fields: fieldsEN,
     beds: bedsEN,
     hierarchy: hierarchyEN,

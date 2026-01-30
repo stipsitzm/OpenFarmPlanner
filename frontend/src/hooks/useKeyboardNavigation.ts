@@ -19,7 +19,6 @@ const ROUTES = [
   '/fields-beds',
   '/cultures',
   '/planting-plans',
-  '/tasks',
   '/gantt-chart',
 ];
 
