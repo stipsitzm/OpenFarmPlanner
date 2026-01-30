@@ -46,7 +46,7 @@ frontend/src/i18n/
         ├── locations.json      # Locations page
         ├── cultures.json       # Cultures page
         ├── plantingPlans.json  # Planting Plans page
-        
+        ├── tasks.json          # Tasks page
         ├── fields.json         # Fields page
         ├── beds.json           # Beds page
         └── hierarchy.json      # Hierarchy view
@@ -60,7 +60,7 @@ frontend/src/i18n/
 4. **locations** - Locations page content
 5. **cultures** - Cultures page and CultureDetail component
 6. **plantingPlans** - Planting Plans page
-7. 
+7. **tasks** - Tasks page
 8. **fields** - Fields page
 9. **beds** - Beds page
 10. **hierarchy** - Hierarchical Fields/Beds view
@@ -75,7 +75,7 @@ All major components now use translations:
 - **Cultures.tsx** - Page title
 - **CultureDetail.tsx** - All labels, messages, interpolation
 - **PlantingPlans.tsx** - Columns, errors, validation
-
+- **Tasks.tsx** - Columns, status labels, errors, validation
 - **FieldsBedsHierarchy.tsx** - Page title, error messages
 - **HierarchyColumns.tsx** - Column headers, action buttons
 - **HierarchyFooter.tsx** - Footer messages

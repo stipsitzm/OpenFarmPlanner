@@ -27,6 +27,7 @@ A full-stack web application for managing CSA (Community Supported Agriculture) 
 - **Growstuff Integration**: Import crop data from Growstuff.org (CC-BY-SA licensed)
 - **Farm Organization**: Organize your farm into locations, fields, and beds
 - **Planting Plans**: Schedule plantings with automatic harvest date calculation based on crop characteristics
+- **Task Management**: Track farm tasks and activities
 - **RESTful API**: Full CRUD operations for all resources
 - **Admin Interface**: Django admin panel for easy data management
 - **Responsive UI**: Modern React interface for managing farm operations
@@ -170,6 +171,7 @@ The backend provides the following REST API endpoints:
 - `/api/beds/` - Bed management
 - `/api/cultures/` - Culture (crop) management
 - `/api/planting-plans/` - Planting plan management
+- `/api/tasks/` - Task management
 
 Each endpoint supports:
 - `GET` - List all items

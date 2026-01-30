@@ -31,7 +31,7 @@ frontend/src/i18n/
         ├── locations.json      # Locations page
         ├── cultures.json       # Cultures page
         ├── plantingPlans.json  # Planting Plans page
-        
+        ├── tasks.json          # Tasks page
         ├── fields.json         # Fields page
         ├── beds.json           # Beds page
         └── hierarchy.json      # Hierarchy view
@@ -77,7 +77,7 @@ Contains navigation menu labels:
   "fieldsAndBeds": "Schläge & Beete",
   "cultures": "Kulturen",
   "plantingPlans": "Anbaupläne",
-  
+  "tasks": "Aufgaben"
 }
 ```
 
