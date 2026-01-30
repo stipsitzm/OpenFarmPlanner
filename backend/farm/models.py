@@ -288,6 +288,33 @@ class Culture(models.Model):
         blank=True,
         help_text="Sowing depth in meters (stored in SI units)"
     )
+
+    # Seeding attributes
+    seed_rate_value = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Seed rate value (per m² or per 100m, depending on unit)"
+    )
+    seed_rate_unit = models.CharField(
+        max_length=30,
+        blank=True,
+        help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m²', 'g/100m', etc.)"
+    )
+    sowing_calculation_safety_percent = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Safety margin for seeding calculation in percent (0-100)"
+    )
+    seeding_requirement = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Total seeding requirement (g or seeds, depending on type)"
+    )
+    seeding_requirement_type = models.CharField(
+        max_length=30,
+        blank=True,
+        help_text="Type of seeding requirement (e.g. 'g', 'seeds')"
+    )
     
     # Display settings
     display_color = models.CharField(

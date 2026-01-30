@@ -16,9 +16,7 @@
     "daysToFirstHarvest": "Tage bis zur ersten Ernte",
     "daysToLastHarvest": "Tage bis zur letzten Ernte",
     "harvestWindow": "Erntefenster",
-    "harvestWindowValue": "{{first}}–{{last}} Tage nach der Aussaat",
-    "lifespan": "Typische Lebensdauer",
-    "lifespanValue": "{{days}} Tage"
+    "harvestWindowValue": "{{first}}–{{last}} Tage nach der Aussaat"
   },
   "moreInfo": "Mehr Infos (Wikipedia)",
   "attribution": "Datenquelle: Diese Informationen stammen von",
