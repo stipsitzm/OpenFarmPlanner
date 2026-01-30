@@ -49,6 +49,8 @@ export function buildHierarchyRows(
           locationId: location.id,
           fieldId: field.id,
           expanded: isFieldExpanded,
+          area_sqm: field.area_sqm,
+          notes: field.notes,
         });
 
         if (!isFieldExpanded) return;
@@ -86,6 +88,8 @@ export function buildHierarchyRows(
         name: field.name,
         fieldId: field.id,
         expanded: isFieldExpanded,
+        area_sqm: field.area_sqm,
+        notes: field.notes,
       });
 
       if (!isFieldExpanded) return;
@@ -111,5 +115,6 @@ export function buildHierarchyRows(
     });
   }
 
+  console.debug('[DEBUG] buildHierarchyRows: result', hierarchyRows);
   return hierarchyRows;
 }

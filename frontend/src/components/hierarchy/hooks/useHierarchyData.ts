@@ -21,10 +21,16 @@ export function useHierarchyData() {
         bedAPI.list(),
       ]);
       
-      setLocations(locationsRes.data.results.filter(l => l.id !== undefined));
-      setFields(fieldsRes.data.results.filter(f => f.id !== undefined));
-      setBeds(bedsRes.data.results.filter(b => b.id !== undefined));
+      const locs = locationsRes.data.results.filter(l => l.id !== undefined);
+      const flds = fieldsRes.data.results.filter(f => f.id !== undefined);
+      const bds = bedsRes.data.results.filter(b => b.id !== undefined);
+      setLocations(locs);
+      setFields(flds);
+      setBeds(bds);
       setError('');
+      console.debug('[DEBUG] useHierarchyData.fetchData: locations', locs);
+      console.debug('[DEBUG] useHierarchyData.fetchData: fields', flds);
+      console.debug('[DEBUG] useHierarchyData.fetchData: beds', bds);
     } catch (err) {
       setError('Fehler beim Laden der Daten');
       console.error('Error fetching data:', err);
