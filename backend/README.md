@@ -128,7 +128,6 @@ All endpoints are available under `/api/`:
 - `/api/beds/` - Bed management
 - `/api/cultures/` - Culture (crop) management
 - `/api/planting-plans/` - Planting plan management
-- `/api/tasks/` - Task management
 
 Each endpoint supports:
 - `GET` - List all items
