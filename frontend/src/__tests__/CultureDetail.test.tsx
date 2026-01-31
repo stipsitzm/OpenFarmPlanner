@@ -13,9 +13,7 @@ describe('CultureDetail Component', () => {
 
       growth_duration_days: 56,
       harvest_duration_days: 28,
-      perennial: false,
-      median_lifespan: 120,
-      en_wikipedia_url: 'https://en.wikipedia.org/wiki/Tomato',
+      notes: 'Frisch und süß.',
     },
     {
       id: 2,
@@ -23,7 +21,6 @@ describe('CultureDetail Component', () => {
 
       growth_duration_days: 42,
       harvest_duration_days: 14,
-      perennial: false,
     },
     {
       id: 3,
@@ -31,8 +28,6 @@ describe('CultureDetail Component', () => {
 
       growth_duration_days: 730,
       harvest_duration_days: 56,
-      perennial: true,
-      median_lifespan: 7300,
     },
   ];
 
@@ -71,21 +66,7 @@ describe('CultureDetail Component', () => {
     );
     
     expect(screen.getByText('Tomato (Cherry)')).toBeInTheDocument();
-    expect(screen.getByText(translations.cultures.annual)).toBeInTheDocument();
     expect(screen.getByText(translations.cultures.sections.growthHarvest)).toBeInTheDocument();
-  });
-
-  it('displays perennial badge for perennial crops', () => {
-    const mockOnSelect = vi.fn();
-    render(
-      <CultureDetail
-        cultures={mockCultures}
-        selectedCultureId={3}
-        onCultureSelect={mockOnSelect}
-      />
-    );
-    
-    expect(screen.getByText(translations.cultures.perennial)).toBeInTheDocument();
   });
 
   it('displays harvest information correctly', () => {
@@ -98,13 +79,11 @@ describe('CultureDetail Component', () => {
       />
     );
     
-    expect(screen.getByText('55')).toBeInTheDocument();
-    expect(screen.getByText('85')).toBeInTheDocument();
-    expect(screen.getByText('55–85 Tage nach der Aussaat')).toBeInTheDocument();
-    expect(screen.getByText('120 Tage')).toBeInTheDocument();
+    expect(screen.getByText('56 Tage')).toBeInTheDocument();
+    expect(screen.getByText('28 Tage')).toBeInTheDocument();
   });
 
-  it('displays Wikipedia link when available', () => {
+  it('displays notes when available', () => {
     const mockOnSelect = vi.fn();
     render(
       <CultureDetail
@@ -114,60 +93,7 @@ describe('CultureDetail Component', () => {
       />
     );
     
-    const link = screen.getByText(translations.cultures.moreInfo);
-    expect(link).toBeInTheDocument();
-    expect(link.closest('a')).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/Tomato');
+    expect(screen.getByText('Frisch und süß.')).toBeInTheDocument();
   });
 
-  it('displays Growstuff attribution for Growstuff-sourced crops', () => {
-    const mockOnSelect = vi.fn();
-    const growstuffCulture: Culture = {
-      ...mockCultures[0],
-      source: 'growstuff',
-    };
-    
-    render(
-      <CultureDetail
-        cultures={[growstuffCulture]}
-        selectedCultureId={1}
-        onCultureSelect={mockOnSelect}
-      />
-    );
-    
-    expect(screen.getByText(new RegExp(translations.cultures.attribution))).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(translations.cultures.attributionLink))).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(translations.cultures.license))).toBeInTheDocument();
-  });
-
-  it('does not display Growstuff attribution for manual crops', () => {
-    const mockOnSelect = vi.fn();
-    const manualCulture: Culture = {
-      ...mockCultures[0],
-      source: 'manual',
-    };
-    
-    render(
-      <CultureDetail
-        cultures={[manualCulture]}
-        selectedCultureId={1}
-        onCultureSelect={mockOnSelect}
-      />
-    );
-    
-    expect(screen.queryByText(new RegExp(translations.cultures.attribution))).not.toBeInTheDocument();
-  });
-
-  it('displays "Keine Angabe" for missing values', () => {
-    const mockOnSelect = vi.fn();
-    render(
-      <CultureDetail
-        cultures={mockCultures}
-        selectedCultureId={3}
-        onCultureSelect={mockOnSelect}
-      />
-    );
-    
-    const noDataElements = screen.getAllByText(translations.cultures.noData);
-    expect(noDataElements.length).toBeGreaterThan(0);
-  });
 });

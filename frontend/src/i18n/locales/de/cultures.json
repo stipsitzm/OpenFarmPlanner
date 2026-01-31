@@ -18,12 +18,6 @@
     "harvestWindow": "Erntefenster",
     "harvestWindowValue": "{{first}}–{{last}} Tage nach der Aussaat"
   },
-  "moreInfo": "Mehr Infos (Wikipedia)",
-  "attribution": "Datenquelle: Diese Informationen stammen von",
-  "attributionLink": "Growstuff.org",
-  "license": "und sind unter der",
-  "licenseLink": "CC-BY-SA 3.0 Lizenz",
-  "licenseEnd": "verfügbar.",
   "form": {
     "createTitle": "Neue Kultur erstellen",
     "editTitle": "Kultur bearbeiten",

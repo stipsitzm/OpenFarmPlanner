@@ -137,8 +137,7 @@ class CultureSerializer(serializers.ModelSerializer):
     """Serializer for the Culture model.
     
     Converts Culture instances to/from JSON for API responses.
-    Includes all fields from the Culture model. Growstuff fields are
-    read-only and cannot be modified via the API.
+    Includes all fields from the Culture model.
     
     Note on units:
     - Spacing fields are stored internally in meters (SI units)
@@ -200,15 +199,6 @@ class CultureSerializer(serializers.ModelSerializer):
     class Meta:
         model = Culture
         fields = '__all__'
-        read_only_fields = [
-            'growstuff_id',
-            'growstuff_slug',
-            'source',
-            'last_synced',
-            'en_wikipedia_url',
-            'perennial',
-            'median_lifespan',
-        ]
     
     def validate_growth_duration_days(self, value):
         """Validate growth duration is required and non-negative.
@@ -382,4 +372,3 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = '__all__'
-

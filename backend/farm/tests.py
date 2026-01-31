@@ -553,23 +553,6 @@ class APITestCase(APITestCase):
         self.assertEqual(response.data['name'], 'Updated Culture')
         self.assertEqual(response.data['crop_family'], 'Updated Family')
     
-    def test_culture_growstuff_fields_readonly(self):
-        """Test that Growstuff fields cannot be modified via API"""
-        data = {
-            'name': 'Test Culture',
-            'days_to_harvest': 45,
-            'growth_duration_days': 6,
-            'harvest_duration_days': 2,
-            'growstuff_id': 12345,  # Should be ignored
-            'source': 'growstuff',  # Should be ignored
-            'perennial': True  # Should be ignored
-        }
-        response = self.client.post('/openfarmplanner/api/cultures/', data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        # Growstuff fields should not be set via API (should remain default/None)
-        self.assertIsNone(response.data['growstuff_id'])
-        self.assertEqual(response.data['source'], 'manual')  # Default value
-
     def test_bed_list(self):
         response = self.client.get('/openfarmplanner/api/beds/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -692,5 +675,4 @@ class APITestCase(APITestCase):
         response2 = self.client.post('/openfarmplanner/api/planting-plans/', data2)
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('area_usage_sqm', response2.data)
-
 
