@@ -6,10 +6,9 @@
   "manageBeds": "Beete verwalten",
   "manageCultures": "Kulturen verwalten",
   "managePlantingPlans": "Anbaupläne verwalten",
-  "manageTasks": "Aufgaben verwalten",
   "features": "Funktionen",
   "feature1": "Verwalten Sie Ihre Kulturen und Pflanzensorten",
   "feature2": "Organisieren Sie Ihr Hoflayout (Standorte, Schläge, Beete)",
   "feature3": "Planen Sie Ihren Anbauzeitplan mit automatischer Erntedatumsberechnung",
-  "feature4": "Verfolgen Sie Aufgaben und Aktivitäten"
+  "feature4": "Behalten Sie Erntezeiträume im Anbaukalender im Blick"
 }

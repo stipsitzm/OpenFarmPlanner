@@ -12,7 +12,6 @@ import type {
   Field,
   Bed,
   PlantingPlan,
-  Task,
   PaginatedResponse,
 } from './types';
 
@@ -98,12 +97,6 @@ export const locationAPI = {
   delete: (id: number) => http.delete(`/locations/${id}/`),
 };
 
-/**
- * API endpoints for Task operations
- */
-export const taskAPI = {
-};
-
 // Re-export types for convenience
 export type {
   Culture,
@@ -111,7 +104,6 @@ export type {
   Field,
   Bed,
   PlantingPlan,
-  Task,
   PaginatedResponse,
 };
 
