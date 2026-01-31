@@ -50,7 +50,7 @@ export function SpacingSection({ formData, errors, onChange, t }: SpacingSection
           onChange={e => onChange('sowing_depth_cm', e.target.value ? parseInt(e.target.value) : undefined)}
           error={Boolean(errors.sowing_depth_cm)}
           helperText={errors.sowing_depth_cm}
-          slotProps={{ htmlInput: { min: 0, step: 1 } }}
+          slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
         />
       </Box>
     </>
