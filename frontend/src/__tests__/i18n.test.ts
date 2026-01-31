@@ -45,7 +45,7 @@ describe('i18n Configuration', () => {
   });
 
   it('should have all required namespaces', () => {
-    const namespaces = ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'tasks', 'fields', 'beds', 'hierarchy'];
+    const namespaces = ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy'];
     
     namespaces.forEach(ns => {
       expect(i18n.hasResourceBundle('de', ns)).toBe(true);

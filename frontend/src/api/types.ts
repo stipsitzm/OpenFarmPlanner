@@ -8,14 +8,24 @@
  * Culture (crop) type that can be grown
  */
 export interface Culture {
+    /** Saatgutbedarf pro m² oder pro Pflanze (optional) */
+    seeding_requirement?: number;
+    /** Art des Saatgutbedarfs: pro m² oder pro Pflanze (optional) */
+    seeding_requirement_type?: 'per_sqm' | 'per_plant' | '';
+  /** Saatgutmenge (Aussaatstärke, optional) */
+  seed_rate_value?: number | null;
+  /** Einheit der Saatgutmenge (optional) */
+  seed_rate_unit?: 'g_per_m2' | 'pcs_per_m2' | 'pcs_per_plant' | null;
   /** Unique identifier (auto-generated) */
   id?: number;
   /** Name of the crop */
   name: string;
   /** Specific variety of the crop (optional) */
   variety?: string;
+  /** Seed supplier/manufacturer (optional) */
+  seed_supplier?: string;
   /** Average days from planting to harvest */
-  days_to_harvest: number;
+
   /** Additional notes */
   notes?: string;
   
@@ -50,6 +60,9 @@ export interface Culture {
   row_spacing_cm?: number;
   /** Sowing depth in cm (optional) */
   sowing_depth_cm?: number;
+
+  /** Prozentuale Sicherheit für die Berechnung der Aussaat- und Pflanzenmenge (optional, 0-100) */
+  sowing_calculation_safety_percent?: number;
   
   // Display settings
   /** Display color for cultivation calendar (hex format, optional) */

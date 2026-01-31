@@ -2,7 +2,7 @@
  * Reusable Editable Data Grid component.
  * 
  * Provides Excel-like inline editing with validation and API integration.
- * Now supports spreadsheet-like autosave on blur.
+ * Supports spreadsheet-like autosave on blur.
  * Can be used for any entity type with proper configuration.
  * UI text is in German, code comments remain in English.
  * 
@@ -233,32 +233,33 @@ export function EditableDataGrid<T extends EditableRow>({
         if (data && typeof data === 'object') {
           const errors: string[] = [];
           
-          // Field name translations (German)
-          const fieldTranslations: Record<string, string> = {
-            'area_usage_sqm': 'Flächennutzung',
-            'planting_date': 'Pflanzdatum',
-            'harvest_date': 'Erntebeginn',
-            'harvest_end_date': 'Ernteende',
-            'culture': 'Kultur',
-            'bed': 'Beet',
-            'notes': 'Notizen',
-            'non_field_errors': 'Fehler',
-          };
-          
-          // Extract errors from all fields
+          // Feldnamen dynamisch aus i18n ermitteln
           Object.entries(data).forEach(([field, value]) => {
             console.log(`Processing field ${field}:`, value);
-            const fieldName = fieldTranslations[field] || field;
-            
+            // Versuche verschiedene i18n-Namen, fallback auf Feldname
+            let fieldName = t(`fields.${field}`);
+            if (fieldName === `fields.${field}`) {
+              fieldName = t(`columns.${field}`);
+            }
+            if (fieldName === `columns.${field}`) {
+              fieldName = t(field);
+            }
+            if (fieldName === field) {
+              // Sonderfall für non_field_errors
+              if (field === 'non_field_errors') {
+                fieldName = t('messages.error');
+              }
+            }
+            if (!fieldName || fieldName === field) {
+              fieldName = field;
+            }
             if (Array.isArray(value)) {
-              // If value is an array of error messages
               value.forEach((msg: string) => {
                 const errorMsg = `${fieldName}: ${msg}`;
                 console.log('Adding error:', errorMsg);
                 errors.push(errorMsg);
               });
             } else if (typeof value === 'string') {
-              // If value is a single error message
               const errorMsg = `${fieldName}: ${value}`;
               console.log('Adding error:', errorMsg);
               errors.push(errorMsg);

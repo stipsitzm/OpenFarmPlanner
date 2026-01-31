@@ -68,8 +68,17 @@ class CultureAdmin(admin.ModelAdmin):
         list_display: Fields to display in the list view
         search_fields: Fields to include in the search functionality
     """
-    list_display = ['name', 'variety', 'days_to_harvest', 'created_at']
-    search_fields = ['name', 'variety']
+    list_display = [
+        'name', 'variety',
+        'seed_rate_value', 'seed_rate_unit',
+        'sowing_calculation_safety_percent',
+        'seeding_requirement', 'seeding_requirement_type',
+        'created_at'
+    ]
+    search_fields = [
+        'name', 'variety',
+        'seed_rate_unit', 'seeding_requirement_type'
+    ]
 
 
 @admin.register(PlantingPlan)

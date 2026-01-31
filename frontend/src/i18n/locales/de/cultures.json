@@ -16,9 +16,7 @@
     "daysToFirstHarvest": "Tage bis zur ersten Ernte",
     "daysToLastHarvest": "Tage bis zur letzten Ernte",
     "harvestWindow": "Erntefenster",
-    "harvestWindowValue": "{{first}}–{{last}} Tage nach der Aussaat",
-    "lifespan": "Typische Lebensdauer",
-    "lifespanValue": "{{days}} Tage"
+    "harvestWindowValue": "{{first}}–{{last}} Tage nach der Aussaat"
   },
   "moreInfo": "Mehr Infos (Wikipedia)",
   "attribution": "Datenquelle: Diese Informationen stammen von",
@@ -73,7 +71,7 @@
     "harvestMethod": "Erntemethode",
     "harvestMethodPerPlant": "Pro Pflanze",
     "harvestMethodPerSqm": "Pro m²",
-    "expectedYield": "Erwarteter Ertrag",
+    "expectedYield": "Erwarteter Ertrag (kg)",
     "expectedYieldPlaceholder": "z.B. 500",
     "expectedYieldError": "Erwarteter Ertrag muss ≥ 0 sein",
     "allowDeviationDeliveryWeeks": "Abweichende Lieferwochen erlauben",

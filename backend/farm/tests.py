@@ -143,27 +143,24 @@ class CultureModelTest(TestCase):
         culture = Culture.objects.create(
             name="Tomato",
             variety="Cherry",
-            days_to_harvest=60,
             growth_duration_days=8,
             harvest_duration_days=4
         )
         self.assertEqual(str(culture), "Tomato (Cherry)")
 
-    def test_culture_creation_without_variety(self):
+                        growth_duration_days=8,
         culture = Culture.objects.create(
             name="Lettuce",
-            days_to_harvest=30,
             growth_duration_days=4,
             harvest_duration_days=2
         )
         self.assertEqual(str(culture), "Lettuce")
     
-    def test_culture_creation_with_all_manual_fields(self):
+                        growth_duration_days=4,
         """Test creating a culture with all manual planning fields"""
         culture = Culture.objects.create(
             name="Broccoli",
             variety="Calabrese",
-            days_to_harvest=70,
             notes="Great for winter growing",
             crop_family="Brassicaceae",
             nutrient_demand="high",
@@ -173,7 +170,7 @@ class CultureModelTest(TestCase):
             propagation_duration_days=4,
             harvest_method="per_plant",
             expected_yield=500.0,
-            allow_deviation_delivery_weeks=True,
+                        growth_duration_days=10,
             distance_within_row_m=0.40,  # 40 cm = 0.40 m
             row_spacing_m=0.60,  # 60 cm = 0.60 m
             sowing_depth_m=0.015,  # 1.5 cm = 0.015 m
@@ -196,7 +193,6 @@ class CultureModelTest(TestCase):
         """Test that display color is automatically generated on creation"""
         culture = Culture.objects.create(
             name="Carrot",
-            days_to_harvest=70,
             growth_duration_days=10,
             harvest_duration_days=3
         )
@@ -204,12 +200,11 @@ class CultureModelTest(TestCase):
         self.assertTrue(culture.display_color.startswith('#'))
         self.assertEqual(len(culture.display_color), 7)
     
-    def test_display_color_custom_value(self):
+                        growth_duration_days=-1,
         """Test that custom display color is preserved"""
         custom_color = "#FF5733"
         culture = Culture.objects.create(
             name="Lettuce",
-            days_to_harvest=30,
             growth_duration_days=4,
             harvest_duration_days=2,
             display_color=custom_color
@@ -221,8 +216,7 @@ class CultureModelTest(TestCase):
         colors = set()
         for i in range(10):
             culture = Culture.objects.create(
-                name=f"Culture {i}",
-                days_to_harvest=30 + i,
+                    expected_harvest = planting_date + timedelta(days=self.culture.growth_duration_days)
                 growth_duration_days=4,
                 harvest_duration_days=2
             )
@@ -233,11 +227,10 @@ class CultureModelTest(TestCase):
     
     def test_negative_numeric_fields_validation(self):
         """Test that negative values for numeric fields are rejected"""
-        from django.core.exceptions import ValidationError
+                        area_usage_sqm=self.culture.growth_duration_days,  # Corrected to use growth_duration_days
         
         culture = Culture(
             name="Lettuce",
-            days_to_harvest=30,
             growth_duration_days=-1,
             harvest_duration_days=2
         )
@@ -252,7 +245,6 @@ class CultureModelTest(TestCase):
         # Invalid color format
         culture = Culture(
             name="Tomato",
-            days_to_harvest=60,
             growth_duration_days=8,
             harvest_duration_days=4,
             display_color="invalid"
@@ -264,7 +256,6 @@ class CultureModelTest(TestCase):
         # Valid color format
         culture2 = Culture(
             name="Tomato",
-            days_to_harvest=60,
             growth_duration_days=8,
             harvest_duration_days=4,
             display_color="#FF5733"

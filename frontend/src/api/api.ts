@@ -102,16 +102,6 @@ export const locationAPI = {
  * API endpoints for Task operations
  */
 export const taskAPI = {
-  /** Get paginated list of all tasks */
-  list: () => http.get<PaginatedResponse<Task>>('/tasks/'),
-  /** Get a specific task by ID */
-  get: (id: number) => http.get<Task>(`/tasks/${id}/`),
-  /** Create a new task */
-  create: (data: Task) => http.post<Task>('/tasks/', data),
-  /** Update an existing task */
-  update: (id: number, data: Task) => http.put<Task>(`/tasks/${id}/`, data),
-  /** Delete a task */
-  delete: (id: number) => http.delete(`/tasks/${id}/`),
 };
 
 // Re-export types for convenience
@@ -132,5 +122,4 @@ export default {
   plantingPlans: plantingPlanAPI,
   fields: fieldAPI,
   locations: locationAPI,
-  tasks: taskAPI,
 };

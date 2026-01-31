@@ -16,7 +16,6 @@ import Locations from './pages/Locations';
 import FieldsBedsHierarchy from './pages/FieldsBedsHierarchy';
 import Cultures from './pages/Cultures';
 import PlantingPlans from './pages/PlantingPlans';
-import Tasks from './pages/Tasks';
 import GanttChart from './pages/GanttChart';
 import './App.css';
 
@@ -50,8 +49,6 @@ function RootLayout(): React.ReactElement {
             {t('plantingPlans')}
           </NavLink>
           {/*
-          <NavLink to="/tasks" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            {t('tasks')}
           </NavLink>*/}
           <NavLink to="/gantt-chart" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('ganttChart')}
@@ -92,10 +89,6 @@ function createAppRouter(basename: string) {
         {
           path: 'planting-plans',
           element: <PlantingPlans />,
-        },
-        {
-          path: 'tasks',
-          element: <Tasks />,
         },
         {
           path: 'gantt-chart',

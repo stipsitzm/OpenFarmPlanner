@@ -8,7 +8,8 @@
  * @returns The hierarchical Fields/Beds page component
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { HierarchyFooter } from '../components/hierarchy/HierarchyFooter';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
@@ -23,8 +24,6 @@ import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperat
 import { fieldAPI } from '../api/api';
 import { buildHierarchyRows } from '../components/hierarchy/utils/hierarchyUtils';
 import { createHierarchyColumns } from '../components/hierarchy/HierarchyColumns';
-import { HierarchyFooter } from '../components/hierarchy/HierarchyFooter';
-import type { HierarchyRow } from '../components/hierarchy/utils/types';
 
 function FieldsBedsHierarchy(): React.ReactElement {
   const { t } = useTranslation('hierarchy');
@@ -33,7 +32,11 @@ function FieldsBedsHierarchy(): React.ReactElement {
   const [hasInitiallyExpanded, setHasInitiallyExpanded] = useState(false);
   
   // Data fetching
-  const { loading, error, setError, locations, fields, beds, setBeds, fetchData } = useHierarchyData();
+  const { loading, error, setError, locations, fields, beds, setBeds, setFields, fetchData } = useHierarchyData();
+
+  // Debug-Ausgaben NACH allen Hook-Deklarationen
+  // Debug-Ausgabe direkt vor DataGrid-Render
+
   
   // Expansion state
   const { expandedRows, toggleExpand, ensureExpanded, expandAll } = useExpandedState();
@@ -45,7 +48,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
   const { addField, deleteField } = useFieldOperations(locations, setError, fetchData);
 
   /**
-   * Build hierarchy from flat data
+  // Removed duplicate import of useState
    */
   const rows = useMemo<GridRowsProp<HierarchyRow>>(() => {
     return buildHierarchyRows(locations, fields, beds, expandedRows);
@@ -90,36 +93,29 @@ function FieldsBedsHierarchy(): React.ReactElement {
     }
   }, [rows, pendingEditRow]);
 
-  /**
-   * Handle adding a new bed
-   */
   const handleAddBed = (fieldId: number): void => {
     const field = fields.find(f => f.id === fieldId);
     if (!field) return;
 
-    // Ensure field is expanded
     const fieldKey = `field-${fieldId}`;
     ensureExpanded(fieldKey);
 
-    // Add bed and get ID
     const newBedId = addBed(fieldId);
 
-    // Set pending edit mode for the new bed (will be applied after re-render)
-    setPendingEditRow(newBedId);
+    setPendingEditRow(newBedId); //will be applied after re-render
   };
 
-  /**
-   * Handle creating a planting plan with pre-selected bed
-   */
   const handleCreatePlantingPlan = (bedId: number): void => {
     navigate(`/planting-plans?bedId=${bedId}`);
   };
 
+  const getBedAreaSum = (fieldId: number, excludeBedId?: number, overrideArea?: number) => {
+    const filteredBeds = beds.filter(b => b.field === fieldId && b.id !== excludeBedId);
+    const bedAreas = filteredBeds.map(b => typeof b.area_sqm === 'number' ? b.area_sqm : parseFloat(b.area_sqm as any));
+    const sum = bedAreas.reduce((sum, area) => sum + (typeof area === 'number' ? area : 0), 0) + (typeof overrideArea === 'number' ? overrideArea : parseFloat(overrideArea as any) || 0);
+    return sum;
+  };
 
-
-  /**
-   * Process row update - save bed to API
-   */
   const processRowUpdate = async (newRow: HierarchyRow): Promise<HierarchyRow> => {
     // Name muss immer gesetzt sein
     if (!newRow.name || newRow.name.trim() === '') {
@@ -127,7 +123,30 @@ function FieldsBedsHierarchy(): React.ReactElement {
       throw new Error(t('validation.nameRequired'));
     }
 
+    // Flächenwert muss > 0 sein
+    const areaValue = typeof newRow.area_sqm === 'number' ? newRow.area_sqm : parseFloat(newRow.area_sqm as any);
+    if (areaValue <= 0 || isNaN(areaValue)) {
+      setError(t('validation.areaMustBePositive'));
+      throw new Error(t('validation.areaMustBePositive'));
+    }
+
+    // ...existing code...
+
+    // Validierung: Summe der Beetflächen darf Feldfläche nicht überschreiten
     if (newRow.type === 'bed') {
+      const field = fields.find(f => f.id === newRow.field);
+      if (field) {
+        const fieldArea = typeof field.area_sqm === 'number' ? field.area_sqm : parseFloat(field.area_sqm as any);
+        const bedArea = typeof newRow.area_sqm === 'number' ? newRow.area_sqm : parseFloat(newRow.area_sqm as any);
+        const sum = getBedAreaSum(field.id!, newRow.bedId, bedArea);
+        // ...existing code...
+        if (sum > fieldArea) {
+          const sumStr = sum.toFixed(2);
+          const maxStr = fieldArea.toFixed(2);
+          setError(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
+          throw new Error(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
+        }
+      }
       try {
         const savedBed = await saveBed({
           id: newRow.bedId!,
@@ -141,6 +160,16 @@ function FieldsBedsHierarchy(): React.ReactElement {
         throw err;
       }
     } else if (newRow.type === 'field') {
+      // Validierung: Summe der Beetflächen darf neue Feldfläche nicht überschreiten
+      const fieldArea = typeof newRow.area_sqm === 'number' ? newRow.area_sqm : parseFloat(newRow.area_sqm as any);
+      const sum = getBedAreaSum(newRow.fieldId!);
+      // ...existing code...
+      if (sum > fieldArea) {
+        const sumStr = sum.toFixed(2);
+        const maxStr = fieldArea.toFixed(2);
+        setError(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
+        throw new Error(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
+      }
       try {
         // Update Field via API
         const updated = await fieldAPI.update(newRow.fieldId!, {
@@ -149,6 +178,23 @@ function FieldsBedsHierarchy(): React.ReactElement {
           area_sqm: newRow.area_sqm,
           notes: newRow.notes,
         });
+        // ...existing code...
+        // Aktualisiere lokalen State direkt (optional, für sofortiges Feedback)
+        setFields((prevFields) => prevFields.map(f => {
+          if (f.id === newRow.fieldId) {
+            // Merge API-Daten, id bleibt Zahl, area_sqm als Zahl
+            return {
+              ...f,
+              ...updated.data,
+              id: updated.data.id,
+              fieldId: updated.data.id,
+              area_sqm: updated.data.area_sqm !== undefined ? parseFloat(updated.data.area_sqm) : undefined,
+            };
+          }
+          return f;
+        }));
+        // Frische Felder nach Update neu laden
+        await fetchData();
         return { ...newRow, name: updated.data.name, area_sqm: updated.data.area_sqm, notes: updated.data.notes };
       } catch (err) {
         setError(t('errors.save'));
@@ -157,6 +203,8 @@ function FieldsBedsHierarchy(): React.ReactElement {
     }
     return newRow;
   };
+
+
 
   /**
    * Handle row update errors

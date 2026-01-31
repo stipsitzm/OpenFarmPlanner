@@ -43,8 +43,6 @@ function Home(): React.ReactElement {
             </Link>
           </li>
           {/*<li>
-            <Link to="/tasks" className="quick-link">
-              {t('home:manageTasks')}
             </Link>
           </li>*/}
         </ul>

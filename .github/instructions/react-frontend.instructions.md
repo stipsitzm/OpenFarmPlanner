@@ -10,10 +10,12 @@ Follow the Airbnb JavaScript + React Style Guide for styling and structure.
 
 ## Comments & TSDoc
 
+
 For React components, hooks, utility functions, and services:
 - Use TSDoc comments above the declaration.
 - Include tags like `@param`, `@returns`, `@remarks`.
 - Briefly describe what it does and how it is used.
+- **Do not add trivial comments (wie z.B. "Handle X"), wenn der Funktionsname bereits selbsterklärend ist.**
 
 Example component:
 

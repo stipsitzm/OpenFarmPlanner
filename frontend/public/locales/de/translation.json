@@ -7,7 +7,6 @@
     "locations": "Standorte",
     "cultures": "Kulturen",
     "plantingPlans": "Anbaupläne",
-    "tasks": "Aufgaben"
   },
   "fields": {
     "plots": "Anbauflächen"
@@ -45,7 +44,6 @@
     "manageBeds": "Beete verwalten",
     "manageCultures": "Kulturen verwalten",
     "managePlantingPlans": "Anbaupläne verwalten",
-    "manageTasks": "Aufgaben verwalten"
   },
   "cultures": {
     "title": "Kulturen",

@@ -72,11 +72,30 @@ PDM provides convenient scripts defined in `pyproject.toml`:
 pdm run runserver        # Start Django development server
 ```
 
+
 ### Database Management
 ```bash
-pdm run migrate          # Apply database migrations
 pdm run makemigrations   # Create new migrations
+pdm run migrate          # Apply database migrations
 ```
+
+#### How to create and apply migrations
+
+Whenever you change models (e.g. add, remove, or modify fields), you need to create and apply migrations:
+
+1. **Create migration files** (detects model changes and generates migration scripts):
+   ```bash
+   pdm run makemigrations farm
+   ```
+   This will create a new migration file in `farm/migrations/`.
+
+2. **Apply migrations to the database**:
+   ```bash
+   pdm run migrate farm
+   ```
+   This updates your database schema to match the models.
+
+You can also run `pdm run migrate` without an app name to apply all unapplied migrations for all apps.
 
 ### Testing
 ```bash
@@ -128,7 +147,6 @@ All endpoints are available under `/api/`:
 - `/api/beds/` - Bed management
 - `/api/cultures/` - Culture (crop) management
 - `/api/planting-plans/` - Planting plan management
-- `/api/tasks/` - Task management
 
 Each endpoint supports:
 - `GET` - List all items

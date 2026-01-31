@@ -177,6 +177,39 @@ export function CultureDetail({
                     {formatNumber(selectedCulture.harvest_duration_days, t)} Tage
                   </Typography>
                 </Box>
+                {/* Seeding attributes */}
+                {(selectedCulture.seed_rate_value !== null && selectedCulture.seed_rate_value !== undefined) && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Saatgutmenge
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.seed_rate_value}
+                      {selectedCulture.seed_rate_unit === 'g_per_m2' ? ' g/m²' : selectedCulture.seed_rate_unit === 'pcs_per_m2' ? ' Stk./m²' : selectedCulture.seed_rate_unit === 'pcs_per_plant' ? ' Stk./Pflanze' : ''}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.sowing_calculation_safety_percent !== undefined && selectedCulture.sowing_calculation_safety_percent !== null && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Sicherheitszuschlag Saatgut
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.sowing_calculation_safety_percent} %
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.seeding_requirement !== undefined && selectedCulture.seeding_requirement !== null && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Saatgutbedarf
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.seeding_requirement}
+                      {selectedCulture.seeding_requirement_type === 'per_sqm' ? ' / m²' : selectedCulture.seeding_requirement_type === 'per_plant' ? ' / Pflanze' : ''}
+                    </Typography>
+                  </Box>
+                )}
                 {selectedCulture.propagation_duration_days && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
@@ -281,16 +314,6 @@ export function CultureDetail({
                     />
                   </Box>
                 )}
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('fields.lifespan')}
-                  </Typography>
-                  <Typography variant="body1">
-                    {selectedCulture.median_lifespan
-                      ? t('fields.lifespanValue', { days: selectedCulture.median_lifespan })
-                      : t('noData')}
-                  </Typography>
-                </Box>
               </Box>
             </Box>
 
