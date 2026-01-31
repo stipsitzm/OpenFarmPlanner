@@ -68,25 +68,10 @@ export interface Culture {
   /** Display color for cultivation calendar (hex format, optional) */
   display_color?: string;
   
-  // Growstuff API fields (read-only)
   /** Creation timestamp */
   created_at?: string;
   /** Last update timestamp */
   updated_at?: string;
-  /** Growstuff API crop ID (optional) */
-  growstuff_id?: number | null;
-  /** Growstuff API crop slug (optional) */
-  growstuff_slug?: string;
-  /** Source of the crop data */
-  source?: 'manual' | 'growstuff';
-  /** Last time synced with Growstuff API (optional) */
-  last_synced?: string | null;
-  /** English Wikipedia URL (optional) */
-  en_wikipedia_url?: string | null;
-  /** Whether the crop is perennial (optional) */
-  perennial?: boolean | null;
-  /** Median lifespan in days (optional) */
-  median_lifespan?: number | null;
 }
 
 /**

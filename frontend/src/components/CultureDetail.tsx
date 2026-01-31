@@ -1,7 +1,6 @@
 /**
  * Culture Detail component with searchable dropdown and detailed crop information view.
  * 
- * Displays crop data from Growstuff API in a human-friendly layout.
  * UI text is in German as per requirements.
  * 
  * @param props - Component properties
@@ -21,10 +20,8 @@ import {
   CardContent,
   Typography,
   Chip,
-  Button,
   Divider,
 } from '@mui/material';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import type { Culture } from '../api/api';
 
 interface CultureDetailProps {
@@ -335,47 +332,8 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
-                {selectedCulture.en_wikipedia_url && (
-                  <Button
-                    variant="outlined"
-                    startIcon={<OpenInNewIcon />}
-                    href={selectedCulture.en_wikipedia_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{ alignSelf: 'flex-start' }}
-                  >
-                    {t('moreInfo')}
-                  </Button>
-                )}
               </Box>
             </Box>
-
-            {/* Growstuff Attribution */}
-            {selectedCulture.source === 'growstuff' && (
-              <Box sx={{ mt: 3, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-                <Typography variant="caption" color="text.secondary">
-                  {t('attribution')}{' '}
-                  <a
-                    href="https://www.growstuff.org"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'inherit' }}
-                  >
-                    {t('attributionLink')}
-                  </a>{' '}
-                  {t('license')}{' '}
-                  <a
-                    href="https://creativecommons.org/licenses/by-sa/3.0/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'inherit' }}
-                  >
-                    {t('licenseLink')}
-                  </a>{' '}
-                  {t('licenseEnd')}
-                </Typography>
-              </Box>
-            )}
           </CardContent>
         </Card>
       )}

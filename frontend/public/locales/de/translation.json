@@ -59,9 +59,6 @@
       "daysToFirstHarvest": "Tage bis zur ersten Ernte",
       "daysToLastHarvest": "Tage bis zur letzten Ernte"
     },
-    "moreInfo": "Mehr Infos (Wikipedia)",
-    "attribution": "Datenquelle:",
-    "attributionLink": "Growstuff.org",
-    "license": "CC-BY-SA 3.0 Lizenz"
+    "moreInfo": "Mehr Infos (Wikipedia)"
   }
 }

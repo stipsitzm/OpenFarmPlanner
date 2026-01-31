@@ -181,23 +181,9 @@ class Culture(models.Model):
         # Display settings
         display_color: Display color for cultivation calendar (hex color, optional)
         
-        # Growstuff API fields (read-only via form)
-        growstuff_id: Unique ID from Growstuff API (optional)
-        growstuff_slug: URL slug from Growstuff API (optional)
-        source: Source of the data ('manual', 'growstuff')
-        last_synced: Timestamp of last Growstuff sync (optional)
-        en_wikipedia_url: English Wikipedia URL for the crop (from Growstuff)
-        perennial: Whether the crop is perennial (from Growstuff)
-        median_lifespan: Median lifespan in days (from Growstuff)
-        
         created_at: Timestamp when the culture was created
         updated_at: Timestamp when the culture was last updated
     """
-    SOURCE_CHOICES = [
-        ('manual', 'Manual Entry'),
-        ('growstuff', 'Growstuff API'),
-    ]
-    
     NUTRIENT_DEMAND_CHOICES = [
         ('low', 'Low'),
         ('medium', 'Medium'),
@@ -322,15 +308,6 @@ class Culture(models.Model):
         blank=True,
         help_text="Display color for cultivation calendar (hex format: #RRGGBB)"
     )
-    
-    # Growstuff API fields
-    growstuff_id = models.IntegerField(null=True, blank=True, unique=True, help_text="Growstuff API crop ID")
-    growstuff_slug = models.CharField(max_length=200, blank=True, help_text="Growstuff API crop slug")
-    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='manual', help_text="Source of the crop data")
-    last_synced = models.DateTimeField(null=True, blank=True, help_text="Last time synced with Growstuff API")
-    en_wikipedia_url = models.URLField(max_length=500, blank=True, null=True, help_text="English Wikipedia URL")
-    perennial = models.BooleanField(null=True, blank=True, help_text="Whether the crop is perennial")
-    median_lifespan = models.IntegerField(null=True, blank=True, help_text="Median lifespan in days")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -638,4 +615,3 @@ class Task(models.Model):
 
     class Meta:
         ordering = ['due_date', '-created_at']
-
