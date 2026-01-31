@@ -95,5 +95,23 @@
     "delete": "Löschen",
     "deleteConfirm": "Möchten Sie diese Kultur wirklich löschen?",
     "createPlantingPlan": "Anbauplan erstellen"
+  },
+  "import": {
+    "menuLabel": "Weitere Aktionen",
+    "menuItem": "Aus JSON importieren…",
+    "title": "Kulturen importieren",
+    "foundCount": "{{count}} Einträge gefunden",
+    "invalidCount": "{{invalid}} Einträge ohne gültigen Namen",
+    "start": "Import starten",
+    "close": "Schließen",
+    "success": "Import erfolgreich",
+    "invalidEntry": "Ungültiger Eintrag",
+    "errors": {
+      "notArray": "Die Datei muss ein JSON-Array enthalten.",
+      "noValidEntries": "Keine gültigen Einträge gefunden.",
+      "parse": "Die Datei konnte nicht gelesen werden.",
+      "server": "Import fehlgeschlagen.",
+      "network": "Netzwerkfehler beim Import."
+    }
   }
 }

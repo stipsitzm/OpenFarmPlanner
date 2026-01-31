@@ -8,14 +8,31 @@
  * @returns The Cultures page component
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture } from '../api/api';
 import { CultureDetail } from '../components/CultureDetail';
 import { CultureForm } from '../components/CultureForm';
-import { Box, Button, Dialog, DialogContent, Snackbar, Alert } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  ButtonGroup,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  List,
+  ListItem,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Snackbar,
+  Typography,
+} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
@@ -27,11 +44,21 @@ function Cultures(): React.ReactElement {
   const [selectedCultureId, setSelectedCultureId] = useState<number | undefined>(undefined);
   const [showForm, setShowForm] = useState(false);
   const [editingCulture, setEditingCulture] = useState<Culture | undefined>(undefined);
+  const [importMenuAnchor, setImportMenuAnchor] = useState<null | HTMLElement>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importPreviewCount, setImportPreviewCount] = useState(0);
+  const [importValidCount, setImportValidCount] = useState(0);
+  const [importInvalidEntries, setImportInvalidEntries] = useState<string[]>([]);
+  const [importPayload, setImportPayload] = useState<Record<string, unknown>[]>([]);
+  const [importStatus, setImportStatus] = useState<'idle' | 'ready' | 'uploading' | 'success' | 'error'>('idle');
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Fetch cultures on mount
   useEffect(() => {
@@ -53,8 +80,7 @@ function Cultures(): React.ReactElement {
   };
 
   const handleAddNew = () => {
-    setEditingCulture(undefined);
-    setShowForm(true);
+    navigate('/cultures/new');
   };
 
   const handleEdit = (culture: Culture) => {
@@ -124,19 +150,176 @@ function Cultures(): React.ReactElement {
     }
   };
 
+  const handleImportMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setImportMenuAnchor(event.currentTarget);
+  };
+
+  const handleImportMenuClose = () => {
+    setImportMenuAnchor(null);
+  };
+
+  const resetImportState = () => {
+    setImportPreviewCount(0);
+    setImportValidCount(0);
+    setImportInvalidEntries([]);
+    setImportPayload([]);
+    setImportStatus('idle');
+    setImportError(null);
+    setImportSuccess(null);
+  };
+
+  const handleImportFileTrigger = () => {
+    handleImportMenuClose();
+    resetImportState();
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string);
+        if (!Array.isArray(parsed)) {
+          setImportStatus('error');
+          setImportError(t('import.errors.notArray'));
+          setImportDialogOpen(true);
+          return;
+        }
+
+        const invalidEntries: string[] = [];
+        const validEntries: Record<string, unknown>[] = [];
+
+        parsed.forEach((entry, index) => {
+          const isObject = typeof entry === 'object' && entry !== null;
+          const nameValue = isObject ? (entry as { name?: unknown }).name : undefined;
+          if (isObject && typeof nameValue === 'string' && nameValue.trim().length > 0) {
+            validEntries.push(entry as Record<string, unknown>);
+          } else {
+            invalidEntries.push(`${t('import.invalidEntry')} ${index + 1}`);
+          }
+        });
+
+        setImportPreviewCount(parsed.length);
+        setImportValidCount(validEntries.length);
+        setImportInvalidEntries(invalidEntries);
+        setImportPayload(validEntries);
+        setImportStatus('ready');
+        setImportDialogOpen(true);
+        if (validEntries.length === 0) {
+          setImportStatus('error');
+          setImportError(t('import.errors.noValidEntries'));
+        }
+      } catch (error) {
+        console.error('Error parsing JSON file:', error);
+        setImportStatus('error');
+        setImportError(t('import.errors.parse'));
+        setImportDialogOpen(true);
+      }
+    };
+
+    reader.readAsText(file);
+    event.target.value = '';
+  };
+
+  const handleImportStart = async () => {
+    if (importPayload.length === 0 || importStatus === 'uploading') {
+      return;
+    }
+
+    setImportStatus('uploading');
+    setImportError(null);
+    setImportSuccess(null);
+
+    try {
+      const response = await fetch('/api/cultures/import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(importPayload),
+      });
+
+      let responseData: unknown = null;
+      try {
+        responseData = await response.json();
+      } catch (error) {
+        responseData = null;
+      }
+
+      if (!response.ok) {
+        const message =
+          (responseData as { message?: string })?.message ?? t('import.errors.server');
+        const invalidEntries = (responseData as { invalidEntries?: unknown })?.invalidEntries;
+        setImportError(message);
+        if (Array.isArray(invalidEntries)) {
+          setImportInvalidEntries(
+            invalidEntries.map((entry, index) =>
+              typeof entry === 'string'
+                ? entry
+                : `${t('import.invalidEntry')} ${index + 1}`
+            )
+          );
+        }
+        setImportStatus('error');
+        return;
+      }
+
+      setImportStatus('success');
+      setImportSuccess(t('import.success'));
+      await fetchCultures();
+    } catch (error) {
+      console.error('Error importing cultures:', error);
+      setImportStatus('error');
+      setImportError(t('import.errors.network'));
+    }
+  };
+
+  const handleImportDialogClose = () => {
+    setImportDialogOpen(false);
+  };
+
   const selectedCulture = cultures.find(c => c.id === selectedCultureId);
 
   return (
     <div className="page-container">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <h1>{t('title')}</h1>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleAddNew}
+        <ButtonGroup variant="contained" aria-label={t('buttons.addNew')}>
+          <Button startIcon={<AddIcon />} onClick={handleAddNew}>
+            {t('buttons.addNew')}
+          </Button>
+          <Button
+            size="small"
+            aria-label={t('import.menuLabel')}
+            aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
+            aria-haspopup="true"
+            onClick={handleImportMenuOpen}
+          >
+            <ArrowDropDownIcon />
+          </Button>
+        </ButtonGroup>
+        <Menu
+          id="culture-import-menu"
+          anchorEl={importMenuAnchor}
+          open={Boolean(importMenuAnchor)}
+          onClose={handleImportMenuClose}
         >
-          {t('buttons.addNew')}
-        </Button>
+          <MenuItem onClick={handleImportFileTrigger}>
+            {t('import.menuItem')}
+          </MenuItem>
+        </Menu>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          onChange={handleImportFileChange}
+          hidden
+        />
       </Box>
       
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
@@ -191,6 +374,45 @@ function Cultures(): React.ReactElement {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={importDialogOpen} onClose={handleImportDialogClose} maxWidth="sm" fullWidth>
+        <DialogTitle>{t('import.title')}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <Typography variant="body1">
+              {t('import.foundCount', { count: importValidCount || importPreviewCount })}
+            </Typography>
+            {importPreviewCount !== importValidCount && (
+              <Typography variant="body2" color="warning.main">
+                {t('import.invalidCount', {
+                  invalid: importPreviewCount - importValidCount,
+                })}
+              </Typography>
+            )}
+            {importInvalidEntries.length > 0 && (
+              <List dense>
+                {importInvalidEntries.map((entry) => (
+                  <ListItem key={entry}>
+                    <ListItemText primary={entry} />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+            {importError && <Alert severity="error">{importError}</Alert>}
+            {importSuccess && <Alert severity="success">{importSuccess}</Alert>}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleImportDialogClose}>{t('import.close')}</Button>
+          <Button
+            variant="contained"
+            onClick={handleImportStart}
+            disabled={importValidCount === 0 || importStatus === 'uploading'}
+          >
+            {t('import.start')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
@@ -211,4 +433,3 @@ function Cultures(): React.ReactElement {
 }
 
 export default Cultures;
-
