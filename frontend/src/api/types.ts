@@ -184,30 +184,6 @@ export interface PlantingPlan {
 }
 
 /**
- * Farm management task
- */
-export interface Task {
-  /** Unique identifier (auto-generated) */
-  id?: number;
-  /** Short title describing the task */
-  title: string;
-  /** Detailed description (optional) */
-  description?: string;
-  /** Foreign key to PlantingPlan (optional) */
-  planting_plan?: number;
-  /** Read-only planting plan name */
-  planting_plan_name?: string;
-  /** Due date (optional) */
-  due_date?: string;
-  /** Current status of the task */
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-  /** Creation timestamp */
-  created_at?: string;
-  /** Last update timestamp */
-  updated_at?: string;
-}
-
-/**
  * Paginated API response wrapper
  * @template T The type of items in the results array
  */

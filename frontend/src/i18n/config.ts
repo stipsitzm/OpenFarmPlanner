@@ -16,7 +16,6 @@ import homeDE from './locales/de/home.json';
 import locationsDE from './locales/de/locations.json';
 import culturesDE from './locales/de/cultures.json';
 import plantingPlansDE from './locales/de/plantingPlans.json';
-// tasksDE entfernt
 import fieldsDE from './locales/de/fields.json';
 import bedsDE from './locales/de/beds.json';
 import hierarchyDE from './locales/de/hierarchy.json';
@@ -46,7 +45,6 @@ i18n
         locations: locationsDE,
         cultures: culturesDE,
         plantingPlans: plantingPlansDE,
-        // tasks: tasksDE, entfernt
         fields: fieldsDE,
         beds: bedsDE,
         hierarchy: hierarchyDE,

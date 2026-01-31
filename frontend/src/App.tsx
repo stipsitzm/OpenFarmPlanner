@@ -48,8 +48,6 @@ function RootLayout(): React.ReactElement {
           <NavLink to="/planting-plans" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('plantingPlans')}
           </NavLink>
-          {/*
-          </NavLink>*/}
           <NavLink to="/gantt-chart" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('ganttChart')}
           </NavLink>
@@ -112,4 +110,3 @@ function App(): React.ReactElement {
 }
 
 export default App;
-
