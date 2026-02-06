@@ -7,6 +7,12 @@ This repository has two main parts:
 
 All comments, docstrings, logs, and output messages must be written in English.
 
+## Comment Style
+
+- Keep comments and docstrings concise and single-line whenever possible.
+- Avoid verbose attribute lists in class docstrings; prefer a short summary sentence.
+- Apply this especially to Django model classes and their methods.
+
 For specific coding rules, see:
 
 - `./instructions/python-backend.instructions.md`

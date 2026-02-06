@@ -11,6 +11,8 @@
  */
 
 import { useState, useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
 import {
   Box,
@@ -21,6 +23,7 @@ import {
   Typography,
   Chip,
   Divider,
+  Link,
 } from '@mui/material';
 import type { Culture } from '../api/api';
 
@@ -146,10 +149,71 @@ export function CultureDetail({
 
             <Divider sx={{ mb: 3 }} />
 
-            {/* Growth & Harvest Section */}
+            {/* General Information Section */}
             <Box sx={{ mb: 4 }}>
               <Typography variant="h6" gutterBottom>
-                {t('sections.growthHarvest')}
+                Allgemeine Informationen
+              </Typography>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gap: 2,
+                }}
+              >
+                {selectedCulture.crop_family && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Pflanzenfamilie
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.crop_family}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.seed_supplier && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Saatgutanbieter
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.seed_supplier}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.nutrient_demand && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Nährstoffbedarf
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.nutrient_demand === 'low'
+                        ? 'Niedrig'
+                        : selectedCulture.nutrient_demand === 'medium'
+                          ? 'Mittel'
+                          : 'Hoch'}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.cultivation_type && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Anbauart
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.cultivation_type === 'pre_cultivation' ? 'Anzucht' : 'Direktsaat'}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Box>
+
+            <Divider sx={{ mb: 3 }} />
+
+            {/* Timing Section */}
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                Zeitplanung
               </Typography>
               <Box
                 sx={{
@@ -174,39 +238,6 @@ export function CultureDetail({
                     {formatNumber(selectedCulture.harvest_duration_days, t)} Tage
                   </Typography>
                 </Box>
-                {/* Seeding attributes */}
-                {(selectedCulture.seed_rate_value !== null && selectedCulture.seed_rate_value !== undefined) && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Saatgutmenge
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedCulture.seed_rate_value}
-                      {selectedCulture.seed_rate_unit === 'g_per_m2' ? ' g/m²' : selectedCulture.seed_rate_unit === 'pcs_per_m2' ? ' Stk./m²' : selectedCulture.seed_rate_unit === 'pcs_per_plant' ? ' Stk./Pflanze' : ''}
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.sowing_calculation_safety_percent !== undefined && selectedCulture.sowing_calculation_safety_percent !== null && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Sicherheitszuschlag Saatgut
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedCulture.sowing_calculation_safety_percent} %
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.seeding_requirement !== undefined && selectedCulture.seeding_requirement !== null && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Saatgutbedarf
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedCulture.seeding_requirement}
-                      {selectedCulture.seeding_requirement_type === 'per_sqm' ? ' / m²' : selectedCulture.seeding_requirement_type === 'per_plant' ? ' / Pflanze' : ''}
-                    </Typography>
-                  </Box>
-                )}
                 {selectedCulture.propagation_duration_days && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
@@ -217,57 +248,23 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
-                {selectedCulture.crop_family && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Pflanzenfamilie
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedCulture.crop_family}
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.nutrient_demand && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Nährstoffbedarf
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedCulture.nutrient_demand === 'low' ? 'Niedrig' : 
-                       selectedCulture.nutrient_demand === 'medium' ? 'Mittel' : 'Hoch'}
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.cultivation_type && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Anbauart
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedCulture.cultivation_type === 'pre_cultivation' ? 'Anzucht' : 'Direktsaat'}
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.harvest_method && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Erntemethode
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedCulture.harvest_method === 'per_plant' ? 'Pro Pflanze' : 'Pro m²'}
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.expected_yield && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Erwarteter Ertrag
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatNumber(selectedCulture.expected_yield, t)}
-                    </Typography>
-                  </Box>
-                )}
+              </Box>
+            </Box>
+
+            <Divider sx={{ mb: 3 }} />
+
+            {/* Spacing Section */}
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                Abstände
+              </Typography>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gap: 2,
+                }}
+              >
                 {selectedCulture.distance_within_row_cm && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
@@ -298,6 +295,101 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
+              </Box>
+            </Box>
+
+            <Divider sx={{ mb: 3 }} />
+
+            {/* Seeding Section */}
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                Saatgut
+              </Typography>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gap: 2,
+                }}
+              >
+                {(selectedCulture.seed_rate_value !== null && selectedCulture.seed_rate_value !== undefined) && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Saatgutmenge
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.seed_rate_value}
+                      {selectedCulture.seed_rate_unit === 'g_per_m2'
+                        ? ' g/m²'
+                        : selectedCulture.seed_rate_unit === 'pcs_per_m2'
+                          ? ' Stk./m²'
+                          : selectedCulture.seed_rate_unit === 'pcs_per_plant'
+                            ? ' Stk./Pflanze'
+                            : ''}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.sowing_calculation_safety_percent !== undefined && selectedCulture.sowing_calculation_safety_percent !== null && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Sicherheitszuschlag Saatgut
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.sowing_calculation_safety_percent} %
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.seeding_requirement !== undefined && selectedCulture.seeding_requirement !== null && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Saatgutbedarf
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.seeding_requirement}
+                      {selectedCulture.seeding_requirement_type === 'per_sqm'
+                        ? ' / m²'
+                        : selectedCulture.seeding_requirement_type === 'per_plant'
+                          ? ' / Pflanze'
+                          : ''}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Box>
+
+            <Divider sx={{ mb: 3 }} />
+            {/* Harvest Section */}
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                Ernte
+              </Typography>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gap: 2,
+                }}
+              >
+                {selectedCulture.harvest_method && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Erntemethode
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.harvest_method === 'per_plant' ? 'Pro Pflanze' : 'Pro m²'}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.expected_yield && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Erwarteter Ertrag
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatNumber(selectedCulture.expected_yield, t)}
+                    </Typography>
+                  </Box>
+                )}
                 {selectedCulture.allow_deviation_delivery_weeks && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
@@ -316,20 +408,37 @@ export function CultureDetail({
 
             <Divider sx={{ mb: 3 }} />
 
-            {/* Info Section */}
+            {/* Notes Section */}
             <Box>
               <Typography variant="h6" gutterBottom>
-                {t('sections.additionalInfo')}
+                Notizen
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {selectedCulture.notes && (
                   <Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      Notizen
-                    </Typography>
-                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                      {selectedCulture.notes}
-                    </Typography>
+                    <Box
+                      sx={{
+                        '& h3': { mt: 2, mb: 1, fontSize: '1.05rem' },
+                        '& p': { mb: 1 },
+                        '& ul': { pl: 3, mb: 1 },
+                        '& li': { mb: 0.5 },
+                        '& a': { color: 'primary.main' },
+                        '& em': { color: 'text.secondary' },
+                      }}
+                    >
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          a: ({ children, ...props }) => (
+                            <Link target="_blank" rel="noreferrer" {...props}>
+                              {children}
+                            </Link>
+                          ),
+                        }}
+                      >
+                        {selectedCulture.notes}
+                      </ReactMarkdown>
+                    </Box>
                   </Box>
                 )}
               </Box>
