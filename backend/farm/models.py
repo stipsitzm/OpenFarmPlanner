@@ -3,11 +3,20 @@ from django.core.exceptions import ValidationError
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
-from decimal import Decimal
+
+
+class TimestampedModel(models.Model):
+    """Abstract base model with created/updated timestamps."""
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
 
 
 
-class Location(models.Model):
+class Location(TimestampedModel):
     """A physical location where farming occurs.
     
     This model represents a physical farm location that can contain
@@ -24,8 +33,6 @@ class Location(models.Model):
     name = models.CharField(max_length=200)
     address = models.TextField(blank=True)
     notes = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
         """Return string representation of the location.
@@ -39,7 +46,7 @@ class Location(models.Model):
         ordering = ['name']
 
 
-class Field(models.Model):
+class Field(TimestampedModel):
     """A field within a location.
     
     This model represents a field that belongs to a specific location.
@@ -61,8 +68,6 @@ class Field(models.Model):
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='fields')
     area_sqm = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     notes = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self) -> None:
         """Validate the field data.
@@ -95,7 +100,7 @@ class Field(models.Model):
         ordering = ['location', 'name']
 
 
-class Bed(models.Model):
+class Bed(TimestampedModel):
     """A bed within a field.
     
     This model represents a planting bed that belongs to a specific field.
@@ -118,8 +123,6 @@ class Bed(models.Model):
     field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds')
     area_sqm = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     notes = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     def get_total_area(self) -> float | None:
         """Get total area of the bed in square meters.
@@ -143,7 +146,7 @@ class Bed(models.Model):
         ordering = ['field', 'name']
 
 
-class Culture(models.Model):
+class Culture(TimestampedModel):
     """A crop or plant type that can be grown.
     
     This model represents a specific type of crop or plant variety
@@ -309,9 +312,6 @@ class Culture(models.Model):
         help_text="Display color for cultivation calendar (hex format: #RRGGBB)"
     )
     
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
     def clean(self) -> None:
         """Validate the culture data.
         
@@ -447,7 +447,7 @@ class Culture(models.Model):
         ordering = ['name', 'variety']
 
 
-class PlantingPlan(models.Model):
+class PlantingPlan(TimestampedModel):
     """A plan for planting a specific culture in a specific bed.
     
     This model represents a planting schedule that links a culture
@@ -480,8 +480,6 @@ class PlantingPlan(models.Model):
         help_text="Area in square meters used by this planting plan"
     )
     notes = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self) -> None:
         """Validate the planting plan.
@@ -573,7 +571,7 @@ class PlantingPlan(models.Model):
         ordering = ['-planting_date']
 
 
-class Task(models.Model):
+class Task(TimestampedModel):
     """A task related to farm management.
     
     This model represents a farm management task that can optionally
@@ -602,8 +600,6 @@ class Task(models.Model):
     planting_plan = models.ForeignKey(PlantingPlan, on_delete=models.CASCADE, related_name='tasks', null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
         """Return string representation of the task.
