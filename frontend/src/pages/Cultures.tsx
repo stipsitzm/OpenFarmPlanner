@@ -183,7 +183,9 @@ function Cultures(): React.ReactElement {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const parsed = JSON.parse(reader.result as string);
+        // Remove trailing commas before parsing to support common JSON export formats
+        const jsonString = (reader.result as string).replace(/,(\s*[}\]])/g, '$1');
+        const parsed = JSON.parse(jsonString);
         if (!Array.isArray(parsed)) {
           setImportStatus('error');
           setImportError(t('import.errors.notArray'));
