@@ -5,6 +5,7 @@ Django REST Framework's ModelViewSet. Each ViewSet handles CRUD operations
 for its respective model.
 """
 
+from django.core.exceptions import ValidationError
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -82,7 +83,7 @@ class CultureViewSet(viewsets.ModelViewSet):
         Validates each entry and returns information about successful and failed imports.
         
         :param request: HTTP request containing array of culture objects
-        :return: Response with import results
+        :return: Response with import results including created IDs and failed entries
         """
         if not isinstance(request.data, list):
             return Response(
@@ -109,7 +110,8 @@ class CultureViewSet(viewsets.ModelViewSet):
                 try:
                     culture = serializer.save()
                     created_cultures.append(culture.id)
-                except Exception as e:
+                except (ValidationError, ValueError, TypeError) as e:
+                    # Catch validation and type errors during save
                     failed_entries.append({
                         'index': idx,
                         'data': culture_data,
