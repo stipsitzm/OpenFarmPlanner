@@ -222,7 +222,7 @@ function Cultures(): React.ReactElement {
           if (isObject && typeof nameValue === 'string' && nameValue.trim().length > 0) {
             validEntries.push(entry as Record<string, unknown>);
           } else {
-            invalidEntries.push(`${t('import.invalidEntry')} ${index + 1}`);
+            invalidEntries.push(`{t('import.invalidEntry')} ${index + 1}`);
           }
         });
 
@@ -435,7 +435,7 @@ function Cultures(): React.ReactElement {
                   return newCultures.length > 0 && (
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="h6" color="success.main">
-                        Neue Kulturen ({newCultures.length})
+                        {t('import.newCultures')} ({newCultures.length})
                       </Typography>
                       <List dense>
                         {newCultures.map((result) => (
@@ -456,14 +456,14 @@ function Cultures(): React.ReactElement {
                   return updateCandidates.length > 0 && (
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="h6" color="warning.main">
-                        Überschreiben möglich ({updateCandidates.length})
+                        {t('import.updateCandidates')} ({updateCandidates.length})
                       </Typography>
                       <List dense>
                         {updateCandidates.map((result) => (
                           <ListItem key={result.index} sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
                             <ListItemText 
                               primary={`${result.import_data.name}${result.import_data.variety ? ` (${result.import_data.variety})` : ''}`}
-                              secondary={result.diff && result.diff.length > 0 ? `${result.diff.length} Felder ändern` : 'Keine Änderungen'}
+                              secondary={result.diff && result.diff.length > 0 ? `${result.diff.length} {t('import.fieldsChanged', { count: result.diff.length })}` : '{t('import.noChanges')}'}
                             />
                             {result.diff && result.diff.length > 0 && (
                               <Box sx={{ ml: 2, fontSize: '0.875rem' }}>
@@ -485,7 +485,7 @@ function Cultures(): React.ReactElement {
                           onChange={(e) => setConfirmUpdates(e.target.checked)}
                         />
                         <label htmlFor="confirm-updates">
-                          <Typography variant="body2">Überschreiben bestätigen</Typography>
+                          <Typography variant="body2">{t('import.confirmUpdates')}</Typography>
                         </label>
                       </Box>
                     </Box>
@@ -498,7 +498,7 @@ function Cultures(): React.ReactElement {
             {importInvalidEntries.length > 0 && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="h6" color="error.main">
-                  Ungültige Einträge ({importInvalidEntries.length})
+                  {t('import.invalidEntries')} ({importInvalidEntries.length})
                 </Typography>
                 <List dense>
                   {importInvalidEntries.map((entry) => (
@@ -521,7 +521,7 @@ function Cultures(): React.ReactElement {
             onClick={handleImportStart}
             disabled={importValidCount === 0 || importStatus === 'uploading' || importStatus === 'success'}
           >
-            {importStatus === 'success' ? 'Fertig' : 'Importieren'}
+            {importStatus === 'success' ? t('import.done') : t('import.start')}
           </Button>
         </DialogActions>
       </Dialog>
