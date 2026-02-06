@@ -5,6 +5,22 @@
  */
 
 /**
+ * Seed supplier/manufacturer
+ */
+export interface Supplier {
+  /** Unique identifier (auto-generated) */
+  id?: number;
+  /** Supplier name */
+  name: string;
+  /** Creation timestamp */
+  created_at?: string;
+  /** Last update timestamp */
+  updated_at?: string;
+  /** Flag indicating if supplier was newly created (for get-or-create) */
+  created?: boolean;
+}
+
+/**
  * Culture (crop) type that can be grown
  */
 export interface Culture {
@@ -22,8 +38,10 @@ export interface Culture {
   name: string;
   /** Specific variety of the crop (optional) */
   variety?: string;
-  /** Seed supplier/manufacturer (optional) */
+  /** Seed supplier/manufacturer (optional, legacy field) */
   seed_supplier?: string;
+  /** Supplier object (preferred over seed_supplier text field) */
+  supplier?: Supplier | null;
   /** Average days from planting to harvest */
 
   /** Additional notes */

@@ -6,7 +6,7 @@ to and from JSON representations for the API endpoints.
 
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
-from .models import Location, Field, Bed, Culture, PlantingPlan, Task
+from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier
 
 
 class CentimetersField(serializers.FloatField):
@@ -61,6 +61,24 @@ class LocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Location
         fields = '__all__'
+
+
+class SupplierSerializer(serializers.ModelSerializer):
+    """Serializer for the Supplier model.
+    
+    Converts Supplier instances to/from JSON for API responses.
+    Includes id, name, and created flag for get-or-create operations.
+    
+    Attributes:
+        created: Read-only flag indicating if supplier was newly created
+        Meta: Configuration class specifying model and fields
+    """
+    created = serializers.BooleanField(read_only=True, default=False)
+    
+    class Meta:
+        model = Supplier
+        fields = ['id', 'name', 'created_at', 'updated_at', 'created']
+        read_only_fields = ['created_at', 'updated_at']
 
 
 class FieldSerializer(serializers.ModelSerializer):
@@ -144,10 +162,16 @@ class CultureSerializer(serializers.ModelSerializer):
     - API exposes these fields in centimeters for user convenience
     - Conversion is handled automatically by CentimetersField
     
+    Supplier handling:
+    - Read: supplier field returns { id, name } or null
+    - Write: accepts supplier_id (FK) or supplier_name (get-or-create)
+    
     Attributes:
         distance_within_row_cm: Distance within row in cm (API), stored as meters internally
         row_spacing_cm: Row spacing in cm (API), stored as meters internally
         sowing_depth_cm: Sowing depth in cm (API), stored as meters internally
+        supplier: Nested supplier object for read operations
+        supplier_name: Write-only field for creating/getting supplier by name
         Meta: Configuration class specifying model and fields
     """
     # Use custom field to convert between meters (internal) and centimeters (API)
@@ -168,6 +192,15 @@ class CultureSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
         help_text='Sowing depth in centimeters'
+    )
+    
+    # Supplier fields - nested for read, write-only name field for convenience
+    supplier = SupplierSerializer(read_only=True)
+    supplier_name = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        help_text='Supplier name for get-or-create (alternative to supplier_id)'
     )
 
     seed_rate_value = serializers.FloatField(
@@ -252,12 +285,23 @@ class CultureSerializer(serializers.ModelSerializer):
         """Validate the culture data.
         
         Runs model-level validation via clean() method and checks required fields.
+        Handles supplier_name to get-or-create Supplier instance.
         
         :param attrs: Dictionary of attributes for the culture
         :return: The validated attributes
         :raises serializers.ValidationError: If validation fails
         """
         errors = {}
+        
+        # Handle supplier_name if provided (get-or-create Supplier)
+        supplier_name = attrs.pop('supplier_name', None)
+        if supplier_name and not attrs.get('supplier'):
+            # Get or create supplier by name
+            supplier, created = Supplier.objects.get_or_create(
+                name_normalized=Supplier()._normalize_name(supplier_name),
+                defaults={'name': supplier_name}
+            )
+            attrs['supplier'] = supplier
         
         # Check required fields for create operations
         if not self.instance:

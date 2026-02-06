@@ -5,7 +5,24 @@ providing customized list displays, filters, and search capabilities.
 """
 
 from django.contrib import admin
-from .models import Location, Field, Bed, Culture, PlantingPlan, Task
+from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier
+
+
+@admin.register(Supplier)
+class SupplierAdmin(admin.ModelAdmin):
+    """Admin interface configuration for Supplier model.
+    
+    Provides a customized admin interface with search and display
+    capabilities for seed suppliers.
+    
+    Attributes:
+        list_display: Fields to display in the list view
+        search_fields: Fields to include in the search functionality
+        readonly_fields: Fields that cannot be edited in the admin
+    """
+    list_display = ['name', 'name_normalized', 'created_at']
+    search_fields = ['name', 'name_normalized']
+    readonly_fields = ['name_normalized']
 
 
 @admin.register(Location)
