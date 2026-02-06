@@ -81,8 +81,8 @@ class SupplierViewSet(viewsets.ModelViewSet):
             )
         
         # Get or create supplier by normalized name
-        supplier_instance = Supplier()
-        normalized = supplier_instance._normalize_name(name)
+        from .utils import normalize_supplier_name
+        normalized = normalize_supplier_name(name) or ''
         
         supplier, created = Supplier.objects.get_or_create(
             name_normalized=normalized,

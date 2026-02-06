@@ -296,9 +296,10 @@ class CultureSerializer(serializers.ModelSerializer):
         # Handle supplier_name if provided (get-or-create Supplier)
         supplier_name = attrs.pop('supplier_name', None)
         if supplier_name and not attrs.get('supplier'):
+            from .utils import normalize_supplier_name
             # Get or create supplier by name
             supplier, created = Supplier.objects.get_or_create(
-                name_normalized=Supplier()._normalize_name(supplier_name),
+                name_normalized=normalize_supplier_name(supplier_name) or '',
                 defaults={'name': supplier_name}
             )
             attrs['supplier'] = supplier
