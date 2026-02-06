@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
+import re
 
 
 class TimestampedModel(models.Model):
@@ -14,6 +15,62 @@ class TimestampedModel(models.Model):
     class Meta:
         abstract = True
 
+
+class Supplier(TimestampedModel):
+    """A seed supplier or manufacturer."""
+    
+    name = models.CharField(max_length=200, help_text="Supplier name")
+    name_normalized = models.CharField(
+        max_length=200,
+        unique=True,
+        editable=False,
+        help_text="Normalized name for deduplication"
+    )
+    
+    def _normalize_name(self, text: str) -> str:
+        """Normalize supplier name for deduplication.
+        
+        :param text: The supplier name to normalize
+        :return: Normalized name (lowercase, trimmed, legal suffixes removed)
+        """
+        if not text:
+            return ''
+        
+        # Trim and collapse whitespace
+        normalized = ' '.join(text.split())
+        
+        # Convert to lowercase
+        normalized = normalized.casefold()
+        
+        # Remove common legal suffixes
+        legal_suffixes = [
+            r'\s+gmbh\s*$', r'\s+kg\s*$', r'\s+og\s*$', 
+            r'\s+e\.u\.\s*$', r'\s+ltd\.?\s*$', r'\s+inc\.?\s*$',
+            r'\s+ag\s*$', r'\s+gbr\s*$', r'\s+co\.?\s*kg\s*$'
+        ]
+        for suffix in legal_suffixes:
+            normalized = re.sub(suffix, '', normalized, flags=re.IGNORECASE)
+        
+        # Final trim
+        return normalized.strip()
+    
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Save supplier and auto-generate normalized name."""
+        # Always update name_normalized based on current name
+        self.name_normalized = self._normalize_name(self.name)
+        
+        # Trim and collapse whitespace in the user-facing name
+        if self.name:
+            self.name = ' '.join(self.name.split())
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self) -> str:
+        """Return the supplier name."""
+        return self.name
+    
+    class Meta:
+        ordering = ['name']
 
 
 class Location(TimestampedModel):
@@ -110,7 +167,15 @@ class Culture(TimestampedModel):
     variety = models.CharField(max_length=200, blank=True)
     # Use growth_duration_days instead of days_to_harvest.
     notes = models.TextField(blank=True)
-    seed_supplier = models.CharField(max_length=200, blank=True, help_text="Seed supplier/manufacturer")
+    seed_supplier = models.CharField(max_length=200, blank=True, help_text="Seed supplier/manufacturer (legacy field)")
+    supplier = models.ForeignKey(
+        'Supplier',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='cultures',
+        help_text="Seed supplier (preferred over seed_supplier text field)"
+    )
     
     # Manual planning fields.
     crop_family = models.CharField(max_length=200, blank=True, help_text="Crop family for rotation planning")
