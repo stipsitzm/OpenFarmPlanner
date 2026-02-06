@@ -5,7 +5,10 @@ Django REST Framework's ModelViewSet. Each ViewSet handles CRUD operations
 for its respective model.
 """
 
-from rest_framework import viewsets
+from django.core.exceptions import ValidationError
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from .models import Location, Field, Bed, Culture, PlantingPlan, Task
 from .serializers import (
     LocationSerializer,
@@ -71,6 +74,62 @@ class CultureViewSet(viewsets.ModelViewSet):
     """
     queryset = Culture.objects.all()
     serializer_class = CultureSerializer
+    
+    @action(detail=False, methods=['post'], url_path='import')
+    def import_cultures(self, request):
+        """Bulk import cultures from JSON data.
+        
+        Accepts an array of culture objects and creates them in the database.
+        Validates each entry and returns information about successful and failed imports.
+        
+        :param request: HTTP request containing array of culture objects
+        :return: Response with import results including created IDs and failed entries
+        """
+        if not isinstance(request.data, list):
+            return Response(
+                {'message': 'Request body must be an array of culture objects.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        created_cultures = []
+        failed_entries = []
+        
+        for idx, culture_data in enumerate(request.data):
+            # Validate that entry has at least a name
+            if not isinstance(culture_data, dict) or not culture_data.get('name'):
+                failed_entries.append({
+                    'index': idx,
+                    'data': culture_data,
+                    'error': 'Entry must be an object with at least a "name" field.'
+                })
+                continue
+            
+            # Try to create the culture
+            serializer = CultureSerializer(data=culture_data)
+            if serializer.is_valid():
+                try:
+                    culture = serializer.save()
+                    created_cultures.append(culture.id)
+                except (ValidationError, ValueError, TypeError) as e:
+                    # Catch validation and type errors during save
+                    failed_entries.append({
+                        'index': idx,
+                        'data': culture_data,
+                        'error': str(e)
+                    })
+            else:
+                failed_entries.append({
+                    'index': idx,
+                    'data': culture_data,
+                    'error': serializer.errors
+                })
+        
+        return Response({
+            'created': len(created_cultures),
+            'failed': len(failed_entries),
+            'created_ids': created_cultures,
+            'failed_entries': failed_entries
+        }, status=status.HTTP_201_CREATED if created_cultures else status.HTTP_400_BAD_REQUEST)
 
 
 class PlantingPlanViewSet(viewsets.ModelViewSet):

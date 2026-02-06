@@ -31,6 +31,8 @@ export const cultureAPI = {
   update: (id: number, data: Culture) => http.put<Culture>(`/cultures/${id}/`, data),
   /** Delete a culture */
   delete: (id: number) => http.delete(`/cultures/${id}/`),
+  /** Import multiple cultures from JSON data */
+  import: (data: Record<string, unknown>[]) => http.post('/cultures/import/', data),
 };
 
 /**

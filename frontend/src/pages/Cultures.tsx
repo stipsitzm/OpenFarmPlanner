@@ -184,7 +184,18 @@ function Cultures(): React.ReactElement {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const parsed = JSON.parse(reader.result as string);
+        const jsonString = reader.result as string;
+        let parsed: unknown;
+        
+        // Try parsing first with standard JSON.parse
+        try {
+          parsed = JSON.parse(jsonString);
+        } catch {
+          // If parsing fails, try removing trailing commas before closing brackets/braces
+          // This handles common JSON export formats that include trailing commas
+          const cleanedJson = jsonString.replace(/,\s*([\}\]])/g, '$1');
+          parsed = JSON.parse(cleanedJson);
+        }
         if (!Array.isArray(parsed)) {
           setImportStatus('error');
           setImportError(t('import.errors.notArray'));
@@ -237,25 +248,12 @@ function Cultures(): React.ReactElement {
     setImportSuccess(null);
 
     try {
-      const response = await fetch('/api/cultures/import', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(importPayload),
-      });
+      const response = await cultureAPI.import(importPayload);
 
-      let responseData: unknown = null;
-      try {
-        responseData = await response.json();
-      } catch (error) {
-        responseData = null;
-      }
-
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         const message =
-          (responseData as { message?: string })?.message ?? t('import.errors.server');
-        const invalidEntries = (responseData as { invalidEntries?: unknown })?.invalidEntries;
+          (response.data as { message?: string })?.message ?? t('import.errors.server');
+        const invalidEntries = (response.data as { invalidEntries?: unknown })?.invalidEntries;
         setImportError(message);
         if (Array.isArray(invalidEntries)) {
           setImportInvalidEntries(
