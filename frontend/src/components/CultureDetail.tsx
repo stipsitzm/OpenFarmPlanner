@@ -253,56 +253,6 @@ export function CultureDetail({
 
             <Divider sx={{ mb: 3 }} />
 
-            {/* Harvest Section */}
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                Ernte
-              </Typography>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                  gap: 2,
-                }}
-              >
-                {selectedCulture.harvest_method && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Erntemethode
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedCulture.harvest_method === 'per_plant' ? 'Pro Pflanze' : 'Pro m²'}
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.expected_yield && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Erwarteter Ertrag
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatNumber(selectedCulture.expected_yield, t)}
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.allow_deviation_delivery_weeks && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Abweichung Lieferwochen
-                    </Typography>
-                    <Chip
-                      label="Ja"
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                  </Box>
-                )}
-              </Box>
-            </Box>
-
-            <Divider sx={{ mb: 3 }} />
-
             {/* Spacing Section */}
             <Box sx={{ mb: 4 }}>
               <Typography variant="h6" gutterBottom>
@@ -408,32 +358,52 @@ export function CultureDetail({
             </Box>
 
             <Divider sx={{ mb: 3 }} />
-
-            {/* Color Section */}
+            {/* Harvest Section */}
             <Box sx={{ mb: 4 }}>
               <Typography variant="h6" gutterBottom>
-                Farbe
+                Ernte
               </Typography>
-              {selectedCulture.display_color ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box
-                    sx={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '6px',
-                      backgroundColor: selectedCulture.display_color,
-                      border: '1px solid #ccc',
-                    }}
-                  />
-                  <Typography variant="body1">
-                    {selectedCulture.display_color}
-                  </Typography>
-                </Box>
-              ) : (
-                <Typography variant="body1">
-                  {t('cultures:noData')}
-                </Typography>
-              )}
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gap: 2,
+                }}
+              >
+                {selectedCulture.harvest_method && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Erntemethode
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.harvest_method === 'per_plant' ? 'Pro Pflanze' : 'Pro m²'}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.expected_yield && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Erwarteter Ertrag
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatNumber(selectedCulture.expected_yield, t)}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.allow_deviation_delivery_weeks && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Abweichung Lieferwochen
+                    </Typography>
+                    <Chip
+                      label="Ja"
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                    />
+                  </Box>
+                )}
+              </Box>
             </Box>
 
             <Divider sx={{ mb: 3 }} />
