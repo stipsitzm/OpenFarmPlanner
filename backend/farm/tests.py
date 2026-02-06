@@ -3,7 +3,41 @@ from django.utils import timezone
 from datetime import date, timedelta
 from rest_framework.test import APITestCase
 from rest_framework import status
-from .models import Location, Field, Bed, Culture, PlantingPlan, Task
+from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier
+
+
+class SupplierModelTest(TestCase):
+    def test_supplier_creation(self):
+        """Test creating a supplier"""
+        supplier = Supplier.objects.create(name="Green Seeds Co.")
+        self.assertEqual(str(supplier), "Green Seeds Co.")
+        self.assertEqual(supplier.name, "Green Seeds Co.")
+
+    def test_supplier_name_normalization(self):
+        """Test that supplier names are normalized (lowercased, stripped)"""
+        supplier = Supplier.objects.create(name="  ACME Seeds  ")
+        self.assertEqual(supplier.name_normalized, "acme seeds")
+
+    def test_supplier_normalization_removes_legal_suffixes(self):
+        """Test that legal suffixes are removed from normalized names"""
+        supplier1 = Supplier.objects.create(name="Green Inc.")
+        self.assertEqual(supplier1.name_normalized, "green")
+        
+        supplier2 = Supplier.objects.create(name="Farm Ltd")
+        self.assertEqual(supplier2.name_normalized, "farm")
+        
+        supplier3 = Supplier.objects.create(name="Seeds GmbH")
+        self.assertEqual(supplier3.name_normalized, "seeds")
+
+    def test_supplier_normalization_deduplication(self):
+        """Test that suppliers with same normalized name cannot be created"""
+        from django.db import IntegrityError
+        
+        Supplier.objects.create(name="ACME Seeds")
+        
+        # Try to create another with same normalized name
+        with self.assertRaises(IntegrityError):
+            Supplier.objects.create(name="acme seeds")
 
 
 class LocationModelTest(TestCase):
@@ -147,8 +181,9 @@ class CultureModelTest(TestCase):
             harvest_duration_days=4
         )
         self.assertEqual(str(culture), "Tomato (Cherry)")
-
-                        growth_duration_days=8,
+    
+    def test_culture_creation_without_variety(self):
+        """Test creating a culture without a variety"""
         culture = Culture.objects.create(
             name="Lettuce",
             growth_duration_days=4,
@@ -156,7 +191,7 @@ class CultureModelTest(TestCase):
         )
         self.assertEqual(str(culture), "Lettuce")
     
-                        growth_duration_days=4,
+    def test_culture_with_manual_planning_fields(self):
         """Test creating a culture with all manual planning fields"""
         culture = Culture.objects.create(
             name="Broccoli",
@@ -170,7 +205,7 @@ class CultureModelTest(TestCase):
             propagation_duration_days=4,
             harvest_method="per_plant",
             expected_yield=500.0,
-                        growth_duration_days=10,
+            allow_deviation_delivery_weeks=True,
             distance_within_row_m=0.40,  # 40 cm = 0.40 m
             row_spacing_m=0.60,  # 60 cm = 0.60 m
             sowing_depth_m=0.015,  # 1.5 cm = 0.015 m
@@ -200,7 +235,7 @@ class CultureModelTest(TestCase):
         self.assertTrue(culture.display_color.startswith('#'))
         self.assertEqual(len(culture.display_color), 7)
     
-                        growth_duration_days=-1,
+    def test_display_color_custom_preserved(self):
         """Test that custom display color is preserved"""
         custom_color = "#FF5733"
         culture = Culture.objects.create(
@@ -216,7 +251,7 @@ class CultureModelTest(TestCase):
         colors = set()
         for i in range(10):
             culture = Culture.objects.create(
-                    expected_harvest = planting_date + timedelta(days=self.culture.growth_duration_days)
+                name=f"Culture {i}",
                 growth_duration_days=4,
                 harvest_duration_days=2
             )
@@ -227,7 +262,7 @@ class CultureModelTest(TestCase):
     
     def test_negative_numeric_fields_validation(self):
         """Test that negative values for numeric fields are rejected"""
-                        area_usage_sqm=self.culture.growth_duration_days,  # Corrected to use growth_duration_days
+        from django.core.exceptions import ValidationError
         
         culture = Culture(
             name="Lettuce",
@@ -460,10 +495,63 @@ class APITestCase(APITestCase):
         )
         self.culture = Culture.objects.create(
             name="API Test Culture",
-            days_to_harvest=50,
             growth_duration_days=7,
             harvest_duration_days=2
         )
+        self.supplier = Supplier.objects.create(name="Test Supplier Co.")
+
+    def test_supplier_list(self):
+        """Test listing suppliers"""
+        response = self.client.get('/openfarmplanner/api/suppliers/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['name'], "Test Supplier Co.")
+
+    def test_supplier_list_with_search(self):
+        """Test searching suppliers"""
+        Supplier.objects.create(name="Another Supplier")
+        response = self.client.get('/openfarmplanner/api/suppliers/?search=Test Supplier')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(response.data['results']), 1)
+        # At least one result should be "Test Supplier Co."
+        supplier_names = [s['name'] for s in response.data['results']]
+        self.assertIn("Test Supplier Co.", supplier_names)
+
+    def test_supplier_create_new(self):
+        """Test creating a new supplier"""
+        data = {'name': 'New Supplier Inc.'}
+        response = self.client.post('/openfarmplanner/api/suppliers/', data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Supplier.objects.count(), 2)
+        self.assertEqual(response.data['name'], 'New Supplier Inc.')
+
+    def test_supplier_create_existing(self):
+        """Test creating supplier with exact duplicate name returns existing"""
+        data = {'name': 'Test Supplier Co.'}
+        response = self.client.post('/openfarmplanner/api/suppliers/', data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Supplier.objects.count(), 1)
+        self.assertEqual(response.data['id'], self.supplier.id)
+
+    def test_supplier_create_normalized_match(self):
+        """Test creating supplier with normalized match returns existing"""
+        data = {'name': '  TEST SUPPLIER co.  '}
+        response = self.client.post('/openfarmplanner/api/suppliers/', data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Supplier.objects.count(), 1)
+        self.assertEqual(response.data['id'], self.supplier.id)
+
+    def test_culture_with_supplier(self):
+        """Test creating culture with supplier"""
+        data = {
+            'name': 'Culture with Supplier',
+            'growth_duration_days': 8,
+            'harvest_duration_days': 3,
+            'supplier_name': self.supplier.name
+        }
+        response = self.client.post('/openfarmplanner/api/cultures/', data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['supplier']['id'], self.supplier.id)
 
     def test_culture_list(self):
         response = self.client.get('/openfarmplanner/api/cultures/')
