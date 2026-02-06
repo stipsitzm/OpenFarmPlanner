@@ -1,5 +1,5 @@
 /**
- * BasicInfoSection: Name, Variety, Crop Family, Nutrient Demand, Supplier
+ * BasicInfoSection: Name, Variety, Supplier, Crop Family, Nutrient Demand
  * @remarks Presentational, no internal state
  */
 import { useState } from 'react';

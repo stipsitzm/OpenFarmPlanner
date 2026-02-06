@@ -510,7 +510,7 @@ class APITestCase(APITestCase):
     def test_supplier_list_with_search(self):
         """Test searching suppliers"""
         Supplier.objects.create(name="Another Supplier")
-        response = self.client.get('/openfarmplanner/api/suppliers/?search=Test Supplier')
+        response = self.client.get('/openfarmplanner/api/suppliers/?q=Test Supplier')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data['results']), 1)
         # At least one result should be "Test Supplier Co."
