@@ -108,13 +108,17 @@
     "start": "Import starten",
     "close": "Schließen",
     "success": "Import erfolgreich",
+    "created": "{{count}} neue Kulturen erstellt",
+    "updated": "{{count}} Kulturen aktualisiert",
+    "skipped": "{{count}} Kulturen übersprungen",
     "invalidEntry": "Ungültiger Eintrag",
     "errors": {
       "notArray": "Die Datei muss ein JSON-Array enthalten.",
       "noValidEntries": "Keine gültigen Einträge gefunden.",
       "parse": "Die Datei konnte nicht gelesen werden.",
       "server": "Import fehlgeschlagen.",
-      "network": "Netzwerkfehler beim Import."
+      "network": "Netzwerkfehler beim Import.",
+      "someFailures": "{{failed}} Einträge konnten nicht importiert werden."
     }
   }
 }
