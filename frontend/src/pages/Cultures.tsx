@@ -247,25 +247,12 @@ function Cultures(): React.ReactElement {
     setImportSuccess(null);
 
     try {
-      const response = await fetch('/api/cultures/import', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(importPayload),
-      });
+      const response = await cultureAPI.import(importPayload);
 
-      let responseData: unknown = null;
-      try {
-        responseData = await response.json();
-      } catch (error) {
-        responseData = null;
-      }
-
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         const message =
-          (responseData as { message?: string })?.message ?? t('import.errors.server');
-        const invalidEntries = (responseData as { invalidEntries?: unknown })?.invalidEntries;
+          (response.data as { message?: string })?.message ?? t('import.errors.server');
+        const invalidEntries = (response.data as { invalidEntries?: unknown })?.invalidEntries;
         setImportError(message);
         if (Array.isArray(invalidEntries)) {
           setImportInvalidEntries(
