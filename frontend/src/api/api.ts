@@ -13,6 +13,7 @@ import type {
   Bed,
   PlantingPlan,
   PaginatedResponse,
+  Supplier,
 } from './types';
 
 // API functions
@@ -33,6 +34,25 @@ export const cultureAPI = {
   delete: (id: number) => http.delete(`/cultures/${id}/`),
   /** Import multiple cultures from JSON data */
   import: (data: Record<string, unknown>[]) => http.post('/cultures/import/', data),
+};
+
+/**
+ * API endpoints for Supplier operations
+ */
+export const supplierAPI = {
+  /** Get list of suppliers, optionally filtered by query */
+  list: (query?: string) => {
+    const params = query ? { q: query } : {};
+    return http.get<PaginatedResponse<Supplier>>('/suppliers/', { params });
+  },
+  /** Get a specific supplier by ID */
+  get: (id: number) => http.get<Supplier>(`/suppliers/${id}/`),
+  /** Create or get existing supplier by name (get-or-create) */
+  create: (name: string) => http.post<Supplier>('/suppliers/', { name }),
+  /** Update an existing supplier */
+  update: (id: number, data: Supplier) => http.put<Supplier>(`/suppliers/${id}/`, data),
+  /** Delete a supplier */
+  delete: (id: number) => http.delete(`/suppliers/${id}/`),
 };
 
 /**
@@ -107,11 +127,13 @@ export type {
   Bed,
   PlantingPlan,
   PaginatedResponse,
+  Supplier,
 };
 
 // Default export: object bundling all API endpoints
 export default {
   cultures: cultureAPI,
+  suppliers: supplierAPI,
   beds: bedAPI,
   plantingPlans: plantingPlanAPI,
   fields: fieldAPI,
