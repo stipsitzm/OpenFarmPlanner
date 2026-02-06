@@ -51,17 +51,17 @@ def normalize_supplier_name(value: str | None) -> str | None:
     if not normalized:
         return None
     
-    # Remove common legal suffixes
+    # Remove common legal suffixes (order matters - match longer patterns first)
     legal_suffixes = [
-        r'\s+gmbh\s*$',
-        r'\s+kg\s*$',
-        r'\s+og\s*$',
+        r'\s+co\.?\s+kg\s*$',  # Match "co. kg" or "co kg" first
         r'\s+e\.u\.\s*$',
         r'\s+ltd\.?\s*$',
         r'\s+inc\.?\s*$',
-        r'\s+ag\s*$',
+        r'\s+gmbh\s*$',
         r'\s+gbr\s*$',
-        r'\s+co\.?\s*kg\s*$',
+        r'\s+kg\s*$',
+        r'\s+og\s*$',
+        r'\s+ag\s*$',
     ]
     
     for suffix in legal_suffixes:

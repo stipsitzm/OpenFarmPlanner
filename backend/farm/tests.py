@@ -764,3 +764,289 @@ class APITestCase(APITestCase):
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('area_usage_sqm', response2.data)
 
+
+
+class NormalizationUtilsTest(TestCase):
+    """Tests for text normalization utilities."""
+    
+    def test_normalize_text_basic(self):
+        """Test basic text normalization."""
+        from .utils import normalize_text
+        
+        self.assertEqual(normalize_text("  Hello World  "), "hello world")
+        self.assertEqual(normalize_text("UPPERCASE"), "uppercase")
+        self.assertEqual(normalize_text("Multiple   Spaces"), "multiple spaces")
+    
+    def test_normalize_text_edge_cases(self):
+        """Test edge cases for text normalization."""
+        from .utils import normalize_text
+        
+        self.assertIsNone(normalize_text(None))
+        self.assertIsNone(normalize_text(""))
+        self.assertIsNone(normalize_text("   "))
+        self.assertEqual(normalize_text("abc"), "abc")
+    
+    def test_normalize_supplier_name_basic(self):
+        """Test supplier name normalization."""
+        from .utils import normalize_supplier_name
+        
+        self.assertEqual(normalize_supplier_name("ACME Seeds"), "acme seeds")
+        self.assertEqual(normalize_supplier_name("  Green Inc.  "), "green")
+    
+    def test_normalize_supplier_name_legal_suffixes(self):
+        """Test that legal suffixes are removed."""
+        from .utils import normalize_supplier_name
+        
+        self.assertEqual(normalize_supplier_name("Farm GmbH"), "farm")
+        self.assertEqual(normalize_supplier_name("Seeds KG"), "seeds")
+        self.assertEqual(normalize_supplier_name("Company OG"), "company")
+        self.assertEqual(normalize_supplier_name("Business Ltd."), "business")
+        self.assertEqual(normalize_supplier_name("Corp Inc"), "corp")
+        self.assertEqual(normalize_supplier_name("Trade AG"), "trade")
+        self.assertEqual(normalize_supplier_name("Partners GbR"), "partners")
+        self.assertEqual(normalize_supplier_name("Seeds Co. KG"), "seeds")
+
+
+class CultureNormalizedFieldsTest(TestCase):
+    """Tests for Culture model normalized fields."""
+    
+    def test_culture_normalized_fields_populated(self):
+        """Test that normalized fields are populated on save."""
+        culture = Culture.objects.create(
+            name="  Tomato  ",
+            variety="  Cherry  ",
+            growth_duration_days=60,
+            harvest_duration_days=30
+        )
+        
+        self.assertEqual(culture.name_normalized, "tomato")
+        self.assertEqual(culture.variety_normalized, "cherry")
+    
+    def test_culture_normalized_empty_variety(self):
+        """Test normalized fields with empty variety."""
+        culture = Culture.objects.create(
+            name="Carrot",
+            variety="",
+            growth_duration_days=60,
+            harvest_duration_days=30
+        )
+        
+        self.assertEqual(culture.name_normalized, "carrot")
+        self.assertIsNone(culture.variety_normalized)
+    
+    def test_culture_unique_constraint(self):
+        """Test unique constraint on normalized fields."""
+        from django.db import IntegrityError
+        
+        supplier = Supplier.objects.create(name="Test Supplier")
+        
+        Culture.objects.create(
+            name="Tomato",
+            variety="Cherry",
+            supplier=supplier,
+            growth_duration_days=60,
+            harvest_duration_days=30
+        )
+        
+        # Try to create duplicate with same normalized values
+        with self.assertRaises(IntegrityError):
+            Culture.objects.create(
+                name="TOMATO",  # Different case
+                variety="cherry",  # Different case
+                supplier=supplier,
+                growth_duration_days=60,
+                harvest_duration_days=30
+            )
+    
+    def test_culture_unique_constraint_different_supplier(self):
+        """Test that same culture with different supplier is allowed."""
+        supplier1 = Supplier.objects.create(name="Supplier 1")
+        supplier2 = Supplier.objects.create(name="Supplier 2")
+        
+        culture1 = Culture.objects.create(
+            name="Tomato",
+            variety="Cherry",
+            supplier=supplier1,
+            growth_duration_days=60,
+            harvest_duration_days=30
+        )
+        
+        culture2 = Culture.objects.create(
+            name="Tomato",
+            variety="Cherry",
+            supplier=supplier2,
+            growth_duration_days=60,
+            harvest_duration_days=30
+        )
+        
+        self.assertNotEqual(culture1.id, culture2.id)
+
+
+class CultureImportAPITest(APITestCase):
+    """Tests for culture import API endpoints."""
+    
+    def setUp(self):
+        """Set up test data."""
+        self.supplier = Supplier.objects.create(name="Test Supplier")
+        self.existing_culture = Culture.objects.create(
+            name="Tomato",
+            variety="Cherry",
+            supplier=self.supplier,
+            growth_duration_days=60,
+            harvest_duration_days=30,
+            notes="Existing notes"
+        )
+    
+    def test_import_preview_new_culture(self):
+        """Test preview endpoint for new culture."""
+        data = [{
+            'name': 'Cucumber',
+            'variety': 'English',
+            'growth_duration_days': 50,
+            'harvest_duration_days': 20
+        }]
+        
+        response = self.client.post('/openfarmplanner/api/cultures/import/preview/', data, format='json')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['status'], 'create')
+    
+    def test_import_preview_update_candidate(self):
+        """Test preview endpoint for matching culture."""
+        data = [{
+            'name': 'Tomato',
+            'variety': 'Cherry',
+            'supplier_id': self.supplier.id,
+            'growth_duration_days': 65,  # Different value
+            'harvest_duration_days': 30,
+            'notes': 'Updated notes'  # Different value
+        }]
+        
+        response = self.client.post('/openfarmplanner/api/cultures/import/preview/', data, format='json')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data['results']), 1)
+        result = response.data['results'][0]
+        self.assertEqual(result['status'], 'update_candidate')
+        self.assertEqual(result['matched_culture_id'], self.existing_culture.id)
+        self.assertIsInstance(result['diff'], list)
+        self.assertGreater(len(result['diff']), 0)
+    
+    def test_import_preview_supplier_by_name(self):
+        """Test preview resolves supplier by name."""
+        data = [{
+            'name': 'Tomato',
+            'variety': 'Cherry',
+            'supplier_name': 'test supplier',  # Same normalized name
+            'growth_duration_days': 60,
+            'harvest_duration_days': 30
+        }]
+        
+        response = self.client.post('/openfarmplanner/api/cultures/import/preview/', data, format='json')
+        
+        self.assertEqual(response.status_code, 200)
+        result = response.data['results'][0]
+        self.assertEqual(result['status'], 'update_candidate')
+    
+    def test_import_apply_create_new(self):
+        """Test apply endpoint creates new cultures."""
+        data = {
+            'items': [{
+                'name': 'Cucumber',
+                'variety': 'English',
+                'growth_duration_days': 50,
+                'harvest_duration_days': 20
+            }],
+            'confirm_updates': False
+        }
+        
+        response = self.client.post('/openfarmplanner/api/cultures/import/apply/', data, format='json')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['created_count'], 1)
+        self.assertEqual(response.data['updated_count'], 0)
+        self.assertEqual(response.data['skipped_count'], 0)
+        
+        # Verify culture was created
+        self.assertTrue(Culture.objects.filter(name_normalized='cucumber').exists())
+    
+    def test_import_apply_skip_update_without_confirmation(self):
+        """Test apply endpoint skips updates without confirmation."""
+        data = {
+            'items': [{
+                'name': 'Tomato',
+                'variety': 'Cherry',
+                'supplier_id': self.supplier.id,
+                'growth_duration_days': 65,
+                'harvest_duration_days': 30,
+                'notes': 'Updated notes'
+            }],
+            'confirm_updates': False
+        }
+        
+        response = self.client.post('/openfarmplanner/api/cultures/import/apply/', data, format='json')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['created_count'], 0)
+        self.assertEqual(response.data['updated_count'], 0)
+        self.assertEqual(response.data['skipped_count'], 1)
+        
+        # Verify culture was not updated
+        culture = Culture.objects.get(id=self.existing_culture.id)
+        self.assertEqual(culture.growth_duration_days, 60)  # Original value
+        self.assertEqual(culture.notes, "Existing notes")  # Original value
+    
+    def test_import_apply_update_with_confirmation(self):
+        """Test apply endpoint updates cultures with confirmation."""
+        data = {
+            'items': [{
+                'name': 'Tomato',
+                'variety': 'Cherry',
+                'supplier_id': self.supplier.id,
+                'growth_duration_days': 65,
+                'harvest_duration_days': 30,
+                'notes': 'Updated notes'
+            }],
+            'confirm_updates': True
+        }
+        
+        response = self.client.post('/openfarmplanner/api/cultures/import/apply/', data, format='json')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['created_count'], 0)
+        self.assertEqual(response.data['updated_count'], 1)
+        self.assertEqual(response.data['skipped_count'], 0)
+        
+        # Verify culture was updated
+        culture = Culture.objects.get(id=self.existing_culture.id)
+        self.assertEqual(culture.growth_duration_days, 65)
+        self.assertEqual(culture.notes, "Updated notes")
+    
+    def test_import_apply_mixed_operations(self):
+        """Test apply endpoint with both create and update operations."""
+        data = {
+            'items': [
+                {
+                    'name': 'Cucumber',
+                    'variety': 'English',
+                    'growth_duration_days': 50,
+                    'harvest_duration_days': 20
+                },
+                {
+                    'name': 'Tomato',
+                    'variety': 'Cherry',
+                    'supplier_id': self.supplier.id,
+                    'growth_duration_days': 65,
+                    'harvest_duration_days': 30
+                }
+            ],
+            'confirm_updates': True
+        }
+        
+        response = self.client.post('/openfarmplanner/api/cultures/import/apply/', data, format='json')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['created_count'], 1)
+        self.assertEqual(response.data['updated_count'], 1)
+        self.assertEqual(response.data['skipped_count'], 0)

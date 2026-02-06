@@ -417,3 +417,42 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = '__all__'
+
+
+class CultureImportPreviewItemSerializer(serializers.Serializer):
+    """Serializer for a single culture import preview item.
+    
+    Used to preview the result of importing a culture without writing to database.
+    Returns match status and field differences.
+    """
+    status = serializers.ChoiceField(
+        choices=['create', 'update_candidate'],
+        help_text='Whether this culture would be created or matches an existing one'
+    )
+    matched_culture_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text='ID of matched culture (only for update_candidate status)'
+    )
+    diff = serializers.ListField(
+        child=serializers.DictField(),
+        required=False,
+        help_text='List of fields that would change (only for update_candidate)'
+    )
+    import_data = serializers.DictField(
+        help_text='The culture data that would be imported'
+    )
+
+
+class CultureImportApplySummarySerializer(serializers.Serializer):
+    """Serializer for culture import apply operation summary.
+    
+    Returns counts of created, updated, skipped cultures and any errors.
+    """
+    created_count = serializers.IntegerField(help_text='Number of cultures created')
+    updated_count = serializers.IntegerField(help_text='Number of cultures updated')
+    skipped_count = serializers.IntegerField(help_text='Number of cultures skipped')
+    errors = serializers.ListField(
+        child=serializers.DictField(),
+        help_text='List of errors encountered during import'
+    )
