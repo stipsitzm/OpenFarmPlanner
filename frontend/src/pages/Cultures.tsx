@@ -80,7 +80,8 @@ function Cultures(): React.ReactElement {
   };
 
   const handleAddNew = () => {
-    navigate('/cultures/new');
+    setEditingCulture(undefined);
+    setShowForm(true);
   };
 
   const handleEdit = (culture: Culture) => {
@@ -299,6 +300,7 @@ function Cultures(): React.ReactElement {
             aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
             aria-haspopup="true"
             onClick={handleImportMenuOpen}
+            sx={{ minWidth: 32, px: 0.5 }}
           >
             <ArrowDropDownIcon />
           </Button>
