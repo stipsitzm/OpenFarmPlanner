@@ -11,6 +11,8 @@
  */
 
 import { useState, useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
 import {
   Box,
@@ -21,6 +23,7 @@ import {
   Typography,
   Chip,
   Divider,
+  Link,
 } from '@mui/material';
 import type { Culture } from '../api/api';
 
@@ -327,9 +330,29 @@ export function CultureDetail({
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                       Notizen
                     </Typography>
-                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                      {selectedCulture.notes}
-                    </Typography>
+                    <Box
+                      sx={{
+                        '& h3': { mt: 2, mb: 1, fontSize: '1.05rem' },
+                        '& p': { mb: 1 },
+                        '& ul': { pl: 3, mb: 1 },
+                        '& li': { mb: 0.5 },
+                        '& a': { color: 'primary.main' },
+                        '& em': { color: 'text.secondary' },
+                      }}
+                    >
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          a: ({ children, ...props }) => (
+                            <Link target="_blank" rel="noreferrer" {...props}>
+                              {children}
+                            </Link>
+                          ),
+                        }}
+                      >
+                        {selectedCulture.notes}
+                      </ReactMarkdown>
+                    </Box>
                   </Box>
                 )}
               </Box>
