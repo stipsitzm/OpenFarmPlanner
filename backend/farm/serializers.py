@@ -128,6 +128,12 @@ class CultureSerializer(serializers.ModelSerializer):
         allow_blank=True,
         help_text="Type of seeding requirement (e.g. 'g', 'seeds')"
     )
+    plants_per_m2 = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        read_only=True,
+        help_text='Calculated plants per square meter based on spacing (read-only)'
+    )
     
     class Meta:
         model = Culture
@@ -206,6 +212,21 @@ class CultureSerializer(serializers.ModelSerializer):
 class PlantingPlanSerializer(serializers.ModelSerializer):
     culture_name = serializers.CharField(source='culture.name', read_only=True)
     bed_name = serializers.CharField(source='bed.name', read_only=True)
+    
+    # Write-only fields for area input
+    area_input_value = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        write_only=True,
+        required=False,
+        help_text='Area value to input (m² or plant count depending on unit)'
+    )
+    area_input_unit = serializers.ChoiceField(
+        choices=[('M2', 'm²'), ('PLANTS', 'Plants')],
+        write_only=True,
+        required=False,
+        help_text='Unit for area input: M2 (square meters) or PLANTS (plant count)'
+    )
 
     class Meta:
         model = PlantingPlan
@@ -213,6 +234,52 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
         read_only_fields = ['harvest_date', 'harvest_end_date']
 
     def validate(self, attrs):
+        from decimal import Decimal as D
+        
+        # Handle area input conversion
+        area_input_value = attrs.pop('area_input_value', None)
+        area_input_unit = attrs.pop('area_input_unit', None)
+        
+        # Validate area input fields
+        if area_input_value is not None:
+            # Value must be positive
+            if area_input_value <= 0:
+                raise serializers.ValidationError({
+                    'area_input_value': 'Area input value must be greater than 0.'
+                })
+            
+            # Unit is required when value is provided
+            if not area_input_unit:
+                raise serializers.ValidationError({
+                    'area_input_unit': 'Area input unit is required when area_input_value is provided.'
+                })
+            
+            # Get culture (could be from attrs for create, or from instance for update)
+            culture = attrs.get('culture')
+            if not culture and self.instance:
+                culture = self.instance.culture
+            
+            # Convert based on unit
+            if area_input_unit == 'M2':
+                # Direct assignment
+                attrs['area_usage_sqm'] = area_input_value
+            elif area_input_unit == 'PLANTS':
+                # Validate culture is present
+                if not culture:
+                    raise serializers.ValidationError({
+                        'area_input_unit': 'Culture must be selected to input area as plant count.'
+                    })
+                
+                # Validate culture has valid spacing
+                plants_per_m2 = culture.plants_per_m2
+                if plants_per_m2 is None or plants_per_m2 <= 0:
+                    raise serializers.ValidationError({
+                        'area_input_unit': 'Culture spacing data is missing or invalid. Cannot calculate area from plant count.'
+                    })
+                
+                # Calculate area in m²: plants / (plants_per_m2)
+                attrs['area_usage_sqm'] = area_input_value / plants_per_m2
+        
         # Only run clean() validation if we have valid foreign keys
         # DRF converts the IDs to objects during validation
         culture = attrs.get('culture')

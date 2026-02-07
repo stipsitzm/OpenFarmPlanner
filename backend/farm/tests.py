@@ -1050,3 +1050,163 @@ class CultureImportAPITest(APITestCase):
         self.assertEqual(response.data['created_count'], 1)
         self.assertEqual(response.data['updated_count'], 1)
         self.assertEqual(response.data['skipped_count'], 0)
+
+
+class PlantingPlanAreaInputTest(APITestCase):
+    """Test area input as m² or plants for PlantingPlan."""
+    
+    def setUp(self):
+        """Create test data."""
+        # Create location, field, and bed
+        self.location = Location.objects.create(name="Test Farm")
+        self.field = Field.objects.create(
+            name="Test Field",
+            location=self.location,
+            area_sqm=100.00
+        )
+        self.bed = Bed.objects.create(
+            name="Test Bed",
+            field=self.field,
+            area_sqm=10.00
+        )
+        
+        # Create culture with spacing data
+        self.culture_with_spacing = Culture.objects.create(
+            name="Tomato",
+            growth_duration_days=60,
+            harvest_duration_days=30,
+            row_spacing_m=0.50,  # 50 cm
+            distance_within_row_m=0.40  # 40 cm
+        )
+        
+        # Create culture without spacing data
+        self.culture_no_spacing = Culture.objects.create(
+            name="Cucumber",
+            growth_duration_days=50,
+            harvest_duration_days=20
+        )
+    
+    def test_plants_per_m2_calculation(self):
+        """Test that plants_per_m2 is calculated correctly."""
+        # 10000 / (50 * 40) = 10000 / 2000 = 5.0
+        expected = 5.0
+        self.assertAlmostEqual(float(self.culture_with_spacing.plants_per_m2), expected, places=2)
+    
+    def test_plants_per_m2_returns_none_when_spacing_missing(self):
+        """Test that plants_per_m2 returns None when spacing is missing."""
+        self.assertIsNone(self.culture_no_spacing.plants_per_m2)
+    
+    def test_area_input_m2_creates_planting_plan(self):
+        """Test creating planting plan with M2 input."""
+        data = {
+            'culture': self.culture_with_spacing.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_input_value': '2.50',
+            'area_input_unit': 'M2'
+        }
+        
+        response = self.client.post('/openfarmplanner/api/planting-plans/', data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(float(response.data['area_usage_sqm']), 2.50)
+    
+    def test_area_input_plants_converts_correctly(self):
+        """Test creating planting plan with PLANTS input converts to m²."""
+        # 10 plants / 5 plants_per_m2 = 2.0 m²
+        data = {
+            'culture': self.culture_with_spacing.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_input_value': '10',
+            'area_input_unit': 'PLANTS'
+        }
+        
+        response = self.client.post('/openfarmplanner/api/planting-plans/', data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # 10 / 5 = 2.0
+        self.assertAlmostEqual(float(response.data['area_usage_sqm']), 2.0, places=2)
+    
+    def test_area_input_plants_fails_when_culture_missing(self):
+        """Test that PLANTS input fails when culture is not provided."""
+        data = {
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_input_value': '10',
+            'area_input_unit': 'PLANTS'
+        }
+        
+        response = self.client.post('/openfarmplanner/api/planting-plans/', data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_input_unit', response.data)
+    
+    def test_area_input_plants_fails_when_spacing_missing(self):
+        """Test that PLANTS input fails when culture spacing is missing."""
+        data = {
+            'culture': self.culture_no_spacing.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_input_value': '10',
+            'area_input_unit': 'PLANTS'
+        }
+        
+        response = self.client.post('/openfarmplanner/api/planting-plans/', data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_input_unit', response.data)
+    
+    def test_area_input_value_must_be_positive(self):
+        """Test that area_input_value must be greater than 0."""
+        data = {
+            'culture': self.culture_with_spacing.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_input_value': '0',
+            'area_input_unit': 'M2'
+        }
+        
+        response = self.client.post('/openfarmplanner/api/planting-plans/', data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_input_value', response.data)
+    
+    def test_area_input_unit_required_when_value_provided(self):
+        """Test that area_input_unit is required when area_input_value is provided."""
+        data = {
+            'culture': self.culture_with_spacing.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_input_value': '2.50'
+            # Missing area_input_unit
+        }
+        
+        response = self.client.post('/openfarmplanner/api/planting-plans/', data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_input_unit', response.data)
+    
+    def test_area_input_plants_update_existing_plan(self):
+        """Test updating existing planting plan with PLANTS input."""
+        # Create initial plan
+        plan = PlantingPlan.objects.create(
+            culture=self.culture_with_spacing,
+            bed=self.bed,
+            planting_date=date(2024, 3, 1),
+            area_usage_sqm=1.0
+        )
+        
+        # Update with PLANTS input: 15 plants / 5 plants_per_m2 = 3.0 m²
+        data = {
+            'culture': self.culture_with_spacing.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_input_value': '15',
+            'area_input_unit': 'PLANTS'
+        }
+        
+        response = self.client.put(f'/openfarmplanner/api/planting-plans/{plan.id}/', data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertAlmostEqual(float(response.data['area_usage_sqm']), 3.0, places=2)

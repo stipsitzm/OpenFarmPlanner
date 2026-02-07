@@ -366,6 +366,28 @@ class Culture(TimestampedModel):
         
         return (int(r * 255), int(g * 255), int(b * 255))
 
+    @property
+    def plants_per_m2(self) -> Decimal | None:
+        """
+        Calculate plants per square meter based on spacing.
+        
+        Formula: plants_per_m2 = 10000 / (row_spacing_cm * plant_spacing_cm)
+        
+        :return: Plants per m² as Decimal, or None if spacing data is missing or invalid
+        """
+        # Convert meters to centimeters for calculation
+        row_spacing_cm = self.row_spacing_m * 100 if self.row_spacing_m else None
+        plant_spacing_cm = self.distance_within_row_m * 100 if self.distance_within_row_m else None
+        
+        # Return None if either spacing is missing or invalid (<= 0)
+        if not row_spacing_cm or not plant_spacing_cm:
+            return None
+        if row_spacing_cm <= 0 or plant_spacing_cm <= 0:
+            return None
+        
+        # Calculate plants per m²: 10000 cm² per m² / (row_spacing * plant_spacing)
+        return Decimal("10000") / (Decimal(str(row_spacing_cm)) * Decimal(str(plant_spacing_cm)))
+
     def __str__(self) -> str:
         """Return the culture name, with variety in parentheses if set."""
         if self.variety:
