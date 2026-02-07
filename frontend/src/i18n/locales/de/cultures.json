@@ -116,6 +116,7 @@
     "newCultures": "Neue Kulturen",
     "updateCandidates": "Überschreiben möglich",
     "invalidEntries": "Ungültige Einträge",
+    "failedEntries": "Fehler beim Import",
     "fieldsChanged": "{{count}} Felder ändern",
     "noChanges": "Keine Änderungen",
     "confirmUpdates": "Überschreiben bestätigen",

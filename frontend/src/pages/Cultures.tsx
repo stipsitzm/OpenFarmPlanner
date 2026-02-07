@@ -61,6 +61,12 @@ function Cultures(): React.ReactElement {
   const [importStatus, setImportStatus] = useState<'idle' | 'ready' | 'uploading' | 'success' | 'error'>('idle');
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [importFailedEntries, setImportFailedEntries] = useState<Array<{
+    index: number;
+    name?: string;
+    variety?: string;
+    error: string | Record<string, unknown>;
+  }>>([]);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -177,6 +183,7 @@ function Cultures(): React.ReactElement {
     setImportError(null);
     setImportSuccess(null);
     setImportPreviewResults([]);
+    setImportFailedEntries([]);
   };
 
   const handleImportFileTrigger = () => {
@@ -274,6 +281,7 @@ function Cultures(): React.ReactElement {
     setImportStatus('uploading');
     setImportError(null);
     setImportSuccess(null);
+    setImportFailedEntries([]);
 
     try {
       const response = await cultureAPI.importApply({
@@ -284,6 +292,18 @@ function Cultures(): React.ReactElement {
       const { created_count, updated_count, skipped_count, errors } = response.data;
       
       if (errors.length > 0) {
+        // Map errors to include culture names from the original payload
+        const detailedErrors = errors.map((err: { index: number; error: string | Record<string, unknown> }) => {
+          const originalData = importPayload[err.index];
+          return {
+            index: err.index,
+            name: originalData?.name as string | undefined,
+            variety: originalData?.variety as string | undefined,
+            error: err.error,
+          };
+        });
+        
+        setImportFailedEntries(detailedErrors);
         setImportError(t('import.errors.someFailures', {
           failed: errors.length,
         }));
@@ -504,6 +524,25 @@ function Cultures(): React.ReactElement {
                   {importInvalidEntries.map((entry) => (
                     <ListItem key={entry}>
                       <ListItemText primary={entry} />
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
+            )}
+            
+            {/* Failed entries from import attempt */}
+            {importFailedEntries.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="h6" color="error.main">
+                  {t('import.failedEntries')} ({importFailedEntries.length})
+                </Typography>
+                <List dense>
+                  {importFailedEntries.map((entry, idx) => (
+                    <ListItem key={idx}>
+                      <ListItemText 
+                        primary={entry.name ? `${entry.name}${entry.variety ? ` (${entry.variety})` : ''}` : `${t('import.invalidEntry')} ${entry.index + 1}`}
+                        secondary={typeof entry.error === 'string' ? entry.error : JSON.stringify(entry.error)}
+                      />
                     </ListItem>
                   ))}
                 </List>
