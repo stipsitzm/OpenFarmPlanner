@@ -28,6 +28,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import axios, { AxiosError } from 'axios';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { useTranslation } from '../../i18n';
+import { NotesCell } from './NotesCell';
+import { NotesDrawer } from './NotesDrawer';
+import { getPlainExcerpt } from './markdown';
 
 /**
  * Base interface for editable data grid rows
@@ -46,6 +49,18 @@ export interface DataGridAPI<T> {
   create: (data: Partial<T>) => Promise<{ data: T }>;
   update: (id: number, data: Partial<T>) => Promise<{ data: T }>;
   delete: (id: number) => Promise<void>;
+}
+
+/**
+ * Configuration for notes fields
+ */
+export interface NotesFieldConfig {
+  /** Field name in the row data */
+  field: string;
+  /** Optional translation key for field label */
+  labelKey?: string;
+  /** Optional translation key for drawer title */
+  titleKey?: string;
 }
 
 /**
@@ -78,6 +93,10 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showDeleteAction?: boolean;
   /** Optional initial row to add on mount (e.g., pre-filled from another page) */
   initialRow?: Partial<T>;
+  /** Optional configuration for notes fields */
+  notes?: {
+    fields: NotesFieldConfig[];
+  };
 }
 
 /**
@@ -97,6 +116,7 @@ export function EditableDataGrid<T extends EditableRow>({
   addButtonLabel,
   showDeleteAction = true,
   initialRow,
+  notes,
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -105,6 +125,13 @@ export function EditableDataGrid<T extends EditableRow>({
   const [dataFetched, setDataFetched] = useState<boolean>(false);
   const initialRowProcessedRef = useRef<boolean>(false);
   const initialFetchDoneRef = useRef<boolean>(false);
+  
+  // Notes drawer state
+  const [notesEditorOpen, setNotesEditorOpen] = useState<boolean>(false);
+  const [notesEditorRowId, setNotesEditorRowId] = useState<GridRowId | null>(null);
+  const [notesEditorField, setNotesEditorField] = useState<string | null>(null);
+  const [notesEditorDraft, setNotesEditorDraft] = useState<string>('');
+  const [notesEditorSaving, setNotesEditorSaving] = useState<boolean>(false);
   
   const { t } = useTranslation('common');
 
@@ -369,6 +396,78 @@ export function EditableDataGrid<T extends EditableRow>({
   };
 
   /**
+   * Handle opening the notes editor drawer
+   */
+  const handleOpenNotesEditor = (rowId: GridRowId, field: string): void => {
+    const row = rows.find(r => r.id === rowId);
+    if (!row) return;
+    
+    const currentValue = (row[field as keyof T] as string) || '';
+    setNotesEditorRowId(rowId);
+    setNotesEditorField(field);
+    setNotesEditorDraft(currentValue);
+    setNotesEditorOpen(true);
+  };
+
+  /**
+   * Handle saving notes from the drawer
+   */
+  const handleSaveNotes = async (): Promise<void> => {
+    if (notesEditorRowId === null || notesEditorField === null) return;
+    
+    const row = rows.find(r => r.id === notesEditorRowId);
+    if (!row) return;
+    
+    setNotesEditorSaving(true);
+    
+    try {
+      // Update the row with the new notes value
+      const updatedRow = { ...row, [notesEditorField]: notesEditorDraft } as T;
+      
+      const numericId = Number(notesEditorRowId);
+      if (numericId < 0 || row.isNew) {
+        // For new rows, just update local state
+        setRows((prevRows) =>
+          prevRows.map((r) => (r.id === notesEditorRowId ? updatedRow : r))
+        );
+        setNotesEditorOpen(false);
+        setNotesEditorSaving(false);
+      } else {
+        // For existing rows, save to API
+        const response = await api.update(numericId, mapToApiData(updatedRow));
+        if (!response.data.id) {
+          throw new Error('API response missing ID');
+        }
+        
+        // Update the row in state with the response data
+        const savedRow = mapToRow(response.data as T);
+        setRows((prevRows) =>
+          prevRows.map((r) => (r.id === notesEditorRowId ? savedRow : r))
+        );
+        setError('');
+        setNotesEditorOpen(false);
+        setNotesEditorSaving(false);
+      }
+    } catch (err) {
+      const errorMessage = extractErrorMessage(err);
+      setError(errorMessage);
+      console.error('Error saving notes:', err);
+      setNotesEditorSaving(false);
+      // Keep drawer open on error
+    }
+  };
+
+  /**
+   * Handle closing the notes editor drawer
+   */
+  const handleCloseNotesEditor = (): void => {
+    setNotesEditorOpen(false);
+    setNotesEditorRowId(null);
+    setNotesEditorField(null);
+    setNotesEditorDraft('');
+  };
+
+  /**
    * Custom footer component with add button
    */
   const CustomFooter = (): React.ReactElement => {
@@ -387,11 +486,46 @@ export function EditableDataGrid<T extends EditableRow>({
   };
 
   /**
+   * Process columns to replace notes fields with NotesCell renderer
+   */
+  const processedColumns: GridColDef[] = useMemo(() => {
+    if (!notes || !notes.fields || notes.fields.length === 0) {
+      return columns;
+    }
+
+    const notesFieldNames = notes.fields.map(f => f.field);
+    
+    return columns.map((col) => {
+      if (notesFieldNames.includes(col.field)) {
+        // Replace the column with notes cell renderer
+        return {
+          ...col,
+          editable: false,
+          renderCell: (params) => {
+            const value = (params.value as string) || '';
+            const hasValue = value.trim().length > 0;
+            const excerpt = hasValue ? getPlainExcerpt(value, 120) : '';
+            
+            return (
+              <NotesCell
+                hasValue={hasValue}
+                excerpt={excerpt}
+                onOpen={() => handleOpenNotesEditor(params.id, col.field)}
+              />
+            );
+          },
+        };
+      }
+      return col;
+    });
+  }, [columns, notes]);
+
+  /**
    * Add delete action column if enabled
    */
   const columnsWithActions: GridColDef[] = showDeleteAction
     ? [
-        ...columns,
+        ...processedColumns,
         {
           field: 'actions',
           type: 'actions',
@@ -413,7 +547,37 @@ export function EditableDataGrid<T extends EditableRow>({
           },
         },
       ]
-    : columns;
+    : processedColumns;
+
+  /**
+   * Get the title for the notes drawer
+   */
+  const getNotesDrawerTitle = (): string => {
+    if (!notesEditorField || !notes) return 'Notizen';
+    
+    const config = notes.fields.find(f => f.field === notesEditorField);
+    if (!config) return 'Notizen';
+    
+    // Use titleKey if provided
+    if (config.titleKey) {
+      return t(config.titleKey);
+    }
+    
+    // Use labelKey if provided
+    if (config.labelKey) {
+      const fieldLabel = t(config.labelKey);
+      return `${fieldLabel} – Notizen`;
+    }
+    
+    // Fallback to field name from translations
+    const fieldLabel = t(`fields.${notesEditorField}`);
+    if (fieldLabel !== `fields.${notesEditorField}`) {
+      return `${fieldLabel} – Notizen`;
+    }
+    
+    // Last resort: use field name itself
+    return `${notesEditorField} – Notizen`;
+  };
 
   return (
     <>
@@ -444,6 +608,19 @@ export function EditableDataGrid<T extends EditableRow>({
           onCellClick={(params) => handleEditableCellClick(params, rowModesModel, setRowModesModel)}
         />
       </Box>
+
+      {/* Notes Editor Drawer */}
+      {notes && notes.fields && notes.fields.length > 0 && (
+        <NotesDrawer
+          open={notesEditorOpen}
+          title={getNotesDrawerTitle()}
+          value={notesEditorDraft}
+          onChange={setNotesEditorDraft}
+          onSave={handleSaveNotes}
+          onClose={handleCloseNotesEditor}
+          loading={notesEditorSaving}
+        />
+      )}
     </>
   );
 }

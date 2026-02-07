@@ -5,7 +5,15 @@
  */
 
 export { EditableDataGrid } from './EditableDataGrid';
-export type { EditableRow, DataGridAPI, EditableDataGridProps } from './EditableDataGrid';
+export type { 
+  EditableRow, 
+  DataGridAPI, 
+  EditableDataGridProps,
+  NotesFieldConfig,
+} from './EditableDataGrid';
+export { NotesCell } from './NotesCell';
+export { NotesDrawer } from './NotesDrawer';
+export { getPlainExcerpt, stripMarkdown } from './markdown';
 
 export { handleEditableCellClick, handleRowEditStop } from './handlers';
 

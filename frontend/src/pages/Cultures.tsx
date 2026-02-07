@@ -293,13 +293,13 @@ function Cultures(): React.ReactElement {
       
       if (errors.length > 0) {
         // Map errors to include culture names from the original payload
-        const detailedErrors = errors.map((err: { index: number; error: string | Record<string, unknown> }) => {
+        const detailedErrors = errors.map((err: { index: number; error: unknown }) => {
           const originalData = importPayload[err.index];
           return {
             index: err.index,
             name: originalData?.name as string | undefined,
             variety: originalData?.variety as string | undefined,
-            error: err.error,
+            error: typeof err.error === 'string' || typeof err.error === 'object' ? err.error as string | Record<string, unknown> : String(err.error),
           };
         });
         

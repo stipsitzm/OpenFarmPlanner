@@ -49,8 +49,8 @@ function Locations(): React.ReactElement {
     {
       field: 'notes',
       headerName: t('common:fields.notes'),
-      width: 300,
-      editable: true,
+      width: 150,
+      // Notes field will be overridden by NotesCell in EditableDataGrid
     },
   ];
 
@@ -91,6 +91,14 @@ function Locations(): React.ReactElement {
         deleteErrorMessage={t('locations:errors.delete')}
         deleteConfirmMessage={t('locations:confirmDelete')}
         addButtonLabel={t('locations:addButton')}
+        notes={{
+          fields: [
+            {
+              field: 'notes',
+              labelKey: 'common:fields.notes',
+            },
+          ],
+        }}
       />
     </div>
   );
