@@ -13,6 +13,8 @@ export type {
 } from './EditableDataGrid';
 export { NotesCell } from './NotesCell';
 export { NotesDrawer } from './NotesDrawer';
+export { MarkdownToolbar } from './MarkdownToolbar';
+export type { MarkdownFormat } from './MarkdownToolbar';
 export { getPlainExcerpt, stripMarkdown } from './markdown';
 export { useNotesEditor } from './useNotesEditor';
 export type { UseNotesEditorConfig, UseNotesEditorReturn, NotesEditorSaveOptions } from './useNotesEditor';

@@ -185,9 +185,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'notes',
       headerName: t('common:fields.notes'),
-      flex: 1.5,
-      minWidth: 200,
-      editable: true,
+      width: 250,
+      // Notes field will be overridden by NotesCell in EditableDataGrid
     },
   ], [cultures, beds, t]);
 
@@ -304,6 +303,14 @@ function PlantingPlans(): React.ReactElement {
         deleteConfirmMessage={t('plantingPlans:confirmDelete')}
         addButtonLabel={t('plantingPlans:addButton')}
         showDeleteAction={true}
+        notes={{
+          fields: [
+            {
+              field: 'notes',
+              labelKey: 'common:fields.notes',
+            },
+          ],
+        }}
       />
     </div>
   );

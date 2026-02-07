@@ -49,7 +49,7 @@ function Locations(): React.ReactElement {
     {
       field: 'notes',
       headerName: t('common:fields.notes'),
-      width: 150,
+      width: 250,
       // Notes field will be overridden by NotesCell in EditableDataGrid
     },
   ];

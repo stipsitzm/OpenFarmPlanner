@@ -2,10 +2,10 @@
  * NotesDrawer component for editing markdown notes.
  * 
  * Provides a side drawer with tabs for editing and previewing markdown.
- * Includes save/cancel actions and keyboard shortcuts.
+ * Includes formatting toolbar, save/cancel actions and keyboard shortcuts.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { KeyboardEvent } from 'react';
 import {
   Drawer,
@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { MarkdownToolbar, type MarkdownFormat } from './MarkdownToolbar';
 
 export interface NotesDrawerProps {
   /** Whether the drawer is open */
@@ -50,6 +51,7 @@ export function NotesDrawer({
   loading = false,
 }: NotesDrawerProps): React.ReactElement {
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
+  const textFieldRef = useRef<HTMLTextAreaElement>(null);
 
   // Reset to edit tab when drawer opens
   useEffect(() => {
@@ -59,9 +61,104 @@ export function NotesDrawer({
   }, [open]);
 
   /**
+   * Handle markdown formatting
+   */
+  const handleFormat = (format: MarkdownFormat): void => {
+    if (!textFieldRef.current) return;
+
+    const textarea = textFieldRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = value.substring(start, end);
+    const beforeText = value.substring(0, start);
+    const afterText = value.substring(end);
+
+    let newText = '';
+    let newCursorPos = start;
+
+    switch (format) {
+      case 'bold':
+        newText = `${beforeText}**${selectedText || 'fetter Text'}**${afterText}`;
+        newCursorPos = selectedText ? end + 4 : start + 2;
+        break;
+      case 'italic':
+        newText = `${beforeText}_${selectedText || 'kursiver Text'}_${afterText}`;
+        newCursorPos = selectedText ? end + 2 : start + 1;
+        break;
+      case 'code':
+        newText = `${beforeText}\`${selectedText || 'Code'}\`${afterText}`;
+        newCursorPos = selectedText ? end + 2 : start + 1;
+        break;
+      case 'heading':
+        newText = `${beforeText}## ${selectedText || 'Überschrift'}${afterText}`;
+        newCursorPos = selectedText ? end + 3 : start + 3;
+        break;
+      case 'bullet-list':
+        if (selectedText) {
+          const lines = selectedText.split('\n');
+          const bulletedLines = lines.map(line => `- ${line}`).join('\n');
+          newText = `${beforeText}${bulletedLines}${afterText}`;
+          newCursorPos = end + (lines.length * 2);
+        } else {
+          newText = `${beforeText}- Listeneintrag${afterText}`;
+          newCursorPos = start + 2;
+        }
+        break;
+      case 'numbered-list':
+        if (selectedText) {
+          const lines = selectedText.split('\n');
+          const numberedLines = lines.map((line, i) => `${i + 1}. ${line}`).join('\n');
+          newText = `${beforeText}${numberedLines}${afterText}`;
+          newCursorPos = end + (lines.length * 3);
+        } else {
+          newText = `${beforeText}1. Listeneintrag${afterText}`;
+          newCursorPos = start + 3;
+        }
+        break;
+      case 'link':
+        newText = `${beforeText}[${selectedText || 'Linktext'}](url)${afterText}`;
+        newCursorPos = selectedText ? start + selectedText.length + 3 : start + 1;
+        break;
+      case 'quote':
+        if (selectedText) {
+          const lines = selectedText.split('\n');
+          const quotedLines = lines.map(line => `> ${line}`).join('\n');
+          newText = `${beforeText}${quotedLines}${afterText}`;
+          newCursorPos = end + (lines.length * 2);
+        } else {
+          newText = `${beforeText}> Zitat${afterText}`;
+          newCursorPos = start + 2;
+        }
+        break;
+      default:
+        return;
+    }
+
+    onChange(newText);
+
+    // Restore cursor position after React re-renders
+    setTimeout(() => {
+      if (textFieldRef.current) {
+        textFieldRef.current.focus();
+        textFieldRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
+  };
+
+  /**
    * Handle keyboard shortcuts
    */
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    // Ctrl+B for bold
+    if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+      event.preventDefault();
+      handleFormat('bold');
+    }
+    // Ctrl+I for italic
+    if ((event.ctrlKey || event.metaKey) && event.key === 'i') {
+      event.preventDefault();
+      handleFormat('italic');
+    }
     // Ctrl+Enter or Cmd+Enter to save
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
@@ -113,23 +210,27 @@ export function NotesDrawer({
         {/* Content */}
         <Box sx={{ flexGrow: 1, mb: 2, overflow: 'auto' }}>
           {activeTab === 'edit' ? (
-            <TextField
-              fullWidth
-              multiline
-              minRows={10}
-              maxRows={25}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder="Notizen in Markdown..."
-              variant="outlined"
-              autoFocus
-              sx={{
-                '& .MuiInputBase-input': {
-                  fontFamily: 'monospace',
-                  fontSize: '0.9rem',
-                },
-              }}
-            />
+            <>
+              <MarkdownToolbar onFormat={handleFormat} />
+              <TextField
+                fullWidth
+                multiline
+                minRows={10}
+                maxRows={25}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder="Notizen in Markdown..."
+                variant="outlined"
+                autoFocus
+                inputRef={textFieldRef}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontFamily: 'monospace',
+                    fontSize: '0.9rem',
+                  },
+                }}
+              />
+            </>
           ) : (
             <Box
               sx={{
@@ -187,7 +288,7 @@ export function NotesDrawer({
           color="text.secondary"
           sx={{ mt: 1, textAlign: 'center' }}
         >
-          Strg+Enter: Speichern • Esc: Schließen
+          Strg+B: Fett • Strg+I: Kursiv • Strg+Enter: Speichern • Esc: Schließen
         </Typography>
       </Box>
     </Drawer>

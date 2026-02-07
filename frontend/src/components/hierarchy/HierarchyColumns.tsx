@@ -90,7 +90,7 @@ export function createHierarchyColumns(
     {
       field: 'notes',
       headerName: t('common:fields.notes'),
-      width: 150,
+      width: 250,
       editable: false,
       renderCell: (params) => {
         const value = (params.value as string) || '';
