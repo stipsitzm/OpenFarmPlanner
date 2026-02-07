@@ -21,9 +21,11 @@ import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData
 import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState';
 import { useBedOperations } from '../components/hierarchy/hooks/useBedOperations';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
-import { fieldAPI } from '../api/api';
+import { fieldAPI, bedAPI } from '../api/api';
 import { buildHierarchyRows } from '../components/hierarchy/utils/hierarchyUtils';
 import { createHierarchyColumns } from '../components/hierarchy/HierarchyColumns';
+import { useNotesEditor, NotesDrawer } from '../components/data-grid';
+import type { HierarchyRow } from '../components/hierarchy/utils/types';
 
 function FieldsBedsHierarchy(): React.ReactElement {
   const { t } = useTranslation('hierarchy');
@@ -46,6 +48,45 @@ function FieldsBedsHierarchy(): React.ReactElement {
   
   // Field operations
   const { addField, deleteField } = useFieldOperations(locations, setError, fetchData);
+
+  // Notes editor
+  const notesEditor = useNotesEditor<HierarchyRow>({
+    rows,
+    onSave: async ({ row, field, value }) => {
+      // Update the row with the new notes value
+      const updatedRow = { ...row, [field]: value };
+      
+      if (row.type === 'bed' && row.bedId) {
+        // Save bed with notes
+        await bedAPI.update(row.bedId, {
+          name: row.name,
+          field: row.field!,
+          area_sqm: row.area_sqm,
+          notes: value,
+        });
+        
+        // Update local state
+        setBeds(prev => prev.map(b => 
+          b.id === row.bedId ? { ...b, notes: value } : b
+        ));
+      } else if (row.type === 'field' && row.fieldId) {
+        // Save field with notes
+        await fieldAPI.update(row.fieldId, {
+          name: row.name,
+          location: row.locationId!,
+          area_sqm: row.area_sqm,
+          notes: value,
+        });
+        
+        // Update local state
+        setFields(prev => prev.map(f => 
+          f.id === row.fieldId ? { ...f, notes: value } : f
+        ));
+      }
+      // Note: locations don't have notes in this hierarchy
+    },
+    onError: setError,
+  });
 
   /**
   // Removed duplicate import of useState
@@ -225,9 +266,10 @@ function FieldsBedsHierarchy(): React.ReactElement {
       (locationId) => addField(locationId),
       (fieldId) => deleteField(fieldId),
       handleCreatePlantingPlan,
+      notesEditor.handleOpen,
       t
     );
-  }, [toggleExpand, handleAddBed, deleteBed, addField, deleteField, t]);
+  }, [toggleExpand, handleAddBed, deleteBed, addField, deleteField, notesEditor.handleOpen, t]);
 
   return (
     <div className="page-container">
@@ -262,6 +304,17 @@ function FieldsBedsHierarchy(): React.ReactElement {
           onCellClick={(params) => handleEditableCellClick(params, rowModesModel, setRowModesModel)}
         />
       </Box>
+
+      {/* Notes Editor Drawer */}
+      <NotesDrawer
+        open={notesEditor.isOpen}
+        title="Notizen"
+        value={notesEditor.draft}
+        onChange={notesEditor.setDraft}
+        onSave={notesEditor.handleSave}
+        onClose={notesEditor.handleClose}
+        loading={notesEditor.isSaving}
+      />
     </div>
   );
 }

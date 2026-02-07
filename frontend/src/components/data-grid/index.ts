@@ -14,6 +14,8 @@ export type {
 export { NotesCell } from './NotesCell';
 export { NotesDrawer } from './NotesDrawer';
 export { getPlainExcerpt, stripMarkdown } from './markdown';
+export { useNotesEditor } from './useNotesEditor';
+export type { UseNotesEditorConfig, UseNotesEditorReturn, NotesEditorSaveOptions } from './useNotesEditor';
 
 export { handleEditableCellClick, handleRowEditStop } from './handlers';
 
