@@ -49,7 +49,14 @@ function FieldsBedsHierarchy(): React.ReactElement {
   // Field operations
   const { addField, deleteField } = useFieldOperations(locations, setError, fetchData);
 
-  // Notes editor
+  /**
+  // Removed duplicate import of useState
+   */
+  const rows = useMemo<GridRowsProp<HierarchyRow>>(() => {
+    return buildHierarchyRows(locations, fields, beds, expandedRows);
+  }, [locations, fields, beds, expandedRows]);
+
+  // Notes editor - must be after rows definition
   const notesEditor = useNotesEditor<HierarchyRow>({
     rows,
     onSave: async ({ row, field, value }) => {
@@ -87,13 +94,6 @@ function FieldsBedsHierarchy(): React.ReactElement {
     },
     onError: setError,
   });
-
-  /**
-  // Removed duplicate import of useState
-   */
-  const rows = useMemo<GridRowsProp<HierarchyRow>>(() => {
-    return buildHierarchyRows(locations, fields, beds, expandedRows);
-  }, [locations, fields, beds, expandedRows]);
 
   /**
    * Expand all rows when data is loaded (only once on initial load)
