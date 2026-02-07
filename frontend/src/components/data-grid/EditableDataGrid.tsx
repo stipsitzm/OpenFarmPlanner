@@ -476,7 +476,7 @@ export function EditableDataGrid<T extends EditableRow>({
       }
       return col;
     });
-  }, [columns, notes]);
+  }, [columns, notes, notesEditor]);
 
   /**
    * Add delete action column if enabled
