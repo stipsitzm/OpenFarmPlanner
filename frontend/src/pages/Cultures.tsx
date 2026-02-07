@@ -222,7 +222,7 @@ function Cultures(): React.ReactElement {
           if (isObject && typeof nameValue === 'string' && nameValue.trim().length > 0) {
             validEntries.push(entry as Record<string, unknown>);
           } else {
-            invalidEntries.push(`{t('import.invalidEntry')} ${index + 1}`);
+            invalidEntries.push(`${t('import.invalidEntry')} ${index + 1}`);
           }
         });
 
@@ -463,7 +463,7 @@ function Cultures(): React.ReactElement {
                           <ListItem key={result.index} sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
                             <ListItemText 
                               primary={`${result.import_data.name}${result.import_data.variety ? ` (${result.import_data.variety})` : ''}`}
-                              secondary={result.diff && result.diff.length > 0 ? `${result.diff.length} {t('import.fieldsChanged', { count: result.diff.length })}` : '{t('import.noChanges')}'}
+                              secondary={result.diff && result.diff.length > 0 ? t('import.fieldsChanged', { count: result.diff.length }) : t('import.noChanges')}
                             />
                             {result.diff && result.diff.length > 0 && (
                               <Box sx={{ ml: 2, fontSize: '0.875rem' }}>
