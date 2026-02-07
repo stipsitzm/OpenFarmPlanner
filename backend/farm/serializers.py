@@ -247,14 +247,14 @@ class CultureSerializer(serializers.ModelSerializer):
         return value
     
     def validate_harvest_duration_days(self, value):
-        """Validate harvest duration is required and non-negative.
+        """Validate harvest duration is non-negative when provided.
         
         :param value: The harvest duration value to validate
         :return: The validated value
         :raises serializers.ValidationError: If validation fails
         """
         if value is None:
-            raise serializers.ValidationError('Harvest duration is required.')
+            return value
         if value < 0:
             raise serializers.ValidationError('Harvest duration must be non-negative.')
         return value
@@ -308,14 +308,10 @@ class CultureSerializer(serializers.ModelSerializer):
         if not self.instance:
             if 'growth_duration_days' not in attrs or attrs.get('growth_duration_days') is None:
                 errors['growth_duration_days'] = 'Growth duration is required.'
-            if 'harvest_duration_days' not in attrs or attrs.get('harvest_duration_days') is None:
-                errors['harvest_duration_days'] = 'Harvest duration is required.'
         else:
             # For updates, only validate if field is being set to None
             if 'growth_duration_days' in attrs and attrs.get('growth_duration_days') is None:
                 errors['growth_duration_days'] = 'Growth duration is required.'
-            if 'harvest_duration_days' in attrs and attrs.get('harvest_duration_days') is None:
-                errors['harvest_duration_days'] = 'Harvest duration is required.'
         
         if errors:
             raise serializers.ValidationError(errors)
