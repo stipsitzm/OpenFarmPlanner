@@ -24,5 +24,8 @@
     "address": "Adresse",
     "notes": "Notizen",
     "description": "Beschreibung"
+  },
+  "notes": {
+    "empty": "Keine Notizen"
   }
 }

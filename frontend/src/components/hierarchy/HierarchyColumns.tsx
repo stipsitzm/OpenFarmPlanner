@@ -101,6 +101,7 @@ export function createHierarchyColumns(
           <NotesCell
             hasValue={hasValue}
             excerpt={excerpt}
+            rawValue={value}
             onOpen={() => onOpenNotes(params.id, 'notes')}
           />
         );

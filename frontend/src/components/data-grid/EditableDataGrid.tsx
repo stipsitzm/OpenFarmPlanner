@@ -467,6 +467,7 @@ export function EditableDataGrid<T extends EditableRow>({
               <NotesCell
                 hasValue={hasValue}
                 excerpt={excerpt}
+                rawValue={value}
                 onOpen={() => notesEditor.handleOpen(params.id, col.field)}
               />
             );
