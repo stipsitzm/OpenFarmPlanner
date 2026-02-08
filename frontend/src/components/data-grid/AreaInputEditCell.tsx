@@ -59,20 +59,19 @@ export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactEle
   const [inputValue, setInputValue] = useState<number | ''>(initialValue.value);
   const [unit, setUnit] = useState<'M2' | 'PLANTS'>(initialValue.unit);
   
+  // Update cell value immediately when local state changes
+  useEffect(() => {
+    const cellValue = { value: inputValue, unit };
+    console.log('[DEBUG] AreaInputEditCell updating cell value:', cellValue);
+    api.setEditCellValue({ id, field, value: cellValue });
+  }, [inputValue, unit, api, id, field]);
+  
   // If plants option becomes unavailable, switch to M2
   useEffect(() => {
     if (unit === 'PLANTS' && !canUsePlants) {
       setUnit('M2');
     }
   }, [unit, canUsePlants]);
-  
-  // Handle committing the value when done editing
-  const handleCommit = () => {
-    const cellValue = { value: inputValue, unit };
-    console.log('[DEBUG] AreaInputEditCell committing cell value:', cellValue);
-    api.setEditCellValue({ id, field, value: cellValue }, new Event('custom'));
-    api.stopCellEditMode({ id, field });
-  };
   
   // Helper text for disabled plants option
   let helperText = '';
@@ -94,10 +93,11 @@ export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactEle
           console.log('[DEBUG] AreaInputEditCell value changed to:', newValue);
           setInputValue(newValue);
         }}
-        onBlur={handleCommit}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            handleCommit();
+          if (e.key === 'Enter' || e.key === 'Tab') {
+            // Stop edit mode on Enter/Tab - value is already set via useEffect
+            e.preventDefault();
+            api.stopCellEditMode({ id, field });
           } else if (e.key === 'Escape') {
             api.stopCellEditMode({ id, field, ignoreModifications: true });
           }
