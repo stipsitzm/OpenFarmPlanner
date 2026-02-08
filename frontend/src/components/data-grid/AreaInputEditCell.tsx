@@ -70,7 +70,7 @@ export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactEle
   useEffect(() => {
     const cellValue = { value: inputValue, unit };
     console.log('[DEBUG] AreaInputEditCell setting cell value:', cellValue);
-    api.setEditCellValue({ id, field, value: cellValue });
+    api.setEditCellValue({ id, field, value: cellValue }, new Event('custom'));
   }, [inputValue, unit, api, id, field]);
   
   // Helper text for disabled plants option
