@@ -61,9 +61,16 @@ export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactEle
   
   // Update cell value immediately when local state changes
   useEffect(() => {
+    console.log('[DEBUG] AreaInputEditCell useEffect FIRED - inputValue:', inputValue, 'unit:', unit);
     const cellValue = { value: inputValue, unit };
     console.log('[DEBUG] AreaInputEditCell updating cell value:', cellValue);
-    api.setEditCellValue({ id, field, value: cellValue });
+    
+    try {
+      api.setEditCellValue({ id, field, value: cellValue });
+      console.log('[DEBUG] AreaInputEditCell setEditCellValue SUCCESS');
+    } catch (error) {
+      console.error('[DEBUG] AreaInputEditCell setEditCellValue ERROR:', error);
+    }
   }, [inputValue, unit, api, id, field]);
   
   // If plants option becomes unavailable, switch to M2
