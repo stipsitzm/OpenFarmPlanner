@@ -18,6 +18,8 @@ export type { MarkdownFormat } from './MarkdownToolbar';
 export { getPlainExcerpt, stripMarkdown } from './markdown';
 export { useNotesEditor } from './useNotesEditor';
 export type { UseNotesEditorConfig, UseNotesEditorReturn, NotesEditorSaveOptions } from './useNotesEditor';
+export { AreaInputEditCell } from './AreaInputEditCell';
+export type { AreaInputEditCellProps } from './AreaInputEditCell';
 
 export { handleEditableCellClick, handleRowEditStop } from './handlers';
 

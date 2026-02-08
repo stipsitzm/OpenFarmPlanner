@@ -12,7 +12,7 @@ import { useSearchParams } from 'react-router-dom';
 import type { GridColDef } from '@mui/x-data-grid';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
-import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/data-grid';
+import { EditableDataGrid, type EditableRow, type DataGridAPI, AreaInputEditCell } from '../components/data-grid';
 
 /**
  * Row data type for Data Grid
@@ -181,6 +181,9 @@ function PlantingPlans(): React.ReactElement {
       minWidth: 110,
       type: 'number',
       editable: true,
+      renderEditCell: (params) => (
+        <AreaInputEditCell {...params} cultures={cultures} />
+      ),
     },
     {
       field: 'notes',
@@ -267,14 +270,38 @@ function PlantingPlans(): React.ReactElement {
             bedId = 0; // This will cause validation error
           }
           
-          return {
+          // Handle area input - check if it's a custom input object or a plain number
+          interface AreaInputValue {
+            value: number | '';
+            unit: 'M2' | 'PLANTS';
+          }
+          
+          const isAreaInputValue = (val: unknown): val is AreaInputValue =>
+            typeof val === 'object' && val !== null && 'value' in val && 'unit' in val;
+          
+          // Prepare API data object
+          const apiData: PlantingPlan = {
             culture: cultureId,
             bed: bedId,
             planting_date: plantingDate,
             quantity: row.quantity,
-            area_usage_sqm: row.area_usage_sqm,
             notes: row.notes || '',
           };
+          
+          // Handle area input based on type
+          if (isAreaInputValue(row.area_usage_sqm)) {
+            // Custom area input with unit
+            const areaInput = row.area_usage_sqm as AreaInputValue;
+            if (areaInput.value !== '' && areaInput.value > 0) {
+              apiData.area_input_value = areaInput.value;
+              apiData.area_input_unit = areaInput.unit;
+            }
+          } else if (typeof row.area_usage_sqm === 'number') {
+            // Plain number - send as area_usage_sqm for backward compatibility
+            apiData.area_usage_sqm = row.area_usage_sqm;
+          }
+          
+          return apiData;
         }}
         validateRow={(row) => {
           const missingFields: string[] = [];

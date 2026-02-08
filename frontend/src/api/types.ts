@@ -86,6 +86,9 @@ export interface Culture {
   /** Display color for cultivation calendar (hex format, optional) */
   display_color?: string;
   
+  /** Computed plants per square meter based on spacing (read-only) */
+  plants_per_m2?: number | null;
+  
   /** Creation timestamp */
   created_at?: string;
   /** Last update timestamp */
@@ -178,6 +181,10 @@ export interface PlantingPlan {
   quantity?: number;
   /** Area in square meters used by this planting plan (optional, stored in SI units) */
   area_usage_sqm?: number;
+  /** Area input value (write-only, for create/update) */
+  area_input_value?: number;
+  /** Area input unit (write-only, for create/update) */
+  area_input_unit?: 'M2' | 'PLANTS';
   /** Additional notes */
   notes?: string;
   /** Creation timestamp */
