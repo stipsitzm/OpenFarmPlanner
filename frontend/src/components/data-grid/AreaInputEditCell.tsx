@@ -66,12 +66,13 @@ export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactEle
     }
   }, [unit, canUsePlants]);
   
-  // Update grid cell value whenever input changes
-  useEffect(() => {
+  // Handle committing the value when done editing
+  const handleCommit = () => {
     const cellValue = { value: inputValue, unit };
-    console.log('[DEBUG] AreaInputEditCell setting cell value:', cellValue);
+    console.log('[DEBUG] AreaInputEditCell committing cell value:', cellValue);
     api.setEditCellValue({ id, field, value: cellValue }, new Event('custom'));
-  }, [inputValue, unit, api, id, field]);
+    api.stopCellEditMode({ id, field });
+  };
   
   // Helper text for disabled plants option
   let helperText = '';
@@ -92,6 +93,14 @@ export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactEle
           const newValue = e.target.value === '' ? '' : parseFloat(e.target.value);
           console.log('[DEBUG] AreaInputEditCell value changed to:', newValue);
           setInputValue(newValue);
+        }}
+        onBlur={handleCommit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            handleCommit();
+          } else if (e.key === 'Escape') {
+            api.stopCellEditMode({ id, field, ignoreModifications: true });
+          }
         }}
         size="small"
         sx={{ flex: 1, minWidth: 80 }}
