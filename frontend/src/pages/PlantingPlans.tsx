@@ -184,6 +184,22 @@ function PlantingPlans(): React.ReactElement {
       renderEditCell: (params) => (
         <AreaInputEditCell {...params} cultures={cultures} />
       ),
+      // Display formatted area value
+      valueFormatter: (value) => {
+        if (typeof value === 'number' && !isNaN(value)) {
+          return `${value.toFixed(2)} m²`;
+        }
+        return '';
+      },
+      // Extract numeric value from potential object during editing
+      valueGetter: (value) => {
+        // If it's an object from edit mode, extract the numeric value
+        if (typeof value === 'object' && value !== null && 'value' in value) {
+          return typeof value.value === 'number' ? value.value : undefined;
+        }
+        // Otherwise return the value as-is
+        return typeof value === 'number' ? value : undefined;
+      },
     },
     {
       field: 'notes',
@@ -229,7 +245,8 @@ function PlantingPlans(): React.ReactElement {
           harvest_date: plan.harvest_date,
           harvest_end_date: plan.harvest_end_date,
           quantity: plan.quantity,
-          area_usage_sqm: plan.area_usage_sqm,
+          // Ensure area_usage_sqm is always a number (not an object from edit mode)
+          area_usage_sqm: typeof plan.area_usage_sqm === 'number' ? plan.area_usage_sqm : undefined,
           notes: plan.notes || '',
         })}
         mapToApiData={(row) => {
