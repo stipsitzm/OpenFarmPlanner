@@ -107,14 +107,26 @@
     "invalidCount": "{{invalid}} Einträge ohne gültigen Namen",
     "start": "Import starten",
     "close": "Schließen",
+    "done": "Fertig",
     "success": "Import erfolgreich",
+    "created": "{{count}} neue Kulturen erstellt",
+    "updated": "{{count}} Kulturen aktualisiert",
+    "skipped": "{{count}} Kulturen übersprungen",
     "invalidEntry": "Ungültiger Eintrag",
+    "newCultures": "Neue Kulturen",
+    "updateCandidates": "Überschreiben möglich",
+    "invalidEntries": "Ungültige Einträge",
+    "failedEntries": "Fehler beim Import",
+    "fieldsChanged": "{{count}} Felder ändern",
+    "noChanges": "Keine Änderungen",
+    "confirmUpdates": "Überschreiben bestätigen",
     "errors": {
       "notArray": "Die Datei muss ein JSON-Array enthalten.",
       "noValidEntries": "Keine gültigen Einträge gefunden.",
       "parse": "Die Datei konnte nicht gelesen werden.",
       "server": "Import fehlgeschlagen.",
-      "network": "Netzwerkfehler beim Import."
+      "network": "Netzwerkfehler beim Import.",
+      "someFailures": "{{failed}} Einträge konnten nicht importiert werden."
     }
   }
 }

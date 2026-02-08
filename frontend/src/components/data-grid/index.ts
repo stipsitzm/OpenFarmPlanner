@@ -5,7 +5,21 @@
  */
 
 export { EditableDataGrid } from './EditableDataGrid';
-export type { EditableRow, DataGridAPI, EditableDataGridProps } from './EditableDataGrid';
+export type { 
+  EditableRow, 
+  DataGridAPI, 
+  EditableDataGridProps,
+  NotesFieldConfig,
+} from './EditableDataGrid';
+export { NotesCell } from './NotesCell';
+export { NotesDrawer } from './NotesDrawer';
+export { MarkdownToolbar } from './MarkdownToolbar';
+export type { MarkdownFormat } from './MarkdownToolbar';
+export { getPlainExcerpt, stripMarkdown } from './markdown';
+export { useNotesEditor } from './useNotesEditor';
+export type { UseNotesEditorConfig, UseNotesEditorReturn, NotesEditorSaveOptions } from './useNotesEditor';
+export { AreaInputEditCell } from './AreaInputEditCell';
+export type { AreaInputEditCellProps } from './AreaInputEditCell';
 
 export { handleEditableCellClick, handleRowEditStop } from './handlers';
 

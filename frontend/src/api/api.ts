@@ -32,8 +32,29 @@ export const cultureAPI = {
   update: (id: number, data: Culture) => http.put<Culture>(`/cultures/${id}/`, data),
   /** Delete a culture */
   delete: (id: number) => http.delete(`/cultures/${id}/`),
-  /** Import multiple cultures from JSON data */
+  /** Import multiple cultures from JSON data (legacy endpoint) */
   import: (data: Record<string, unknown>[]) => http.post('/cultures/import/', data),
+  /** Preview import - analyze cultures without writing to database */
+  importPreview: (data: Record<string, unknown>[]) => http.post<{
+    results: Array<{
+      index: number;
+      status: 'create' | 'update_candidate';
+      matched_culture_id?: number;
+      diff?: Array<{ field: string; current: unknown; new: unknown }>;
+      import_data: Record<string, unknown>;
+      error?: string;
+    }>;
+  }>('/cultures/import/preview/', data),
+  /** Apply import - create and/or update cultures with optional confirmation */
+  importApply: (data: {
+    items: Record<string, unknown>[];
+    confirm_updates: boolean;
+  }) => http.post<{
+    created_count: number;
+    updated_count: number;
+    skipped_count: number;
+    errors: Array<{ index: number; error: unknown }>;
+  }>('/cultures/import/apply/', data),
 };
 
 /**

@@ -27,37 +27,12 @@ class Supplier(TimestampedModel):
         help_text="Normalized name for deduplication"
     )
     
-    def _normalize_name(self, text: str) -> str:
-        """Normalize supplier name for deduplication.
-        
-        :param text: The supplier name to normalize
-        :return: Normalized name (lowercase, trimmed, legal suffixes removed)
-        """
-        if not text:
-            return ''
-        
-        # Trim and collapse whitespace
-        normalized = ' '.join(text.split())
-        
-        # Convert to lowercase
-        normalized = normalized.casefold()
-        
-        # Remove common legal suffixes
-        legal_suffixes = [
-            r'\s+gmbh\s*$', r'\s+kg\s*$', r'\s+og\s*$', 
-            r'\s+e\.u\.\s*$', r'\s+ltd\.?\s*$', r'\s+inc\.?\s*$',
-            r'\s+ag\s*$', r'\s+gbr\s*$', r'\s+co\.?\s*kg\s*$'
-        ]
-        for suffix in legal_suffixes:
-            normalized = re.sub(suffix, '', normalized, flags=re.IGNORECASE)
-        
-        # Final trim
-        return normalized.strip()
-    
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save supplier and auto-generate normalized name."""
+        from .utils import normalize_supplier_name
+        
         # Always update name_normalized based on current name
-        self.name_normalized = self._normalize_name(self.name)
+        self.name_normalized = normalize_supplier_name(self.name) or ''
         
         # Trim and collapse whitespace in the user-facing name
         if self.name:
@@ -175,6 +150,22 @@ class Culture(TimestampedModel):
         on_delete=models.SET_NULL,
         related_name='cultures',
         help_text="Seed supplier (preferred over seed_supplier text field)"
+    )
+    
+    # Normalized fields for matching and deduplication.
+    name_normalized = models.CharField(
+        max_length=200,
+        db_index=True,
+        editable=False,
+        help_text="Normalized name for deduplication"
+    )
+    variety_normalized = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        db_index=True,
+        editable=False,
+        help_text="Normalized variety for deduplication"
     )
     
     # Manual planning fields.
@@ -316,10 +307,16 @@ class Culture(TimestampedModel):
             raise ValidationError(errors)
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        """Save the culture and auto-generate display color if not set."""
+        """Save the culture and auto-generate display color and normalized fields."""
+        from .utils import normalize_text
+        
         # Generate display color on creation if not set.
         if not self.pk and not self.display_color:
             self.display_color = self._generate_display_color()
+        
+        # Always update normalized fields based on current values
+        self.name_normalized = normalize_text(self.name) or ''
+        self.variety_normalized = normalize_text(self.variety)
         
         super().save(*args, **kwargs)
 
@@ -369,6 +366,28 @@ class Culture(TimestampedModel):
         
         return (int(r * 255), int(g * 255), int(b * 255))
 
+    @property
+    def plants_per_m2(self) -> Decimal | None:
+        """
+        Calculate plants per square meter based on spacing.
+        
+        Formula: plants_per_m2 = 10000 / (row_spacing_cm * plant_spacing_cm)
+        
+        :return: Plants per m² as Decimal, or None if spacing data is missing or invalid
+        """
+        # Convert meters to centimeters for calculation
+        row_spacing_cm = self.row_spacing_m * 100 if self.row_spacing_m else None
+        plant_spacing_cm = self.distance_within_row_m * 100 if self.distance_within_row_m else None
+        
+        # Return None if either spacing is missing or invalid (<= 0)
+        if not row_spacing_cm or not plant_spacing_cm:
+            return None
+        if row_spacing_cm <= 0 or plant_spacing_cm <= 0:
+            return None
+        
+        # Calculate plants per m²: 10000 cm² per m² / (row_spacing * plant_spacing)
+        return Decimal("10000") / (Decimal(str(row_spacing_cm)) * Decimal(str(plant_spacing_cm)))
+
     def __str__(self) -> str:
         """Return the culture name, with variety in parentheses if set."""
         if self.variety:
@@ -377,6 +396,13 @@ class Culture(TimestampedModel):
 
     class Meta:
         ordering = ['name', 'variety']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name_normalized', 'variety_normalized', 'supplier'],
+                name='unique_culture_normalized',
+                violation_error_message='A culture with this name, variety, and supplier already exists.'
+            )
+        ]
 
 
 class PlantingPlan(TimestampedModel):

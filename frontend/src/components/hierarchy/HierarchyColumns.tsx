@@ -12,6 +12,8 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import type { HierarchyRow } from './utils/types';
+import { NotesCell } from '../data-grid/NotesCell';
+import { getPlainExcerpt } from '../data-grid/markdown';
 
 /**
  * Render name cell with expansion controls
@@ -63,6 +65,7 @@ export function createHierarchyColumns(
   onAddField: (locationId?: number) => void,
   onDeleteField: (fieldId: number) => void,
   onCreatePlantingPlan: (bedId: number) => void,
+  onOpenNotes: (rowId: string | number, field: string) => void,
   t: TFunction
 ): GridColDef<HierarchyRow>[] {
   return [
@@ -87,8 +90,22 @@ export function createHierarchyColumns(
     {
       field: 'notes',
       headerName: t('common:fields.notes'),
-      width: 300,
-      editable: true,
+      width: 250,
+      editable: false,
+      renderCell: (params) => {
+        const value = (params.value as string) || '';
+        const hasValue = value.trim().length > 0;
+        const excerpt = hasValue ? getPlainExcerpt(value, 120) : '';
+        
+        return (
+          <NotesCell
+            hasValue={hasValue}
+            excerpt={excerpt}
+            rawValue={value}
+            onOpen={() => onOpenNotes(params.id, 'notes')}
+          />
+        );
+      },
     },
     {
       field: 'actions',

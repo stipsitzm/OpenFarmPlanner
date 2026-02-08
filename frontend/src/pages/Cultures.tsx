@@ -50,14 +50,29 @@ function Cultures(): React.ReactElement {
   const [importValidCount, setImportValidCount] = useState(0);
   const [importInvalidEntries, setImportInvalidEntries] = useState<string[]>([]);
   const [importPayload, setImportPayload] = useState<Record<string, unknown>[]>([]);
+  const [importPreviewResults, setImportPreviewResults] = useState<Array<{
+    index: number;
+    status: 'create' | 'update_candidate';
+    matched_culture_id?: number;
+    diff?: Array<{ field: string; current: unknown; new: unknown }>;
+    import_data: Record<string, unknown>;
+    error?: string;
+  }>>([]);
   const [importStatus, setImportStatus] = useState<'idle' | 'ready' | 'uploading' | 'success' | 'error'>('idle');
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [importFailedEntries, setImportFailedEntries] = useState<Array<{
+    index: number;
+    name?: string;
+    variety?: string;
+    error: string | Record<string, unknown>;
+  }>>([]);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
+  const [confirmUpdates, setConfirmUpdates] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Fetch cultures on mount
@@ -167,6 +182,8 @@ function Cultures(): React.ReactElement {
     setImportStatus('idle');
     setImportError(null);
     setImportSuccess(null);
+    setImportPreviewResults([]);
+    setImportFailedEntries([]);
   };
 
   const handleImportFileTrigger = () => {
@@ -175,14 +192,14 @@ function Cultures(): React.ReactElement {
     fileInputRef.current?.click();
   };
 
-  const handleImportFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const jsonString = reader.result as string;
         let parsed: unknown;
@@ -216,15 +233,33 @@ function Cultures(): React.ReactElement {
           }
         });
 
-        setImportPreviewCount(parsed.length);
-        setImportValidCount(validEntries.length);
-        setImportInvalidEntries(invalidEntries);
-        setImportPayload(validEntries);
-        setImportStatus('ready');
-        setImportDialogOpen(true);
         if (validEntries.length === 0) {
           setImportStatus('error');
           setImportError(t('import.errors.noValidEntries'));
+          setImportPreviewCount(parsed.length);
+          setImportValidCount(0);
+          setImportInvalidEntries(invalidEntries);
+          setImportDialogOpen(true);
+          return;
+        }
+
+        // Call preview endpoint
+        setImportStatus('uploading');
+        try {
+          const response = await cultureAPI.importPreview(validEntries);
+          
+          setImportPreviewCount(parsed.length);
+          setImportValidCount(validEntries.length);
+          setImportInvalidEntries(invalidEntries);
+          setImportPayload(validEntries);
+          setImportPreviewResults(response.data.results);
+          setImportStatus('ready');
+          setImportDialogOpen(true);
+        } catch (error) {
+          console.error('Error calling preview endpoint:', error);
+          setImportStatus('error');
+          setImportError(t('import.errors.network'));
+          setImportDialogOpen(true);
         }
       } catch (error) {
         console.error('Error parsing JSON file:', error);
@@ -246,30 +281,51 @@ function Cultures(): React.ReactElement {
     setImportStatus('uploading');
     setImportError(null);
     setImportSuccess(null);
+    setImportFailedEntries([]);
 
     try {
-      const response = await cultureAPI.import(importPayload);
+      const response = await cultureAPI.importApply({
+        items: importPayload,
+        confirm_updates: confirmUpdates,
+      });
 
-      if (response.status < 200 || response.status >= 300) {
-        const message =
-          (response.data as { message?: string })?.message ?? t('import.errors.server');
-        const invalidEntries = (response.data as { invalidEntries?: unknown })?.invalidEntries;
-        setImportError(message);
-        if (Array.isArray(invalidEntries)) {
-          setImportInvalidEntries(
-            invalidEntries.map((entry, index) =>
-              typeof entry === 'string'
-                ? entry
-                : `${t('import.invalidEntry')} ${index + 1}`
-            )
-          );
-        }
+      const { created_count, updated_count, skipped_count, errors } = response.data;
+      
+      if (errors.length > 0) {
+        // Map errors to include culture names from the original payload
+        const detailedErrors = errors.map((err: { index: number; error: unknown }) => {
+          const originalData = importPayload[err.index];
+          return {
+            index: err.index,
+            name: originalData?.name as string | undefined,
+            variety: originalData?.variety as string | undefined,
+            error: typeof err.error === 'string' || typeof err.error === 'object' ? err.error as string | Record<string, unknown> : String(err.error),
+          };
+        });
+        
+        setImportFailedEntries(detailedErrors);
+        setImportError(t('import.errors.someFailures', {
+          failed: errors.length,
+        }));
         setImportStatus('error');
         return;
       }
 
+      let successMessage = '';
+      if (created_count > 0) {
+        successMessage += t('import.created', { count: created_count });
+      }
+      if (updated_count > 0) {
+        if (successMessage) successMessage += ', ';
+        successMessage += t('import.updated', { count: updated_count });
+      }
+      if (skipped_count > 0) {
+        if (successMessage) successMessage += ', ';
+        successMessage += t('import.skipped', { count: skipped_count });
+      }
+
       setImportStatus('success');
-      setImportSuccess(t('import.success'));
+      setImportSuccess(successMessage || t('import.success'));
       await fetchCultures();
     } catch (error) {
       console.error('Error importing cultures:', error);
@@ -374,10 +430,11 @@ function Cultures(): React.ReactElement {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={importDialogOpen} onClose={handleImportDialogClose} maxWidth="sm" fullWidth>
+      <Dialog open={importDialogOpen} onClose={handleImportDialogClose} maxWidth="md" fullWidth>
         <DialogTitle>{t('import.title')}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            {/* Summary */}
             <Typography variant="body1">
               {t('import.foundCount', { count: importValidCount || importPreviewCount })}
             </Typography>
@@ -388,15 +445,110 @@ function Cultures(): React.ReactElement {
                 })}
               </Typography>
             )}
-            {importInvalidEntries.length > 0 && (
-              <List dense>
-                {importInvalidEntries.map((entry) => (
-                  <ListItem key={entry}>
-                    <ListItemText primary={entry} />
-                  </ListItem>
-                ))}
-              </List>
+            
+            {/* Grouped results */}
+            {importPreviewResults.length > 0 && (
+              <>
+                {/* New cultures */}
+                {(() => {
+                  const newCultures = importPreviewResults.filter(r => r.status === 'create');
+                  return newCultures.length > 0 && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="h6" color="success.main">
+                        {t('import.newCultures')} ({newCultures.length})
+                      </Typography>
+                      <List dense>
+                        {newCultures.map((result) => (
+                          <ListItem key={result.index}>
+                            <ListItemText 
+                              primary={`${result.import_data.name}${result.import_data.variety ? ` (${result.import_data.variety})` : ''}`}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Box>
+                  );
+                })()}
+                
+                {/* Update candidates */}
+                {(() => {
+                  const updateCandidates = importPreviewResults.filter(r => r.status === 'update_candidate');
+                  return updateCandidates.length > 0 && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="h6" color="warning.main">
+                        {t('import.updateCandidates')} ({updateCandidates.length})
+                      </Typography>
+                      <List dense>
+                        {updateCandidates.map((result) => (
+                          <ListItem key={result.index} sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                            <ListItemText 
+                              primary={`${result.import_data.name}${result.import_data.variety ? ` (${result.import_data.variety})` : ''}`}
+                              secondary={result.diff && result.diff.length > 0 ? t('import.fieldsChanged', { count: result.diff.length }) : t('import.noChanges')}
+                            />
+                            {result.diff && result.diff.length > 0 && (
+                              <Box sx={{ ml: 2, fontSize: '0.875rem' }}>
+                                {result.diff.map((d, idx) => (
+                                  <Typography key={idx} variant="caption" display="block">
+                                    {d.field}: {JSON.stringify(d.current)} → {JSON.stringify(d.new)}
+                                  </Typography>
+                                ))}
+                              </Box>
+                            )}
+                          </ListItem>
+                        ))}
+                      </List>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                        <input
+                          type="checkbox"
+                          id="confirm-updates"
+                          checked={confirmUpdates}
+                          onChange={(e) => setConfirmUpdates(e.target.checked)}
+                        />
+                        <label htmlFor="confirm-updates">
+                          <Typography variant="body2">{t('import.confirmUpdates')}</Typography>
+                        </label>
+                      </Box>
+                    </Box>
+                  );
+                })()}
+              </>
             )}
+            
+            {/* Invalid entries */}
+            {importInvalidEntries.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="h6" color="error.main">
+                  {t('import.invalidEntries')} ({importInvalidEntries.length})
+                </Typography>
+                <List dense>
+                  {importInvalidEntries.map((entry) => (
+                    <ListItem key={entry}>
+                      <ListItemText primary={entry} />
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
+            )}
+            
+            {/* Failed entries from import attempt */}
+            {importFailedEntries.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="h6" color="error.main">
+                  {t('import.failedEntries')} ({importFailedEntries.length})
+                </Typography>
+                <List dense>
+                  {importFailedEntries.map((entry, idx) => (
+                    <ListItem key={idx}>
+                      <ListItemText 
+                        primary={entry.name ? `${entry.name}${entry.variety ? ` (${entry.variety})` : ''}` : `${t('import.invalidEntry')} ${entry.index + 1}`}
+                        secondary={typeof entry.error === 'string' ? entry.error : JSON.stringify(entry.error)}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
+            )}
+            
             {importError && <Alert severity="error">{importError}</Alert>}
             {importSuccess && <Alert severity="success">{importSuccess}</Alert>}
           </Box>
@@ -406,9 +558,9 @@ function Cultures(): React.ReactElement {
           <Button
             variant="contained"
             onClick={handleImportStart}
-            disabled={importValidCount === 0 || importStatus === 'uploading'}
+            disabled={importValidCount === 0 || importStatus === 'uploading' || importStatus === 'success'}
           >
-            {t('import.start')}
+            {importStatus === 'success' ? t('import.done') : t('import.start')}
           </Button>
         </DialogActions>
       </Dialog>

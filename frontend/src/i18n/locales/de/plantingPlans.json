@@ -10,6 +10,13 @@
     "areaUsage": "Fläche (m²)",
     "notes": "Notizen"
   },
+  "areaInput": {
+    "unit": "Einheit",
+    "m2": "m²",
+    "plants": "Pflanzen",
+    "noCulture": "Bitte zuerst Kultur auswählen",
+    "noSpacing": "Für diese Kultur fehlen Pflanzabstände"
+  },
   "errors": {
     "load": "Fehler beim Laden der Anbaupläne",
     "save": "Fehler beim Speichern des Anbauplans",
