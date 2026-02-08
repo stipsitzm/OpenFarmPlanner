@@ -9,10 +9,11 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { GridColDef } from '@mui/x-data-grid';
+import type { GridColDef, GridRowId } from '@mui/x-data-grid';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
-import { EditableDataGrid, type EditableRow, type DataGridAPI, AreaInputEditCell } from '../components/data-grid';
+import { EditableDataGrid, type EditableRow, type DataGridAPI, type AreaDraft } from '../components/data-grid';
+import { AreaInputEditCell } from '../components/data-grid/AreaInputEditCell';
 
 /**
  * Row data type for Data Grid
@@ -30,6 +31,13 @@ function PlantingPlans(): React.ReactElement {
   const [initialCultureId, setInitialCultureId] = useState<number | null>(null);
   const [initialBedId, setInitialBedId] = useState<number | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
+  
+  /**
+   * Area edit drafts - temporary storage for area input while editing
+   * Maps rowId to draft {value, unit}
+   * Cleared after successful save or on cancel
+   */
+  const [areaDrafts, setAreaDrafts] = useState<Record<GridRowId, AreaDraft>>({});
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
@@ -179,39 +187,23 @@ function PlantingPlans(): React.ReactElement {
       headerName: t('plantingPlans:columns.areaUsage'),
       flex: 0.6,
       minWidth: 210,
-      type: 'number',
       editable: true,
       renderEditCell: (params) => (
-        <AreaInputEditCell {...params} cultures={cultures} />
+        <AreaInputEditCell 
+          {...params} 
+          cultures={cultures}
+          draft={areaDrafts[params.id]}
+          onDraftChange={(rowId, draft) => {
+            setAreaDrafts(prev => ({ ...prev, [rowId]: draft }));
+          }}
+        />
       ),
-      // Display formatted area value
+      // Display formatted area value (row always contains numeric value)
       valueFormatter: (value) => {
-        console.log('[DEBUG] valueFormatter input:', value);
-        let formatted = '';
         if (typeof value === 'number' && !isNaN(value)) {
-          formatted = `${value.toFixed(2)} m²`;
+          return `${value.toFixed(2)} m²`;
         }
-        console.log('[DEBUG] valueFormatter output:', formatted);
-        return formatted;
-      },
-      // Extract numeric value from potential object during editing
-      valueGetter: (value) => {
-        console.log('[DEBUG] valueGetter input:', value);
-        let result: number | undefined;
-        // If it's an object from edit mode, extract the numeric value
-        if (typeof value === 'object' && value !== null && 'value' in value) {
-          result = typeof value.value === 'number' ? value.value : undefined;
-        } else {
-          // Otherwise return the value as-is
-          result = typeof value === 'number' ? value : undefined;
-        }
-        console.log('[DEBUG] valueGetter output:', result);
-        return result;
-      },
-      // Store custom object value in row data
-      valueSetter: (value, row) => {
-        console.log('[DEBUG] valueSetter called with:', value);
-        return { ...row, area_usage_sqm: value };
+        return '';
       },
     },
     {
@@ -247,26 +239,32 @@ function PlantingPlans(): React.ReactElement {
               }
             : undefined
         }
-        mapToRow={(plan) => ({
-          ...plan,
-          id: plan.id!,
-          culture: plan.culture,
-          culture_name: plan.culture_name || '',
-          bed: plan.bed,
-          bed_name: plan.bed_name || '',
-          planting_date: plan.planting_date,
-          harvest_date: plan.harvest_date,
-          harvest_end_date: plan.harvest_end_date,
-          quantity: plan.quantity,
-          // Ensure area_usage_sqm is always a number (not an object from edit mode)
-          area_usage_sqm: (() => {
-            console.log('[DEBUG] mapToRow area_usage_sqm input:', plan.area_usage_sqm);
-            const convertedArea = typeof plan.area_usage_sqm === 'number' ? plan.area_usage_sqm : undefined;
-            console.log('[DEBUG] mapToRow area_usage_sqm output:', convertedArea);
-            return convertedArea;
-          })(),
-          notes: plan.notes || '',
-        })}
+        mapToRow={(plan) => {
+          // Clean up draft after successful save (backend returns numeric area)
+          if (plan.id && areaDrafts[plan.id]) {
+            setAreaDrafts(prev => {
+              const newDrafts = { ...prev };
+              delete newDrafts[plan.id!];
+              return newDrafts;
+            });
+          }
+          
+          return {
+            ...plan,
+            id: plan.id!,
+            culture: plan.culture,
+            culture_name: plan.culture_name || '',
+            bed: plan.bed,
+            bed_name: plan.bed_name || '',
+            planting_date: plan.planting_date,
+            harvest_date: plan.harvest_date,
+            harvest_end_date: plan.harvest_end_date,
+            quantity: plan.quantity,
+            // Row always stores numeric area_usage_sqm (no objects)
+            area_usage_sqm: plan.area_usage_sqm,
+            notes: plan.notes || '',
+          };
+        }}
         mapToApiData={(row) => {
           const isDate = (val: unknown): val is Date => val instanceof Date;
 
@@ -305,15 +303,6 @@ function PlantingPlans(): React.ReactElement {
             bedId = 0; // This will cause validation error
           }
           
-          // Handle area input - check if it's a custom input object or a plain number
-          interface AreaInputValue {
-            value: number | '';
-            unit: 'M2' | 'PLANTS';
-          }
-          
-          const isAreaInputValue = (val: unknown): val is AreaInputValue =>
-            typeof val === 'object' && val !== null && 'value' in val && 'unit' in val;
-          
           // Prepare API data object
           const apiData: PlantingPlan = {
             culture: cultureId,
@@ -323,24 +312,18 @@ function PlantingPlans(): React.ReactElement {
             notes: row.notes || '',
           };
           
-          // Handle area input based on type
-          console.log('[DEBUG] mapToApiData row.area_usage_sqm:', row.area_usage_sqm);
-          console.log('[DEBUG] mapToApiData isAreaInputValue:', isAreaInputValue(row.area_usage_sqm));
-          if (isAreaInputValue(row.area_usage_sqm)) {
-            // Custom area input with unit
-            const areaInput = row.area_usage_sqm as AreaInputValue;
-            if (areaInput.value !== '' && areaInput.value > 0) {
-              apiData.area_input_value = areaInput.value;
-              apiData.area_input_unit = areaInput.unit;
-              console.log('[DEBUG] mapToApiData sending to API:', { area_input_value: apiData.area_input_value, area_input_unit: apiData.area_input_unit });
-            }
+          // Check if we have a draft for this row (area was edited with unit selection)
+          const draft = areaDrafts[row.id];
+          if (draft && draft.value !== '' && draft.value > 0) {
+            // Send area input with unit for backend conversion
+            apiData.area_input_value = draft.value;
+            apiData.area_input_unit = draft.unit;
+            // Clear draft after sending (will be cleaned up after save)
           } else if (typeof row.area_usage_sqm === 'number') {
-            // Plain number - send as area_usage_sqm for backward compatibility
+            // No draft - send numeric value as-is
             apiData.area_usage_sqm = row.area_usage_sqm;
-            console.log('[DEBUG] mapToApiData sending area_usage_sqm:', apiData.area_usage_sqm);
           }
           
-          console.log('[DEBUG] mapToApiData complete payload:', apiData);
           return apiData;
         }}
         validateRow={(row) => {

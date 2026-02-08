@@ -5,20 +5,20 @@
  * Plants are converted to m² using culture spacing data.
  * 
  * @remarks
- * This component is used in the PlantingPlans data grid to provide a custom edit cell
- * for the area field that supports both m² and plant count inputs.
+ * This component maintains local edit state and communicates with parent via draft callbacks.
+ * It does NOT modify the DataGrid row directly - the row always stores only numeric area_usage_sqm.
  */
 
 import { useState, useEffect } from 'react';
 import { Box, TextField, Select, MenuItem, FormControl, InputLabel, FormHelperText } from '@mui/material';
-import type { GridRenderEditCellParams } from '@mui/x-data-grid';
+import type { GridRenderEditCellParams, GridRowId } from '@mui/x-data-grid';
 import { useTranslation } from '../../i18n';
 import type { Culture } from '../../api/types';
 
 /**
- * Value stored in the cell during editing
+ * Draft value stored during editing (outside DataGrid row)
  */
-interface AreaInputValue {
+export interface AreaDraft {
   value: number | '';
   unit: 'M2' | 'PLANTS';
 }
@@ -29,16 +29,21 @@ interface AreaInputValue {
 export interface AreaInputEditCellProps extends GridRenderEditCellParams {
   /** Array of all cultures for looking up spacing data */
   cultures: Culture[];
+  /** Current draft for this row (if exists) */
+  draft?: AreaDraft;
+  /** Callback to update draft when local state changes */
+  onDraftChange: (rowId: GridRowId, draft: AreaDraft) => void;
 }
 
 /**
- * Custom edit cell for area input with unit selection
+ * Custom edit cell for area input with unit selection.
+ * Maintains local state and updates parent draft, but does NOT modify grid row.
  * 
- * @param props - Grid edit cell params plus cultures array
+ * @param props - Grid edit cell params plus cultures array and draft callbacks
  * @returns Custom edit cell component
  */
 export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactElement {
-  const { id, value, field, api, cultures } = props;
+  const { id, value, field, api, cultures, draft, onDraftChange } = props;
   const { t } = useTranslation(['plantingPlans', 'common']);
   
   // Get the row data to access culture selection
@@ -49,29 +54,19 @@ export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactEle
   // Check if plants option is available
   const canUsePlants = culture && culture.plants_per_m2 !== null && culture.plants_per_m2 !== undefined && culture.plants_per_m2 > 0;
   
-  // Parse current value or initialize
-  console.log('[DEBUG] AreaInputEditCell initial value:', value);
-  const initialValue: AreaInputValue = typeof value === 'object' && value !== null && 'value' in value && 'unit' in value
-    ? value as AreaInputValue
-    : { value: (value as number) || '', unit: 'M2' };
-  console.log('[DEBUG] AreaInputEditCell parsed initialValue:', initialValue);
+  // Initialize from draft (if exists) or from current numeric value
+  const initialDraft: AreaDraft = draft || {
+    value: (typeof value === 'number' && !isNaN(value)) ? value : '',
+    unit: 'M2'
+  };
   
-  const [inputValue, setInputValue] = useState<number | ''>(initialValue.value);
-  const [unit, setUnit] = useState<'M2' | 'PLANTS'>(initialValue.unit);
+  const [inputValue, setInputValue] = useState<number | ''>(initialDraft.value);
+  const [unit, setUnit] = useState<'M2' | 'PLANTS'>(initialDraft.unit);
   
-  // Update cell value immediately when local state changes
+  // Update parent draft whenever local state changes
   useEffect(() => {
-    console.log('[DEBUG] AreaInputEditCell useEffect FIRED - inputValue:', inputValue, 'unit:', unit);
-    const cellValue = { value: inputValue, unit };
-    console.log('[DEBUG] AreaInputEditCell updating cell value:', cellValue);
-    
-    try {
-      api.setEditCellValue({ id, field, value: cellValue });
-      console.log('[DEBUG] AreaInputEditCell setEditCellValue SUCCESS');
-    } catch (error) {
-      console.error('[DEBUG] AreaInputEditCell setEditCellValue ERROR:', error);
-    }
-  }, [inputValue, unit, api, id, field]);
+    onDraftChange(id, { value: inputValue, unit });
+  }, [inputValue, unit, id, onDraftChange]);
   
   // If plants option becomes unavailable, switch to M2
   useEffect(() => {
@@ -97,15 +92,15 @@ export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactEle
         value={inputValue}
         onChange={(e) => {
           const newValue = e.target.value === '' ? '' : parseFloat(e.target.value);
-          console.log('[DEBUG] AreaInputEditCell value changed to:', newValue);
           setInputValue(newValue);
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === 'Tab') {
-            // Stop edit mode on Enter/Tab - value is already set via useEffect
+            // Stop edit mode - draft is already updated via useEffect
             e.preventDefault();
             api.stopCellEditMode({ id, field });
           } else if (e.key === 'Escape') {
+            // Cancel edit - discard draft
             api.stopCellEditMode({ id, field, ignoreModifications: true });
           }
         }}
@@ -125,7 +120,6 @@ export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactEle
           value={unit}
           onChange={(e) => {
             const newUnit = e.target.value as 'M2' | 'PLANTS';
-            console.log('[DEBUG] AreaInputEditCell unit changed to:', newUnit);
             setUnit(newUnit);
           }}
           label={t('plantingPlans:areaInput.unit')}
