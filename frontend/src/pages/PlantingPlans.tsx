@@ -208,6 +208,11 @@ function PlantingPlans(): React.ReactElement {
         console.log('[DEBUG] valueGetter output:', result);
         return result;
       },
+      // Store custom object value in row data
+      valueSetter: (value, row) => {
+        console.log('[DEBUG] valueSetter called with:', value);
+        return { ...row, area_usage_sqm: value };
+      },
     },
     {
       field: 'notes',
