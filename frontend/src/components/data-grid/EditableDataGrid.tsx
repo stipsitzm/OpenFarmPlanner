@@ -354,7 +354,9 @@ export function EditableDataGrid<T extends EditableRow>({
     try {
       if (newRow.isNew) {
         // Create new item via API
+        console.log('[DEBUG] processRowUpdate creating new row:', newRow);
         const response = await api.create(mapToApiData(newRow));
+        console.log('[DEBUG] processRowUpdate API response:', response.data);
         setError('');
         if (!response.data.id) {
           throw new Error('API response missing ID');
@@ -362,6 +364,7 @@ export function EditableDataGrid<T extends EditableRow>({
         
         // Remove the temporary row and add the saved row
         const savedRow = mapToRow(response.data as T);
+        console.log('[DEBUG] processRowUpdate mapped saved row:', savedRow);
         setRows((prevRows) => {
           // Remove the temporary row with negative ID
           const filteredRows = prevRows.filter(row => row.id !== newRow.id);
@@ -372,14 +375,18 @@ export function EditableDataGrid<T extends EditableRow>({
         return savedRow;
       } else {
         // Update existing item via API
+        console.log('[DEBUG] processRowUpdate updating row:', newRow);
         const response = await api.update(newRow.id, mapToApiData(newRow));
+        console.log('[DEBUG] processRowUpdate API response:', response.data);
         setError('');
         if (!response.data.id) {
           throw new Error('API response missing ID');
         }
         // Map the response through mapToRow to ensure all fields are properly formatted
         // This is important for auto-calculated fields like harvest dates
-        return mapToRow(response.data as T);
+        const mappedRow = mapToRow(response.data as T);
+        console.log('[DEBUG] processRowUpdate mapped row:', mappedRow);
+        return mappedRow;
       }
     } catch (err) {
       // Extract user-friendly error message

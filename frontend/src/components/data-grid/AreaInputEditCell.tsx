@@ -50,9 +50,11 @@ export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactEle
   const canUsePlants = culture && culture.plants_per_m2 !== null && culture.plants_per_m2 !== undefined && culture.plants_per_m2 > 0;
   
   // Parse current value or initialize
+  console.log('[DEBUG] AreaInputEditCell initial value:', value);
   const initialValue: AreaInputValue = typeof value === 'object' && value !== null && 'value' in value && 'unit' in value
     ? value as AreaInputValue
     : { value: (value as number) || '', unit: 'M2' };
+  console.log('[DEBUG] AreaInputEditCell parsed initialValue:', initialValue);
   
   const [inputValue, setInputValue] = useState<number | ''>(initialValue.value);
   const [unit, setUnit] = useState<'M2' | 'PLANTS'>(initialValue.unit);
@@ -66,7 +68,9 @@ export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactEle
   
   // Update grid cell value whenever input changes
   useEffect(() => {
-    api.setEditCellValue({ id, field, value: { value: inputValue, unit } });
+    const cellValue = { value: inputValue, unit };
+    console.log('[DEBUG] AreaInputEditCell setting cell value:', cellValue);
+    api.setEditCellValue({ id, field, value: cellValue });
   }, [inputValue, unit, api, id, field]);
   
   // Helper text for disabled plants option
@@ -86,6 +90,7 @@ export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactEle
         value={inputValue}
         onChange={(e) => {
           const newValue = e.target.value === '' ? '' : parseFloat(e.target.value);
+          console.log('[DEBUG] AreaInputEditCell value changed to:', newValue);
           setInputValue(newValue);
         }}
         size="small"
@@ -102,7 +107,11 @@ export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactEle
         <Select
           labelId={`unit-select-label-${id}`}
           value={unit}
-          onChange={(e) => setUnit(e.target.value as 'M2' | 'PLANTS')}
+          onChange={(e) => {
+            const newUnit = e.target.value as 'M2' | 'PLANTS';
+            console.log('[DEBUG] AreaInputEditCell unit changed to:', newUnit);
+            setUnit(newUnit);
+          }}
           label={t('plantingPlans:areaInput.unit')}
         >
           <MenuItem value="M2">{t('plantingPlans:areaInput.m2')}</MenuItem>

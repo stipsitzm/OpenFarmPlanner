@@ -186,19 +186,27 @@ function PlantingPlans(): React.ReactElement {
       ),
       // Display formatted area value
       valueFormatter: (value) => {
+        console.log('[DEBUG] valueFormatter input:', value);
+        let formatted = '';
         if (typeof value === 'number' && !isNaN(value)) {
-          return `${value.toFixed(2)} m²`;
+          formatted = `${value.toFixed(2)} m²`;
         }
-        return '';
+        console.log('[DEBUG] valueFormatter output:', formatted);
+        return formatted;
       },
       // Extract numeric value from potential object during editing
       valueGetter: (value) => {
+        console.log('[DEBUG] valueGetter input:', value);
+        let result: number | undefined;
         // If it's an object from edit mode, extract the numeric value
         if (typeof value === 'object' && value !== null && 'value' in value) {
-          return typeof value.value === 'number' ? value.value : undefined;
+          result = typeof value.value === 'number' ? value.value : undefined;
+        } else {
+          // Otherwise return the value as-is
+          result = typeof value === 'number' ? value : undefined;
         }
-        // Otherwise return the value as-is
-        return typeof value === 'number' ? value : undefined;
+        console.log('[DEBUG] valueGetter output:', result);
+        return result;
       },
     },
     {
@@ -246,7 +254,12 @@ function PlantingPlans(): React.ReactElement {
           harvest_end_date: plan.harvest_end_date,
           quantity: plan.quantity,
           // Ensure area_usage_sqm is always a number (not an object from edit mode)
-          area_usage_sqm: typeof plan.area_usage_sqm === 'number' ? plan.area_usage_sqm : undefined,
+          area_usage_sqm: (() => {
+            console.log('[DEBUG] mapToRow area_usage_sqm input:', plan.area_usage_sqm);
+            const convertedArea = typeof plan.area_usage_sqm === 'number' ? plan.area_usage_sqm : undefined;
+            console.log('[DEBUG] mapToRow area_usage_sqm output:', convertedArea);
+            return convertedArea;
+          })(),
           notes: plan.notes || '',
         })}
         mapToApiData={(row) => {
@@ -306,18 +319,23 @@ function PlantingPlans(): React.ReactElement {
           };
           
           // Handle area input based on type
+          console.log('[DEBUG] mapToApiData row.area_usage_sqm:', row.area_usage_sqm);
+          console.log('[DEBUG] mapToApiData isAreaInputValue:', isAreaInputValue(row.area_usage_sqm));
           if (isAreaInputValue(row.area_usage_sqm)) {
             // Custom area input with unit
             const areaInput = row.area_usage_sqm as AreaInputValue;
             if (areaInput.value !== '' && areaInput.value > 0) {
               apiData.area_input_value = areaInput.value;
               apiData.area_input_unit = areaInput.unit;
+              console.log('[DEBUG] mapToApiData sending to API:', { area_input_value: apiData.area_input_value, area_input_unit: apiData.area_input_unit });
             }
           } else if (typeof row.area_usage_sqm === 'number') {
             // Plain number - send as area_usage_sqm for backward compatibility
             apiData.area_usage_sqm = row.area_usage_sqm;
+            console.log('[DEBUG] mapToApiData sending area_usage_sqm:', apiData.area_usage_sqm);
           }
           
+          console.log('[DEBUG] mapToApiData complete payload:', apiData);
           return apiData;
         }}
         validateRow={(row) => {
