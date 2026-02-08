@@ -3,25 +3,19 @@
  * 
  * Allows users to input area either as square meters (m²) or as number of plants.
  * Plants are converted to m² using culture spacing data.
+ * Immediately calculates and stores the m² value in the grid row.
  * 
  * @remarks
- * This component maintains local edit state and communicates with parent via draft callbacks.
- * It does NOT modify the DataGrid row directly - the row always stores only numeric area_usage_sqm.
+ * This component calculates m² immediately and stores it directly in the grid using setEditCellValue.
+ * The grid row ALWAYS contains only the numeric area_usage_sqm value.
  */
 
 import { useState, useEffect } from 'react';
-import { Box, TextField, Select, MenuItem, FormControl, InputLabel, FormHelperText } from '@mui/material';
-import type { GridRenderEditCellParams, GridRowId } from '@mui/x-data-grid';
+import { Box, TextField, Select, MenuItem, FormControl, FormHelperText } from '@mui/material';
+import type { GridRenderEditCellParams } from '@mui/x-data-grid';
+import { useGridApiContext } from '@mui/x-data-grid';
 import { useTranslation } from '../../i18n';
 import type { Culture } from '../../api/types';
-
-/**
- * Draft value stored during editing (outside DataGrid row)
- */
-export interface AreaDraft {
-  value: number | '';
-  unit: 'M2' | 'PLANTS';
-}
 
 /**
  * Props for AreaInputEditCell component
@@ -29,112 +23,105 @@ export interface AreaDraft {
 export interface AreaInputEditCellProps extends GridRenderEditCellParams {
   /** Array of all cultures for looking up spacing data */
   cultures: Culture[];
-  /** Current draft for this row (if exists) */
-  draft?: AreaDraft;
-  /** Callback to update draft when local state changes */
-  onDraftChange: (rowId: GridRowId, draft: AreaDraft) => void;
 }
 
 /**
  * Custom edit cell for area input with unit selection.
- * Maintains local state and updates parent draft, but does NOT modify grid row.
+ * Calculates m² immediately and stores it in the grid row.
  * 
- * @param props - Grid edit cell params plus cultures array and draft callbacks
+ * @param props - Grid edit cell params plus cultures array
  * @returns Custom edit cell component
  */
 export function AreaInputEditCell(props: AreaInputEditCellProps): React.ReactElement {
-  const { id, value, field, api, cultures, draft, onDraftChange } = props;
+  const { id, value, field, cultures } = props;
   const { t } = useTranslation(['plantingPlans', 'common']);
+  const apiRef = useGridApiContext();
   
   // Get the row data to access culture selection
-  const row = api.getRow(id);
+  const row = apiRef.current.getRow(id);
   const cultureId = row?.culture;
-  const culture = cultures.find(c => c.id === cultureId);
+  const culture = cultures.find((c) => c.id === row?.culture);
   
-  // Check if plants option is available
-  const canUsePlants = culture && culture.plants_per_m2 !== null && culture.plants_per_m2 !== undefined && culture.plants_per_m2 > 0;
+  // Local state for UI
+  const [inputValue, setInputValue] = useState<number | ''>(
+    typeof value === 'number' && !isNaN(value) ? value : ''
+  );
+  const [unit, setUnit] = useState<'M2' | 'PLANTS'>('M2');
   
-  // Initialize from draft (if exists) or from current numeric value
-  const initialDraft: AreaDraft = draft || {
-    value: (typeof value === 'number' && !isNaN(value)) ? value : '',
-    unit: 'M2'
-  };
+  // Check if culture has valid spacing for plant conversion
+  const canUsePlants = culture && 
+    culture.plants_per_m2 !== null && 
+    culture.plants_per_m2 !== undefined && 
+    culture.plants_per_m2 > 0;
   
-  const [inputValue, setInputValue] = useState<number | ''>(initialDraft.value);
-  const [unit, setUnit] = useState<'M2' | 'PLANTS'>(initialDraft.unit);
-  
-  // Update parent draft whenever local state changes
+  // Calculate and update grid value whenever input changes
   useEffect(() => {
-    onDraftChange(id, { value: inputValue, unit });
-  }, [inputValue, unit, id, onDraftChange]);
-  
-  // If plants option becomes unavailable, switch to M2
-  useEffect(() => {
-    if (unit === 'PLANTS' && !canUsePlants) {
-      setUnit('M2');
+    if (inputValue === '' || inputValue <= 0) {
+      // Don't update for invalid values
+      return;
     }
-  }, [unit, canUsePlants]);
-  
-  // Helper text for disabled plants option
-  let helperText = '';
-  if (unit === 'PLANTS' || !canUsePlants) {
-    if (!cultureId || cultureId === 0) {
-      helperText = t('plantingPlans:areaInput.noCulture');
-    } else if (!canUsePlants) {
-      helperText = t('plantingPlans:areaInput.noSpacing');
+    
+    let calculatedAreaM2: number;
+    
+    if (unit === 'M2') {
+      // Direct m² input
+      calculatedAreaM2 = inputValue;
+    } else {
+      // PLANTS - convert using culture spacing
+      if (!canUsePlants) {
+        // Shouldn't happen if UI is correct, but safety check
+        return;
+      }
+      calculatedAreaM2 = inputValue / culture.plants_per_m2!;
     }
-  }
+    
+    // Immediately update the grid cell value with calculated m²
+    apiRef.current.setEditCellValue({
+      id,
+      field,
+      value: calculatedAreaM2
+    });
+  }, [inputValue, unit, id, field, apiRef, canUsePlants, culture]);
   
   return (
-    <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', width: '100%', p: 1 }}>
+    <Box sx={{ display: 'flex', gap: 1, width: '100%', p: 1 }}>
       <TextField
         type="number"
         value={inputValue}
         onChange={(e) => {
-          const newValue = e.target.value === '' ? '' : parseFloat(e.target.value);
-          setInputValue(newValue);
+          const val = e.target.value;
+          setInputValue(val === '' ? '' : parseFloat(val));
         }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === 'Tab') {
-            // Stop edit mode - draft is already updated via useEffect
-            e.preventDefault();
-            api.stopCellEditMode({ id, field });
-          } else if (e.key === 'Escape') {
-            // Cancel edit - discard draft
-            api.stopCellEditMode({ id, field, ignoreModifications: true });
-          }
-        }}
+        inputProps={{ min: 0, step: 0.01 }}
         size="small"
-        sx={{ flex: 1, minWidth: 80 }}
-        inputProps={{
-          min: 0,
-          step: unit === 'PLANTS' ? 1 : 0.1,
-        }}
+        sx={{ flex: 1, minWidth: 0 }}
         autoFocus
       />
-      
-      <FormControl size="small" sx={{ minWidth: 100 }}>
-        <InputLabel id={`unit-select-label-${id}`}>{t('plantingPlans:areaInput.unit')}</InputLabel>
+      <FormControl size="small" sx={{ minWidth: 120 }}>
         <Select
-          labelId={`unit-select-label-${id}`}
           value={unit}
-          onChange={(e) => {
-            const newUnit = e.target.value as 'M2' | 'PLANTS';
-            setUnit(newUnit);
-          }}
-          label={t('plantingPlans:areaInput.unit')}
+          onChange={(e) => setUnit(e.target.value as 'M2' | 'PLANTS')}
         >
-          <MenuItem value="M2">{t('plantingPlans:areaInput.m2')}</MenuItem>
-          <MenuItem value="PLANTS" disabled={!canUsePlants}>
-            {t('plantingPlans:areaInput.plants')}
+          <MenuItem value="M2">{t('areaInput.m2', { ns: 'plantingPlans' })}</MenuItem>
+          <MenuItem 
+            value="PLANTS" 
+            disabled={!canUsePlants}
+          >
+            {t('areaInput.plants', { ns: 'plantingPlans' })}
           </MenuItem>
         </Select>
-        {helperText && (
-          <FormHelperText error={!canUsePlants}>
-            {helperText}
+        {!canUsePlants && unit === 'PLANTS' && (
+          <FormHelperText error>
+            {t('areaInput.noSpacing', { ns: 'plantingPlans' })}
+          </FormHelperText>
+        )}
+        {!culture && (
+          <FormHelperText>
+            {t('areaInput.noCulture', { ns: 'plantingPlans' })}
           </FormHelperText>
         )}
       </FormControl>
     </Box>
   );
 }
+

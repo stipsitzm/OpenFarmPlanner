@@ -9,10 +9,10 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { GridColDef, GridRowId } from '@mui/x-data-grid';
+import type { GridColDef } from '@mui/x-data-grid';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
-import { EditableDataGrid, type EditableRow, type DataGridAPI, type AreaDraft } from '../components/data-grid';
+import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/data-grid';
 import { AreaInputEditCell } from '../components/data-grid/AreaInputEditCell';
 
 /**
@@ -31,13 +31,6 @@ function PlantingPlans(): React.ReactElement {
   const [initialCultureId, setInitialCultureId] = useState<number | null>(null);
   const [initialBedId, setInitialBedId] = useState<number | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
-  
-  /**
-   * Area edit drafts - temporary storage for area input while editing
-   * Maps rowId to draft {value, unit}
-   * Cleared after successful save or on cancel
-   */
-  const [areaDrafts, setAreaDrafts] = useState<Record<GridRowId, AreaDraft>>({});
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
@@ -192,10 +185,6 @@ function PlantingPlans(): React.ReactElement {
         <AreaInputEditCell 
           {...params} 
           cultures={cultures}
-          draft={areaDrafts[params.id]}
-          onDraftChange={(rowId, draft) => {
-            setAreaDrafts(prev => ({ ...prev, [rowId]: draft }));
-          }}
         />
       ),
       // Display formatted area value (row always contains numeric value)
@@ -240,15 +229,6 @@ function PlantingPlans(): React.ReactElement {
             : undefined
         }
         mapToRow={(plan) => {
-          // Clean up draft after successful save (backend returns numeric area)
-          if (plan.id && areaDrafts[plan.id]) {
-            setAreaDrafts(prev => {
-              const newDrafts = { ...prev };
-              delete newDrafts[plan.id!];
-              return newDrafts;
-            });
-          }
-          
           return {
             ...plan,
             id: plan.id!,
@@ -260,7 +240,7 @@ function PlantingPlans(): React.ReactElement {
             harvest_date: plan.harvest_date,
             harvest_end_date: plan.harvest_end_date,
             quantity: plan.quantity,
-            // Row always stores numeric area_usage_sqm (no objects)
+            // Row always stores numeric area_usage_sqm
             area_usage_sqm: plan.area_usage_sqm,
             notes: plan.notes || '',
           };
@@ -312,16 +292,11 @@ function PlantingPlans(): React.ReactElement {
             notes: row.notes || '',
           };
           
-          // Check if we have a draft for this row (area was edited with unit selection)
-          const draft = areaDrafts[row.id];
-          if (draft && draft.value !== '' && draft.value > 0) {
-            // Send area input with unit for backend conversion
-            apiData.area_input_value = draft.value;
-            apiData.area_input_unit = draft.unit;
-            // Clear draft after sending (will be cleaned up after save)
-          } else if (typeof row.area_usage_sqm === 'number') {
-            // No draft - send numeric value as-is
-            apiData.area_usage_sqm = row.area_usage_sqm;
+          // Area is always stored as numeric m² in the grid row
+          // Send as area_input_value with unit "M2" since we already have m²
+          if (typeof row.area_usage_sqm === 'number') {
+            apiData.area_input_value = row.area_usage_sqm;
+            apiData.area_input_unit = 'M2';
           }
           
           return apiData;
