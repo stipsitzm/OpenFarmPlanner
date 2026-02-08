@@ -178,7 +178,7 @@ function PlantingPlans(): React.ReactElement {
       field: 'area_usage_sqm',
       headerName: t('plantingPlans:columns.areaUsage'),
       flex: 0.6,
-      minWidth: 110,
+      minWidth: 210,
       type: 'number',
       editable: true,
       renderEditCell: (params) => (
