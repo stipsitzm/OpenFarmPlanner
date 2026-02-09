@@ -6,7 +6,7 @@
  * The partner plants_count field is computed after save via mapToRow.
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { TextField } from '@mui/material';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
@@ -23,6 +23,9 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
   
   console.log('[DEBUG] AreaM2EditCell mounted for row', id, 'with value:', value);
   
+  // Track initial value to prevent premature updates that steal focus
+  const initialValueRef = useRef(value);
+  
   // Local state for immediate UI feedback
   const [inputValue, setInputValue] = useState<string>(
     typeof value === 'number' && !isNaN(value) ? value.toString() : ''
@@ -35,12 +38,17 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     
     // Immediately update DataGrid with the new value
     const numValue = val === '' ? null : parseFloat(val);
-    console.log('[DEBUG] AreaM2EditCell calling setEditCellValue with:', numValue);
-    apiRef.current.setEditCellValue({
-      id,
-      field,
-      value: numValue
-    });
+    
+    // Only call setEditCellValue if value actually changed from initial
+    // This prevents premature grid updates on mount that can steal focus
+    if (numValue !== initialValueRef.current) {
+      console.log('[DEBUG] AreaM2EditCell calling setEditCellValue with:', numValue);
+      apiRef.current.setEditCellValue({
+        id,
+        field,
+        value: numValue
+      });
+    }
     
     onLastEditedFieldChange('area_m2');
   };
