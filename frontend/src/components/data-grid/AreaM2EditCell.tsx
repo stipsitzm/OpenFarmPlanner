@@ -1,15 +1,14 @@
 /**
  * Edit cell for area_m2 field in PlantingPlans grid.
  * 
- * When user edits area, updates only the area field during editing.
- * The partner plants_count field is computed and updated after the edit is committed.
- * Uses culture spacing data to calculate plants from area.
+ * Manages local state for immediate UI feedback.
+ * MUI DataGrid automatically extracts the value when edit mode ends.
+ * The partner plants_count field is computed after save via mapToRow.
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { TextField } from '@mui/material';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
-import { useGridApiContext } from '@mui/x-data-grid';
 import type { Culture } from '../../api/types';
 
 export interface AreaM2EditCellProps extends GridRenderEditCellParams {
@@ -18,29 +17,15 @@ export interface AreaM2EditCellProps extends GridRenderEditCellParams {
 }
 
 export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
-  const { id, value, field, onLastEditedFieldChange } = props;
-  const apiRef = useGridApiContext();
+  const { id, value, onLastEditedFieldChange } = props;
   
   console.log('[DEBUG] AreaM2EditCell mounted for row', id, 'with value:', value);
   
   // Local state for immediate UI feedback
+  // DataGrid extracts this value when edit mode ends
   const [inputValue, setInputValue] = useState<string>(
     typeof value === 'number' && !isNaN(value) ? value.toString() : ''
   );
-  
-  // Update ONLY the area_m2 field during editing (not plants_count)
-  useEffect(() => {
-    const numValue = inputValue === '' ? null : parseFloat(inputValue);
-    
-    console.log('[DEBUG] AreaM2EditCell updating area_m2 to:', numValue);
-    
-    // Update only our own field - partner field will be updated after save
-    apiRef.current.setEditCellValue({
-      id,
-      field,
-      value: numValue
-    });
-  }, [inputValue, id, field, apiRef]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
