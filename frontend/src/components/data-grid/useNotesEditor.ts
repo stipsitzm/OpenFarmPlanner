@@ -25,7 +25,7 @@ export interface NotesEditorSaveOptions<T> {
  */
 export interface UseNotesEditorConfig<T> {
   /** Array of rows being displayed */
-  rows: T[];
+  rows: readonly T[];
   /** Callback to save notes - should update the row and return success/failure */
   onSave: (options: NotesEditorSaveOptions<T>) => Promise<void>;
   /** Callback to set error message */

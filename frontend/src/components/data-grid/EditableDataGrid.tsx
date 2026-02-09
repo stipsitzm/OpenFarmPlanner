@@ -32,7 +32,6 @@ import { NotesCell } from './NotesCell';
 import { NotesDrawer } from './NotesDrawer';
 import { getPlainExcerpt } from './markdown';
 import { useNotesEditor } from './useNotesEditor';
-import type { NotesEditorSaveOptions } from './useNotesEditor';
 
 /**
  * Base interface for editable data grid rows
