@@ -7,12 +7,15 @@
  * @returns The Planting Plans page component
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { GridColDef } from '@mui/x-data-grid';
+import type { GridColDef, GridCellParams } from '@mui/x-data-grid';
+import { Tooltip } from '@mui/material';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
 import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/data-grid';
+import { AreaM2EditCell } from '../components/data-grid/AreaM2EditCell';
+import { PlantsCountEditCell } from '../components/data-grid/PlantsCountEditCell';
 
 /**
  * Row data type for Data Grid
@@ -20,6 +23,8 @@ import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../compone
 interface PlantingPlanRow extends PlantingPlan, EditableRow {
   id: number;
   isNew?: boolean;
+  area_m2?: number;
+  plants_count?: number | null; // UI-only derived field
 }
 
 function PlantingPlans(): React.ReactElement {
@@ -27,46 +32,97 @@ function PlantingPlans(): React.ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
-  const [initialCultureId, setInitialCultureId] = useState<number | null>(null);
-  const [initialBedId, setInitialBedId] = useState<number | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
+  
+  // Track which field was last edited (for determining API payload)
+  const lastEditedFieldRef = useRef<'area_m2' | 'plants_count' | null>(null);
+
+  /**
+   * Helper: Get culture for a row
+   */
+  const getCultureForRow = useCallback(
+    (row: PlantingPlanRow): Culture | undefined => cultures.find((c) => c.id === row.culture),
+    [cultures]
+  );
+
+  /**
+   * Helper: Calculate plants per m² from culture spacing
+   */
+  const getPlantsPerM2 = useCallback((culture: Culture | undefined): number | null => {
+    if (!culture) return null;
+    
+    const rowSpacingCm = culture.row_spacing_cm;
+    const plantSpacingCm = culture.distance_within_row_cm;
+    
+    if (!rowSpacingCm || !plantSpacingCm || rowSpacingCm <= 0 || plantSpacingCm <= 0) {
+      return null;
+    }
+
+    const rowSpacingM = rowSpacingCm / 100;
+    const plantSpacingM = plantSpacingCm / 100;
+    
+    // Formula: 1 / (row_spacing_m * distance_within_row_m)
+    return 1 / (rowSpacingM * plantSpacingM);
+  }, []);
+
+  /**
+   * Helper: Calculate plants count from area and plants per m²
+   */
+  const computePlantsCount = (areaM2: number | null, plantsPerM2: number | null): number | null => {
+    if (!areaM2 || !plantsPerM2 || areaM2 <= 0) return null;
+    return Math.round(areaM2 * plantsPerM2);
+  };
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
    */
-  useEffect(() => {
-    if (!urlParamProcessedRef.current) {
-      const newParams = new URLSearchParams(searchParams);
-      let hasChanges = false;
+  const [initialSelection] = useState(() => {
+    const cultureIdParam = searchParams.get('cultureId');
+    const bedIdParam = searchParams.get('bedId');
+    let cultureId: number | null = null;
+    let bedId: number | null = null;
 
-      const cultureIdParam = searchParams.get('cultureId');
-      if (cultureIdParam) {
-        const cultureId = parseInt(cultureIdParam, 10);
-        if (!isNaN(cultureId)) {
-          setInitialCultureId(cultureId);
-          newParams.delete('cultureId');
-          hasChanges = true;
-        }
+    if (cultureIdParam) {
+      const parsedCultureId = parseInt(cultureIdParam, 10);
+      if (!isNaN(parsedCultureId)) {
+        cultureId = parsedCultureId;
       }
-
-      const bedIdParam = searchParams.get('bedId');
-      if (bedIdParam) {
-        const bedId = parseInt(bedIdParam, 10);
-        if (!isNaN(bedId)) {
-          setInitialBedId(bedId);
-          newParams.delete('bedId');
-          hasChanges = true;
-        }
-      }
-
-      // Remove parameters from URL after reading them
-      if (hasChanges) {
-        setSearchParams(newParams, { replace: true });
-      }
-
-      urlParamProcessedRef.current = true;
     }
-  }, [searchParams, setSearchParams]);
+
+    if (bedIdParam) {
+      const parsedBedId = parseInt(bedIdParam, 10);
+      if (!isNaN(parsedBedId)) {
+        bedId = parsedBedId;
+      }
+    }
+
+    return { cultureId, bedId };
+  });
+
+  useEffect(() => {
+    if (urlParamProcessedRef.current) {
+      return;
+    }
+
+    const newParams = new URLSearchParams(searchParams);
+    let hasChanges = false;
+
+    if (initialSelection.cultureId !== null) {
+      newParams.delete('cultureId');
+      hasChanges = true;
+    }
+
+    if (initialSelection.bedId !== null) {
+      newParams.delete('bedId');
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
+      setSearchParams(newParams, { replace: true });
+    }
+
+    urlParamProcessedRef.current = true;
+  }, [initialSelection, searchParams, setSearchParams]);
 
   /**
    * Fetch cultures and beds for dropdowns
@@ -175,21 +231,78 @@ function PlantingPlans(): React.ReactElement {
       valueGetter: (value) => value ? new Date(value) : null,
     },
     {
-      field: 'area_usage_sqm',
-      headerName: t('plantingPlans:columns.areaUsage'),
-      flex: 0.6,
-      minWidth: 110,
-      type: 'number',
+      field: 'area_m2',
+      headerName: t('plantingPlans:columns.areaM2'),
+      flex: 0.7,
+      minWidth: 100,
       editable: true,
+      type: 'number',
+      renderHeader: () => (
+        <Tooltip title={t('plantingPlans:tooltips.coupledFields')}>
+            <div>{t('plantingPlans:columns.areaM2')}</div>
+        </Tooltip>
+      ),
+      renderEditCell: (params) => (
+        <AreaM2EditCell 
+          {...params} 
+          cultures={cultures}
+          onLastEditedFieldChange={(field) => {
+            lastEditedFieldRef.current = field;
+          }}
+        />
+      ),
+      valueFormatter: (value) => {
+        const numericValue = Number(value);
+        if (!Number.isNaN(numericValue)) {
+          return `${numericValue.toFixed(2)} m²`;
+        }
+        return '';
+      },
+      headerClassName: 'coupled-field-header',
+    },
+    {
+      field: 'plants_count',
+      headerName: t('plantingPlans:columns.plantsCount'),
+      flex: 0.7,
+      minWidth: 100,
+      editable: true,
+      type: 'number',
+      renderHeader: () => (
+        <Tooltip title={t('plantingPlans:tooltips.plantsFromSpacing')}>
+            <div>{t('plantingPlans:columns.plantsCount')}</div>
+        </Tooltip>
+      ),
+      renderEditCell: (params) => (
+        <PlantsCountEditCell 
+          {...params} 
+          cultures={cultures}
+          onLastEditedFieldChange={(field) => {
+            lastEditedFieldRef.current = field;
+          }}
+        />
+      ),
+      valueFormatter: (value) => {
+        if (typeof value === 'number' && !isNaN(value)) {
+          return `≈ ${Math.round(value)}`;
+        }
+        return '—';
+      },
+      // Disable editing if culture has no valid spacing
+      isCellEditable: (params: GridCellParams<PlantingPlanRow>) => {
+        const row = params.row as PlantingPlanRow;
+        const culture = getCultureForRow(row);
+        const plantsPerM2 = getPlantsPerM2(culture);
+        return plantsPerM2 !== null;
+      },
+      headerClassName: 'coupled-field-header',
     },
     {
       field: 'notes',
       headerName: t('common:fields.notes'),
-      flex: 1.5,
-      minWidth: 200,
-      editable: true,
+      width: 250,
+      // Notes field will be overridden by NotesCell in EditableDataGrid
     },
-  ], [cultures, beds, t]);
+  ], [cultures, beds, getCultureForRow, getPlantsPerM2, t]);
 
   return (
     <div className="page-container">
@@ -202,35 +315,49 @@ function PlantingPlans(): React.ReactElement {
           id: -Date.now(),
           culture: 0,
           bed: 0,
-          planting_date: null as any, // Allow null initially, will be set when user selects
+          planting_date: '',
           quantity: undefined,
-          area_usage_sqm: undefined,
+          area_m2: undefined,
+          plants_count: undefined,
           notes: '',
           isNew: true,
         })}
         initialRow={
-          initialCultureId || initialBedId
+          initialSelection.cultureId || initialSelection.bedId
             ? {
-                ...(initialCultureId ? { culture: initialCultureId } : {}),
-                ...(initialBedId ? { bed: initialBedId } : {}),
+                ...(initialSelection.cultureId ? { culture: initialSelection.cultureId } : {}),
+                ...(initialSelection.bedId ? { bed: initialSelection.bedId } : {}),
               }
             : undefined
         }
-        mapToRow={(plan) => ({
-          ...plan,
-          id: plan.id!,
-          culture: plan.culture,
-          culture_name: plan.culture_name || '',
-          bed: plan.bed,
-          bed_name: plan.bed_name || '',
-          planting_date: plan.planting_date,
-          harvest_date: plan.harvest_date,
-          harvest_end_date: plan.harvest_end_date,
-          quantity: plan.quantity,
-          area_usage_sqm: plan.area_usage_sqm,
-          notes: plan.notes || '',
-        })}
+        mapToRow={(plan) => {
+          // Get culture to compute plants_count
+          const culture = cultures.find(c => c.id === plan.culture);
+          const plantsPerM2 = getPlantsPerM2(culture);
+          const plantsCount = computePlantsCount(plan.area_usage_sqm ?? null, plantsPerM2);
+          
+          return {
+            ...plan,
+            id: plan.id!,
+            culture: plan.culture,
+            culture_name: plan.culture_name || '',
+            bed: plan.bed,
+            bed_name: plan.bed_name || '',
+            planting_date: plan.planting_date,
+            harvest_date: plan.harvest_date,
+            harvest_end_date: plan.harvest_end_date,
+            quantity: plan.quantity,
+            // Backend field name is area_usage_sqm, map to area_m2 for grid
+            area_m2: plan.area_usage_sqm,
+            // Compute plants_count from area and culture spacing
+            plants_count: plantsCount,
+            notes: plan.notes || '',
+          };
+        }}
         mapToApiData={(row) => {
+          console.log('[DEBUG] mapToApiData called with row:', row);
+          console.log('[DEBUG] mapToApiData lastEditedField:', lastEditedFieldRef.current);
+          
           const isDate = (val: unknown): val is Date => val instanceof Date;
 
           // Convert date from Date object to string if needed
@@ -268,14 +395,39 @@ function PlantingPlans(): React.ReactElement {
             bedId = 0; // This will cause validation error
           }
           
-          return {
+          // Prepare API data object
+          const apiData: Partial<PlantingPlanRow> = {
             culture: cultureId,
             bed: bedId,
             planting_date: plantingDate,
             quantity: row.quantity,
-            area_usage_sqm: row.area_usage_sqm,
             notes: row.notes || '',
           };
+          
+          // Determine which field to send based on last edit
+          const source = lastEditedFieldRef.current || 'area_m2';
+          
+          console.log('[DEBUG] mapToApiData source:', source);
+          console.log('[DEBUG] mapToApiData row.area_m2:', row.area_m2);
+          console.log('[DEBUG] mapToApiData row.plants_count:', row.plants_count);
+          
+          if (source === 'area_m2' && typeof row.area_m2 === 'number') {
+            // User edited area directly - send as M2
+            apiData.area_input_value = row.area_m2;
+            apiData.area_input_unit = 'M2';
+            console.log('[DEBUG] mapToApiData sending area as M2:', apiData.area_input_value);
+          } else if (source === 'plants_count' && typeof row.plants_count === 'number') {
+            // User edited plants count - send as PLANTS
+            apiData.area_input_value = row.plants_count;
+            apiData.area_input_unit = 'PLANTS';
+            console.log('[DEBUG] mapToApiData sending plants count as PLANTS:', apiData.area_input_value);
+          }
+          
+          // Clear last edited field after use
+          lastEditedFieldRef.current = null;
+          
+          console.log('[DEBUG] mapToApiData final payload:', apiData);
+          return apiData;
         }}
         validateRow={(row) => {
           const missingFields: string[] = [];
@@ -304,6 +456,14 @@ function PlantingPlans(): React.ReactElement {
         deleteConfirmMessage={t('plantingPlans:confirmDelete')}
         addButtonLabel={t('plantingPlans:addButton')}
         showDeleteAction={true}
+        notes={{
+          fields: [
+            {
+              field: 'notes',
+              labelKey: 'common:fields.notes',
+            },
+          ],
+        }}
       />
     </div>
   );

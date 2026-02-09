@@ -7,8 +7,16 @@
     "harvestDate": "Erntedatum",
     "harvestStartDate": "Erntebeginn",
     "harvestEndDate": "Ernteende",
-    "areaUsage": "Fläche (m²)",
+    "areaM2": "Fläche (m²)",
+    "plantsCount": "Pflanzen (≈)",
     "notes": "Notizen"
+  },
+  "labels": {
+    "coupled": "gekoppelt"
+  },
+  "tooltips": {
+    "coupledFields": "Fläche und Pflanzenzahl sind gekoppelt. Änderungen in einem Feld aktualisieren automatisch das andere.",
+    "plantsFromSpacing": "Berechnung aus Pflanzabständen der Kultur"
   },
   "errors": {
     "load": "Fehler beim Laden der Anbaupläne",
