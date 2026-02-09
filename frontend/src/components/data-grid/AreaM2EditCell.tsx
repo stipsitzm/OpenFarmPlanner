@@ -1,7 +1,8 @@
 /**
  * Edit cell for area_m2 field in PlantingPlans grid.
  * 
- * When user edits area, automatically updates the linked plants_count field.
+ * When user edits area, updates only the area field during editing.
+ * The partner plants_count field is computed and updated after the edit is committed.
  * Uses culture spacing data to calculate plants from area.
  */
 
@@ -52,6 +53,8 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
   const { id, value, field, cultures, onLastEditedFieldChange } = props;
   const apiRef = useGridApiContext();
   
+  console.log('[DEBUG] AreaM2EditCell mounted for row', id, 'with value:', value);
+  
   // Get row to access culture
   const row = apiRef.current.getRow(id);
   const culture = cultures.find((c) => c.id === row?.culture);
@@ -62,37 +65,35 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     typeof value === 'number' && !isNaN(value) ? value.toString() : ''
   );
   
-  // Update grid when input changes
+  // Update ONLY the area_m2 field during editing (not plants_count)
   useEffect(() => {
     const numValue = inputValue === '' ? null : parseFloat(inputValue);
     
-    // Update area_m2 field
+    console.log('[DEBUG] AreaM2EditCell updating area_m2 to:', numValue);
+    
+    // Update only our own field
     apiRef.current.setEditCellValue({
       id,
       field,
       value: numValue
     });
     
-    // Calculate and update plants_count field if possible
+    // Calculate plants for display in the grid (but don't update the edit cell)
     if (numValue !== null && !isNaN(numValue) && numValue > 0 && plantsPerM2) {
       const plantsCount = computePlantsCount(numValue, plantsPerM2);
+      console.log('[DEBUG] AreaM2EditCell calculated plants_count:', plantsCount);
+      // Update the row's plants_count value so it displays correctly
       apiRef.current.setEditCellValue({
         id,
         field: 'plants_count',
         value: plantsCount
-      });
-    } else {
-      // Clear plants_count if area is invalid
-      apiRef.current.setEditCellValue({
-        id,
-        field: 'plants_count',
-        value: null
       });
     }
   }, [inputValue, id, field, apiRef, plantsPerM2]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
+    console.log('[DEBUG] AreaM2EditCell input changed to:', val);
     setInputValue(val);
     onLastEditedFieldChange('area_m2');
   };

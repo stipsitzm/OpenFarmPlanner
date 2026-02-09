@@ -356,6 +356,9 @@ function PlantingPlans(): React.ReactElement {
           };
         }}
         mapToApiData={(row) => {
+          console.log('[DEBUG] mapToApiData called with row:', row);
+          console.log('[DEBUG] mapToApiData lastEditedField:', lastEditedFieldRef.current);
+          
           const isDate = (val: unknown): val is Date => val instanceof Date;
 
           // Convert date from Date object to string if needed
@@ -405,19 +408,26 @@ function PlantingPlans(): React.ReactElement {
           // Determine which field to send based on last edit
           const source = lastEditedFieldRef.current || 'area_m2';
           
+          console.log('[DEBUG] mapToApiData source:', source);
+          console.log('[DEBUG] mapToApiData row.area_m2:', row.area_m2);
+          console.log('[DEBUG] mapToApiData row.plants_count:', row.plants_count);
+          
           if (source === 'area_m2' && typeof row.area_m2 === 'number') {
             // User edited area directly - send as M2
             apiData.area_input_value = row.area_m2;
             apiData.area_input_unit = 'M2';
+            console.log('[DEBUG] mapToApiData sending area as M2:', apiData.area_input_value);
           } else if (source === 'plants_count' && typeof row.plants_count === 'number') {
             // User edited plants count - send as PLANTS
             apiData.area_input_value = row.plants_count;
             apiData.area_input_unit = 'PLANTS';
+            console.log('[DEBUG] mapToApiData sending plants count as PLANTS:', apiData.area_input_value);
           }
           
           // Clear last edited field after use
           lastEditedFieldRef.current = null;
           
+          console.log('[DEBUG] mapToApiData final payload:', apiData);
           return apiData;
         }}
         validateRow={(row) => {
