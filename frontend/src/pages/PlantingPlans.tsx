@@ -10,7 +10,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { GridColDef, GridCellParams } from '@mui/x-data-grid';
-import { Typography, Tooltip } from '@mui/material';
+import { Tooltip } from '@mui/material';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
 import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/data-grid';
@@ -239,9 +239,7 @@ function PlantingPlans(): React.ReactElement {
       type: 'number',
       renderHeader: () => (
         <Tooltip title={t('plantingPlans:tooltips.coupledFields')}>
-          <div>
             <div>{t('plantingPlans:columns.areaM2')}</div>
-          </div>
         </Tooltip>
       ),
       renderEditCell: (params) => (
