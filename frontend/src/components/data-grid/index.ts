@@ -18,8 +18,10 @@ export type { MarkdownFormat } from './MarkdownToolbar';
 export { getPlainExcerpt, stripMarkdown } from './markdown';
 export { useNotesEditor } from './useNotesEditor';
 export type { UseNotesEditorConfig, UseNotesEditorReturn, NotesEditorSaveOptions } from './useNotesEditor';
-export { AreaInputEditCell } from './AreaInputEditCell';
-export type { AreaInputEditCellProps } from './AreaInputEditCell';
+export { AreaM2EditCell } from './AreaM2EditCell';
+export type { AreaM2EditCellProps } from './AreaM2EditCell';
+export { PlantsCountEditCell } from './PlantsCountEditCell';
+export type { PlantsCountEditCellProps } from './PlantsCountEditCell';
 
 export { handleEditableCellClick, handleRowEditStop } from './handlers';
 

@@ -34,49 +34,6 @@ function PlantingPlans(): React.ReactElement {
   const [initialCultureId, setInitialCultureId] = useState<number | null>(null);
   const [initialBedId, setInitialBedId] = useState<number | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
-  
-  // Track which field was last edited (for determining API payload)
-  const lastEditedFieldRef = useRef<'area_m2' | 'plants_count' | null>(null);
-
-  /**
-   * Helper: Get culture for a row
-   */
-  const getCultureForRow = (row: PlantingPlanRow): Culture | undefined => {
-    return cultures.find((c) => c.id === row.culture);
-  };
-
-  /**
-   * Helper: Calculate plants per m² from culture spacing
-   */
-  const getPlantsPerM2 = (culture: Culture | undefined): number | null => {
-    if (!culture) return null;
-    
-    const rowSpacing = culture.row_spacing_m;
-    const plantSpacing = culture.distance_within_row_m;
-    
-    if (!rowSpacing || !plantSpacing || rowSpacing <= 0 || plantSpacing <= 0) {
-      return null;
-    }
-    
-    // Formula: 1 / (row_spacing_m * distance_within_row_m)
-    return 1 / (rowSpacing * plantSpacing);
-  };
-
-  /**
-   * Helper: Calculate plants count from area and plants per m²
-   */
-  const computePlantsCount = (areaM2: number | null, plantsPerM2: number | null): number | null => {
-    if (!areaM2 || !plantsPerM2 || areaM2 <= 0) return null;
-    return Math.round(areaM2 * plantsPerM2);
-  };
-
-  /**
-   * Helper: Calculate area from plants count and plants per m²
-   */
-  const computeAreaM2 = (plantsCount: number | null, plantsPerM2: number | null): number | null => {
-    if (!plantsCount || !plantsPerM2 || plantsCount <= 0) return null;
-    return plantsCount / plantsPerM2;
-  };
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
@@ -222,80 +179,24 @@ function PlantingPlans(): React.ReactElement {
       valueGetter: (value) => value ? new Date(value) : null,
     },
     {
-      field: 'area_m2',
-      headerName: t('plantingPlans:columns.areaM2'),
-      flex: 0.7,
-      minWidth: 140,
+      field: 'area_usage_sqm',
+      headerName: t('plantingPlans:columns.areaUsage'),
+      flex: 0.6,
+      minWidth: 210,
       editable: true,
-      type: 'number',
-      renderHeader: () => (
-        <Tooltip title={t('plantingPlans:tooltips.coupledFields')}>
-          <div>
-            <div>{t('plantingPlans:columns.areaM2')}</div>
-            <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
-              ↔ {t('plantingPlans:labels.coupled')}
-            </Typography>
-          </div>
-        </Tooltip>
-      ),
       renderEditCell: (params) => (
-        <AreaM2EditCell 
+        <AreaInputEditCell 
           {...params} 
           cultures={cultures}
-          onLastEditedFieldChange={(field) => {
-            lastEditedFieldRef.current = field;
-          }}
         />
       ),
+      // Display formatted area value (row always contains numeric value)
       valueFormatter: (value) => {
         if (typeof value === 'number' && !isNaN(value)) {
           return `${value.toFixed(2)} m²`;
         }
         return '';
       },
-      headerClassName: 'coupled-field-header',
-    },
-    {
-      field: 'plants_count',
-      headerName: t('plantingPlans:columns.plantsCount'),
-      flex: 0.7,
-      minWidth: 140,
-      editable: true,
-      type: 'number',
-      renderHeader: () => (
-        <Tooltip title={t('plantingPlans:tooltips.plantsFromSpacing')}>
-          <div>
-            <div>{t('plantingPlans:columns.plantsCount')}</div>
-            <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
-              ↔ {t('plantingPlans:labels.coupled')}
-            </Typography>
-          </div>
-        </Tooltip>
-      ),
-      renderEditCell: (params) => (
-        <PlantsCountEditCell 
-          {...params} 
-          cultures={cultures}
-          onLastEditedFieldChange={(field) => {
-            lastEditedFieldRef.current = field;
-          }}
-        />
-      ),
-      valueFormatter: (value) => {
-        if (typeof value === 'number' && !isNaN(value)) {
-          return `≈ ${Math.round(value)}`;
-        }
-        return '—';
-      },
-      // Disable editing if culture has no valid spacing
-      editable: true,
-      isCellEditable: (params) => {
-        const row = params.row as PlantingPlanRow;
-        const culture = getCultureForRow(row);
-        const plantsPerM2 = getPlantsPerM2(culture);
-        return plantsPerM2 !== null;
-      },
-      headerClassName: 'coupled-field-header',
     },
     {
       field: 'notes',
@@ -318,8 +219,7 @@ function PlantingPlans(): React.ReactElement {
           bed: 0,
           planting_date: null as any, // Allow null initially, will be set when user selects
           quantity: undefined,
-          area_m2: undefined,
-          plants_count: undefined,
+          area_usage_sqm: undefined,
           notes: '',
           isNew: true,
         })}
@@ -332,11 +232,6 @@ function PlantingPlans(): React.ReactElement {
             : undefined
         }
         mapToRow={(plan) => {
-          // Get culture to compute plants_count
-          const culture = cultures.find(c => c.id === plan.culture);
-          const plantsPerM2 = getPlantsPerM2(culture);
-          const plantsCount = computePlantsCount(plan.area_usage_sqm ?? null, plantsPerM2);
-          
           return {
             ...plan,
             id: plan.id!,
@@ -348,10 +243,8 @@ function PlantingPlans(): React.ReactElement {
             harvest_date: plan.harvest_date,
             harvest_end_date: plan.harvest_end_date,
             quantity: plan.quantity,
-            // Backend field name is area_usage_sqm, map to area_m2 for grid
-            area_m2: plan.area_usage_sqm,
-            // Compute plants_count from area and culture spacing
-            plants_count: plantsCount,
+            // Row always stores numeric area_usage_sqm
+            area_usage_sqm: plan.area_usage_sqm,
             notes: plan.notes || '',
           };
         }}
@@ -402,21 +295,12 @@ function PlantingPlans(): React.ReactElement {
             notes: row.notes || '',
           };
           
-          // Determine which field to send based on last edit
-          const source = lastEditedFieldRef.current || 'area_m2';
-          
-          if (source === 'area_m2' && typeof row.area_m2 === 'number') {
-            // User edited area directly - send as M2
-            apiData.area_input_value = row.area_m2;
+          // Area is always stored as numeric m² in the grid row
+          // Send as area_input_value with unit "M2" since we already have m²
+          if (typeof row.area_usage_sqm === 'number') {
+            apiData.area_input_value = row.area_usage_sqm;
             apiData.area_input_unit = 'M2';
-          } else if (source === 'plants_count' && typeof row.plants_count === 'number') {
-            // User edited plants count - send as PLANTS
-            apiData.area_input_value = row.plants_count;
-            apiData.area_input_unit = 'PLANTS';
           }
-          
-          // Clear last edited field after use
-          lastEditedFieldRef.current = null;
           
           return apiData;
         }}
