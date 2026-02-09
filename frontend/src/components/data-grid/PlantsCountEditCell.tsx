@@ -1,13 +1,14 @@
 /**
  * Edit cell for plants_count field in PlantingPlans grid.
  * 
- * Manages local state for immediate UI feedback.
- * MUI DataGrid automatically extracts the value when edit mode ends.
+ * Manages local state for immediate UI feedback and communicates
+ * value changes to DataGrid via setEditCellValue in onChange handler.
  * The partner area_m2 field is computed after save via mapToRow.
  */
 
 import { useState } from 'react';
 import { TextField } from '@mui/material';
+import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
 import type { Culture } from '../../api/types';
 
@@ -17,12 +18,12 @@ export interface PlantsCountEditCellProps extends GridRenderEditCellParams {
 }
 
 export function PlantsCountEditCell(props: PlantsCountEditCellProps): React.ReactElement {
-  const { id, value, onLastEditedFieldChange } = props;
+  const { id, value, field, onLastEditedFieldChange } = props;
+  const apiRef = useGridApiContext();
   
   console.log('[DEBUG] PlantsCountEditCell mounted for row', id, 'with value:', value);
   
   // Local state for immediate UI feedback
-  // DataGrid extracts this value when edit mode ends
   const [inputValue, setInputValue] = useState<string>(
     typeof value === 'number' && !isNaN(value) ? value.toString() : ''
   );
@@ -31,6 +32,16 @@ export function PlantsCountEditCell(props: PlantsCountEditCellProps): React.Reac
     const val = e.target.value;
     console.log('[DEBUG] PlantsCountEditCell input changed to:', val);
     setInputValue(val);
+    
+    // Immediately update DataGrid with the new value
+    const numValue = val === '' ? null : parseInt(val);
+    console.log('[DEBUG] PlantsCountEditCell calling setEditCellValue with:', numValue);
+    apiRef.current.setEditCellValue({
+      id,
+      field,
+      value: numValue
+    });
+    
     onLastEditedFieldChange('plants_count');
   };
   
