@@ -10,14 +10,12 @@
  * @returns JSX element rendering the culture selector and detail view
  */
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
 import {
   Box,
-  TextField,
-  Autocomplete,
   Card,
   CardContent,
   Typography,
@@ -26,6 +24,8 @@ import {
   Link,
 } from '@mui/material';
 import type { Culture } from '../api/api';
+import { SearchableSelect } from './inputs/SearchableSelect';
+import type { SearchableSelectOption } from './inputs/SearchableSelect';
 
 interface CultureDetailProps {
   cultures: Culture[];
@@ -71,48 +71,39 @@ export function CultureDetail({
   onCultureSelect,
 }: CultureDetailProps): React.ReactElement {
   const { t } = useTranslation('cultures');
-  const [searchText, setSearchText] = useState('');
 
-  // Find the selected culture
-  const selectedCulture = useMemo(
-    () => cultures.find((c) => c.id === selectedCultureId) || null,
-    [cultures, selectedCultureId]
+  const cultureOptions: SearchableSelectOption<Culture>[] = useMemo(
+    () => cultures
+      .filter((culture) => culture.id !== undefined)
+      .map((culture) => ({
+        value: culture.id!,
+        label: culture.variety
+          ? `${culture.name} (${culture.variety})`
+          : culture.name,
+        data: culture,
+      })),
+    [cultures]
   );
 
-  // Filter cultures based on search text
-  const filteredCultures = useMemo(() => {
-    if (!searchText) return cultures;
-    const lowerSearch = searchText.toLowerCase();
-    return cultures.filter(
-      (c) =>
-        c.name.toLowerCase().includes(lowerSearch) ||
-        (c.variety && c.variety.toLowerCase().includes(lowerSearch))
-    );
-  }, [cultures, searchText]);
+  const selectedOption = useMemo(
+    () => cultureOptions.find((option) => option.value === selectedCultureId) ?? null,
+    [cultureOptions, selectedCultureId]
+  );
+
+  const selectedCulture = selectedOption?.data ?? null;
 
   return (
     <Box sx={{ width: '100%' }}>
       {/* Searchable Dropdown */}
       <Box sx={{ mb: 3 }}>
-        <Autocomplete
-          options={filteredCultures}
-          getOptionLabel={(option) =>
-            option.variety ? `${option.name} (${option.variety})` : option.name
-          }
-          value={selectedCulture}
-          onChange={(_, newValue) => onCultureSelect(newValue)}
-          inputValue={searchText}
-          onInputChange={(_, newInputValue) => setSearchText(newInputValue)}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label={t('searchPlaceholder')}
-              placeholder={t('searchInputPlaceholder')}
-              fullWidth
-            />
-          )}
+        <SearchableSelect
+          options={cultureOptions}
+          value={selectedOption}
+          onChange={(option) => onCultureSelect(option?.data ?? null)}
+          label={t('searchPlaceholder')}
+          placeholder={t('searchInputPlaceholder')}
           noOptionsText={t('noOptions')}
-          isOptionEqualToValue={(option, value) => option.id === value.id}
+          textFieldSx={{ width: '100%' }}
         />
       </Box>
 

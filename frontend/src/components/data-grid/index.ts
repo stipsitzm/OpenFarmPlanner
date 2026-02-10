@@ -24,6 +24,8 @@ export { PlantsCountEditCell } from './PlantsCountEditCell';
 export type { PlantsCountEditCellProps } from './PlantsCountEditCell';
 export { SearchableSelectEditCell } from './SearchableSelectEditCell';
 export type { SearchableSelectOption, SearchableSelectEditCellProps } from './SearchableSelectEditCell';
+export { createSearchableSelectColumn } from './columns';
+export type { SearchableSelectColumnConfig } from './columns';
 
 export { handleEditableCellClick, handleRowEditStop } from './handlers';
 

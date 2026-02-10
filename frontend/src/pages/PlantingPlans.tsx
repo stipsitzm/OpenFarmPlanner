@@ -15,7 +15,7 @@ import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
 import {
   EditableDataGrid,
-  SearchableSelectEditCell,
+  createSearchableSelectColumn,
   type EditableRow,
   type DataGridAPI,
   type SearchableSelectOption,
@@ -32,6 +32,7 @@ interface PlantingPlanRow extends PlantingPlan, EditableRow {
   area_m2?: number;
   plants_count?: number | null; // UI-only derived field
 }
+
 
 function PlantingPlans(): React.ReactElement {
   const { t } = useTranslation(['plantingPlans', 'common']);
@@ -175,65 +176,20 @@ function PlantingPlans(): React.ReactElement {
    * Recalculates when cultures or beds change to update dropdown options
    */
   const columns: GridColDef[] = useMemo(() => [
-    {
+    createSearchableSelectColumn({
       field: 'culture',
       headerName: t('plantingPlans:columns.culture'),
       flex: 1,
       minWidth: 180,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: cultureOptions,
-      valueFormatter: (value) => {
-        const culture = cultures.find(c => c.id === value);
-        return culture ? (culture.variety ? `${culture.name} (${culture.variety})` : culture.name) : '';
-      },
-      renderEditCell: (params) => (
-        <SearchableSelectEditCell
-          {...params}
-          options={cultureOptions}
-        />
-      ),
-      valueSetter: (value, row) => {
-        // Ensure we always store the numeric ID, not the label
-        const numericValue = typeof value === 'number' ? value : Number(value);
-        return { ...row, culture: numericValue };
-      },
-      preProcessEditCellProps: (params) => {
-        const hasError = !params.props.value || params.props.value === 0;
-        return { ...params.props, error: hasError };
-      },
-    },
-    {
+      options: cultureOptions,
+    }),
+    createSearchableSelectColumn({
       field: 'bed',
       headerName: t('plantingPlans:columns.bed'),
       flex: 1.2,
       minWidth: 200,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: bedOptions,
-      valueFormatter: (value) => {
-        const bed = beds.find(b => b.id === value);
-        if (!bed) return '';
-        const baseName = bed.field_name ? `${bed.field_name} - ${bed.name}` : bed.name;
-        const areaInfo = bed.area_sqm ? ` (${bed.area_sqm} m²)` : '';
-        return `${baseName}${areaInfo}`;
-      },
-      renderEditCell: (params) => (
-        <SearchableSelectEditCell
-          {...params}
-          options={bedOptions}
-        />
-      ),
-      valueSetter: (value, row) => {
-        // Ensure we always store the numeric ID, not the label string
-        const numericValue = typeof value === 'number' ? value : Number(value);
-        return { ...row, bed: numericValue };
-      },
-      preProcessEditCellProps: (params) => {
-        const hasError = !params.props.value || params.props.value === 0;
-        return { ...params.props, error: hasError };
-      },
-    },
+      options: bedOptions,
+    }),
     {
       field: 'planting_date',
       headerName: t('plantingPlans:columns.plantingDate'),

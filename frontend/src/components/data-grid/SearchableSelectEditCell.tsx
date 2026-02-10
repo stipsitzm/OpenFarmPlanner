@@ -10,14 +10,10 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Autocomplete, TextField } from '@mui/material';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
-
-export interface SearchableSelectOption {
-  value: number;
-  label: string;
-}
+import { SearchableSelect } from '../inputs/SearchableSelect';
+import type { SearchableSelectOption } from '../inputs/SearchableSelect';
 
 export interface SearchableSelectEditCellProps extends GridRenderEditCellParams {
   options: SearchableSelectOption[];
@@ -60,25 +56,17 @@ export function SearchableSelectEditCell({
   };
 
   return (
-    <Autocomplete
-      fullWidth
-      autoHighlight
-      openOnFocus
-      size="small"
+    <SearchableSelect
       options={options}
       value={currentOption}
       inputValue={inputValue}
-      onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
+      onInputChange={setInputValue}
       onChange={handleChange}
-      isOptionEqualToValue={(option, selected) => option.value === selected.value}
-      getOptionLabel={(option) => option.label}
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          autoFocus
-          sx={{ '& .MuiInputBase-root': { height: '100%' } }}
-        />
-      )}
+      size="small"
+      autoFocus
+      textFieldSx={{ '& .MuiInputBase-root': { height: '100%' } }}
     />
   );
 }
+
+export type { SearchableSelectOption } from '../inputs/SearchableSelect';
