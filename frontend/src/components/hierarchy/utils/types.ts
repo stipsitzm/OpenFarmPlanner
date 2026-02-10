@@ -7,6 +7,7 @@
  */
 export interface HierarchyRow {
   id: string | number;
+  [key: string]: unknown;
   type: 'location' | 'field' | 'bed';
   level: number;
   expanded?: boolean;
@@ -15,7 +16,7 @@ export interface HierarchyRow {
   name?: string;
   field?: number;
   field_name?: string;
-  area_sqm?: number;
+  area_sqm?: number | string;
   notes?: string;
   // Location/Field metadata
   locationId?: number;

@@ -49,7 +49,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
               label={t('form.growthDurationDays') + ' *'}
               placeholder={t('form.growthDurationDaysPlaceholder')}
               value={formData.growth_duration_days ?? ''}
-              onChange={e => onChange('growth_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
+              onChange={e => onChange('growth_duration_days', e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
               error={Boolean(errors.growth_duration_days)}
               helperText={errors.growth_duration_days}
               inputProps={{ min: 1, step: 1 }}
@@ -62,7 +62,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
             label={t('form.harvestDurationDays') + ' *'}
             placeholder={t('form.harvestDurationDaysPlaceholder')}
             value={formData.harvest_duration_days ?? ''}
-            onChange={e => onChange('harvest_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
+            onChange={e => onChange('harvest_duration_days', e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
             error={Boolean(errors.harvest_duration_days)}
             helperText={errors.harvest_duration_days}
             inputProps={{ min: 0, step: 1 }}
