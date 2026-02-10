@@ -13,7 +13,13 @@ import type { GridColDef, GridCellParams } from '@mui/x-data-grid';
 import { Tooltip } from '@mui/material';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
-import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/data-grid';
+import {
+  EditableDataGrid,
+  SearchableSelectEditCell,
+  type EditableRow,
+  type DataGridAPI,
+  type SearchableSelectOption,
+} from '../components/data-grid';
 import { AreaM2EditCell } from '../components/data-grid/AreaM2EditCell';
 import { PlantsCountEditCell } from '../components/data-grid/PlantsCountEditCell';
 
@@ -36,6 +42,27 @@ function PlantingPlans(): React.ReactElement {
   
   // Track which field was last edited (for determining API payload)
   const lastEditedFieldRef = useRef<'area_m2' | 'plants_count' | null>(null);
+
+  const cultureOptions: SearchableSelectOption[] = useMemo(
+    () => cultures
+      .filter(c => c.id !== undefined)
+      .map(c => ({
+        value: c.id!,
+        label: c.variety ? `${c.name} (${c.variety})` : c.name,
+      })),
+    [cultures]
+  );
+
+  const bedOptions: SearchableSelectOption[] = useMemo(
+    () => beds
+      .filter(b => b.id !== undefined)
+      .map(b => {
+        const baseName = b.field_name ? `${b.field_name} - ${b.name}` : b.name;
+        const areaInfo = b.area_sqm ? ` (${b.area_sqm} m²)` : '';
+        return { value: b.id!, label: `${baseName}${areaInfo}` };
+      }),
+    [beds]
+  );
 
   /**
    * Helper: Get culture for a row
@@ -155,11 +182,17 @@ function PlantingPlans(): React.ReactElement {
       minWidth: 180,
       editable: true,
       type: 'singleSelect',
-      valueOptions: cultures.filter(c => c.id !== undefined).map(c => ({ value: c.id!, label: c.variety ? `${c.name} (${c.variety})` : c.name })),
+      valueOptions: cultureOptions,
       valueFormatter: (value) => {
         const culture = cultures.find(c => c.id === value);
         return culture ? (culture.variety ? `${culture.name} (${culture.variety})` : culture.name) : '';
       },
+      renderEditCell: (params) => (
+        <SearchableSelectEditCell
+          {...params}
+          options={cultureOptions}
+        />
+      ),
       valueSetter: (value, row) => {
         // Ensure we always store the numeric ID, not the label
         const numericValue = typeof value === 'number' ? value : Number(value);
@@ -177,11 +210,7 @@ function PlantingPlans(): React.ReactElement {
       minWidth: 200,
       editable: true,
       type: 'singleSelect',
-      valueOptions: beds.filter(b => b.id !== undefined).map(b => {
-        const baseName = b.field_name ? `${b.field_name} - ${b.name}` : b.name;
-        const areaInfo = b.area_sqm ? ` (${b.area_sqm} m²)` : '';
-        return { value: b.id!, label: `${baseName}${areaInfo}` };
-      }),
+      valueOptions: bedOptions,
       valueFormatter: (value) => {
         const bed = beds.find(b => b.id === value);
         if (!bed) return '';
@@ -189,6 +218,12 @@ function PlantingPlans(): React.ReactElement {
         const areaInfo = bed.area_sqm ? ` (${bed.area_sqm} m²)` : '';
         return `${baseName}${areaInfo}`;
       },
+      renderEditCell: (params) => (
+        <SearchableSelectEditCell
+          {...params}
+          options={bedOptions}
+        />
+      ),
       valueSetter: (value, row) => {
         // Ensure we always store the numeric ID, not the label string
         const numericValue = typeof value === 'number' ? value : Number(value);
@@ -302,7 +337,7 @@ function PlantingPlans(): React.ReactElement {
       width: 250,
       // Notes field will be overridden by NotesCell in EditableDataGrid
     },
-  ], [cultures, beds, getCultureForRow, getPlantsPerM2, t]);
+  ], [bedOptions, cultureOptions, cultures, beds, getCultureForRow, getPlantsPerM2, t]);
 
   return (
     <div className="page-container">

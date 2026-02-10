@@ -22,6 +22,8 @@ export { AreaM2EditCell } from './AreaM2EditCell';
 export type { AreaM2EditCellProps } from './AreaM2EditCell';
 export { PlantsCountEditCell } from './PlantsCountEditCell';
 export type { PlantsCountEditCellProps } from './PlantsCountEditCell';
+export { SearchableSelectEditCell } from './SearchableSelectEditCell';
+export type { SearchableSelectOption, SearchableSelectEditCellProps } from './SearchableSelectEditCell';
 
 export { handleEditableCellClick, handleRowEditStop } from './handlers';
 
