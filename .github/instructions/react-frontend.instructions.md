@@ -49,3 +49,4 @@ export function CropList({ items, onSelect }: CropListProps) {
 - Component names in PascalCase; hooks as `useSomething`.
 - Prefer strongly typed props (interfaces/types) over `any`.
 - Keep comments minimal and focus on explaining "why", not trivial "how".
+- Avoid deprecated APIs; use current MUI patterns (e.g., prefer `slotProps.htmlInput` over `inputProps`).

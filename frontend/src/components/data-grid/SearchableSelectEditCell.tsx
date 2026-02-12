@@ -63,7 +63,6 @@ export function SearchableSelectEditCell({
       onInputChange={setInputValue}
       onChange={handleChange}
       size="small"
-      autoFocus
       textFieldSx={{ '& .MuiInputBase-root': { height: '100%' } }}
     />
   );

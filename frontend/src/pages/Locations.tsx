@@ -3,7 +3,6 @@
  * 
  * Manages farm locations with Excel-like editable data grid.
  * Uses MUI Data Grid for inline editing with validation.
- * UI text is in German, code comments remain in English.
  * 
  * @returns The Locations page component
  */
@@ -13,21 +12,15 @@ import { useTranslation } from '../i18n';
 import { locationAPI, type Location } from '../api/api';
 import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/data-grid';
 
-/**
- * Row data type for Data Grid with all optional fields for new rows
- */
 interface LocationRow extends Location, EditableRow {
   id: number;
   isNew?: boolean;
 }
 
-
 function Locations(): React.ReactElement {
   const { t } = useTranslation(['locations', 'common']);
   
-  /**
-   * Define columns for the Data Grid with inline editing
-   */
+  //Define columns for the Data Grid with inline editing
   const columns: GridColDef[] = [
     {
       field: 'name',

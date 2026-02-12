@@ -58,10 +58,11 @@ export function PlantsCountEditCell(props: PlantsCountEditCellProps): React.Reac
       type="number"
       value={inputValue}
       onChange={handleChange}
-      inputProps={{ min: 0, step: 1 }}
+      slotProps={{
+        htmlInput: { min: 0, step: 1 },
+      }}
       size="small"
       fullWidth
-      autoFocus
       sx={{ '& .MuiInputBase-root': { height: '100%' } }}
     />
   );

@@ -58,10 +58,11 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
       type="number"
       value={inputValue}
       onChange={handleChange}
-      inputProps={{ min: 0, step: 0.01 }}
+      slotProps={{
+        htmlInput: { min: 0, step: 0.01 },
+      }}
       size="small"
       fullWidth
-      autoFocus
       sx={{ '& .MuiInputBase-root': { height: '100%' } }}
     />
   );

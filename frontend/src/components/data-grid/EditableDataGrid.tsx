@@ -33,18 +33,12 @@ import { NotesDrawer } from './NotesDrawer';
 import { getPlainExcerpt } from './markdown';
 import { useNotesEditor } from './useNotesEditor';
 
-/**
- * Base interface for editable data grid rows
- */
 export interface EditableRow {
   id: number;
   isNew?: boolean;
   [key: string]: unknown;
 }
 
-/**
- * API interface for CRUD operations
- */
 export interface DataGridAPI<T> {
   list: () => Promise<{ data: { results: Partial<T>[] } }>;
   create: (data: Partial<T>) => Promise<{ data: T }>;
@@ -52,57 +46,31 @@ export interface DataGridAPI<T> {
   delete: (id: number) => Promise<void>;
 }
 
-/**
- * Configuration for notes fields
- */
 export interface NotesFieldConfig {
-  /** Field name in the row data */
   field: string;
-  /** Optional translation key for field label */
-  labelKey?: string;
-  /** Optional translation key for drawer title */
-  titleKey?: string;
+  labelKey?: string; 
+  titleKey?: string; 
 }
 
-/**
- * Props for the EditableDataGrid component
- */
 export interface EditableDataGridProps<T extends EditableRow> {
-  /** Column definitions for the grid (without actions column) */
-  columns: GridColDef[];
-  /** API handler for CRUD operations */
-  api: DataGridAPI<T>;
-  /** Function to create a new empty row */
-  createNewRow: () => T;
-  /** Function to map API data to grid row */
-  mapToRow: (item: T) => T;
-  /** Function to map grid row to API data for create/update */
-  mapToApiData: (row: T) => Partial<T>;
-  /** Function to validate row before save */
-  validateRow: (row: T) => string | null;
-  /** Error message when loading fails */
-  loadErrorMessage: string;
-  /** Error message when save fails */
-  saveErrorMessage: string;
-  /** Error message when delete fails */
-  deleteErrorMessage: string;
-  /** Delete confirmation message */
-  deleteConfirmMessage: string;
-  /** Aria label for add button */
-  addButtonLabel: string;
-  /** Whether to show delete action column (default: true) */
-  showDeleteAction?: boolean;
-  /** Optional initial row to add on mount (e.g., pre-filled from another page) */
-  initialRow?: Partial<T>;
-  /** Optional configuration for notes fields */
+  columns: GridColDef[]; // Column definitions for the grid (without actions column)
+  api: DataGridAPI<T>; // API handler for CRUD operations
+  createNewRow: () => T; // Function to create a new empty row
+  mapToRow: (item: T) => T; // Function to map API data to grid row
+  mapToApiData: (row: T) => Partial<T>; // Function to map grid row to API data for create/update
+  validateRow: (row: T) => string | null; // Function to validate row before save
+  loadErrorMessage: string; // Error message when loading fails
+  saveErrorMessage: string; // Error message when save fails
+  deleteErrorMessage: string; // Error message when delete fails
+  deleteConfirmMessage: string; // Delete confirmation message
+  addButtonLabel: string; // Aria label for add button
+  showDeleteAction?: boolean; // Whether to show delete action column (default: true)
+  initialRow?: Partial<T>; // Optional initial row to add on mount (e.g., pre-filled from another page)
   notes?: {
     fields: NotesFieldConfig[];
   };
 }
 
-/**
- * Reusable editable data grid component
- */
 export function EditableDataGrid<T extends EditableRow>({
   columns,
   api,
@@ -129,13 +97,10 @@ export function EditableDataGrid<T extends EditableRow>({
   
   const { t } = useTranslation('common');
 
-  // Use notes editor hook
   const notesEditor = useNotesEditor({
     rows,
     onSave: async ({ row, field, value }) => {
-      // Update the row with the new notes value
       const updatedRow = { ...row, [field]: value } as T;
-      
       const numericId = Number(row.id);
       if (numericId < 0 || row.isNew) {
         // For new rows, just update local state
