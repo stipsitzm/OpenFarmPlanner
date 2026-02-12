@@ -1,209 +1,106 @@
-/**
- * Type definitions for the OpenFarmPlanner API.
- * 
- * Contains all interfaces and types used to communicate with the Django REST API.
- */
-
-/**
- * Seed supplier/manufacturer
- */
 export interface Supplier {
-  /** Unique identifier (auto-generated) */
   id?: number;
-  /** Supplier name */
   name: string;
-  /** Creation timestamp */
   created_at?: string;
-  /** Last update timestamp */
   updated_at?: string;
-  /** Flag indicating if supplier was newly created (for get-or-create) */
   created?: boolean;
 }
 
-/**
- * Culture (crop) type that can be grown
- */
 export interface Culture {
-    /** Saatgutbedarf pro m² oder pro Pflanze (optional) */
-    seeding_requirement?: number;
-    /** Art des Saatgutbedarfs: pro m² oder pro Pflanze (optional) */
-    seeding_requirement_type?: 'per_sqm' | 'per_plant' | '';
-  /** Saatgutmenge (Aussaatstärke, optional) */
+  seeding_requirement?: number;
+  seeding_requirement_type?: 'per_sqm' | 'per_plant' | '';
   seed_rate_value?: number | null;
-  /** Einheit der Saatgutmenge (optional) */
   seed_rate_unit?: 'g_per_m2' | 'pcs_per_m2' | 'pcs_per_plant' | null;
-  /** Unique identifier (auto-generated) */
   id?: number;
-  /** Name of the crop */
   name: string;
-  /** Specific variety of the crop (optional) */
   variety?: string;
-  /** Seed supplier/manufacturer (optional, legacy field) */
   seed_supplier?: string;
-  /** Supplier object (preferred over seed_supplier text field) */
   supplier?: Supplier | null;
-  /** Average days from planting to harvest */
-
-  /** Additional notes */
   notes?: string;
   
-  // Manual planning fields
-  /** Crop family for rotation planning (optional) */
   crop_family?: string;
-  /** Nutrient demand level (optional) */
   nutrient_demand?: 'low' | 'medium' | 'high' | '';
-  /** Type of cultivation (optional) */
   cultivation_type?: 'pre_cultivation' | 'direct_sowing' | '';
   
-  // Timing fields (in days)
-  /** Growth duration in days (from planting to first harvest, required) */
   growth_duration_days: number;
-  /** Harvest duration in days (from first to last harvest, required) */
   harvest_duration_days: number;
-  /** Propagation duration in days (optional) */
   propagation_duration_days?: number;
   
-  // Harvest information
-  /** Harvest method (optional) */
   harvest_method?: 'per_plant' | 'per_sqm' | '';
-  /** Expected yield amount (optional) */
   expected_yield?: number;
-  /** Allow deviating delivery weeks (optional) */
   allow_deviation_delivery_weeks?: boolean;
   
-  // Planting distances (API exposes in cm, stored internally in meters)
-  /** Distance within row in cm (optional) */
   distance_within_row_cm?: number;
-  /** Row spacing in cm (optional) */
   row_spacing_cm?: number;
-  /** Sowing depth in cm (optional) */
   sowing_depth_cm?: number;
 
-  /** Prozentuale Sicherheit für die Berechnung der Aussaat- und Pflanzenmenge (optional, 0-100) */
   sowing_calculation_safety_percent?: number;
   
-  // Display settings
-  /** Display color for cultivation calendar (hex format, optional) */
   display_color?: string;
   
-  /** Computed plants per square meter based on spacing (read-only) */
+  // Computed, read-only.
   plants_per_m2?: number | null;
   
-  /** Creation timestamp */
   created_at?: string;
-  /** Last update timestamp */
   updated_at?: string;
 }
 
-/**
- * Physical location where farming occurs
- */
 export interface Location {
-  /** Unique identifier (auto-generated) */
   id?: number;
-  /** Name of the location */
   name: string;
-  /** Physical address (optional) */
   address?: string;
-  /** Additional notes */
   notes?: string;
-  /** Creation timestamp */
   created_at?: string;
-  /** Last update timestamp */
   updated_at?: string;
 }
 
-/**
- * Field within a location
- */
 export interface Field {
-  /** Unique identifier (auto-generated) */
   id?: number;
-  /** Name of the field */
   name: string;
-  /** Foreign key to Location */
   location: number;
-  /** Read-only location name */
   location_name?: string;
-  /** Area in square meters (optional, stored in SI units) */
   area_sqm?: number;
-  /** Additional notes */
   notes?: string;
-  /** Creation timestamp */
   created_at?: string;
-  /** Last update timestamp */
   updated_at?: string;
 }
 
-/**
- * Bed within a field
- */
 export interface Bed {
-  /** Unique identifier (auto-generated) */
   id?: number;
-  /** Name of the bed */
   name: string;
-  /** Foreign key to Field */
   field: number;
-  /** Read-only field name */
   field_name?: string;
-  /** Area in square meters (optional, stored in SI units) */
   area_sqm?: number;
-  /** Additional notes */
   notes?: string;
-  /** Creation timestamp */
   created_at?: string;
-  /** Last update timestamp */
   updated_at?: string;
 }
 
-/**
- * Planting plan linking a culture to a bed with dates
- */
 export interface PlantingPlan {
-  /** Unique identifier (auto-generated) */
   id?: number;
-  /** Foreign key to Culture */
   culture: number;
-  /** Read-only culture name */
   culture_name?: string;
-  /** Foreign key to Bed */
   bed: number;
-  /** Read-only bed name */
   bed_name?: string;
-  /** Date when planting is scheduled */
   planting_date: string;
-  /** Auto-calculated harvest start date (read-only, Erntebeginn) */
+  // Read-only, computed.
   harvest_date?: string;
-  /** Auto-calculated harvest end date (read-only, Ernteende) */
+  // Read-only, computed.
   harvest_end_date?: string;
-  /** Number of plants or seeds (optional) */
   quantity?: number;
-  /** Area in square meters used by this planting plan (optional, stored in SI units) */
   area_usage_sqm?: number;
-  /** Area input value (write-only, for create/update) */
+  // Write-only input used on create/update.
   area_input_value?: number;
-  /** Area input unit (write-only, for create/update) */
+  // Write-only input used on create/update.
   area_input_unit?: 'M2' | 'PLANTS';
-  /** Additional notes */
   notes?: string;
-  /** Creation timestamp */
   created_at?: string;
-  /** Last update timestamp */
   updated_at?: string;
 }
 
-/**
- * Paginated API response wrapper
- * @template T The type of items in the results array
- */
 export interface PaginatedResponse<T> {
-  /** Total count of items */
   count: number;
-  /** URL to next page (if any) */
   next: string | null;
-  /** URL to previous page (if any) */
   previous: string | null;
-  /** Array of items for current page */
   results: T[];
 }
