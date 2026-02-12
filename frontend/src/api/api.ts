@@ -16,24 +16,12 @@ import type {
   Supplier,
 } from './types';
 
-// API functions
-
-/**
- * API endpoints for Culture operations
- */
 export const cultureAPI = {
-  /** Get paginated list of all cultures */
   list: () => http.get<PaginatedResponse<Culture>>('/cultures/'),
-  /** Get a specific culture by ID */
   get: (id: number) => http.get<Culture>(`/cultures/${id}/`),
-  /** Create a new culture */
   create: (data: Culture) => http.post<Culture>('/cultures/', data),
-  /** Update an existing culture */
   update: (id: number, data: Culture) => http.put<Culture>(`/cultures/${id}/`, data),
-  /** Delete a culture */
   delete: (id: number) => http.delete(`/cultures/${id}/`),
-  /** Import multiple cultures from JSON data (legacy endpoint) */
-  import: (data: Record<string, unknown>[]) => http.post('/cultures/import/', data),
   /** Preview import - analyze cultures without writing to database */
   importPreview: (data: Record<string, unknown>[]) => http.post<{
     results: Array<{
