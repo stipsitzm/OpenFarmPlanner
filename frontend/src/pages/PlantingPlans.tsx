@@ -15,7 +15,7 @@ import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
 import {
   EditableDataGrid,
-  createSearchableSelectColumn,
+  createSingleSelectColumn,
   type EditableRow,
   type DataGridAPI,
   type SearchableSelectOption,
@@ -176,14 +176,14 @@ function PlantingPlans(): React.ReactElement {
    * Recalculates when cultures or beds change to update dropdown options
    */
   const columns: GridColDef[] = useMemo(() => [
-    createSearchableSelectColumn({
+    createSingleSelectColumn<PlantingPlanRow>({
       field: 'culture',
       headerName: t('plantingPlans:columns.culture'),
       flex: 1,
       minWidth: 180,
       options: cultureOptions,
     }),
-    createSearchableSelectColumn({
+    createSingleSelectColumn<PlantingPlanRow>({
       field: 'bed',
       headerName: t('plantingPlans:columns.bed'),
       flex: 1.2,
