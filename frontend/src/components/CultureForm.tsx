@@ -15,6 +15,7 @@
 import { useState } from 'react';
 import { useTranslation } from '../i18n';
 import type { Culture } from '../api/types';
+import { extractApiErrorMessage } from '../api/errors';
 import {
   Dialog,
   DialogTitle,
@@ -138,7 +139,7 @@ export function CultureForm({
       setShowSaveSuccess(true);
       setIsDirty(false);
     } catch (error) {
-      setSaveError((error as Error)?.message || t('messages.updateError'));
+      setSaveError(extractApiErrorMessage(error, t, t('messages.updateError')));
     } finally {
       setIsSaving(false);
     }

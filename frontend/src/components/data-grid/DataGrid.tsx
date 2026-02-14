@@ -25,13 +25,13 @@ import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId } from '@mu
 import { Box, Alert, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
-import axios, { AxiosError } from 'axios';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { useTranslation } from '../../i18n';
 import { NotesCell } from './NotesCell';
 import { NotesDrawer } from './NotesDrawer';
 import { getPlainExcerpt } from './markdown';
 import { useNotesEditor } from './useNotesEditor';
+import { extractApiErrorMessage } from '../../api/errors';
 
 export interface EditableRow {
   id: number;
@@ -123,7 +123,7 @@ export function EditableDataGrid<T extends EditableRow>({
       }
     },
     onError: (errorMessage) => {
-      const extractedError = extractErrorMessage(errorMessage);
+      const extractedError = extractApiErrorMessage(errorMessage, t, saveErrorMessage);
       setError(extractedError);
     },
   });
@@ -225,81 +225,6 @@ export function EditableDataGrid<T extends EditableRow>({
     }));
   };
 
-
-
-  /**
-   * Extract user-friendly error message from Axios error response
-   */
-  const extractErrorMessage = (err: unknown): string => {
-    console.log('extractErrorMessage called with:', err);
-    
-    if (axios.isAxiosError(err)) {
-      const axiosError = err as AxiosError;
-      console.log('Is Axios error, status:', axiosError.response?.status);
-      console.log('Response data:', axiosError.response?.data);
-      
-      // Check if it's a 400 validation error
-      if (axiosError.response?.status === 400) {
-        const data = axiosError.response.data;
-        console.log('Data type:', typeof data);
-        
-        // If data is a string, return it directly
-        if (typeof data === 'string') {
-          console.log('Returning string data:', data);
-          return data;
-        }
-        
-        // If data is an object with error fields
-        if (data && typeof data === 'object') {
-          const errors: string[] = [];
-          
-          // Feldnamen dynamisch aus i18n ermitteln
-          Object.entries(data).forEach(([field, value]) => {
-            console.log(`Processing field ${field}:`, value);
-            // Versuche verschiedene i18n-Namen, fallback auf Feldname
-            let fieldName = t(`fields.${field}`);
-            if (fieldName === `fields.${field}`) {
-              fieldName = t(`columns.${field}`);
-            }
-            if (fieldName === `columns.${field}`) {
-              fieldName = t(field);
-            }
-            if (fieldName === field) {
-              // Sonderfall für non_field_errors
-              if (field === 'non_field_errors') {
-                fieldName = t('messages.error');
-              }
-            }
-            if (!fieldName || fieldName === field) {
-              fieldName = field;
-            }
-            if (Array.isArray(value)) {
-              value.forEach((msg: string) => {
-                const errorMsg = `${fieldName}: ${msg}`;
-                console.log('Adding error:', errorMsg);
-                errors.push(errorMsg);
-              });
-            } else if (typeof value === 'string') {
-              const errorMsg = `${fieldName}: ${value}`;
-              console.log('Adding error:', errorMsg);
-              errors.push(errorMsg);
-            }
-          });
-          
-          if (errors.length > 0) {
-            const result = errors.join('\n');
-            console.log('Returning joined errors:', result);
-            return result;
-          }
-        }
-      }
-    }
-    
-    // Fallback to generic error message
-    console.log('Fallback to generic error');
-    return saveErrorMessage;
-  };
-
   /**
    * Process row update - save to API
    */
@@ -354,7 +279,7 @@ export function EditableDataGrid<T extends EditableRow>({
       }
     } catch (err) {
       // Extract user-friendly error message
-      const errorMessage = extractErrorMessage(err);
+      const errorMessage = extractApiErrorMessage(err, t, saveErrorMessage);
       console.log('Extracted error message:', errorMessage);
       setError(errorMessage);
       console.error('Error saving data:', err);
