@@ -4,13 +4,13 @@
  * Central export point for all DataGrid-related utilities
  */
 
-export { EditableDataGrid } from './EditableDataGrid';
+export { EditableDataGrid } from './DataGrid';
 export type { 
   EditableRow, 
   DataGridAPI, 
   EditableDataGridProps,
   NotesFieldConfig,
-} from './EditableDataGrid';
+} from './DataGrid';
 export { NotesCell } from './NotesCell';
 export { NotesDrawer } from './NotesDrawer';
 export { MarkdownToolbar } from './MarkdownToolbar';
