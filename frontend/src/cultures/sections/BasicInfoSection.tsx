@@ -4,10 +4,10 @@
  */
 import { useState } from 'react';
 import { Box, TextField, FormControl, InputLabel, Select, MenuItem, Autocomplete } from '@mui/material';
-import { fieldSx } from '../styles.tsx';
-import type { Culture, Supplier } from '../../../api/types';
+import { fieldSx } from './styles.tsx';
+import type { Culture, Supplier } from '../../api/types';
 import type { TFunction } from 'i18next';
-import { supplierAPI } from '../../../api/api';
+import { supplierAPI } from '../../api/api';
 
 interface BasicInfoSectionProps {
   formData: Partial<Culture>;

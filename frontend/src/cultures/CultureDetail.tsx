@@ -24,8 +24,8 @@ import {
   Link,
 } from '@mui/material';
 import type { Culture } from '../api/api';
-import { SearchableSelect } from './inputs/SearchableSelect';
-import type { SearchableSelectOption } from './inputs/SearchableSelect';
+import { SearchableSelect } from '../components/inputs/SearchableSelect';
+import type { SearchableSelectOption } from '../components/inputs/SearchableSelect';
 
 interface CultureDetailProps {
   cultures: Culture[];

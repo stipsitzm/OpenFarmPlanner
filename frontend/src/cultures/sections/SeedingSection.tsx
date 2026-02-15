@@ -3,10 +3,10 @@
  * @remarks Presentational, no internal state
  */
 import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Tooltip } from '@mui/material';
-import type { Culture } from '../../../api/types';
+import type { Culture } from '../../api/types';
 import type { TFunction } from 'i18next';
-import { fieldSx, spacingFieldSx } from '../styles.tsx';
-import { fieldRowSx } from '../styles.tsx';
+import { fieldSx, spacingFieldSx } from './styles.tsx';
+import { fieldRowSx } from './styles.tsx';
 
 
 interface SeedingSectionProps {

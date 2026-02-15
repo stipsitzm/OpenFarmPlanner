@@ -3,8 +3,8 @@
  * @remarks Presentational, no internal state
  */
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField, Tooltip } from '@mui/material';
-import { smallFieldSx } from '../styles.tsx';
-import type { Culture } from '../../../api/types';
+import { smallFieldSx } from './styles.tsx';
+import type { Culture } from '../../api/types';
 import type { TFunction } from 'i18next';
 
 interface TimingSectionProps {

@@ -12,8 +12,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture } from '../api/api';
-import { CultureDetail } from '../components/CultureDetail';
-import { CultureForm } from '../components/CultureForm';
+import { CultureDetail } from '../cultures/CultureDetail';
+import { CultureForm } from '../cultures/CultureForm';
 import {
   Alert,
   Box,

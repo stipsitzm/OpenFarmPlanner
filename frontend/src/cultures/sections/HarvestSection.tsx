@@ -3,9 +3,9 @@
  * @remarks Presentational, no internal state
  */
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
-import type { Culture } from '../../../api/types';
+import type { Culture } from '../../api/types';
 import type { TFunction } from 'i18next';
-import { fieldSx } from '../styles.tsx';
+import { fieldSx } from './styles.tsx';
 
 interface HarvestSectionProps {
   formData: Partial<Culture>;

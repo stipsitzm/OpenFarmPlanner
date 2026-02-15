@@ -26,14 +26,14 @@ import {
   Button,
   Typography,
 } from '@mui/material';
-import { validateCulture } from '../cultures/validation';
-import { BasicInfoSection } from '../cultures/CultureForm/sections/BasicInfoSection';
-import { TimingSection } from '../cultures/CultureForm/sections/TimingSection';
-import { HarvestSection } from '../cultures/CultureForm/sections/HarvestSection';
-import { SpacingSection } from '../cultures/CultureForm/sections/SpacingSection';
-import { SeedingSection } from '../cultures/CultureForm/sections/SeedingSection';
-import { ColorSection } from '../cultures/CultureForm/sections/ColorSection';
-import { NotesSection } from '../cultures/CultureForm/sections/NotesSection';
+import { validateCulture } from './validation';
+import { BasicInfoSection } from './sections/BasicInfoSection';
+import { TimingSection } from './sections/TimingSection';
+import { HarvestSection } from './sections/HarvestSection';
+import { SpacingSection } from './sections/SpacingSection';
+import { SeedingSection } from './sections/SeedingSection';
+import { ColorSection } from './sections/ColorSection';
+import { NotesSection } from './sections/NotesSection';
 
 interface CultureFormProps {
   culture?: Culture;

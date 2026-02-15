@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { CultureDetail } from '../components/CultureDetail';
+import { CultureDetail } from '../cultures/CultureDetail';
 import type { Culture } from '../api/api';
 import translations from '@/test-utils/translations';
 
