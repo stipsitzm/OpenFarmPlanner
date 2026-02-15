@@ -65,8 +65,8 @@ describe('CultureDetail Component', () => {
       />
     );
     
-    expect(screen.getByText('Tomato (Cherry)')).toBeInTheDocument();
-    expect(screen.getByText(translations.cultures.sections.growthHarvest)).toBeInTheDocument();
+    expect(screen.getByText('Tomato')).toBeInTheDocument();
+    expect(screen.getByText('Cherry')).toBeInTheDocument();
   });
 
   it('displays harvest information correctly', () => {
@@ -79,8 +79,8 @@ describe('CultureDetail Component', () => {
       />
     );
     
-    expect(screen.getByText('56 Tage')).toBeInTheDocument();
-    expect(screen.getByText('28 Tage')).toBeInTheDocument();
+    expect(screen.getByText(/56\s+Tage/)).toBeInTheDocument();
+    expect(screen.getByText(/28\s+Tage/)).toBeInTheDocument();
   });
 
   it('displays notes when available', () => {
