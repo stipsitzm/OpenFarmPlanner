@@ -97,30 +97,33 @@ export function EditableDataGrid<T extends EditableRow>({
   
   const { t } = useTranslation('common');
 
+  const saveUpdatedRow = useCallback(async (updatedRow: T): Promise<T> => {
+    const numericId = Number(updatedRow.id);
+    if (numericId < 0 || updatedRow.isNew) {
+      setRows((prevRows) =>
+        prevRows.map((row) => (row.id === updatedRow.id ? updatedRow : row))
+      );
+      return updatedRow;
+    }
+
+    const response = await api.update(numericId, mapToApiData(updatedRow));
+    if (!response.data.id) {
+      throw new Error('API response missing ID');
+    }
+
+    const savedRow = mapToRow(response.data as T);
+    setRows((prevRows) =>
+      prevRows.map((row) => (row.id === updatedRow.id ? savedRow : row))
+    );
+    setError('');
+    return savedRow;
+  }, [api, mapToApiData, mapToRow]);
+
   const notesEditor = useNotesEditor({
     rows,
     onSave: async ({ row, field, value }) => {
       const updatedRow = { ...row, [field]: value } as T;
-      const numericId = Number(row.id);
-      if (numericId < 0 || row.isNew) {
-        // For new rows, just update local state
-        setRows((prevRows) =>
-          prevRows.map((r) => (r.id === row.id ? updatedRow : r))
-        );
-      } else {
-        // For existing rows, save to API
-        const response = await api.update(numericId, mapToApiData(updatedRow));
-        if (!response.data.id) {
-          throw new Error('API response missing ID');
-        }
-        
-        // Update the row in state with the response data
-        const savedRow = mapToRow(response.data as T);
-        setRows((prevRows) =>
-          prevRows.map((r) => (r.id === row.id ? savedRow : r))
-        );
-        setError('');
-      }
+      await saveUpdatedRow(updatedRow);
     },
     onError: (errorMessage) => {
       const extractedError = extractApiErrorMessage(errorMessage, t, saveErrorMessage);
@@ -138,6 +141,10 @@ export function EditableDataGrid<T extends EditableRow>({
   
   // Check if any row in edit mode has validation errors
   // This prevents navigation when user has incomplete data even if blur hasn't happened yet
+  const rowsById = useMemo(() => {
+    return new Map(rows.map((row) => [String(row.id), row]));
+  }, [rows]);
+
   const hasInvalidRowInEditMode = useMemo(() => {
     if (!hasUnsavedChanges) return false;
     
@@ -148,12 +155,12 @@ export function EditableDataGrid<T extends EditableRow>({
     
     // Check if any of those rows have validation errors
     return editingRowIds.some(id => {
-      const row = rows.find(r => String(r.id) === String(id));
+      const row = rowsById.get(String(id));
       if (!row) return false;
       const validationError = validateRow(row);
       return validationError !== null;
     });
-  }, [hasUnsavedChanges, rowModesModel, rows, validateRow]);
+  }, [hasUnsavedChanges, rowModesModel, rowsById, validateRow]);
 
   // Block navigation if there are unsaved changes with invalid data OR validation errors showing
   // This prevents losing incomplete data when required fields are missing
@@ -211,7 +218,7 @@ export function EditableDataGrid<T extends EditableRow>({
         }));
       }, 0);
     }
-  }, [initialRow, dataFetched, loading, createNewRow, columns]);
+  }, [initialRow, dataFetched, loading, createNewRow]);
 
   /**
    * Handle adding a new row to the grid
@@ -372,7 +379,7 @@ export function EditableDataGrid<T extends EditableRow>({
       }
       return col;
     });
-  }, [columns, notes, notesEditor]);
+  }, [columns, notes, notesEditor.handleOpen]);
 
   /**
    * Add delete action column if enabled
@@ -403,9 +410,6 @@ export function EditableDataGrid<T extends EditableRow>({
       ]
     : processedColumns;
 
-  /**
-   * Get the title for the notes drawer
-   */
   const getNotesDrawerTitle = (): string => {
     if (!notesEditor.field || !notes) return 'Notizen';
     

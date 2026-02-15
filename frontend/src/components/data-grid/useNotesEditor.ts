@@ -5,7 +5,7 @@
  * in any component that needs to edit markdown notes in a drawer.
  */
 
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { GridRowId } from '@mui/x-data-grid';
 
 /**
@@ -77,7 +77,7 @@ export function useNotesEditor<T extends { id: GridRowId; [key: string]: unknown
   /**
    * Open the notes editor for a specific row and field
    */
-  const handleOpen = (targetRowId: GridRowId, targetField: string): void => {
+  const handleOpen = useCallback((targetRowId: GridRowId, targetField: string): void => {
     const row = rows.find(r => r.id === targetRowId);
     if (!row) return;
     
@@ -86,12 +86,12 @@ export function useNotesEditor<T extends { id: GridRowId; [key: string]: unknown
     setField(targetField);
     setDraft(currentValue);
     setIsOpen(true);
-  };
+  }, [rows]);
 
   /**
    * Save the notes and close the drawer
    */
-  const handleSave = async (): Promise<void> => {
+  const handleSave = useCallback(async (): Promise<void> => {
     if (rowId === null || field === null) return;
     
     const row = rows.find(r => r.id === rowId);
@@ -115,19 +115,20 @@ export function useNotesEditor<T extends { id: GridRowId; [key: string]: unknown
       console.error('Error saving notes:', err);
       setIsSaving(false);
     }
-  };
+  }, [draft, field, onError, onSave, rowId, rows]);
 
   /**
    * Close the notes editor without saving
    */
-  const handleClose = (): void => {
+  const handleClose = useCallback((): void => {
     setIsOpen(false);
     setRowId(null);
     setField(null);
     setDraft('');
-  };
+    setIsSaving(false);
+  }, []);
 
-  return {
+  return useMemo(() => ({
     isOpen,
     rowId,
     field,
@@ -137,5 +138,5 @@ export function useNotesEditor<T extends { id: GridRowId; [key: string]: unknown
     handleSave,
     handleClose,
     setDraft,
-  };
+  }), [draft, field, handleClose, handleOpen, handleSave, isOpen, isSaving, rowId]);
 }
