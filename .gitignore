@@ -24,3 +24,8 @@ __pycache__/
 # Temporary files
 tmp*
 **/tmp*
+
+# Test coverage
+coverage/
+**/coverage/
+*.lcov

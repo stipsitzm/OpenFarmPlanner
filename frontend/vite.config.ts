@@ -28,6 +28,19 @@ export default defineConfig({
         inline: ['@mui/x-data-grid', '@mui/material'],
       },
     },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      exclude: [
+        'node_modules/**',
+        'src/__tests__/**',
+        'src/test-utils/**',
+        'src/setupTests.ts',
+        '**/*.test.{ts,tsx}',
+        '**/*.config.{ts,js}',
+        '**/types.ts',
+      ],
+    },
   },
 })
 
