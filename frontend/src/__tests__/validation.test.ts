@@ -248,4 +248,42 @@ describe('Validation Utilities', () => {
       expect(result.errors.name).toContain('Full Name');
     });
   });
+
+  describe('additional edge cases', () => {
+    it('handles NaN-like string values in numeric validators', () => {
+      expect(min(1)('abc', 'Amount')).toBe('Amount must be at least 1');
+      expect(max(10)('abc', 'Amount')).toBe('Amount must be at most 10');
+      expect(positive('abc', 'Amount')).toBe('Amount must be a positive number');
+      expect(nonNegative('abc', 'Amount')).toBe('Amount must be a non-negative number');
+    });
+
+    it('skips empty input in optional validators', () => {
+      expect(email('', 'Email')).toBeNull();
+      expect(oneOf(['x', 'y'])('', 'Type')).toBeNull();
+      expect(maxLength(3)('', 'Code')).toBeNull();
+      expect(minLength(3)('', 'Code')).toBeNull();
+      expect(max(10)(null, 'Amount')).toBeNull();
+      expect(max(10)(undefined, 'Amount')).toBeNull();
+      expect(positive(null, 'Amount')).toBeNull();
+      expect(positive(undefined, 'Amount')).toBeNull();
+      expect(nonNegative(null, 'Amount')).toBeNull();
+      expect(nonNegative(undefined, 'Amount')).toBeNull();
+    });
+
+    it('returns undefined for nested path through null object', () => {
+      const obj = { nested: null as null | { value: number } };
+      expect(getNestedValue(obj, 'nested.value')).toBeUndefined();
+    });
+
+    it('stops validation at first failing validator per field', () => {
+      const secondValidator = (value: unknown) => (value ? null : 'second error');
+      const result = validateFields(
+        { title: '' },
+        [{ field: 'title', validators: [required, secondValidator] }]
+      );
+
+      expect(result.errors.title).toBe('title is required');
+    });
+  });
+
 });
