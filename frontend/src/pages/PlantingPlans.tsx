@@ -66,42 +66,6 @@ function PlantingPlans(): React.ReactElement {
   );
 
   /**
-   * Helper: Get culture for a row
-   */
-  const getCultureForRow = useCallback(
-    (row: PlantingPlanRow): Culture | undefined => cultures.find((c) => c.id === row.culture),
-    [cultures]
-  );
-
-  /**
-   * Helper: Calculate plants per m² from culture spacing
-   */
-  const getPlantsPerM2 = useCallback((culture: Culture | undefined): number | null => {
-    if (!culture) return null;
-    
-    const rowSpacingCm = culture.row_spacing_cm;
-    const plantSpacingCm = culture.distance_within_row_cm;
-    
-    if (!rowSpacingCm || !plantSpacingCm || rowSpacingCm <= 0 || plantSpacingCm <= 0) {
-      return null;
-    }
-
-    const rowSpacingM = rowSpacingCm / 100;
-    const plantSpacingM = plantSpacingCm / 100;
-    
-    // Formula: 1 / (row_spacing_m * distance_within_row_m)
-    return 1 / (rowSpacingM * plantSpacingM);
-  }, []);
-
-  /**
-   * Helper: Calculate plants count from area and plants per m²
-   */
-  const computePlantsCount = (areaM2: number | null, plantsPerM2: number | null): number | null => {
-    if (!areaM2 || !plantsPerM2 || areaM2 <= 0) return null;
-    return Math.round(areaM2 * plantsPerM2);
-  };
-
-  /**
    * Check for cultureId or bedId parameter in URL and set as initial values
    */
   const [initialSelection] = useState(() => {
@@ -281,9 +245,10 @@ function PlantingPlans(): React.ReactElement {
       // Disable editing if culture has no valid spacing
       isCellEditable: (params: GridCellParams<PlantingPlanRow>) => {
         const row = params.row as PlantingPlanRow;
-        const culture = getCultureForRow(row);
-        const plantsPerM2 = getPlantsPerM2(culture);
-        return plantsPerM2 !== null;
+        const culture = cultures.find(c => c.id === row.culture);
+        if (!culture) return false;
+        const plantsPerM2 = culture.plants_per_m2;
+        return plantsPerM2 !== null && plantsPerM2 > 0;
       },
       headerClassName: 'coupled-field-header',
     },
@@ -293,7 +258,7 @@ function PlantingPlans(): React.ReactElement {
       width: 250,
       // Notes field will be overridden by NotesCell in EditableDataGrid
     },
-  ], [bedOptions, cultureOptions, cultures, beds, getCultureForRow, getPlantsPerM2, t]);
+  ], [bedOptions, cultureOptions, cultures, beds, t]);
 
   return (
     <div className="page-container">
@@ -322,11 +287,6 @@ function PlantingPlans(): React.ReactElement {
             : undefined
         }
         mapToRow={(plan) => {
-          // Get culture to compute plants_count
-          const culture = cultures.find(c => c.id === plan.culture);
-          const plantsPerM2 = getPlantsPerM2(culture);
-          const plantsCount = computePlantsCount(plan.area_usage_sqm ?? null, plantsPerM2);
-          
           return {
             ...plan,
             id: plan.id!,
@@ -340,8 +300,8 @@ function PlantingPlans(): React.ReactElement {
             quantity: plan.quantity,
             // Backend field name is area_usage_sqm, map to area_m2 for grid
             area_m2: plan.area_usage_sqm,
-            // Compute plants_count from area and culture spacing
-            plants_count: plantsCount,
+            // plants_count computed by backend serializer
+            plants_count: plan.plants_count ?? null,
             notes: plan.notes || '',
           };
         }}
