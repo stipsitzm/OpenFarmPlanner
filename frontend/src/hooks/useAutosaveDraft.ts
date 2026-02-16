@@ -118,6 +118,11 @@ export function useAutosaveDraft<T extends Record<string, unknown>>(
     setSavedState(initialData);
     setErrors({});
     setShowErrors(showErrorsImmediately);
+    // Populate errors if showErrorsImmediately is true
+    if (showErrorsImmediately) {
+      const validationResult = validateFn(initialData);
+      setErrors(validationResult.errors);
+    }
   }, [initialData, showErrorsImmediately]);
 
   /**
