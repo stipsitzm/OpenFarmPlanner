@@ -212,6 +212,7 @@ class CultureSerializer(serializers.ModelSerializer):
 class PlantingPlanSerializer(serializers.ModelSerializer):
     culture_name = serializers.CharField(source='culture.name', read_only=True)
     bed_name = serializers.CharField(source='bed.name', read_only=True)
+    plants_count = serializers.SerializerMethodField(read_only=True)
     
     # Write-only fields for area input
     area_input_value = serializers.DecimalField(
@@ -232,6 +233,15 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
         model = PlantingPlan
         fields = '__all__'
         read_only_fields = ['harvest_date', 'harvest_end_date']
+    
+    def get_plants_count(self, obj):
+        """Compute plant count from area and culture spacing."""
+        if not obj.area_usage_sqm or not obj.culture:
+            return None
+        plants_per_m2 = obj.culture.plants_per_m2
+        if not plants_per_m2 or plants_per_m2 <= 0:
+            return None
+        return round(obj.area_usage_sqm * plants_per_m2)
 
     def validate(self, attrs):
         from decimal import Decimal as D

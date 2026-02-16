@@ -8,7 +8,7 @@
  * @returns The Cultures page component
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture } from '../api/api';
@@ -75,12 +75,11 @@ function Cultures(): React.ReactElement {
   const [confirmUpdates, setConfirmUpdates] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Fetch cultures on mount
-  useEffect(() => {
-    fetchCultures();
+  const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
+    setSnackbar({ open: true, message, severity });
   }, []);
 
-  const fetchCultures = async () => {
+  const fetchCultures = useCallback(async () => {
     try {
       const response = await cultureAPI.list();
       setCultures(response.data.results);
@@ -88,7 +87,13 @@ function Cultures(): React.ReactElement {
       console.error('Error fetching cultures:', error);
       showSnackbar(t('messages.fetchError'), 'error');
     }
-  };
+  }, [showSnackbar, t]);
+
+  // Fetch cultures on mount
+  useEffect(() => {
+    // eslint-disable-next-line -- Data fetching on mount is intentional
+    fetchCultures();
+  }, [fetchCultures]);
 
   const handleCultureSelect = (culture: Culture | null) => {
     setSelectedCultureId(culture?.id);
@@ -152,10 +157,6 @@ function Cultures(): React.ReactElement {
     setEditingCulture(undefined);
   };
 
-  const showSnackbar = (message: string, severity: 'success' | 'error') => {
-    setSnackbar({ open: true, message, severity });
-  };
-
   const handleCloseSnackbar = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
@@ -210,7 +211,7 @@ function Cultures(): React.ReactElement {
         } catch {
           // If parsing fails, try removing trailing commas before closing brackets/braces
           // This handles common JSON export formats that include trailing commas
-          const cleanedJson = jsonString.replace(/,\s*([\}\]])/g, '$1');
+          const cleanedJson = jsonString.replace(/,\s*([}\]])/g, '$1');
           parsed = JSON.parse(cleanedJson);
         }
         if (!Array.isArray(parsed)) {
