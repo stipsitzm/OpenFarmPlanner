@@ -26,11 +26,22 @@ vi.mock('@mui/material', async () => {
       />
       <button type="button" onClick={() => props.onChange?.({} as never, null)}>clear-supplier</button>
       <button type="button" onClick={() => props.onChange?.({} as never, 'Neuer Lieferant')}>create-supplier</button>
+      <button type="button" onClick={() => props.onChange?.({} as never, { id: 5, name: 'Bestehend' })}>select-supplier</button>
       <button
         type="button"
-        onClick={() => props.onChange?.({} as never, { id: 5, name: 'Bestehend' })}
+        onClick={() => {
+          const labelA = props.getOptionLabel?.('Freitext');
+          const labelB = props.getOptionLabel?.({ id: 5, name: 'Bestehend' });
+          const equal = props.isOptionEqualToValue?.({ id: 5, name: 'A' }, { id: 5, name: 'B' });
+          (window as Window & { __autocompleteProbe?: unknown }).__autocompleteProbe = {
+            labelA,
+            labelB,
+            equal,
+            loading: props.loading,
+          };
+        }}
       >
-        select-supplier
+        probe-autocomplete
       </button>
     </div>
   );
@@ -74,6 +85,26 @@ describe('BasicInfoSection', () => {
     expect(onChange).toHaveBeenCalledWith('crop_family', 'Asteraceae');
   });
 
+  it('updates nutrient demand via select', () => {
+    const onChange = vi.fn();
+
+    render(
+      <BasicInfoSection
+        formData={{ nutrient_demand: '' }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+
+    const nutrientCombobox = screen.getAllByRole('combobox').at(-1);
+    if (!nutrientCombobox) throw new Error('nutrient combobox not found');
+    fireEvent.mouseDown(nutrientCombobox);
+    fireEvent.click(screen.getByRole('option', { name: 'form.nutrientDemandHigh' }));
+
+    expect(onChange).toHaveBeenCalledWith('nutrient_demand', 'high');
+  });
+
   it('searches suppliers only when at least 2 characters are typed', async () => {
     const onChange = vi.fn();
     supplierListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Biohof' }] } });
@@ -93,6 +124,34 @@ describe('BasicInfoSection', () => {
     fireEvent.change(screen.getByLabelText('supplier-mock-input'), { target: { value: 'bi' } });
     await waitFor(() => {
       expect(supplierListMock).toHaveBeenCalledWith('bi');
+    });
+  });
+
+  it('uses autocomplete label/equality helpers and loading flag', async () => {
+    const onChange = vi.fn();
+    supplierListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Biohof' }] } });
+
+    render(
+      <BasicInfoSection
+        formData={{}}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('supplier-mock-input'), { target: { value: 'bi' } });
+    await waitFor(() => {
+      expect(supplierListMock).toHaveBeenCalledWith('bi');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'probe-autocomplete' }));
+
+    expect((window as Window & { __autocompleteProbe?: unknown }).__autocompleteProbe).toEqual({
+      labelA: 'Freitext',
+      labelB: 'Bestehend',
+      equal: true,
+      loading: false,
     });
   });
 
