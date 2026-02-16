@@ -2,8 +2,8 @@
  * Tests for autosave-related hooks and utilities
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
 import { useAutosaveDraft, type ValidationResult } from '../hooks/autosave';
 
 describe('useAutosaveDraft', () => {
@@ -14,9 +14,9 @@ describe('useAutosaveDraft', () => {
   }
 
   let mockValidate: (data: TestData) => ValidationResult;
-  let mockSave: (data: TestData, reason: string) => Promise<TestData>;
-  let mockOnSaveSuccess: ReturnType<typeof vi.fn>;
-  let mockOnSaveError: ReturnType<typeof vi.fn>;
+  let mockSave: Mock<(data: TestData, draftKey: string) => Promise<TestData>>;
+  let mockOnSaveSuccess: Mock<(data: TestData) => void>;
+  let mockOnSaveError: Mock<(error: Error) => void>;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -456,7 +456,6 @@ describe('useAutosaveDraft', () => {
 
     it('should abort in-flight saves on unmount', async () => {
       const initialData: TestData = { name: 'Test', value: 10 };
-      const abortSpy = vi.fn();
 
       mockSave.mockImplementation(
         () => new Promise((resolve) => {

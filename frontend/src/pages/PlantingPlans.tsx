@@ -7,7 +7,7 @@
  * @returns The Planting Plans page component
  */
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { GridColDef, GridCellParams } from '@mui/x-data-grid';
 import { Tooltip } from '@mui/material';
@@ -248,7 +248,7 @@ function PlantingPlans(): React.ReactElement {
         const culture = cultures.find(c => c.id === row.culture);
         if (!culture) return false;
         const plantsPerM2 = culture.plants_per_m2;
-        return plantsPerM2 !== null && plantsPerM2 > 0;
+        return plantsPerM2 !== null && plantsPerM2 !== undefined && plantsPerM2 > 0;
       },
       headerClassName: 'coupled-field-header',
     },
@@ -258,7 +258,7 @@ function PlantingPlans(): React.ReactElement {
       width: 250,
       // Notes field will be overridden by NotesCell in EditableDataGrid
     },
-  ], [bedOptions, cultureOptions, cultures, beds, t]);
+  ], [bedOptions, cultureOptions, cultures, t]);
 
   return (
     <div className="page-container">
