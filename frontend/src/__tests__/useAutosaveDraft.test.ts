@@ -253,4 +253,92 @@ describe('useAutosaveDraft', () => {
 
     expect(result.current.errors.name).toBeUndefined();
   });
+
+  it('creates nested objects when setting a deep field path', () => {
+    const initialData = { name: 'Test', value: 10 } as TestData;
+    const validate = (): ValidationResult => ({ isValid: true, errors: {} });
+    const save = vi.fn();
+
+    const { result } = renderHook(() =>
+      useAutosaveDraft({ initialData, validate, save })
+    );
+
+    act(() => {
+      result.current.setField('metadata.preferences.color', 'green');
+    });
+
+    expect((result.current.draft as Record<string, unknown>).metadata).toEqual({
+      preferences: { color: 'green' },
+    });
+    expect(result.current.isDirty).toBe(true);
+  });
+
+  it('revalidates and shows immediate errors when initialData changes', async () => {
+    const validate = (draft: TestData): ValidationResult => {
+      const errors: Record<string, string> = {};
+      if (!draft.name) errors.name = 'Name is required';
+      return { isValid: Object.keys(errors).length === 0, errors };
+    };
+
+    const save = vi.fn();
+
+    const { result, rerender } = renderHook(
+      ({ initialData, showErrorsImmediately }) =>
+        useAutosaveDraft({ initialData, validate, save, showErrorsImmediately }),
+      {
+        initialProps: {
+          initialData: { name: 'Valid', value: 10 } as TestData,
+          showErrorsImmediately: false,
+        },
+      }
+    );
+
+    expect(result.current.errors).toEqual({});
+
+    rerender({
+      initialData: { name: '', value: 10 } as TestData,
+      showErrorsImmediately: true,
+    });
+
+    await waitFor(() => {
+      expect(result.current.errors).toEqual({ name: 'Name is required' });
+      expect(result.current.isValid).toBe(false);
+      expect(result.current.isDirty).toBe(false);
+    });
+  });
+
+  it('registers beforeunload protection only when draft is dirty and valid', () => {
+    const initialData: TestData = { name: 'Test', value: 10 };
+    const validate = (draft: TestData): ValidationResult => {
+      const errors: Record<string, string> = {};
+      if (!draft.name) errors.name = 'invalid';
+      return { isValid: Object.keys(errors).length === 0, errors };
+    };
+    const save = vi.fn();
+
+    const { result } = renderHook(() =>
+      useAutosaveDraft({ initialData, validate, save })
+    );
+
+    const pristineEvent = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(pristineEvent);
+    expect(pristineEvent.defaultPrevented).toBe(false);
+
+    act(() => {
+      result.current.setField('name', 'Updated');
+    });
+
+    const dirtyValidEvent = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(dirtyValidEvent);
+    expect(dirtyValidEvent.defaultPrevented).toBe(true);
+
+    act(() => {
+      result.current.setField('name', '');
+    });
+
+    const dirtyInvalidEvent = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(dirtyInvalidEvent);
+    expect(dirtyInvalidEvent.defaultPrevented).toBe(false);
+  });
+
 });
