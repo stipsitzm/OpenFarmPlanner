@@ -2,7 +2,7 @@
  * Tests for hierarchy utility functions
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { buildHierarchyRows } from '../components/hierarchy/utils/hierarchyUtils';
 import type { Location, Field, Bed } from '../api/api';
 
@@ -68,6 +68,10 @@ describe('buildHierarchyRows', () => {
 
     expandedRows = new Set();
     vi.spyOn(console, 'debug').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('should return empty array when all inputs are empty', () => {
