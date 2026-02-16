@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "reporters": ["clear-text", "progress", "html"],
+  "vitest": {
+    "configFile": "vite.config.ts"
+  },
+  "mutate": [
+    "src/**/*.{ts,tsx}",
+    "!src/**/*.test.{ts,tsx}",
+    "!src/**/__tests__/**",
+    "!src/**/*.d.ts",
+    "!src/**/*.css",
+    "!src/**/index.ts",
+    "!src/i18n/locales/**",
+    "!src/test-utils/**",
+    "!src/main.tsx",
+    "!src/setupTests.ts",
+    "!src/api/types.ts"
+  ],
+  "coverageAnalysis": "off",
+  "thresholds": {
+    "high": 50,
+    "low": 35,
+    "break": 30
+  },
+  "tempDirName": ".stryker-tmp"
+}
