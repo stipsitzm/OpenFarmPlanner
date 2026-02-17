@@ -4,9 +4,9 @@ from decimal import Decimal
 from django.test import TestCase
 from rest_framework import serializers
 
-from .models import Bed, Culture, Field, Location, PlantingPlan, Supplier
-from .serializers import CentimetersField, CultureSerializer, PlantingPlanSerializer
-from .utils.normalization import normalize_supplier_name, normalize_text
+from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier
+from farm.serializers import CentimetersField, CultureSerializer, PlantingPlanSerializer
+from farm.utils.normalization import normalize_supplier_name, normalize_text
 
 
 class NormalizationUtilsTest(TestCase):
