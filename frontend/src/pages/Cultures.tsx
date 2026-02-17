@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture } from '../api/api';
 import { CultureDetail } from '../cultures/CultureDetail';
@@ -40,8 +40,28 @@ import AgricultureIcon from '@mui/icons-material/Agriculture';
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedCultureParam = searchParams.get('cultureId');
+  const selectedCultureIdFromQuery = selectedCultureParam ? Number.parseInt(selectedCultureParam, 10) : undefined;
+
+  const getStoredCultureId = (): number | undefined => {
+    const storedCultureId = localStorage.getItem('selectedCultureId');
+    if (!storedCultureId) {
+      return undefined;
+    }
+
+    const parsedId = Number.parseInt(storedCultureId, 10);
+    return Number.isFinite(parsedId) ? parsedId : undefined;
+  };
+
   const [cultures, setCultures] = useState<Culture[]>([]);
-  const [selectedCultureId, setSelectedCultureId] = useState<number | undefined>(undefined);
+  const [selectedCultureId, setSelectedCultureId] = useState<number | undefined>(() => {
+    if (Number.isFinite(selectedCultureIdFromQuery)) {
+      return selectedCultureIdFromQuery;
+    }
+
+    return getStoredCultureId();
+  });
   const [showForm, setShowForm] = useState(false);
   const [editingCulture, setEditingCulture] = useState<Culture | undefined>(undefined);
   const [importMenuAnchor, setImportMenuAnchor] = useState<null | HTMLElement>(null);
@@ -94,6 +114,47 @@ function Cultures(): React.ReactElement {
     // eslint-disable-next-line -- Data fetching on mount is intentional
     fetchCultures();
   }, [fetchCultures]);
+
+  useEffect(() => {
+    if (Number.isFinite(selectedCultureIdFromQuery) && selectedCultureIdFromQuery !== selectedCultureId) {
+      setSelectedCultureId(selectedCultureIdFromQuery);
+    }
+  }, [selectedCultureIdFromQuery, selectedCultureId]);
+
+  useEffect(() => {
+    if (selectedCultureId === undefined) {
+      localStorage.removeItem('selectedCultureId');
+
+      if (!selectedCultureParam) {
+        return;
+      }
+
+      setSearchParams((params) => {
+        const nextParams = new URLSearchParams(params);
+        nextParams.delete('cultureId');
+        return nextParams;
+      }, { replace: true });
+      return;
+    }
+
+    localStorage.setItem('selectedCultureId', String(selectedCultureId));
+
+    if (selectedCultureParam === String(selectedCultureId)) {
+      return;
+    }
+
+    setSearchParams((params) => {
+      const nextParams = new URLSearchParams(params);
+      nextParams.set('cultureId', String(selectedCultureId));
+      return nextParams;
+    }, { replace: true });
+  }, [selectedCultureId, selectedCultureParam, setSearchParams]);
+
+  useEffect(() => {
+    if (selectedCultureId !== undefined && !cultures.some((culture) => culture.id === selectedCultureId)) {
+      setSelectedCultureId(undefined);
+    }
+  }, [cultures, selectedCultureId]);
 
   const handleCultureSelect = (culture: Culture | null) => {
     setSelectedCultureId(culture?.id);

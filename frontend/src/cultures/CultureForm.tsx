@@ -62,6 +62,8 @@ const EMPTY_CULTURE: Partial<Culture> = {
   sowing_depth_cm: undefined,
   display_color: '',
   sowing_calculation_safety_percent: 0,
+  thousand_kernel_weight_g: undefined,
+  package_size_g: undefined,
   seeding_requirement: undefined,
   seeding_requirement_type: '',
   seed_rate_value: null,

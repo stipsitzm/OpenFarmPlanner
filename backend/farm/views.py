@@ -6,7 +6,9 @@ for its respective model.
 """
 
 from django.core.exceptions import ValidationError
-from rest_framework import viewsets, status
+from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q
+from django.db.models.functions import Coalesce, Ceil, Cast
+from rest_framework import viewsets, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier
@@ -18,6 +20,7 @@ from .serializers import (
     PlantingPlanSerializer,
     TaskSerializer,
     SupplierSerializer,
+    SeedDemandSerializer,
 )
 
 
@@ -208,6 +211,7 @@ class CultureViewSet(viewsets.ModelViewSet):
             'harvest_method', 'expected_yield', 'allow_deviation_delivery_weeks',
             'distance_within_row_cm', 'row_spacing_cm', 'sowing_depth_cm',
             'seed_rate_value', 'seed_rate_unit', 'sowing_calculation_safety_percent',
+            'thousand_kernel_weight_g', 'package_size_g',
             'seeding_requirement', 'seeding_requirement_type', 'display_color'
         ]
         
@@ -407,3 +411,107 @@ class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
 
+
+
+class SeedDemandListView(generics.ListAPIView):
+    """Read-only endpoint returning gram-based seed demand aggregated by culture."""
+
+    serializer_class = SeedDemandSerializer
+
+    def get_queryset(self):
+        """Build aggregated queryset with DB-side calculations and warnings."""
+        total_area_expr = Coalesce(Sum('area_usage_sqm'), Value(0.0), output_field=FloatField())
+        total_quantity_expr = Coalesce(Sum('quantity'), Value(0.0), output_field=FloatField())
+
+        queryset = (
+            PlantingPlan.objects
+            .values(
+                'culture_id',
+                culture_name=F('culture__name'),
+                variety=F('culture__variety'),
+                supplier=Coalesce(
+                    F('culture__supplier__name'),
+                    F('culture__seed_supplier'),
+                    Value('', output_field=CharField()),
+                ),
+                seed_rate_value=F('culture__seed_rate_value'),
+                seed_rate_unit=F('culture__seed_rate_unit'),
+                thousand_kernel_weight_g=F('culture__thousand_kernel_weight_g'),
+                package_size_g=F('culture__package_size_g'),
+                safety_margin_percent=Coalesce(F('culture__sowing_calculation_safety_percent'), Value(0.0), output_field=FloatField()),
+                row_spacing_m=F('culture__row_spacing_m'),
+            )
+            .annotate(
+                total_area_sqm=total_area_expr,
+                total_quantity=total_quantity_expr,
+            )
+            .annotate(
+                base_grams=Case(
+                    When(
+                        Q(seed_rate_unit='g_per_m2') & Q(seed_rate_value__isnull=False) & Q(total_area_sqm__gt=0),
+                        then=ExpressionWrapper(F('total_area_sqm') * F('seed_rate_value'), output_field=FloatField()),
+                    ),
+                    When(
+                        Q(seed_rate_unit='seeds/m')
+                        & Q(seed_rate_value__isnull=False)
+                        & Q(thousand_kernel_weight_g__isnull=False)
+                        & Q(row_spacing_m__gt=0)
+                        & Q(total_area_sqm__gt=0),
+                        then=ExpressionWrapper(
+                            (F('total_area_sqm') / F('row_spacing_m'))
+                            * F('seed_rate_value')
+                            * (F('thousand_kernel_weight_g') / Value(1000.0)),
+                            output_field=FloatField(),
+                        ),
+                    ),
+                    When(
+                        Q(seed_rate_unit__in=['seeds_per_plant', 'pcs_per_plant'])
+                        & Q(seed_rate_value__isnull=False)
+                        & Q(thousand_kernel_weight_g__isnull=False)
+                        & Q(total_quantity__gt=0),
+                        then=ExpressionWrapper(
+                            F('total_quantity')
+                            * F('seed_rate_value')
+                            * (F('thousand_kernel_weight_g') / Value(1000.0)),
+                            output_field=FloatField(),
+                        ),
+                    ),
+                    default=Value(None, output_field=FloatField()),
+                ),
+            )
+            .annotate(
+                total_grams=Case(
+                    When(
+                        base_grams__isnull=False,
+                        then=ExpressionWrapper(
+                            F('base_grams') * (Value(1.0) + (F('safety_margin_percent') / Value(100.0))),
+                            output_field=FloatField(),
+                        ),
+                    ),
+                    default=Value(None, output_field=FloatField()),
+                ),
+            )
+            .annotate(
+                packages_needed=Case(
+                    When(
+                        Q(total_grams__isnull=False) & Q(package_size_g__gt=0),
+                        then=Cast(Ceil(F('total_grams') / F('package_size_g')), IntegerField()),
+                    ),
+                    default=Value(None, output_field=IntegerField()),
+                ),
+                warning=Case(
+                    When(Q(seed_rate_unit__isnull=True) | Q(seed_rate_unit=''), then=Value('Missing seed rate unit.')),
+                    When(seed_rate_value__isnull=True, then=Value('Missing seed rate value.')),
+                    When(Q(seed_rate_unit='g_per_m2') & Q(total_area_sqm__lte=0), then=Value('Missing area usage for gram conversion.')),
+                    When(Q(seed_rate_unit='seeds/m') & Q(thousand_kernel_weight_g__isnull=True), then=Value('Missing thousand-kernel weight for conversion to grams.')),
+                    When(Q(seed_rate_unit='seeds/m') & (Q(row_spacing_m__isnull=True) | Q(row_spacing_m__lte=0)), then=Value('Missing row spacing for conversion from seeds/m to grams.')),
+                    When(Q(seed_rate_unit='seeds/m') & Q(total_area_sqm__lte=0), then=Value('Missing area usage for conversion from seeds/m to grams.')),
+                    When(Q(seed_rate_unit__in=['seeds_per_plant', 'pcs_per_plant']) & Q(thousand_kernel_weight_g__isnull=True), then=Value('Missing thousand-kernel weight for conversion to grams.')),
+                    When(Q(seed_rate_unit__in=['seeds_per_plant', 'pcs_per_plant']) & Q(total_quantity__lte=0), then=Value('Missing plant quantity for conversion from seeds per plant to grams.')),
+                    default=Value(None, output_field=CharField()),
+                ),
+            )
+            .order_by('culture_name', 'variety')
+        )
+
+        return queryset

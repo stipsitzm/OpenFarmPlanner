@@ -55,12 +55,36 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               <MenuItem value="">-</MenuItem>
               <MenuItem value="g_per_m2">g / m²</MenuItem>
               <MenuItem value="seeds/m">Korn / lfm</MenuItem>
-              <MenuItem value="pcs_per_plant">Stück / Pflanze</MenuItem>
+              <MenuItem value="seeds_per_plant">Korn / Pflanze</MenuItem>
             </Select>
             {errors.seed_rate_unit && (
               <Typography variant="caption" color="error">{errors.seed_rate_unit}</Typography>
             )}
           </FormControl>
+        </Tooltip>
+        <Tooltip title={t('form.thousandKernelWeightHelp', { defaultValue: 'Gewicht von 1000 Körnern in Gramm.' })} arrow>
+          <TextField
+            sx={fieldSx}
+            type="number"
+            label={t('form.thousandKernelWeightLabel', { defaultValue: 'Tausendkorngewicht (g)' })}
+            value={formData.thousand_kernel_weight_g ?? ''}
+            onChange={e => onChange('thousand_kernel_weight_g', e.target.value ? parseFloat(e.target.value) : undefined)}
+            error={Boolean(errors.thousand_kernel_weight_g)}
+            helperText={errors.thousand_kernel_weight_g}
+            slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+          />
+        </Tooltip>
+        <Tooltip title={t('form.packageSizeHelp', { defaultValue: 'Packungsgröße in Gramm.' })} arrow>
+          <TextField
+            sx={fieldSx}
+            type="number"
+            label={t('form.packageSizeLabel', { defaultValue: 'Packungsgröße (g)' })}
+            value={formData.package_size_g ?? ''}
+            onChange={e => onChange('package_size_g', e.target.value ? parseFloat(e.target.value) : undefined)}
+            error={Boolean(errors.package_size_g)}
+            helperText={errors.package_size_g}
+            slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+          />
         </Tooltip>
         <Tooltip title={t('form.sowingCalculationSafetyPercentHelp', { defaultValue: 'Prozentualer Zuschlag zur berechneten Saatgutmenge.' })} arrow>
           <TextField

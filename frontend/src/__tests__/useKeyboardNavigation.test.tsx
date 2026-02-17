@@ -54,12 +54,29 @@ describe('useKeyboardNavigation', () => {
       })
     );
 
-    expect(navigateMock).toHaveBeenCalledWith('/gantt-chart');
+    expect(navigateMock).toHaveBeenCalledWith('/seed-demand');
   });
 
 
-  it('wraps to first route on Ctrl+Shift+ArrowRight from last route', () => {
+  it('navigates from gantt to seed-demand on Ctrl+Shift+ArrowRight', () => {
     currentPathname = '/gantt-chart';
+    render(<TestComponent />);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+      })
+    );
+
+    expect(navigateMock).toHaveBeenCalledWith('/seed-demand');
+  });
+
+
+  it('wraps to first route on Ctrl+Shift+ArrowRight from seed-demand', () => {
+    currentPathname = '/seed-demand';
     render(<TestComponent />);
 
     window.dispatchEvent(

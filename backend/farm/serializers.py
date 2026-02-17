@@ -111,12 +111,22 @@ class CultureSerializer(serializers.ModelSerializer):
     seed_rate_unit = serializers.CharField(
         required=False,
         allow_blank=True,
-        help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds/plant')"
+        help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds_per_plant')"
     )
     sowing_calculation_safety_percent = serializers.FloatField(
         required=False,
         allow_null=True,
         help_text='Safety margin for seeding calculation in percent (0-100)'
+    )
+    thousand_kernel_weight_g = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text='Weight of 1000 kernels in grams'
+    )
+    package_size_g = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text='Package size in grams'
     )
     seeding_requirement = serializers.FloatField(
         required=False,
@@ -139,6 +149,16 @@ class CultureSerializer(serializers.ModelSerializer):
         model = Culture
         fields = '__all__'
     
+
+    def validate_seed_rate_unit(self, value):
+        """Normalize legacy seed rate unit values and validate supported units."""
+        if value == 'pcs_per_plant':
+            return 'seeds_per_plant'
+
+        allowed_values = {'', 'g_per_m2', 'seeds/m', 'seeds_per_plant'}
+        if value not in allowed_values:
+            raise serializers.ValidationError('Unsupported seed rate unit.')
+        return value
     def validate_growth_duration_days(self, value):
         if value is None:
             raise serializers.ValidationError('Growth duration is required.')
@@ -350,3 +370,15 @@ class CultureImportApplySummarySerializer(serializers.Serializer):
         child=serializers.DictField(),
         help_text='List of errors encountered during import'
     )
+
+
+class SeedDemandSerializer(serializers.Serializer):
+    """Read-only serializer for aggregated seed demand per culture."""
+    culture_id = serializers.IntegerField()
+    culture_name = serializers.CharField()
+    variety = serializers.CharField(allow_blank=True, allow_null=True)
+    supplier = serializers.CharField(allow_blank=True, allow_null=True)
+    total_grams = serializers.FloatField(allow_null=True)
+    package_size_g = serializers.FloatField(allow_null=True)
+    packages_needed = serializers.IntegerField(allow_null=True)
+    warning = serializers.CharField(allow_null=True)

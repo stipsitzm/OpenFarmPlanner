@@ -245,12 +245,22 @@ class Culture(TimestampedModel):
     seed_rate_unit = models.CharField(
         max_length=30,
         blank=True,
-        help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds/plant')"
+        help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds_per_plant')"
     )
     sowing_calculation_safety_percent = models.FloatField(
         null=True,
         blank=True,
         help_text="Safety margin for seeding calculation in percent (0-100)"
+    )
+    thousand_kernel_weight_g = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Weight of 1000 kernels in grams"
+    )
+    package_size_g = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Package size in grams"
     )
     seeding_requirement = models.FloatField(
         null=True,
@@ -296,6 +306,12 @@ class Culture(TimestampedModel):
         
         if self.sowing_depth_m is not None and self.sowing_depth_m < 0:
             errors['sowing_depth_m'] = 'Sowing depth must be non-negative.'
+
+        if self.thousand_kernel_weight_g is not None and self.thousand_kernel_weight_g < 0:
+            errors['thousand_kernel_weight_g'] = 'Thousand kernel weight must be non-negative.'
+
+        if self.package_size_g is not None and self.package_size_g < 0:
+            errors['package_size_g'] = 'Package size must be non-negative.'
         
         # Validate hex color format if provided.
         if self.display_color:

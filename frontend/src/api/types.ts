@@ -6,9 +6,11 @@ export interface Supplier {
   created?: boolean;
 }
 
-export type SeedRateUnit = 'g_per_m2' | 'seeds/m' | 'pcs_per_plant';
+export type SeedRateUnit = 'g_per_m2' | 'seeds/m' | 'seeds_per_plant';
 
 export interface Culture {
+  thousand_kernel_weight_g?: number;
+  package_size_g?: number;
   seeding_requirement?: number;
   seeding_requirement_type?: 'per_sqm' | 'per_plant' | '';
   seed_rate_value?: number | null;
@@ -45,6 +47,18 @@ export interface Culture {
   
   created_at?: string;
   updated_at?: string;
+}
+
+
+export interface SeedDemand {
+  culture_id: number;
+  culture_name: string;
+  variety?: string | null;
+  supplier?: string | null;
+  total_grams: number | null;
+  package_size_g: number | null;
+  packages_needed: number | null;
+  warning: string | null;
 }
 
 export interface Location {

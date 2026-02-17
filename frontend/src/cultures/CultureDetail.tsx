@@ -314,8 +314,8 @@ export function CultureDetail({
                         ? ' g/m²'
                         : selectedCulture.seed_rate_unit === 'seeds/m'
                           ? ' Korn / lfm'
-                          : selectedCulture.seed_rate_unit === 'pcs_per_plant'
-                            ? ' Stk./Pflanze'
+                          : selectedCulture.seed_rate_unit === 'seeds_per_plant'
+                            ? ' Korn / Pflanze'
                             : ''}
                     </Typography>
                   </Box>
@@ -327,6 +327,26 @@ export function CultureDetail({
                     </Typography>
                     <Typography variant="body1">
                       {selectedCulture.sowing_calculation_safety_percent} %
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.thousand_kernel_weight_g !== undefined && selectedCulture.thousand_kernel_weight_g !== null && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Tausendkorngewicht
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatNumber(selectedCulture.thousand_kernel_weight_g, t)} g
+                    </Typography>
+                  </Box>
+                )}
+                {selectedCulture.package_size_g !== undefined && selectedCulture.package_size_g !== null && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Packungsgröße
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatNumber(selectedCulture.package_size_g, t)} g
                     </Typography>
                   </Box>
                 )}
