@@ -111,6 +111,8 @@ class ApiEndpointsTest(DRFAPITestCase):
             'distance_within_row_cm': 40.0,
             'row_spacing_cm': 60.0,
             'sowing_depth_cm': 1.5,
+            'thousand_kernel_weight_g': 472.02,
+            'package_size_g': 40,
             'display_color': '#FF5733'
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
@@ -118,6 +120,8 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.data['name'], 'Comprehensive Culture')
         self.assertEqual(response.data['crop_family'], 'Solanaceae')
         self.assertEqual(response.data['nutrient_demand'], 'high')
+        self.assertEqual(response.data['thousand_kernel_weight_g'], 472.02)
+        self.assertEqual(response.data['package_size_g'], 40.0)
         self.assertEqual(response.data['display_color'], '#FF5733')
     
     def test_culture_create_missing_required_fields(self):

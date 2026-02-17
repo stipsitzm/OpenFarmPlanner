@@ -208,6 +208,7 @@ class CultureViewSet(viewsets.ModelViewSet):
             'harvest_method', 'expected_yield', 'allow_deviation_delivery_weeks',
             'distance_within_row_cm', 'row_spacing_cm', 'sowing_depth_cm',
             'seed_rate_value', 'seed_rate_unit', 'sowing_calculation_safety_percent',
+            'thousand_kernel_weight_g', 'package_size_g',
             'seeding_requirement', 'seeding_requirement_type', 'display_color'
         ]
         

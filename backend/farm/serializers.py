@@ -118,6 +118,16 @@ class CultureSerializer(serializers.ModelSerializer):
         allow_null=True,
         help_text='Safety margin for seeding calculation in percent (0-100)'
     )
+    thousand_kernel_weight_g = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text='Weight of 1000 kernels in grams'
+    )
+    package_size_g = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text='Package size in grams'
+    )
     seeding_requirement = serializers.FloatField(
         required=False,
         allow_null=True,
