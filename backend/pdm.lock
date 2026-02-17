@@ -1,0 +1,43 @@
+# This file is generated for CI frozen-lock installs.
+# It should normally be regenerated with: pdm lock
+
+[metadata]
+groups = ["default"]
+strategy = ["inherit_metadata"]
+lock_version = "4.5.0"
+content_hash = "sha256:manual-bootstrap-lockfile"
+
+[[package]]
+name = "django"
+version = "5.2.9"
+groups = ["default"]
+
+[[package]]
+name = "djangorestframework"
+version = "3.16.1"
+groups = ["default"]
+
+[[package]]
+name = "django-cors-headers"
+version = "4.9.0"
+groups = ["default"]
+
+[[package]]
+name = "requests"
+version = "2.32.5"
+groups = ["default"]
+
+[[package]]
+name = "python-dotenv"
+version = "1.2.1"
+groups = ["default"]
+
+[[package]]
+name = "psycopg2-binary"
+version = "2.9.11"
+groups = ["default"]
+
+[[package]]
+name = "django-debug-toolbar"
+version = "6.1.0"
+groups = ["default"]
