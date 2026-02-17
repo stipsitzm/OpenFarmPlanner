@@ -50,7 +50,7 @@ describe('HarvestSection and SeedingSection', () => {
 
     fireEvent.mouseDown(unitCombobox);
     fireEvent.click(screen.getByRole('option', { name: 'Korn / Pflanze' }));
-    expect(onChange).toHaveBeenCalledWith('seed_rate_unit', 'pcs_per_plant');
+    expect(onChange).toHaveBeenCalledWith('seed_rate_unit', 'seeds_per_plant');
 
     fireEvent.blur(unitCombobox);
     expect(onChange).toHaveBeenCalledWith('seed_rate_unit', 'g_per_m2');

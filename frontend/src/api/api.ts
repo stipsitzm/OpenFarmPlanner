@@ -7,6 +7,7 @@ import type {
   PlantingPlan,
   PaginatedResponse,
   Supplier,
+  SeedDemand,
 } from './types';
 
 export const cultureAPI = {
@@ -64,6 +65,11 @@ export const plantingPlanAPI = {
   delete: (id: number) => http.delete(`/planting-plans/${id}/`),
 };
 
+
+export const seedDemandAPI = {
+  list: () => http.get<SeedDemand[]>('/seed-demand/'),
+};
+
 export const fieldAPI = {
   list: () => http.get<PaginatedResponse<Field>>('/fields/'),
   get: (id: number) => http.get<Field>(`/fields/${id}/`),
@@ -88,6 +94,7 @@ export type {
   PlantingPlan,
   PaginatedResponse,
   Supplier,
+  SeedDemand,
 };
 
 export default {
@@ -97,4 +104,5 @@ export default {
   plantingPlans: plantingPlanAPI,
   fields: fieldAPI,
   locations: locationAPI,
+  seedDemand: seedDemandAPI,
 };

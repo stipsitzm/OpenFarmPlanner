@@ -23,6 +23,7 @@ import api, {
   locationAPI,
   plantingPlanAPI,
   supplierAPI,
+  seedDemandAPI,
 } from '../api/api';
 
 describe('API Client', () => {
@@ -131,6 +132,13 @@ describe('API Client', () => {
     expect(deleteMock).toHaveBeenCalledWith('/locations/9/');
   });
 
+
+  it('calls seed demand endpoint', () => {
+    seedDemandAPI.list();
+
+    expect(getMock).toHaveBeenCalledWith('/seed-demand/');
+  });
+
   it('exports grouped default API object', () => {
     expect(api.cultures).toBe(cultureAPI);
     expect(api.suppliers).toBe(supplierAPI);
@@ -138,5 +146,6 @@ describe('API Client', () => {
     expect(api.plantingPlans).toBe(plantingPlanAPI);
     expect(api.fields).toBe(fieldAPI);
     expect(api.locations).toBe(locationAPI);
+    expect(api.seedDemand).toBe(seedDemandAPI);
   });
 });

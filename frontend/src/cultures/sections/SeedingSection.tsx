@@ -55,7 +55,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               <MenuItem value="">-</MenuItem>
               <MenuItem value="g_per_m2">g / m²</MenuItem>
               <MenuItem value="seeds/m">Korn / lfm</MenuItem>
-              <MenuItem value="pcs_per_plant">Korn / Pflanze</MenuItem>
+              <MenuItem value="seeds_per_plant">Korn / Pflanze</MenuItem>
             </Select>
             {errors.seed_rate_unit && (
               <Typography variant="caption" color="error">{errors.seed_rate_unit}</Typography>

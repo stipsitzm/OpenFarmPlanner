@@ -245,7 +245,7 @@ class Culture(TimestampedModel):
     seed_rate_unit = models.CharField(
         max_length=30,
         blank=True,
-        help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds/plant')"
+        help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds_per_plant')"
     )
     sowing_calculation_safety_percent = models.FloatField(
         null=True,

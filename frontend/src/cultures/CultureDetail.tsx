@@ -314,7 +314,7 @@ export function CultureDetail({
                         ? ' g/m²'
                         : selectedCulture.seed_rate_unit === 'seeds/m'
                           ? ' Korn / lfm'
-                          : selectedCulture.seed_rate_unit === 'pcs_per_plant'
+                          : selectedCulture.seed_rate_unit === 'seeds_per_plant'
                             ? ' Korn / Pflanze'
                             : ''}
                     </Typography>

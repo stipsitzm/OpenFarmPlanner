@@ -17,6 +17,7 @@ import FieldsBedsHierarchy from './pages/FieldsBedsHierarchy';
 import Cultures from './pages/Cultures';
 import PlantingPlans from './pages/PlantingPlans';
 import GanttChart from './pages/GanttChart';
+import SeedDemandPage from './pages/SeedDemand';
 import './App.css';
 
 /**
@@ -50,6 +51,9 @@ function RootLayout(): React.ReactElement {
           </NavLink>
           <NavLink to="/gantt-chart" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('ganttChart')}
+          </NavLink>
+          <NavLink to="/seed-demand" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
+            {t('seedDemand')}
           </NavLink>
         </div>
       </nav>
@@ -91,6 +95,10 @@ function createAppRouter(basename: string) {
         {
           path: 'gantt-chart',
           element: <GanttChart />,
+        },
+        {
+          path: 'seed-demand',
+          element: <SeedDemandPage />,
         },
       ],
     },

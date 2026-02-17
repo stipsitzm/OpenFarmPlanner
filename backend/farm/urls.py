@@ -8,6 +8,7 @@ from .views import (
     CultureViewSet,
     PlantingPlanViewSet,
     TaskViewSet,
+    SeedDemandListView,
 )
 
 router = DefaultRouter()
@@ -20,5 +21,6 @@ router.register(r'planting-plans', PlantingPlanViewSet)
 router.register(r'tasks', TaskViewSet)
 
 urlpatterns = [
+    path('seed-demand/', SeedDemandListView.as_view(), name='seed-demand-list'),
     path('', include(router.urls)),
 ]
