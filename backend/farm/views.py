@@ -7,7 +7,7 @@ for its respective model.
 
 from django.core.exceptions import ValidationError
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q
-from django.db.models.functions import Coalesce, Ceil
+from django.db.models.functions import Coalesce, Ceil, Cast
 from rest_framework import viewsets, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -426,7 +426,7 @@ class SeedDemandListView(generics.ListAPIView):
         queryset = (
             PlantingPlan.objects
             .values(
-                culture_id=F('culture_id'),
+                'culture_id',
                 culture_name=F('culture__name'),
                 variety=F('culture__variety'),
                 supplier=Coalesce(
@@ -495,7 +495,7 @@ class SeedDemandListView(generics.ListAPIView):
                 packages_needed=Case(
                     When(
                         Q(total_grams__isnull=False) & Q(package_size_g__gt=0),
-                        then=Ceil(F('total_grams') / F('package_size_g')),
+                        then=Cast(Ceil(F('total_grams') / F('package_size_g')), IntegerField()),
                     ),
                     default=Value(None, output_field=IntegerField()),
                 ),
