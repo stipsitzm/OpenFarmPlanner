@@ -27,7 +27,7 @@ export default function SeedDemandPage(): React.ReactElement {
       setError(null);
       try {
         const response = await seedDemandAPI.list();
-        setRows(response.data);
+        setRows(response.data.results ?? []);
       } catch {
         setError('Saatgutbedarf konnte nicht geladen werden.');
       } finally {

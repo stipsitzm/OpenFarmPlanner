@@ -67,7 +67,7 @@ export const plantingPlanAPI = {
 
 
 export const seedDemandAPI = {
-  list: () => http.get<SeedDemand[]>('/seed-demand/'),
+  list: () => http.get<PaginatedResponse<SeedDemand>>('/seed-demand/'),
 };
 
 export const fieldAPI = {
