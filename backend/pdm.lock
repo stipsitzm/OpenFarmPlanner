@@ -81,3 +81,13 @@ groups = ["default"]
 name = "coverage"
 version = "7.6.1"
 groups = ["default"]
+
+[[package]]
+name = "asgiref"
+version = "3.8.1"
+groups = ["default"]
+
+[[package]]
+name = "sqlparse"
+version = "0.5.3"
+groups = ["default"]
