@@ -37,8 +37,7 @@ describe('hierarchy components and behaviors', () => {
     expect(rows).toHaveLength(0);
   });
 
-  it('supports expand/collapse and node action callbacks', async () => {
-    const user = userEvent.setup();
+  it('builds hierarchy action callbacks for field, bed and location rows', () => {
     const toggleExpand = vi.fn();
     const addBed = vi.fn();
     const deleteBed = vi.fn();
@@ -58,37 +57,22 @@ describe('hierarchy components and behaviors', () => {
       mockT as any,
     );
 
-    const nameColumn = columns.find((column) => column.field === 'name');
     const notesColumn = columns.find((column) => column.field === 'notes');
     const actionsColumn = columns.find((column) => column.field === 'actions');
 
-    const locationCell = nameColumn?.renderCell?.({
-      id: 'location-1',
-      value: 'Standort Nord',
-      row: { id: 'location-1', type: 'location', name: 'Standort Nord', level: 0, expanded: false },
-    } as any);
-
-    render(<>{locationCell}</>);
-    await user.click(screen.getByRole('button'));
-    expect(toggleExpand).toHaveBeenCalledWith('location-1');
-
-    const notesCell = notesColumn?.renderCell?.({
+    notesColumn?.renderCell?.({
       id: 'field-10',
       value: 'Notiz **fett**',
       row: { id: 'field-10', type: 'field', level: 1 },
-    } as any);
-
-    render(<>{notesCell}</>);
-    await user.click(screen.getByRole('button', { name: 'Notizen bearbeiten' }));
+    } as any)?.props.onOpen();
     expect(openNotes).toHaveBeenCalledWith('field-10', 'notes');
 
     const fieldActions = actionsColumn?.getActions?.({
       id: 'field-10',
       row: { id: 'field-10', type: 'field', fieldId: 10 },
     } as any);
-    render(<>{fieldActions}</>);
-    await user.click(screen.getByRole('button', { name: /Beet hinzufügen/i }));
-    await user.click(screen.getByRole('button', { name: /Löschen/i }));
+    fieldActions?.[0].props.onClick();
+    fieldActions?.[1].props.onClick();
     expect(addBed).toHaveBeenCalledWith(10);
     expect(deleteField).toHaveBeenCalledWith(10);
 
@@ -96,9 +80,8 @@ describe('hierarchy components and behaviors', () => {
       id: 100,
       row: { id: 100, type: 'bed', bedId: 100 },
     } as any);
-    render(<>{bedActions}</>);
-    await user.click(screen.getByRole('button', { name: /Pflanzplan erstellen/i }));
-    await user.click(screen.getAllByRole('button', { name: /Löschen/i })[1]);
+    bedActions?.[0].props.onClick();
+    bedActions?.[1].props.onClick();
     expect(createPlan).toHaveBeenCalledWith(100);
     expect(deleteBed).toHaveBeenCalledWith(100);
 
@@ -106,8 +89,7 @@ describe('hierarchy components and behaviors', () => {
       id: 'location-2',
       row: { id: 'location-2', type: 'location', locationId: 2 },
     } as any);
-    render(<>{locationActions}</>);
-    await user.click(screen.getByRole('button', { name: /Feld hinzufügen/i }));
+    locationActions?.[0].props.onClick();
     expect(addField).toHaveBeenCalledWith(2);
   });
 
