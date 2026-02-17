@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -20,7 +22,7 @@ def _create_plan(culture: Culture, bed: Bed, area: float, quantity: int | None =
     return PlantingPlan.objects.create(
         culture=culture,
         bed=bed,
-        planting_date='2025-03-01',
+        planting_date=date(2025, 3, 1),
         area_usage_sqm=area,
         quantity=quantity,
     )
