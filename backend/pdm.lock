@@ -56,3 +56,23 @@ groups = ["default"]
 name = "pytest-cov"
 version = "7.0.0"
 groups = ["default"]
+
+[[package]]
+name = "pluggy"
+version = "1.5.0"
+groups = ["default"]
+
+[[package]]
+name = "iniconfig"
+version = "2.0.0"
+groups = ["default"]
+
+[[package]]
+name = "packaging"
+version = "24.2"
+groups = ["default"]
+
+[[package]]
+name = "pygments"
+version = "2.18.0"
+groups = ["default"]
