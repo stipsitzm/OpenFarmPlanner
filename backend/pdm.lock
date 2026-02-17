@@ -41,3 +41,18 @@ groups = ["default"]
 name = "django-debug-toolbar"
 version = "6.1.0"
 groups = ["default"]
+
+[[package]]
+name = "pytest"
+version = "8.4.2"
+groups = ["default"]
+
+[[package]]
+name = "pytest-django"
+version = "4.11.1"
+groups = ["default"]
+
+[[package]]
+name = "pytest-cov"
+version = "7.0.0"
+groups = ["default"]
