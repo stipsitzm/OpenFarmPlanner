@@ -160,6 +160,21 @@ cd frontend
 npm test
 ```
 
+## Running tests locally
+
+### Frontend
+```bash
+cd frontend
+npm ci
+npm run test:coverage
+```
+
+### Backend
+```bash
+cd backend
+pytest
+```
+
 ## API Endpoints
 
 The backend provides the following REST API endpoints:

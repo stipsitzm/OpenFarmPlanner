@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node (LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install and test frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run test:coverage
+
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: backend/pyproject.toml
+
+      - name: Install backend dependencies
+        shell: bash
+        run: |
+          if [ -f backend/pyproject.toml ] && grep -q "\[tool.pdm\]" backend/pyproject.toml; then
+            python -m pip install --upgrade pip
+            python -m pip install pdm
+            cd backend
+            pdm install --no-self
+            pdm run python -m pip install pytest pytest-django pytest-cov
+          elif [ -f backend/requirements.txt ]; then
+            python -m pip install --upgrade pip
+            python -m pip install -r backend/requirements.txt pytest pytest-cov
+          else
+            echo "No supported backend dependency file found." >&2
+            exit 1
+          fi
+
+      - name: Run backend tests with coverage
+        shell: bash
+        run: |
+          if [ -f backend/pyproject.toml ] && grep -q "\[tool.pdm\]" backend/pyproject.toml; then
+            cd backend
+            pdm run pytest --cov --cov-report=term-missing
+          else
+            cd backend
+            pytest --cov --cov-report=term-missing
+          fi
