@@ -1,0 +1,47 @@
+name: Codex Auto-Fix on CI Failure
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  codex-autofix:
+    if: >
+      github.event.workflow_run.conclusion == 'failure' &&
+      secrets.OPENAI_API_KEY != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout failing commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Run Codex Auto-Fix
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            The CI workflow failed for this commit.
+            
+            Tasks:
+            1) Analyze the failing workflow logs and identify the exact backend/frontend test or build failures.
+            2) Implement the minimal safe code/test fixes needed to make CI pass.
+            3) Re-run both test suites:
+               - Frontend: cd frontend && npm run test:coverage
+               - Backend: cd backend && pytest --cov --cov-report=term-missing
+            4) Create a branch named: codex/auto-fix/${{ github.event.workflow_run.id }}
+            5) Open a PR to main.
+            6) Include a short summary in the PR body and link this failing run:
+               ${{ github.event.workflow_run.html_url }}
+            
+            Security constraints:
+            - Do not add or expose secrets.
+            - Do not use pull_request_target.
+            - Keep changes minimal and scoped to fixing CI failures.
