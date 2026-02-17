@@ -46,7 +46,7 @@ jobs:
       - name: Install backend dependencies with PDM
         run: |
           cd backend
-          pdm install --frozen-lockfile
+          pdm install --frozen-lockfile -G test
 
       - name: Run backend tests
         run: |
