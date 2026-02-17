@@ -98,6 +98,14 @@ describe('culture form UI sections', () => {
     fireEvent.change(safetyInput, { target: { value: '10' } });
     expect(onChange).toHaveBeenCalledWith('sowing_calculation_safety_percent', 10);
 
+    const thousandKernelWeightInput = screen.getByLabelText('Tausendkorngewicht (g)');
+    fireEvent.change(thousandKernelWeightInput, { target: { value: '472.02' } });
+    expect(onChange).toHaveBeenCalledWith('thousand_kernel_weight_g', 472.02);
+
+    const packageSizeInput = screen.getByLabelText('Packungsgröße (g)');
+    fireEvent.change(packageSizeInput, { target: { value: '40' } });
+    expect(onChange).toHaveBeenCalledWith('package_size_g', 40);
+
     expect(screen.getByText('Bitte wählen')).toBeInTheDocument();
   });
 

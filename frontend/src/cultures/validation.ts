@@ -88,6 +88,8 @@ export function validateCulture(
     'row_spacing_cm',
     'sowing_depth_cm',
     'sowing_calculation_safety_percent',
+    'thousand_kernel_weight_g',
+    'package_size_g',
   ];
   numericFields.forEach(field => {
     const value = draft[field as keyof Culture];

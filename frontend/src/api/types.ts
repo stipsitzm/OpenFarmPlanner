@@ -9,6 +9,8 @@ export interface Supplier {
 export type SeedRateUnit = 'g_per_m2' | 'seeds/m' | 'pcs_per_plant';
 
 export interface Culture {
+  thousand_kernel_weight_g?: number;
+  package_size_g?: number;
   seeding_requirement?: number;
   seeding_requirement_type?: 'per_sqm' | 'per_plant' | '';
   seed_rate_value?: number | null;
