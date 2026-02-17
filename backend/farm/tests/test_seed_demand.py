@@ -45,7 +45,7 @@ def test_seed_demand_applies_safety_margin(api_client: APIClient, bed: Bed):
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     assert response.status_code == 200
 
-    row = response.json()[0]
+    row = response.json()['results'][0]
     assert row['culture_name'] == 'Carrot'
     assert row['total_grams'] == pytest.approx(110.0)
     assert row['packages_needed'] == 5
@@ -67,7 +67,7 @@ def test_seed_demand_rounds_packages_up(api_client: APIClient, bed: Bed):
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     assert response.status_code == 200
 
-    row = next(item for item in response.json() if item['culture_name'] == 'Cabbage')
+    row = next(item for item in response.json()['results'] if item['culture_name'] == 'Cabbage')
     assert row['total_grams'] == pytest.approx(184.2)
     assert row['packages_needed'] == 8
 
@@ -106,7 +106,7 @@ def test_seed_demand_returns_warning_when_gram_conversion_missing(api_client: AP
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     assert response.status_code == 200
 
-    row = next(item for item in response.json() if item['culture_name'] == 'Radish')
+    row = next(item for item in response.json()['results'] if item['culture_name'] == 'Radish')
     assert row['total_grams'] is None
     assert row['packages_needed'] is None
     assert row['warning'] == 'Missing thousand-kernel weight for conversion to grams.'
