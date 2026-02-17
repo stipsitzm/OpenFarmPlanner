@@ -51,4 +51,4 @@ jobs:
       - name: Run backend tests
         run: |
           cd backend
-          pdm run pytest
+          pdm run test

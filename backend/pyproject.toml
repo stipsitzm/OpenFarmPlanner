@@ -13,9 +13,6 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "psycopg2-binary>=2.9.11",
     "django-debug-toolbar>=6.1.0",
-    "pytest>=8.0.0",
-    "pytest-django>=4.8.0",
-    "pytest-cov>=5.0.0",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
@@ -24,11 +21,18 @@ license = {text = "MIT"}
 [tool.pdm]
 distribution = false
 
+[tool.pdm.dev-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-django>=4.8.0",
+    "pytest-cov>=5.0.0",
+]
+
 [tool.pdm.scripts]
 migrate = "python manage.py migrate"
 makemigrations = "python manage.py makemigrations"
 runserver = "python manage.py runserver"
-test = "python manage.py test"
+test = "pytest"
 createsuperuser = "python manage.py createsuperuser"
 shell = "python manage.py shell"
 collectstatic = "python manage.py collectstatic --noinput"
