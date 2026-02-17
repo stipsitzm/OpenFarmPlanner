@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { GridColDef } from '@mui/x-data-grid';
 import { EditableDataGrid } from '../components/data-grid/DataGrid';
@@ -120,7 +120,6 @@ describe('EditableDataGrid', () => {
   });
 
   it('supports add, blur/enter/tab commit flows and calls API save with payload', async () => {
-    const user = userEvent.setup();
     const validateRow = vi
       .fn<(row: TestGridRow) => string | null>()
       .mockImplementation((row) => (!row.name ? 'Name ist erforderlich' : null));
@@ -132,15 +131,15 @@ describe('EditableDataGrid', () => {
 
     await waitFor(() => expect(screen.getByText('Zelle 1-name')).toBeInTheDocument());
 
-    await user.click(screen.getByLabelText('Neu'));
-    await user.click(screen.getByRole('button', { name: /Blur speichern -1/i }));
+    fireEvent.click(screen.getByLabelText('Neu'));
+    fireEvent.click(screen.getByRole('button', { name: /Blur speichern -1/i }));
     expect(screen.getByText('Name ist erforderlich')).toBeInTheDocument();
 
     validateRow.mockReturnValue(null);
-    await user.click(screen.getByRole('button', { name: /Enter speichern -1/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Enter speichern -1/i }));
     await waitFor(() => expect(createSpy).toHaveBeenCalled());
 
-    await user.click(screen.getAllByRole('button', { name: /Tab speichern 1/i })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /Tab speichern 1/i })[0]);
     await waitFor(() => expect(updateSpy).toHaveBeenCalled());
     expect(updateSpy).toHaveBeenLastCalledWith(100, expect.objectContaining({ area_sqm: 12 }));
   });
