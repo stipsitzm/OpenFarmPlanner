@@ -52,5 +52,10 @@ describe('SeedDemandPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('link', { name: 'Bohne (Canadian Wonder)' })).toBeInTheDocument();
     });
+
+    expect(screen.getByRole('link', { name: 'Bohne (Canadian Wonder)' })).toHaveAttribute(
+      'href',
+      '/cultures?cultureId=1'
+    );
   });
 });
