@@ -6,11 +6,13 @@ export interface Supplier {
   created?: boolean;
 }
 
+export type SeedRateUnit = 'g_per_m2' | 'seeds/m' | 'pcs_per_plant';
+
 export interface Culture {
   seeding_requirement?: number;
   seeding_requirement_type?: 'per_sqm' | 'per_plant' | '';
   seed_rate_value?: number | null;
-  seed_rate_unit?: 'g_per_m2' | 'pcs_per_m2' | 'pcs_per_plant' | null;
+  seed_rate_unit?: SeedRateUnit | null;
   id?: number;
   name: string;
   variety?: string;

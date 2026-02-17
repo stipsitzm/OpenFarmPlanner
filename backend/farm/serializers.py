@@ -106,12 +106,12 @@ class CultureSerializer(serializers.ModelSerializer):
     seed_rate_value = serializers.FloatField(
         required=False,
         allow_null=True,
-        help_text='Seed rate value (per m² or per 100m, depending on unit)'
+        help_text='Seed rate value (per m², per meter, or per plant, depending on unit)'
     )
     seed_rate_unit = serializers.CharField(
         required=False,
         allow_blank=True,
-        help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m²', 'g/100m', etc.)"
+        help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds/plant')"
     )
     sowing_calculation_safety_percent = serializers.FloatField(
         required=False,

@@ -83,7 +83,7 @@ describe('culture form UI sections', () => {
 
     render(
       <SeedingSection
-        formData={{ seed_rate_value: 5, seed_rate_unit: 'g_per_m2' }}
+        formData={{ seed_rate_value: 5, seed_rate_unit: 'seeds/m' }}
         errors={{ seed_rate_unit: 'Bitte wählen' }}
         onChange={onChange}
         t={t}

@@ -312,8 +312,8 @@ export function CultureDetail({
                       {selectedCulture.seed_rate_value}
                       {selectedCulture.seed_rate_unit === 'g_per_m2'
                         ? ' g/m²'
-                        : selectedCulture.seed_rate_unit === 'pcs_per_m2'
-                          ? ' Stk./m²'
+                        : selectedCulture.seed_rate_unit === 'seeds/m'
+                          ? ' Korn / lfm'
                           : selectedCulture.seed_rate_unit === 'pcs_per_plant'
                             ? ' Stk./Pflanze'
                             : ''}

@@ -3,7 +3,7 @@
  * @remarks Presentational, no internal state
  */
 import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Tooltip } from '@mui/material';
-import type { Culture } from '../../api/types';
+import type { Culture, SeedRateUnit } from '../../api/types';
 import type { TFunction } from 'i18next';
 import { fieldSx, spacingFieldSx } from './styles.tsx';
 import { fieldRowSx } from './styles.tsx';
@@ -17,6 +17,14 @@ interface SeedingSectionProps {
 }
 
 export function SeedingSection({ formData, errors, onChange, t }: SeedingSectionProps) {
+  const handleSeedRateUnitChange = (value: string) => {
+    if (!value) {
+      onChange('seed_rate_unit', null);
+      return;
+    }
+    onChange('seed_rate_unit', value as SeedRateUnit);
+  };
+
   return (
     <>
       <Typography variant="h6" sx={{ mt: 2 }}>{t('form.seedRateSectionTitle', { defaultValue: 'Saatgutmenge' })}</Typography>
@@ -40,13 +48,13 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
             <Select
               value={formData.seed_rate_unit ?? ''}
               label="Einheit"
-              onChange={e => onChange('seed_rate_unit', e.target.value)}
+              onChange={e => handleSeedRateUnitChange(e.target.value)}
               onBlur={() => onChange('seed_rate_unit', formData.seed_rate_unit)}
               fullWidth
             >
               <MenuItem value="">-</MenuItem>
               <MenuItem value="g_per_m2">g / m²</MenuItem>
-              <MenuItem value="pcs_per_m2">Stück / m²</MenuItem>
+              <MenuItem value="seeds/m">Korn / lfm</MenuItem>
               <MenuItem value="pcs_per_plant">Stück / Pflanze</MenuItem>
             </Select>
             {errors.seed_rate_unit && (

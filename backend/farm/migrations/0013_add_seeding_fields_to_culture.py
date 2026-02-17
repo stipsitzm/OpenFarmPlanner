@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="culture",
             name="seed_rate_unit",
-            field=models.CharField(max_length=30, blank=True, help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m²', 'g/100m', etc.)"),
+            field=models.CharField(max_length=30, blank=True, help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds/plant')"),
         ),
         migrations.AddField(
             model_name="culture",

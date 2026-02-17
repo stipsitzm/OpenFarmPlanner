@@ -240,12 +240,12 @@ class Culture(TimestampedModel):
     seed_rate_value = models.FloatField(
         null=True,
         blank=True,
-        help_text="Seed rate value (per m² or per 100m, depending on unit)"
+        help_text="Seed rate value (per m², per meter, or per plant, depending on unit)"
     )
     seed_rate_unit = models.CharField(
         max_length=30,
         blank=True,
-        help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m²', 'g/100m', etc.)"
+        help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds/plant')"
     )
     sowing_calculation_safety_percent = models.FloatField(
         null=True,
