@@ -76,3 +76,8 @@ groups = ["default"]
 name = "pygments"
 version = "2.18.0"
 groups = ["default"]
+
+[[package]]
+name = "coverage"
+version = "7.6.1"
+groups = ["default"]
