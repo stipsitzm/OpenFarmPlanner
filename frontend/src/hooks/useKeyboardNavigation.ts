@@ -20,6 +20,7 @@ const ROUTES = [
   '/cultures',
   '/planting-plans',
   '/gantt-chart',
+  '/seed-demand',
 ];
 
 export function useKeyboardNavigation(): void {

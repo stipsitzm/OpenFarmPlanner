@@ -48,7 +48,7 @@ export default function SeedDemandPage(): React.ReactElement {
       {error && <Alert severity="error">{error}</Alert>}
 
       {!isLoading && !error && (
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
           <Table>
             <TableHead>
               <TableRow>
