@@ -60,6 +60,12 @@ describe('hierarchy components and behaviors', () => {
 
     const notesColumn = columns.find((column) => column.field === 'notes');
     const nameColumn = columns.find((column) => column.field === 'name');
+    const areaColumn = columns.find((column) => column.field === 'area_sqm');
+
+    expect(nameColumn?.width).toBe(420);
+    expect(nameColumn).not.toHaveProperty('flex');
+    expect(areaColumn?.width).toBe(120);
+    expect(notesColumn?.width).toBe(320);
 
     notesColumn?.renderCell?.({
       id: 'field-10',

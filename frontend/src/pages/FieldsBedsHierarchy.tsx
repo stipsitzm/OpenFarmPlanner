@@ -327,7 +327,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
       
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
-      <Box sx={{ width: '100%' }}>
+      <Box sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
         <DataGrid
           rows={rows}
           columns={columns}
@@ -353,7 +353,12 @@ function FieldsBedsHierarchy(): React.ReactElement {
           }}
           isRowSelectable={(params) => params.row.type === 'bed'}
           isCellEditable={(params) => params.row.type === 'bed' || params.row.type === 'field'}
-          sx={dataGridSx}
+          sx={{
+            ...dataGridSx,
+            width: 'fit-content',
+            minWidth: 'unset',
+            maxWidth: '100%',
+          }}
           onCellClick={(params) => handleEditableCellClick(params, rowModesModel, setRowModesModel)}
         />
       </Box>

@@ -15,6 +15,13 @@ import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
 import { getPlainExcerpt } from '../data-grid/markdown';
 
+
+const HIERARCHY_COLUMN_WIDTHS = {
+  name: 420,
+  area: 120,
+  notes: 320,
+} as const;
+
 interface NameCellCallbacks {
   onToggleExpand: (rowId: string | number) => void;
   onAddBed: (fieldId: number) => void;
@@ -193,8 +200,7 @@ export function createHierarchyColumns(
     {
       field: 'name',
       headerName: t('hierarchy:columns.name'),
-      flex: 1,
-      minWidth: 420,
+      width: HIERARCHY_COLUMN_WIDTHS.name,
       editable: true,
       renderCell: (params) => renderNameCell(params, callbacks, t),
       preProcessEditCellProps: (params) => {
@@ -205,14 +211,14 @@ export function createHierarchyColumns(
     {
       field: 'area_sqm',
       headerName: t('hierarchy:columns.area'),
-      width: 120,
+      width: HIERARCHY_COLUMN_WIDTHS.area,
       type: 'number',
       editable: true,
     },
     {
       field: 'notes',
       headerName: t('common:fields.notes'),
-      width: 250,
+      width: HIERARCHY_COLUMN_WIDTHS.notes,
       editable: false,
       renderCell: (params) => {
         const value = (params.value as string) || '';
