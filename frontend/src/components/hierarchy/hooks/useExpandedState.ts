@@ -2,7 +2,7 @@
  * Custom hook for managing expansion state
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { GridRowId } from '@mui/x-data-grid';
 
 const EXPANDED_STORAGE_PREFIX = 'hierarchyExpanded.';
@@ -25,17 +25,15 @@ const parseExpandedRows = (rawValue: string | null): Set<string | number> => {
 };
 
 export function useExpandedState(storageKey?: string) {
-  const initialExpandedRows = useMemo(() => {
+  const [expandedRows, setExpandedRows] = useState<Set<string | number>>(() => {
     if (!storageKey) {
       return new Set<string | number>();
     }
 
     return parseExpandedRows(window.sessionStorage.getItem(`${EXPANDED_STORAGE_PREFIX}${storageKey}`));
-  }, [storageKey]);
+  });
 
-  const [expandedRows, setExpandedRows] = useState<Set<string | number>>(initialExpandedRows);
-
-  const hasPersistedState = initialExpandedRows.size > 0;
+  const hasPersistedState = expandedRows.size > 0;
 
   useEffect(() => {
     if (!storageKey) {

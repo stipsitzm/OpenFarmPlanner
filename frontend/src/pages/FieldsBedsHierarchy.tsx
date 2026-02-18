@@ -37,10 +37,6 @@ function FieldsBedsHierarchy(): React.ReactElement {
   // Data fetching
   const { loading, error, setError, locations, fields, beds, setBeds, setFields, fetchData } = useHierarchyData();
 
-  // Debug-Ausgaben NACH allen Hook-Deklarationen
-  // Debug-Ausgabe direkt vor DataGrid-Render
-
-  
   // Expansion state
   const { expandedRows, hasPersistedState, toggleExpand, ensureExpanded, expandAll } = useExpandedState('fieldsBedsHierarchy');
   const { sortModel, setSortModel } = usePersistentSortModel({
@@ -66,9 +62,6 @@ function FieldsBedsHierarchy(): React.ReactElement {
   // Field operations
   const { addField, deleteField } = useFieldOperations(locations, setError, fetchData);
 
-  /**
-  // Removed duplicate import of useState
-   */
   const rows = useMemo<GridRowsProp<HierarchyRow>>(() => {
     return buildHierarchyRows(locations, fields, beds, expandedRows, hierarchySortConfig);
   }, [locations, fields, beds, expandedRows, hierarchySortConfig]);
