@@ -119,6 +119,32 @@ describe('hierarchy components and behaviors', () => {
   });
 
 
+
+  it('applies custom hierarchy column widths when provided', () => {
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+      {
+        name: 333,
+        notes: 280,
+      },
+    );
+
+    const nameColumn = columns.find((column) => column.field === 'name');
+    const areaColumn = columns.find((column) => column.field === 'area_sqm');
+    const notesColumn = columns.find((column) => column.field === 'notes');
+
+    expect(nameColumn?.width).toBe(333);
+    expect(areaColumn?.width).toBe(120);
+    expect(notesColumn?.width).toBe(280);
+  });
+
   it('hides inline action icons while the name cell is in edit mode', () => {
     const columns = createHierarchyColumns(
       vi.fn(),

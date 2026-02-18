@@ -15,12 +15,17 @@ import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
 import { getPlainExcerpt } from '../data-grid/markdown';
 
+export interface HierarchyColumnWidths {
+  name: number;
+  area: number;
+  notes: number;
+}
 
-const HIERARCHY_COLUMN_WIDTHS = {
+export const DEFAULT_HIERARCHY_COLUMN_WIDTHS: HierarchyColumnWidths = {
   name: 280,
   area: 120,
   notes: 320,
-} as const;
+};
 
 interface NameCellCallbacks {
   onToggleExpand: (rowId: string | number) => void;
@@ -185,8 +190,14 @@ export function createHierarchyColumns(
   onDeleteField: (fieldId: number) => void,
   onCreatePlantingPlan: (bedId: number) => void,
   onOpenNotes: (rowId: string | number, field: string) => void,
-  t: TFunction
+  t: TFunction,
+  columnWidths?: Partial<HierarchyColumnWidths>
 ): GridColDef<HierarchyRow>[] {
+  const widths: HierarchyColumnWidths = {
+    ...DEFAULT_HIERARCHY_COLUMN_WIDTHS,
+    ...columnWidths,
+  };
+
   const callbacks: NameCellCallbacks = {
     onToggleExpand,
     onAddBed,
@@ -200,7 +211,7 @@ export function createHierarchyColumns(
     {
       field: 'name',
       headerName: t('hierarchy:columns.name'),
-      width: HIERARCHY_COLUMN_WIDTHS.name,
+      width: widths.name,
       editable: true,
       renderCell: (params) => renderNameCell(params, callbacks, t),
       preProcessEditCellProps: (params) => {
@@ -211,14 +222,14 @@ export function createHierarchyColumns(
     {
       field: 'area_sqm',
       headerName: t('hierarchy:columns.area'),
-      width: HIERARCHY_COLUMN_WIDTHS.area,
+      width: widths.area,
       type: 'number',
       editable: true,
     },
     {
       field: 'notes',
       headerName: t('common:fields.notes'),
-      width: HIERARCHY_COLUMN_WIDTHS.notes,
+      width: widths.notes,
       editable: false,
       renderCell: (params) => {
         const value = (params.value as string) || '';

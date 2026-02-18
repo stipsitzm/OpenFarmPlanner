@@ -23,8 +23,9 @@ import { usePersistentSortModel } from '../hooks/usePersistentSortModel';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
 import { fieldAPI, bedAPI } from '../api/api';
 import { buildHierarchyRows, type HierarchySortConfig } from '../components/hierarchy/utils/hierarchyUtils';
-import { createHierarchyColumns } from '../components/hierarchy/HierarchyColumns';
+import { createHierarchyColumns, DEFAULT_HIERARCHY_COLUMN_WIDTHS } from '../components/hierarchy/HierarchyColumns';
 import { useNotesEditor, NotesDrawer } from '../components/data-grid';
+import { extractApiErrorMessage } from '../api/errors';
 import type { HierarchyRow } from '../components/hierarchy/utils/types';
 
 function FieldsBedsHierarchy(): React.ReactElement {
@@ -167,11 +168,11 @@ function FieldsBedsHierarchy(): React.ReactElement {
 
   const parseAreaValue = (value: number | string | undefined): number | undefined => {
     if (typeof value === 'number') {
-      return value;
+      return Number.isFinite(value) ? value : undefined;
     }
     if (typeof value === 'string' && value.trim() !== '') {
       const parsed = Number.parseFloat(value);
-      return Number.isNaN(parsed) ? undefined : parsed;
+      return Number.isFinite(parsed) ? parsed : undefined;
     }
     return undefined;
   };
@@ -204,6 +205,11 @@ function FieldsBedsHierarchy(): React.ReactElement {
     if (areaValue <= 0 || isNaN(areaValue)) {
       setError(t('validation.areaMustBePositive'));
       throw new Error(t('validation.areaMustBePositive'));
+    }
+
+    if (areaValue > 1000000) {
+      setError(t('validation.areaTooLarge'));
+      throw new Error(t('validation.areaTooLarge'));
     }
 
     // ...existing code...
@@ -287,8 +293,14 @@ function FieldsBedsHierarchy(): React.ReactElement {
         await fetchData();
         return { ...newRow, name: updated.data.name, area_sqm: updated.data.area_sqm, notes: updated.data.notes };
       } catch (err) {
-        setError(t('errors.save'));
-        throw err;
+        const extractedError = extractApiErrorMessage(err, t, t('errors.save'));
+        const errorMessage = extractedError.includes('max_digits')
+          || extractedError.toLowerCase().includes('digits')
+          ? t('validation.areaTooLarge')
+          : extractedError;
+
+        setError(errorMessage);
+        throw new Error(errorMessage);
       }
     }
     return newRow;
@@ -304,6 +316,23 @@ function FieldsBedsHierarchy(): React.ReactElement {
     setError(error.message || t('errors.save'));
   };
 
+  const nameColumnWidth = useMemo(() => {
+    const MIN_NAME_WIDTH = 220;
+    const CHAR_WIDTH_PX = 8;
+    const ICON_GROUP_PX = 120;
+    const INDENT_PER_LEVEL_PX = 24;
+    const EXTRA_BED_INDENT_PX = 34;
+
+    const measuredWidth = rows.reduce((maxWidth, row) => {
+      const nameLength = typeof row.name === 'string' ? row.name.length : 0;
+      const indent = (row.level * INDENT_PER_LEVEL_PX) + (row.type === 'bed' ? EXTRA_BED_INDENT_PX : 0);
+      const rowWidth = indent + ICON_GROUP_PX + (nameLength * CHAR_WIDTH_PX);
+      return Math.max(maxWidth, rowWidth);
+    }, MIN_NAME_WIDTH);
+
+    return Math.min(520, Math.max(MIN_NAME_WIDTH, measuredWidth));
+  }, [rows]);
+
   /**
    * Create columns with callbacks
    */
@@ -316,9 +345,13 @@ function FieldsBedsHierarchy(): React.ReactElement {
       (fieldId) => deleteField(fieldId),
       handleCreatePlantingPlan,
       notesEditor.handleOpen,
-      t
+      t,
+      {
+        ...DEFAULT_HIERARCHY_COLUMN_WIDTHS,
+        name: nameColumnWidth,
+      }
     );
-  }, [toggleExpand, handleAddBed, deleteBed, addField, deleteField, handleCreatePlantingPlan, notesEditor.handleOpen, t]);
+  }, [toggleExpand, handleAddBed, deleteBed, addField, deleteField, handleCreatePlantingPlan, notesEditor.handleOpen, t, nameColumnWidth]);
 
   return (
     <div className="page-container">
