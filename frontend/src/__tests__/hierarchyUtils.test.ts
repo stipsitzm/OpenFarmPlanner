@@ -332,6 +332,46 @@ describe('buildHierarchyRows', () => {
     });
   });
 
+
+  it('sorts only within each hierarchy level when sorting by name descending', () => {
+    expandedRows.add('location-1');
+    expandedRows.add('location-2');
+    expandedRows.add('field-1');
+
+    const result = buildHierarchyRows(mockLocations, mockFields, mockBeds, expandedRows, {
+      field: 'name',
+      direction: 'desc',
+    });
+
+    const topLevelLocations = result.filter((row) => row.type === 'location');
+    expect(topLevelLocations.map((row) => row.name)).toEqual(['Location 2', 'Location 1']);
+
+    const location1Fields = result.filter((row) => row.parentId === 'location-1' && row.type === 'field');
+    expect(location1Fields.map((row) => row.name)).toEqual(['Field 2', 'Field 1']);
+
+    const field1Beds = result.filter((row) => row.parentId === 'field-1' && row.type === 'bed');
+    expect(field1Beds.map((row) => row.name)).toEqual(['Bed 2', 'Bed 1']);
+  });
+
+  it('sorts each level by area while preserving the hierarchy', () => {
+    expandedRows.add('location-1');
+    expandedRows.add('location-2');
+
+    const result = buildHierarchyRows(mockLocations, mockFields, mockBeds, expandedRows, {
+      field: 'area_sqm',
+      direction: 'desc',
+    });
+
+    const topLevelLocations = result.filter((row) => row.type === 'location');
+    expect(topLevelLocations).toHaveLength(2);
+
+    const fieldsUnderLocation1 = result.filter((row) => row.parentId === 'location-1' && row.type === 'field');
+    expect(fieldsUnderLocation1.map((row) => row.name)).toEqual(['Field 2', 'Field 1']);
+
+    const fieldsUnderLocation2 = result.filter((row) => row.parentId === 'location-2' && row.type === 'field');
+    expect(fieldsUnderLocation2.map((row) => row.name)).toEqual(['Field 3']);
+  });
+
   it('should set field_name on bed rows', () => {
     expandedRows.add('location-1');
     expandedRows.add(`field-1`);

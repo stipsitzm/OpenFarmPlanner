@@ -407,6 +407,9 @@ function PlantingPlans(): React.ReactElement {
         deleteConfirmMessage={t('plantingPlans:confirmDelete')}
         addButtonLabel={t('plantingPlans:addButton')}
         showDeleteAction={true}
+        tableKey="plantingPlans"
+        defaultSortModel={[{ field: 'planting_date', sort: 'asc' }]}
+        persistSortInUrl={true}
         notes={{
           fields: [
             {

@@ -84,6 +84,8 @@ function Locations(): React.ReactElement {
         deleteErrorMessage={t('locations:errors.delete')}
         deleteConfirmMessage={t('locations:confirmDelete')}
         addButtonLabel={t('locations:addButton')}
+        tableKey="locations"
+        persistSortInUrl={true}
         notes={{
           fields: [
             {

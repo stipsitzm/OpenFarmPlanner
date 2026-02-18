@@ -21,11 +21,12 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
-import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId } from '@mui/x-data-grid';
+import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel } from '@mui/x-data-grid';
 import { Box, Alert, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigationBlocker } from '../../hooks/autosave';
+import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
 import { useTranslation } from '../../i18n';
 import { NotesCell } from './NotesCell';
 import { NotesDrawer } from './NotesDrawer';
@@ -66,6 +67,9 @@ export interface EditableDataGridProps<T extends EditableRow> {
   addButtonLabel: string; // Aria label for add button
   showDeleteAction?: boolean; // Whether to show delete action column (default: true)
   initialRow?: Partial<T>; // Optional initial row to add on mount (e.g., pre-filled from another page)
+  tableKey?: string; // Optional key for persisting table sorting in session + URL
+  defaultSortModel?: GridSortModel; // Optional default sort model (used when no persisted state exists)
+  persistSortInUrl?: boolean; // Whether sorting should be persisted in URL query params
   notes?: {
     fields: NotesFieldConfig[];
   };
@@ -85,6 +89,9 @@ export function EditableDataGrid<T extends EditableRow>({
   addButtonLabel,
   showDeleteAction = true,
   initialRow,
+  tableKey,
+  defaultSortModel = [],
+  persistSortInUrl = true,
   notes,
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
@@ -96,6 +103,12 @@ export function EditableDataGrid<T extends EditableRow>({
   const initialFetchDoneRef = useRef<boolean>(false);
   
   const { t } = useTranslation('common');
+  const { sortModel, setSortModel } = usePersistentSortModel({
+    tableKey: tableKey ?? 'editableDataGrid',
+    defaultSortModel,
+    allowedFields: columns.map((column) => column.field),
+    persistInUrl: persistSortInUrl,
+  });
 
   const saveUpdatedRow = useCallback(async (updatedRow: T): Promise<T> => {
     const numericId = Number(updatedRow.id);
@@ -459,6 +472,8 @@ export function EditableDataGrid<T extends EditableRow>({
               paginationModel: { pageSize: 10 },
             },
           }}
+          sortModel={sortModel}
+          onSortModelChange={setSortModel}
           slots={{
             footer: CustomFooter,
           }}
