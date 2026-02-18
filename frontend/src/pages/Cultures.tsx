@@ -42,19 +42,20 @@ function Cultures(): React.ReactElement {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCultureParam = searchParams.get('cultureId');
-  const selectedCultureIdFromQuery = selectedCultureParam ? Number.parseInt(selectedCultureParam, 10) : undefined;
-
-  const getStoredCultureId = (): number | undefined => {
-    const storedCultureId = localStorage.getItem('selectedCultureId');
-    if (!storedCultureId) {
+  const parseCultureId = (value: string | null): number | undefined => {
+    if (!value) {
       return undefined;
     }
 
-    const parsedId = Number.parseInt(storedCultureId, 10);
+    const parsedId = Number.parseInt(value, 10);
     return Number.isFinite(parsedId) ? parsedId : undefined;
   };
+  const selectedCultureIdFromQuery = parseCultureId(selectedCultureParam);
+
+  const getStoredCultureId = (): number | undefined => parseCultureId(localStorage.getItem('selectedCultureId'));
 
   const [cultures, setCultures] = useState<Culture[]>([]);
+  const selectionSyncSourceRef = useRef<'internal' | 'query' | null>(null);
   const [selectedCultureId, setSelectedCultureId] = useState<number | undefined>(() => {
     if (Number.isFinite(selectedCultureIdFromQuery)) {
       return selectedCultureIdFromQuery;
@@ -99,6 +100,11 @@ function Cultures(): React.ReactElement {
     setSnackbar({ open: true, message, severity });
   }, []);
 
+  const updateSelectedCultureId = useCallback((id: number | undefined, source: 'internal' | 'query') => {
+    selectionSyncSourceRef.current = source;
+    setSelectedCultureId((currentId) => (currentId === id ? currentId : id));
+  }, []);
+
   const fetchCultures = useCallback(async () => {
     try {
       const response = await cultureAPI.list();
@@ -116,16 +122,32 @@ function Cultures(): React.ReactElement {
   }, [fetchCultures]);
 
   useEffect(() => {
-    if (Number.isFinite(selectedCultureIdFromQuery) && selectedCultureIdFromQuery !== selectedCultureId) {
-      setSelectedCultureId(selectedCultureIdFromQuery);
+    if (selectionSyncSourceRef.current === 'internal') {
+      return;
     }
-  }, [selectedCultureIdFromQuery, selectedCultureId]);
+
+    if (selectedCultureParam === null) {
+      return;
+    }
+
+    const nextCultureId = selectedCultureIdFromQuery;
+
+    if (nextCultureId !== selectedCultureId) {
+      updateSelectedCultureId(nextCultureId, 'query');
+    }
+  }, [selectedCultureIdFromQuery, selectedCultureId, updateSelectedCultureId]);
 
   useEffect(() => {
     if (selectedCultureId === undefined) {
       localStorage.removeItem('selectedCultureId');
 
+      if (selectionSyncSourceRef.current === 'query') {
+        selectionSyncSourceRef.current = null;
+        return;
+      }
+
       if (!selectedCultureParam) {
+        selectionSyncSourceRef.current = null;
         return;
       }
 
@@ -134,12 +156,19 @@ function Cultures(): React.ReactElement {
         nextParams.delete('cultureId');
         return nextParams;
       }, { replace: true });
+      selectionSyncSourceRef.current = null;
       return;
     }
 
     localStorage.setItem('selectedCultureId', String(selectedCultureId));
 
+    if (selectionSyncSourceRef.current === 'query') {
+      selectionSyncSourceRef.current = null;
+      return;
+    }
+
     if (selectedCultureParam === String(selectedCultureId)) {
+      selectionSyncSourceRef.current = null;
       return;
     }
 
@@ -148,16 +177,21 @@ function Cultures(): React.ReactElement {
       nextParams.set('cultureId', String(selectedCultureId));
       return nextParams;
     }, { replace: true });
+    selectionSyncSourceRef.current = null;
   }, [selectedCultureId, selectedCultureParam, setSearchParams]);
 
   useEffect(() => {
-    if (selectedCultureId !== undefined && !cultures.some((culture) => culture.id === selectedCultureId)) {
-      setSelectedCultureId(undefined);
+    if (cultures.length === 0) {
+      return;
     }
-  }, [cultures, selectedCultureId]);
+
+    if (selectedCultureId !== undefined && !cultures.some((culture) => culture.id === selectedCultureId)) {
+      updateSelectedCultureId(undefined, 'internal');
+    }
+  }, [cultures, selectedCultureId, updateSelectedCultureId]);
 
   const handleCultureSelect = (culture: Culture | null) => {
-    setSelectedCultureId(culture?.id);
+    updateSelectedCultureId(culture?.id, 'internal');
   };
 
   const handleAddNew = () => {
@@ -176,7 +210,7 @@ function Cultures(): React.ReactElement {
         await cultureAPI.delete(culture.id!);
         await fetchCultures();
         if (selectedCultureId === culture.id) {
-          setSelectedCultureId(undefined);
+          updateSelectedCultureId(undefined, 'internal');
         }
         showSnackbar(t('messages.updateSuccess'), 'success');
       } catch (error) {
@@ -198,7 +232,7 @@ function Cultures(): React.ReactElement {
         savedCulture = response.data;
         showSnackbar(t('messages.createSuccess'), 'success');
         // Auto-select the newly created culture
-        setSelectedCultureId(savedCulture.id);
+        updateSelectedCultureId(savedCulture.id, 'internal');
       }
       await fetchCultures();
       setShowForm(false);
