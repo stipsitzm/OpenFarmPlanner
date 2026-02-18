@@ -42,17 +42,17 @@ function Cultures(): React.ReactElement {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCultureParam = searchParams.get('cultureId');
-  const selectedCultureIdFromQuery = selectedCultureParam ? Number.parseInt(selectedCultureParam, 10) : undefined;
-
-  const getStoredCultureId = (): number | undefined => {
-    const storedCultureId = localStorage.getItem('selectedCultureId');
-    if (!storedCultureId) {
+  const parseCultureId = (value: string | null): number | undefined => {
+    if (!value) {
       return undefined;
     }
 
-    const parsedId = Number.parseInt(storedCultureId, 10);
+    const parsedId = Number.parseInt(value, 10);
     return Number.isFinite(parsedId) ? parsedId : undefined;
   };
+  const selectedCultureIdFromQuery = parseCultureId(selectedCultureParam);
+
+  const getStoredCultureId = (): number | undefined => parseCultureId(localStorage.getItem('selectedCultureId'));
 
   const [cultures, setCultures] = useState<Culture[]>([]);
   const selectionSyncSourceRef = useRef<'internal' | 'query' | null>(null);
@@ -126,9 +126,11 @@ function Cultures(): React.ReactElement {
       return;
     }
 
-    const nextCultureId = Number.isFinite(selectedCultureIdFromQuery)
-      ? selectedCultureIdFromQuery
-      : undefined;
+    if (selectedCultureParam === null) {
+      return;
+    }
+
+    const nextCultureId = selectedCultureIdFromQuery;
 
     if (nextCultureId !== selectedCultureId) {
       updateSelectedCultureId(nextCultureId, 'query');

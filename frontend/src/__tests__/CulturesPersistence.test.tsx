@@ -114,6 +114,19 @@ describe('Cultures selection persistence', () => {
     expect(localStorage.getItem('selectedCultureId')).toBe('2');
   });
 
+  it('restores selection from localStorage when returning without query parameter', async () => {
+    localStorage.setItem('selectedCultureId', '2');
+
+    renderCultures('/cultures');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('2');
+    });
+
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?cultureId=2');
+    expect(localStorage.getItem('selectedCultureId')).toBe('2');
+  });
+
   it('does not flip back to previous selection after user change', async () => {
     renderCultures('/cultures?cultureId=1');
 
