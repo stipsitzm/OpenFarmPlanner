@@ -23,7 +23,7 @@ import { useBedOperations } from '../components/hierarchy/hooks/useBedOperations
 import { usePersistentSortModel } from '../hooks/usePersistentSortModel';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
 import { fieldAPI, bedAPI } from '../api/api';
-import { buildHierarchyRows } from '../components/hierarchy/utils/hierarchyUtils';
+import { buildHierarchyRows, type HierarchySortConfig } from '../components/hierarchy/utils/hierarchyUtils';
 import { createHierarchyColumns } from '../components/hierarchy/HierarchyColumns';
 import { useNotesEditor, NotesDrawer } from '../components/data-grid';
 import type { HierarchyRow } from '../components/hierarchy/utils/types';
@@ -42,12 +42,23 @@ function FieldsBedsHierarchy(): React.ReactElement {
 
   
   // Expansion state
-  const { expandedRows, toggleExpand, ensureExpanded, expandAll } = useExpandedState();
+  const { expandedRows, hasPersistedState, toggleExpand, ensureExpanded, expandAll } = useExpandedState('fieldsBedsHierarchy');
   const { sortModel, setSortModel } = usePersistentSortModel({
     tableKey: 'fieldsBedsHierarchy',
     allowedFields: ['name', 'area_sqm'],
     persistInUrl: true,
   });
+  const hierarchySortConfig = useMemo<HierarchySortConfig | undefined>(() => {
+    const [firstSort] = sortModel;
+    if (!firstSort || !firstSort.sort) {
+      return undefined;
+    }
+
+    return {
+      field: firstSort.field,
+      direction: firstSort.sort,
+    };
+  }, [sortModel]);
   
   // Bed operations
   const { addBed, saveBed, deleteBed, pendingEditRow, setPendingEditRow } = useBedOperations(beds, setBeds, setError);
@@ -59,8 +70,8 @@ function FieldsBedsHierarchy(): React.ReactElement {
   // Removed duplicate import of useState
    */
   const rows = useMemo<GridRowsProp<HierarchyRow>>(() => {
-    return buildHierarchyRows(locations, fields, beds, expandedRows);
-  }, [locations, fields, beds, expandedRows]);
+    return buildHierarchyRows(locations, fields, beds, expandedRows, hierarchySortConfig);
+  }, [locations, fields, beds, expandedRows, hierarchySortConfig]);
 
   // Notes editor - must be after rows definition
   const notesEditor = useNotesEditor<HierarchyRow>({
@@ -108,7 +119,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
    * Expand all rows when data is loaded (only once on initial load)
    */
   useEffect(() => {
-    if (!hasInitiallyExpandedRef.current && locations.length > 0 && fields.length > 0) {
+    if (!hasPersistedState && !hasInitiallyExpandedRef.current && locations.length > 0 && fields.length > 0) {
       const allRowIds = new Set<string | number>();
       
       // Add all location IDs
@@ -124,7 +135,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
       expandAll(Array.from(allRowIds));
       hasInitiallyExpandedRef.current = true;
     }
-  }, [expandAll, fields, locations]);
+  }, [expandAll, fields, hasPersistedState, locations]);
 
   /**
    * Handle pending edit mode after rows are updated
@@ -341,6 +352,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
               paginationModel: { pageSize: 25 },
             },
           }}
+          sortingMode="server"
           sortModel={sortModel}
           onSortModelChange={setSortModel}
           slots={{
