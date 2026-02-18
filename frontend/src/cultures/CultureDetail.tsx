@@ -77,9 +77,7 @@ export function CultureDetail({
       .filter((culture) => culture.id !== undefined)
       .map((culture) => ({
         value: culture.id!,
-        label: culture.variety
-          ? `${culture.name} (${culture.variety})`
-          : culture.name,
+        label: `${culture.name}${culture.variety ? ` - ${culture.variety}` : ''}${culture.seed_supplier ? ` | ${culture.seed_supplier}` : ''}`,
         data: culture,
       })),
     [cultures]
