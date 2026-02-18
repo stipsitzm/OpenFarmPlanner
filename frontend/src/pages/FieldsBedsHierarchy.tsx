@@ -20,6 +20,7 @@ import { handleRowEditStop, handleEditableCellClick } from '../components/data-g
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState';
 import { useBedOperations } from '../components/hierarchy/hooks/useBedOperations';
+import { usePersistentSortModel } from '../hooks/usePersistentSortModel';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
 import { fieldAPI, bedAPI } from '../api/api';
 import { buildHierarchyRows } from '../components/hierarchy/utils/hierarchyUtils';
@@ -42,6 +43,11 @@ function FieldsBedsHierarchy(): React.ReactElement {
   
   // Expansion state
   const { expandedRows, toggleExpand, ensureExpanded, expandAll } = useExpandedState();
+  const { sortModel, setSortModel } = usePersistentSortModel({
+    tableKey: 'fieldsBedsHierarchy',
+    allowedFields: ['name', 'area_sqm'],
+    persistInUrl: true,
+  });
   
   // Bed operations
   const { addBed, saveBed, deleteBed, pendingEditRow, setPendingEditRow } = useBedOperations(beds, setBeds, setError);
@@ -335,6 +341,8 @@ function FieldsBedsHierarchy(): React.ReactElement {
               paginationModel: { pageSize: 25 },
             },
           }}
+          sortModel={sortModel}
+          onSortModelChange={setSortModel}
           slots={{
             footer: () => <HierarchyFooter locations={locations} onAddField={addField} />,
           }}
