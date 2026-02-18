@@ -62,7 +62,7 @@ describe('hierarchy components and behaviors', () => {
     const nameColumn = columns.find((column) => column.field === 'name');
     const areaColumn = columns.find((column) => column.field === 'area_sqm');
 
-    expect(nameColumn?.width).toBe(420);
+    expect(nameColumn?.width).toBe(280);
     expect(nameColumn).not.toHaveProperty('flex');
     expect(areaColumn?.width).toBe(120);
     expect(notesColumn?.width).toBe(320);

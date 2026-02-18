@@ -9,7 +9,6 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { HierarchyFooter } from '../components/hierarchy/HierarchyFooter';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
@@ -348,9 +347,6 @@ function FieldsBedsHierarchy(): React.ReactElement {
           sortingMode="server"
           sortModel={sortModel}
           onSortModelChange={setSortModel}
-          slots={{
-            footer: () => <HierarchyFooter locations={locations} onAddField={addField} />,
-          }}
           isRowSelectable={(params) => params.row.type === 'bed'}
           isCellEditable={(params) => params.row.type === 'bed' || params.row.type === 'field'}
           sx={{

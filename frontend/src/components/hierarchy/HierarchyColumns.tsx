@@ -17,7 +17,7 @@ import { getPlainExcerpt } from '../data-grid/markdown';
 
 
 const HIERARCHY_COLUMN_WIDTHS = {
-  name: 420,
+  name: 280,
   area: 120,
   notes: 320,
 } as const;
