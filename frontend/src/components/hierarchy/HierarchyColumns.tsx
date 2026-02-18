@@ -126,6 +126,7 @@ function renderNameCell(
   const indent = row.type === 'bed' ? baseIndent + 34 : baseIndent;
 
   const hasExpandToggle = row.type === 'location' || row.type === 'field';
+  const showInlineActions = params.cellMode !== 'edit';
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', pl: `${indent}px`, width: '100%', gap: 0.5 }}>
@@ -144,21 +145,23 @@ function renderNameCell(
 
       {!hasExpandToggle && <Box sx={{ width: 32 }} />}
 
-      <Box
-        component="span"
-        sx={{
-          fontWeight: row.type === 'location' ? 'bold' : 'normal',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          flexGrow: 1,
-        }}
-      >
-        {params.value}
-      </Box>
+      <Box sx={{ display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: 0.5 }}>
+        <Box
+          component="span"
+          sx={{
+            fontWeight: row.type === 'location' ? 'bold' : 'normal',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: '100%',
+          }}
+        >
+          {params.value}
+        </Box>
 
-      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, mr: 0.5 }}>
-        {renderInlineActions(row, callbacks, t)}
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+          {showInlineActions ? renderInlineActions(row, callbacks, t) : null}
+        </Box>
       </Box>
     </Box>
   );

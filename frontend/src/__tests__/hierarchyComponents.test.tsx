@@ -112,6 +112,37 @@ describe('hierarchy components and behaviors', () => {
     expect(deleteBed).toHaveBeenCalledWith(100);
   });
 
+
+  it('hides inline action icons while the name cell is in edit mode', () => {
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+    );
+
+    const nameColumn = columns.find((column) => column.field === 'name');
+
+    render(
+      <>
+        {nameColumn?.renderCell?.({
+          id: 100,
+          field: 'name',
+          value: 'Beet 100',
+          cellMode: 'edit',
+          row: { id: 100, type: 'bed', bedId: 100, level: 2 },
+        } as never)}
+      </>
+    );
+
+    expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
+  });
+
   it('updates footer messaging and add action based on location count', async () => {
     const user = userEvent.setup();
     const onAddField = vi.fn();
