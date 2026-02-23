@@ -553,6 +553,36 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
         self.assertEqual(self.culture.harvest_duration_days, 35)
         self.assertEqual(self.culture.notes, 'Existing notes Quellen: https://existing.example')
 
+
+    @patch('farm.views.enrich_culture_data')
+    def test_enrich_overwrite_does_not_duplicate_quellen_on_research(self, mock_enrich):
+        self.culture.notes = (
+            'Ausführliche Notiz.\n\n### Quellen\n'
+            '- [https://supplier.example/pea-norli](https://supplier.example/pea-norli)\n'
+            '- [https://wiki.example/pea](https://wiki.example/pea)'
+        )
+        self.culture.save(update_fields=['notes'])
+
+        mock_enrich.return_value = (
+            {
+                'notes': 'Aktualisierte Notiz zu Kultur und Ernte.',
+            },
+            ['https://supplier.example/pea-norli', 'https://wiki.example/pea'],
+            {'parsed_keys': ['notes', 'sources']}
+        )
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.culture.refresh_from_db()
+        self.assertIn('### Quellen', self.culture.notes)
+        self.assertEqual(self.culture.notes.count('- [https://supplier.example/pea-norli](https://supplier.example/pea-norli)'), 1)
+        self.assertEqual(self.culture.notes.count('- [https://wiki.example/pea](https://wiki.example/pea)'), 1)
+
     @patch('farm.views.enrich_culture_data')
     def test_enrich_returns_422_when_no_sources(self, mock_enrich):
         from farm.services.enrichment import EnrichmentServiceError

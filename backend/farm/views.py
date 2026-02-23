@@ -163,10 +163,20 @@ class CultureViewSet(viewsets.ModelViewSet):
         return False
 
     def _extract_urls(self, value: str | None) -> list[str]:
-        """Extract HTTP(S) URLs from free text in stable order."""
+        """Extract and normalize HTTP(S) URLs from plain text and markdown links."""
         if not value:
             return []
-        return re.findall(r'https?://[^\s|]+', value)
+
+        candidates = re.findall(r'https?://[^\s\)\]\|>]+', value)
+        markdown_targets = re.findall(r'\[[^\]]+\]\((https?://[^\s\)]+)\)', value)
+
+        deduped: list[str] = []
+        for raw in [*candidates, *markdown_targets]:
+            normalized = raw.strip().rstrip('.,;:')
+            normalized = re.sub(r'[\]\)]+$', '', normalized)
+            if normalized and normalized not in deduped:
+                deduped.append(normalized)
+        return deduped
 
     def _format_notes_with_sources(self, notes: str | None, source_urls: list[str]) -> str:
         """Format markdown notes and append a Quellen section at the end."""
@@ -174,6 +184,7 @@ class CultureViewSet(viewsets.ModelViewSet):
 
         # Remove existing Quellen section to avoid duplication.
         base_notes = re.sub(r'\n+###\s+Quellen\b[\s\S]*$', '', base_notes, flags=re.IGNORECASE).strip()
+        base_notes = re.sub(r'\s+Quellen:\s*.*$', '', base_notes, flags=re.IGNORECASE | re.DOTALL).strip()
 
         deduped_urls: list[str] = []
         seen: set[str] = set()

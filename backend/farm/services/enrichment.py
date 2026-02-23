@@ -390,7 +390,7 @@ def enrich_culture_data(
         llm_sources = []
 
     normalized_sources: list[str] = []
-    for url in [*llm_sources, *fetched_urls, *source_urls]:
+    for url in [*llm_sources, *fetched_urls]:
         normalized = str(url).strip()
         if normalized and normalized not in normalized_sources:
             normalized_sources.append(normalized)
