@@ -181,7 +181,8 @@ class CultureViewSet(viewsets.ModelViewSet):
 
         sources_suffix = 'Quellen: '
         if deduped_urls:
-            sources_suffix += ' | '.join(deduped_urls)
+            markdown_links = [f'[{url}]({url})' for url in deduped_urls]
+            sources_suffix += ' | '.join(markdown_links)
 
         if base_notes:
             return f'{base_notes} {sources_suffix}'
@@ -507,10 +508,26 @@ class CultureViewSet(viewsets.ModelViewSet):
         ]
         target_fields = fill_missing_targets if mode == 'fill_missing' else list(self.ENRICH_UPDATABLE_FIELDS)
 
+        if not target_fields:
+            return Response(
+                {'message': 'No enrichable fields found for this culture.', 'code': 'NO_ENRICHABLE_FIELDS'},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+
         try:
             llm_updates, llm_sources, llm_debug = enrich_culture_data(culture_context, source_urls, mode=mode, target_fields=target_fields)
         except EnrichmentServiceError as exc:
             message = str(exc)
+            if message == 'NO_SOURCES':
+                return Response(
+                    {'message': 'No usable web sources found for enrichment.', 'code': 'NO_SOURCES'},
+                    status=status.HTTP_422_UNPROCESSABLE_ENTITY
+                )
+            if message == 'NO_ENRICHABLE_FIELDS':
+                return Response(
+                    {'message': 'No enrichable fields found for this culture.', 'code': 'NO_ENRICHABLE_FIELDS'},
+                    status=status.HTTP_422_UNPROCESSABLE_ENTITY
+                )
             status_code = status.HTTP_502_BAD_GATEWAY
             if 'not configured' in message.lower():
                 status_code = status.HTTP_503_SERVICE_UNAVAILABLE
@@ -519,20 +536,11 @@ class CultureViewSet(viewsets.ModelViewSet):
                 status=status_code
             )
 
-        llm_note_sources = self._extract_urls(str(llm_updates.get('notes', '')))
-
-        combined_sources: list[str] = []
-        for url in [*llm_sources, *source_urls, *llm_note_sources]:
-            normalized = url.strip()
-            if normalized and normalized not in combined_sources:
-                combined_sources.append(normalized)
+        combined_sources = [url.strip() for url in llm_sources if isinstance(url, str) and url.strip()]
 
         candidate = dict(llm_updates)
-        if combined_sources:
+        if 'notes' in candidate:
             candidate['notes'] = self._format_notes_with_sources(candidate.get('notes'), combined_sources)
-        else:
-            # Without sources we cannot generate a compliant Quellen section.
-            candidate.pop('notes', None)
         merge_payload, updated_fields = self._merge_enrichment(culture, candidate, mode)
 
         if merge_payload:

@@ -555,12 +555,10 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
         self.assertEqual(self.culture.notes, 'Existing notes Quellen: https://existing.example')
 
     @patch('farm.views.enrich_culture_data')
-    def test_enrich_without_source_urls_skips_notes_update(self, mock_enrich):
-        self.culture.notes = ''
-        self.culture.save(update_fields=['notes'])
-        self.culture.notes = 'Existing note without url'
-        self.culture.save(update_fields=['notes'])
-        mock_enrich.return_value = ({'notes': 'Summary without sources', 'harvest_duration_days': 31}, [], {'parsed_keys': ['notes', 'harvest_duration_days']})
+    def test_enrich_returns_422_when_no_sources(self, mock_enrich):
+        from farm.services.enrichment import EnrichmentServiceError
+
+        mock_enrich.side_effect = EnrichmentServiceError('NO_SOURCES')
 
         response = self.client.post(
             f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
@@ -568,12 +566,40 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
             format='json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('harvest_duration_days', response.data['updated_fields'])
-        self.assertNotIn('notes', response.data['updated_fields'])
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data['code'], 'NO_SOURCES')
 
-        self.culture.refresh_from_db()
-        self.assertEqual(self.culture.notes, 'Existing note without url')
+
+
+
+    def test_enrich_returns_422_when_no_enrichable_fields(self):
+        self.culture.crop_family = 'Fabaceae'
+        self.culture.nutrient_demand = 'medium'
+        self.culture.cultivation_type = 'direct_sowing'
+        self.culture.growth_duration_days = 70
+        self.culture.harvest_duration_days = 20
+        self.culture.propagation_duration_days = 0
+        self.culture.harvest_method = 'per_sqm'
+        self.culture.expected_yield = 1
+        self.culture.distance_within_row_m = 0.1
+        self.culture.row_spacing_m = 0.2
+        self.culture.sowing_depth_m = 0.03
+        self.culture.seed_rate_value = 2
+        self.culture.seed_rate_unit = 'g_per_m2'
+        self.culture.sowing_calculation_safety_percent = 10
+        self.culture.thousand_kernel_weight_g = 1
+        self.culture.package_size_g = 100
+        self.culture.notes = 'Summary Quellen: [https://example.com](https://example.com)'
+        self.culture.save()
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=fill_missing',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data['code'], 'NO_ENRICHABLE_FIELDS')
 
     @patch('farm.views.enrich_culture_data')
     def test_enrich_propagates_configuration_error(self, mock_enrich):
