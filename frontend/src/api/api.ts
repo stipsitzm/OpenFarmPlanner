@@ -36,6 +36,13 @@ export const cultureAPI = {
     skipped_count: number;
     errors: Array<{ index: number; error: unknown }>;
   }>('/cultures/import/apply/', data),
+
+  enrich: (id: number, mode: 'overwrite' | 'fill_missing') => http.post<{
+    culture: Culture;
+    mode: 'overwrite' | 'fill_missing';
+    updated_fields: string[];
+    sources: string[];
+  }>(`/cultures/${id}/enrich/?mode=${mode}`),
 };
 
 export const supplierAPI = {

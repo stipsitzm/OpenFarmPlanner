@@ -453,6 +453,81 @@ class CultureImportAPITest(DRFAPITestCase):
         self.assertEqual(response.data['skipped_count'], 0)
 
 
+class CultureEnrichmentAPITest(DRFAPITestCase):
+    """Tests for single-culture enrichment endpoint."""
+
+    def setUp(self):
+        self.culture = Culture.objects.create(
+            name="Tomato",
+            variety="Cherry",
+            seed_supplier="Supplier A",
+            growth_duration_days=60,
+            harvest_duration_days=20,
+            notes="Line one\nhttps://example.com/a"
+        )
+
+    def test_enrich_rejects_missing_required_fields(self):
+        self.culture.variety = ''
+        self.culture.save(update_fields=['variety'])
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('missing_fields', response.data)
+        self.assertIn('variety', response.data['missing_fields'])
+
+    def test_enrich_overwrite_updates_whitelisted_fields(self):
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('notes', response.data['updated_fields'])
+
+        self.culture.refresh_from_db()
+        self.assertIn('Quellen:', self.culture.notes)
+        self.assertNotIn('\n', self.culture.notes)
+
+    def test_enrich_fill_missing_does_not_override_existing_notes(self):
+        original_notes = 'Already set Quellen: https://existing.example'
+        self.culture.notes = original_notes
+        self.culture.save(update_fields=['notes'])
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=fill_missing',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['updated_fields'], [])
+
+        self.culture.refresh_from_db()
+        self.assertEqual(self.culture.notes, original_notes)
+
+    def test_enrich_notes_are_single_line_and_sources_at_end(self):
+        self.culture.notes = 'A note with newline\nand source https://example.com/source'
+        self.culture.save(update_fields=['notes'])
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        notes = response.data['culture']['notes']
+        self.assertNotIn('\n', notes)
+        self.assertRegex(notes, r'Quellen:\s+https?://')
+
+
+
 class PlantingPlanAreaInputTest(DRFAPITestCase):
     """Test area input as m² or plants for PlantingPlan."""
     

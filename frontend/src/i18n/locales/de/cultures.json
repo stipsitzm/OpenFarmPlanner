@@ -128,5 +128,17 @@
       "network": "Netzwerkfehler beim Import.",
       "someFailures": "{{failed}} Einträge konnten nicht importiert werden."
     }
+  },
+  "enrichment": {
+    "buttons": {
+      "overwrite": "Neu recherchieren",
+      "fillMissing": "Nur leere Felder ergänzen"
+    },
+    "messages": {
+      "noCultureSelected": "Bitte zuerst eine Kultur auswählen.",
+      "missingRequiredFields": "Anreicherung benötigt ausgefüllte Felder: {{fields}}.",
+      "success": "Kulturdaten erfolgreich angereichert.",
+      "error": "Fehler bei der Anreicherung der Kulturdaten."
+    }
   }
 }

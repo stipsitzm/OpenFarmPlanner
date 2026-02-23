@@ -43,6 +43,7 @@ describe('API Client', () => {
     cultureAPI.delete(7);
     cultureAPI.importPreview(importPreviewData);
     cultureAPI.importApply(importApplyData);
+    cultureAPI.enrich(7, 'overwrite');
 
     expect(getMock).toHaveBeenCalledWith('/cultures/');
     expect(getMock).toHaveBeenCalledWith('/cultures/7/');
@@ -51,6 +52,7 @@ describe('API Client', () => {
     expect(deleteMock).toHaveBeenCalledWith('/cultures/7/');
     expect(postMock).toHaveBeenCalledWith('/cultures/import/preview/', importPreviewData);
     expect(postMock).toHaveBeenCalledWith('/cultures/import/apply/', importApplyData);
+    expect(postMock).toHaveBeenCalledWith('/cultures/7/enrich/?mode=overwrite');
   });
 
   it('calls supplier endpoints and handles optional query params', () => {

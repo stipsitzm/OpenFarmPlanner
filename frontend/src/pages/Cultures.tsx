@@ -29,6 +29,7 @@ import {
   Menu,
   MenuItem,
   Snackbar,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -94,6 +95,7 @@ function Cultures(): React.ReactElement {
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
+  const [enrichLoadingMode, setEnrichLoadingMode] = useState<'overwrite' | 'fill_missing' | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
@@ -436,6 +438,47 @@ function Cultures(): React.ReactElement {
 
   const selectedCulture = cultures.find(c => c.id === selectedCultureId);
 
+
+  const missingEnrichmentFields = selectedCulture
+    ? ['name', 'variety', 'seed_supplier'].filter((field) => {
+      const value = selectedCulture[field as keyof Culture];
+      return typeof value !== 'string' || value.trim().length === 0;
+    })
+    : [];
+  const canEnrichCulture = selectedCulture !== undefined && missingEnrichmentFields.length === 0;
+
+  const getEnrichmentDisabledMessage = (): string => {
+    if (!selectedCulture) {
+      return t('enrichment.messages.noCultureSelected');
+    }
+
+    if (missingEnrichmentFields.length === 0) {
+      return '';
+    }
+
+    return t('enrichment.messages.missingRequiredFields', {
+      fields: missingEnrichmentFields.join(', '),
+    });
+  };
+
+  const handleEnrichCulture = async (mode: 'overwrite' | 'fill_missing') => {
+    if (!selectedCulture?.id || !canEnrichCulture) {
+      return;
+    }
+
+    setEnrichLoadingMode(mode);
+    try {
+      await cultureAPI.enrich(selectedCulture.id, mode);
+      await fetchCultures();
+      showSnackbar(t('enrichment.messages.success'), 'success');
+    } catch (error) {
+      console.error('Error enriching culture:', error);
+      showSnackbar(t('enrichment.messages.error'), 'error');
+    } finally {
+      setEnrichLoadingMode(null);
+    }
+  };
+
   return (
     <div className="page-container">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -492,6 +535,28 @@ function Cultures(): React.ReactElement {
           >
             {t('buttons.createPlantingPlan')}
           </Button>
+          <Tooltip title={canEnrichCulture ? '' : getEnrichmentDisabledMessage()}>
+            <span>
+              <Button
+                variant="outlined"
+                onClick={() => handleEnrichCulture('overwrite')}
+                disabled={!canEnrichCulture || enrichLoadingMode !== null}
+              >
+                {t('enrichment.buttons.overwrite')}
+              </Button>
+            </span>
+          </Tooltip>
+          <Tooltip title={canEnrichCulture ? '' : getEnrichmentDisabledMessage()}>
+            <span>
+              <Button
+                variant="outlined"
+                onClick={() => handleEnrichCulture('fill_missing')}
+                disabled={!canEnrichCulture || enrichLoadingMode !== null}
+              >
+                {t('enrichment.buttons.fillMissing')}
+              </Button>
+            </span>
+          </Tooltip>
           <Button
             variant="outlined"
             startIcon={<EditIcon />}
