@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import json
 import os
 import re
@@ -73,8 +74,10 @@ def _extract_json_object(content: str) -> dict[str, Any]:
 
 def web_search(query: str, max_results: int = 8, include_domains: list[str] | None = None) -> list[dict[str, str]]:
     """Run Tavily search and return simplified results list."""
+    import sys
     api_key = os.getenv('TAVILY_API_KEY', '').strip()
     if not api_key:
+        print(f'[ENRICH DEBUG] TAVILY_API_KEY is not configured', file=sys.stderr)
         raise EnrichmentServiceError('TAVILY_API_KEY is not configured.')
 
     endpoint = os.getenv('TAVILY_SEARCH_URL', 'https://api.tavily.com/search').strip()
@@ -100,7 +103,9 @@ def web_search(query: str, max_results: int = 8, include_domains: list[str] | No
         with urlopen(request, timeout=timeout) as response:
             payload = json.loads(response.read().decode('utf-8'))
     except (HTTPError, URLError, ValueError) as exc:
-        raise EnrichmentServiceError('Web search request failed.') from exc
+        import sys
+        print(f'[ENRICH DEBUG] Web search request failed: {exc}', file=sys.stderr)
+        raise EnrichmentServiceError(f'Web search request failed: {exc}') from exc
 
     results = payload.get('results', [])
     simplified: list[dict[str, str]] = []
@@ -150,8 +155,10 @@ def fetch_page_text(url: str, max_chars: int = 8000) -> str:
 
 def _call_llm_extract(culture_data: dict[str, Any], source_docs: list[dict[str, str]], mode: str, target_fields: list[str]) -> dict[str, Any]:
     """Call OpenAI-compatible endpoint for extraction."""
+    import sys
     api_key = os.getenv('OPENAI_API_KEY', '').strip()
     if not api_key:
+        print(f'[ENRICH DEBUG] OPENAI_API_KEY is not configured', file=sys.stderr)
         raise EnrichmentServiceError('OPENAI_API_KEY is not configured.')
 
     model = os.getenv('OPENAI_MODEL', 'gpt-4o-mini').strip() or 'gpt-4o-mini'
@@ -194,7 +201,9 @@ def _call_llm_extract(culture_data: dict[str, Any], source_docs: list[dict[str, 
         with urlopen(request, timeout=timeout) as response:
             payload = json.loads(response.read().decode('utf-8'))
     except (HTTPError, URLError, ValueError) as exc:
-        raise EnrichmentServiceError('LLM request failed.') from exc
+        import sys
+        print(f'[ENRICH DEBUG] LLM request failed: {exc}', file=sys.stderr)
+        raise EnrichmentServiceError(f'LLM request failed: {exc}') from exc
 
     try:
         content = payload['choices'][0]['message']['content']
@@ -250,6 +259,8 @@ def enrich_culture_data(
         fetched_urls.append(url)
 
     if not fetched_urls:
+        import sys
+        print(f'[ENRICH DEBUG] NO_SOURCES - search returned {len(search_results)} results but none fetchable', file=sys.stderr)
         raise EnrichmentServiceError('NO_SOURCES')
 
     parsed = _call_llm_extract(culture_data, docs, mode=mode, target_fields=effective_target_fields)
@@ -274,6 +285,8 @@ def enrich_culture_data(
         updates['notes'] = str(notes).replace('\r', ' ').replace('\n', ' ').strip()
 
     if not updates:
+        import sys
+        print(f'[ENRICH DEBUG] NO_ENRICHABLE_FIELDS - parsed keys: {list(parsed.keys())}, target fields: {effective_target_fields}', file=sys.stderr)
         raise EnrichmentServiceError('NO_ENRICHABLE_FIELDS')
 
     debug = {

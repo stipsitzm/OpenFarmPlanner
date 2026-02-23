@@ -486,7 +486,8 @@ function Cultures(): React.ReactElement {
     } catch (error) {
       console.error('Error enriching culture:', error);
       if (axios.isAxiosError(error)) {
-        console.debug('Culture enrichment error payload:', error.response?.data);
+        console.error('Culture enrichment error payload:', error.response?.data);
+        console.error('Status:', error.response?.status, 'Status Text:', error.response?.statusText);
       }
       let message = t('enrichment.messages.error');
       if (axios.isAxiosError(error)) {

@@ -614,7 +614,41 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.data['message'], 'OPENAI_API_KEY is not configured.')
+        self.assertEqual(response.data['code'], 'SERVICE_NOT_CONFIGURED')
+        self.assertIn('not configured', response.data['detail'])
+        self.assertIn('message', response.data)
+
+    @patch('farm.views.enrich_culture_data')
+    def test_enrich_returns_503_for_tavily_api_key_error(self, mock_enrich):
+        from farm.services.enrichment import EnrichmentServiceError
+
+        mock_enrich.side_effect = EnrichmentServiceError('TAVILY_API_KEY is not configured.')
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.data['code'], 'SERVICE_NOT_CONFIGURED')
+        self.assertIn('TAVILY_API_KEY', response.data['detail'])
+
+    @patch('farm.views.enrich_culture_data')
+    def test_enrich_returns_502_for_external_service_error(self, mock_enrich):
+        from farm.services.enrichment import EnrichmentServiceError
+
+        mock_enrich.side_effect = EnrichmentServiceError('Web search request failed: HTTP Error 500')
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(response.data['code'], 'EXTERNAL_SERVICE_ERROR')
+        self.assertIn('failed', response.data['detail'])
 
 
 

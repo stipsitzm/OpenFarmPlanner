@@ -7,6 +7,7 @@ for its respective model.
 
 import re
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q
 from django.db.models.functions import Coalesce, Ceil, Cast
@@ -517,23 +518,58 @@ class CultureViewSet(viewsets.ModelViewSet):
         try:
             llm_updates, llm_sources, llm_debug = enrich_culture_data(culture_context, source_urls, mode=mode, target_fields=target_fields)
         except EnrichmentServiceError as exc:
+            import sys
+            import traceback
             message = str(exc)
+            
+            # Log full traceback in DEBUG mode
+            if settings.DEBUG:
+                print(f'[ENRICH ERROR] {message}', file=sys.stderr)
+                traceback.print_exc()
+            
+            # Handle specific error codes with 422
             if message == 'NO_SOURCES':
                 return Response(
-                    {'message': 'No usable web sources found for enrichment.', 'code': 'NO_SOURCES'},
+                    {'message': 'No usable web sources found for enrichment.', 'code': 'NO_SOURCES', 'detail': 'Web search returned results but none could be fetched as readable text.'},
                     status=status.HTTP_422_UNPROCESSABLE_ENTITY
                 )
             if message == 'NO_ENRICHABLE_FIELDS':
                 return Response(
-                    {'message': 'No enrichable fields found for this culture.', 'code': 'NO_ENRICHABLE_FIELDS'},
+                    {'message': 'No enrichable fields found for this culture.', 'code': 'NO_ENRICHABLE_FIELDS', 'detail': 'LLM returned data but no fields matched the whitelist.'},
                     status=status.HTTP_422_UNPROCESSABLE_ENTITY
                 )
-            status_code = status.HTTP_502_BAD_GATEWAY
+            
+            # Handle configuration errors with 503
             if 'not configured' in message.lower():
-                status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+                return Response(
+                    {'message': 'External service not configured.', 'code': 'SERVICE_NOT_CONFIGURED', 'detail': message},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+            
+            # Handle external API errors with 502
+            if 'failed' in message.lower() or 'request' in message.lower():
+                return Response(
+                    {'message': 'External service request failed.', 'code': 'EXTERNAL_SERVICE_ERROR', 'detail': message},
+                    status=status.HTTP_502_BAD_GATEWAY
+                )
+            
+            # Fallback to 500 for unknown errors
             return Response(
-                {'message': message},
-                status=status_code
+                {'message': 'Enrichment service error.', 'code': 'ENRICHMENT_ERROR', 'detail': message},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as exc:
+            import sys
+            import traceback
+            
+            # Log unexpected errors
+            if settings.DEBUG:
+                print(f'[ENRICH UNEXPECTED ERROR] {exc}', file=sys.stderr)
+                traceback.print_exc()
+            
+            return Response(
+                {'message': 'Unexpected error during enrichment.', 'code': 'UNEXPECTED_ERROR', 'detail': str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
         combined_sources = [url.strip() for url in llm_sources if isinstance(url, str) and url.strip()]

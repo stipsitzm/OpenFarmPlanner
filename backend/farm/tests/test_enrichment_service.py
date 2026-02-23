@@ -1,8 +1,9 @@
 """Tests for LLM enrichment service utilities."""
 
 from unittest.mock import patch
+import os
 
-from farm.services.enrichment import _extract_json_object, enrich_culture_data
+from farm.services.enrichment import _extract_json_object, enrich_culture_data, EnrichmentServiceError, web_search, _call_llm_extract
 
 
 def test_extract_json_object_parses_wrapped_json():
@@ -58,3 +59,28 @@ def test_enrich_culture_data_raises_no_sources(_mock_search, _mock_fetch):
             assert False, 'Expected exception'
         except Exception as exc:
             assert str(exc) == 'NO_SOURCES'
+
+
+def test_web_search_raises_when_tavily_key_missing():
+    """Test that web_search raises EnrichmentServiceError when TAVILY_API_KEY is not configured."""
+    with patch.dict(os.environ, {'TAVILY_API_KEY': ''}, clear=False):
+        try:
+            web_search('test query', max_results=5)
+            assert False, 'Expected EnrichmentServiceError'
+        except EnrichmentServiceError as exc:
+            assert 'TAVILY_API_KEY is not configured' in str(exc)
+
+
+def test_call_llm_extract_raises_when_openai_key_missing():
+    """Test that _call_llm_extract raises EnrichmentServiceError when OPENAI_API_KEY is not configured."""
+    with patch.dict(os.environ, {'OPENAI_API_KEY': ''}, clear=False):
+        try:
+            _call_llm_extract(
+                {'name': 'Erbse'},
+                [{'url': 'https://example.com', 'title': 'Test', 'snippet': 'Test', 'text': 'Test content'}],
+                mode='overwrite',
+                target_fields=['notes']
+            )
+            assert False, 'Expected EnrichmentServiceError'
+        except EnrichmentServiceError as exc:
+            assert 'OPENAI_API_KEY is not configured' in str(exc)
