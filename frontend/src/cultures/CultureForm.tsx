@@ -98,7 +98,11 @@ export function CultureForm({
   };
 
   // Local form state (no autosave)
-  const [formData, setFormData] = useState<Partial<Culture>>(culture || EMPTY_CULTURE);
+  const [formData, setFormData] = useState<Partial<Culture>>(() => ({
+    ...EMPTY_CULTURE,
+    ...(culture || {}),
+    seed_supplier: culture?.seed_supplier || culture?.supplier?.name || '',
+  }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);

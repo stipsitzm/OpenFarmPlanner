@@ -161,7 +161,7 @@ class CultureSerializer(serializers.ModelSerializer):
         return value
     def validate_growth_duration_days(self, value):
         if value is None:
-            raise serializers.ValidationError('Growth duration is required.')
+            return value
         if value < 0:
             raise serializers.ValidationError('Growth duration must be non-negative.')
         return value
@@ -197,12 +197,16 @@ class CultureSerializer(serializers.ModelSerializer):
             )
             attrs['supplier'] = supplier
         
-        if not self.instance:
-            if 'growth_duration_days' not in attrs or attrs.get('growth_duration_days') is None:
-                errors['growth_duration_days'] = 'Growth duration is required.'
-        else:
-            if 'growth_duration_days' in attrs and attrs.get('growth_duration_days') is None:
-                errors['growth_duration_days'] = 'Growth duration is required.'
+        current_name = attrs.get('name') if not self.instance else attrs.get('name', self.instance.name)
+        current_variety = attrs.get('variety') if not self.instance else attrs.get('variety', self.instance.variety)
+        current_seed_supplier = attrs.get('seed_supplier') if not self.instance else attrs.get('seed_supplier', self.instance.seed_supplier)
+
+        if not current_name or (isinstance(current_name, str) and current_name.strip() == ''):
+            errors['name'] = 'Name is required.'
+        if not current_variety or (isinstance(current_variety, str) and current_variety.strip() == ''):
+            errors['variety'] = 'Variety is required.'
+        if not current_seed_supplier or (isinstance(current_seed_supplier, str) and current_seed_supplier.strip() == ''):
+            errors['seed_supplier'] = 'Seed supplier is required.'
         
         if errors:
             raise serializers.ValidationError(errors)
