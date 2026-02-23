@@ -5,8 +5,10 @@ Django REST Framework's ModelViewSet. Each ViewSet handles CRUD operations
 for its respective model.
 """
 
+import logging
 import re
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q
 from django.db.models.functions import Coalesce, Ceil, Cast
@@ -25,6 +27,9 @@ from .serializers import (
     SupplierSerializer,
     SeedDemandSerializer,
 )
+
+logger = logging.getLogger(__name__)
+
 
 
 class LocationViewSet(viewsets.ModelViewSet):
@@ -518,6 +523,8 @@ class CultureViewSet(viewsets.ModelViewSet):
             llm_updates, llm_sources, llm_debug = enrich_culture_data(culture_context, source_urls, mode=mode, target_fields=target_fields)
         except EnrichmentServiceError as exc:
             message = str(exc)
+            if settings.DEBUG:
+                logger.exception('Culture enrichment service error: %s', message)
             if message == 'NO_SOURCES':
                 return Response(
                     {'message': 'No usable web sources found for enrichment.', 'code': 'NO_SOURCES'},
@@ -528,12 +535,21 @@ class CultureViewSet(viewsets.ModelViewSet):
                     {'message': 'No enrichable fields found for this culture.', 'code': 'NO_ENRICHABLE_FIELDS'},
                     status=status.HTTP_422_UNPROCESSABLE_ENTITY
                 )
-            status_code = status.HTTP_502_BAD_GATEWAY
             if 'not configured' in message.lower():
-                status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+                return Response(
+                    {'message': 'LLM not configured.', 'detail': message},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE
+                )
             return Response(
                 {'message': message},
-                status=status_code
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+        except Exception:
+            if settings.DEBUG:
+                logger.exception('Unexpected culture enrichment error for culture_id=%s', culture.id)
+            return Response(
+                {'message': 'Unexpected enrichment error.'},
+                status=status.HTTP_502_BAD_GATEWAY
             )
 
         combined_sources = [url.strip() for url in llm_sources if isinstance(url, str) and url.strip()]
@@ -541,6 +557,16 @@ class CultureViewSet(viewsets.ModelViewSet):
         candidate = dict(llm_updates)
         if 'notes' in candidate:
             candidate['notes'] = self._format_notes_with_sources(candidate.get('notes'), combined_sources)
+        candidate = {
+            field: value for field, value in candidate.items()
+            if not self._is_empty_value(value)
+        }
+        if not candidate:
+            return Response(
+                {'message': 'No enrichable fields found for this culture.', 'code': 'NO_ENRICHABLE_FIELDS'},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+
         merge_payload, updated_fields = self._merge_enrichment(culture, candidate, mode)
 
         if merge_payload:

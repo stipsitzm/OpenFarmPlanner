@@ -603,7 +603,7 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
 
 
     @patch('farm.views.enrich_culture_data')
-    def test_enrich_returns_200_when_llm_returns_no_updates(self, mock_enrich):
+    def test_enrich_returns_422_when_llm_returns_no_updates(self, mock_enrich):
         mock_enrich.return_value = ({}, ['https://supplier.example/pea-norli'], {'parsed_keys': ['unrelated_key']})
 
         response = self.client.post(
@@ -612,8 +612,8 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
             format='json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['updated_fields'], [])
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data['code'], 'NO_ENRICHABLE_FIELDS')
 
     @patch('farm.views.enrich_culture_data')
     def test_enrich_propagates_configuration_error(self, mock_enrich):
@@ -628,7 +628,8 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
-        self.assertEqual(response.data['message'], 'OPENAI_API_KEY is not configured.')
+        self.assertEqual(response.data['message'], 'LLM not configured.')
+        self.assertEqual(response.data['detail'], 'OPENAI_API_KEY is not configured.')
 
 
 
