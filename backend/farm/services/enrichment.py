@@ -46,10 +46,12 @@ def _build_system_prompt() -> str:
     )
 
 
-def _build_user_prompt(culture_data: dict[str, Any], source_urls: list[str]) -> str:
+def _build_user_prompt(culture_data: dict[str, Any], source_urls: list[str], mode: str, target_fields: list[str]) -> str:
     payload = {
         'culture': culture_data,
         'source_urls': source_urls,
+        'mode': mode,
+        'target_fields': target_fields,
         'output_contract': {
             'fields': list(ENRICH_FIELD_WHITELIST),
             'sources': 'array of source URLs used for extraction',
@@ -86,7 +88,7 @@ def _extract_json_object(content: str) -> dict[str, Any]:
     return parsed
 
 
-def enrich_culture_data(culture_data: dict[str, Any], source_urls: list[str]) -> tuple[dict[str, Any], list[str]]:
+def enrich_culture_data(culture_data: dict[str, Any], source_urls: list[str], mode: str = 'overwrite', target_fields: list[str] | None = None) -> tuple[dict[str, Any], list[str], dict[str, Any]]:
     """Call LLM and return whitelisted field updates and source URLs."""
     api_key = os.getenv('OPENAI_API_KEY', '').strip()
     if not api_key:
@@ -96,13 +98,15 @@ def enrich_culture_data(culture_data: dict[str, Any], source_urls: list[str]) ->
     base_url = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1').rstrip('/')
     timeout = int(os.getenv('OPENAI_TIMEOUT_SECONDS', '40'))
 
+    effective_target_fields = target_fields or list(ENRICH_FIELD_WHITELIST)
+
     body = {
         'model': model,
         'response_format': {'type': 'json_object'},
         'temperature': 0.2,
         'messages': [
             {'role': 'system', 'content': _build_system_prompt()},
-            {'role': 'user', 'content': _build_user_prompt(culture_data, source_urls)},
+            {'role': 'user', 'content': _build_user_prompt(culture_data, source_urls, mode, effective_target_fields)},
         ],
     }
 
@@ -146,4 +150,13 @@ def enrich_culture_data(culture_data: dict[str, Any], source_urls: list[str]) ->
     if notes is not None:
         updates['notes'] = str(notes).replace('\r', ' ').replace('\n', ' ').strip()
 
-    return updates, normalized_sources
+    debug = {
+        'model': model,
+        'mode': mode,
+        'target_fields': effective_target_fields,
+        'parsed_keys': list(parsed.keys()),
+        'returned_update_keys': list(updates.keys()),
+        'returned_sources_count': len(normalized_sources),
+    }
+
+    return updates, normalized_sources, debug

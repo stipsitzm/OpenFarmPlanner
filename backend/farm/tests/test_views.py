@@ -505,7 +505,8 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
                 'harvest_duration_days': 28,
                 'notes': 'Research summary from supplier and cultivation guide',
             },
-            ['https://supplier.example/pea-norli', 'https://wiki.example/pea']
+            ['https://supplier.example/pea-norli', 'https://wiki.example/pea'],
+            {'parsed_keys': ['harvest_duration_days', 'notes', 'sources']}
         )
 
         response = self.client.post(
@@ -517,6 +518,7 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('notes', response.data['updated_fields'])
         self.assertIn('harvest_duration_days', response.data['updated_fields'])
+        self.assertIn('debug', response.data)
 
         self.culture.refresh_from_db()
         self.assertEqual(self.culture.harvest_duration_days, 28)
@@ -535,7 +537,8 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
                 'harvest_duration_days': 35,
                 'notes': 'LLM notes that should not replace existing notes in fill mode',
             },
-            ['https://supplier.example/pea-norli']
+            ['https://supplier.example/pea-norli'],
+            {'parsed_keys': ['harvest_duration_days', 'notes', 'sources']}
         )
 
         response = self.client.post(
@@ -557,7 +560,7 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
         self.culture.save(update_fields=['notes'])
         self.culture.notes = 'Existing note without url'
         self.culture.save(update_fields=['notes'])
-        mock_enrich.return_value = ({'notes': 'Summary without sources', 'harvest_duration_days': 31}, [])
+        mock_enrich.return_value = ({'notes': 'Summary without sources', 'harvest_duration_days': 31}, [], {'parsed_keys': ['notes', 'harvest_duration_days']})
 
         response = self.client.post(
             f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',

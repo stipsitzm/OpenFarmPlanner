@@ -470,14 +470,24 @@ function Cultures(): React.ReactElement {
     setEnrichLoadingMode(mode);
     try {
       const response = await cultureAPI.enrich(selectedCulture.id, mode);
+      console.debug('Culture enrichment response debug:', response.data.debug);
       await fetchCultures();
       if (response.data.updated_fields.length === 0) {
-        showSnackbar(t('enrichment.messages.noChanges'), 'success');
+        const notesSkipped = Boolean(response.data.debug?.notes_skipped_due_to_missing_sources);
+        showSnackbar(
+          notesSkipped
+            ? t('enrichment.messages.noChangesMissingSources')
+            : t('enrichment.messages.noChanges'),
+          'success'
+        );
       } else {
         showSnackbar(t('enrichment.messages.success'), 'success');
       }
     } catch (error) {
       console.error('Error enriching culture:', error);
+      if (axios.isAxiosError(error)) {
+        console.debug('Culture enrichment error payload:', error.response?.data);
+      }
       let message = t('enrichment.messages.error');
       if (axios.isAxiosError(error)) {
         if (error.code === 'ECONNABORTED') {

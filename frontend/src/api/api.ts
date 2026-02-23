@@ -42,6 +42,13 @@ export const cultureAPI = {
     mode: 'overwrite' | 'fill_missing';
     updated_fields: string[];
     sources: string[];
+    debug?: {
+      target_fields?: string[];
+      llm?: Record<string, unknown>;
+      llm_update_keys?: string[];
+      combined_sources_count?: number;
+      notes_skipped_due_to_missing_sources?: boolean;
+    };
   }>(`/cultures/${id}/enrich/?mode=${mode}`, undefined, { timeout: 30000 }),
 };
 

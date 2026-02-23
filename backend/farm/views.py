@@ -499,8 +499,16 @@ class CultureViewSet(viewsets.ModelViewSet):
             'notes': culture.notes,
         }
 
+
+        serializer_snapshot = CultureSerializer(culture).data
+        fill_missing_targets = [
+            field for field in self.ENRICH_UPDATABLE_FIELDS
+            if self._is_empty_value(serializer_snapshot.get(field))
+        ]
+        target_fields = fill_missing_targets if mode == 'fill_missing' else list(self.ENRICH_UPDATABLE_FIELDS)
+
         try:
-            llm_updates, llm_sources = enrich_culture_data(culture_context, source_urls)
+            llm_updates, llm_sources, llm_debug = enrich_culture_data(culture_context, source_urls, mode=mode, target_fields=target_fields)
         except EnrichmentServiceError as exc:
             message = str(exc)
             status_code = status.HTTP_502_BAD_GATEWAY
@@ -540,6 +548,13 @@ class CultureViewSet(viewsets.ModelViewSet):
                 'mode': mode,
                 'updated_fields': updated_fields,
                 'sources': combined_sources,
+                'debug': {
+                    'target_fields': target_fields,
+                    'llm': llm_debug,
+                    'llm_update_keys': list(llm_updates.keys()),
+                    'combined_sources_count': len(combined_sources),
+                    'notes_skipped_due_to_missing_sources': 'notes' not in candidate and 'notes' in llm_updates,
+                },
             },
             status=status.HTTP_200_OK
         )
