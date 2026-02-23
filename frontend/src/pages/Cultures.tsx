@@ -499,24 +499,54 @@ function Cultures(): React.ReactElement {
 
   const handleEnrichCulture = async (mode: 'overwrite' | 'fill_missing') => {
     if (!selectedCulture?.id || !canEnrichCulture) {
+      console.debug('[enrich] skipped before request', {
+        hasSelectedCulture: Boolean(selectedCulture?.id),
+        canEnrichCulture,
+        mode,
+      });
       return;
     }
     if (mode === 'fill_missing' && fillMissingTargetCount === 0) {
+      console.debug('[enrich] skipped: no fill_missing targets', {
+        selectedCultureId: selectedCulture.id,
+        fillMissingTargetCount,
+        fillMissingCandidateFields,
+      });
       showSnackbar(t('enrichment.messages.noFillMissingTargets'), 'error');
       return;
     }
 
     setEnrichLoadingMode(mode);
+    const startedAt = Date.now();
+    const enrichUrl = `/cultures/${selectedCulture.id}/enrich/?mode=${mode}`;
+    console.groupCollapsed(`[enrich] start culture=${selectedCulture.id} mode=${mode}`);
+    console.debug('[enrich] preflight', {
+      url: enrichUrl,
+      selectedCultureId: selectedCulture.id,
+      missingEnrichmentFields,
+      fillMissingTargetCount,
+      fillMissingCandidateFields,
+      notesLength: selectedCulture.notes?.length ?? 0,
+    });
     try {
       const response = await cultureAPI.enrich(selectedCulture.id, mode);
-      console.debug('Culture enrichment response debug:', response.data.debug);
+      console.debug('[enrich] API response', {
+        status: response.status,
+        statusText: response.statusText,
+        updated_fields: response.data.updated_fields,
+        sources_count: response.data.sources?.length ?? 0,
+        debug: response.data.debug,
+        durationMs: Date.now() - startedAt,
+      });
+      console.debug('[enrich] refreshing cultures after enrich...');
       await fetchCultures();
+      console.debug('[enrich] cultures refreshed');
       if (response.data.updated_fields.length === 0) {
         const debug = response.data.debug;
         const parsedKeys = Array.isArray(debug?.llm?.parsed_keys)
           ? debug.llm.parsed_keys
           : [];
-        console.debug('Culture enrichment no-op diagnostics:', {
+        console.debug('[enrich] no-op diagnostics', {
           mode,
           target_fields: debug?.target_fields ?? [],
           llm_update_keys: debug?.llm_update_keys ?? [],
@@ -539,9 +569,19 @@ function Cultures(): React.ReactElement {
         showSnackbar(t('enrichment.messages.success'), 'success');
       }
     } catch (error) {
-      console.error('Error enriching culture:', error);
+      console.error('[enrich] API error', error);
       if (axios.isAxiosError(error)) {
-        console.debug('Culture enrichment error payload:', error.response?.data);
+        console.debug('[enrich] axios error details', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          code: error.code,
+          url: error.config?.url,
+          method: error.config?.method,
+          timeout: error.config?.timeout,
+          responseHeaders: error.response?.headers,
+          responseData: error.response?.data,
+          durationMs: Date.now() - startedAt,
+        });
       }
       let message = t('enrichment.messages.error');
       if (axios.isAxiosError(error)) {
@@ -556,6 +596,7 @@ function Cultures(): React.ReactElement {
       }
       showSnackbar(message, 'error');
     } finally {
+      console.groupEnd();
       setEnrichLoadingMode(null);
     }
   };
