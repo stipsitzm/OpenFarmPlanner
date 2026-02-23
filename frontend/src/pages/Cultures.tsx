@@ -570,7 +570,20 @@ function Cultures(): React.ReactElement {
       }
     } catch (error) {
       console.error('[enrich] API error', error);
+
+      let message = t('enrichment.messages.error');
+      let snackbarSeverity: 'error' | 'success' = 'error';
+
       if (axios.isAxiosError(error)) {
+        const responseData = (error.response?.data && typeof error.response.data === 'object')
+          ? error.response.data as {
+            message?: unknown;
+            code?: unknown;
+            detail?: unknown;
+            missing_fields?: unknown;
+          }
+          : undefined;
+
         console.debug('[enrich] axios error details', {
           status: error.response?.status,
           statusText: error.response?.statusText,
@@ -579,22 +592,31 @@ function Cultures(): React.ReactElement {
           method: error.config?.method,
           timeout: error.config?.timeout,
           responseHeaders: error.response?.headers,
-          responseData: error.response?.data,
+          responseData,
           durationMs: Date.now() - startedAt,
         });
-      }
-      let message = t('enrichment.messages.error');
-      if (axios.isAxiosError(error)) {
+
+        if (responseData) {
+          console.debug('[enrich] backend error payload fields', {
+            backendCode: responseData.code,
+            backendMessage: responseData.message,
+            backendDetail: responseData.detail,
+            missingFields: responseData.missing_fields,
+          });
+        }
+
         if (error.code === 'ECONNABORTED') {
           message = t('enrichment.messages.timeout');
-        } else if (error.response?.data && typeof error.response.data === 'object') {
-          const apiMessage = (error.response.data as { message?: unknown }).message;
-          if (typeof apiMessage === 'string' && apiMessage.trim()) {
-            message = apiMessage;
-          }
+        } else if (error.response?.status === 422 && responseData?.code === 'NO_ENRICHABLE_FIELDS') {
+          message = t('enrichment.messages.noChanges');
+          snackbarSeverity = 'success';
+          console.debug('[enrich] interpreted 422 NO_ENRICHABLE_FIELDS as no-op enrichment result');
+        } else if (typeof responseData?.message === 'string' && responseData.message.trim()) {
+          message = responseData.message;
         }
       }
-      showSnackbar(message, 'error');
+
+      showSnackbar(message, snackbarSeverity);
     } finally {
       console.groupEnd();
       setEnrichLoadingMode(null);
