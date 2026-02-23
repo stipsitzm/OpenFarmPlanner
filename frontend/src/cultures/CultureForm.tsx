@@ -89,10 +89,31 @@ export function CultureForm({
   // --- Validation now imported from ../cultures/validation ---
 
   // Save function for the autosave hook
+  const toNullableNumber = (value: unknown): number | null | undefined => {
+    if (value === '') return null;
+    if (value === null || value === undefined) return value as null | undefined;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+    return undefined;
+  };
+
+  const buildSavePayload = (draft: Partial<Culture>): Culture => ({
+    ...(draft as Culture),
+    growth_duration_days: Number(draft.growth_duration_days ?? 0),
+    harvest_duration_days: Number(draft.harvest_duration_days ?? 0),
+    propagation_duration_days: toNullableNumber(draft.propagation_duration_days) as number | undefined,
+    expected_yield: toNullableNumber(draft.expected_yield) as number | undefined,
+    distance_within_row_cm: toNullableNumber(draft.distance_within_row_cm) as number | undefined,
+    row_spacing_cm: toNullableNumber(draft.row_spacing_cm) as number | undefined,
+    sowing_depth_cm: toNullableNumber(draft.sowing_depth_cm) as number | undefined,
+    seed_rate_value: toNullableNumber(draft.seed_rate_value) as number | null | undefined,
+    thousand_kernel_weight_g: toNullableNumber(draft.thousand_kernel_weight_g) as number | undefined,
+    package_size_g: toNullableNumber(draft.package_size_g) as number | undefined,
+    seeding_requirement: toNullableNumber(draft.seeding_requirement) as number | undefined,
+    sowing_calculation_safety_percent: toNullableNumber(draft.sowing_calculation_safety_percent) as number | undefined,
+  });
+
   const saveCulture = async (draft: Partial<Culture>): Promise<Partial<Culture>> => {
-    const dataToSave: Culture = {
-      ...(draft as Culture),
-    };
+    const dataToSave = buildSavePayload(draft);
     await onSave(dataToSave);
     return dataToSave;
   };
