@@ -37,7 +37,8 @@ describe('hierarchy components and behaviors', () => {
     expect(rows).toHaveLength(0);
   });
 
-  it('builds hierarchy action callbacks for field, bed and location rows', () => {
+  it('builds hierarchy inline action callbacks for field, bed and location rows', async () => {
+    const user = userEvent.setup();
     const toggleExpand = vi.fn();
     const addBed = vi.fn();
     const deleteBed = vi.fn();
@@ -54,43 +55,124 @@ describe('hierarchy components and behaviors', () => {
       deleteField,
       createPlan,
       openNotes,
-      mockT as any,
+      mockT as never,
     );
 
     const notesColumn = columns.find((column) => column.field === 'notes');
-    const actionsColumn = columns.find((column) => column.field === 'actions');
+    const nameColumn = columns.find((column) => column.field === 'name');
+    const areaColumn = columns.find((column) => column.field === 'area_sqm');
+
+    expect(nameColumn?.width).toBe(280);
+    expect(nameColumn).not.toHaveProperty('flex');
+    expect(areaColumn?.width).toBe(120);
+    expect(notesColumn?.width).toBe(320);
 
     notesColumn?.renderCell?.({
       id: 'field-10',
       value: 'Notiz **fett**',
       row: { id: 'field-10', type: 'field', level: 1 },
-    } as any)?.props.onOpen();
+    } as never)?.props.onOpen();
     expect(openNotes).toHaveBeenCalledWith('field-10', 'notes');
 
-    const fieldActions = actionsColumn?.getActions?.({
-      id: 'field-10',
-      row: { id: 'field-10', type: 'field', fieldId: 10 },
-    } as any);
-    fieldActions?.[0].props.onClick();
-    fieldActions?.[1].props.onClick();
+    const { rerender } = render(
+      <>
+        {nameColumn?.renderCell?.({
+          id: 'location-2',
+          field: 'name',
+          value: 'Standort 2',
+          row: { id: 'location-2', type: 'location', locationId: 2, level: 0, expanded: true },
+        } as never)}
+      </>
+    );
+    await user.click(screen.getByLabelText('Feld hinzufügen'));
+    expect(addField).toHaveBeenCalledWith(2);
+
+    rerender(
+      <>
+        {nameColumn?.renderCell?.({
+          id: 'field-10',
+          field: 'name',
+          value: 'Schlag 10',
+          row: { id: 'field-10', type: 'field', fieldId: 10, level: 1, expanded: true },
+        } as never)}
+      </>
+    );
+    await user.click(screen.getByLabelText('Beet hinzufügen'));
+    await user.click(screen.getByLabelText('Löschen'));
     expect(addBed).toHaveBeenCalledWith(10);
     expect(deleteField).toHaveBeenCalledWith(10);
 
-    const bedActions = actionsColumn?.getActions?.({
-      id: 100,
-      row: { id: 100, type: 'bed', bedId: 100 },
-    } as any);
-    bedActions?.[0].props.onClick();
-    bedActions?.[1].props.onClick();
+    rerender(
+      <>
+        {nameColumn?.renderCell?.({
+          id: 100,
+          field: 'name',
+          value: 'Beet 100',
+          row: { id: 100, type: 'bed', bedId: 100, level: 2 },
+        } as never)}
+      </>
+    );
+    await user.click(screen.getByLabelText('Pflanzplan erstellen'));
+    await user.click(screen.getByLabelText('Löschen'));
     expect(createPlan).toHaveBeenCalledWith(100);
     expect(deleteBed).toHaveBeenCalledWith(100);
+  });
 
-    const locationActions = actionsColumn?.getActions?.({
-      id: 'location-2',
-      row: { id: 'location-2', type: 'location', locationId: 2 },
-    } as any);
-    locationActions?.[0].props.onClick();
-    expect(addField).toHaveBeenCalledWith(2);
+
+
+  it('applies custom hierarchy column widths when provided', () => {
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+      {
+        name: 333,
+        notes: 280,
+      },
+    );
+
+    const nameColumn = columns.find((column) => column.field === 'name');
+    const areaColumn = columns.find((column) => column.field === 'area_sqm');
+    const notesColumn = columns.find((column) => column.field === 'notes');
+
+    expect(nameColumn?.width).toBe(333);
+    expect(areaColumn?.width).toBe(120);
+    expect(notesColumn?.width).toBe(280);
+  });
+
+  it('hides inline action icons while the name cell is in edit mode', () => {
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+    );
+
+    const nameColumn = columns.find((column) => column.field === 'name');
+
+    render(
+      <>
+        {nameColumn?.renderCell?.({
+          id: 100,
+          field: 'name',
+          value: 'Beet 100',
+          cellMode: 'edit',
+          row: { id: 100, type: 'bed', bedId: 100, level: 2 },
+        } as never)}
+      </>
+    );
+
+    expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
   });
 
   it('updates footer messaging and add action based on location count', async () => {
