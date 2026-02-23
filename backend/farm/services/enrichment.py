@@ -6,8 +6,8 @@ import json
 import os
 import re
 from typing import Any
-
-import requests
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 
 class EnrichmentServiceError(Exception):
@@ -106,22 +106,26 @@ def enrich_culture_data(culture_data: dict[str, Any], source_urls: list[str]) ->
         ],
     }
 
+    request = Request(
+        url=f'{base_url}/chat/completions',
+        data=json.dumps(body).encode('utf-8'),
+        headers={
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
+        },
+        method='POST',
+    )
+
     try:
-        response = requests.post(
-            f'{base_url}/chat/completions',
-            headers={
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json',
-            },
-            json=body,
-            timeout=timeout,
-        )
-        response.raise_for_status()
-    except requests.RequestException as exc:
+        with urlopen(request, timeout=timeout) as response:
+            raw_response = response.read().decode('utf-8')
+    except HTTPError as exc:
+        raise EnrichmentServiceError('LLM request failed.') from exc
+    except URLError as exc:
         raise EnrichmentServiceError('LLM request failed.') from exc
 
     try:
-        response_json = response.json()
+        response_json = json.loads(raw_response)
         content = response_json['choices'][0]['message']['content']
     except (ValueError, KeyError, IndexError, TypeError) as exc:
         raise EnrichmentServiceError('LLM response format is invalid.') from exc
