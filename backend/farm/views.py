@@ -5,6 +5,8 @@ Django REST Framework's ModelViewSet. Each ViewSet handles CRUD operations
 for its respective model.
 """
 
+import re
+
 from django.core.exceptions import ValidationError
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q
 from django.db.models.functions import Coalesce, Ceil, Cast
@@ -12,6 +14,7 @@ from rest_framework import viewsets, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier
+from .services.enrichment import ENRICH_FIELD_WHITELIST, EnrichmentServiceError, enrich_culture_data
 from .serializers import (
     LocationSerializer,
     FieldSerializer,
@@ -142,6 +145,70 @@ class CultureViewSet(viewsets.ModelViewSet):
     """
     queryset = Culture.objects.all()
     serializer_class = CultureSerializer
+
+    ENRICH_REQUIRED_FIELDS = ('name', 'variety', 'seed_supplier')
+    ENRICH_UPDATABLE_FIELDS = ENRICH_FIELD_WHITELIST
+
+    def _is_empty_value(self, value):
+        """Return True when value is semantically empty for merge decisions."""
+        if value is None:
+            return True
+        if isinstance(value, str):
+            return value.strip() == ''
+        return False
+
+    def _extract_urls(self, value: str | None) -> list[str]:
+        """Extract HTTP(S) URLs from free text in stable order."""
+        if not value:
+            return []
+        return re.findall(r'https?://[^\s|]+', value)
+
+    def _format_notes_with_sources(self, notes: str | None, source_urls: list[str]) -> str:
+        """Format notes as single-line text ending with `Quellen:` URLs list."""
+        base_notes = (notes or '').replace('\r', ' ').replace('\n', ' ')
+        base_notes = ' '.join(base_notes.split())
+
+        # Remove existing `Quellen:` suffix to avoid duplication.
+        base_notes = re.sub(r'\s*Quellen:\s*.*$', '', base_notes).strip()
+
+        deduped_urls: list[str] = []
+        seen: set[str] = set()
+        for url in source_urls:
+            normalized = url.strip()
+            if normalized and normalized not in seen:
+                seen.add(normalized)
+                deduped_urls.append(normalized)
+
+        sources_suffix = 'Quellen: '
+        if deduped_urls:
+            markdown_links = [f'[{url}]({url})' for url in deduped_urls]
+            sources_suffix += ' | '.join(markdown_links)
+
+        if base_notes:
+            return f'{base_notes} {sources_suffix}'
+        return sources_suffix
+
+    def _merge_enrichment(self, culture: Culture, candidate: dict, mode: str) -> tuple[dict, list[str]]:
+        """Merge whitelisted enrichment fields onto one culture according to mode."""
+        serializer_data = CultureSerializer(culture).data
+        payload: dict = {}
+        updated_fields: list[str] = []
+
+        for field in self.ENRICH_UPDATABLE_FIELDS:
+            if field not in candidate:
+                continue
+
+            incoming = candidate[field]
+            current = serializer_data.get(field)
+
+            if mode == 'fill_missing' and not self._is_empty_value(current):
+                continue
+
+            if incoming != current:
+                payload[field] = incoming
+                updated_fields.append(field)
+
+        return payload, updated_fields
     
     def _resolve_supplier(self, culture_data: dict) -> Supplier | None:
         """Resolve supplier from culture data using supplier_id or supplier_name.
@@ -382,6 +449,123 @@ class CultureViewSet(viewsets.ModelViewSet):
             'skipped_count': skipped_count,
             'errors': errors
         }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='enrich')
+    def enrich(self, request, pk=None):
+        """Enrich one culture record with strict, whitelist-based updates."""
+        mode = request.query_params.get('mode', 'overwrite')
+        if mode not in {'overwrite', 'fill_missing'}:
+            return Response(
+                {'message': 'Invalid mode. Use overwrite or fill_missing.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        culture = self.get_object()
+
+        missing_fields = [
+            field for field in self.ENRICH_REQUIRED_FIELDS
+            if self._is_empty_value(getattr(culture, field, None))
+        ]
+        if missing_fields:
+            return Response(
+                {
+                    'message': 'Culture enrichment requires non-empty name, variety, and seed_supplier.',
+                    'missing_fields': missing_fields,
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        source_urls = self._extract_urls(culture.notes)
+
+        culture_context = {
+            'name': culture.name,
+            'variety': culture.variety,
+            'seed_supplier': culture.seed_supplier,
+            'crop_family': culture.crop_family,
+            'nutrient_demand': culture.nutrient_demand,
+            'cultivation_type': culture.cultivation_type,
+            'growth_duration_days': culture.growth_duration_days,
+            'harvest_duration_days': culture.harvest_duration_days,
+            'propagation_duration_days': culture.propagation_duration_days,
+            'harvest_method': culture.harvest_method,
+            'expected_yield': float(culture.expected_yield) if culture.expected_yield is not None else None,
+            'distance_within_row_cm': float(culture.distance_within_row_m * 100.0) if culture.distance_within_row_m is not None else None,
+            'row_spacing_cm': float(culture.row_spacing_m * 100.0) if culture.row_spacing_m is not None else None,
+            'sowing_depth_cm': float(culture.sowing_depth_m * 100.0) if culture.sowing_depth_m is not None else None,
+            'seed_rate_value': culture.seed_rate_value,
+            'seed_rate_unit': culture.seed_rate_unit,
+            'sowing_calculation_safety_percent': culture.sowing_calculation_safety_percent,
+            'thousand_kernel_weight_g': culture.thousand_kernel_weight_g,
+            'package_size_g': culture.package_size_g,
+            'notes': culture.notes,
+        }
+
+
+        serializer_snapshot = CultureSerializer(culture).data
+        fill_missing_targets = [
+            field for field in self.ENRICH_UPDATABLE_FIELDS
+            if self._is_empty_value(serializer_snapshot.get(field))
+        ]
+        target_fields = fill_missing_targets if mode == 'fill_missing' else list(self.ENRICH_UPDATABLE_FIELDS)
+
+        if not target_fields:
+            return Response(
+                {'message': 'No enrichable fields found for this culture.', 'code': 'NO_ENRICHABLE_FIELDS'},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+
+        try:
+            llm_updates, llm_sources, llm_debug = enrich_culture_data(culture_context, source_urls, mode=mode, target_fields=target_fields)
+        except EnrichmentServiceError as exc:
+            message = str(exc)
+            if message == 'NO_SOURCES':
+                return Response(
+                    {'message': 'No usable web sources found for enrichment.', 'code': 'NO_SOURCES'},
+                    status=status.HTTP_422_UNPROCESSABLE_ENTITY
+                )
+            if message == 'NO_ENRICHABLE_FIELDS':
+                return Response(
+                    {'message': 'No enrichable fields found for this culture.', 'code': 'NO_ENRICHABLE_FIELDS'},
+                    status=status.HTTP_422_UNPROCESSABLE_ENTITY
+                )
+            status_code = status.HTTP_502_BAD_GATEWAY
+            if 'not configured' in message.lower():
+                status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            return Response(
+                {'message': message},
+                status=status_code
+            )
+
+        combined_sources = [url.strip() for url in llm_sources if isinstance(url, str) and url.strip()]
+
+        candidate = dict(llm_updates)
+        if 'notes' in candidate:
+            candidate['notes'] = self._format_notes_with_sources(candidate.get('notes'), combined_sources)
+        merge_payload, updated_fields = self._merge_enrichment(culture, candidate, mode)
+
+        if merge_payload:
+            serializer = CultureSerializer(culture, data=merge_payload, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+        else:
+            serializer = CultureSerializer(culture)
+
+        return Response(
+            {
+                'culture': serializer.data,
+                'mode': mode,
+                'updated_fields': updated_fields,
+                'sources': combined_sources,
+                'debug': {
+                    'target_fields': target_fields,
+                    'llm': llm_debug,
+                    'llm_update_keys': list(llm_updates.keys()),
+                    'combined_sources_count': len(combined_sources),
+                    'notes_skipped_due_to_missing_sources': 'notes' not in candidate and 'notes' in llm_updates,
+                },
+            },
+            status=status.HTTP_200_OK
+        )
     
 class PlantingPlanViewSet(viewsets.ModelViewSet):
     """ViewSet for PlantingPlan model providing CRUD operations.

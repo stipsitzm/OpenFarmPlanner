@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture } from '../api/api';
@@ -29,6 +30,7 @@ import {
   Menu,
   MenuItem,
   Snackbar,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -94,6 +96,7 @@ function Cultures(): React.ReactElement {
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
+  const [enrichLoadingMode, setEnrichLoadingMode] = useState<'overwrite' | 'fill_missing' | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
@@ -436,6 +439,111 @@ function Cultures(): React.ReactElement {
 
   const selectedCulture = cultures.find(c => c.id === selectedCultureId);
 
+
+  const missingEnrichmentFields = selectedCulture
+    ? ['name', 'variety', 'seed_supplier'].filter((field) => {
+      const value = selectedCulture[field as keyof Culture];
+      return typeof value !== 'string' || value.trim().length === 0;
+    })
+    : [];
+  const canEnrichCulture = selectedCulture !== undefined && missingEnrichmentFields.length === 0;
+
+  const fillMissingCandidateFields: Array<keyof Culture> = [
+    'crop_family',
+    'nutrient_demand',
+    'cultivation_type',
+    'growth_duration_days',
+    'harvest_duration_days',
+    'propagation_duration_days',
+    'harvest_method',
+    'expected_yield',
+    'distance_within_row_cm',
+    'row_spacing_cm',
+    'sowing_depth_cm',
+    'seed_rate_value',
+    'seed_rate_unit',
+    'sowing_calculation_safety_percent',
+    'thousand_kernel_weight_g',
+    'package_size_g',
+    'notes',
+  ];
+
+  const fillMissingTargetCount = selectedCulture
+    ? fillMissingCandidateFields.filter((field) => {
+      const value = selectedCulture[field];
+      if (value === null || value === undefined) return true;
+      if (typeof value === 'string') return value.trim().length === 0;
+      return false;
+    }).length
+    : 0;
+
+
+  const getEnrichmentDisabledMessage = (mode: 'overwrite' | 'fill_missing'): string => {
+    if (!selectedCulture) {
+      return t('enrichment.messages.noCultureSelected');
+    }
+
+    if (missingEnrichmentFields.length > 0) {
+      return t('enrichment.messages.missingRequiredFields', {
+        fields: missingEnrichmentFields.join(', '),
+      });
+    }
+
+    if (mode === 'fill_missing' && fillMissingTargetCount === 0) {
+      return t('enrichment.messages.noFillMissingTargets');
+    }
+
+    return '';
+
+  };
+
+  const handleEnrichCulture = async (mode: 'overwrite' | 'fill_missing') => {
+    if (!selectedCulture?.id || !canEnrichCulture) {
+      return;
+    }
+    if (mode === 'fill_missing' && fillMissingTargetCount === 0) {
+      showSnackbar(t('enrichment.messages.noFillMissingTargets'), 'error');
+      return;
+    }
+
+    setEnrichLoadingMode(mode);
+    try {
+      const response = await cultureAPI.enrich(selectedCulture.id, mode);
+      console.debug('Culture enrichment response debug:', response.data.debug);
+      await fetchCultures();
+      if (response.data.updated_fields.length === 0) {
+        const notesSkipped = Boolean(response.data.debug?.notes_skipped_due_to_missing_sources);
+        showSnackbar(
+          notesSkipped
+            ? t('enrichment.messages.noChangesMissingSources')
+            : t('enrichment.messages.noChanges'),
+          'success'
+        );
+      } else {
+        showSnackbar(t('enrichment.messages.success'), 'success');
+      }
+    } catch (error) {
+      console.error('Error enriching culture:', error);
+      if (axios.isAxiosError(error)) {
+        console.debug('Culture enrichment error payload:', error.response?.data);
+      }
+      let message = t('enrichment.messages.error');
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          message = t('enrichment.messages.timeout');
+        } else if (error.response?.data && typeof error.response.data === 'object') {
+          const apiMessage = (error.response.data as { message?: unknown }).message;
+          if (typeof apiMessage === 'string' && apiMessage.trim()) {
+            message = apiMessage;
+          }
+        }
+      }
+      showSnackbar(message, 'error');
+    } finally {
+      setEnrichLoadingMode(null);
+    }
+  };
+
   return (
     <div className="page-container">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -492,6 +600,28 @@ function Cultures(): React.ReactElement {
           >
             {t('buttons.createPlantingPlan')}
           </Button>
+          <Tooltip title={!canEnrichCulture ? getEnrichmentDisabledMessage('overwrite') : ''}>
+            <span>
+              <Button
+                variant="outlined"
+                onClick={() => handleEnrichCulture('overwrite')}
+                disabled={!canEnrichCulture || enrichLoadingMode !== null}
+              >
+                {enrichLoadingMode === 'overwrite' ? t('enrichment.messages.loading') : t('enrichment.buttons.overwrite')}
+              </Button>
+            </span>
+          </Tooltip>
+          <Tooltip title={(!canEnrichCulture || fillMissingTargetCount === 0) ? getEnrichmentDisabledMessage('fill_missing') : ''}>
+            <span>
+              <Button
+                variant="outlined"
+                onClick={() => handleEnrichCulture('fill_missing')}
+                disabled={!canEnrichCulture || fillMissingTargetCount === 0 || enrichLoadingMode !== null}
+              >
+                {enrichLoadingMode === 'fill_missing' ? t('enrichment.messages.loading') : t('enrichment.buttons.fillMissing')}
+              </Button>
+            </span>
+          </Tooltip>
           <Button
             variant="outlined"
             startIcon={<EditIcon />}

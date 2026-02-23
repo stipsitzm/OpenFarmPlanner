@@ -41,44 +41,30 @@ export function validateCulture(
   if (!draft.name) {
     errors.name = t('form.nameRequired');
   }
-  // Required field: growth_duration_days
-  if (
-    draft.growth_duration_days === undefined ||
-    draft.growth_duration_days === null ||
-    (draft.growth_duration_days as unknown) === ''
-  ) {
-    errors.growth_duration_days = t('form.growthDurationDaysRequired');
-  } else {
+  if (!draft.variety || (typeof draft.variety === 'string' && draft.variety.trim().length === 0)) {
+    errors.variety = t('form.varietyRequired');
+  }
+
+  if (!draft.seed_supplier || (typeof draft.seed_supplier === 'string' && draft.seed_supplier.trim().length === 0)) {
+    errors.seed_supplier = t('form.supplierRequired');
+  }
+
+  if (draft.growth_duration_days !== undefined && draft.growth_duration_days !== null && (draft.growth_duration_days as unknown) !== '') {
     const numValue = typeof draft.growth_duration_days === 'string' ? parseFloat(draft.growth_duration_days as string) : draft.growth_duration_days;
     if (numValue < 0) {
       errors.growth_duration_days = t('form.growthDurationDaysError');
     }
   }
-  if (
-    draft.harvest_duration_days === undefined ||
-    draft.harvest_duration_days === null ||
-    (draft.harvest_duration_days as unknown) === ''
-  ) {
-    errors.harvest_duration_days = t('form.harvestDurationDaysRequired');
-  } else {
+  if (draft.harvest_duration_days !== undefined && draft.harvest_duration_days !== null && (draft.harvest_duration_days as unknown) !== '') {
     const numValue = typeof draft.harvest_duration_days === 'string' ? parseFloat(draft.harvest_duration_days as string) : draft.harvest_duration_days;
     if (numValue < 0) {
       errors.harvest_duration_days = t('form.harvestDurationDaysError');
     }
   }
-  // Pflichtfeld: propagation_duration_days, außer bei Direktsaat
-  if (draft.cultivation_type !== 'direct_sowing') {
-    if (
-      draft.propagation_duration_days === undefined ||
-      draft.propagation_duration_days === null ||
-      (draft.propagation_duration_days as unknown) === ''
-    ) {
-      errors.propagation_duration_days = t('form.propagationDurationDaysRequired');
-    } else {
-      const numValue = typeof draft.propagation_duration_days === 'string' ? parseFloat(draft.propagation_duration_days as string) : draft.propagation_duration_days;
-      if (numValue < 0) {
-        errors.propagation_duration_days = t('form.propagationDurationDaysError');
-      }
+  if (draft.propagation_duration_days !== undefined && draft.propagation_duration_days !== null && (draft.propagation_duration_days as unknown) !== '') {
+    const numValue = typeof draft.propagation_duration_days === 'string' ? parseFloat(draft.propagation_duration_days as string) : draft.propagation_duration_days;
+    if (numValue < 0) {
+      errors.propagation_duration_days = t('form.propagationDurationDaysError');
     }
   }
   // Optional numeric fields validation (alle außer propagation_duration_days)

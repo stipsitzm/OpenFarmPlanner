@@ -37,6 +37,8 @@ class SerializerBranchCoverageTest(TestCase):
         serializer = CultureSerializer(
             data={
                 'name': 'Salat',
+                'variety': 'Lollo',
+                'seed_supplier': 'ACME Seeds',
                 'growth_duration_days': 6,
                 'harvest_duration_days': 2,
                 'supplier_name': '  ACME Seeds GmbH ',
@@ -62,6 +64,8 @@ class SerializerBranchCoverageTest(TestCase):
     def test_planting_plan_serializer_converts_plants_to_area_and_computes_count(self):
         culture = Culture.objects.create(
             name='Möhre',
+            variety='Nantaise',
+            seed_supplier='Bingenheimer',
             growth_duration_days=8,
             harvest_duration_days=3,
             distance_within_row_m=0.2,
