@@ -169,12 +169,11 @@ class CultureViewSet(viewsets.ModelViewSet):
         return re.findall(r'https?://[^\s|]+', value)
 
     def _format_notes_with_sources(self, notes: str | None, source_urls: list[str]) -> str:
-        """Format notes as single-line text ending with `Quellen:` URLs list."""
-        base_notes = (notes or '').replace('\r', ' ').replace('\n', ' ')
-        base_notes = ' '.join(base_notes.split())
+        """Format markdown notes and append a Quellen section at the end."""
+        base_notes = (notes or '').replace('\r\n', '\n').replace('\r', '\n').strip()
 
-        # Remove existing `Quellen:` suffix to avoid duplication.
-        base_notes = re.sub(r'\s*Quellen:\s*.*$', '', base_notes).strip()
+        # Remove existing Quellen section to avoid duplication.
+        base_notes = re.sub(r'\n+###\s+Quellen\b[\s\S]*$', '', base_notes, flags=re.IGNORECASE).strip()
 
         deduped_urls: list[str] = []
         seen: set[str] = set()
@@ -184,13 +183,13 @@ class CultureViewSet(viewsets.ModelViewSet):
                 seen.add(normalized)
                 deduped_urls.append(normalized)
 
-        sources_suffix = 'Quellen: '
+        sources_suffix = '### Quellen'
         if deduped_urls:
             markdown_links = [f'[{url}]({url})' for url in deduped_urls]
-            sources_suffix += ' | '.join(markdown_links)
+            sources_suffix += '\n' + '\n'.join([f'- {link}' for link in markdown_links])
 
         if base_notes:
-            return f'{base_notes} {sources_suffix}'
+            return f'{base_notes}\n\n{sources_suffix}'
         return sources_suffix
 
     def _merge_enrichment(self, culture: Culture, candidate: dict, mode: str) -> tuple[dict, list[str]]:

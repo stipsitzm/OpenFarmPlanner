@@ -60,7 +60,7 @@ def _build_system_prompt() -> str:
         'Return ONLY valid JSON without markdown. '
         'Use conservative values, avoid guessing. '
         'Only output allowed fields. '
-        'The notes field must be concise markdown (single line), in German language, '
+        'The notes field must be detailed markdown in German language, '
         'and must NOT contain a Quellen section. '
         'Distinguish genus and family correctly (e.g., Brassica vs Brassicaceae). '
         'Do not mix data from different varieties/cultivars. '
@@ -292,7 +292,7 @@ def _call_llm_extract(culture_data: dict[str, Any], source_docs: list[dict[str, 
             'fields': list(ENRICH_FIELD_WHITELIST),
             'sources': 'array of URLs from source_documents used for extraction',
             'constraints': {
-                'single_line_notes': True,
+                'single_line_notes': False,
                 'notes_without_quellen': True,
                 'notes_language': 'de',
                 'taxonomy_family_not_genus': True,
@@ -402,7 +402,7 @@ def enrich_culture_data(
 
     notes = updates.get('notes')
     if notes is not None:
-        updates['notes'] = str(notes).replace('\r', ' ').replace('\n', ' ').strip()
+        updates['notes'] = str(notes).replace('\r\n', '\n').replace('\r', '\n').strip()
 
     warnings = _collect_plausibility_warnings(culture_data, updates, docs, normalized_sources)
     confidence_score = _compute_confidence_score(warnings, len(normalized_sources), len(updates))

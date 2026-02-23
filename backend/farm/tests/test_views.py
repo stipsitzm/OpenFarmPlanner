@@ -522,9 +522,8 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
 
         self.culture.refresh_from_db()
         self.assertEqual(self.culture.harvest_duration_days, 28)
-        self.assertIn('Quellen:', self.culture.notes)
-        self.assertIn('https://supplier.example/pea-norli', self.culture.notes)
-        self.assertNotIn('\n', self.culture.notes)
+        self.assertIn('### Quellen', self.culture.notes)
+        self.assertIn('- [https://supplier.example/pea-norli](https://supplier.example/pea-norli)', self.culture.notes)
 
     @patch('farm.views.enrich_culture_data')
     def test_enrich_fill_missing_updates_only_empty_fields(self, mock_enrich):
