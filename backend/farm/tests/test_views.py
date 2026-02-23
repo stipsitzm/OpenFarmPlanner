@@ -632,7 +632,7 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
 
 
     @patch('farm.views.enrich_culture_data')
-    def test_enrich_returns_422_when_llm_returns_no_updates(self, mock_enrich):
+    def test_enrich_returns_200_when_llm_returns_no_updates(self, mock_enrich):
         mock_enrich.return_value = ({}, ['https://supplier.example/pea-norli'], {'parsed_keys': ['unrelated_key']})
 
         response = self.client.post(
@@ -641,8 +641,8 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
             format='json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
-        self.assertEqual(response.data['code'], 'NO_ENRICHABLE_FIELDS')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['updated_fields'], [])
 
     @patch('farm.views.enrich_culture_data')
     def test_enrich_propagates_configuration_error(self, mock_enrich):

@@ -87,8 +87,7 @@ class CultureEnrichAPIIntegrationTest(APITestCase):
         culture.refresh_from_db()
         self.assertEqual(float(culture.expected_yield), 3.5)
         self.assertEqual(float(culture.seed_rate_value), 1.2)
-        self.assertIn('Quellen:', culture.notes)
-        self.assertNotIn('\n', culture.notes)
+        self.assertIn('### Quellen', culture.notes)
 
     @patch('farm.views.enrich_culture_data')
     def test_successful_overwrite_replaces_existing_values(self, mock_enrich):
@@ -122,7 +121,7 @@ class CultureEnrichAPIIntegrationTest(APITestCase):
         self.assertIn('New summary', culture.notes)
 
     @patch('farm.views.enrich_culture_data')
-    def test_no_enrichable_fields_returned_results_in_422_and_no_db_change(self, mock_enrich):
+    def test_no_enrichable_fields_returned_results_in_200_and_no_db_change(self, mock_enrich):
         culture = self._create_culture(
             expected_yield=1.7,
             notes='Keep me',
@@ -136,9 +135,8 @@ class CultureEnrichAPIIntegrationTest(APITestCase):
             format='json',
         )
 
-        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
-        self.assertEqual(response.data['code'], 'NO_ENRICHABLE_FIELDS')
-        self.assertIn('No enrichable fields found', response.data['message'])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['updated_fields'], [])
 
         culture.refresh_from_db()
         self.assertEqual(float(culture.expected_yield), 1.7)

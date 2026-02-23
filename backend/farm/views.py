@@ -571,12 +571,6 @@ class CultureViewSet(viewsets.ModelViewSet):
             field: value for field, value in candidate.items()
             if not self._is_empty_value(value)
         }
-        if not candidate:
-            return Response(
-                {'message': 'No enrichable fields found for this culture.', 'code': 'NO_ENRICHABLE_FIELDS'},
-                status=status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-
         merge_payload, updated_fields = self._merge_enrichment(culture, candidate, mode)
 
         if merge_payload:
