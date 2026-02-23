@@ -371,12 +371,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
           loading={loading}
           editMode="row"
           autoHeight
-          pageSizeOptions={[10, 25, 50]}
-          initialState={{
-            pagination: {
-              paginationModel: { pageSize: 25 },
-            },
-          }}
+          hideFooter={true}
           sortingMode="server"
           sortModel={sortModel}
           onSortModelChange={setSortModel}

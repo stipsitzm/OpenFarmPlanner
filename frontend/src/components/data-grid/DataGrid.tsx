@@ -466,12 +466,7 @@ export function EditableDataGrid<T extends EditableRow>({
           loading={loading}
           editMode="row"
           autoHeight
-          pageSizeOptions={[5, 10, 25]}
-          initialState={{
-            pagination: {
-              paginationModel: { pageSize: 10 },
-            },
-          }}
+          hideFooter={true}
           sortModel={sortModel}
           onSortModelChange={setSortModel}
           slots={{
