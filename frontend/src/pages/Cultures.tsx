@@ -512,11 +512,27 @@ function Cultures(): React.ReactElement {
       console.debug('Culture enrichment response debug:', response.data.debug);
       await fetchCultures();
       if (response.data.updated_fields.length === 0) {
+        const debug = response.data.debug;
+        const parsedKeys = Array.isArray(debug?.llm?.parsed_keys)
+          ? debug.llm.parsed_keys
+          : [];
+        console.debug('Culture enrichment no-op diagnostics:', {
+          mode,
+          target_fields: debug?.target_fields ?? [],
+          llm_update_keys: debug?.llm_update_keys ?? [],
+          llm_parsed_keys: parsedKeys,
+          combined_sources_count: debug?.combined_sources_count ?? 0,
+          notes_skipped_due_to_missing_sources: Boolean(debug?.notes_skipped_due_to_missing_sources),
+        });
         const notesSkipped = Boolean(response.data.debug?.notes_skipped_due_to_missing_sources);
         showSnackbar(
           notesSkipped
             ? t('enrichment.messages.noChangesMissingSources')
-            : t('enrichment.messages.noChanges'),
+            : t('enrichment.messages.noChangesWithCounts', {
+              targetCount: response.data.debug?.target_fields?.length ?? 0,
+              llmUpdateCount: response.data.debug?.llm_update_keys?.length ?? 0,
+              sourceCount: response.data.debug?.combined_sources_count ?? 0,
+            }),
           'success'
         );
       } else {
