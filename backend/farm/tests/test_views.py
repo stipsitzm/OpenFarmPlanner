@@ -552,10 +552,12 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
         self.assertEqual(self.culture.notes, 'Existing notes Quellen: https://existing.example')
 
     @patch('farm.views.enrich_culture_data')
-    def test_enrich_requires_at_least_one_source_url(self, mock_enrich):
+    def test_enrich_without_source_urls_skips_notes_update(self, mock_enrich):
         self.culture.notes = ''
         self.culture.save(update_fields=['notes'])
-        mock_enrich.return_value = ({'notes': 'Summary without sources'}, [])
+        self.culture.notes = 'Existing note without url'
+        self.culture.save(update_fields=['notes'])
+        mock_enrich.return_value = ({'notes': 'Summary without sources', 'harvest_duration_days': 31}, [])
 
         response = self.client.post(
             f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
@@ -563,7 +565,12 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
             format='json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('harvest_duration_days', response.data['updated_fields'])
+        self.assertNotIn('notes', response.data['updated_fields'])
+
+        self.culture.refresh_from_db()
+        self.assertEqual(self.culture.notes, 'Existing note without url')
 
     @patch('farm.views.enrich_culture_data')
     def test_enrich_propagates_configuration_error(self, mock_enrich):

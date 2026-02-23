@@ -511,20 +511,20 @@ class CultureViewSet(viewsets.ModelViewSet):
                 status=status_code
             )
 
+        llm_note_sources = self._extract_urls(str(llm_updates.get('notes', '')))
+
         combined_sources: list[str] = []
-        for url in [*llm_sources, *source_urls]:
+        for url in [*llm_sources, *source_urls, *llm_note_sources]:
             normalized = url.strip()
             if normalized and normalized not in combined_sources:
                 combined_sources.append(normalized)
 
-        if not combined_sources:
-            return Response(
-                {'message': 'Enrichment must include at least one source URL.'},
-                status=status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-
         candidate = dict(llm_updates)
-        candidate['notes'] = self._format_notes_with_sources(candidate.get('notes'), combined_sources)
+        if combined_sources:
+            candidate['notes'] = self._format_notes_with_sources(candidate.get('notes'), combined_sources)
+        else:
+            # Without sources we cannot generate a compliant Quellen section.
+            candidate.pop('notes', None)
         merge_payload, updated_fields = self._merge_enrichment(culture, candidate, mode)
 
         if merge_payload:
