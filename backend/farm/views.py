@@ -14,6 +14,7 @@ from rest_framework import viewsets, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier
+from .services.enrichment import ENRICH_FIELD_WHITELIST, EnrichmentServiceError, enrich_culture_data
 from .serializers import (
     LocationSerializer,
     FieldSerializer,
@@ -146,25 +147,7 @@ class CultureViewSet(viewsets.ModelViewSet):
     serializer_class = CultureSerializer
 
     ENRICH_REQUIRED_FIELDS = ('name', 'variety', 'seed_supplier')
-    ENRICH_UPDATABLE_FIELDS = (
-        'crop_family',
-        'nutrient_demand',
-        'cultivation_type',
-        'growth_duration_days',
-        'harvest_duration_days',
-        'propagation_duration_days',
-        'harvest_method',
-        'expected_yield',
-        'distance_within_row_cm',
-        'row_spacing_cm',
-        'sowing_depth_cm',
-        'seed_rate_value',
-        'seed_rate_unit',
-        'sowing_calculation_safety_percent',
-        'thousand_kernel_weight_g',
-        'package_size_g',
-        'notes',
-    )
+    ENRICH_UPDATABLE_FIELDS = ENRICH_FIELD_WHITELIST
 
     def _is_empty_value(self, value):
         """Return True when value is semantically empty for merge decisions."""
@@ -203,21 +186,6 @@ class CultureViewSet(viewsets.ModelViewSet):
         if base_notes:
             return f'{base_notes} {sources_suffix}'
         return sources_suffix
-
-    def _build_enrichment_candidate(self, culture: Culture, source_urls: list[str]) -> dict:
-        """Build a strict enrichment candidate dict for whitelisted fields only.
-
-        This is intentionally deterministic and local-only for now.
-        """
-        existing_notes = culture.notes or ''
-        urls_from_notes = self._extract_urls(existing_notes)
-        final_urls = [*source_urls, *urls_from_notes]
-
-        candidate = {
-            'notes': self._format_notes_with_sources(existing_notes, final_urls),
-        }
-
-        return {field: candidate[field] for field in self.ENRICH_UPDATABLE_FIELDS if field in candidate}
 
     def _merge_enrichment(self, culture: Culture, candidate: dict, mode: str) -> tuple[dict, list[str]]:
         """Merge whitelisted enrichment fields onto one culture according to mode."""
@@ -506,10 +474,57 @@ class CultureViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Source gathering: currently local-only (existing URLs in notes).
         source_urls = self._extract_urls(culture.notes)
 
-        candidate = self._build_enrichment_candidate(culture, source_urls)
+        culture_context = {
+            'name': culture.name,
+            'variety': culture.variety,
+            'seed_supplier': culture.seed_supplier,
+            'crop_family': culture.crop_family,
+            'nutrient_demand': culture.nutrient_demand,
+            'cultivation_type': culture.cultivation_type,
+            'growth_duration_days': culture.growth_duration_days,
+            'harvest_duration_days': culture.harvest_duration_days,
+            'propagation_duration_days': culture.propagation_duration_days,
+            'harvest_method': culture.harvest_method,
+            'expected_yield': float(culture.expected_yield) if culture.expected_yield is not None else None,
+            'distance_within_row_cm': float(culture.distance_within_row_m * 100.0) if culture.distance_within_row_m is not None else None,
+            'row_spacing_cm': float(culture.row_spacing_m * 100.0) if culture.row_spacing_m is not None else None,
+            'sowing_depth_cm': float(culture.sowing_depth_m * 100.0) if culture.sowing_depth_m is not None else None,
+            'seed_rate_value': culture.seed_rate_value,
+            'seed_rate_unit': culture.seed_rate_unit,
+            'sowing_calculation_safety_percent': culture.sowing_calculation_safety_percent,
+            'thousand_kernel_weight_g': culture.thousand_kernel_weight_g,
+            'package_size_g': culture.package_size_g,
+            'notes': culture.notes,
+        }
+
+        try:
+            llm_updates, llm_sources = enrich_culture_data(culture_context, source_urls)
+        except EnrichmentServiceError as exc:
+            message = str(exc)
+            status_code = status.HTTP_502_BAD_GATEWAY
+            if 'not configured' in message.lower():
+                status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            return Response(
+                {'message': message},
+                status=status_code
+            )
+
+        combined_sources: list[str] = []
+        for url in [*llm_sources, *source_urls]:
+            normalized = url.strip()
+            if normalized and normalized not in combined_sources:
+                combined_sources.append(normalized)
+
+        if not combined_sources:
+            return Response(
+                {'message': 'Enrichment must include at least one source URL.'},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+
+        candidate = dict(llm_updates)
+        candidate['notes'] = self._format_notes_with_sources(candidate.get('notes'), combined_sources)
         merge_payload, updated_fields = self._merge_enrichment(culture, candidate, mode)
 
         if merge_payload:
@@ -524,7 +539,7 @@ class CultureViewSet(viewsets.ModelViewSet):
                 'culture': serializer.data,
                 'mode': mode,
                 'updated_fields': updated_fields,
-                'sources': source_urls,
+                'sources': combined_sources,
             },
             status=status.HTTP_200_OK
         )

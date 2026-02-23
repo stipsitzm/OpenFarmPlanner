@@ -1,4 +1,5 @@
 from datetime import date
+from unittest.mock import patch
 
 from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
@@ -463,7 +464,7 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
             seed_supplier="Supplier A",
             growth_duration_days=60,
             harvest_duration_days=20,
-            notes="Line one\nhttps://example.com/a"
+            notes="Line one https://example.com/a"
         )
 
     def test_enrich_rejects_missing_required_fields(self):
@@ -480,7 +481,16 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
         self.assertIn('missing_fields', response.data)
         self.assertIn('variety', response.data['missing_fields'])
 
-    def test_enrich_overwrite_updates_whitelisted_fields(self):
+    @patch('farm.views.enrich_culture_data')
+    def test_enrich_overwrite_updates_whitelisted_fields(self, mock_enrich):
+        mock_enrich.return_value = (
+            {
+                'harvest_duration_days': 28,
+                'notes': 'Research summary from supplier and cultivation guide',
+            },
+            ['https://supplier.example/pea-norli', 'https://wiki.example/pea']
+        )
+
         response = self.client.post(
             f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
             {},
@@ -489,15 +499,27 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('notes', response.data['updated_fields'])
+        self.assertIn('harvest_duration_days', response.data['updated_fields'])
 
         self.culture.refresh_from_db()
+        self.assertEqual(self.culture.harvest_duration_days, 28)
         self.assertIn('Quellen:', self.culture.notes)
+        self.assertIn('https://supplier.example/pea-norli', self.culture.notes)
         self.assertNotIn('\n', self.culture.notes)
 
-    def test_enrich_fill_missing_does_not_override_existing_notes(self):
-        original_notes = 'Already set Quellen: https://existing.example'
-        self.culture.notes = original_notes
-        self.culture.save(update_fields=['notes'])
+    @patch('farm.views.enrich_culture_data')
+    def test_enrich_fill_missing_updates_only_empty_fields(self, mock_enrich):
+        self.culture.harvest_duration_days = None
+        self.culture.notes = 'Existing notes Quellen: https://existing.example'
+        self.culture.save(update_fields=['harvest_duration_days', 'notes'])
+
+        mock_enrich.return_value = (
+            {
+                'harvest_duration_days': 35,
+                'notes': 'LLM notes that should not replace existing notes in fill mode',
+            },
+            ['https://supplier.example/pea-norli']
+        )
 
         response = self.client.post(
             f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=fill_missing',
@@ -506,14 +528,17 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['updated_fields'], [])
+        self.assertEqual(response.data['updated_fields'], ['harvest_duration_days'])
 
         self.culture.refresh_from_db()
-        self.assertEqual(self.culture.notes, original_notes)
+        self.assertEqual(self.culture.harvest_duration_days, 35)
+        self.assertEqual(self.culture.notes, 'Existing notes Quellen: https://existing.example')
 
-    def test_enrich_notes_are_single_line_and_sources_at_end(self):
-        self.culture.notes = 'A note with newline\nand source https://example.com/source'
+    @patch('farm.views.enrich_culture_data')
+    def test_enrich_requires_at_least_one_source_url(self, mock_enrich):
+        self.culture.notes = ''
         self.culture.save(update_fields=['notes'])
+        mock_enrich.return_value = ({'notes': 'Summary without sources'}, [])
 
         response = self.client.post(
             f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
@@ -521,10 +546,22 @@ class CultureEnrichmentAPITest(DRFAPITestCase):
             format='json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        notes = response.data['culture']['notes']
-        self.assertNotIn('\n', notes)
-        self.assertRegex(notes, r'Quellen:\s+https?://')
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+    @patch('farm.views.enrich_culture_data')
+    def test_enrich_propagates_configuration_error(self, mock_enrich):
+        from farm.services.enrichment import EnrichmentServiceError
+
+        mock_enrich.side_effect = EnrichmentServiceError('OPENAI_API_KEY is not configured.')
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.data['message'], 'OPENAI_API_KEY is not configured.')
 
 
 

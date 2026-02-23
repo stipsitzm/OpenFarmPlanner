@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture } from '../api/api';
@@ -468,12 +469,23 @@ function Cultures(): React.ReactElement {
 
     setEnrichLoadingMode(mode);
     try {
-      await cultureAPI.enrich(selectedCulture.id, mode);
+      const response = await cultureAPI.enrich(selectedCulture.id, mode);
       await fetchCultures();
-      showSnackbar(t('enrichment.messages.success'), 'success');
+      if (response.data.updated_fields.length === 0) {
+        showSnackbar(t('enrichment.messages.noChanges'), 'success');
+      } else {
+        showSnackbar(t('enrichment.messages.success'), 'success');
+      }
     } catch (error) {
       console.error('Error enriching culture:', error);
-      showSnackbar(t('enrichment.messages.error'), 'error');
+      let message = t('enrichment.messages.error');
+      if (axios.isAxiosError(error) && error.response?.data && typeof error.response.data === 'object') {
+        const apiMessage = (error.response.data as { message?: unknown }).message;
+        if (typeof apiMessage === 'string' && apiMessage.trim()) {
+          message = apiMessage;
+        }
+      }
+      showSnackbar(message, 'error');
     } finally {
       setEnrichLoadingMode(null);
     }

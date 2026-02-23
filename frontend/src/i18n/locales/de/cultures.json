@@ -138,7 +138,8 @@
       "noCultureSelected": "Bitte zuerst eine Kultur auswählen.",
       "missingRequiredFields": "Anreicherung benötigt ausgefüllte Felder: {{fields}}.",
       "success": "Kulturdaten erfolgreich angereichert.",
-      "error": "Fehler bei der Anreicherung der Kulturdaten."
+      "error": "Fehler bei der Anreicherung der Kulturdaten.",
+      "noChanges": "Keine neuen Daten gefunden – bestehende Werte bleiben unverändert."
     }
   }
 }
