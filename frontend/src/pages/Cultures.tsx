@@ -32,6 +32,7 @@ import {
   Snackbar,
   Tooltip,
   Typography,
+  CircularProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -97,6 +98,7 @@ function Cultures(): React.ReactElement {
   }>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
   const [enrichLoadingMode, setEnrichLoadingMode] = useState<'overwrite' | 'fill_missing' | null>(null);
+  const [enrichElapsedSeconds, setEnrichElapsedSeconds] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
@@ -497,6 +499,28 @@ function Cultures(): React.ReactElement {
 
   };
 
+  useEffect(() => {
+    if (!enrichLoadingMode) {
+      setEnrichElapsedSeconds(0);
+      return;
+    }
+
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      setEnrichElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
+    }, 500);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [enrichLoadingMode]);
+
+  const enrichProgressStep = enrichElapsedSeconds < 4
+    ? t('enrichment.progress.stepSearching')
+    : enrichElapsedSeconds < 9
+      ? t('enrichment.progress.stepAnalyzing')
+      : t('enrichment.progress.stepFinalizing');
+
   const handleEnrichCulture = async (mode: 'overwrite' | 'fill_missing') => {
     if (!selectedCulture?.id || !canEnrichCulture) {
       console.debug('[enrich] skipped before request', {
@@ -720,6 +744,29 @@ function Cultures(): React.ReactElement {
           </Button>
         </Box>
       )}
+
+      <Dialog
+        open={enrichLoadingMode !== null}
+        onClose={() => undefined}
+        disableEscapeKeyDown
+        aria-labelledby="enrichment-progress-title"
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle id="enrichment-progress-title">{t('enrichment.progress.title')}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
+            <CircularProgress size={28} />
+            <Box>
+              <Typography variant="body1">{t('enrichment.progress.description')}</Typography>
+              <Typography variant="body2" color="text.secondary">{enrichProgressStep}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {t('enrichment.progress.elapsed', { seconds: enrichElapsedSeconds })}
+              </Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+      </Dialog>
 
       {/* Form Dialog */}
       <Dialog
