@@ -83,7 +83,9 @@
     "sowingDepthCmError": "Saattiefe muss ≥ 0 sein",
     "displayColor": "Anzeigefarbe",
     "displayColorHelp": "Farbe zur Darstellung im Anbaukalender (wird automatisch generiert)",
-    "displayColorError": "Ungültiges Farbformat (verwenden Sie #RRGGBB)"
+    "displayColorError": "Ungültiges Farbformat (verwenden Sie #RRGGBB)",
+    "varietyRequired": "Sorte ist erforderlich",
+    "supplierRequired": "Saatgutlieferant ist erforderlich"
   },
   "messages": {
     "createSuccess": "Kultur erfolgreich erstellt",
