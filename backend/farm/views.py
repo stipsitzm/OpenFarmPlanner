@@ -582,6 +582,8 @@ class CultureViewSet(viewsets.ModelViewSet):
                 'mode': mode,
                 'updated_fields': updated_fields,
                 'sources': combined_sources,
+                'confidence_score': llm_debug.get('confidence_score') if isinstance(llm_debug, dict) else None,
+                'plausibility_warnings': llm_debug.get('plausibility_warnings', []) if isinstance(llm_debug, dict) else [],
                 'debug': {
                     'target_fields': target_fields,
                     'llm': llm_debug,

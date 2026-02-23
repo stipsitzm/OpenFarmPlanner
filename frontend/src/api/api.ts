@@ -42,6 +42,8 @@ export const cultureAPI = {
     mode: 'overwrite' | 'fill_missing';
     updated_fields: string[];
     sources: string[];
+    confidence_score?: number | null;
+    plausibility_warnings?: string[];
     debug?: {
       target_fields?: string[];
       llm?: Record<string, unknown>;

@@ -138,6 +138,8 @@ class CultureSerializer(serializers.ModelSerializer):
         allow_blank=True,
         help_text="Type of seeding requirement (e.g. 'g', 'seeds')"
     )
+    automatic_warnings = serializers.SerializerMethodField(read_only=True)
+
     plants_per_m2 = serializers.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -149,6 +151,9 @@ class CultureSerializer(serializers.ModelSerializer):
         model = Culture
         fields = '__all__'
     
+
+    def get_automatic_warnings(self, obj):
+        return obj.get_automatic_warnings()
 
     def validate_seed_rate_unit(self, value):
         """Normalize legacy seed rate unit values and validate supported units."""

@@ -550,3 +550,24 @@ class CultureNormalizedFieldsTest(TestCase):
         
         self.assertNotEqual(culture1.id, culture2.id)
 
+
+
+class CultureAutomaticWarningsTest(TestCase):
+    def test_automatic_warnings_cover_requested_thresholds(self):
+        culture = Culture.objects.create(
+            name='Kohlrabi',
+            variety='Superschmelz',
+            seed_supplier='Demo',
+            growth_duration_days=130,
+            seed_rate_value=0.6,
+            seed_rate_unit='g_per_m2',
+            cultivation_type='pre_cultivation',
+            propagation_duration_days=5,
+            harvest_duration_days=20,
+        )
+
+        warnings = culture.get_automatic_warnings()
+        self.assertEqual(len(warnings), 3)
+        self.assertTrue(any('Kohlrabi' in msg for msg in warnings))
+        self.assertTrue(any('Saatmenge' in msg for msg in warnings))
+        self.assertTrue(any('Anzuchtdauer' in msg for msg in warnings))

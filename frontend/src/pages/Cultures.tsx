@@ -535,6 +535,8 @@ function Cultures(): React.ReactElement {
         statusText: response.statusText,
         updated_fields: response.data.updated_fields,
         sources_count: response.data.sources?.length ?? 0,
+        confidence_score: response.data.confidence_score,
+        plausibility_warnings: response.data.plausibility_warnings,
         debug: response.data.debug,
         durationMs: Date.now() - startedAt,
       });

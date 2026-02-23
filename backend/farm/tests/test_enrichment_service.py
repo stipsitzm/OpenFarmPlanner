@@ -58,3 +58,39 @@ def test_enrich_culture_data_raises_no_sources(_mock_search, _mock_fetch):
             assert False, 'Expected exception'
         except Exception as exc:
             assert str(exc) == 'NO_SOURCES'
+
+
+@patch('farm.services.enrichment._call_llm_extract')
+@patch('farm.services.enrichment.fetch_page_text')
+@patch('farm.services.enrichment.web_search')
+def test_enrich_culture_data_adds_plausibility_warnings_and_confidence(mock_search, mock_fetch, mock_llm):
+    mock_search.return_value = [
+        {'url': 'https://example.com/kohlrabi-a', 'title': 'Kohlrabi Superschmelz', 'snippet': 'Info Superschmelz'},
+        {'url': 'https://example.com/kohlrabi-b', 'title': 'Kohlrabi generic', 'snippet': 'General info'},
+    ]
+    mock_fetch.side_effect = [
+        'Kohlrabi Superschmelz data',
+        'Kohlrabi overview not specific to variety',
+    ]
+    mock_llm.return_value = {
+        'crop_family': 'Brassica',
+        'growth_duration_days': 130,
+        'harvest_duration_days': 220,
+        'seed_rate_value': 0.9,
+        'seed_rate_unit': 'g_per_m2',
+        'thousand_kernel_weight_g': 3.0,
+        'notes': 'Kurzbeschreibung auf Deutsch',
+        'sources': ['https://example.com/kohlrabi-a', 'https://example.com/kohlrabi-b'],
+    }
+
+    _updates, _sources, debug = enrich_culture_data(
+        {'name': 'Kohlrabi', 'variety': 'Superschmelz', 'seed_supplier': 'Demo'},
+        source_urls=[],
+        mode='overwrite',
+        target_fields=['crop_family', 'growth_duration_days', 'harvest_duration_days', 'seed_rate_value', 'seed_rate_unit', 'thousand_kernel_weight_g', 'notes'],
+    )
+
+    assert 'plausibility_warnings' in debug
+    assert len(debug['plausibility_warnings']) > 0
+    assert 'confidence_score' in debug
+    assert 0.0 <= debug['confidence_score'] <= 1.0

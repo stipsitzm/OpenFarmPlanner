@@ -36,6 +36,23 @@ ENRICH_FIELD_WHITELIST: tuple[str, ...] = (
     'notes',
 )
 
+SPECIES_RULES: dict[str, dict[str, Any]] = {
+    'kohlrabi': {
+        'family': 'Brassicaceae',
+        'genus': 'Brassica',
+        'growth_range_days': (45, 95),
+        'typical_density_per_m2': (8.0, 25.0),
+        'transplanted': True,
+    },
+    'tomato': {
+        'family': 'Solanaceae',
+        'genus': 'Solanum',
+        'growth_range_days': (60, 140),
+        'typical_density_per_m2': (2.0, 5.0),
+        'transplanted': True,
+    },
+}
+
 
 def _build_system_prompt() -> str:
     return (
@@ -43,7 +60,10 @@ def _build_system_prompt() -> str:
         'Return ONLY valid JSON without markdown. '
         'Use conservative values, avoid guessing. '
         'Only output allowed fields. '
-        'The notes field must be concise markdown (single line), and must NOT contain a Quellen section. '
+        'The notes field must be concise markdown (single line), in German language, '
+        'and must NOT contain a Quellen section. '
+        'Distinguish genus and family correctly (e.g., Brassica vs Brassicaceae). '
+        'Do not mix data from different varieties/cultivars. '
         'Provide source URLs in the sources array.'
     )
 
@@ -69,6 +89,111 @@ def _extract_json_object(content: str) -> dict[str, Any]:
     if not isinstance(parsed, dict):
         raise EnrichmentServiceError('LLM response JSON must be an object.')
     return parsed
+
+
+def _infer_species_rule(culture_name: str) -> dict[str, Any] | None:
+    lowered = culture_name.strip().lower()
+    for key, rule in SPECIES_RULES.items():
+        if key in lowered:
+            return rule
+    return None
+
+
+def _value_as_float(value: Any) -> float | None:
+    try:
+        if value is None or value == '':
+            return None
+        return float(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def _value_as_int(value: Any) -> int | None:
+    try:
+        if value is None or value == '':
+            return None
+        return int(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def _collect_plausibility_warnings(
+    culture_data: dict[str, Any],
+    updates: dict[str, Any],
+    docs: list[dict[str, str]],
+    normalized_sources: list[str],
+) -> list[str]:
+    warnings: list[str] = []
+    name = str(culture_data.get('name', '')).strip()
+    rule = _infer_species_rule(name)
+
+    # Taxonomy checks: family vs genus and known family for mapped species.
+    crop_family = str(updates.get('crop_family') or culture_data.get('crop_family') or '').strip()
+    if crop_family and not crop_family.lower().endswith('aceae'):
+        warnings.append('Taxonomy plausibility: crop_family should usually be a botanical family (e.g. Brassicaceae, not Brassica).')
+    if rule and crop_family and rule['family'].lower() not in crop_family.lower():
+        warnings.append(f"Taxonomy mismatch: expected family around '{rule['family']}' for {name}.")
+
+    # Growth duration plausibility against species range.
+    growth_days = _value_as_int(updates.get('growth_duration_days', culture_data.get('growth_duration_days')))
+    if rule and growth_days is not None:
+        lo, hi = rule['growth_range_days']
+        if growth_days < lo or growth_days > hi:
+            warnings.append(
+                f'Growth duration plausibility: {growth_days}d outside typical range {lo}-{hi}d for {name}.'
+            )
+
+    # Harvest duration cannot dominate maturity unrealistically.
+    harvest_days = _value_as_int(updates.get('harvest_duration_days', culture_data.get('harvest_duration_days')))
+    if growth_days is not None and harvest_days is not None and harvest_days > max(14, int(growth_days * 1.5)):
+        warnings.append(
+            f'Biological plausibility: harvest_duration_days ({harvest_days}) too high compared to growth_duration_days ({growth_days}).'
+        )
+
+    # Seed rate plausibility (g/m2 + TKG => seeds/m2) compared to expected density.
+    seed_rate_value = _value_as_float(updates.get('seed_rate_value', culture_data.get('seed_rate_value')))
+    seed_rate_unit = str(updates.get('seed_rate_unit', culture_data.get('seed_rate_unit')) or '').strip().lower()
+    tkg = _value_as_float(updates.get('thousand_kernel_weight_g', culture_data.get('thousand_kernel_weight_g')))
+
+    if seed_rate_value is not None and seed_rate_unit in {'g_per_m2', 'g/m²', 'g/m2'} and tkg and tkg > 0:
+        seeds_per_m2 = (seed_rate_value * 1000.0) / tkg
+        if rule:
+            d_lo, d_hi = rule['typical_density_per_m2']
+            median_density = (d_lo + d_hi) / 2.0
+            if median_density > 0:
+                factor = max(seeds_per_m2 / median_density, median_density / seeds_per_m2)
+                if factor > 3.0:
+                    warnings.append(
+                        f'Seed rate plausibility: estimated {seeds_per_m2:.1f} seeds/m² deviates by factor {factor:.1f} from typical density.'
+                    )
+
+    # Source consistency for variety/cultivar.
+    variety = str(culture_data.get('variety', '')).strip().lower()
+    if variety and len(docs) > 1:
+        with_variety = 0
+        for doc in docs:
+            haystack = ' '.join([
+                str(doc.get('title', '')),
+                str(doc.get('snippet', '')),
+                str(doc.get('text', ''))[:1200],
+            ]).lower()
+            if variety in haystack:
+                with_variety += 1
+        if 0 < with_variety < len(docs):
+            warnings.append('Source consistency: not all sources clearly reference the same variety/cultivar.')
+
+    if len(normalized_sources) > 3:
+        warnings.append('Source consistency: many sources used; verify data refers to one cultivar only.')
+
+    return warnings
+
+
+def _compute_confidence_score(warnings: list[str], source_count: int, update_count: int) -> float:
+    score = 0.55
+    score += min(0.25, source_count * 0.05)
+    score += min(0.20, update_count * 0.03)
+    score -= min(0.60, len(warnings) * 0.12)
+    return round(max(0.0, min(1.0, score)), 2)
 
 
 def web_search(query: str, max_results: int = 8, include_domains: list[str] | None = None) -> list[dict[str, str]]:
@@ -166,7 +291,13 @@ def _call_llm_extract(culture_data: dict[str, Any], source_docs: list[dict[str, 
         'output_contract': {
             'fields': list(ENRICH_FIELD_WHITELIST),
             'sources': 'array of URLs from source_documents used for extraction',
-            'constraints': {'single_line_notes': True, 'notes_without_quellen': True},
+            'constraints': {
+                'single_line_notes': True,
+                'notes_without_quellen': True,
+                'notes_language': 'de',
+                'taxonomy_family_not_genus': True,
+                'variety_consistency': True,
+            },
         },
     }
 
@@ -273,7 +404,8 @@ def enrich_culture_data(
     if notes is not None:
         updates['notes'] = str(notes).replace('\r', ' ').replace('\n', ' ').strip()
 
-    # No extracted updates is a valid no-op result; endpoint returns 200 with updated_fields=[].
+    warnings = _collect_plausibility_warnings(culture_data, updates, docs, normalized_sources)
+    confidence_score = _compute_confidence_score(warnings, len(normalized_sources), len(updates))
 
     debug = {
         'mode': mode,
@@ -285,6 +417,8 @@ def enrich_culture_data(
         'returned_update_keys': list(updates.keys()),
         'returned_sources_count': len(normalized_sources),
         'supplier_domains': supplier_domains,
+        'plausibility_warnings': warnings,
+        'confidence_score': confidence_score,
     }
 
     return updates, normalized_sources, debug
