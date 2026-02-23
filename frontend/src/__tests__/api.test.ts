@@ -52,7 +52,7 @@ describe('API Client', () => {
     expect(deleteMock).toHaveBeenCalledWith('/cultures/7/');
     expect(postMock).toHaveBeenCalledWith('/cultures/import/preview/', importPreviewData);
     expect(postMock).toHaveBeenCalledWith('/cultures/import/apply/', importApplyData);
-    expect(postMock).toHaveBeenCalledWith('/cultures/7/enrich/?mode=overwrite');
+    expect(postMock).toHaveBeenCalledWith('/cultures/7/enrich/?mode=overwrite', undefined, { timeout: 30000 });
   });
 
   it('calls supplier endpoints and handles optional query params', () => {

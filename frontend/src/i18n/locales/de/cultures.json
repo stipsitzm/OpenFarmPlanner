@@ -139,7 +139,9 @@
       "missingRequiredFields": "Anreicherung benötigt ausgefüllte Felder: {{fields}}.",
       "success": "Kulturdaten erfolgreich angereichert.",
       "error": "Fehler bei der Anreicherung der Kulturdaten.",
-      "noChanges": "Keine neuen Daten gefunden – bestehende Werte bleiben unverändert."
+      "noChanges": "Keine neuen Daten gefunden – bestehende Werte bleiben unverändert.",
+      "loading": "Recherche läuft...",
+      "timeout": "Die Recherche dauert zu lange. Bitte später erneut versuchen."
     }
   }
 }

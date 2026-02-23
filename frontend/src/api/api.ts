@@ -42,7 +42,7 @@ export const cultureAPI = {
     mode: 'overwrite' | 'fill_missing';
     updated_fields: string[];
     sources: string[];
-  }>(`/cultures/${id}/enrich/?mode=${mode}`),
+  }>(`/cultures/${id}/enrich/?mode=${mode}`, undefined, { timeout: 30000 }),
 };
 
 export const supplierAPI = {

@@ -479,10 +479,14 @@ function Cultures(): React.ReactElement {
     } catch (error) {
       console.error('Error enriching culture:', error);
       let message = t('enrichment.messages.error');
-      if (axios.isAxiosError(error) && error.response?.data && typeof error.response.data === 'object') {
-        const apiMessage = (error.response.data as { message?: unknown }).message;
-        if (typeof apiMessage === 'string' && apiMessage.trim()) {
-          message = apiMessage;
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          message = t('enrichment.messages.timeout');
+        } else if (error.response?.data && typeof error.response.data === 'object') {
+          const apiMessage = (error.response.data as { message?: unknown }).message;
+          if (typeof apiMessage === 'string' && apiMessage.trim()) {
+            message = apiMessage;
+          }
         }
       }
       showSnackbar(message, 'error');
@@ -554,7 +558,7 @@ function Cultures(): React.ReactElement {
                 onClick={() => handleEnrichCulture('overwrite')}
                 disabled={!canEnrichCulture || enrichLoadingMode !== null}
               >
-                {t('enrichment.buttons.overwrite')}
+                {enrichLoadingMode === 'overwrite' ? t('enrichment.messages.loading') : t('enrichment.buttons.overwrite')}
               </Button>
             </span>
           </Tooltip>
@@ -565,7 +569,7 @@ function Cultures(): React.ReactElement {
                 onClick={() => handleEnrichCulture('fill_missing')}
                 disabled={!canEnrichCulture || enrichLoadingMode !== null}
               >
-                {t('enrichment.buttons.fillMissing')}
+                {enrichLoadingMode === 'fill_missing' ? t('enrichment.messages.loading') : t('enrichment.buttons.fillMissing')}
               </Button>
             </span>
           </Tooltip>
