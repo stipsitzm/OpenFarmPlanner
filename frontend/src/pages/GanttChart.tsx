@@ -10,14 +10,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../i18n';
-import { Box, Alert, Paper, FormControlLabel, Switch, Typography } from '@mui/material';
+import { Box, Alert, Paper, FormControlLabel, Switch, Typography, Tooltip } from '@mui/material';
 import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, cultureAPI, yieldCalendarAPI, type PlantingPlan, type Bed, type Field, type Location, type Culture, type YieldCalendarWeek } from '../api/api';
 import GanttChart, { ViewMode } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import type { CommandSpec } from '../commands/types';
-import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
 
 interface Task {
   id: string;
@@ -49,12 +48,6 @@ interface TaskGroup {
   area?: number;
   isGroup?: boolean; // For hierarchy groups
   level?: number; // Hierarchy level: 0=location, 1=field, 2=bed
-}
-
-interface WeeklyYieldChartRow {
-  iso_week: string;
-  week_label: string;
-  [key: string]: string | number;
 }
 
 interface WeeklyYieldCultureMeta {
@@ -382,32 +375,40 @@ function GanttChartPage(): React.ReactElement {
   const endDate = useMemo(() => new Date(displayYear, 11, 31), [displayYear]);
   
 
-  const { chartData, chartCultures } = useMemo(() => {
+  const { chartData, chartCultures, maxTotalYield } = useMemo(() => {
     const cultureMeta = new Map<number, WeeklyYieldCultureMeta>();
-    const rows: WeeklyYieldChartRow[] = weeklyYield.map((week) => {
-      const row: WeeklyYieldChartRow = {
-        iso_week: week.iso_week,
-        week_label: week.iso_week.split('-W')[1] ? `W${week.iso_week.split('-W')[1]}` : week.iso_week,
-      };
 
-      week.cultures.forEach((entry) => {
-        const dataKey = `culture_${entry.culture_id}`;
-        row[dataKey] = entry.yield;
+    const rows = weeklyYield.map((week) => {
+      const culturesForWeek = week.cultures.map((entry) => {
         if (!cultureMeta.has(entry.culture_id)) {
           cultureMeta.set(entry.culture_id, {
             id: entry.culture_id,
             name: entry.culture_name,
             color: entry.color,
-            dataKey,
+            dataKey: `culture_${entry.culture_id}`
           });
         }
+        return entry;
       });
 
-      return row;
+      const totalYield = culturesForWeek.reduce((sum, item) => sum + item.yield, 0);
+
+      return {
+        isoWeek: week.iso_week,
+        weekLabel: week.iso_week.split('-W')[1] ? `W${week.iso_week.split('-W')[1]}` : week.iso_week,
+        cultures: culturesForWeek,
+        totalYield,
+      };
     });
 
     const sortedCultures = [...cultureMeta.values()].sort((a, b) => a.name.localeCompare(b.name));
-    return { chartData: rows, chartCultures: sortedCultures };
+    const maxYield = rows.reduce((max, row) => Math.max(max, row.totalYield), 0);
+
+    return {
+      chartData: rows,
+      chartCultures: sortedCultures,
+      maxTotalYield: maxYield,
+    };
   }, [weeklyYield]);
 
   if (loading) {
@@ -463,25 +464,37 @@ function GanttChartPage(): React.ReactElement {
         {chartData.length === 0 ? (
           <div className="gantt-no-data">Keine erwarteten Erträge für dieses Jahr vorhanden.</div>
         ) : (
-          <Box sx={{ width: '100%', height: 360 }}>
-            <ResponsiveContainer>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="week_label" />
-                <YAxis unit=" kg" />
-                <Tooltip formatter={(value: number, name: string) => [`${Number(value).toFixed(2)} kg`, chartCultures.find((culture) => culture.dataKey === name)?.name || name]} />
-                <Legend formatter={(value: string) => chartCultures.find((culture) => culture.dataKey === value)?.name || value} />
-                {chartCultures.map((culture) => (
-                  <Bar
-                    key={culture.id}
-                    dataKey={culture.dataKey}
-                    stackId="yield"
-                    fill={culture.color}
-                    name={culture.name}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
+          <Box sx={{ width: '100%' }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+              {chartCultures.map((culture) => (
+                <Box key={culture.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: '2px', backgroundColor: culture.color }} />
+                  <Typography variant="body2">{culture.name}</Typography>
+                </Box>
+              ))}
+            </Box>
+
+            <Box sx={{ display: 'grid', gap: 1.25 }}>
+              {chartData.map((week) => (
+                <Box key={week.isoWeek} sx={{ display: 'grid', gridTemplateColumns: '56px 1fr 72px', gap: 1, alignItems: 'center' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{week.weekLabel}</Typography>
+                  <Box sx={{ display: 'flex', width: '100%', height: 24, borderRadius: 1, overflow: 'hidden', backgroundColor: '#f3f4f6' }}>
+                    {week.cultures.map((culture) => (
+                      <Tooltip key={`${week.isoWeek}-${culture.culture_id}`} title={`${culture.culture_name}: ${culture.yield.toFixed(2)} kg`}>
+                        <Box
+                          sx={{
+                            width: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
+                            minWidth: culture.yield > 0 ? '2px' : 0,
+                            backgroundColor: culture.color,
+                          }}
+                        />
+                      </Tooltip>
+                    ))}
+                  </Box>
+                  <Typography variant="body2" sx={{ textAlign: 'right' }}>{week.totalYield.toFixed(2)} kg</Typography>
+                </Box>
+              ))}
+            </Box>
           </Box>
         )}
       </Paper>
