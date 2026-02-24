@@ -1,3 +1,4 @@
+from datetime import date
 from io import BytesIO
 from tempfile import TemporaryDirectory
 from unittest import skipUnless
@@ -23,7 +24,7 @@ class NoteAttachmentProcessingApiTest(APITestCase):
         self.field = Field.objects.create(name='Attachment Field', location=self.location)
         self.bed = Bed.objects.create(name='Attachment Bed', field=self.field)
         self.culture = Culture.objects.create(name='Attachment Culture', growth_duration_days=7, harvest_duration_days=2)
-        self.plan = PlantingPlan.objects.create(culture=self.culture, bed=self.bed, planting_date='2024-03-01')
+        self.plan = PlantingPlan.objects.create(culture=self.culture, bed=self.bed, planting_date=date(2024, 3, 1))
 
     def _image_file(self, width: int, height: int, file_name: str = 'test.jpg') -> SimpleUploadedFile:
         image = Image.new('RGB', (width, height), color=(120, 50, 90))
