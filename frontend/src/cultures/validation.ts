@@ -28,10 +28,10 @@ export function validateCulture(
   const hasSeedRateValue = draft.seed_rate_value !== null && draft.seed_rate_value !== undefined;
   const hasSeedRateUnit = draft.seed_rate_unit !== null && draft.seed_rate_unit !== undefined;
   if (hasSeedRateValue && !hasSeedRateUnit) {
-    errors.seed_rate_unit = 'Wenn eine Menge angegeben wird, muss auch eine Einheit gewählt werden.';
+    errors.seed_rate_unit = t('form.seedRateUnitRequired');
   }
   if (hasSeedRateValue && Number(draft.seed_rate_value) <= 0) {
-    errors.seed_rate_value = 'Die Menge muss größer als 0 sein.';
+    errors.seed_rate_value = t('form.seedRateValueRequired');
   }
 
   // Required field: name

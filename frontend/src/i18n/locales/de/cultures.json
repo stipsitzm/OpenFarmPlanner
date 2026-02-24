@@ -83,14 +83,36 @@
     "sowingDepthCmError": "Saattiefe muss ≥ 0 sein",
     "displayColor": "Anzeigefarbe",
     "displayColorHelp": "Farbe zur Darstellung im Anbaukalender (wird automatisch generiert)",
-    "displayColorError": "Ungültiges Farbformat (verwenden Sie #RRGGBB)"
+    "displayColorError": "Ungültiges Farbformat (verwenden Sie #RRGGBB)",
+    "seedRateSectionTitle": "Saatgutmenge",
+    "seedRateHelp": "Saatgutmenge und -einheit für die Bedarfsplanung",
+    "seedRateValue": "Menge",
+    "seedRateUnit": "Einheit",
+    "seedRateUnitRequired": "Wenn eine Menge angegeben wird, muss auch eine Einheit gewählt werden.",
+    "seedRateValueRequired": "Die Menge muss größer als 0 sein.",
+    "thousandKernelWeightLabel": "Tausendkorngewicht (g)",
+    "thousandKernelWeightHelp": "Gewicht von 1000 Körnern in Gramm.",
+    "thousandKernelWeightError": "Tausendkorngewicht muss ≥ 0 sein",
+    "packageSizeLabel": "Packungsgröße (g)",
+    "packageSizeHelp": "Packungsgröße in Gramm.",
+    "packageSizeError": "Packungsgröße muss ≥ 0 sein",
+    "sowingCalculationSafetyPercentLabel": "Sicherheitszuschlag für Saatgut (%)",
+    "sowingCalculationSafetyPercentPlaceholder": "z.B. 10",
+    "sowingCalculationSafetyPercentHelp": "Prozentualer Zuschlag zur berechneten Saatgutmenge.",
+    "sowingCalculationSafetyPercentError": "Sicherheitszuschlag muss zwischen 0 und 100 liegen",
+    "propagationDurationDaysRequired": "Anzuchtdauer ist erforderlich",
+    "propagationDurationDaysTooLong": "Anzuchtdauer darf nicht länger als die Wachstumsdauer sein",
+    "harvestMethodRequired": "Erntemethode ist bei angegebenem Ertrag erforderlich"
   },
   "messages": {
     "createSuccess": "Kultur erfolgreich erstellt",
     "updateSuccess": "Kultur erfolgreich aktualisiert",
     "createError": "Fehler beim Erstellen der Kultur",
     "updateError": "Fehler beim Aktualisieren der Kultur",
-    "fetchError": "Fehler beim Laden der Kulturen"
+    "fetchError": "Fehler beim Laden der Kulturen",
+    "saving": "Speichern...",
+    "unsavedChanges": "Ungespeicherte Änderungen",
+    "fixErrors": "Bitte beheben Sie die Validierungsfehler"
   },
   "buttons": {
     "addNew": "Neue Kultur hinzufügen",
