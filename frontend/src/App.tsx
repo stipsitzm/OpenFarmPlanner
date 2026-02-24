@@ -8,9 +8,12 @@
  * @returns The main App component with routing
  */
 
-import { createBrowserRouter, RouterProvider, Outlet, NavLink } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from './i18n';
 import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
+import { useRegisterCommands } from './commands/CommandProvider';
+import type { CommandSpec } from './commands/types';
+import { useMemo } from 'react';
 import Home from './pages/Home';
 import Locations from './pages/Locations';
 import FieldsBedsHierarchy from './pages/FieldsBedsHierarchy';
@@ -20,15 +23,52 @@ import GanttChart from './pages/GanttChart';
 import SeedDemandPage from './pages/SeedDemand';
 import './App.css';
 
+
 /**
  * Root layout component with navigation.
  * Wraps all routes with the persistent navigation bar.
  */
 function RootLayout(): React.ReactElement {
   const { t } = useTranslation('navigation');
-  
-  // Enable keyboard navigation shortcuts
+  // Re-enable Ctrl+Shift+Arrow route switching
   useKeyboardNavigation();
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const routes = ['/', '/locations', '/fields-beds', '/cultures', '/planting-plans', '/gantt-chart', '/seed-demand'];
+
+  const globalCommands = useMemo<CommandSpec[]>(() => [
+    {
+      id: 'global.nextPage',
+      title: 'Nächste Seite (Ctrl+Shift+→)',
+      keywords: ['seite', 'nächste', 'navigation'],
+      shortcutHint: 'Ctrl+Shift+→',
+      contextTags: ['global'],
+      isAvailable: () => true,
+      run: () => {
+        const normalizedPath = location.pathname.replace(/\/$/, '') || '/';
+        const currentIndex = routes.indexOf(normalizedPath);
+        const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % routes.length;
+        navigate(routes[nextIndex]);
+      },
+    },
+    {
+      id: 'global.previousPage',
+      title: 'Vorherige Seite (Ctrl+Shift+←)',
+      keywords: ['seite', 'vorherige', 'navigation'],
+      shortcutHint: 'Ctrl+Shift+←',
+      contextTags: ['global'],
+      isAvailable: () => true,
+      run: () => {
+        const normalizedPath = location.pathname.replace(/\/$/, '') || '/';
+        const currentIndex = routes.indexOf(normalizedPath);
+        const previousIndex = currentIndex === -1 ? 0 : (currentIndex - 1 + routes.length) % routes.length;
+        navigate(routes[previousIndex]);
+      },
+    },
+  ], [location.pathname, navigate]);
+
+  useRegisterCommands('global-app', globalCommands);
   
   return (
     <div className="app">

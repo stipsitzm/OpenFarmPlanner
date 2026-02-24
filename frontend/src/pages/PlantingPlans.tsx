@@ -10,7 +10,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { GridColDef, GridCellParams } from '@mui/x-data-grid';
-import { Tooltip } from '@mui/material';
+import { Box, Button, Tooltip } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
 import {
@@ -19,9 +20,12 @@ import {
   type EditableRow,
   type DataGridAPI,
   type SearchableSelectOption,
+  type EditableDataGridCommandApi,
 } from '../components/data-grid';
 import { AreaM2EditCell } from '../components/data-grid/AreaM2EditCell';
 import { PlantsCountEditCell } from '../components/data-grid/PlantsCountEditCell';
+import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
+import type { CommandSpec } from '../commands/types';
 
 /**
  * Row data type for Data Grid
@@ -40,6 +44,10 @@ function PlantingPlans(): React.ReactElement {
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
   const urlParamProcessedRef = useRef<boolean>(false);
+  const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<PlantingPlanRow | null>(null);
+
+  useCommandContextTag('plans');
   
   // Track which field was last edited (for determining API payload)
   const lastEditedFieldRef = useRef<'area_m2' | 'plants_count' | null>(null);
@@ -139,6 +147,41 @@ function PlantingPlans(): React.ReactElement {
    * Define columns for the Data Grid with inline editing
    * Recalculates when cultures or beds change to update dropdown options
    */
+  const commands = useMemo<CommandSpec[]>(() => [
+    {
+      id: 'plans.create',
+      title: 'Neuer Anbauplan (Alt+N)',
+      keywords: ['anbauplan', 'neu', 'create'],
+      shortcutHint: 'Alt+N',
+      keys: { alt: true, key: 'n' },
+      contextTags: ['plans'],
+      isAvailable: () => Boolean(gridCommandApiRef.current),
+      run: () => gridCommandApiRef.current?.addRow(),
+    },
+    {
+      id: 'plans.edit',
+      title: 'Anbauplan bearbeiten (Alt+E)',
+      keywords: ['anbauplan', 'bearbeiten', 'edit'],
+      shortcutHint: 'Alt+E',
+      keys: { alt: true, key: 'e' },
+      contextTags: ['plans'],
+      isAvailable: () => selectedPlan !== null,
+      run: () => gridCommandApiRef.current?.editSelectedRow(),
+    },
+    {
+      id: 'plans.delete',
+      title: 'Anbauplan löschen (Alt+Shift+D)',
+      keywords: ['anbauplan', 'löschen', 'delete'],
+      shortcutHint: 'Alt+Shift+D',
+      keys: { alt: true, shift: true, key: 'd' },
+      contextTags: ['plans'],
+      isAvailable: () => selectedPlan !== null,
+      run: () => gridCommandApiRef.current?.deleteSelectedRow(),
+    },
+  ], [selectedPlan]);
+
+  useRegisterCommands('plans-page', commands);
+
   const columns: GridColDef[] = useMemo(() => [
     createSingleSelectColumn<PlantingPlanRow>({
       field: 'culture',
@@ -262,11 +305,23 @@ function PlantingPlans(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <h1>{t('plantingPlans:title')}</h1>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <h1>{t('plantingPlans:title')}</h1>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => gridCommandApiRef.current?.addRow()}
+          aria-label={`${t('plantingPlans:addButton')} (Alt+N)`}
+        >
+          {t('plantingPlans:addButton')}
+        </Button>
+      </Box>
       
       <EditableDataGrid<PlantingPlanRow>
         columns={columns}
         api={plantingPlanAPI as unknown as DataGridAPI<PlantingPlanRow>}
+        commandApiRef={gridCommandApiRef}
+        onSelectedRowChange={setSelectedPlan}
         createNewRow={() => ({
           id: -Date.now(),
           culture: 0,
@@ -405,7 +460,7 @@ function PlantingPlans(): React.ReactElement {
         saveErrorMessage={t('plantingPlans:errors.save')}
         deleteErrorMessage={t('plantingPlans:errors.delete')}
         deleteConfirmMessage={t('plantingPlans:confirmDelete')}
-        addButtonLabel={t('plantingPlans:addButton')}
+        addButtonLabel={`${t('plantingPlans:addButton')} (Alt+N)`}
         showDeleteAction={true}
         tableKey="plantingPlans"
         defaultSortModel={[{ field: 'planting_date', sort: 'asc' }]}

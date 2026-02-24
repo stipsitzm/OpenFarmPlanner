@@ -27,12 +27,20 @@ import { createHierarchyColumns, DEFAULT_HIERARCHY_COLUMN_WIDTHS } from '../comp
 import { useNotesEditor, NotesDrawer } from '../components/data-grid';
 import { extractApiErrorMessage } from '../api/errors';
 import type { HierarchyRow } from '../components/hierarchy/utils/types';
+import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
+import type { CommandSpec } from '../commands/types';
+import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 
 function FieldsBedsHierarchy(): React.ReactElement {
   const { t } = useTranslation('hierarchy');
   const navigate = useNavigate();
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
+  const [selectedRowId, setSelectedRowId] = useState<string | number | null>(null);
+  const [treeActive, setTreeActive] = useState(false);
   const hasInitiallyExpandedRef = useRef(false);
+  const tableWrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useCommandContextTag('areas');
   
   // Data fetching
   const { loading, error, setError, locations, fields, beds, setBeds, setFields, fetchData } = useHierarchyData();
@@ -316,6 +324,170 @@ function FieldsBedsHierarchy(): React.ReactElement {
     setError(error.message || t('errors.save'));
   };
 
+
+  const selectedRow = useMemo(() => rows.find((row) => row.id === selectedRowId) ?? null, [rows, selectedRowId]);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (!selectedRow) {
+      return;
+    }
+
+    if (selectedRow.type === 'bed' && selectedRow.bedId) {
+      void deleteBed(selectedRow.bedId);
+    }
+
+    if (selectedRow.type === 'field' && selectedRow.fieldId) {
+      void deleteField(selectedRow.fieldId);
+    }
+  }, [deleteBed, deleteField, selectedRow]);
+
+  const handleCreateBySelection = useCallback(() => {
+    if (!selectedRow) {
+      return;
+    }
+
+    if (selectedRow.type === 'location' && selectedRow.locationId) {
+      void addField(selectedRow.locationId);
+      return;
+    }
+
+    if (selectedRow.type === 'field' && selectedRow.fieldId) {
+      handleAddBed(selectedRow.fieldId);
+      return;
+    }
+
+    if (selectedRow.type === 'bed' && selectedRow.field) {
+      handleAddBed(selectedRow.field);
+    }
+  }, [addField, handleAddBed, selectedRow]);
+
+  const handleEditSelected = useCallback(() => {
+    if (!selectedRow) {
+      return;
+    }
+
+    if (selectedRow.type === 'location') {
+      return;
+    }
+
+    setRowModesModel((previous) => ({
+      ...previous,
+      [selectedRow.id]: { mode: GridRowModes.Edit, fieldToFocus: 'name' },
+    }));
+  }, [selectedRow]);
+
+  const areaCommands = useMemo<CommandSpec[]>(() => [
+    {
+      id: 'areas.create',
+      title: 'Neu erstellen (Alt+N)',
+      keywords: ['neu', 'anbauflächen', 'create'],
+      shortcutHint: 'Alt+N',
+      keys: { alt: true, key: 'n' },
+      contextTags: ['areas'],
+      isAvailable: () => selectedRow !== null,
+      run: handleCreateBySelection,
+    },
+    {
+      id: 'areas.edit',
+      title: 'Bearbeiten (Alt+E)',
+      keywords: ['bearbeiten', 'edit'],
+      shortcutHint: 'Alt+E',
+      keys: { alt: true, key: 'e' },
+      contextTags: ['areas'],
+      isAvailable: () => selectedRow !== null && selectedRow.type !== 'location',
+      run: handleEditSelected,
+    },
+    {
+      id: 'areas.delete',
+      title: 'Löschen (Alt+Shift+D)',
+      keywords: ['löschen', 'delete'],
+      shortcutHint: 'Alt+Shift+D',
+      keys: { alt: true, shift: true, key: 'd' },
+      contextTags: ['areas'],
+      isAvailable: () => selectedRow !== null && selectedRow.type !== 'location',
+      run: handleDeleteSelected,
+    },
+  ], [handleCreateBySelection, handleDeleteSelected, handleEditSelected, selectedRow]);
+
+  useRegisterCommands('areas-page', areaCommands);
+
+  useEffect(() => {
+    const handleDocumentPointerDown = (event: MouseEvent) => {
+      if (!tableWrapperRef.current?.contains(event.target as Node)) {
+        setTreeActive(false);
+      }
+    };
+
+    const handleTreeNavigation = (event: KeyboardEvent) => {
+      if (!treeActive || !selectedRowId) {
+        return;
+      }
+
+      if (isTypingInEditableElement(document.activeElement)) {
+        return;
+      }
+
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+        return;
+      }
+
+      const currentIndex = rows.findIndex((row) => row.id === selectedRowId);
+      if (currentIndex === -1) {
+        return;
+      }
+
+      let performedAction = false;
+      let targetRowId: string | number | null = selectedRowId;
+
+      if (event.key === 'ArrowDown') {
+        const nextRow = rows[currentIndex + 1];
+        if (nextRow) {
+          targetRowId = nextRow.id;
+          setSelectedRowId(nextRow.id);
+          performedAction = true;
+        }
+      } else if (event.key === 'ArrowUp') {
+        const previousRow = rows[currentIndex - 1];
+        if (previousRow) {
+          targetRowId = previousRow.id;
+          setSelectedRowId(previousRow.id);
+          performedAction = true;
+        }
+      } else if (event.key === 'ArrowRight') {
+        const row = rows[currentIndex];
+        if (row && (row.type === 'location' || row.type === 'field') && !expandedRows.has(row.id)) {
+          toggleExpand(row.id);
+          performedAction = true;
+        }
+      } else if (event.key === 'ArrowLeft') {
+        const row = rows[currentIndex];
+        if (row && expandedRows.has(row.id)) {
+          toggleExpand(row.id);
+          performedAction = true;
+        }
+      }
+
+      if (!performedAction) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const selectedElement = document.querySelector(`[data-id="${String(targetRowId ?? selectedRowId)}"]`);
+      if (selectedElement instanceof HTMLElement) {
+        selectedElement.scrollIntoView({ block: 'nearest' });
+      }
+    };
+
+    document.addEventListener('mousedown', handleDocumentPointerDown);
+    window.addEventListener('keydown', handleTreeNavigation);
+
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentPointerDown);
+      window.removeEventListener('keydown', handleTreeNavigation);
+    };
+  }, [expandedRows, rows, selectedRowId, toggleExpand, treeActive]);
+
   const nameColumnWidth = useMemo(() => {
     const MIN_NAME_WIDTH = 220;
     const CHAR_WIDTH_PX = 8;
@@ -359,7 +531,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
       
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
-      <Box sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
+      <Box ref={tableWrapperRef} sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }} onClick={() => setTreeActive(true)}>
         <DataGrid
           rows={rows}
           columns={columns}
@@ -375,7 +547,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
           sortingMode="server"
           sortModel={sortModel}
           onSortModelChange={setSortModel}
-          isRowSelectable={(params) => params.row.type === 'bed'}
+          isRowSelectable={() => true}
           isCellEditable={(params) => params.row.type === 'bed' || params.row.type === 'field'}
           sx={{
             ...dataGridSx,
@@ -383,7 +555,13 @@ function FieldsBedsHierarchy(): React.ReactElement {
             minWidth: 'unset',
             maxWidth: '100%',
           }}
-          onCellClick={(params) => handleEditableCellClick(params, rowModesModel, setRowModesModel)}
+          rowSelectionModel={{ type: "include", ids: new Set(selectedRowId ? [selectedRowId] : []) }}
+          onRowSelectionModelChange={(nextModel) => setSelectedRowId(Array.from(nextModel.ids)[0] ?? null)}
+          onCellClick={(params) => {
+            setSelectedRowId(params.id);
+            setTreeActive(true);
+            handleEditableCellClick(params, rowModesModel, setRowModesModel);
+          }}
         />
       </Box>
 

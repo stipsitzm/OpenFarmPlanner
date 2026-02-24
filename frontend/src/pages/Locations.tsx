@@ -7,10 +7,15 @@
  * @returns The Locations page component
  */
 
+import { useMemo, useRef, useState } from 'react';
 import type { GridColDef } from '@mui/x-data-grid';
+import { Box, Button } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from '../i18n';
 import { locationAPI, type Location } from '../api/api';
-import { EditableDataGrid, type EditableRow, type DataGridAPI } from '../components/data-grid';
+import { EditableDataGrid, type EditableDataGridCommandApi, type EditableRow, type DataGridAPI } from '../components/data-grid';
+import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
+import type { CommandSpec } from '../commands/types';
 
 interface LocationRow extends Location, EditableRow {
   id: number;
@@ -19,6 +24,45 @@ interface LocationRow extends Location, EditableRow {
 
 function Locations(): React.ReactElement {
   const { t } = useTranslation(['locations', 'common']);
+  const commandApiRef = useRef<EditableDataGridCommandApi | null>(null);
+  const [selectedRow, setSelectedRow] = useState<LocationRow | null>(null);
+
+  useCommandContextTag('locations');
+
+  const commands = useMemo<CommandSpec[]>(() => [
+    {
+      id: 'locations.create',
+      title: 'Neuer Standort (Alt+N)',
+      keywords: ['standort', 'neu', 'create'],
+      shortcutHint: 'Alt+N',
+      keys: { alt: true, key: 'n' },
+      contextTags: ['locations'],
+      isAvailable: () => Boolean(commandApiRef.current),
+      run: () => commandApiRef.current?.addRow(),
+    },
+    {
+      id: 'locations.edit',
+      title: 'Standort bearbeiten (Alt+E)',
+      keywords: ['standort', 'bearbeiten', 'edit'],
+      shortcutHint: 'Alt+E',
+      keys: { alt: true, key: 'e' },
+      contextTags: ['locations'],
+      isAvailable: () => selectedRow !== null,
+      run: () => commandApiRef.current?.editSelectedRow(),
+    },
+    {
+      id: 'locations.delete',
+      title: 'Standort löschen (Alt+Shift+D)',
+      keywords: ['standort', 'löschen', 'delete'],
+      shortcutHint: 'Alt+Shift+D',
+      keys: { alt: true, shift: true, key: 'd' },
+      contextTags: ['locations'],
+      isAvailable: () => selectedRow !== null,
+      run: () => commandApiRef.current?.deleteSelectedRow(),
+    },
+  ], [selectedRow]);
+
+  useRegisterCommands('locations-page', commands);
   
   //Define columns for the Data Grid with inline editing
   const columns: GridColDef[] = [
@@ -49,7 +93,17 @@ function Locations(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <h1>{t('locations:title')}</h1>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <h1>{t('locations:title')}</h1>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => commandApiRef.current?.addRow()}
+          aria-label={`${t('locations:addButton')} (Alt+N)`}
+        >
+          {t('locations:addButton')}
+        </Button>
+      </Box>
       
       <EditableDataGrid<LocationRow>
         columns={columns}
@@ -83,9 +137,11 @@ function Locations(): React.ReactElement {
         saveErrorMessage={t('locations:errors.save')}
         deleteErrorMessage={t('locations:errors.delete')}
         deleteConfirmMessage={t('locations:confirmDelete')}
-        addButtonLabel={t('locations:addButton')}
+        addButtonLabel={`${t('locations:addButton')} (Alt+N)`}
         tableKey="locations"
         persistSortInUrl={true}
+        commandApiRef={commandApiRef}
+        onSelectedRowChange={setSelectedRow}
         notes={{
           fields: [
             {

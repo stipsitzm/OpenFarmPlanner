@@ -15,6 +15,8 @@ import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, cultureAPI, type Planti
 import GanttChart, { ViewMode } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
+import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
+import type { CommandSpec } from '../commands/types';
 
 interface Task {
   id: string;
@@ -82,6 +84,7 @@ function getDefaultCultureColor(cultureName: string): string {
 
 function GanttChartPage(): React.ReactElement {
   const { t } = useTranslation(['ganttChart', 'common']);
+  useCommandContextTag('calendar');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -94,6 +97,20 @@ function GanttChartPage(): React.ReactElement {
   
   // UI state
   const [editMode, setEditMode] = useState(false);
+
+  const calendarCommands = useMemo<CommandSpec[]>(() => [
+    {
+      id: 'calendar.toggleEdit',
+      title: editMode ? 'Bearbeiten deaktivieren' : 'Bearbeiten aktivieren',
+      keywords: ['kalender', 'bearbeiten', 'toggle'],
+      shortcutHint: '—',
+      contextTags: ['calendar'],
+      isAvailable: () => true,
+      run: () => setEditMode((value) => !value),
+    },
+  ], [editMode]);
+
+  useRegisterCommands('calendar-page', calendarCommands);
   
   // Timeline configuration
   const currentYear = new Date().getFullYear();

@@ -15,8 +15,10 @@ import {
   Typography,
 } from '@mui/material';
 import { seedDemandAPI, type SeedDemand } from '../api/api';
+import { useCommandContextTag } from '../commands/CommandProvider';
 
 export default function SeedDemandPage(): React.ReactElement {
+  useCommandContextTag('seedDemand');
   const [rows, setRows] = useState<SeedDemand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -17,7 +17,7 @@
  * Navigation is blocked if there are unsaved changes (row in edit mode).
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, type MutableRefObject } from 'react';
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
@@ -47,6 +47,13 @@ export interface DataGridAPI<T> {
   delete: (id: number) => Promise<void>;
 }
 
+
+export interface EditableDataGridCommandApi {
+  addRow: () => void;
+  editSelectedRow: () => void;
+  deleteSelectedRow: () => void;
+  getSelectedRowId: () => GridRowId | null;
+}
 export interface NotesFieldConfig {
   field: string;
   labelKey?: string; 
@@ -73,6 +80,8 @@ export interface EditableDataGridProps<T extends EditableRow> {
   notes?: {
     fields: NotesFieldConfig[];
   };
+  commandApiRef?: MutableRefObject<EditableDataGridCommandApi | null>;
+  onSelectedRowChange?: (row: T | null) => void;
 }
 
 export function EditableDataGrid<T extends EditableRow>({
@@ -93,6 +102,8 @@ export function EditableDataGrid<T extends EditableRow>({
   defaultSortModel = [],
   persistSortInUrl = true,
   notes,
+  commandApiRef,
+  onSelectedRowChange,
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -101,6 +112,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const [dataFetched, setDataFetched] = useState<boolean>(false);
   const initialRowProcessedRef = useRef<boolean>(false);
   const initialFetchDoneRef = useRef<boolean>(false);
+  const [selectedRowIds, setSelectedRowIds] = useState<GridRowId[]>([]);
   
   const { t } = useTranslation('common');
   const { sortModel, setSortModel } = usePersistentSortModel({
@@ -245,6 +257,45 @@ export function EditableDataGrid<T extends EditableRow>({
     }));
   };
 
+  const handleEditSelectedRow = (): void => {
+    const selectedRowId = selectedRowIds[0];
+    if (!selectedRowId) {
+      return;
+    }
+
+    setRowModesModel((oldModel) => ({
+      ...oldModel,
+      [selectedRowId]: { mode: GridRowModes.Edit, fieldToFocus: columns[0]?.field },
+    }));
+  };
+
+  const handleDeleteSelectedRow = (): void => {
+    const selectedRowId = selectedRowIds[0];
+    if (!selectedRowId) {
+      return;
+    }
+
+    handleDeleteClick(selectedRowId)();
+  };
+
+  useEffect(() => {
+    if (!commandApiRef) {
+      return;
+    }
+
+    commandApiRef.current = {
+      addRow: handleAddClick,
+      editSelectedRow: handleEditSelectedRow,
+      deleteSelectedRow: handleDeleteSelectedRow,
+      getSelectedRowId: () => selectedRowIds[0] ?? null,
+    };
+
+    return () => {
+      commandApiRef.current = null;
+    };
+  }, [commandApiRef, handleAddClick, selectedRowIds]);
+
+
   /**
    * Process row update - save to API
    */
@@ -344,7 +395,17 @@ export function EditableDataGrid<T extends EditableRow>({
    * Custom footer component with add button
    */
   const CustomFooter = (): React.ReactElement => {
-    return (
+    useEffect(() => {
+    if (!onSelectedRowChange) {
+      return;
+    }
+
+    const selectedId = selectedRowIds[0];
+    const selectedRow = rows.find((row) => row.id === selectedId) as T | undefined;
+    onSelectedRowChange(selectedRow ?? null);
+  }, [onSelectedRowChange, selectedRowIds, rows]);
+
+  return (
       <Box sx={dataGridFooterSx}>
         <IconButton
           onClick={handleAddClick}
@@ -379,7 +440,17 @@ export function EditableDataGrid<T extends EditableRow>({
             const hasValue = value.trim().length > 0;
             const excerpt = hasValue ? getPlainExcerpt(value, 120) : '';
             
-            return (
+            useEffect(() => {
+    if (!onSelectedRowChange) {
+      return;
+    }
+
+    const selectedId = selectedRowIds[0];
+    const selectedRow = rows.find((row) => row.id === selectedId) as T | undefined;
+    onSelectedRowChange(selectedRow ?? null);
+  }, [onSelectedRowChange, selectedRowIds, rows]);
+
+  return (
               <NotesCell
                 hasValue={hasValue}
                 excerpt={excerpt}
@@ -450,6 +521,16 @@ export function EditableDataGrid<T extends EditableRow>({
     return `${notesEditor.field} – Notizen`;
   };
 
+  useEffect(() => {
+    if (!onSelectedRowChange) {
+      return;
+    }
+
+    const selectedId = selectedRowIds[0];
+    const selectedRow = rows.find((row) => row.id === selectedId) as T | undefined;
+    onSelectedRowChange(selectedRow ?? null);
+  }, [onSelectedRowChange, selectedRowIds, rows]);
+
   return (
     <>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -469,6 +550,8 @@ export function EditableDataGrid<T extends EditableRow>({
           hideFooter={true}
           sortModel={sortModel}
           onSortModelChange={setSortModel}
+          rowSelectionModel={{ type: "include", ids: new Set(selectedRowIds) }}
+          onRowSelectionModelChange={(nextModel) => setSelectedRowIds(Array.from(nextModel.ids))}
           slots={{
             footer: CustomFooter,
           }}

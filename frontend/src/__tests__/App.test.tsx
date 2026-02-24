@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import App from '../App';
+import { CommandProvider } from '../commands/CommandProvider';
 import translations from '@/test-utils/translations';
 
 describe('App', () => {
   it('renders navigation', () => {
-    render(<App />);
+    render(<CommandProvider><App /></CommandProvider>);
     
     expect(screen.getByText(translations.navigation.start)).toBeInTheDocument();
     expect(screen.getByText(translations.navigation.locations)).toBeInTheDocument();
@@ -14,7 +15,7 @@ describe('App', () => {
   });
 
   it('renders home page by default', () => {
-    render(<App />);
+    render(<CommandProvider><App /></CommandProvider>);
     
     expect(screen.getByText(translations.app.title)).toBeInTheDocument();
   });
