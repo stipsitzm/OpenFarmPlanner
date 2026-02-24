@@ -183,9 +183,31 @@ Farm management tasks
 
 ## Development
 
+### Image Processing & WEBP Support
+
+The backend supports image uploads with automatic processing: EXIF orientation, resizing, and format conversion to WEBP or JPEG.
+
+**For Linux (Ubuntu/Debian) with full WEBP support:**
+```bash
+sudo apt-get install libjpeg-dev zlib1g-dev libwebp-dev libwebp6
+pdm install  # Reinstall Pillow with WEBP support
+```
+
+**Verify WEBP support is available:**
+```bash
+pdm run test -k "test_upload_stored_format_is_webp_or_jpeg"
+```
+
+If WEBP is unavailable in your environment, the system automatically falls back to JPEG encoding without user intervention.
+
 ### Running Tests
 ```bash
 pdm run test
+```
+
+Test image upload including size limits and format handling:
+```bash
+pdm run test -k "test_note"
 ```
 
 ### Making Model Changes

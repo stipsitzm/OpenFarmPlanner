@@ -19,6 +19,9 @@ def process_note_image(uploaded_file) -> tuple[ContentFile, dict[str, int | str]
     try:
         from PIL import Image, ImageOps
     except ModuleNotFoundError as exc:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'PIL/Pillow not available: {exc}. Install with: pip install Pillow[webp]')
         raise ImageProcessingError('Image processing backend is not available.') from exc
 
     if uploaded_file.size > MAX_UPLOAD_SIZE_BYTES:
@@ -50,7 +53,10 @@ def process_note_image(uploaded_file) -> tuple[ContentFile, dict[str, int | str]
         filename = 'processed.webp'
         try:
             image.save(buffer, format='WEBP', quality=82, method=6)
-        except Exception:
+        except Exception as webp_exc:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f'WEBP encoding not supported: {webp_exc}. Falling back to JPEG.')
             buffer = BytesIO()
             image.save(buffer, format='JPEG', quality=85, optimize=True)
             mime_type = 'image/jpeg'
