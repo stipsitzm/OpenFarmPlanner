@@ -119,11 +119,19 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
     };
   }, [pendingPreviewUrl]);
 
+  const clearPendingSelection = (): void => {
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
+    setPendingFile(null);
+    setPendingPreviewUrl(null);
+    setCropRect(null);
+    setSourceSize(null);
+    if (galleryInputRef.current) galleryInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
   const openCropDialog = (file: File): void => {
     const nextUrl = URL.createObjectURL(file);
-    if (pendingPreviewUrl) {
-      URL.revokeObjectURL(pendingPreviewUrl);
-    }
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
     setPendingFile(file);
     setPendingPreviewUrl(nextUrl);
     setCropRect(null);
@@ -254,12 +262,9 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
       const processed = await renderProcessedFile(pendingFile, sourceCrop);
       await noteAttachmentAPI.upload(noteId, processed, '', setUploadProgress);
       await loadAttachments();
-
-      if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
-      setPendingFile(null);
-      setPendingPreviewUrl(null);
-      setCropRect(null);
-      setSourceSize(null);
+      clearPendingSelection();
+    } catch (error) {
+      console.error('Error uploading note attachment:', error);
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -271,10 +276,10 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
     if (!img) return;
     const bounds = img.getBoundingClientRect();
     setCropRect({
-      x: bounds.width * 0.1,
-      y: bounds.height * 0.1,
-      width: bounds.width * 0.8,
-      height: bounds.height * 0.8,
+      x: 0,
+      y: 0,
+      width: bounds.width,
+      height: bounds.height,
     });
   };
 
@@ -347,11 +352,11 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
 
       <Dialog open={Boolean(selectedImage)} onClose={() => setSelectedImage(null)} maxWidth="lg" fullWidth>
         <DialogTitle>Foto</DialogTitle>
-        <DialogContent>{selectedImage && <img src={selectedImage} style={{ width: '100%' }} alt="Attachment preview" />}</DialogContent>
+        <DialogContent sx={{ display: 'flex', justifyContent: 'center', backgroundColor: '#111' }}>{selectedImage && <img src={selectedImage} style={{ width: '100%', maxHeight: '80vh', objectFit: 'contain' }} alt="Attachment preview" />}</DialogContent>
         <DialogActions><Button onClick={() => setSelectedImage(null)}>Close</Button></DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(pendingFile)} onClose={() => setPendingFile(null)} maxWidth="md" fullWidth>
+      <Dialog open={Boolean(pendingFile)} onClose={clearPendingSelection} maxWidth="md" fullWidth>
         <DialogTitle>Crop</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 1 }}>Draw, move and resize the crop rectangle. The outside area is dimmed.</Typography>
@@ -374,10 +379,10 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
                   setSourceSize({ width: img.naturalWidth, height: img.naturalHeight });
                   const bounds = img.getBoundingClientRect();
                   setCropRect({
-                    x: bounds.width * 0.1,
-                    y: bounds.height * 0.1,
-                    width: bounds.width * 0.8,
-                    height: bounds.height * 0.8,
+                    x: 0,
+                    y: 0,
+                    width: bounds.width,
+                    height: bounds.height,
                   });
                 }}
               />
@@ -403,7 +408,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl); setPendingFile(null); setPendingPreviewUrl(null); setCropRect(null); setSourceSize(null); }}>Cancel</Button>
+          <Button onClick={clearPendingSelection}>Cancel</Button>
           <Button onClick={resetCrop}>Reset</Button>
           <Button onClick={() => void handleUpload()} disabled={uploading} variant="contained">Save</Button>
         </DialogActions>
