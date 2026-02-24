@@ -9,8 +9,8 @@ import uuid
 
 def note_attachment_upload_path(instance: 'NoteAttachment', filename: str) -> str:
     """Build a deterministic storage path for note attachments."""
-    extension = '.webp'
-    return f"notes/{instance.planting_plan_id}/{uuid.uuid4().hex}{extension}"
+    extension = (filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'bin')
+    return f"notes/{instance.planting_plan_id}/{uuid.uuid4().hex}.{extension}"
 
 
 class TimestampedModel(models.Model):

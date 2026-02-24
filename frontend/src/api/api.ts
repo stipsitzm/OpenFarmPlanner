@@ -72,10 +72,9 @@ export const noteAttachmentAPI = {
   list: (noteId: number) => http.get<NoteAttachment[]>(`/notes/${noteId}/attachments/`),
   upload: (noteId: number, file: File, caption = '', onUploadProgress?: (progress: number) => void) => {
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('image', file, file.name || 'note-attachment');
     formData.append('caption', caption);
     return http.post<NoteAttachment>(`/notes/${noteId}/attachments/`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (event) => {
         if (!onUploadProgress || !event.total) return;
         onUploadProgress(Math.round((event.loaded / event.total) * 100));

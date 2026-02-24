@@ -573,7 +573,7 @@ class NoteAttachmentListCreateView(APIView):
             size_bytes=metadata['size_bytes'],
             mime_type=metadata['mime_type'],
         )
-        attachment.image.save('processed.webp', content, save=False)
+        attachment.image.save(str(metadata.get('filename', 'processed.webp')), content, save=False)
         attachment.save()
 
         serializer = NoteAttachmentSerializer(attachment, context={'request': request})

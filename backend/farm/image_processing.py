@@ -31,28 +31,43 @@ def process_note_image(uploaded_file) -> tuple[ContentFile, dict[str, int | str]
     except Exception as exc:
         raise ImageProcessingError('Uploaded file is not a valid image.') from exc
 
-    uploaded_file.seek(0)
-    image = Image.open(uploaded_file)
-    image = ImageOps.exif_transpose(image)
+    try:
+        uploaded_file.seek(0)
+        image = Image.open(uploaded_file)
+        image = ImageOps.exif_transpose(image)
 
-    if image.mode not in ('RGB', 'RGBA'):
-        image = image.convert('RGB')
-    elif image.mode == 'RGBA':
-        background = Image.new('RGB', image.size, (255, 255, 255))
-        background.paste(image, mask=image.getchannel('A'))
-        image = background
+        if image.mode not in ('RGB', 'RGBA'):
+            image = image.convert('RGB')
+        elif image.mode == 'RGBA':
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            background.paste(image, mask=image.getchannel('A'))
+            image = background
 
-    image.thumbnail((MAX_IMAGE_SIDE, MAX_IMAGE_SIDE), Image.Resampling.LANCZOS)
+        image.thumbnail((MAX_IMAGE_SIDE, MAX_IMAGE_SIDE), Image.Resampling.LANCZOS)
 
-    buffer = BytesIO()
-    image.save(buffer, format='WEBP', quality=82, method=6)
-    payload = buffer.getvalue()
-    content = ContentFile(payload)
+        buffer = BytesIO()
+        mime_type = 'image/webp'
+        filename = 'processed.webp'
+        try:
+            image.save(buffer, format='WEBP', quality=82, method=6)
+        except Exception:
+            buffer = BytesIO()
+            image.save(buffer, format='JPEG', quality=85, optimize=True)
+            mime_type = 'image/jpeg'
+            filename = 'processed.jpg'
 
-    metadata = {
-        'width': image.width,
-        'height': image.height,
-        'size_bytes': len(payload),
-        'mime_type': 'image/webp',
-    }
-    return content, metadata
+        payload = buffer.getvalue()
+        content = ContentFile(payload)
+
+        metadata = {
+            'width': image.width,
+            'height': image.height,
+            'size_bytes': len(payload),
+            'mime_type': mime_type,
+            'filename': filename,
+        }
+        return content, metadata
+    except ImageProcessingError:
+        raise
+    except Exception as exc:
+        raise ImageProcessingError('Failed to process image.') from exc

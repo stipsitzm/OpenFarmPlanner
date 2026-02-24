@@ -18,6 +18,7 @@ import {
   DialogContent,
   DialogActions,
   LinearProgress,
+  Alert,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ReactMarkdown from 'react-markdown';
@@ -86,6 +87,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string>('');
 
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
@@ -132,6 +134,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
   const openCropDialog = (file: File): void => {
     const nextUrl = URL.createObjectURL(file);
     if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
+    setUploadError('');
     setPendingFile(file);
     setPendingPreviewUrl(nextUrl);
     setCropRect(null);
@@ -264,6 +267,11 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
       await loadAttachments();
       clearPendingSelection();
     } catch (error) {
+      const message =
+        typeof error === 'object' && error !== null && 'response' in error
+          ? ((error as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? 'Upload failed. Please try again.')
+          : 'Upload failed. Please try again.';
+      setUploadError(message);
       console.error('Error uploading note attachment:', error);
     } finally {
       setUploading(false);
@@ -360,6 +368,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
         <DialogTitle>Crop</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 1 }}>Draw, move and resize the crop rectangle. The outside area is dimmed.</Typography>
+          {uploadError && <Alert severity="error" sx={{ mb: 1 }}>{uploadError}</Alert>}
           <Box
             data-testid="crop-stage"
             sx={{ position: 'relative', width: '100%', maxHeight: 420, overflow: 'auto', userSelect: 'none' }}
@@ -410,7 +419,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
         <DialogActions>
           <Button onClick={clearPendingSelection}>Cancel</Button>
           <Button onClick={resetCrop}>Reset</Button>
-          <Button onClick={() => void handleUpload()} disabled={uploading} variant="contained">Save</Button>
+          <Button onClick={() => void handleUpload()} disabled={uploading || !pendingFile} variant="contained">Save</Button>
         </DialogActions>
       </Dialog>
     </Drawer>
