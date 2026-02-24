@@ -10,6 +10,7 @@ export type {
   DataGridAPI, 
   EditableDataGridProps,
   NotesFieldConfig,
+  EditableDataGridCommandApi,
 } from './DataGrid';
 export { NotesCell } from './NotesCell';
 export { NotesDrawer } from './NotesDrawer';

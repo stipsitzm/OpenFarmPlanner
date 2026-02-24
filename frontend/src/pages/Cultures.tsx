@@ -45,13 +45,12 @@ import {
   downloadJsonFile,
 } from '../cultures/exportUtils';
 import { parseCultureImportJson } from '../cultures/importUtils';
-import { useCommandContext, useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
+import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import type { CommandSpec } from '../commands/types';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
   const navigate = useNavigate();
-  const { openPalette } = useCommandContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCultureParam = searchParams.get('cultureId');
   const parseCultureId = (value: string | null): number | undefined => {
@@ -488,7 +487,7 @@ function Cultures(): React.ReactElement {
 
   const selectedCulture = cultures.find(c => c.id === selectedCultureId);
 
-  useCommandContextTag('cultureDetail');
+  useCommandContextTag('cultures');
 
   const getCultureLabel = useCallback((culture: Culture): string => {
     return `${culture.name}${culture.variety ? ` – ${culture.variety}` : ''}${culture.seed_supplier ? ` | ${culture.seed_supplier}` : ''}`;
@@ -517,7 +516,7 @@ function Cultures(): React.ReactElement {
         keywords: ['kultur', 'bearbeiten', 'edit'],
         shortcutHint: 'Alt+E',
         keys: { alt: true, key: 'e' },
-        contextTags: ['cultureDetail'],
+        contextTags: ['cultures'],
         isAvailable: () => Boolean(selectedCulture),
         run: () => { if (selectedCulture) { handleEdit(selectedCulture); } },
       },
@@ -527,7 +526,7 @@ function Cultures(): React.ReactElement {
         keywords: ['kultur', 'löschen', 'delete'],
         shortcutHint: 'Alt+Shift+D',
         keys: { alt: true, shift: true, key: 'd' },
-        contextTags: ['cultureDetail'],
+        contextTags: ['cultures'],
         isAvailable: () => Boolean(selectedCulture),
         run: () => { if (selectedCulture) { handleDelete(selectedCulture); } },
       },
@@ -537,7 +536,7 @@ function Cultures(): React.ReactElement {
         keywords: ['json', 'export', 'kultur'],
         shortcutHint: 'Alt+J',
         keys: { alt: true, key: 'j' },
-        contextTags: ['cultureDetail'],
+        contextTags: ['cultures'],
         isAvailable: () => Boolean(selectedCulture),
         run: handleExportCurrentCulture,
       },
@@ -547,7 +546,7 @@ function Cultures(): React.ReactElement {
         keywords: ['json', 'export', 'alle', 'kulturen'],
         shortcutHint: 'Alt+Shift+J',
         keys: { alt: true, shift: true, key: 'j' },
-        contextTags: ['cultureDetail'],
+        contextTags: ['cultures'],
         isAvailable: () => true,
         run: handleExportAllCultures,
       },
@@ -557,7 +556,7 @@ function Cultures(): React.ReactElement {
         keywords: ['json', 'import'],
         shortcutHint: 'Alt+I',
         keys: { alt: true, key: 'i' },
-        contextTags: ['cultureDetail'],
+        contextTags: ['cultures'],
         isAvailable: () => true,
         run: handleImportFileTrigger,
       },
@@ -567,7 +566,7 @@ function Cultures(): React.ReactElement {
         keywords: ['anbauplan', 'planting', 'plan'],
         shortcutHint: 'Alt+P',
         keys: { alt: true, key: 'p' },
-        contextTags: ['cultureDetail'],
+        contextTags: ['cultures'],
         isAvailable: () => Boolean(selectedCultureId),
         run: handleCreatePlantingPlan,
       },
@@ -577,7 +576,7 @@ function Cultures(): React.ReactElement {
         keywords: ['vorherige', 'kultur', 'left'],
         shortcutHint: 'Alt+Shift+←',
         keys: { alt: true, shift: true, key: 'ArrowLeft' },
-        contextTags: ['cultureDetail'],
+        contextTags: ['cultures'],
         isAvailable: () => cultures.length > 1 && Boolean(selectedCultureId),
         run: () => goToRelativeCulture('previous'),
       },
@@ -587,7 +586,7 @@ function Cultures(): React.ReactElement {
         keywords: ['nächste', 'kultur', 'right'],
         shortcutHint: 'Alt+Shift+→',
         keys: { alt: true, shift: true, key: 'ArrowRight' },
-        contextTags: ['cultureDetail'],
+        contextTags: ['cultures'],
         isAvailable: () => cultures.length > 1 && Boolean(selectedCultureId),
         run: () => goToRelativeCulture('next'),
       },
@@ -601,11 +600,6 @@ function Cultures(): React.ReactElement {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <h1>{t('title')}</h1>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title="Command Palette (Alt+K)">
-            <Button aria-label="Command Palette (Alt+K)" variant="outlined" onClick={openPalette}>
-              Command Palette
-            </Button>
-          </Tooltip>
           <ButtonGroup variant="contained" aria-label={t('buttons.addNew')}>
             <Button startIcon={<AddIcon />} onClick={handleAddNew}>
               {t('buttons.addNew')}

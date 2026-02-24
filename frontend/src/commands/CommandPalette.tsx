@@ -4,7 +4,6 @@ import {
   DialogContent,
   List,
   ListItemButton,
-  ListItemText,
   TextField,
   Typography,
 } from '@mui/material';
@@ -101,8 +100,10 @@ export function CommandPalette({ open, commands, onClose }: CommandPaletteProps)
                 key={command.id}
                 selected={selectedIndex === index}
                 onClick={() => runCommand(index)}
+                sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
               >
-                <ListItemText primary={command.title} secondary={command.shortcutHint} />
+                <Typography>{command.title}</Typography>
+                <Typography variant="body2" color="text.secondary">{command.shortcutHint}</Typography>
               </ListItemButton>
             ))}
           </List>
