@@ -114,6 +114,21 @@ export interface PlantingPlan {
   updated_at?: string;
 }
 
+
+export interface YieldCalendarCulture {
+  culture_id: number;
+  culture_name: string;
+  color: string;
+  yield: number;
+}
+
+export interface YieldCalendarWeek {
+  iso_week: string;
+  week_start: string;
+  week_end: string;
+  cultures: YieldCalendarCulture[];
+}
+
 export interface PaginatedResponse<T> {
   count: number;
   next: string | null;

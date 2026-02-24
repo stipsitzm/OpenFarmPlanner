@@ -10,13 +10,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../i18n';
-import { Box, Alert, Paper, FormControlLabel, Switch } from '@mui/material';
-import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, cultureAPI, type PlantingPlan, type Bed, type Field, type Location, type Culture } from '../api/api';
+import { Box, Alert, Paper, FormControlLabel, Switch, Typography } from '@mui/material';
+import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, cultureAPI, yieldCalendarAPI, type PlantingPlan, type Bed, type Field, type Location, type Culture, type YieldCalendarWeek } from '../api/api';
 import GanttChart, { ViewMode } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import type { CommandSpec } from '../commands/types';
+import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
 
 interface Task {
   id: string;
@@ -49,6 +50,20 @@ interface TaskGroup {
   isGroup?: boolean; // For hierarchy groups
   level?: number; // Hierarchy level: 0=location, 1=field, 2=bed
 }
+
+interface WeeklyYieldChartRow {
+  iso_week: string;
+  week_label: string;
+  [key: string]: string | number;
+}
+
+interface WeeklyYieldCultureMeta {
+  id: number;
+  name: string;
+  color: string;
+  dataKey: string;
+}
+
 
 /**
  * Parse date string from API to local Date object
@@ -94,6 +109,7 @@ function GanttChartPage(): React.ReactElement {
   const [beds, setBeds] = useState<Bed[]>([]);
   const [plantingPlans, setPlantingPlans] = useState<PlantingPlan[]>([]);
   const [cultures, setCultures] = useState<Culture[]>([]);
+  const [weeklyYield, setWeeklyYield] = useState<YieldCalendarWeek[]>([]);
   
   // UI state
   const [editMode, setEditMode] = useState(false);
@@ -125,12 +141,13 @@ function GanttChartPage(): React.ReactElement {
         setLoading(true);
         setError(null);
         
-        const [locationsRes, fieldsRes, bedsRes, plansRes, culturesRes] = await Promise.all([
+        const [locationsRes, fieldsRes, bedsRes, plansRes, culturesRes, weeklyYieldRes] = await Promise.all([
           locationAPI.list(),
           fieldAPI.list(),
           bedAPI.list(),
           plantingPlanAPI.list(),
           cultureAPI.list(),
+          yieldCalendarAPI.list(displayYear),
         ]);
         
         setLocations(locationsRes.data.results);
@@ -138,6 +155,7 @@ function GanttChartPage(): React.ReactElement {
         setBeds(bedsRes.data.results);
         setPlantingPlans(plansRes.data.results);
         setCultures(culturesRes.data.results);
+        setWeeklyYield(weeklyYieldRes.data);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(t('ganttChart:errors.load'));
@@ -147,7 +165,7 @@ function GanttChartPage(): React.ReactElement {
     };
     
     fetchData();
-  }, [t]);
+  }, [displayYear, t]);
   
   /**
    * Format date to API format (YYYY-MM-DD)
@@ -363,6 +381,35 @@ function GanttChartPage(): React.ReactElement {
   const startDate = useMemo(() => new Date(displayYear, 0, 1), [displayYear]);
   const endDate = useMemo(() => new Date(displayYear, 11, 31), [displayYear]);
   
+
+  const { chartData, chartCultures } = useMemo(() => {
+    const cultureMeta = new Map<number, WeeklyYieldCultureMeta>();
+    const rows: WeeklyYieldChartRow[] = weeklyYield.map((week) => {
+      const row: WeeklyYieldChartRow = {
+        iso_week: week.iso_week,
+        week_label: week.iso_week.split('-W')[1] ? `W${week.iso_week.split('-W')[1]}` : week.iso_week,
+      };
+
+      week.cultures.forEach((entry) => {
+        const dataKey = `culture_${entry.culture_id}`;
+        row[dataKey] = entry.yield;
+        if (!cultureMeta.has(entry.culture_id)) {
+          cultureMeta.set(entry.culture_id, {
+            id: entry.culture_id,
+            name: entry.culture_name,
+            color: entry.color,
+            dataKey,
+          });
+        }
+      });
+
+      return row;
+    });
+
+    const sortedCultures = [...cultureMeta.values()].sort((a, b) => a.name.localeCompare(b.name));
+    return { chartData: rows, chartCultures: sortedCultures };
+  }, [weeklyYield]);
+
   if (loading) {
     return (
       <div className="page-container">
@@ -406,6 +453,36 @@ function GanttChartPage(): React.ReactElement {
             darkMode={false}
             onTaskUpdate={handleTaskUpdate}
           />
+        )}
+      </Paper>
+
+      <Paper className="gantt-container-wrapper" sx={{ mt: 3, p: 2 }}>
+        <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
+          Ertragsverteilung (Wochenbasis)
+        </Typography>
+        {chartData.length === 0 ? (
+          <div className="gantt-no-data">Keine erwarteten Erträge für dieses Jahr vorhanden.</div>
+        ) : (
+          <Box sx={{ width: '100%', height: 360 }}>
+            <ResponsiveContainer>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="week_label" />
+                <YAxis unit=" kg" />
+                <Tooltip formatter={(value: number, name: string) => [`${Number(value).toFixed(2)} kg`, chartCultures.find((culture) => culture.dataKey === name)?.name || name]} />
+                <Legend formatter={(value: string) => chartCultures.find((culture) => culture.dataKey === value)?.name || value} />
+                {chartCultures.map((culture) => (
+                  <Bar
+                    key={culture.id}
+                    dataKey={culture.dataKey}
+                    stackId="yield"
+                    fill={culture.color}
+                    name={culture.name}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </Box>
         )}
       </Paper>
     </div>

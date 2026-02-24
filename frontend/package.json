@@ -28,7 +28,8 @@
     "react-markdown": "^10.1.0",
     "react-modern-gantt": "^0.6.1",
     "react-router-dom": "^7.9.6",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "recharts": "^2.15.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
