@@ -175,6 +175,66 @@ cd backend
 pytest
 ```
 
+## Database Migrations
+
+When you make changes to the Django models in `backend/farm/models.py`, you need to create and apply database migrations.
+
+### Creating Migrations
+
+After modifying models, generate migration files:
+
+```bash
+cd backend
+pdm run python manage.py makemigrations
+```
+
+This will create a new migration file in `backend/farm/migrations/` with the detected changes.
+
+### Applying Migrations
+
+To apply pending migrations to the database:
+
+```bash
+pdm run python manage.py migrate
+```
+
+Or use the shortcut:
+
+```bash
+pdm run migrate
+```
+
+### Checking Migration Status
+
+To see which migrations have been applied:
+
+```bash
+pdm run python manage.py showmigrations
+```
+
+### Rolling Back Migrations
+
+To revert to a specific migration:
+
+```bash
+pdm run python manage.py migrate farm <migration_name>
+```
+
+For example, to revert to migration 0021:
+```bash
+pdm run python manage.py migrate farm 0021
+```
+
+### Best Practices
+
+- Always review generated migration files before committing
+- Test migrations on a copy of production data before deploying
+- Never edit migration files that have already been applied in production
+- Use meaningful names for data migrations with `--name` flag:
+  ```bash
+  pdm run python manage.py makemigrations --name add_default_suppliers farm
+  ```
+
 ## API Endpoints
 
 The backend provides the following REST API endpoints:
