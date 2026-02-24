@@ -48,7 +48,7 @@ export function NotesCell({
         '& h1, & h2, & h3, & h4, & h5, & h6': { margin: '0.5em 0', fontSize: '1.1em' },
         '& ul, & ol': { margin: '0.5em 0', paddingLeft: 2 },
         '& code': {
-          backgroundColor: 'rgba(255,255,255,0.1)',
+          backgroundColor: 'rgba(0,0,0,0.08)',
           padding: '0.1em 0.3em',
           borderRadius: 0.5,
           fontSize: '0.85em',
@@ -72,7 +72,23 @@ export function NotesCell({
     : `${attachmentCount} Fotos in Notizen`;
 
   return (
-    <Tooltip title={tooltipContent} placement="top-start" arrow enterDelay={500}>
+    <Tooltip
+      title={tooltipContent}
+      placement="top-start"
+      arrow
+      enterDelay={500}
+      slotProps={{
+        tooltip: {
+          sx: {
+            bgcolor: 'common.white',
+            color: 'text.primary',
+            border: '1px solid',
+            borderColor: 'divider',
+            boxShadow: 3,
+          },
+        },
+      }}
+    >
       <Box
         sx={{
           width: '100%',
