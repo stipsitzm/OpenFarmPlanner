@@ -30,9 +30,6 @@ export function validateCulture(
   if (hasSeedRateValue && !hasSeedRateUnit) {
     errors.seed_rate_unit = 'Wenn eine Menge angegeben wird, muss auch eine Einheit gewählt werden.';
   }
-  if (hasSeedRateUnit && !hasSeedRateValue) {
-    errors.seed_rate_value = 'Wenn eine Einheit gewählt wird, muss auch eine Menge angegeben werden.';
-  }
   if (hasSeedRateValue && Number(draft.seed_rate_value) <= 0) {
     errors.seed_rate_value = 'Die Menge muss größer als 0 sein.';
   }

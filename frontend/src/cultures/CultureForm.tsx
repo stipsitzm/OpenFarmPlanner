@@ -121,10 +121,6 @@ export function CultureForm({
       if (name === 'seed_rate_unit' && (!value || value === '')) {
         updated = { ...updated, seed_rate_value: null };
       }
-      // Wenn Menge gelöscht wird, Einheit auf null setzen
-      if (name === 'seed_rate_value' && (value === null || value === undefined || value === '')) {
-        updated = { ...updated, seed_rate_unit: null };
-      }
       setIsDirty(true);
       validateAndSet(updated);
       return updated;

@@ -21,17 +21,18 @@ describe('validateCulture', () => {
     );
     expect(missingUnit.errors.seed_rate_unit).toContain('Einheit gewählt werden');
 
-    const missingValue = validateCulture(
-      { name: 'Karotte', growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_unit: 'g_per_m2' },
-      t
-    );
-    expect(missingValue.errors.seed_rate_value).toContain('Menge angegeben werden');
-
     const nonPositive = validateCulture(
       { name: 'Karotte', growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 0, seed_rate_unit: 'g_per_m2' },
       t
     );
     expect(nonPositive.errors.seed_rate_value).toBe('Die Menge muss größer als 0 sein.');
+    
+    // Einheit ohne Menge ist erlaubt
+    const unitWithoutValue = validateCulture(
+      { name: 'Karotte', growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_unit: 'g_per_m2' },
+      t
+    );
+    expect(unitWithoutValue.errors.seed_rate_value).toBeUndefined();
   });
 
   it('accepts direct sowing without propagation duration', () => {
