@@ -267,10 +267,14 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
       await loadAttachments();
       clearPendingSelection();
     } catch (error) {
-      const message =
+      const response =
         typeof error === 'object' && error !== null && 'response' in error
-          ? ((error as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? 'Upload failed. Please try again.')
-          : 'Upload failed. Please try again.';
+          ? (error as { response?: { status?: number; data?: { detail?: string } } }).response
+          : undefined;
+      const backendDetail = response?.data?.detail;
+      const message = response?.status === 503
+        ? (backendDetail ?? 'Image processing backend is unavailable on the server. Please install Pillow and restart backend.')
+        : (backendDetail ?? 'Upload failed. Please try again.');
       setUploadError(message);
       console.error('Error uploading note attachment:', error);
     } finally {

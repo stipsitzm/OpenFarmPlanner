@@ -14,12 +14,18 @@ class ImageProcessingError(ValueError):
     """Raised when uploaded image processing fails."""
 
 
+class ImageProcessingBackendUnavailableError(ImageProcessingError):
+    """Raised when the image processing backend is not installed."""
+
+
 def process_note_image(uploaded_file) -> tuple[ContentFile, dict[str, int | str]]:
     """Validate, orient, downscale and re-encode uploaded image."""
     try:
         from PIL import Image, ImageOps
     except ModuleNotFoundError as exc:
-        raise ImageProcessingError('Image processing backend is not available.') from exc
+        raise ImageProcessingBackendUnavailableError(
+            'Image processing backend is not available. Install Pillow in the backend environment.'
+        ) from exc
 
     if uploaded_file.size > MAX_UPLOAD_SIZE_BYTES:
         raise ImageProcessingError('Uploaded file exceeds the 10MB size limit.')
