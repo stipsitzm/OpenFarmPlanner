@@ -114,7 +114,12 @@
     "fetchError": "Fehler beim Laden der Kulturen",
     "saving": "Speichern...",
     "unsavedChanges": "Ungespeicherte Änderungen",
-    "fixErrors": "Bitte beheben Sie die Validierungsfehler"
+    "fixErrors": "Bitte beheben Sie die Validierungsfehler",
+    "exportSuccess": "JSON exportiert"
+  },
+  "export": {
+    "current": "Aktuelle Kultur als JSON herunterladen",
+    "all": "Alle Kulturen als JSON herunterladen"
   },
   "buttons": {
     "addNew": "Neue Kultur hinzufügen",

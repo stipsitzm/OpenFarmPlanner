@@ -36,6 +36,13 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
+import {
+  buildAllCulturesExport,
+  buildAllCulturesFilename,
+  buildSingleCultureExport,
+  buildSingleCultureFilename,
+  downloadJsonFile,
+} from '../cultures/exportUtils';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -295,6 +302,41 @@ function Cultures(): React.ReactElement {
     fileInputRef.current?.click();
   };
 
+  const handleExportCurrentCulture = () => {
+    if (!selectedCulture) {
+      return;
+    }
+
+    const exportPayload = buildSingleCultureExport(selectedCulture);
+    const filename = buildSingleCultureFilename(selectedCulture);
+    downloadJsonFile(exportPayload, filename);
+    showSnackbar(t('messages.exportSuccess'), 'success');
+    handleImportMenuClose();
+  };
+
+  const handleExportAllCultures = async () => {
+    try {
+      const allCultures: Culture[] = [];
+      let nextUrl: string | null = '/cultures/';
+
+      while (nextUrl) {
+        const response = await cultureAPI.list(nextUrl);
+        allCultures.push(...response.data.results);
+        nextUrl = response.data.next;
+      }
+
+      const exportPayload = buildAllCulturesExport(allCultures);
+      const filename = buildAllCulturesFilename();
+      downloadJsonFile(exportPayload, filename);
+      showSnackbar(t('messages.exportSuccess'), 'success');
+    } catch (error) {
+      console.error('Error exporting cultures:', error);
+      showSnackbar(t('messages.fetchError'), 'error');
+    } finally {
+      handleImportMenuClose();
+    }
+  };
+
   const handleImportFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
@@ -468,6 +510,12 @@ function Cultures(): React.ReactElement {
           open={Boolean(importMenuAnchor)}
           onClose={handleImportMenuClose}
         >
+          <MenuItem onClick={handleExportCurrentCulture} disabled={!selectedCulture}>
+            {t('export.current')}
+          </MenuItem>
+          <MenuItem onClick={handleExportAllCultures}>
+            {t('export.all')}
+          </MenuItem>
           <MenuItem onClick={handleImportFileTrigger}>
             {t('import.menuItem')}
           </MenuItem>
