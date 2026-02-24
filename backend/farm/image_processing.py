@@ -14,6 +14,10 @@ class ImageProcessingError(ValueError):
     """Raised when uploaded image processing fails."""
 
 
+class ImageProcessingBackendUnavailableError(ImageProcessingError):
+    """Raised when the image processing backend is not installed."""
+
+
 def process_note_image(uploaded_file) -> tuple[ContentFile, dict[str, int | str]]:
     """Validate, orient, downscale and re-encode uploaded image."""
     try:
@@ -22,7 +26,7 @@ def process_note_image(uploaded_file) -> tuple[ContentFile, dict[str, int | str]
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f'PIL/Pillow not available: {exc}. Install with: pip install Pillow[webp]')
-        raise ImageProcessingError('Image processing backend is not available.') from exc
+        raise ImageProcessingBackendUnavailableError('Image processing backend is not available.') from exc
 
     if uploaded_file.size > MAX_UPLOAD_SIZE_BYTES:
         raise ImageProcessingError('Uploaded file exceeds the 10MB size limit.')

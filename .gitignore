@@ -29,6 +29,8 @@ tmp*
 coverage/
 **/coverage/
 *.lcov
+.coverage
+.coverage.*
 
 # Mutation testing
 .stryker-tmp/
