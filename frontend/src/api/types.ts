@@ -110,6 +110,7 @@ export interface PlantingPlan {
   // Write-only input used on create/update.
   area_input_unit?: 'M2' | 'PLANTS';
   notes?: string;
+  note_attachment_count?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -134,4 +135,18 @@ export interface PaginatedResponse<T> {
   next: string | null;
   previous: string | null;
   results: T[];
+}
+
+
+export interface NoteAttachment {
+  id: number;
+  planting_plan: number;
+  image: string;
+  image_url?: string;
+  caption?: string;
+  created_at: string;
+  width?: number;
+  height?: number;
+  size_bytes?: number;
+  mime_type?: string;
 }

@@ -9,6 +9,7 @@ import type {
   Supplier,
   SeedDemand,
   YieldCalendarWeek,
+  NoteAttachment,
 } from './types';
 
 export const cultureAPI = {
@@ -67,6 +68,22 @@ export const plantingPlanAPI = {
 };
 
 
+export const noteAttachmentAPI = {
+  list: (noteId: number) => http.get<NoteAttachment[]>(`/notes/${noteId}/attachments/`),
+  upload: (noteId: number, file: File, caption = '', onUploadProgress?: (progress: number) => void) => {
+    const formData = new FormData();
+    formData.append('image', file, file.name || 'note-attachment');
+    formData.append('caption', caption);
+    return http.post<NoteAttachment>(`/notes/${noteId}/attachments/`, formData, {
+      onUploadProgress: (event) => {
+        if (!onUploadProgress || !event.total) return;
+        onUploadProgress(Math.round((event.loaded / event.total) * 100));
+      },
+    });
+  },
+  delete: (attachmentId: number) => http.delete(`/attachments/${attachmentId}/`),
+};
+
 export const seedDemandAPI = {
   list: () => http.get<PaginatedResponse<SeedDemand>>('/seed-demand/'),
 };
@@ -101,6 +118,7 @@ export type {
   Supplier,
   SeedDemand,
   YieldCalendarWeek,
+  NoteAttachment,
 };
 
 export default {
@@ -112,4 +130,5 @@ export default {
   locations: locationAPI,
   seedDemand: seedDemandAPI,
   yieldCalendar: yieldCalendarAPI,
+  noteAttachments: noteAttachmentAPI,
 };

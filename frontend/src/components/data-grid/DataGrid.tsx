@@ -56,8 +56,10 @@ export interface EditableDataGridCommandApi {
 }
 export interface NotesFieldConfig {
   field: string;
-  labelKey?: string; 
-  titleKey?: string; 
+  labelKey?: string;
+  titleKey?: string;
+  attachmentNoteIdField?: string;
+  attachmentCountField?: string;
 }
 
 export interface EditableDataGridProps<T extends EditableRow> {
@@ -395,17 +397,7 @@ export function EditableDataGrid<T extends EditableRow>({
    * Custom footer component with add button
    */
   const CustomFooter = (): React.ReactElement => {
-    useEffect(() => {
-    if (!onSelectedRowChange) {
-      return;
-    }
-
-    const selectedId = selectedRowIds[0];
-    const selectedRow = rows.find((row) => row.id === selectedId) as T | undefined;
-    onSelectedRowChange(selectedRow ?? null);
-  }, [onSelectedRowChange, selectedRowIds, rows]);
-
-  return (
+    return (
       <Box sx={dataGridFooterSx}>
         <IconButton
           onClick={handleAddClick}
@@ -427,41 +419,45 @@ export function EditableDataGrid<T extends EditableRow>({
       return columns;
     }
 
-    const notesFieldNames = notes.fields.map(f => f.field);
-    
+    const notesFieldNames = notes.fields.map((f) => f.field);
+
     return columns.map((col) => {
-      if (notesFieldNames.includes(col.field)) {
-        // Replace the column with notes cell renderer
-        return {
-          ...col,
-          editable: false,
-          renderCell: (params) => {
-            const value = (params.value as string) || '';
-            const hasValue = value.trim().length > 0;
-            const excerpt = hasValue ? getPlainExcerpt(value, 120) : '';
-            
-            useEffect(() => {
-    if (!onSelectedRowChange) {
-      return;
-    }
-
-    const selectedId = selectedRowIds[0];
-    const selectedRow = rows.find((row) => row.id === selectedId) as T | undefined;
-    onSelectedRowChange(selectedRow ?? null);
-  }, [onSelectedRowChange, selectedRowIds, rows]);
-
-  return (
-              <NotesCell
-                hasValue={hasValue}
-                excerpt={excerpt}
-                rawValue={value}
-                onOpen={() => notesEditor.handleOpen(params.id, col.field)}
-              />
-            );
-          },
-        };
+      if (!notesFieldNames.includes(col.field)) {
+        return col;
       }
-      return col;
+
+      const fieldConfig = notes.fields.find((f) => f.field === col.field);
+
+      return {
+        ...col,
+        editable: false,
+        renderCell: (params) => {
+          const value = (params.value as string) || '';
+          const hasValue = value.trim().length > 0;
+          const excerpt = hasValue ? getPlainExcerpt(value, 120) : '';
+
+          const row = params.row as T;
+          const attachmentCountRaw = fieldConfig?.attachmentCountField
+            ? row[fieldConfig.attachmentCountField as keyof T]
+            : 0;
+          const attachmentCount = typeof attachmentCountRaw === 'number' ? attachmentCountRaw : 0;
+
+          return (
+            <NotesCell
+              hasValue={hasValue}
+              excerpt={excerpt}
+              rawValue={value}
+              attachmentCount={attachmentCount}
+              onOpen={() => notesEditor.handleOpen(params.id, col.field)}
+              onOpenAttachments={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                notesEditor.handleOpen(params.id, col.field, { focusAttachments: true });
+              }}
+            />
+          );
+        },
+      };
     });
   }, [columns, notes, notesEditor]);
 
@@ -570,6 +566,15 @@ export function EditableDataGrid<T extends EditableRow>({
           onSave={notesEditor.handleSave}
           onClose={notesEditor.handleClose}
           loading={notesEditor.isSaving}
+          focusAttachments={notesEditor.focusAttachments}
+          focusRequestId={notesEditor.focusRequestId}
+          noteId={(() => {
+            if (!notesEditor.currentRow || !notesEditor.field || !notes) return undefined;
+            const cfg = notes.fields.find((f) => f.field === notesEditor.field);
+            if (!cfg?.attachmentNoteIdField) return undefined;
+            const val = notesEditor.currentRow[cfg.attachmentNoteIdField as keyof typeof notesEditor.currentRow];
+            return typeof val === "number" ? val : undefined;
+          })()}
         />
       )}
     </>

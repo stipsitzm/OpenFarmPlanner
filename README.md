@@ -358,3 +358,10 @@ Each command can provide:
 - optional keyboard `keys` mapping (Alt/Shift only)
 
 Keyboard handling is centralized in `useKeyboardShortcuts` and only calls `preventDefault()` on exact, context-allowed matches.
+
+
+## Note Attachments
+
+Planting plan notes support photo attachments through `/openfarmplanner/api/notes/{noteId}/attachments/` (list + multipart upload) and `/openfarmplanner/api/attachments/{attachmentId}/` (delete). Uploaded images are validated and transformed server-side into a processed image (max side 1280px, EXIF orientation applied, metadata stripped, re-encoded), and only the processed file is stored.
+
+The notes drawer UI includes photo upload, an optional crop/zoom step before upload, thumbnail gallery, full-size preview dialog, and delete actions. The browser additionally resizes/re-encodes before upload to reduce traffic, while the backend remains the source of truth for final validation and processing.
