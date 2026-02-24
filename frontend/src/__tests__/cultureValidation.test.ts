@@ -9,9 +9,9 @@ describe('validateCulture', () => {
 
     expect(result.isValid).toBe(false);
     expect(result.errors.name).toBe('form.nameRequired');
-    expect(result.errors.growth_duration_days).toBe('form.growthDurationDaysRequired');
-    expect(result.errors.harvest_duration_days).toBe('form.harvestDurationDaysRequired');
-    expect(result.errors.propagation_duration_days).toBe('form.propagationDurationDaysRequired');
+    expect(result.errors.growth_duration_days).toBeUndefined();
+    expect(result.errors.harvest_duration_days).toBeUndefined();
+    expect(result.errors.propagation_duration_days).toBeUndefined();
   });
 
   it('validates seed rate value/unit dependencies and positive amount', () => {

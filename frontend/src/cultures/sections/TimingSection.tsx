@@ -43,10 +43,9 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <Tooltip title="Wachstumszeitraum = Gesamtzeit von Saat bis Ernte." arrow>
             <TextField
-              required
               sx={smallFieldSx}
               type="number"
-              label={t('form.growthDurationDays') + ' *'}
+              label={t('form.growthDurationDays')}
               placeholder={t('form.growthDurationDaysPlaceholder')}
               value={formData.growth_duration_days ?? ''}
               onChange={e => onChange('growth_duration_days', e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
@@ -56,10 +55,9 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
             />
           </Tooltip>
           <TextField
-            required
             sx={smallFieldSx}
             type="number"
-            label={t('form.harvestDurationDays') + ' *'}
+            label={t('form.harvestDurationDays')}
             placeholder={t('form.harvestDurationDaysPlaceholder')}
             value={formData.harvest_duration_days ?? ''}
             onChange={e => onChange('harvest_duration_days', e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
@@ -69,10 +67,9 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
           />
           <Tooltip title={formData.cultivation_type === 'direct_sowing' ? 'Bei Direktsaat ist keine Anzuchtdauer erforderlich.' : ''} arrow>
             <TextField
-              required={formData.cultivation_type !== 'direct_sowing'}
               sx={smallFieldSx}
               type="number"
-              label={"Anzuchtdauer (Tage)" + (formData.cultivation_type !== 'direct_sowing' ? ' *' : '')}
+              label="Anzuchtdauer (Tage)"
               value={formData.cultivation_type === 'direct_sowing' ? 0 : (formData.propagation_duration_days ?? '')}
               onChange={e => onChange('propagation_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
               disabled={formData.cultivation_type === 'direct_sowing'}
