@@ -14,8 +14,8 @@ export interface PortableCulture {
   crop_family?: string;
   nutrient_demand?: Culture['nutrient_demand'];
   cultivation_type?: Culture['cultivation_type'];
-  growth_duration_days: number;
-  harvest_duration_days: number;
+  growth_duration_days?: number;
+  harvest_duration_days?: number;
   propagation_duration_days?: number;
   harvest_method?: Culture['harvest_method'];
   expected_yield?: number;

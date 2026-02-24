@@ -26,8 +26,8 @@ export interface Culture {
   nutrient_demand?: 'low' | 'medium' | 'high' | '';
   cultivation_type?: 'pre_cultivation' | 'direct_sowing' | '';
   
-  growth_duration_days: number;
-  harvest_duration_days: number;
+  growth_duration_days?: number;
+  harvest_duration_days?: number;
   propagation_duration_days?: number;
   
   harvest_method?: 'per_plant' | 'per_sqm' | '';
