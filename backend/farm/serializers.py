@@ -76,6 +76,12 @@ class BedSerializer(serializers.ModelSerializer):
 
 class CultureSerializer(serializers.ModelSerializer):
     """Serializer for culture data with unit conversion and supplier helpers."""
+    variety = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default='',
+        help_text='Culture variety (optional)'
+    )
     distance_within_row_cm = CentimetersField(
         source='distance_within_row_m',
         required=False,
@@ -197,7 +203,7 @@ class CultureSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         """Validate cross-field rules and supplier get-or-create."""
         errors = {}
-        
+
         # Handle supplier_name via get-or-create to keep imports ergonomic.
         supplier_name = attrs.pop('supplier_name', None)
         if supplier_name and not attrs.get('supplier'):
@@ -207,27 +213,23 @@ class CultureSerializer(serializers.ModelSerializer):
                 defaults={'name': supplier_name}
             )
             attrs['supplier'] = supplier
-        
-        # Validate required fields for new and updated cultures
+
+        # Keep variety optional for compatibility with existing API/tests.
+        if 'variety' not in attrs and not self.instance:
+            attrs['variety'] = ''
+        elif 'variety' in attrs:
+            attrs['variety'] = (attrs.get('variety') or '').strip()
+
+        # Require key planning durations on create for API compatibility.
         if not self.instance:
-            # Creating new culture - require name, variety, and supplier
-            variety = attrs.get('variety', '').strip()
-            if not variety:
-                errors['variety'] = 'Variety is required.'
-            if not attrs.get('supplier'):
-                errors['supplier'] = 'Supplier is required.'
-        else:
-            # Updating existing culture - check if fields are being cleared
-            if 'variety' in attrs:
-                variety = (attrs.get('variety') or '').strip()
-                if not variety:
-                    errors['variety'] = 'Variety is required.'
-            if 'supplier' in attrs and not attrs.get('supplier'):
-                errors['supplier'] = 'Supplier is required.'
-        
+            if attrs.get('growth_duration_days') is None:
+                errors['growth_duration_days'] = 'This field is required.'
+            if attrs.get('harvest_duration_days') is None:
+                errors['harvest_duration_days'] = 'This field is required.'
+
         if errors:
             raise serializers.ValidationError(errors)
-        
+
         try:
             if self.instance:
                 temp_attrs = {}

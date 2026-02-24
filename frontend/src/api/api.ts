@@ -11,7 +11,7 @@ import type {
 } from './types';
 
 export const cultureAPI = {
-  list: () => http.get<PaginatedResponse<Culture>>('/cultures/'),
+  list: (url = '/cultures/') => http.get<PaginatedResponse<Culture>>(url),
   get: (id: number) => http.get<Culture>(`/cultures/${id}/`),
   create: (data: Culture) => http.post<Culture>('/cultures/', data),
   update: (id: number, data: Culture) => http.put<Culture>(`/cultures/${id}/`, data),

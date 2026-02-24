@@ -36,6 +36,14 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
+import {
+  buildAllCulturesExport,
+  buildAllCulturesFilename,
+  buildSingleCultureExport,
+  buildSingleCultureFilename,
+  downloadJsonFile,
+} from '../cultures/exportUtils';
+import { parseCultureImportJson } from '../cultures/importUtils';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -295,6 +303,41 @@ function Cultures(): React.ReactElement {
     fileInputRef.current?.click();
   };
 
+  const handleExportCurrentCulture = () => {
+    if (!selectedCulture) {
+      return;
+    }
+
+    const exportPayload = buildSingleCultureExport(selectedCulture);
+    const filename = buildSingleCultureFilename(selectedCulture);
+    downloadJsonFile(exportPayload, filename);
+    showSnackbar(t('messages.exportSuccess'), 'success');
+    handleImportMenuClose();
+  };
+
+  const handleExportAllCultures = async () => {
+    try {
+      const allCultures: Culture[] = [];
+      let nextUrl: string | null = '/cultures/';
+
+      while (nextUrl) {
+        const response = await cultureAPI.list(nextUrl);
+        allCultures.push(...response.data.results);
+        nextUrl = response.data.next;
+      }
+
+      const exportPayload = buildAllCulturesExport(allCultures);
+      const filename = buildAllCulturesFilename();
+      downloadJsonFile(exportPayload, filename);
+      showSnackbar(t('messages.exportSuccess'), 'success');
+    } catch (error) {
+      console.error('Error exporting cultures:', error);
+      showSnackbar(t('messages.fetchError'), 'error');
+    } finally {
+      handleImportMenuClose();
+    }
+  };
+
   const handleImportFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
@@ -305,18 +348,9 @@ function Cultures(): React.ReactElement {
     reader.onload = async () => {
       try {
         const jsonString = reader.result as string;
-        let parsed: unknown;
-        
-        // Try parsing first with standard JSON.parse
-        try {
-          parsed = JSON.parse(jsonString);
-        } catch {
-          // If parsing fails, try removing trailing commas before closing brackets/braces
-          // This handles common JSON export formats that include trailing commas
-          const cleanedJson = jsonString.replace(/,\s*([}\]])/g, '$1');
-          parsed = JSON.parse(cleanedJson);
-        }
-        if (!Array.isArray(parsed)) {
+        const { entries, originalCount } = parseCultureImportJson(jsonString);
+
+        if (originalCount === 0) {
           setImportStatus('error');
           setImportError(t('import.errors.notArray'));
           setImportDialogOpen(true);
@@ -326,10 +360,9 @@ function Cultures(): React.ReactElement {
         const invalidEntries: string[] = [];
         const validEntries: Record<string, unknown>[] = [];
 
-        parsed.forEach((entry, index) => {
-          const isObject = typeof entry === 'object' && entry !== null;
-          const nameValue = isObject ? (entry as { name?: unknown }).name : undefined;
-          if (isObject && typeof nameValue === 'string' && nameValue.trim().length > 0) {
+        entries.forEach((entry, index) => {
+          const nameValue = (entry as { name?: unknown }).name;
+          if (typeof nameValue === 'string' && nameValue.trim().length > 0) {
             validEntries.push(entry as Record<string, unknown>);
           } else {
             invalidEntries.push(`${t('import.invalidEntry')} ${index + 1}`);
@@ -339,7 +372,7 @@ function Cultures(): React.ReactElement {
         if (validEntries.length === 0) {
           setImportStatus('error');
           setImportError(t('import.errors.noValidEntries'));
-          setImportPreviewCount(parsed.length);
+          setImportPreviewCount(originalCount);
           setImportValidCount(0);
           setImportInvalidEntries(invalidEntries);
           setImportDialogOpen(true);
@@ -351,7 +384,7 @@ function Cultures(): React.ReactElement {
         try {
           const response = await cultureAPI.importPreview(validEntries);
           
-          setImportPreviewCount(parsed.length);
+          setImportPreviewCount(originalCount);
           setImportValidCount(validEntries.length);
           setImportInvalidEntries(invalidEntries);
           setImportPayload(validEntries);
@@ -468,6 +501,12 @@ function Cultures(): React.ReactElement {
           open={Boolean(importMenuAnchor)}
           onClose={handleImportMenuClose}
         >
+          <MenuItem onClick={handleExportCurrentCulture} disabled={!selectedCulture}>
+            {t('export.current')}
+          </MenuItem>
+          <MenuItem onClick={handleExportAllCultures}>
+            {t('export.all')}
+          </MenuItem>
           <MenuItem onClick={handleImportFileTrigger}>
             {t('import.menuItem')}
           </MenuItem>
