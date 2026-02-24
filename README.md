@@ -323,18 +323,37 @@ This project is open source and available for use.
 
 ## Keyboard shortcuts and Command Palette
 
-OpenFarmPlanner supports browser-safe **Alt / Alt+Shift** shortcuts that are discoverable in UI tooltips and the Command Palette.
+OpenFarmPlanner supports browser-safe keyboard shortcuts that are discoverable in:
+- the Command Palette (`Alt+K`)
+- navigation link tooltips/aria-labels
+- action button tooltips on the Cultures page
 
-- `Alt+K`: Open Command Palette
-- On culture detail context:
-  - `Alt+E`: Kultur bearbeiten
-  - `Alt+Shift+D`: Kultur löschen (opens confirmation dialog)
-  - `Alt+J`: JSON exportieren (aktuelle Kultur)
-  - `Alt+Shift+J`: Alle Kulturen exportieren
-  - `Alt+I`: JSON importieren (opens import flow)
-  - `Alt+P`: Anbauplan erstellen
-  - `Alt+Shift+←`: Vorherige Kultur
-  - `Alt+Shift+→`: Nächste Kultur
+### Global page navigation
+
+- `Ctrl+Shift+←` / `Ctrl+Shift+→`: previous/next main page (cyclic)
+- `Alt+Shift+H`: Startseite
+- `Alt+Shift+L`: Standorte
+- `Alt+Shift+F`: Flächen & Beete
+- `Alt+Shift+C`: Kulturen
+- `Alt+Shift+P`: Anbaupläne
+- `Alt+Shift+G`: Gantt-Chart
+- `Alt+Shift+S`: Saatgutbedarf
+
+### Culture detail shortcuts
+
+- `Alt+E`: Kultur bearbeiten
+- `Alt+Shift+D`: Kultur löschen (öffnet nur den Bestätigungsdialog)
+- `Alt+J`: JSON exportieren (aktuelle Kultur)
+- `Alt+Shift+J`: Alle Kulturen exportieren
+- `Alt+I`: JSON importieren (öffnet Import-Flow)
+- `Alt+P`: Anbauplan erstellen
+- `Alt+Shift+←`: Vorherige Kultur
+- `Alt+Shift+→`: Nächste Kultur
+
+### User hint in the UI
+
+Best practice for end users: show a short helper text in onboarding/release notes such as:
+> „Drücke `Alt+K` für die Command Palette oder nutze die Shortcut-Hinweise in den Menüs und Tooltips.“
 
 ### Adding new commands
 
