@@ -325,20 +325,11 @@ This project is open source and available for use.
 
 OpenFarmPlanner supports browser-safe keyboard shortcuts that are discoverable in:
 - the Command Palette (`Alt+K`)
-- navigation link tooltips/aria-labels
 - action button tooltips on the Cultures page
 
 ### Global page navigation
 
 - `Ctrl+Shift+←` / `Ctrl+Shift+→`: previous/next main page (cyclic)
-- `Alt+Shift+H`: Startseite
-- `Alt+Shift+L`: Standorte
-- `Alt+Shift+F`: Flächen & Beete
-- `Alt+Shift+C`: Kulturen
-- `Alt+Shift+P`: Anbaupläne
-- `Alt+Shift+G`: Gantt-Chart
-- `Alt+Shift+S`: Saatgutbedarf
-
 ### Culture detail shortcuts
 
 - `Alt+E`: Kultur bearbeiten

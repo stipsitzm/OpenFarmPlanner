@@ -12,7 +12,6 @@ describe('App', () => {
     expect(screen.getByText(translations.navigation.locations)).toBeInTheDocument();
     expect(screen.getByText(translations.navigation.cultures)).toBeInTheDocument();
     expect(screen.getByText(translations.fields.plots)).toBeInTheDocument();
-    expect(screen.getByLabelText(`${translations.navigation.cultures} (Alt+Shift+C)`)).toBeInTheDocument();
   });
 
   it('renders home page by default', () => {
