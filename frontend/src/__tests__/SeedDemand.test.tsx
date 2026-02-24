@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import SeedDemandPage from '../pages/SeedDemand';
+import { CommandProvider } from '../commands/CommandProvider';
 
 const { listMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
@@ -45,7 +46,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <SeedDemandPage />
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
       </MemoryRouter>
     );
 
