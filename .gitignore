@@ -33,3 +33,7 @@ coverage/
 # Mutation testing
 .stryker-tmp/
 mutation-report/
+
+# User uploaded media
+backend/media/
+media/

@@ -35,19 +35,25 @@ export interface UseNotesEditorConfig<T> {
 /**
  * Return type for useNotesEditor hook
  */
-export interface UseNotesEditorReturn {
+export interface UseNotesEditorReturn<T = unknown> {
   /** Whether the notes drawer is open */
   isOpen: boolean;
   /** The current row ID being edited */
   rowId: GridRowId | null;
+  /** The current row object being edited */
+  currentRow: T | null;
   /** The field name being edited */
   field: string | null;
   /** The draft value of the notes */
   draft: string;
   /** Whether a save operation is in progress */
   isSaving: boolean;
+  /** Whether drawer should focus attachments section */
+  focusAttachments: boolean;
+  /** Token to trigger re-focus even when drawer already open */
+  focusRequestId: number;
   /** Handler to open the notes editor */
-  handleOpen: (rowId: GridRowId, field: string) => void;
+  handleOpen: (rowId: GridRowId, field: string, options?: { focusAttachments?: boolean }) => void;
   /** Handler to save the notes */
   handleSave: () => Promise<void>;
   /** Handler to close the notes editor */
@@ -65,7 +71,7 @@ export interface UseNotesEditorReturn {
  */
 export function useNotesEditor<T extends { id: GridRowId; [key: string]: unknown }>(
   config: UseNotesEditorConfig<T>
-): UseNotesEditorReturn {
+): UseNotesEditorReturn<T> {
   const { rows, onSave, onError } = config;
   
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -73,11 +79,25 @@ export function useNotesEditor<T extends { id: GridRowId; [key: string]: unknown
   const [field, setField] = useState<string | null>(null);
   const [draft, setDraft] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [focusAttachments, setFocusAttachments] = useState<boolean>(false);
+  const [focusRequestId, setFocusRequestId] = useState<number>(0);
+
+  const currentRow = useMemo(() => rows.find(r => r.id === rowId) ?? null, [rows, rowId]);
 
   /**
    * Open the notes editor for a specific row and field
    */
-  const handleOpen = useCallback((targetRowId: GridRowId, targetField: string): void => {
+  const handleOpen = useCallback((targetRowId: GridRowId, targetField: string, options?: { focusAttachments?: boolean }): void => {
+    const shouldFocusAttachments = Boolean(options?.focusAttachments);
+
+    if (isOpen && rowId === targetRowId && field === targetField) {
+      setFocusAttachments(shouldFocusAttachments);
+      if (shouldFocusAttachments) {
+        setFocusRequestId((prev) => prev + 1);
+      }
+      return;
+    }
+
     const row = rows.find(r => r.id === targetRowId);
     if (!row) return;
     
@@ -85,8 +105,10 @@ export function useNotesEditor<T extends { id: GridRowId; [key: string]: unknown
     setRowId(targetRowId);
     setField(targetField);
     setDraft(currentValue);
+    setFocusAttachments(shouldFocusAttachments);
+    setFocusRequestId((prev) => prev + 1);
     setIsOpen(true);
-  }, [rows]);
+  }, [field, isOpen, rowId, rows]);
 
   /**
    * Save the notes and close the drawer
@@ -126,17 +148,21 @@ export function useNotesEditor<T extends { id: GridRowId; [key: string]: unknown
     setField(null);
     setDraft('');
     setIsSaving(false);
+    setFocusAttachments(false);
   }, []);
 
   return useMemo(() => ({
     isOpen,
     rowId,
+    currentRow,
     field,
     draft,
     isSaving,
+    focusAttachments,
+    focusRequestId,
     handleOpen,
     handleSave,
     handleClose,
     setDraft,
-  }), [draft, field, handleClose, handleOpen, handleSave, isOpen, isSaving, rowId]);
+  }), [currentRow, draft, field, focusAttachments, focusRequestId, handleClose, handleOpen, handleSave, isOpen, isSaving, rowId]);
 }

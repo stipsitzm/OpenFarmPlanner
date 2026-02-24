@@ -1,51 +1,41 @@
 /**
  * NotesCell component for rendering notes field in DataGrid.
- * 
- * Displays an icon button with a text preview of the first line.
- * Shows a tooltip with formatted markdown preview on hover.
- * Clicking opens the notes editor drawer.
  */
 
-import { Box, IconButton, Tooltip, Typography } from '@mui/material';
+import type { MouseEvent } from 'react';
+import { Badge, Box, IconButton, Tooltip, Typography } from '@mui/material';
 import NotesIcon from '@mui/icons-material/Notes';
 import NotesOutlinedIcon from '@mui/icons-material/NotesOutlined';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../../i18n';
 
 export interface NotesCellProps {
-  /** Whether the cell has a value (non-empty notes) */
   hasValue: boolean;
-  /** Plain text excerpt to show in grid cell */
   excerpt: string;
-  /** Full raw markdown value for tooltip preview */
   rawValue: string;
-  /** Handler called when the icon is clicked */
   onOpen: () => void;
+  attachmentCount?: number;
+  onOpenAttachments?: (event: MouseEvent<HTMLButtonElement>) => void;
 }
 
-/**
- * Renders a notes cell with icon, text preview, and markdown tooltip.
- * Shows filled icon if notes exist, outlined icon if empty.
- * Displays first line with "..." if more content exists.
- * Tooltip shows formatted markdown preview (limited to 2000 chars for performance).
- */
-export function NotesCell({ hasValue, excerpt, rawValue, onOpen }: NotesCellProps): React.ReactElement {
+export function NotesCell({
+  hasValue,
+  excerpt,
+  rawValue,
+  onOpen,
+  attachmentCount = 0,
+  onOpenAttachments,
+}: NotesCellProps): React.ReactElement {
   const { t } = useTranslation('common');
-  
-  // Extract first line for display (up to 40 chars)
+
   const firstLine = excerpt.split('\n')[0];
-  const displayText = firstLine.length > 40 
-    ? `${firstLine.substring(0, 37)}...` 
-    : firstLine;
+  const displayText = firstLine.length > 40 ? `${firstLine.substring(0, 37)}...` : firstLine;
   const hasMore = excerpt.length > firstLine.length || firstLine.length > 40;
-  
-  // Prepare tooltip content
-  // Limit to 2000 chars to avoid huge DOM in tooltip (optional safety measure)
-  const tooltipMarkdown = rawValue.length > 2000 
-    ? rawValue.substring(0, 2000) + '\n\n...' 
-    : rawValue;
-  
+
+  const tooltipMarkdown = rawValue.length > 2000 ? rawValue.substring(0, 2000) + '\n\n...' : rawValue;
+
   const tooltipContent = hasValue ? (
     <Box
       sx={{
@@ -53,36 +43,21 @@ export function NotesCell({ hasValue, excerpt, rawValue, onOpen }: NotesCellProp
         maxHeight: 280,
         overflowY: 'auto',
         p: 1.5,
-        // Disable pointer events to prevent link clicks in tooltip
         pointerEvents: 'none',
-        // Ensure good typography
         '& p': { margin: '0.5em 0' },
-        '& p:first-of-type': { marginTop: 0 },
-        '& p:last-of-type': { marginBottom: 0 },
-        '& ul, & ol': { margin: '0.5em 0', paddingLeft: '1.5em' },
-        '& li': { margin: '0.25em 0' },
-        '& code': { 
-          backgroundColor: 'rgba(0, 0, 0, 0.05)',
+        '& h1, & h2, & h3, & h4, & h5, & h6': { margin: '0.5em 0', fontSize: '1.1em' },
+        '& ul, & ol': { margin: '0.5em 0', paddingLeft: 2 },
+        '& code': {
+          backgroundColor: 'rgba(0,0,0,0.08)',
           padding: '0.1em 0.3em',
-          borderRadius: '3px',
-          fontSize: '0.9em',
-        },
-        '& pre': {
-          backgroundColor: 'rgba(0, 0, 0, 0.05)',
-          padding: '0.5em',
-          borderRadius: '4px',
-          overflowX: 'auto',
+          borderRadius: 0.5,
+          fontSize: '0.85em',
         },
       }}
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        components={{
-          // Disable HTML rendering for security
-          html: () => null,
-          // Render links as plain text (no href)
-          a: ({ children }) => <span>{children}</span>,
-        }}
+        components={{ html: () => null }}
       >
         {tooltipMarkdown}
       </ReactMarkdown>
@@ -90,63 +65,95 @@ export function NotesCell({ hasValue, excerpt, rawValue, onOpen }: NotesCellProp
   ) : (
     <Typography variant="body2">{t('notes.empty')}</Typography>
   );
-  
+
+  const notesAria = hasValue ? t('notes.editWithContent') : t('notes.editEmpty');
+  const attachmentTooltip = attachmentCount === 1
+    ? '1 Foto in Notizen'
+    : `${attachmentCount} Fotos in Notizen`;
+
   return (
-    <Tooltip 
+    <Tooltip
       title={tooltipContent}
-      placement="top"
+      placement="top-start"
+      arrow
+      enterDelay={500}
       slotProps={{
         tooltip: {
           sx: {
-            maxWidth: 480,
-            backgroundColor: 'background.paper',
+            bgcolor: 'common.white',
             color: 'text.primary',
-            boxShadow: 2,
-            border: 1,
+            border: '1px solid',
             borderColor: 'divider',
+            boxShadow: 3,
           },
         },
       }}
     >
       <Box
-        onClick={onOpen}
         sx={{
+          width: '100%',
           display: 'flex',
           alignItems: 'center',
           gap: 0.5,
-          cursor: 'pointer',
-          width: '100%',
-          height: '100%',
-          '&:hover': {
-            backgroundColor: 'action.hover',
-          },
+          py: 0.25,
+          position: 'relative',
+          minHeight: 32,
         }}
       >
         <IconButton
           size="small"
-          sx={{ 
-            color: hasValue ? 'primary.main' : 'action.disabled',
-            padding: '4px',
-          }}
-          aria-label="Notizen bearbeiten"
+          onClick={onOpen}
+          aria-label={notesAria}
+          sx={{ p: 0.5 }}
         >
-          {hasValue ? <NotesIcon fontSize="small" /> : <NotesOutlinedIcon fontSize="small" />}
+          {hasValue ? (
+            <NotesIcon fontSize="small" color="primary" />
+          ) : (
+            <NotesOutlinedIcon fontSize="small" color="disabled" />
+          )}
         </IconButton>
-        {hasValue && displayText && (
-          <Typography
-            variant="body2"
-            sx={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              flex: 1,
-              color: 'text.secondary',
-              fontSize: '0.875rem',
-            }}
-          >
-            {displayText}
-            {hasMore && <span style={{ opacity: 0.7 }}> ...</span>}
-          </Typography>
+
+        <Typography
+          variant="body2"
+          sx={{
+            color: hasValue ? 'text.primary' : 'text.disabled',
+            fontStyle: hasValue ? 'normal' : 'italic',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            flexGrow: 1,
+            pr: attachmentCount > 0 ? 3.5 : 0,
+          }}
+        >
+          {hasValue ? displayText : t('notes.empty')}
+          {hasValue && hasMore ? ' ...' : ''}
+        </Typography>
+
+        {attachmentCount > 0 && onOpenAttachments && (
+          <Tooltip title={attachmentTooltip} arrow>
+            <IconButton
+              size="small"
+              onClick={(event) => { event.stopPropagation(); event.preventDefault(); onOpenAttachments(event); }}
+              aria-label={attachmentTooltip}
+              sx={{
+                position: 'absolute',
+                top: 2,
+                right: 2,
+                width: 24,
+                height: 24,
+                p: 0,
+                bgcolor: 'background.paper',
+              }}
+            >
+              <Badge
+                color="primary"
+                badgeContent={attachmentCount > 1 ? attachmentCount : undefined}
+                overlap="circular"
+              >
+                <PhotoLibraryIcon fontSize="small" color="action" />
+              </Badge>
+            </IconButton>
+          </Tooltip>
         )}
       </Box>
     </Tooltip>

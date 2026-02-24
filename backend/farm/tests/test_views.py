@@ -1,9 +1,11 @@
+from unittest.mock import patch
+from django.core.files.uploadedfile import SimpleUploadedFile
 from datetime import date
 
 from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
 
-from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier
+from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier, NoteAttachment
 
 class ApiEndpointsTest(DRFAPITestCase):
     def setUp(self):
@@ -611,3 +613,113 @@ class PlantingPlanAreaInputTest(DRFAPITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertAlmostEqual(float(response.data['area_usage_sqm']), 3.0, places=2)
+
+
+class NoteAttachmentApiTest(DRFAPITestCase):
+    def setUp(self):
+        self.location = Location.objects.create(name="Attachment Location")
+        self.field = Field.objects.create(name="Attachment Field", location=self.location)
+        self.bed = Bed.objects.create(name="Attachment Bed", field=self.field)
+        self.culture = Culture.objects.create(name="Attachment Culture", growth_duration_days=7, harvest_duration_days=2)
+        self.plan = PlantingPlan.objects.create(culture=self.culture, bed=self.bed, planting_date=date(2024, 3, 1))
+
+    @patch('farm.views.process_note_image')
+    def test_upload_list_delete_attachment(self, mock_process):
+        mock_process.return_value = (
+            SimpleUploadedFile('processed.webp', b'processed', content_type='image/webp'),
+            {
+                'width': 1280,
+                'height': 720,
+                'size_bytes': 9,
+                'mime_type': 'image/webp',
+            },
+        )
+        upload = SimpleUploadedFile('raw.jpg', b'raw', content_type='image/jpeg')
+
+        upload_response = self.client.post(
+            f'/openfarmplanner/api/notes/{self.plan.id}/attachments/',
+            {'image': upload},
+            format='multipart',
+        )
+        self.assertEqual(upload_response.status_code, status.HTTP_201_CREATED)
+        self.assertLessEqual(upload_response.data['width'], 1280)
+
+        list_response = self.client.get(f'/openfarmplanner/api/notes/{self.plan.id}/attachments/')
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_response.data), 1)
+
+        attachment_id = upload_response.data['id']
+        delete_response = self.client.delete(f'/openfarmplanner/api/attachments/{attachment_id}/')
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+
+
+    @patch(
+        'farm.views.process_note_image',
+        side_effect=__import__('farm.image_processing', fromlist=['ImageProcessingBackendUnavailableError']).ImageProcessingBackendUnavailableError('Image processing backend is not available. Install Pillow in the backend environment.'),
+    )
+    def test_attachment_upload_returns_503_when_processing_backend_missing(self, _mock_process):
+        upload = SimpleUploadedFile('raw.jpg', b'raw', content_type='image/jpeg')
+        response = self.client.post(
+            f'/openfarmplanner/api/notes/{self.plan.id}/attachments/',
+            {'image': upload},
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    @patch(
+        'farm.views.process_note_image',
+        side_effect=__import__('farm.image_processing', fromlist=['ImageProcessingError']).ImageProcessingError('bad image'),
+    )
+    def test_invalid_attachment_upload_returns_400(self, _mock_process):
+        upload = SimpleUploadedFile('not-image.txt', b'text', content_type='text/plain')
+        response = self.client.post(
+            f'/openfarmplanner/api/notes/{self.plan.id}/attachments/',
+            {'image': upload},
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class PlantingPlanAttachmentCountApiTest(DRFAPITestCase):
+    def setUp(self):
+        self.location = Location.objects.create(name="Plan Location")
+        self.field = Field.objects.create(name="Plan Field", location=self.location)
+        self.bed = Bed.objects.create(name="Plan Bed", field=self.field)
+        self.culture = Culture.objects.create(name="Plan Culture", growth_duration_days=7, harvest_duration_days=2)
+
+        self.plan_without_attachments = PlantingPlan.objects.create(
+            culture=self.culture, bed=self.bed, planting_date=date(2024, 3, 1), notes='No attachments'
+        )
+        self.plan_with_attachments = PlantingPlan.objects.create(
+            culture=self.culture, bed=self.bed, planting_date=date(2024, 3, 2), notes='With attachments'
+        )
+
+        NoteAttachment.objects.create(
+            planting_plan=self.plan_with_attachments,
+            image='notes/test-1.webp',
+            mime_type='image/webp',
+            width=100,
+            height=100,
+            size_bytes=1000,
+        )
+        NoteAttachment.objects.create(
+            planting_plan=self.plan_with_attachments,
+            image='notes/test-2.webp',
+            mime_type='image/webp',
+            width=100,
+            height=100,
+            size_bytes=1000,
+        )
+
+    def test_planting_plan_list_contains_attachment_count(self):
+        response = self.client.get('/openfarmplanner/api/planting-plans/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        by_id = {item['id']: item for item in response.data['results']}
+        self.assertEqual(by_id[self.plan_without_attachments.id]['note_attachment_count'], 0)
+        self.assertEqual(by_id[self.plan_with_attachments.id]['note_attachment_count'], 2)
+
+    def test_planting_plan_list_query_count_stays_stable(self):
+        with self.assertNumQueries(2):
+            response = self.client.get('/openfarmplanner/api/planting-plans/')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)

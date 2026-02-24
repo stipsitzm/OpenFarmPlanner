@@ -35,6 +35,7 @@ interface PlantingPlanRow extends PlantingPlan, EditableRow {
   isNew?: boolean;
   area_m2?: number;
   plants_count?: number | null; // UI-only derived field
+  note_attachment_count?: number;
 }
 
 
@@ -331,6 +332,7 @@ function PlantingPlans(): React.ReactElement {
           area_m2: undefined,
           plants_count: undefined,
           notes: '',
+          note_attachment_count: 0,
           isNew: true,
         })}
         initialRow={
@@ -358,6 +360,7 @@ function PlantingPlans(): React.ReactElement {
             // plants_count computed by backend serializer
             plants_count: plan.plants_count ?? null,
             notes: plan.notes || '',
+            note_attachment_count: plan.note_attachment_count ?? 0,
           };
         }}
         mapToApiData={(row) => {
@@ -470,6 +473,8 @@ function PlantingPlans(): React.ReactElement {
             {
               field: 'notes',
               labelKey: 'common:fields.notes',
+              attachmentNoteIdField: 'id',
+              attachmentCountField: 'note_attachment_count',
             },
           ],
         }}

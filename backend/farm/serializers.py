@@ -2,7 +2,7 @@
 
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
-from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier
+from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment
 
 
 class CentimetersField(serializers.FloatField):
@@ -256,6 +256,7 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
     culture_name = serializers.CharField(source='culture.name', read_only=True)
     bed_name = serializers.CharField(source='bed.name', read_only=True)
     plants_count = serializers.SerializerMethodField(read_only=True)
+    note_attachment_count = serializers.IntegerField(read_only=True)
     
     # Write-only fields for area input
     area_input_value = serializers.DecimalField(
@@ -405,3 +406,41 @@ class SeedDemandSerializer(serializers.Serializer):
     package_size_g = serializers.FloatField(allow_null=True)
     packages_needed = serializers.IntegerField(allow_null=True)
     warning = serializers.CharField(allow_null=True)
+
+
+class NoteAttachmentSerializer(serializers.ModelSerializer):
+    """Serializer for note image attachments."""
+
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = NoteAttachment
+        fields = [
+            "id",
+            "planting_plan",
+            "image",
+            "image_url",
+            "caption",
+            "created_at",
+            "width",
+            "height",
+            "size_bytes",
+            "mime_type",
+        ]
+        read_only_fields = [
+            "id",
+            "planting_plan",
+            "created_at",
+            "width",
+            "height",
+            "size_bytes",
+            "mime_type",
+        ]
+
+    def get_image_url(self, obj):
+        request = self.context.get("request")
+        if not obj.image:
+            return None
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
