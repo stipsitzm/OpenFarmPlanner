@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 import {
   Drawer,
   Box,
@@ -18,7 +18,6 @@ import {
   DialogContent,
   DialogActions,
   LinearProgress,
-  Slider,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ReactMarkdown from 'react-markdown';
@@ -39,6 +38,10 @@ export interface NotesDrawerProps {
 }
 
 const MAX_SIDE = 1280;
+const MIN_CROP_SIZE = 24;
+
+type CropRect = { x: number; y: number; width: number; height: number };
+type DragMode = 'draw' | 'move' | 'resize-nw' | 'resize-ne' | 'resize-sw' | 'resize-se';
 
 async function fileToImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -49,11 +52,15 @@ async function fileToImage(file: File): Promise<HTMLImageElement> {
   });
 }
 
-async function renderProcessedFile(file: File, zoom = 1, offsetX = 0, offsetY = 0): Promise<File> {
+async function renderProcessedFile(file: File, cropRect?: CropRect): Promise<File> {
   const image = await fileToImage(file);
-  const scale = Math.min(1, MAX_SIDE / Math.max(image.width, image.height));
-  const targetWidth = Math.max(1, Math.round(image.width * scale));
-  const targetHeight = Math.max(1, Math.round(image.height * scale));
+  const crop = cropRect ?? { x: 0, y: 0, width: image.width, height: image.height };
+
+  const rawWidth = Math.max(1, Math.round(crop.width));
+  const rawHeight = Math.max(1, Math.round(crop.height));
+  const scale = Math.min(1, MAX_SIDE / Math.max(rawWidth, rawHeight));
+  const targetWidth = Math.max(1, Math.round(rawWidth * scale));
+  const targetHeight = Math.max(1, Math.round(rawHeight * scale));
 
   const canvas = document.createElement('canvas');
   canvas.width = targetWidth;
@@ -61,22 +68,16 @@ async function renderProcessedFile(file: File, zoom = 1, offsetX = 0, offsetY = 
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas context unavailable');
 
-  const cropWidth = image.width / zoom;
-  const cropHeight = image.height / zoom;
-  const maxOffsetX = (image.width - cropWidth) / 2;
-  const maxOffsetY = (image.height - cropHeight) / 2;
-  const sourceX = (image.width - cropWidth) / 2 + Math.max(-maxOffsetX, Math.min(maxOffsetX, offsetX));
-  const sourceY = (image.height - cropHeight) / 2 + Math.max(-maxOffsetY, Math.min(maxOffsetY, offsetY));
+  ctx.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, targetWidth, targetHeight);
 
-  ctx.drawImage(image, sourceX, sourceY, cropWidth, cropHeight, 0, 0, targetWidth, targetHeight);
+  const webp = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.85));
+  if (webp) {
+    return new File([webp], `${file.name.replace(/\.[^.]+$/, '')}.webp`, { type: 'image/webp' });
+  }
 
-  const blob: Blob = await new Promise((resolve, reject) => {
-    canvas.toBlob((result) => {
-      if (!result) reject(new Error('Failed to encode image'));
-      else resolve(result);
-    }, 'image/webp', 0.85);
-  });
-  return new File([blob], `${file.name.replace(/\.[^.]+$/, '')}.webp`, { type: 'image/webp' });
+  const jpeg = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+  if (!jpeg) throw new Error('Failed to encode image');
+  return new File([jpeg], `${file.name.replace(/\.[^.]+$/, '')}.jpg`, { type: 'image/jpeg' });
 }
 
 export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loading = false, noteId }: NotesDrawerProps): React.ReactElement {
@@ -85,12 +86,17 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [zoom, setZoom] = useState<number>(1);
-  const [offsetX, setOffsetX] = useState<number>(0);
-  const [offsetY, setOffsetY] = useState<number>(0);
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
+  const [sourceSize, setSourceSize] = useState<{ width: number; height: number } | null>(null);
+  const [cropRect, setCropRect] = useState<CropRect | null>(null);
+
   const textFieldRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const cropImageRef = useRef<HTMLImageElement>(null);
+  const dragRef = useRef<{ mode: DragMode; startX: number; startY: number; initialRect: CropRect } | null>(null);
 
   const loadAttachments = async (): Promise<void> => {
     if (!noteId) return;
@@ -104,6 +110,25 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
       void loadAttachments();
     }
   }, [open, noteId]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingPreviewUrl) {
+        URL.revokeObjectURL(pendingPreviewUrl);
+      }
+    };
+  }, [pendingPreviewUrl]);
+
+  const openCropDialog = (file: File): void => {
+    const nextUrl = URL.createObjectURL(file);
+    if (pendingPreviewUrl) {
+      URL.revokeObjectURL(pendingPreviewUrl);
+    }
+    setPendingFile(file);
+    setPendingPreviewUrl(nextUrl);
+    setCropRect(null);
+    setSourceSize(null);
+  };
 
   const handleFormat = (format: MarkdownFormat): void => {
     if (!textFieldRef.current) return;
@@ -128,21 +153,129 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
     onChange(newText);
   };
 
-  const handleUpload = async (file: File): Promise<void> => {
-    if (!noteId) return;
+  const imagePointFromEvent = (event: ReactPointerEvent<HTMLDivElement>): { x: number; y: number } | null => {
+    const img = cropImageRef.current;
+    if (!img) return null;
+    const bounds = img.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return null;
+    return {
+      x: Math.max(0, Math.min(bounds.width, event.clientX - bounds.left)),
+      y: Math.max(0, Math.min(bounds.height, event.clientY - bounds.top)),
+    };
+  };
+
+  const onCropPointerDown = (event: ReactPointerEvent<HTMLDivElement>, mode: DragMode): void => {
+    if (event.button !== 0) return;
+    const point = imagePointFromEvent(event);
+    if (!point) return;
+    const initial = cropRect ?? { x: point.x, y: point.y, width: 1, height: 1 };
+    dragRef.current = { mode, startX: point.x, startY: point.y, initialRect: initial };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const onCropPointerMove = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (!dragRef.current || !cropImageRef.current) return;
+    const point = imagePointFromEvent(event);
+    if (!point) return;
+    const bounds = cropImageRef.current.getBoundingClientRect();
+    const { mode, startX, startY, initialRect } = dragRef.current;
+
+    let next: CropRect = { ...initialRect };
+
+    if (mode === 'draw') {
+      next = {
+        x: Math.min(startX, point.x),
+        y: Math.min(startY, point.y),
+        width: Math.max(MIN_CROP_SIZE, Math.abs(point.x - startX)),
+        height: Math.max(MIN_CROP_SIZE, Math.abs(point.y - startY)),
+      };
+    }
+
+    if (mode === 'move') {
+      next = {
+        ...initialRect,
+        x: Math.max(0, Math.min(bounds.width - initialRect.width, initialRect.x + (point.x - startX))),
+        y: Math.max(0, Math.min(bounds.height - initialRect.height, initialRect.y + (point.y - startY))),
+      };
+    }
+
+    if (mode.startsWith('resize')) {
+      let left = initialRect.x;
+      let top = initialRect.y;
+      let right = initialRect.x + initialRect.width;
+      let bottom = initialRect.y + initialRect.height;
+
+      if (mode.includes('w')) left = point.x;
+      if (mode.includes('e')) right = point.x;
+      if (mode.includes('n')) top = point.y;
+      if (mode.includes('s')) bottom = point.y;
+
+      left = Math.max(0, Math.min(left, bounds.width - MIN_CROP_SIZE));
+      top = Math.max(0, Math.min(top, bounds.height - MIN_CROP_SIZE));
+      right = Math.max(left + MIN_CROP_SIZE, Math.min(right, bounds.width));
+      bottom = Math.max(top + MIN_CROP_SIZE, Math.min(bottom, bounds.height));
+
+      next = {
+        x: left,
+        y: top,
+        width: right - left,
+        height: bottom - top,
+      };
+    }
+
+    setCropRect(next);
+  };
+
+  const onCropPointerUp = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const handleUpload = async (): Promise<void> => {
+    if (!noteId || !pendingFile) return;
     setUploading(true);
     try {
-      const processed = await renderProcessedFile(file, zoom, offsetX, offsetY);
+      const img = cropImageRef.current;
+      let sourceCrop: CropRect | undefined;
+      if (cropRect && img && sourceSize) {
+        const bounds = img.getBoundingClientRect();
+        const xScale = sourceSize.width / bounds.width;
+        const yScale = sourceSize.height / bounds.height;
+        sourceCrop = {
+          x: cropRect.x * xScale,
+          y: cropRect.y * yScale,
+          width: cropRect.width * xScale,
+          height: cropRect.height * yScale,
+        };
+      }
+
+      const processed = await renderProcessedFile(pendingFile, sourceCrop);
       await noteAttachmentAPI.upload(noteId, processed, '', setUploadProgress);
       await loadAttachments();
+
+      if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
       setPendingFile(null);
-      setZoom(1);
-      setOffsetX(0);
-      setOffsetY(0);
+      setPendingPreviewUrl(null);
+      setCropRect(null);
+      setSourceSize(null);
     } finally {
       setUploading(false);
       setUploadProgress(0);
     }
+  };
+
+  const resetCrop = (): void => {
+    const img = cropImageRef.current;
+    if (!img) return;
+    const bounds = img.getBoundingClientRect();
+    setCropRect({
+      x: bounds.width * 0.1,
+      y: bounds.height * 0.1,
+      width: bounds.width * 0.8,
+      height: bounds.height * 0.8,
+    });
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
@@ -163,12 +296,17 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
 
         {noteId && (
           <Box sx={{ mb: 2 }}>
-            <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(e) => {
+            <input ref={galleryInputRef} type="file" accept="image/*" hidden onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) setPendingFile(file);
+              if (file) openCropDialog(file);
             }} />
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-              <Button variant="outlined" onClick={() => fileInputRef.current?.click()}>Foto hinzufügen</Button>
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) openCropDialog(file);
+            }} />
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
+              <Button variant="outlined" onClick={() => cameraInputRef.current?.click()}>Foto aufnehmen</Button>
+              <Button variant="outlined" onClick={() => galleryInputRef.current?.click()}>Aus Galerie wählen</Button>
               {uploading && <Typography variant="body2">Uploading...</Typography>}
             </Stack>
             {uploading && <LinearProgress variant="determinate" value={uploadProgress} />}
@@ -216,14 +354,58 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
       <Dialog open={Boolean(pendingFile)} onClose={() => setPendingFile(null)} maxWidth="md" fullWidth>
         <DialogTitle>Crop</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" sx={{ mb: 1 }}>Optional crop with zoom and drag offsets before upload.</Typography>
-          <Slider min={1} max={3} step={0.1} value={zoom} onChange={(_, v) => setZoom(v as number)} valueLabelDisplay="auto" />
-          <Slider min={-800} max={800} step={5} value={offsetX} onChange={(_, v) => setOffsetX(v as number)} valueLabelDisplay="auto" />
-          <Slider min={-800} max={800} step={5} value={offsetY} onChange={(_, v) => setOffsetY(v as number)} valueLabelDisplay="auto" />
+          <Typography variant="body2" sx={{ mb: 1 }}>Draw, move and resize the crop rectangle. The outside area is dimmed.</Typography>
+          <Box
+            data-testid="crop-stage"
+            sx={{ position: 'relative', width: '100%', maxHeight: 420, overflow: 'auto', userSelect: 'none' }}
+            onPointerMove={onCropPointerMove}
+            onPointerUp={onCropPointerUp}
+            onPointerCancel={onCropPointerUp}
+            onPointerDown={(event) => onCropPointerDown(event, 'draw')}
+          >
+            {pendingPreviewUrl && (
+              <img
+                ref={cropImageRef}
+                src={pendingPreviewUrl}
+                alt="Crop source"
+                style={{ width: '100%', display: 'block' }}
+                onLoad={(event) => {
+                  const img = event.currentTarget;
+                  setSourceSize({ width: img.naturalWidth, height: img.naturalHeight });
+                  const bounds = img.getBoundingClientRect();
+                  setCropRect({
+                    x: bounds.width * 0.1,
+                    y: bounds.height * 0.1,
+                    width: bounds.width * 0.8,
+                    height: bounds.height * 0.8,
+                  });
+                }}
+              />
+            )}
+            {cropRect && (
+              <>
+                <Box sx={{ position: 'absolute', left: cropRect.x, top: cropRect.y, width: cropRect.width, height: cropRect.height, boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)', border: '2px solid #fff', cursor: 'move' }} onPointerDown={(event) => { event.stopPropagation(); onCropPointerDown(event, 'move'); }} />
+                {([
+                  { key: 'nw', x: cropRect.x, y: cropRect.y, mode: 'resize-nw', cursor: 'nwse-resize' },
+                  { key: 'ne', x: cropRect.x + cropRect.width, y: cropRect.y, mode: 'resize-ne', cursor: 'nesw-resize' },
+                  { key: 'sw', x: cropRect.x, y: cropRect.y + cropRect.height, mode: 'resize-sw', cursor: 'nesw-resize' },
+                  { key: 'se', x: cropRect.x + cropRect.width, y: cropRect.y + cropRect.height, mode: 'resize-se', cursor: 'nwse-resize' },
+                ] as const).map((handle) => (
+                  <Box
+                    key={handle.key}
+                    data-testid={`crop-handle-${handle.key}`}
+                    sx={{ position: 'absolute', left: handle.x - 7, top: handle.y - 7, width: 14, height: 14, borderRadius: '50%', border: '2px solid #fff', backgroundColor: 'primary.main', cursor: handle.cursor }}
+                    onPointerDown={(event) => { event.stopPropagation(); onCropPointerDown(event, handle.mode); }}
+                  />
+                ))}
+              </>
+            )}
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setZoom(1); setOffsetX(0); setOffsetY(0); }}>Reset</Button>
-          <Button onClick={() => { if (pendingFile) void handleUpload(pendingFile); }} disabled={uploading} variant="contained">Save</Button>
+          <Button onClick={() => { if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl); setPendingFile(null); setPendingPreviewUrl(null); setCropRect(null); setSourceSize(null); }}>Cancel</Button>
+          <Button onClick={resetCrop}>Reset</Button>
+          <Button onClick={() => void handleUpload()} disabled={uploading} variant="contained">Save</Button>
         </DialogActions>
       </Dialog>
     </Drawer>
