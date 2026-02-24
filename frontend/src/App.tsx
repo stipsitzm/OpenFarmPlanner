@@ -10,7 +10,6 @@
 
 import { createBrowserRouter, RouterProvider, Outlet, NavLink } from 'react-router-dom';
 import { useTranslation } from './i18n';
-import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 import Home from './pages/Home';
 import Locations from './pages/Locations';
 import FieldsBedsHierarchy from './pages/FieldsBedsHierarchy';
@@ -26,9 +25,6 @@ import './App.css';
  */
 function RootLayout(): React.ReactElement {
   const { t } = useTranslation('navigation');
-  
-  // Enable keyboard navigation shortcuts
-  useKeyboardNavigation();
   
   return (
     <div className="app">

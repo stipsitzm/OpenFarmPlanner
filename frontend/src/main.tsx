@@ -6,12 +6,15 @@ import App from './App.tsx'
 import { ThemeProvider } from '@mui/material/styles'
 import { CssBaseline } from '@mui/material'
 import theme from './theme'
+import { CommandProvider } from './commands/CommandProvider'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <App />
+      <CommandProvider>
+        <App />
+      </CommandProvider>
     </ThemeProvider>
   </StrictMode>,
 )

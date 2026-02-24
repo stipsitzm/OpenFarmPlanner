@@ -8,7 +8,7 @@
  * @returns The Cultures page component
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture } from '../api/api';
@@ -29,6 +29,7 @@ import {
   Menu,
   MenuItem,
   Snackbar,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -44,10 +45,13 @@ import {
   downloadJsonFile,
 } from '../cultures/exportUtils';
 import { parseCultureImportJson } from '../cultures/importUtils';
+import { useCommandContext, useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
+import type { CommandSpec } from '../commands/types';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
   const navigate = useNavigate();
+  const { openPalette } = useCommandContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCultureParam = searchParams.get('cultureId');
   const parseCultureId = (value: string | null): number | undefined => {
@@ -102,6 +106,7 @@ function Cultures(): React.ReactElement {
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
+  const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
@@ -212,19 +217,26 @@ function Cultures(): React.ReactElement {
     setShowForm(true);
   };
 
-  const handleDelete = async (culture: Culture) => {
-    if (window.confirm(t('buttons.deleteConfirm'))) {
-      try {
-        await cultureAPI.delete(culture.id!);
-        await fetchCultures();
-        if (selectedCultureId === culture.id) {
-          updateSelectedCultureId(undefined, 'internal');
-        }
-        showSnackbar(t('messages.updateSuccess'), 'success');
-      } catch (error) {
-        console.error('Error deleting culture:', error);
-        showSnackbar(t('messages.updateError'), 'error');
+  const handleDelete = (culture: Culture) => {
+    setDeleteDialogCulture(culture);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialogCulture?.id) {
+      return;
+    }
+
+    try {
+      await cultureAPI.delete(deleteDialogCulture.id);
+      await fetchCultures();
+      if (selectedCultureId === deleteDialogCulture.id) {
+        updateSelectedCultureId(undefined, 'internal');
       }
+      showSnackbar(t('messages.updateSuccess'), 'success');
+      setDeleteDialogCulture(null);
+    } catch (error) {
+      console.error('Error deleting culture:', error);
+      showSnackbar(t('messages.updateError'), 'error');
     }
   };
 
@@ -476,39 +488,154 @@ function Cultures(): React.ReactElement {
 
   const selectedCulture = cultures.find(c => c.id === selectedCultureId);
 
+  useCommandContextTag('cultureDetail');
+
+  const getCultureLabel = useCallback((culture: Culture): string => {
+    return `${culture.name}${culture.variety ? ` – ${culture.variety}` : ''}${culture.seed_supplier ? ` | ${culture.seed_supplier}` : ''}`;
+  }, []);
+
+  const goToRelativeCulture = useCallback((direction: 'next' | 'previous') => {
+    if (!selectedCultureId || cultures.length === 0) {
+      return;
+    }
+
+    const currentIndex = cultures.findIndex((culture) => culture.id === selectedCultureId);
+    if (currentIndex === -1) {
+      return;
+    }
+
+    const delta = direction === 'next' ? 1 : -1;
+    const nextIndex = (currentIndex + delta + cultures.length) % cultures.length;
+    updateSelectedCultureId(cultures[nextIndex]?.id, 'internal');
+  }, [cultures, selectedCultureId, updateSelectedCultureId]);
+
+  const commandSpecs = useMemo<CommandSpec[]>(() => {
+    return [
+      {
+        id: 'culture.edit',
+        title: 'Kultur bearbeiten (Alt+E)',
+        keywords: ['kultur', 'bearbeiten', 'edit'],
+        shortcutHint: 'Alt+E',
+        keys: { alt: true, key: 'e' },
+        contextTags: ['cultureDetail'],
+        isAvailable: () => Boolean(selectedCulture),
+        run: () => { if (selectedCulture) { handleEdit(selectedCulture); } },
+      },
+      {
+        id: 'culture.delete',
+        title: 'Kultur löschen (Alt+Shift+D)',
+        keywords: ['kultur', 'löschen', 'delete'],
+        shortcutHint: 'Alt+Shift+D',
+        keys: { alt: true, shift: true, key: 'd' },
+        contextTags: ['cultureDetail'],
+        isAvailable: () => Boolean(selectedCulture),
+        run: () => { if (selectedCulture) { handleDelete(selectedCulture); } },
+      },
+      {
+        id: 'culture.exportCurrent',
+        title: 'JSON exportieren (Alt+J)',
+        keywords: ['json', 'export', 'kultur'],
+        shortcutHint: 'Alt+J',
+        keys: { alt: true, key: 'j' },
+        contextTags: ['cultureDetail'],
+        isAvailable: () => Boolean(selectedCulture),
+        run: handleExportCurrentCulture,
+      },
+      {
+        id: 'culture.exportAll',
+        title: 'Alle Kulturen exportieren (Alt+Shift+J)',
+        keywords: ['json', 'export', 'alle', 'kulturen'],
+        shortcutHint: 'Alt+Shift+J',
+        keys: { alt: true, shift: true, key: 'j' },
+        contextTags: ['cultureDetail'],
+        isAvailable: () => true,
+        run: handleExportAllCultures,
+      },
+      {
+        id: 'culture.import',
+        title: 'JSON importieren (Alt+I)',
+        keywords: ['json', 'import'],
+        shortcutHint: 'Alt+I',
+        keys: { alt: true, key: 'i' },
+        contextTags: ['cultureDetail'],
+        isAvailable: () => true,
+        run: handleImportFileTrigger,
+      },
+      {
+        id: 'culture.createPlan',
+        title: 'Anbauplan erstellen (Alt+P)',
+        keywords: ['anbauplan', 'planting', 'plan'],
+        shortcutHint: 'Alt+P',
+        keys: { alt: true, key: 'p' },
+        contextTags: ['cultureDetail'],
+        isAvailable: () => Boolean(selectedCultureId),
+        run: handleCreatePlantingPlan,
+      },
+      {
+        id: 'culture.previous',
+        title: 'Vorherige Kultur (Alt+Shift+←)',
+        keywords: ['vorherige', 'kultur', 'left'],
+        shortcutHint: 'Alt+Shift+←',
+        keys: { alt: true, shift: true, key: 'ArrowLeft' },
+        contextTags: ['cultureDetail'],
+        isAvailable: () => cultures.length > 1 && Boolean(selectedCultureId),
+        run: () => goToRelativeCulture('previous'),
+      },
+      {
+        id: 'culture.next',
+        title: 'Nächste Kultur (Alt+Shift+→)',
+        keywords: ['nächste', 'kultur', 'right'],
+        shortcutHint: 'Alt+Shift+→',
+        keys: { alt: true, shift: true, key: 'ArrowRight' },
+        contextTags: ['cultureDetail'],
+        isAvailable: () => cultures.length > 1 && Boolean(selectedCultureId),
+        run: () => goToRelativeCulture('next'),
+      },
+    ];
+  }, [cultures.length, goToRelativeCulture, handleCreatePlantingPlan, handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, selectedCulture, selectedCultureId]);
+
+  useRegisterCommands('cultures-page', commandSpecs);
+
   return (
     <div className="page-container">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <h1>{t('title')}</h1>
-        <ButtonGroup variant="contained" aria-label={t('buttons.addNew')}>
-          <Button startIcon={<AddIcon />} onClick={handleAddNew}>
-            {t('buttons.addNew')}
-          </Button>
-          <Button
-            size="small"
-            aria-label={t('import.menuLabel')}
-            aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
-            aria-haspopup="true"
-            onClick={handleImportMenuOpen}
-            sx={{ minWidth: 32, px: 0.5 }}
-          >
-            <ArrowDropDownIcon />
-          </Button>
-        </ButtonGroup>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="Command Palette (Alt+K)">
+            <Button aria-label="Command Palette (Alt+K)" variant="outlined" onClick={openPalette}>
+              Command Palette
+            </Button>
+          </Tooltip>
+          <ButtonGroup variant="contained" aria-label={t('buttons.addNew')}>
+            <Button startIcon={<AddIcon />} onClick={handleAddNew}>
+              {t('buttons.addNew')}
+            </Button>
+            <Button
+              size="small"
+              aria-label={t('import.menuLabel')}
+              aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
+              aria-haspopup="true"
+              onClick={handleImportMenuOpen}
+              sx={{ minWidth: 32, px: 0.5 }}
+            >
+              <ArrowDropDownIcon />
+            </Button>
+          </ButtonGroup>
+        </Box>
         <Menu
           id="culture-import-menu"
           anchorEl={importMenuAnchor}
           open={Boolean(importMenuAnchor)}
           onClose={handleImportMenuClose}
         >
-          <MenuItem onClick={handleExportCurrentCulture} disabled={!selectedCulture}>
-            {t('export.current')}
+          <MenuItem aria-label="JSON exportieren (Alt+J)" onClick={handleExportCurrentCulture} disabled={!selectedCulture}>
+            JSON exportieren (Alt+J)
           </MenuItem>
-          <MenuItem onClick={handleExportAllCultures}>
-            {t('export.all')}
+          <MenuItem aria-label="Alle Kulturen exportieren (Alt+Shift+J)" onClick={handleExportAllCultures}>
+            Alle Kulturen exportieren (Alt+Shift+J)
           </MenuItem>
-          <MenuItem onClick={handleImportFileTrigger}>
-            {t('import.menuItem')}
+          <MenuItem aria-label="JSON importieren (Alt+I)" onClick={handleImportFileTrigger}>
+            JSON importieren (Alt+I)
           </MenuItem>
         </Menu>
         <input
@@ -530,31 +657,74 @@ function Cultures(): React.ReactElement {
 
       {/* Action buttons for selected culture */}
       {selectedCulture && (
-        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-          <Button
-            variant="contained"
-            startIcon={<AgricultureIcon />}
-            onClick={handleCreatePlantingPlan}
-          >
-            {t('buttons.createPlantingPlan')}
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<EditIcon />}
-            onClick={() => handleEdit(selectedCulture)}
-          >
-            {t('buttons.edit')}
-          </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={() => handleDelete(selectedCulture)}
-          >
-            {t('buttons.delete')}
-          </Button>
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+          <Tooltip title="Vorherige Kultur (Alt+Shift+←)">
+            <span>
+              <Button aria-label="Vorherige Kultur (Alt+Shift+←)" variant="outlined" onClick={() => goToRelativeCulture('previous')} disabled={cultures.length < 2}>
+                ←
+              </Button>
+            </span>
+          </Tooltip>
+          <Tooltip title="Nächste Kultur (Alt+Shift+→)">
+            <span>
+              <Button aria-label="Nächste Kultur (Alt+Shift+→)" variant="outlined" onClick={() => goToRelativeCulture('next')} disabled={cultures.length < 2}>
+                →
+              </Button>
+            </span>
+          </Tooltip>
+          <Tooltip title="Anbauplan erstellen (Alt+P)">
+            <Button
+              aria-label="Anbauplan erstellen (Alt+P)"
+              variant="contained"
+              startIcon={<AgricultureIcon />}
+              onClick={handleCreatePlantingPlan}
+            >
+              {t('buttons.createPlantingPlan')}
+            </Button>
+          </Tooltip>
+          <Tooltip title="Kultur bearbeiten (Alt+E)">
+            <Button
+              aria-label="Kultur bearbeiten (Alt+E)"
+              variant="outlined"
+              startIcon={<EditIcon />}
+              onClick={() => handleEdit(selectedCulture)}
+            >
+              {t('buttons.edit')}
+            </Button>
+          </Tooltip>
+          <Tooltip title="Kultur löschen (Alt+Shift+D)">
+            <Button
+              aria-label="Kultur löschen (Alt+Shift+D)"
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={() => handleDelete(selectedCulture)}
+            >
+              {t('buttons.delete')}
+            </Button>
+          </Tooltip>
         </Box>
       )}
+
+      <Dialog open={Boolean(deleteDialogCulture)} onClose={() => setDeleteDialogCulture(null)}>
+        <DialogTitle>{t('buttons.delete')}</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {t('buttons.deleteConfirm')}
+          </Typography>
+          {deleteDialogCulture && (
+            <Typography sx={{ mt: 1, fontWeight: 600 }}>
+              {getCultureLabel(deleteDialogCulture)}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogCulture(null)}>Abbrechen</Button>
+          <Button color="error" variant="contained" onClick={handleDeleteConfirm}>
+            {t('buttons.delete')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Form Dialog */}
       <Dialog

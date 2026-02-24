@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import type { ReactElement } from 'react';
 import Cultures from '../pages/Cultures';
+import { CommandProvider } from '../commands/CommandProvider';
 
 const {
   listMock,
@@ -55,7 +56,7 @@ function renderCultures(initialEntry = '/cultures'): void {
           element={(
             <>
               <SearchIndicator />
-              <Cultures />
+              <CommandProvider><Cultures /></CommandProvider>
             </>
           )}
         />

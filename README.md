@@ -320,3 +320,29 @@ The built files will be in `frontend/dist/`
 ## License
 
 This project is open source and available for use.
+
+## Keyboard shortcuts and Command Palette
+
+OpenFarmPlanner supports browser-safe **Alt / Alt+Shift** shortcuts that are discoverable in UI tooltips and the Command Palette.
+
+- `Alt+K`: Open Command Palette
+- On culture detail context:
+  - `Alt+E`: Kultur bearbeiten
+  - `Alt+Shift+D`: Kultur löschen (opens confirmation dialog)
+  - `Alt+J`: JSON exportieren (aktuelle Kultur)
+  - `Alt+Shift+J`: Alle Kulturen exportieren
+  - `Alt+I`: JSON importieren (opens import flow)
+  - `Alt+P`: Anbauplan erstellen
+  - `Alt+Shift+←`: Vorherige Kultur
+  - `Alt+Shift+→`: Nächste Kultur
+
+### Adding new commands
+
+Commands are defined via `CommandSpec` and registered in page components using `useRegisterCommands`.
+Each command can provide:
+- `title`, `keywords`, `shortcutHint`
+- `contextTags` and `isAvailable()` for context-aware availability
+- `run()` action
+- optional keyboard `keys` mapping (Alt/Shift only)
+
+Keyboard handling is centralized in `useKeyboardShortcuts` and only calls `preventDefault()` on exact, context-allowed matches.
