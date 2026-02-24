@@ -8,7 +8,7 @@
  * @returns The Gantt Chart page component
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from '../i18n';
 import { Box, Alert, Paper, FormControlLabel, Switch, Typography, Tooltip } from '@mui/material';
 import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, cultureAPI, yieldCalendarAPI, type PlantingPlan, type Bed, type Field, type Location, type Culture, type YieldCalendarWeek } from '../api/api';
@@ -167,6 +167,15 @@ function GanttChartPage(): React.ReactElement {
     fetchData();
   }, [displayYear, t]);
   
+  const refreshWeeklyYield = useCallback(async (): Promise<void> => {
+    try {
+      const weeklyYieldRes = await yieldCalendarAPI.list(displayYear);
+      setWeeklyYield(weeklyYieldRes.data);
+    } catch (err) {
+      console.error('Error refreshing weekly yield data:', err);
+    }
+  }, [displayYear]);
+
   /**
    * Format date to API format (YYYY-MM-DD)
    */
@@ -232,14 +241,16 @@ function GanttChartPage(): React.ReactElement {
       setPlantingPlans(prev => prev.map(p => 
         p.id === planId ? response.data : p
       ));
-      
+
+      await refreshWeeklyYield();
+
       console.log('Successfully updated planting plan:', planId, 'New planting_date:', newPlantingDate);
     } catch (err) {
       console.error('Error updating planting plan:', err);
       setError('Fehler beim Aktualisieren des Anbau plans');
     }
   };
-  
+
   /**
    * Get color for a culture from the cultures list
    */
@@ -494,36 +505,50 @@ function GanttChartPage(): React.ReactElement {
               ))}
             </Box>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: 1, alignItems: 'stretch' }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column-reverse', justifyContent: 'space-between', height: 280 }}>
-                {yAxisTicks.map((tick) => (
-                  <Typography key={tick} variant="caption" sx={{ textAlign: 'right', color: 'text.secondary' }}>
-                    {tick.toFixed(1)} kg
-                  </Typography>
-                ))}
+            <Box sx={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: 1, alignItems: 'start' }}>
+              <Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column-reverse', justifyContent: 'space-between', height: 260, pr: 1 }}>
+                  {yAxisTicks.map((tick) => (
+                    <Typography key={tick} variant="caption" sx={{ textAlign: 'right', color: 'text.secondary' }}>
+                      {tick.toFixed(1)} kg
+                    </Typography>
+                  ))}
+                </Box>
+                <Box sx={{ height: 44 }} />
               </Box>
 
-              <Box sx={{ borderLeft: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db', height: 280, px: 1, display: 'flex', alignItems: 'flex-end', gap: 0.75, overflowX: 'auto' }}>
-                {chartData.map((week) => (
-                  <Box key={week.isoWeek} sx={{ width: 34, flex: '0 0 34px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
-                    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column-reverse', justifyContent: 'flex-start' }}>
-                      {week.cultures.map((culture) => (
-                        <Tooltip key={`${week.isoWeek}-${culture.culture_id}`} title={`${culture.culture_name}: ${culture.yield.toFixed(2)} kg`}>
-                          <Box
-                            sx={{
-                              width: '100%',
-                              height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
-                              minHeight: culture.yield > 0 ? '2px' : 0,
-                              backgroundColor: culture.color,
-                            }}
-                          />
-                        </Tooltip>
-                      ))}
-                    </Box>
-                    <Typography variant="caption" sx={{ mt: 0.5, fontWeight: 600 }}>{week.weekLabel}</Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>{week.monthLabel}</Typography>
+              <Box sx={{ overflowX: 'auto', pb: 0.5 }}>
+                <Box sx={{ width: Math.max(chartData.length * 40, 420) }}>
+                  <Box sx={{ borderLeft: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db', height: 260, px: 1, display: 'flex', alignItems: 'flex-end', gap: 0.75 }}>
+                    {chartData.map((week) => (
+                      <Box key={week.isoWeek} sx={{ width: 34, flex: '0 0 34px', height: '100%', display: 'flex', alignItems: 'flex-end' }}>
+                        <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column-reverse', justifyContent: 'flex-start' }}>
+                          {week.cultures.map((culture) => (
+                            <Tooltip key={`${week.isoWeek}-${culture.culture_id}`} title={`${culture.culture_name}: ${culture.yield.toFixed(2)} kg`}>
+                              <Box
+                                sx={{
+                                  width: '100%',
+                                  height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
+                                  minHeight: culture.yield > 0 ? '2px' : 0,
+                                  backgroundColor: culture.color,
+                                }}
+                              />
+                            </Tooltip>
+                          ))}
+                        </Box>
+                      </Box>
+                    ))}
                   </Box>
-                ))}
+
+                  <Box sx={{ height: 44, px: 1, display: 'flex', gap: 0.75, alignItems: 'flex-start' }}>
+                    {chartData.map((week) => (
+                      <Box key={`${week.isoWeek}-axis`} sx={{ width: 34, flex: '0 0 34px', textAlign: 'center' }}>
+                        <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, lineHeight: 1.2 }}>{week.weekLabel}</Typography>
+                        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', lineHeight: 1.2 }}>{week.monthLabel}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
               </Box>
             </Box>
 
