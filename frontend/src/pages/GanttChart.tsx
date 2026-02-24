@@ -54,7 +54,14 @@ interface WeeklyYieldCultureMeta {
   id: number;
   name: string;
   color: string;
-  dataKey: string;
+}
+
+interface WeeklyYieldChartColumn {
+  isoWeek: string;
+  weekLabel: string;
+  monthLabel: string;
+  cultures: YieldCalendarWeek['cultures'];
+  totalYield: number;
 }
 
 
@@ -378,24 +385,26 @@ function GanttChartPage(): React.ReactElement {
   const { chartData, chartCultures, maxTotalYield } = useMemo(() => {
     const cultureMeta = new Map<number, WeeklyYieldCultureMeta>();
 
-    const rows = weeklyYield.map((week) => {
+    const rows: WeeklyYieldChartColumn[] = weeklyYield.map((week) => {
       const culturesForWeek = week.cultures.map((entry) => {
         if (!cultureMeta.has(entry.culture_id)) {
           cultureMeta.set(entry.culture_id, {
             id: entry.culture_id,
             name: entry.culture_name,
             color: entry.color,
-            dataKey: `culture_${entry.culture_id}`
           });
         }
         return entry;
       });
 
       const totalYield = culturesForWeek.reduce((sum, item) => sum + item.yield, 0);
+      const weekStartDate = parseDateString(week.week_start);
+      const monthLabel = weekStartDate.toLocaleDateString('de-DE', { month: 'short' });
 
       return {
         isoWeek: week.iso_week,
         weekLabel: week.iso_week.split('-W')[1] ? `W${week.iso_week.split('-W')[1]}` : week.iso_week,
+        monthLabel,
         cultures: culturesForWeek,
         totalYield,
       };
@@ -410,6 +419,17 @@ function GanttChartPage(): React.ReactElement {
       maxTotalYield: maxYield,
     };
   }, [weeklyYield]);
+
+  const yAxisTicks = useMemo(() => {
+    const tickCount = 5;
+    if (maxTotalYield <= 0) {
+      return [0];
+    }
+    return Array.from({ length: tickCount }, (_, idx) => {
+      const value = (maxTotalYield / (tickCount - 1)) * idx;
+      return Number(value.toFixed(1));
+    });
+  }, [maxTotalYield]);
 
   if (loading) {
     return (
@@ -474,27 +494,42 @@ function GanttChartPage(): React.ReactElement {
               ))}
             </Box>
 
-            <Box sx={{ display: 'grid', gap: 1.25 }}>
-              {chartData.map((week) => (
-                <Box key={week.isoWeek} sx={{ display: 'grid', gridTemplateColumns: '56px 1fr 72px', gap: 1, alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{week.weekLabel}</Typography>
-                  <Box sx={{ display: 'flex', width: '100%', height: 24, borderRadius: 1, overflow: 'hidden', backgroundColor: '#f3f4f6' }}>
-                    {week.cultures.map((culture) => (
-                      <Tooltip key={`${week.isoWeek}-${culture.culture_id}`} title={`${culture.culture_name}: ${culture.yield.toFixed(2)} kg`}>
-                        <Box
-                          sx={{
-                            width: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
-                            minWidth: culture.yield > 0 ? '2px' : 0,
-                            backgroundColor: culture.color,
-                          }}
-                        />
-                      </Tooltip>
-                    ))}
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Y-Achse: Ertrag (kg)</Typography>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: 1, alignItems: 'stretch' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column-reverse', justifyContent: 'space-between', height: 280 }}>
+                {yAxisTicks.map((tick) => (
+                  <Typography key={tick} variant="caption" sx={{ textAlign: 'right', color: 'text.secondary' }}>
+                    {tick.toFixed(1)}
+                  </Typography>
+                ))}
+              </Box>
+
+              <Box sx={{ borderLeft: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db', height: 280, px: 1, display: 'flex', alignItems: 'flex-end', gap: 0.75, overflowX: 'auto' }}>
+                {chartData.map((week) => (
+                  <Box key={week.isoWeek} sx={{ width: 34, flex: '0 0 34px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
+                    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column-reverse', justifyContent: 'flex-start' }}>
+                      {week.cultures.map((culture) => (
+                        <Tooltip key={`${week.isoWeek}-${culture.culture_id}`} title={`${culture.culture_name}: ${culture.yield.toFixed(2)} kg`}>
+                          <Box
+                            sx={{
+                              width: '100%',
+                              height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
+                              minHeight: culture.yield > 0 ? '2px' : 0,
+                              backgroundColor: culture.color,
+                            }}
+                          />
+                        </Tooltip>
+                      ))}
+                    </Box>
+                    <Typography variant="caption" sx={{ mt: 0.5, fontWeight: 600 }}>{week.weekLabel}</Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>{week.monthLabel}</Typography>
                   </Box>
-                  <Typography variant="body2" sx={{ textAlign: 'right' }}>{week.totalYield.toFixed(2)} kg</Typography>
-                </Box>
-              ))}
+                ))}
+              </Box>
             </Box>
+
+            <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>X-Achse: Kalenderwochen (mit Monat)</Typography>
           </Box>
         )}
       </Paper>
