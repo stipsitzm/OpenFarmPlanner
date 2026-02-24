@@ -9,6 +9,7 @@ from .views import (
     PlantingPlanViewSet,
     TaskViewSet,
     SeedDemandListView,
+    YieldCalendarListView,
 )
 
 router = DefaultRouter()
@@ -22,5 +23,6 @@ router.register(r'tasks', TaskViewSet)
 
 urlpatterns = [
     path('seed-demand/', SeedDemandListView.as_view(), name='seed-demand-list'),
+    path('yield-calendar/', YieldCalendarListView.as_view(), name='yield-calendar-list'),
     path('', include(router.urls)),
 ]

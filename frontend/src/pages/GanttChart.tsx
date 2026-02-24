@@ -8,10 +8,10 @@
  * @returns The Gantt Chart page component
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from '../i18n';
-import { Box, Alert, Paper, FormControlLabel, Switch } from '@mui/material';
-import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, cultureAPI, type PlantingPlan, type Bed, type Field, type Location, type Culture } from '../api/api';
+import { Box, Alert, Paper, FormControlLabel, Switch, Typography, Tooltip } from '@mui/material';
+import { plantingPlanAPI, bedAPI, fieldAPI, locationAPI, cultureAPI, yieldCalendarAPI, type PlantingPlan, type Bed, type Field, type Location, type Culture, type YieldCalendarWeek } from '../api/api';
 import GanttChart, { ViewMode } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
@@ -49,6 +49,21 @@ interface TaskGroup {
   isGroup?: boolean; // For hierarchy groups
   level?: number; // Hierarchy level: 0=location, 1=field, 2=bed
 }
+
+interface WeeklyYieldCultureMeta {
+  id: number;
+  name: string;
+  color: string;
+}
+
+interface WeeklyYieldChartColumn {
+  isoWeek: string;
+  weekLabel: string;
+  monthLabel: string;
+  cultures: YieldCalendarWeek['cultures'];
+  totalYield: number;
+}
+
 
 /**
  * Parse date string from API to local Date object
@@ -94,6 +109,7 @@ function GanttChartPage(): React.ReactElement {
   const [beds, setBeds] = useState<Bed[]>([]);
   const [plantingPlans, setPlantingPlans] = useState<PlantingPlan[]>([]);
   const [cultures, setCultures] = useState<Culture[]>([]);
+  const [weeklyYield, setWeeklyYield] = useState<YieldCalendarWeek[]>([]);
   
   // UI state
   const [editMode, setEditMode] = useState(false);
@@ -125,12 +141,13 @@ function GanttChartPage(): React.ReactElement {
         setLoading(true);
         setError(null);
         
-        const [locationsRes, fieldsRes, bedsRes, plansRes, culturesRes] = await Promise.all([
+        const [locationsRes, fieldsRes, bedsRes, plansRes, culturesRes, weeklyYieldRes] = await Promise.all([
           locationAPI.list(),
           fieldAPI.list(),
           bedAPI.list(),
           plantingPlanAPI.list(),
           cultureAPI.list(),
+          yieldCalendarAPI.list(displayYear),
         ]);
         
         setLocations(locationsRes.data.results);
@@ -138,6 +155,7 @@ function GanttChartPage(): React.ReactElement {
         setBeds(bedsRes.data.results);
         setPlantingPlans(plansRes.data.results);
         setCultures(culturesRes.data.results);
+        setWeeklyYield(weeklyYieldRes.data);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(t('ganttChart:errors.load'));
@@ -147,8 +165,17 @@ function GanttChartPage(): React.ReactElement {
     };
     
     fetchData();
-  }, [t]);
+  }, [displayYear, t]);
   
+  const refreshWeeklyYield = useCallback(async (): Promise<void> => {
+    try {
+      const weeklyYieldRes = await yieldCalendarAPI.list(displayYear);
+      setWeeklyYield(weeklyYieldRes.data);
+    } catch (err) {
+      console.error('Error refreshing weekly yield data:', err);
+    }
+  }, [displayYear]);
+
   /**
    * Format date to API format (YYYY-MM-DD)
    */
@@ -214,14 +241,16 @@ function GanttChartPage(): React.ReactElement {
       setPlantingPlans(prev => prev.map(p => 
         p.id === planId ? response.data : p
       ));
-      
+
+      await refreshWeeklyYield();
+
       console.log('Successfully updated planting plan:', planId, 'New planting_date:', newPlantingDate);
     } catch (err) {
       console.error('Error updating planting plan:', err);
       setError('Fehler beim Aktualisieren des Anbau plans');
     }
   };
-  
+
   /**
    * Get color for a culture from the cultures list
    */
@@ -363,6 +392,56 @@ function GanttChartPage(): React.ReactElement {
   const startDate = useMemo(() => new Date(displayYear, 0, 1), [displayYear]);
   const endDate = useMemo(() => new Date(displayYear, 11, 31), [displayYear]);
   
+
+  const { chartData, chartCultures, maxTotalYield } = useMemo(() => {
+    const cultureMeta = new Map<number, WeeklyYieldCultureMeta>();
+
+    const rows: WeeklyYieldChartColumn[] = weeklyYield.map((week) => {
+      const culturesForWeek = week.cultures.map((entry) => {
+        if (!cultureMeta.has(entry.culture_id)) {
+          cultureMeta.set(entry.culture_id, {
+            id: entry.culture_id,
+            name: entry.culture_name,
+            color: entry.color,
+          });
+        }
+        return entry;
+      });
+
+      const totalYield = culturesForWeek.reduce((sum, item) => sum + item.yield, 0);
+      const weekStartDate = parseDateString(week.week_start);
+      const monthLabel = weekStartDate.toLocaleDateString('de-DE', { month: 'short' });
+
+      return {
+        isoWeek: week.iso_week,
+        weekLabel: week.iso_week.split('-W')[1] ? `W${week.iso_week.split('-W')[1]}` : week.iso_week,
+        monthLabel,
+        cultures: culturesForWeek,
+        totalYield,
+      };
+    });
+
+    const sortedCultures = [...cultureMeta.values()].sort((a, b) => a.name.localeCompare(b.name));
+    const maxYield = rows.reduce((max, row) => Math.max(max, row.totalYield), 0);
+
+    return {
+      chartData: rows,
+      chartCultures: sortedCultures,
+      maxTotalYield: maxYield,
+    };
+  }, [weeklyYield]);
+
+  const yAxisTicks = useMemo(() => {
+    const tickCount = 5;
+    if (maxTotalYield <= 0) {
+      return [0];
+    }
+    return Array.from({ length: tickCount }, (_, idx) => {
+      const value = (maxTotalYield / (tickCount - 1)) * idx;
+      return Number(value.toFixed(1));
+    });
+  }, [maxTotalYield]);
+
   if (loading) {
     return (
       <div className="page-container">
@@ -406,6 +485,74 @@ function GanttChartPage(): React.ReactElement {
             darkMode={false}
             onTaskUpdate={handleTaskUpdate}
           />
+        )}
+      </Paper>
+
+      <Paper className="gantt-container-wrapper" sx={{ mt: 3, p: 2 }}>
+        <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
+          Ertragsverteilung (Wochenbasis)
+        </Typography>
+        {chartData.length === 0 ? (
+          <div className="gantt-no-data">Keine erwarteten Erträge für dieses Jahr vorhanden.</div>
+        ) : (
+          <Box sx={{ width: '100%' }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+              {chartCultures.map((culture) => (
+                <Box key={culture.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: '2px', backgroundColor: culture.color }} />
+                  <Typography variant="body2">{culture.name}</Typography>
+                </Box>
+              ))}
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: 1, alignItems: 'start' }}>
+              <Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column-reverse', justifyContent: 'space-between', height: 260, pr: 1 }}>
+                  {yAxisTicks.map((tick) => (
+                    <Typography key={tick} variant="caption" sx={{ textAlign: 'right', color: 'text.secondary' }}>
+                      {tick.toFixed(1)} kg
+                    </Typography>
+                  ))}
+                </Box>
+                <Box sx={{ height: 44 }} />
+              </Box>
+
+              <Box sx={{ overflowX: 'auto', pb: 0.5 }}>
+                <Box sx={{ width: Math.max(chartData.length * 40, 420) }}>
+                  <Box sx={{ borderLeft: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db', height: 260, px: 1, display: 'flex', alignItems: 'flex-end', gap: 0.75 }}>
+                    {chartData.map((week) => (
+                      <Box key={week.isoWeek} sx={{ width: 34, flex: '0 0 34px', height: '100%', display: 'flex', alignItems: 'flex-end' }}>
+                        <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column-reverse', justifyContent: 'flex-start' }}>
+                          {week.cultures.map((culture) => (
+                            <Tooltip key={`${week.isoWeek}-${culture.culture_id}`} title={`${culture.culture_name}: ${culture.yield.toFixed(2)} kg`}>
+                              <Box
+                                sx={{
+                                  width: '100%',
+                                  height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
+                                  minHeight: culture.yield > 0 ? '2px' : 0,
+                                  backgroundColor: culture.color,
+                                }}
+                              />
+                            </Tooltip>
+                          ))}
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+
+                  <Box sx={{ height: 44, px: 1, display: 'flex', gap: 0.75, alignItems: 'flex-start' }}>
+                    {chartData.map((week) => (
+                      <Box key={`${week.isoWeek}-axis`} sx={{ width: 34, flex: '0 0 34px', textAlign: 'center' }}>
+                        <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, lineHeight: 1.2 }}>{week.weekLabel}</Typography>
+                        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', lineHeight: 1.2 }}>{week.monthLabel}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+
+          </Box>
         )}
       </Paper>
     </div>

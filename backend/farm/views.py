@@ -5,6 +5,10 @@ Django REST Framework's ModelViewSet. Each ViewSet handles CRUD operations
 for its respective model.
 """
 
+from collections import defaultdict
+from datetime import date, timedelta
+from decimal import Decimal, ROUND_HALF_UP
+
 from django.core.exceptions import ValidationError
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q
 from django.db.models.functions import Coalesce, Ceil, Cast
@@ -22,6 +26,122 @@ from .serializers import (
     SupplierSerializer,
     SeedDemandSerializer,
 )
+
+
+def _week_start_for_iso_year(iso_year: int) -> date:
+    """Return Monday of ISO week 1 for an ISO year."""
+    return date.fromisocalendar(iso_year, 1, 1)
+
+
+def _iso_week_key(day: date) -> str:
+    """Return ISO week key in the format YYYY-Www using ISO year and week."""
+    iso_year, iso_week, _ = day.isocalendar()
+    return f"{iso_year}-W{iso_week:02d}"
+
+
+class YieldCalendarListView(generics.GenericAPIView):
+    """Return expected yield distribution aggregated by ISO week and culture."""
+
+    def get(self, request):
+        year_param = request.query_params.get('year')
+        try:
+            iso_year = int(year_param) if year_param else date.today().year
+        except ValueError:
+            return Response({'detail': 'Invalid year parameter.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if iso_year < 1 or iso_year > 9999:
+            return Response({'detail': 'Year out of supported range.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        year_start = _week_start_for_iso_year(iso_year)
+        year_end = _week_start_for_iso_year(iso_year + 1) if iso_year < 9999 else date.max
+
+        plans = (
+            PlantingPlan.objects
+            .select_related('culture')
+            .filter(
+                harvest_date__isnull=False,
+                harvest_end_date__isnull=False,
+                culture__expected_yield__gt=0,
+                harvest_date__lt=year_end,
+                harvest_end_date__gt=year_start,
+            )
+        )
+
+        weekly_data: dict[str, dict[str, object]] = {}
+
+        for plan in plans:
+            harvest_start = plan.harvest_date
+            harvest_end = plan.harvest_end_date
+            if harvest_end <= harvest_start:
+                continue
+
+            total_days = (harvest_end - harvest_start).days
+            if total_days <= 0:
+                continue
+
+            expected_yield = Decimal(plan.culture.expected_yield)
+            first_week_start = harvest_start - timedelta(days=harvest_start.weekday())
+            week_start = first_week_start
+
+            while week_start < harvest_end:
+                week_end = week_start + timedelta(days=7)
+                overlap_start = max(harvest_start, week_start)
+                overlap_end = min(harvest_end, week_end)
+                overlap_days = (overlap_end - overlap_start).days
+
+                if overlap_days > 0:
+                    iso_year_of_week, _, _ = week_start.isocalendar()
+                    if iso_year_of_week == iso_year:
+                        iso_week = _iso_week_key(week_start)
+                        week_entry = weekly_data.setdefault(
+                            iso_week,
+                            {
+                                'iso_week': iso_week,
+                                'week_start': week_start,
+                                'week_end': week_end,
+                                'cultures': defaultdict(Decimal),
+                            },
+                        )
+                        culture_key = (
+                            plan.culture_id,
+                            plan.culture.name,
+                            plan.culture.display_color or '#3b82f6',
+                        )
+                        contribution = expected_yield * Decimal(overlap_days) / Decimal(total_days)
+                        week_entry['cultures'][culture_key] += contribution
+
+                week_start += timedelta(days=7)
+
+        response_data = []
+        for iso_week in sorted(weekly_data.keys()):
+            week_entry = weekly_data[iso_week]
+            cultures_payload = []
+            for (culture_id, culture_name, color), value in sorted(week_entry['cultures'].items(), key=lambda c: c[0][1]):
+                rounded_yield = value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                if rounded_yield <= 0:
+                    continue
+                cultures_payload.append(
+                    {
+                        'culture_id': culture_id,
+                        'culture_name': culture_name,
+                        'color': color,
+                        'yield': float(rounded_yield),
+                    }
+                )
+
+            if not cultures_payload:
+                continue
+
+            response_data.append(
+                {
+                    'iso_week': week_entry['iso_week'],
+                    'week_start': week_entry['week_start'].isoformat(),
+                    'week_end': week_entry['week_end'].isoformat(),
+                    'cultures': cultures_payload,
+                }
+            )
+
+        return Response(response_data)
 
 
 class LocationViewSet(viewsets.ModelViewSet):

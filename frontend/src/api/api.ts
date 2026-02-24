@@ -8,6 +8,7 @@ import type {
   PaginatedResponse,
   Supplier,
   SeedDemand,
+  YieldCalendarWeek,
 } from './types';
 
 export const cultureAPI = {
@@ -70,6 +71,10 @@ export const seedDemandAPI = {
   list: () => http.get<PaginatedResponse<SeedDemand>>('/seed-demand/'),
 };
 
+export const yieldCalendarAPI = {
+  list: (year: number) => http.get<YieldCalendarWeek[]>('/yield-calendar/', { params: { year } }),
+};
+
 export const fieldAPI = {
   list: () => http.get<PaginatedResponse<Field>>('/fields/'),
   get: (id: number) => http.get<Field>(`/fields/${id}/`),
@@ -95,6 +100,7 @@ export type {
   PaginatedResponse,
   Supplier,
   SeedDemand,
+  YieldCalendarWeek,
 };
 
 export default {
@@ -105,4 +111,5 @@ export default {
   fields: fieldAPI,
   locations: locationAPI,
   seedDemand: seedDemandAPI,
+  yieldCalendar: yieldCalendarAPI,
 };
