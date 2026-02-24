@@ -494,13 +494,11 @@ function GanttChartPage(): React.ReactElement {
               ))}
             </Box>
 
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Y-Achse: Ertrag (kg)</Typography>
-
             <Box sx={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: 1, alignItems: 'stretch' }}>
               <Box sx={{ display: 'flex', flexDirection: 'column-reverse', justifyContent: 'space-between', height: 280 }}>
                 {yAxisTicks.map((tick) => (
                   <Typography key={tick} variant="caption" sx={{ textAlign: 'right', color: 'text.secondary' }}>
-                    {tick.toFixed(1)}
+                    {tick.toFixed(1)} kg
                   </Typography>
                 ))}
               </Box>
@@ -529,7 +527,6 @@ function GanttChartPage(): React.ReactElement {
               </Box>
             </Box>
 
-            <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>X-Achse: Kalenderwochen (mit Monat)</Typography>
           </Box>
         )}
       </Paper>
