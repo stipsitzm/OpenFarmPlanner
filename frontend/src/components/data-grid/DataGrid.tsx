@@ -56,8 +56,9 @@ export interface EditableDataGridCommandApi {
 }
 export interface NotesFieldConfig {
   field: string;
-  labelKey?: string; 
-  titleKey?: string; 
+  labelKey?: string;
+  titleKey?: string;
+  attachmentNoteIdField?: string;
 }
 
 export interface EditableDataGridProps<T extends EditableRow> {
@@ -570,6 +571,13 @@ export function EditableDataGrid<T extends EditableRow>({
           onSave={notesEditor.handleSave}
           onClose={notesEditor.handleClose}
           loading={notesEditor.isSaving}
+          noteId={(() => {
+            if (!notesEditor.currentRow || !notesEditor.field || !notes) return undefined;
+            const cfg = notes.fields.find((f) => f.field === notesEditor.field);
+            if (!cfg?.attachmentNoteIdField) return undefined;
+            const val = notesEditor.currentRow[cfg.attachmentNoteIdField as keyof typeof notesEditor.currentRow];
+            return typeof val === "number" ? val : undefined;
+          })()}
         />
       )}
     </>

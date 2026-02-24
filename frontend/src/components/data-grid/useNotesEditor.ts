@@ -35,11 +35,13 @@ export interface UseNotesEditorConfig<T> {
 /**
  * Return type for useNotesEditor hook
  */
-export interface UseNotesEditorReturn {
+export interface UseNotesEditorReturn<T = unknown> {
   /** Whether the notes drawer is open */
   isOpen: boolean;
   /** The current row ID being edited */
   rowId: GridRowId | null;
+  /** The current row object being edited */
+  currentRow: T | null;
   /** The field name being edited */
   field: string | null;
   /** The draft value of the notes */
@@ -65,7 +67,7 @@ export interface UseNotesEditorReturn {
  */
 export function useNotesEditor<T extends { id: GridRowId; [key: string]: unknown }>(
   config: UseNotesEditorConfig<T>
-): UseNotesEditorReturn {
+): UseNotesEditorReturn<T> {
   const { rows, onSave, onError } = config;
   
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -73,6 +75,8 @@ export function useNotesEditor<T extends { id: GridRowId; [key: string]: unknown
   const [field, setField] = useState<string | null>(null);
   const [draft, setDraft] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  const currentRow = useMemo(() => rows.find(r => r.id === rowId) ?? null, [rows, rowId]);
 
   /**
    * Open the notes editor for a specific row and field
@@ -131,6 +135,7 @@ export function useNotesEditor<T extends { id: GridRowId; [key: string]: unknown
   return useMemo(() => ({
     isOpen,
     rowId,
+    currentRow,
     field,
     draft,
     isSaving,
@@ -138,5 +143,5 @@ export function useNotesEditor<T extends { id: GridRowId; [key: string]: unknown
     handleSave,
     handleClose,
     setDraft,
-  }), [draft, field, handleClose, handleOpen, handleSave, isOpen, isSaving, rowId]);
+  }), [currentRow, draft, field, handleClose, handleOpen, handleSave, isOpen, isSaving, rowId]);
 }

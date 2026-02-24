@@ -10,6 +10,8 @@ from .views import (
     TaskViewSet,
     SeedDemandListView,
     YieldCalendarListView,
+    NoteAttachmentListCreateView,
+    NoteAttachmentDeleteView,
 )
 
 router = DefaultRouter()
@@ -22,6 +24,8 @@ router.register(r'planting-plans', PlantingPlanViewSet)
 router.register(r'tasks', TaskViewSet)
 
 urlpatterns = [
+    path('notes/<int:note_id>/attachments/', NoteAttachmentListCreateView.as_view(), name='note-attachments'),
+    path('attachments/<int:attachment_id>/', NoteAttachmentDeleteView.as_view(), name='note-attachment-delete'),
     path('seed-demand/', SeedDemandListView.as_view(), name='seed-demand-list'),
     path('yield-calendar/', YieldCalendarListView.as_view(), name='yield-calendar-list'),
     path('', include(router.urls)),

@@ -1,3 +1,5 @@
+from unittest.mock import patch
+from django.core.files.uploadedfile import SimpleUploadedFile
 from datetime import date
 
 from rest_framework import status
@@ -611,3 +613,54 @@ class PlantingPlanAreaInputTest(DRFAPITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertAlmostEqual(float(response.data['area_usage_sqm']), 3.0, places=2)
+
+
+class NoteAttachmentApiTest(DRFAPITestCase):
+    def setUp(self):
+        self.location = Location.objects.create(name="Attachment Location")
+        self.field = Field.objects.create(name="Attachment Field", location=self.location)
+        self.bed = Bed.objects.create(name="Attachment Bed", field=self.field)
+        self.culture = Culture.objects.create(name="Attachment Culture", growth_duration_days=7, harvest_duration_days=2)
+        self.plan = PlantingPlan.objects.create(culture=self.culture, bed=self.bed, planting_date=date(2024, 3, 1))
+
+    @patch('farm.views.process_note_image')
+    def test_upload_list_delete_attachment(self, mock_process):
+        mock_process.return_value = (
+            SimpleUploadedFile('processed.webp', b'processed', content_type='image/webp'),
+            {
+                'width': 1280,
+                'height': 720,
+                'size_bytes': 9,
+                'mime_type': 'image/webp',
+            },
+        )
+        upload = SimpleUploadedFile('raw.jpg', b'raw', content_type='image/jpeg')
+
+        upload_response = self.client.post(
+            f'/openfarmplanner/api/notes/{self.plan.id}/attachments/',
+            {'image': upload},
+            format='multipart',
+        )
+        self.assertEqual(upload_response.status_code, status.HTTP_201_CREATED)
+        self.assertLessEqual(upload_response.data['width'], 1280)
+
+        list_response = self.client.get(f'/openfarmplanner/api/notes/{self.plan.id}/attachments/')
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_response.data), 1)
+
+        attachment_id = upload_response.data['id']
+        delete_response = self.client.delete(f'/openfarmplanner/api/attachments/{attachment_id}/')
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+
+    @patch(
+        'farm.views.process_note_image',
+        side_effect=__import__('farm.image_processing', fromlist=['ImageProcessingError']).ImageProcessingError('bad image'),
+    )
+    def test_invalid_attachment_upload_returns_400(self, _mock_process):
+        upload = SimpleUploadedFile('not-image.txt', b'text', content_type='text/plain')
+        response = self.client.post(
+            f'/openfarmplanner/api/notes/{self.plan.id}/attachments/',
+            {'image': upload},
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

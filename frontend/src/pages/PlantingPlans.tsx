@@ -470,6 +470,7 @@ function PlantingPlans(): React.ReactElement {
             {
               field: 'notes',
               labelKey: 'common:fields.notes',
+              attachmentNoteIdField: 'id',
             },
           ],
         }}

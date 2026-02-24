@@ -12,10 +12,12 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.core.exceptions import ValidationError
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q
 from django.db.models.functions import Coalesce, Ceil, Cast
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, status, generics, parsers
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier
+from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404
+from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment
 from .serializers import (
     LocationSerializer,
     FieldSerializer,
@@ -25,7 +27,9 @@ from .serializers import (
     TaskSerializer,
     SupplierSerializer,
     SeedDemandSerializer,
+    NoteAttachmentSerializer,
 )
+from .image_processing import process_note_image, ImageProcessingError
 
 
 def _week_start_for_iso_year(iso_year: int) -> date:
@@ -531,6 +535,59 @@ class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
 
+
+
+class NoteAttachmentListCreateView(APIView):
+    """List and upload image attachments for a planting plan note."""
+
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+
+    def get(self, request, note_id: int):
+        plan = get_object_or_404(PlantingPlan, pk=note_id)
+        attachments = plan.attachments.all()
+        serializer = NoteAttachmentSerializer(attachments, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request, note_id: int):
+        plan = get_object_or_404(PlantingPlan, pk=note_id)
+
+        if plan.attachments.count() >= 10:
+            return Response({'detail': 'Attachment limit per note reached (10).'}, status=status.HTTP_400_BAD_REQUEST)
+
+        upload = request.FILES.get('image')
+        if upload is None:
+            return Response({'image': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
+
+        caption = request.data.get('caption', '')
+
+        try:
+            content, metadata = process_note_image(upload)
+        except ImageProcessingError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        attachment = NoteAttachment(
+            planting_plan=plan,
+            caption=caption,
+            width=metadata['width'],
+            height=metadata['height'],
+            size_bytes=metadata['size_bytes'],
+            mime_type=metadata['mime_type'],
+        )
+        attachment.image.save('processed.webp', content, save=False)
+        attachment.save()
+
+        serializer = NoteAttachmentSerializer(attachment, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class NoteAttachmentDeleteView(APIView):
+    """Delete a note attachment."""
+
+    def delete(self, request, attachment_id: int):
+        attachment = get_object_or_404(NoteAttachment, pk=attachment_id)
+        attachment.image.delete(save=False)
+        attachment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SeedDemandListView(generics.ListAPIView):

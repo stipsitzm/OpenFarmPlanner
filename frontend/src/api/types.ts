@@ -135,3 +135,17 @@ export interface PaginatedResponse<T> {
   previous: string | null;
   results: T[];
 }
+
+
+export interface NoteAttachment {
+  id: number;
+  planting_plan: number;
+  image: string;
+  image_url?: string;
+  caption?: string;
+  created_at: string;
+  width?: number;
+  height?: number;
+  size_bytes?: number;
+  mime_type?: string;
+}

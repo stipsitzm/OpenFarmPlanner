@@ -4,6 +4,13 @@ from datetime import timedelta
 from decimal import Decimal
 from typing import Any
 import re
+import uuid
+
+
+def note_attachment_upload_path(instance: 'NoteAttachment', filename: str) -> str:
+    """Build a deterministic storage path for note attachments."""
+    extension = '.webp'
+    return f"notes/{instance.planting_plan_id}/{uuid.uuid4().hex}{extension}"
 
 
 class TimestampedModel(models.Model):
@@ -528,3 +535,23 @@ class Task(TimestampedModel):
 
     class Meta:
         ordering = ['due_date', '-created_at']
+
+
+class NoteAttachment(models.Model):
+    """Image attachment linked to a planting plan note."""
+
+    planting_plan = models.ForeignKey(
+        PlantingPlan,
+        on_delete=models.CASCADE,
+        related_name='attachments',
+    )
+    image = models.FileField(upload_to=note_attachment_upload_path)
+    caption = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    width = models.PositiveIntegerField(null=True, blank=True)
+    height = models.PositiveIntegerField(null=True, blank=True)
+    size_bytes = models.PositiveIntegerField(null=True, blank=True)
+    mime_type = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
