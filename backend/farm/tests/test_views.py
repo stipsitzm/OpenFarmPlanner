@@ -652,6 +652,20 @@ class NoteAttachmentApiTest(DRFAPITestCase):
         delete_response = self.client.delete(f'/openfarmplanner/api/attachments/{attachment_id}/')
         self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
 
+
+    @patch(
+        'farm.views.process_note_image',
+        side_effect=__import__('farm.image_processing', fromlist=['ImageProcessingBackendUnavailableError']).ImageProcessingBackendUnavailableError('Image processing backend is not available. Install Pillow in the backend environment.'),
+    )
+    def test_attachment_upload_returns_503_when_processing_backend_missing(self, _mock_process):
+        upload = SimpleUploadedFile('raw.jpg', b'raw', content_type='image/jpeg')
+        response = self.client.post(
+            f'/openfarmplanner/api/notes/{self.plan.id}/attachments/',
+            {'image': upload},
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+
     @patch(
         'farm.views.process_note_image',
         side_effect=__import__('farm.image_processing', fromlist=['ImageProcessingError']).ImageProcessingError('bad image'),

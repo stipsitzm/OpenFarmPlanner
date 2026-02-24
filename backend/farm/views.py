@@ -29,7 +29,11 @@ from .serializers import (
     SeedDemandSerializer,
     NoteAttachmentSerializer,
 )
-from .image_processing import process_note_image, ImageProcessingError
+from .image_processing import (
+    process_note_image,
+    ImageProcessingError,
+    ImageProcessingBackendUnavailableError,
+)
 
 
 def _week_start_for_iso_year(iso_year: int) -> date:
@@ -562,6 +566,8 @@ class NoteAttachmentListCreateView(APIView):
 
         try:
             content, metadata = process_note_image(upload)
+        except ImageProcessingBackendUnavailableError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except ImageProcessingError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
