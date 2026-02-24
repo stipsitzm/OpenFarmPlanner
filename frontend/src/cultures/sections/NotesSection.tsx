@@ -22,7 +22,8 @@ export function NotesSection({ formData, onChange, t }: NotesSectionProps) {
       <TextField
         fullWidth
         multiline
-        rows={3}
+        minRows={3}
+        maxRows={30}
         label={t('form.notes')}
         placeholder={t('form.notesPlaceholder')}
         value={formData.notes}
