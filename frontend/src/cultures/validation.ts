@@ -34,9 +34,15 @@ export function validateCulture(
     errors.seed_rate_value = t('form.seedRateValueRequired');
   }
 
-  // Required field: name
+  // Required fields: name, variety, supplier
   if (!draft.name) {
     errors.name = t('form.nameRequired');
+  }
+  if (!draft.variety) {
+    errors.variety = t('form.varietyRequired');
+  }
+  if (!draft.supplier) {
+    errors.supplier = t('form.supplierRequired');
   }
 
   // Optional numeric fields with explicit error keys

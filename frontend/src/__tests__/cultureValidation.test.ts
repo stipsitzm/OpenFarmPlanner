@@ -9,6 +9,8 @@ describe('validateCulture', () => {
 
     expect(result.isValid).toBe(false);
     expect(result.errors.name).toBe('form.nameRequired');
+    expect(result.errors.variety).toBe('form.varietyRequired');
+    expect(result.errors.supplier).toBe('form.supplierRequired');
     expect(result.errors.growth_duration_days).toBeUndefined();
     expect(result.errors.harvest_duration_days).toBeUndefined();
     expect(result.errors.propagation_duration_days).toBeUndefined();
@@ -16,20 +18,20 @@ describe('validateCulture', () => {
 
   it('validates seed rate value/unit dependencies and positive amount', () => {
     const missingUnit = validateCulture(
-      { name: 'Karotte', growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 1 },
+      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as any, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 1 },
       t
     );
     expect(missingUnit.errors.seed_rate_unit).toBe('form.seedRateUnitRequired');
 
     const nonPositive = validateCulture(
-      { name: 'Karotte', growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 0, seed_rate_unit: 'g_per_m2' },
+      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as any, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 0, seed_rate_unit: 'g_per_m2' },
       t
     );
     expect(nonPositive.errors.seed_rate_value).toBe('form.seedRateValueRequired');
     
     // Einheit ohne Menge ist erlaubt
     const unitWithoutValue = validateCulture(
-      { name: 'Karotte', growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_unit: 'g_per_m2' },
+      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as any, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_unit: 'g_per_m2' },
       t
     );
     expect(unitWithoutValue.errors.seed_rate_value).toBeUndefined();
@@ -39,6 +41,8 @@ describe('validateCulture', () => {
     const result = validateCulture(
       {
         name: 'Radies',
+        variety: 'Saxa',
+        supplier: { id: 1, name: 'Test' } as any,
         cultivation_type: 'direct_sowing',
         growth_duration_days: 20,
         harvest_duration_days: 10,
@@ -53,6 +57,8 @@ describe('validateCulture', () => {
     const result = validateCulture(
       {
         name: 'Tomate',
+        variety: 'Harzfeuer',
+        supplier: { id: 1, name: 'Test' } as any,
         cultivation_type: 'pre_cultivation',
         growth_duration_days: '-1' as never,
         harvest_duration_days: -2,
@@ -80,6 +86,8 @@ describe('validateCulture', () => {
     const invalidColor = validateCulture(
       {
         name: 'Salat',
+        variety: 'Lollo Rosso',
+        supplier: { id: 1, name: 'Test' } as any,
         cultivation_type: 'pre_cultivation',
         growth_duration_days: 15,
         harvest_duration_days: 8,
@@ -93,6 +101,8 @@ describe('validateCulture', () => {
     const requiresMethod = validateCulture(
       {
         name: 'Salat',
+        variety: 'Lollo Rosso',
+        supplier: { id: 1, name: 'Test' } as any,
         cultivation_type: 'pre_cultivation',
         growth_duration_days: 15,
         harvest_duration_days: 8,
@@ -106,6 +116,8 @@ describe('validateCulture', () => {
     const withMethod = validateCulture(
       {
         name: 'Salat',
+        variety: 'Lollo Rosso',
+        supplier: { id: 1, name: 'Test' } as any,
         cultivation_type: 'pre_cultivation',
         growth_duration_days: 15,
         harvest_duration_days: 8,
@@ -124,6 +136,8 @@ describe('validateCulture', () => {
     const result = validateCulture(
       {
         name: 'Fenchel',
+        variety: 'Fino',
+        supplier: { id: 1, name: 'Test' } as any,
         cultivation_type: 'pre_cultivation',
         growth_duration_days: '12' as never,
         harvest_duration_days: '7' as never,

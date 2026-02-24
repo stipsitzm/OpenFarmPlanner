@@ -76,10 +76,13 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
         />
         <TextField
           sx={fieldSx}
+          required
           label={t('form.variety')}
           placeholder={t('form.varietyPlaceholder')}
           value={formData.variety}
           onChange={e => onChange('variety', e.target.value)}
+          error={Boolean(errors.variety)}
+          helperText={errors.variety}
         />
       </Box>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -99,9 +102,11 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
           renderInput={(params) => (
             <TextField
               {...params}
+              required
               label={t('form.supplier', { defaultValue: 'Saatgutlieferant' })}
               placeholder={t('form.supplierPlaceholder', { defaultValue: 'z.B. Bingenheimer' })}
-              helperText={t('form.supplierHelp', { defaultValue: 'Tippen zum Suchen oder neue Lieferanten anlegen' })}
+              helperText={errors.supplier || t('form.supplierHelp', { defaultValue: 'Tippen zum Suchen oder neue Lieferanten anlegen' })}
+              error={Boolean(errors.supplier)}
             />
           )}
         />
