@@ -56,6 +56,14 @@ export const normalizeImportCultureEntry = (entry: Record<string, unknown>): Rec
     }
   }
 
+  delete normalized.supplierName;
+  delete normalized.distance_within_row_m;
+  delete normalized.row_spacing_m;
+  delete normalized.sowing_depth_m;
+  delete normalized.schemaVersion;
+  delete normalized.exportedAt;
+  delete normalized.type;
+
   return normalized;
 };
 

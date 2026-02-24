@@ -20,9 +20,9 @@ describe('culture import utils', () => {
     expect(parsed.entries[0]).toMatchObject({
       name: 'Tomate',
       variety: 'Roma',
-      supplierName: 'Bingenheimer',
       supplier_name: 'Bingenheimer',
     });
+    expect(parsed.entries[0]).not.toHaveProperty('supplierName');
   });
 
   it('supports legacy array format and converts meter fields to centimeters', () => {
@@ -41,5 +41,8 @@ describe('culture import utils', () => {
       row_spacing_cm: 40,
       sowing_depth_cm: 0.5,
     });
+    expect(entry).not.toHaveProperty('distance_within_row_m');
+    expect(entry).not.toHaveProperty('row_spacing_m');
+    expect(entry).not.toHaveProperty('sowing_depth_m');
   });
 });
