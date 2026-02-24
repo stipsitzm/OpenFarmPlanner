@@ -222,13 +222,20 @@ function Cultures(): React.ReactElement {
 
   const handleSave = async (culture: Culture) => {
     try {
+      // Transform culture data for API: replace supplier object with supplier_id
+      const dataToSend = {
+        ...culture,
+        supplier_id: culture.supplier?.id || null,
+        supplier: undefined, // Remove supplier object from payload
+      };
+
       let savedCulture: Culture;
       if (editingCulture) {
-        const response = await cultureAPI.update(editingCulture.id!, culture);
+        const response = await cultureAPI.update(editingCulture.id!, dataToSend as Culture);
         savedCulture = response.data;
         showSnackbar(t('messages.updateSuccess'), 'success');
       } else {
-        const response = await cultureAPI.create(culture);
+        const response = await cultureAPI.create(dataToSend as Culture);
         savedCulture = response.data;
         showSnackbar(t('messages.createSuccess'), 'success');
         // Auto-select the newly created culture

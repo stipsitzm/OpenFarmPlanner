@@ -37,6 +37,7 @@ class SerializerBranchCoverageTest(TestCase):
         serializer = CultureSerializer(
             data={
                 'name': 'Salat',
+                'variety': 'Lollo Rosso',
                 'growth_duration_days': 6,
                 'harvest_duration_days': 2,
                 'supplier_name': '  ACME Seeds GmbH ',

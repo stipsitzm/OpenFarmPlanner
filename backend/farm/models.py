@@ -139,7 +139,7 @@ class Culture(TimestampedModel):
     
     # Basic information.
     name = models.CharField(max_length=200)
-    variety = models.CharField(max_length=200, blank=True)
+    variety = models.CharField(max_length=200)
     # Use growth_duration_days instead of days_to_harvest.
     notes = models.TextField(blank=True)
     seed_supplier = models.CharField(max_length=200, blank=True, help_text="Seed supplier/manufacturer (legacy field)")

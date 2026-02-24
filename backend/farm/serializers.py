@@ -96,10 +96,19 @@ class CultureSerializer(serializers.ModelSerializer):
     )
     
     supplier = SupplierSerializer(read_only=True)
+    supplier_id = serializers.PrimaryKeyRelatedField(
+        queryset=Supplier.objects.all(),
+        source='supplier',
+        write_only=True,
+        required=False,
+        allow_null=True,
+        help_text='Supplier ID (alternative to supplier_name)'
+    )
     supplier_name = serializers.CharField(
         write_only=True,
         required=False,
         allow_blank=True,
+        allow_null=True,
         help_text='Supplier name for get-or-create (alternative to supplier_id)'
     )
 
@@ -111,6 +120,7 @@ class CultureSerializer(serializers.ModelSerializer):
     seed_rate_unit = serializers.CharField(
         required=False,
         allow_blank=True,
+        allow_null=True,
         help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds_per_plant')"
     )
     sowing_calculation_safety_percent = serializers.FloatField(
@@ -152,17 +162,18 @@ class CultureSerializer(serializers.ModelSerializer):
 
     def validate_seed_rate_unit(self, value):
         """Normalize legacy seed rate unit values and validate supported units."""
+        if value is None or value == '':
+            return value
+        
         if value == 'pcs_per_plant':
             return 'seeds_per_plant'
 
-        allowed_values = {'', 'g_per_m2', 'seeds/m', 'seeds_per_plant'}
+        allowed_values = {'g_per_m2', 'seeds/m', 'seeds_per_plant'}
         if value not in allowed_values:
             raise serializers.ValidationError('Unsupported seed rate unit.')
         return value
     def validate_growth_duration_days(self, value):
-        if value is None:
-            raise serializers.ValidationError('Growth duration is required.')
-        if value < 0:
+        if value is not None and value < 0:
             raise serializers.ValidationError('Growth duration must be non-negative.')
         return value
     
@@ -197,12 +208,22 @@ class CultureSerializer(serializers.ModelSerializer):
             )
             attrs['supplier'] = supplier
         
+        # Validate required fields for new and updated cultures
         if not self.instance:
-            if 'growth_duration_days' not in attrs or attrs.get('growth_duration_days') is None:
-                errors['growth_duration_days'] = 'Growth duration is required.'
+            # Creating new culture - require name, variety, and supplier
+            variety = attrs.get('variety', '').strip()
+            if not variety:
+                errors['variety'] = 'Variety is required.'
+            if not attrs.get('supplier'):
+                errors['supplier'] = 'Supplier is required.'
         else:
-            if 'growth_duration_days' in attrs and attrs.get('growth_duration_days') is None:
-                errors['growth_duration_days'] = 'Growth duration is required.'
+            # Updating existing culture - check if fields are being cleared
+            if 'variety' in attrs:
+                variety = (attrs.get('variety') or '').strip()
+                if not variety:
+                    errors['variety'] = 'Variety is required.'
+            if 'supplier' in attrs and not attrs.get('supplier'):
+                errors['supplier'] = 'Supplier is required.'
         
         if errors:
             raise serializers.ValidationError(errors)

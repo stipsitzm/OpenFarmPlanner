@@ -76,10 +76,12 @@ def test_seed_demand_rounds_packages_up(api_client: APIClient, bed: Bed):
 def test_seed_rate_unit_legacy_value_is_normalized(api_client: APIClient):
     payload = {
         'name': 'Bean',
+        'variety': 'Runner',
         'growth_duration_days': 70,
         'harvest_duration_days': 10,
         'seed_rate_value': 2,
         'seed_rate_unit': 'pcs_per_plant',
+        'supplier_name': 'Test Supplier',
     }
 
     response = api_client.post('/openfarmplanner/api/cultures/', payload, format='json')
