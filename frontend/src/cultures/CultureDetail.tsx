@@ -227,7 +227,7 @@ export function CultureDetail({
                     {formatNumber(selectedCulture.harvest_duration_days, t)} Tage
                   </Typography>
                 </Box>
-                {selectedCulture.propagation_duration_days && (
+                {selectedCulture.propagation_duration_days !== undefined && selectedCulture.propagation_duration_days !== null && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
                       Anzuchtdauer
@@ -254,7 +254,7 @@ export function CultureDetail({
                   gap: 2,
                 }}
               >
-                {selectedCulture.distance_within_row_cm && (
+                {selectedCulture.distance_within_row_cm !== undefined && selectedCulture.distance_within_row_cm !== null && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
                       Abstand in der Reihe
@@ -264,7 +264,7 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
-                {selectedCulture.row_spacing_cm && (
+                {selectedCulture.row_spacing_cm !== undefined && selectedCulture.row_spacing_cm !== null && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
                       Reihenabstand
@@ -274,7 +274,7 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
-                {selectedCulture.sowing_depth_cm && (
+                {selectedCulture.sowing_depth_cm !== undefined && selectedCulture.sowing_depth_cm !== null && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
                       Saattiefe
@@ -389,7 +389,7 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
-                {selectedCulture.expected_yield && (
+                {selectedCulture.expected_yield !== undefined && selectedCulture.expected_yield !== null && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
                       Erwarteter Ertrag

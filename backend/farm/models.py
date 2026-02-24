@@ -280,6 +280,22 @@ class Culture(TimestampedModel):
         help_text="Display color for cultivation calendar (hex format: #RRGGBB)"
     )
     
+    def get_automatic_warnings(self) -> list[str]:
+        """Return deterministic plausibility warnings for planning-critical values."""
+        warnings: list[str] = []
+
+        if 'kohlrabi' in (self.name or '').strip().lower() and (self.growth_duration_days or 0) > 120:
+            warnings.append('Warnung: Wachstumstage > 120 sind für Kohlrabi unplausibel.')
+
+        unit = (self.seed_rate_unit or '').strip().lower()
+        if self.seed_rate_value is not None and unit in {'g_per_m2', 'g/m²', 'g/m2'} and self.seed_rate_value > 0.5:
+            warnings.append('Warnung: Saatmenge > 0.5 g/m² prüfen (ungewöhnlich hoch).')
+
+        if self.cultivation_type == 'pre_cultivation' and self.propagation_duration_days is not None and self.propagation_duration_days < 7:
+            warnings.append('Warnung: Anzuchtdauer < 7 Tage ist für vorgezogene Kulturen meist zu kurz.')
+
+        return warnings
+
     def clean(self) -> None:
         """Validate numeric ranges for positive values."""
         super().clean()

@@ -83,7 +83,9 @@
     "sowingDepthCmError": "Saattiefe muss ≥ 0 sein",
     "displayColor": "Anzeigefarbe",
     "displayColorHelp": "Farbe zur Darstellung im Anbaukalender (wird automatisch generiert)",
-    "displayColorError": "Ungültiges Farbformat (verwenden Sie #RRGGBB)"
+    "displayColorError": "Ungültiges Farbformat (verwenden Sie #RRGGBB)",
+    "varietyRequired": "Sorte ist erforderlich",
+    "supplierRequired": "Saatgutlieferant ist erforderlich"
   },
   "messages": {
     "createSuccess": "Kultur erfolgreich erstellt",
@@ -127,6 +129,32 @@
       "server": "Import fehlgeschlagen.",
       "network": "Netzwerkfehler beim Import.",
       "someFailures": "{{failed}} Einträge konnten nicht importiert werden."
+    }
+  },
+  "enrichment": {
+    "buttons": {
+      "overwrite": "Neu recherchieren",
+      "fillMissing": "Nur leere Felder ergänzen"
+    },
+    "messages": {
+      "noCultureSelected": "Bitte zuerst eine Kultur auswählen.",
+      "missingRequiredFields": "Anreicherung benötigt ausgefüllte Felder: {{fields}}.",
+      "success": "Kulturdaten erfolgreich angereichert.",
+      "error": "Fehler bei der Anreicherung der Kulturdaten.",
+      "noChanges": "Keine neuen Daten gefunden – bestehende Werte bleiben unverändert.",
+      "loading": "Recherche läuft...",
+      "timeout": "Die Recherche dauert zu lange. Bitte später erneut versuchen.",
+      "noChangesMissingSources": "Keine neuen Daten gespeichert: KI lieferte keine verwertbaren Quellen-URLs für Notizen.",
+      "noFillMissingTargets": "Es gibt keine leeren Felder zum Ergänzen.",
+      "noChangesWithCounts": "Keine neuen Daten gefunden (Ziel-Felder: {{targetCount}}, KI-Updates: {{llmUpdateCount}}, Quellen: {{sourceCount}})."
+    },
+    "progress": {
+      "title": "KI-Recherche läuft",
+      "description": "Bitte warten – die Kulturdaten werden gesammelt und geprüft.",
+      "stepSearching": "Wir suchen nach verlässlichen Quellen …",
+      "stepAnalyzing": "Wir lesen die Quellen und extrahieren die wichtigsten Daten …",
+      "stepFinalizing": "Wir bereiten die Ergebnisse auf und speichern sie …",
+      "elapsed": "Dauer bisher: {{seconds}} s"
     }
   }
 }

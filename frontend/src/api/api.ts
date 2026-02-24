@@ -36,6 +36,22 @@ export const cultureAPI = {
     skipped_count: number;
     errors: Array<{ index: number; error: unknown }>;
   }>('/cultures/import/apply/', data),
+
+  enrich: (id: number, mode: 'overwrite' | 'fill_missing') => http.post<{
+    culture: Culture;
+    mode: 'overwrite' | 'fill_missing';
+    updated_fields: string[];
+    sources: string[];
+    confidence_score?: number | null;
+    plausibility_warnings?: string[];
+    debug?: {
+      target_fields?: string[];
+      llm?: Record<string, unknown>;
+      llm_update_keys?: string[];
+      combined_sources_count?: number;
+      notes_skipped_due_to_missing_sources?: boolean;
+    };
+  }>(`/cultures/${id}/enrich/?mode=${mode}`, undefined, { timeout: 30000 }),
 };
 
 export const supplierAPI = {

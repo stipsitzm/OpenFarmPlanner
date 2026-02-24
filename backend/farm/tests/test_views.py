@@ -1,4 +1,5 @@
 from datetime import date
+from unittest.mock import patch
 
 from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
@@ -16,6 +17,8 @@ class ApiEndpointsTest(DRFAPITestCase):
         )
         self.culture = Culture.objects.create(
             name="API Test Culture",
+            variety="Standard",
+            seed_supplier="Test Supplier Co.",
             growth_duration_days=7,
             harvest_duration_days=2
         )
@@ -66,6 +69,8 @@ class ApiEndpointsTest(DRFAPITestCase):
         """Test creating culture with supplier"""
         data = {
             'name': 'Culture with Supplier',
+            'variety': 'Demo',
+            'seed_supplier': 'Test Supplier Co.',
             'growth_duration_days': 8,
             'harvest_duration_days': 3,
             'supplier_name': self.supplier.name
@@ -83,6 +88,7 @@ class ApiEndpointsTest(DRFAPITestCase):
         data = {
             'name': 'New Culture',
             'variety': 'Test Variety',
+            'seed_supplier': 'Bingenheimer',
             'growth_duration_days': 6,
             'harvest_duration_days': 2
         }
@@ -98,6 +104,7 @@ class ApiEndpointsTest(DRFAPITestCase):
         data = {
             'name': 'Comprehensive Culture',
             'variety': 'Special Edition',
+            'seed_supplier': 'Bingenheimer',
             'notes': 'Test notes',
             'crop_family': 'Solanaceae',
             'nutrient_demand': 'high',
@@ -128,16 +135,19 @@ class ApiEndpointsTest(DRFAPITestCase):
         """Test that creating culture without required fields fails"""
         data = {
             'name': 'Incomplete Culture',
-            # Missing growth_duration_days and harvest_duration_days
+            # Missing variety and seed_supplier
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('growth_duration_days', response.data)
+        self.assertIn('variety', response.data)
+        self.assertIn('seed_supplier', response.data)
     
     def test_culture_create_invalid_display_color(self):
         """Test that invalid display color format is rejected"""
         data = {
             'name': 'Test Culture',
+            'variety': 'Test',
+            'seed_supplier': 'Supplier',
             'growth_duration_days': 6,
             'harvest_duration_days': 2,
             'display_color': 'invalid'  # Not hex format
@@ -150,6 +160,8 @@ class ApiEndpointsTest(DRFAPITestCase):
         """Test updating a culture"""
         data = {
             'name': 'Updated Culture',
+            'variety': 'Updated Variety',
+            'seed_supplier': 'Updated Supplier',
             'growth_duration_days': 8,
             'harvest_duration_days': 3,
             'crop_family': 'Updated Family',
@@ -292,6 +304,7 @@ class CultureImportAPITest(DRFAPITestCase):
         self.existing_culture = Culture.objects.create(
             name="Tomato",
             variety="Cherry",
+            seed_supplier="Test Supplier",
             supplier=self.supplier,
             growth_duration_days=60,
             harvest_duration_days=30,
@@ -356,6 +369,7 @@ class CultureImportAPITest(DRFAPITestCase):
             'items': [{
                 'name': 'Cucumber',
                 'variety': 'English',
+                'seed_supplier': 'Demo Supplier',
                 'growth_duration_days': 50,
                 'harvest_duration_days': 20
             }],
@@ -378,6 +392,7 @@ class CultureImportAPITest(DRFAPITestCase):
             'items': [{
                 'name': 'Tomato',
                 'variety': 'Cherry',
+                'seed_supplier': 'Test Supplier',
                 'supplier_id': self.supplier.id,
                 'growth_duration_days': 65,
                 'harvest_duration_days': 30,
@@ -404,6 +419,7 @@ class CultureImportAPITest(DRFAPITestCase):
             'items': [{
                 'name': 'Tomato',
                 'variety': 'Cherry',
+                'seed_supplier': 'Test Supplier',
                 'supplier_id': self.supplier.id,
                 'growth_duration_days': 65,
                 'harvest_duration_days': 30,
@@ -431,12 +447,14 @@ class CultureImportAPITest(DRFAPITestCase):
                 {
                     'name': 'Cucumber',
                     'variety': 'English',
+                    'seed_supplier': 'Demo Supplier',
                     'growth_duration_days': 50,
                     'harvest_duration_days': 20
                 },
                 {
                     'name': 'Tomato',
                     'variety': 'Cherry',
+                    'seed_supplier': 'Test Supplier',
                     'supplier_id': self.supplier.id,
                     'growth_duration_days': 65,
                     'harvest_duration_days': 30
@@ -451,6 +469,197 @@ class CultureImportAPITest(DRFAPITestCase):
         self.assertEqual(response.data['created_count'], 1)
         self.assertEqual(response.data['updated_count'], 1)
         self.assertEqual(response.data['skipped_count'], 0)
+
+
+class CultureEnrichmentAPITest(DRFAPITestCase):
+    """Tests for single-culture enrichment endpoint."""
+
+    def setUp(self):
+        self.culture = Culture.objects.create(
+            name="Tomato",
+            variety="Cherry",
+            seed_supplier="Supplier A",
+            growth_duration_days=60,
+            harvest_duration_days=20,
+            notes="Line one https://example.com/a"
+        )
+
+    def test_enrich_rejects_missing_required_fields(self):
+        self.culture.variety = ''
+        self.culture.save(update_fields=['variety'])
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('missing_fields', response.data)
+        self.assertIn('variety', response.data['missing_fields'])
+
+    @patch('farm.views.enrich_culture_data')
+    def test_enrich_overwrite_updates_whitelisted_fields(self, mock_enrich):
+        mock_enrich.return_value = (
+            {
+                'harvest_duration_days': 28,
+                'notes': 'Research summary from supplier and cultivation guide',
+            },
+            ['https://supplier.example/pea-norli', 'https://wiki.example/pea'],
+            {'parsed_keys': ['harvest_duration_days', 'notes', 'sources']}
+        )
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('notes', response.data['updated_fields'])
+        self.assertIn('harvest_duration_days', response.data['updated_fields'])
+        self.assertIn('debug', response.data)
+
+        self.culture.refresh_from_db()
+        self.assertEqual(self.culture.harvest_duration_days, 28)
+        self.assertIn('### Quellen', self.culture.notes)
+        self.assertIn('- [https://supplier.example/pea-norli](https://supplier.example/pea-norli)', self.culture.notes)
+
+    @patch('farm.views.enrich_culture_data')
+    def test_enrich_fill_missing_updates_only_empty_fields(self, mock_enrich):
+        self.culture.harvest_duration_days = None
+        self.culture.notes = 'Existing notes Quellen: https://existing.example'
+        self.culture.save(update_fields=['harvest_duration_days', 'notes'])
+
+        mock_enrich.return_value = (
+            {
+                'harvest_duration_days': 35,
+                'notes': 'LLM notes that should not replace existing notes in fill mode',
+            },
+            ['https://supplier.example/pea-norli'],
+            {'parsed_keys': ['harvest_duration_days', 'notes', 'sources']}
+        )
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=fill_missing',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['updated_fields'], ['harvest_duration_days'])
+
+        self.culture.refresh_from_db()
+        self.assertEqual(self.culture.harvest_duration_days, 35)
+        self.assertEqual(self.culture.notes, 'Existing notes Quellen: https://existing.example')
+
+
+    @patch('farm.views.enrich_culture_data')
+    def test_enrich_overwrite_does_not_duplicate_quellen_on_research(self, mock_enrich):
+        self.culture.notes = (
+            'Ausführliche Notiz.\n\n### Quellen\n'
+            '- [https://supplier.example/pea-norli](https://supplier.example/pea-norli)\n'
+            '- [https://wiki.example/pea](https://wiki.example/pea)'
+        )
+        self.culture.save(update_fields=['notes'])
+
+        mock_enrich.return_value = (
+            {
+                'notes': 'Aktualisierte Notiz zu Kultur und Ernte.',
+            },
+            ['https://supplier.example/pea-norli', 'https://wiki.example/pea'],
+            {'parsed_keys': ['notes', 'sources']}
+        )
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.culture.refresh_from_db()
+        self.assertIn('### Quellen', self.culture.notes)
+        self.assertEqual(self.culture.notes.count('- [https://supplier.example/pea-norli](https://supplier.example/pea-norli)'), 1)
+        self.assertEqual(self.culture.notes.count('- [https://wiki.example/pea](https://wiki.example/pea)'), 1)
+
+    @patch('farm.views.enrich_culture_data')
+    def test_enrich_returns_422_when_no_sources(self, mock_enrich):
+        from farm.services.enrichment import EnrichmentServiceError
+
+        mock_enrich.side_effect = EnrichmentServiceError('NO_SOURCES')
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data['code'], 'NO_SOURCES')
+
+
+
+
+    def test_enrich_returns_422_when_no_enrichable_fields(self):
+        self.culture.crop_family = 'Fabaceae'
+        self.culture.nutrient_demand = 'medium'
+        self.culture.cultivation_type = 'direct_sowing'
+        self.culture.growth_duration_days = 70
+        self.culture.harvest_duration_days = 20
+        self.culture.propagation_duration_days = 0
+        self.culture.harvest_method = 'per_sqm'
+        self.culture.expected_yield = 1
+        self.culture.distance_within_row_m = 0.1
+        self.culture.row_spacing_m = 0.2
+        self.culture.sowing_depth_m = 0.03
+        self.culture.seed_rate_value = 2
+        self.culture.seed_rate_unit = 'g_per_m2'
+        self.culture.sowing_calculation_safety_percent = 10
+        self.culture.thousand_kernel_weight_g = 1
+        self.culture.package_size_g = 100
+        self.culture.notes = 'Summary Quellen: [https://example.com](https://example.com)'
+        self.culture.save()
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=fill_missing',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data['code'], 'NO_ENRICHABLE_FIELDS')
+
+
+    @patch('farm.views.enrich_culture_data')
+    def test_enrich_returns_200_when_llm_returns_no_updates(self, mock_enrich):
+        mock_enrich.return_value = ({}, ['https://supplier.example/pea-norli'], {'parsed_keys': ['unrelated_key']})
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=fill_missing',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['updated_fields'], [])
+
+    @patch('farm.views.enrich_culture_data')
+    def test_enrich_propagates_configuration_error(self, mock_enrich):
+        from farm.services.enrichment import EnrichmentServiceError
+
+        mock_enrich.side_effect = EnrichmentServiceError('OPENAI_API_KEY is not configured.')
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/?mode=overwrite',
+            {},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.data['message'], 'LLM not configured.')
+        self.assertEqual(response.data['detail'], 'OPENAI_API_KEY is not configured.')
+
 
 
 class PlantingPlanAreaInputTest(DRFAPITestCase):

@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture } from '../api/api';
@@ -29,7 +30,9 @@ import {
   Menu,
   MenuItem,
   Snackbar,
+  Tooltip,
   Typography,
+  CircularProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -94,6 +97,8 @@ function Cultures(): React.ReactElement {
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
+  const [enrichLoadingMode, setEnrichLoadingMode] = useState<'overwrite' | 'fill_missing' | null>(null);
+  const [enrichElapsedSeconds, setEnrichElapsedSeconds] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
@@ -436,6 +441,214 @@ function Cultures(): React.ReactElement {
 
   const selectedCulture = cultures.find(c => c.id === selectedCultureId);
 
+
+  const missingEnrichmentFields = selectedCulture
+    ? ['name', 'variety', 'seed_supplier'].filter((field) => {
+      const value = selectedCulture[field as keyof Culture];
+      return typeof value !== 'string' || value.trim().length === 0;
+    })
+    : [];
+  const canEnrichCulture = selectedCulture !== undefined && missingEnrichmentFields.length === 0;
+
+  const fillMissingCandidateFields: Array<keyof Culture> = [
+    'crop_family',
+    'nutrient_demand',
+    'cultivation_type',
+    'growth_duration_days',
+    'harvest_duration_days',
+    'propagation_duration_days',
+    'harvest_method',
+    'expected_yield',
+    'distance_within_row_cm',
+    'row_spacing_cm',
+    'sowing_depth_cm',
+    'seed_rate_value',
+    'seed_rate_unit',
+    'sowing_calculation_safety_percent',
+    'thousand_kernel_weight_g',
+    'package_size_g',
+    'notes',
+  ];
+
+  const fillMissingTargetCount = selectedCulture
+    ? fillMissingCandidateFields.filter((field) => {
+      const value = selectedCulture[field];
+      if (value === null || value === undefined) return true;
+      if (typeof value === 'string') return value.trim().length === 0;
+      return false;
+    }).length
+    : 0;
+
+
+  const getEnrichmentDisabledMessage = (mode: 'overwrite' | 'fill_missing'): string => {
+    if (!selectedCulture) {
+      return t('enrichment.messages.noCultureSelected');
+    }
+
+    if (missingEnrichmentFields.length > 0) {
+      return t('enrichment.messages.missingRequiredFields', {
+        fields: missingEnrichmentFields.join(', '),
+      });
+    }
+
+    if (mode === 'fill_missing' && fillMissingTargetCount === 0) {
+      return t('enrichment.messages.noFillMissingTargets');
+    }
+
+    return '';
+
+  };
+
+  useEffect(() => {
+    if (!enrichLoadingMode) {
+      setEnrichElapsedSeconds(0);
+      return;
+    }
+
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      setEnrichElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
+    }, 500);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [enrichLoadingMode]);
+
+  const enrichProgressStep = enrichElapsedSeconds < 4
+    ? t('enrichment.progress.stepSearching')
+    : enrichElapsedSeconds < 9
+      ? t('enrichment.progress.stepAnalyzing')
+      : t('enrichment.progress.stepFinalizing');
+
+  const handleEnrichCulture = async (mode: 'overwrite' | 'fill_missing') => {
+    if (!selectedCulture?.id || !canEnrichCulture) {
+      console.debug('[enrich] skipped before request', {
+        hasSelectedCulture: Boolean(selectedCulture?.id),
+        canEnrichCulture,
+        mode,
+      });
+      return;
+    }
+    if (mode === 'fill_missing' && fillMissingTargetCount === 0) {
+      console.debug('[enrich] skipped: no fill_missing targets', {
+        selectedCultureId: selectedCulture.id,
+        fillMissingTargetCount,
+        fillMissingCandidateFields,
+      });
+      showSnackbar(t('enrichment.messages.noFillMissingTargets'), 'error');
+      return;
+    }
+
+    setEnrichLoadingMode(mode);
+    const startedAt = Date.now();
+    const enrichUrl = `/cultures/${selectedCulture.id}/enrich/?mode=${mode}`;
+    console.groupCollapsed(`[enrich] start culture=${selectedCulture.id} mode=${mode}`);
+    console.debug('[enrich] preflight', {
+      url: enrichUrl,
+      selectedCultureId: selectedCulture.id,
+      missingEnrichmentFields,
+      fillMissingTargetCount,
+      fillMissingCandidateFields,
+      notesLength: selectedCulture.notes?.length ?? 0,
+    });
+    try {
+      const response = await cultureAPI.enrich(selectedCulture.id, mode);
+      console.debug('[enrich] API response', {
+        status: response.status,
+        statusText: response.statusText,
+        updated_fields: response.data.updated_fields,
+        sources_count: response.data.sources?.length ?? 0,
+        confidence_score: response.data.confidence_score,
+        plausibility_warnings: response.data.plausibility_warnings,
+        debug: response.data.debug,
+        durationMs: Date.now() - startedAt,
+      });
+      console.debug('[enrich] refreshing cultures after enrich...');
+      await fetchCultures();
+      console.debug('[enrich] cultures refreshed');
+      if (response.data.updated_fields.length === 0) {
+        const debug = response.data.debug;
+        const parsedKeys = Array.isArray(debug?.llm?.parsed_keys)
+          ? debug.llm.parsed_keys
+          : [];
+        console.debug('[enrich] no-op diagnostics', {
+          mode,
+          target_fields: debug?.target_fields ?? [],
+          llm_update_keys: debug?.llm_update_keys ?? [],
+          llm_parsed_keys: parsedKeys,
+          combined_sources_count: debug?.combined_sources_count ?? 0,
+          notes_skipped_due_to_missing_sources: Boolean(debug?.notes_skipped_due_to_missing_sources),
+        });
+        const notesSkipped = Boolean(response.data.debug?.notes_skipped_due_to_missing_sources);
+        showSnackbar(
+          notesSkipped
+            ? t('enrichment.messages.noChangesMissingSources')
+            : t('enrichment.messages.noChangesWithCounts', {
+              targetCount: response.data.debug?.target_fields?.length ?? 0,
+              llmUpdateCount: response.data.debug?.llm_update_keys?.length ?? 0,
+              sourceCount: response.data.debug?.combined_sources_count ?? 0,
+            }),
+          'success'
+        );
+      } else {
+        showSnackbar(t('enrichment.messages.success'), 'success');
+      }
+    } catch (error) {
+      console.error('[enrich] API error', error);
+
+      let message = t('enrichment.messages.error');
+      let snackbarSeverity: 'error' | 'success' = 'error';
+
+      if (axios.isAxiosError(error)) {
+        const responseData = (error.response?.data && typeof error.response.data === 'object')
+          ? error.response.data as {
+            message?: unknown;
+            code?: unknown;
+            detail?: unknown;
+            missing_fields?: unknown;
+          }
+          : undefined;
+
+        console.debug('[enrich] axios error details', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          code: error.code,
+          url: error.config?.url,
+          method: error.config?.method,
+          timeout: error.config?.timeout,
+          responseHeaders: error.response?.headers,
+          responseData,
+          durationMs: Date.now() - startedAt,
+        });
+
+        if (responseData) {
+          console.debug('[enrich] backend error payload fields', {
+            backendCode: responseData.code,
+            backendMessage: responseData.message,
+            backendDetail: responseData.detail,
+            missingFields: responseData.missing_fields,
+          });
+        }
+
+        if (error.code === 'ECONNABORTED') {
+          message = t('enrichment.messages.timeout');
+        } else if (error.response?.status === 422 && responseData?.code === 'NO_ENRICHABLE_FIELDS') {
+          message = t('enrichment.messages.noChanges');
+          snackbarSeverity = 'success';
+          console.debug('[enrich] interpreted 422 NO_ENRICHABLE_FIELDS as no-op enrichment result');
+        } else if (typeof responseData?.message === 'string' && responseData.message.trim()) {
+          message = responseData.message;
+        }
+      }
+
+      showSnackbar(message, snackbarSeverity);
+    } finally {
+      console.groupEnd();
+      setEnrichLoadingMode(null);
+    }
+  };
+
   return (
     <div className="page-container">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -492,6 +705,28 @@ function Cultures(): React.ReactElement {
           >
             {t('buttons.createPlantingPlan')}
           </Button>
+          <Tooltip title={!canEnrichCulture ? getEnrichmentDisabledMessage('overwrite') : ''}>
+            <span>
+              <Button
+                variant="outlined"
+                onClick={() => handleEnrichCulture('overwrite')}
+                disabled={!canEnrichCulture || enrichLoadingMode !== null}
+              >
+                {enrichLoadingMode === 'overwrite' ? t('enrichment.messages.loading') : t('enrichment.buttons.overwrite')}
+              </Button>
+            </span>
+          </Tooltip>
+          <Tooltip title={(!canEnrichCulture || fillMissingTargetCount === 0) ? getEnrichmentDisabledMessage('fill_missing') : ''}>
+            <span>
+              <Button
+                variant="outlined"
+                onClick={() => handleEnrichCulture('fill_missing')}
+                disabled={!canEnrichCulture || fillMissingTargetCount === 0 || enrichLoadingMode !== null}
+              >
+                {enrichLoadingMode === 'fill_missing' ? t('enrichment.messages.loading') : t('enrichment.buttons.fillMissing')}
+              </Button>
+            </span>
+          </Tooltip>
           <Button
             variant="outlined"
             startIcon={<EditIcon />}
@@ -509,6 +744,29 @@ function Cultures(): React.ReactElement {
           </Button>
         </Box>
       )}
+
+      <Dialog
+        open={enrichLoadingMode !== null}
+        onClose={() => undefined}
+        disableEscapeKeyDown
+        aria-labelledby="enrichment-progress-title"
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle id="enrichment-progress-title">{t('enrichment.progress.title')}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
+            <CircularProgress size={28} />
+            <Box>
+              <Typography variant="body1">{t('enrichment.progress.description')}</Typography>
+              <Typography variant="body2" color="text.secondary">{enrichProgressStep}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {t('enrichment.progress.elapsed', { seconds: enrichElapsedSeconds })}
+              </Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+      </Dialog>
 
       {/* Form Dialog */}
       <Dialog
