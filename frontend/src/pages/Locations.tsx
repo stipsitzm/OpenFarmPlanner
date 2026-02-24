@@ -9,6 +9,8 @@
 
 import { useMemo, useRef, useState } from 'react';
 import type { GridColDef } from '@mui/x-data-grid';
+import { Box, Button } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from '../i18n';
 import { locationAPI, type Location } from '../api/api';
 import { EditableDataGrid, type EditableDataGridCommandApi, type EditableRow, type DataGridAPI } from '../components/data-grid';
@@ -91,7 +93,17 @@ function Locations(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <h1>{t('locations:title')}</h1>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <h1>{t('locations:title')}</h1>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => commandApiRef.current?.addRow()}
+          aria-label={`${t('locations:addButton')} (Alt+N)`}
+        >
+          {t('locations:addButton')}
+        </Button>
+      </Box>
       
       <EditableDataGrid<LocationRow>
         columns={columns}

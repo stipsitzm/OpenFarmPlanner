@@ -10,7 +10,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { GridColDef, GridCellParams } from '@mui/x-data-grid';
-import { Tooltip } from '@mui/material';
+import { Box, Button, Tooltip } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
 import {
@@ -304,7 +305,17 @@ function PlantingPlans(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <h1>{t('plantingPlans:title')}</h1>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <h1>{t('plantingPlans:title')}</h1>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => gridCommandApiRef.current?.addRow()}
+          aria-label={`${t('plantingPlans:addButton')} (Alt+N)`}
+        >
+          {t('plantingPlans:addButton')}
+        </Button>
+      </Box>
       
       <EditableDataGrid<PlantingPlanRow>
         columns={columns}
