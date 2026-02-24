@@ -47,3 +47,13 @@ const httpClient = axios.create({
 });
 
 export default httpClient;
+
+
+httpClient.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    if (config.headers && typeof config.headers === 'object') {
+      delete config.headers['Content-Type'];
+    }
+  }
+  return config;
+});
