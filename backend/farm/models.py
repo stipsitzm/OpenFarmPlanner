@@ -148,6 +148,13 @@ class Bed(TimestampedModel):
         ordering = ['field', 'name']
 
 
+class ActiveCultureManager(models.Manager):
+    """Default manager that hides soft-deleted cultures."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(deleted_at__isnull=True)
+
+
 class Culture(TimestampedModel):
     """A crop or plant type with growth, harvest, and planning metadata."""
     NUTRIENT_DEMAND_CHOICES = [
@@ -172,6 +179,7 @@ class Culture(TimestampedModel):
     # Use growth_duration_days instead of days_to_harvest.
     notes = models.TextField(blank=True)
     seed_supplier = models.CharField(max_length=200, blank=True, help_text="Seed supplier/manufacturer (legacy field)")
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
     image_file = models.ForeignKey(
         'MediaFile',
         null=True,
@@ -312,6 +320,9 @@ class Culture(TimestampedModel):
     )
     
     # Display settings.
+
+    objects = ActiveCultureManager()
+    all_objects = models.Manager()
     display_color = models.CharField(
         max_length=7,
         blank=True,
@@ -366,7 +377,7 @@ class Culture(TimestampedModel):
 
         previous = None
         if self.pk:
-            previous = Culture.objects.filter(pk=self.pk).values().first()
+            previous = Culture.all_objects.filter(pk=self.pk).values().first()
 
         # Generate display color on creation if not set.
         if not self.pk and not self.display_color:
@@ -378,7 +389,7 @@ class Culture(TimestampedModel):
 
         super().save(*args, **kwargs)
 
-        current = Culture.objects.filter(pk=self.pk).values().first() or {}
+        current = Culture.all_objects.filter(pk=self.pk).values().first() or {}
         serializable_snapshot: dict[str, Any] = json.loads(
             json.dumps(current, cls=DjangoJSONEncoder)
         )
@@ -477,7 +488,7 @@ class Culture(TimestampedModel):
         ordering = ['name', 'variety']
         constraints = [
             models.UniqueConstraint(
-                fields=['name_normalized', 'variety_normalized', 'supplier'],
+                fields=['name_normalized', 'variety_normalized', 'supplier', 'deleted_at'],
                 name='unique_culture_normalized',
                 violation_error_message='A culture with this name, variety, and supplier already exists.'
             )

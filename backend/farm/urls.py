@@ -13,6 +13,9 @@ from .views import (
     NoteAttachmentListCreateView,
     NoteAttachmentDeleteView,
     MediaFileUploadView,
+    GlobalHistoryListView,
+    GlobalHistoryRestoreView,
+    CultureUndeleteView,
 )
 
 router = DefaultRouter()
@@ -25,6 +28,9 @@ router.register(r'planting-plans', PlantingPlanViewSet)
 router.register(r'tasks', TaskViewSet)
 
 urlpatterns = [
+    path('cultures/<int:pk>/undelete/', CultureUndeleteView.as_view(), name='culture-undelete'),
+    path('history/global/', GlobalHistoryListView.as_view(), name='global-history-list'),
+    path('history/global/restore/', GlobalHistoryRestoreView.as_view(), name='global-history-restore'),
     path('media-files/upload/', MediaFileUploadView.as_view(), name='media-file-upload'),
     path('notes/<int:note_id>/attachments/', NoteAttachmentListCreateView.as_view(), name='note-attachments'),
     path('attachments/<int:attachment_id>/', NoteAttachmentDeleteView.as_view(), name='note-attachment-delete'),

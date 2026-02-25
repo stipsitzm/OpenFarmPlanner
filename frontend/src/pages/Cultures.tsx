@@ -107,7 +107,8 @@ function Cultures(): React.ReactElement {
   const [confirmUpdates, setConfirmUpdates] = useState(false);
   const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [historyItems, setHistoryItems] = useState<Array<{ history_id: number; history_date: string; summary: string }>>([]);
+  const [historyItems, setHistoryItems] = useState<Array<{ history_id: number; history_date: string; summary: string; culture_id?: number }>>([]);
+  const [historyScope, setHistoryScope] = useState<'culture' | 'global'>('culture');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
@@ -228,10 +229,25 @@ function Cultures(): React.ReactElement {
     }
     const response = await cultureAPI.history(selectedCulture.id);
     setHistoryItems(response.data);
+    setHistoryScope('culture');
+    setHistoryOpen(true);
+  };
+
+  const handleOpenGlobalHistory = async () => {
+    const response = await cultureAPI.globalHistory();
+    setHistoryItems(response.data);
+    setHistoryScope('global');
     setHistoryOpen(true);
   };
 
   const handleRestoreVersion = async (historyId: number) => {
+    if (historyScope === 'global') {
+      await cultureAPI.globalRestore(historyId);
+      await fetchCultures();
+      setHistoryOpen(false);
+      return;
+    }
+
     if (!selectedCulture?.id) return;
     await cultureAPI.restore(selectedCulture.id, historyId);
     await fetchCultures();
@@ -637,6 +653,9 @@ function Cultures(): React.ReactElement {
           <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
             Version history…
           </Button>
+          <Button variant="outlined" onClick={handleOpenGlobalHistory}>
+            Projekt-History…
+          </Button>
         </Box>
         <Menu
           id="culture-import-menu"
@@ -896,7 +915,7 @@ function Cultures(): React.ReactElement {
       {/* Snackbar for notifications */}
 
       <Dialog open={historyOpen} onClose={() => setHistoryOpen(false)} fullWidth maxWidth="sm"> 
-        <DialogTitle>Versionen</DialogTitle>
+        <DialogTitle>{historyScope === "global" ? "Projekt-Verlauf" : "Versionen"}</DialogTitle>
         <DialogContent>
           <List>
             {historyItems.map((item) => (
@@ -905,7 +924,7 @@ function Cultures(): React.ReactElement {
               }>
                 <ListItemText
                   primary={new Date(item.history_date).toLocaleString()}
-                  secondary={item.summary}
+                  secondary={historyScope === 'global' ? `${item.summary}${item.culture_id ? ` (Kultur #${item.culture_id})` : ''}` : item.summary}
                 />
               </ListItem>
             ))}

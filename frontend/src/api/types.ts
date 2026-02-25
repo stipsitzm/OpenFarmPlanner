@@ -162,6 +162,7 @@ export interface MediaFileRef {
 
 export interface CultureHistoryEntry {
   history_id: number;
+  culture_id?: number;
   history_date: string;
   history_type: string;
   history_user: string | null;

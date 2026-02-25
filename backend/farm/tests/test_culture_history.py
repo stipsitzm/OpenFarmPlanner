@@ -33,6 +33,43 @@ class CultureHistoryTests(TestCase):
         self.culture.refresh_from_db()
         self.assertEqual(self.culture.name, 'Carrot')
 
+
+
+    def test_soft_delete_and_undelete(self):
+        delete_response = self.client.delete(f'/openfarmplanner/api/cultures/{self.culture.id}/')
+        self.assertEqual(delete_response.status_code, 204)
+
+        list_response = self.client.get('/openfarmplanner/api/cultures/')
+        ids = [item['id'] for item in list_response.json()['results']]
+        self.assertNotIn(self.culture.id, ids)
+
+        undelete_response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/undelete/')
+        self.assertEqual(undelete_response.status_code, 200)
+        self.culture.refresh_from_db()
+        self.assertIsNone(self.culture.deleted_at)
+
+    def test_global_history_lists_entries(self):
+        self.culture.name = 'Global History Test'
+        self.culture.save()
+
+        response = self.client.get('/openfarmplanner/api/history/global/')
+        self.assertEqual(response.status_code, 200)
+        self.assertGreaterEqual(len(response.json()), 1)
+
+    def test_global_history_restore_undeletes_culture(self):
+        delete_response = self.client.delete(f'/openfarmplanner/api/cultures/{self.culture.id}/')
+        self.assertEqual(delete_response.status_code, 204)
+
+        revision = self.culture.revisions.first()
+        restore_response = self.client.post(
+            '/openfarmplanner/api/history/global/restore/',
+            data={'history_id': revision.id},
+            content_type='application/json',
+        )
+        self.assertEqual(restore_response.status_code, 200)
+        self.culture.refresh_from_db()
+        self.assertIsNone(self.culture.deleted_at)
+
     def test_cleanup_history_command(self):
         old = self.culture.revisions.first()
         old.created_at = timezone.now() - timedelta(days=40)

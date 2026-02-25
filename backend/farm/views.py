@@ -276,6 +276,12 @@ class CultureViewSet(viewsets.ModelViewSet):
     """
     queryset = Culture.objects.all()
     serializer_class = CultureSerializer
+
+    def get_queryset(self):
+        include_deleted = self.request.query_params.get('include_deleted') in {'1', 'true', 'True'}
+        if include_deleted:
+            return Culture.all_objects.all()
+        return Culture.objects.all()
     
     def _resolve_supplier(self, culture_data: dict) -> Supplier | None:
         """Resolve supplier from culture data using supplier_id or supplier_name.
@@ -517,6 +523,28 @@ class CultureViewSet(viewsets.ModelViewSet):
             'errors': errors
         }, status=status.HTTP_200_OK)
     
+    def destroy(self, request, *args, **kwargs):
+        culture = self.get_object()
+        if culture.deleted_at is not None:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        culture.deleted_at = timezone.now()
+        culture.save()
+
+        if culture.image_file_id:
+            MediaFile.objects.filter(id=culture.image_file_id, orphaned_at__isnull=True).update(orphaned_at=timezone.now())
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'], url_path='undelete')
+    def undelete(self, request, pk=None):
+        culture = self.get_object()
+        culture.deleted_at = None
+        culture.save()
+        if culture.image_file_id:
+            MediaFile.objects.filter(id=culture.image_file_id).update(orphaned_at=None)
+        return Response(self.get_serializer(culture).data, status=status.HTTP_200_OK)
+
     def perform_update(self, serializer):
         instance = self.get_object()
         previous_media_id = instance.image_file_id
@@ -534,6 +562,7 @@ class CultureViewSet(viewsets.ModelViewSet):
         payload = [
             {
                 'history_id': row.id,
+                'culture_id': row.culture_id,
                 'history_date': row.created_at,
                 'history_type': 'snapshot',
                 'history_user': row.user_name or None,
@@ -545,7 +574,8 @@ class CultureViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='restore')
     def restore(self, request, pk=None):
-        culture = self.get_object()
+        lookup_value = self.kwargs.get(self.lookup_field, pk)
+        culture = get_object_or_404(Culture.all_objects.all(), pk=lookup_value)
         serializer = CultureRestoreSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         revision_id = serializer.validated_data['history_id']
@@ -558,6 +588,7 @@ class CultureViewSet(viewsets.ModelViewSet):
             for key, value in snapshot.items():
                 if key in allowed_fields:
                     setattr(culture, key, value)
+            culture.deleted_at = None
             culture.save()
 
         return Response(self.get_serializer(culture).data, status=status.HTTP_200_OK)
@@ -598,6 +629,66 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 
 
+
+
+class CultureUndeleteView(APIView):
+    """Undelete a soft-deleted culture by ID."""
+
+    def post(self, request, pk: int):
+        culture = get_object_or_404(Culture.all_objects.all(), pk=pk)
+        culture.deleted_at = None
+        culture.save()
+        if culture.image_file_id:
+            MediaFile.objects.filter(id=culture.image_file_id).update(orphaned_at=None)
+        return Response(CultureSerializer(culture).data, status=status.HTTP_200_OK)
+
+
+class GlobalHistoryListView(APIView):
+    """List recent history entries across all cultures."""
+
+    def get(self, request):
+        since = timezone.now() - timedelta(days=30)
+        rows = (
+            CultureRevision.objects
+            .select_related('culture')
+            .filter(created_at__gte=since)
+            .order_by('-created_at')
+        )
+        payload = [
+            {
+                'history_id': row.id,
+                'culture_id': row.culture_id,
+                'history_date': row.created_at,
+                'history_type': 'snapshot',
+                'history_user': row.user_name or None,
+                'summary': f"Culture #{row.culture_id}: " + (', '.join(row.changed_fields[:5]) if row.changed_fields else 'snapshot'),
+            }
+            for row in rows
+        ]
+        return Response(CultureHistoryEntrySerializer(payload, many=True).data)
+
+
+class GlobalHistoryRestoreView(APIView):
+    """Restore a culture from a global history entry (supports soft-deleted cultures)."""
+
+    def post(self, request):
+        serializer = CultureRestoreSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        revision_id = serializer.validated_data['history_id']
+
+        revision = get_object_or_404(CultureRevision.objects.select_related('culture'), id=revision_id)
+        culture = revision.culture
+        snapshot = revision.snapshot
+        allowed_fields = {f.name for f in Culture._meta.fields if f.name not in {'id', 'created_at', 'updated_at'}}
+
+        with transaction.atomic():
+            for key, value in snapshot.items():
+                if key in allowed_fields:
+                    setattr(culture, key, value)
+            culture.deleted_at = None
+            culture.save()
+
+        return Response(CultureSerializer(culture).data, status=status.HTTP_200_OK)
 
 
 class MediaFileUploadView(APIView):

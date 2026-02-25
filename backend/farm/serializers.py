@@ -521,6 +521,7 @@ class NoteAttachmentSerializer(serializers.ModelSerializer):
 
 class CultureHistoryEntrySerializer(serializers.Serializer):
     history_id = serializers.IntegerField()
+    culture_id = serializers.IntegerField(required=False)
     history_date = serializers.DateTimeField()
     history_type = serializers.CharField()
     history_user = serializers.CharField(allow_null=True)
