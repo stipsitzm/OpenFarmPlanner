@@ -18,11 +18,11 @@ import {
   Alert,
   Box,
   Button,
-  ButtonGroup,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   List,
   ListItem,
   ListItemText,
@@ -33,10 +33,10 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import {
   buildAllCulturesExport,
   buildAllCulturesFilename,
@@ -47,6 +47,7 @@ import {
 import { parseCultureImportJson } from '../cultures/importUtils';
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import type { CommandSpec } from '../commands/types';
+import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -109,6 +110,7 @@ function Cultures(): React.ReactElement {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<Array<{ history_id: number; history_date: string; summary: string; culture_id?: number }>>([]);
   const [historyScope, setHistoryScope] = useState<'culture' | 'global' | 'project'>('culture');
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
@@ -224,6 +226,7 @@ function Cultures(): React.ReactElement {
   };
 
   const handleOpenHistory = async () => {
+    handleImportMenuClose();
     if (!selectedCulture?.id) {
       return;
     }
@@ -234,6 +237,7 @@ function Cultures(): React.ReactElement {
   };
 
   const handleOpenGlobalHistory = async () => {
+    handleImportMenuClose();
     const response = await cultureAPI.projectHistory();
     setHistoryItems(response.data);
     setHistoryScope('project');
@@ -337,6 +341,31 @@ function Cultures(): React.ReactElement {
   const handleImportMenuClose = () => {
     setImportMenuAnchor(null);
   };
+
+
+  const handleOpenShortcuts = () => {
+    setShortcutsOpen(true);
+    handleImportMenuClose();
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== '?') {
+        return;
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+      if (isTypingInEditableElement(document.activeElement)) {
+        return;
+      }
+      event.preventDefault();
+      setShortcutsOpen(true);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const resetImportState = () => {
     setImportPreviewCount(0);
@@ -641,35 +670,31 @@ function Cultures(): React.ReactElement {
     <div className="page-container">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <h1>{t('title')}</h1>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <ButtonGroup variant="contained" aria-label={t('buttons.addNew')}>
-            <Button startIcon={<AddIcon />} onClick={handleAddNew}>
-              {t('buttons.addNew')}
-            </Button>
-            <Button
-              size="small"
-              aria-label={t('import.menuLabel')}
-              aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
-              aria-haspopup="true"
-              onClick={handleImportMenuOpen}
-              sx={{ minWidth: 32, px: 0.5 }}
-            >
-              <ArrowDropDownIcon />
-            </Button>
-          </ButtonGroup>
-          <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
-            Version history…
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNew}>
+            {t('buttons.addNew')}
           </Button>
-          <Button variant="outlined" onClick={handleOpenGlobalHistory}>
-            Projekt-History…
-          </Button>
+          <IconButton
+            aria-label="Mehr"
+            aria-controls={importMenuAnchor ? 'culture-system-menu' : undefined}
+            aria-haspopup="true"
+            onClick={handleImportMenuOpen}
+          >
+            <MoreVertIcon />
+          </IconButton>
         </Box>
         <Menu
-          id="culture-import-menu"
+          id="culture-system-menu"
           anchorEl={importMenuAnchor}
           open={Boolean(importMenuAnchor)}
           onClose={handleImportMenuClose}
         >
+          <MenuItem aria-label="Projekt-History" onClick={handleOpenGlobalHistory}>
+            Projekt-History…
+          </MenuItem>
+          <MenuItem aria-label="Tastenkürzel" onClick={handleOpenShortcuts}>
+            Tastenkürzel
+          </MenuItem>
           <MenuItem aria-label="JSON exportieren (Alt+J)" onClick={handleExportCurrentCulture} disabled={!selectedCulture}>
             JSON exportieren (Alt+J)
           </MenuItem>
@@ -698,8 +723,16 @@ function Cultures(): React.ReactElement {
       </Box>
 
       {/* Action buttons for selected culture */}
-      {selectedCulture && (
-        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 1,
+          mb: 2,
+          flexWrap: 'wrap',
+          minHeight: 44,
+          alignItems: 'center',
+        }}
+      >
           <Tooltip title="Vorherige Kultur (Alt+Shift+←)">
             <span>
               <Button aria-label="Vorherige Kultur (Alt+Shift+←)" variant="outlined" onClick={() => goToRelativeCulture('previous')} disabled={cultures.length < 2}>
@@ -714,12 +747,16 @@ function Cultures(): React.ReactElement {
               </Button>
             </span>
           </Tooltip>
+          <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
+            Versionen
+          </Button>
           <Tooltip title="Anbauplan erstellen (Alt+P)">
             <Button
               aria-label="Anbauplan erstellen (Alt+P)"
               variant="contained"
               startIcon={<AgricultureIcon />}
               onClick={handleCreatePlantingPlan}
+              disabled={!selectedCulture}
             >
               {t('buttons.createPlantingPlan')}
             </Button>
@@ -729,7 +766,8 @@ function Cultures(): React.ReactElement {
               aria-label="Kultur bearbeiten (Alt+E)"
               variant="outlined"
               startIcon={<EditIcon />}
-              onClick={() => handleEdit(selectedCulture)}
+              onClick={() => selectedCulture && handleEdit(selectedCulture)}
+              disabled={!selectedCulture}
             >
               {t('buttons.edit')}
             </Button>
@@ -740,13 +778,14 @@ function Cultures(): React.ReactElement {
               variant="outlined"
               color="error"
               startIcon={<DeleteIcon />}
-              onClick={() => handleDelete(selectedCulture)}
+              onClick={() => selectedCulture && handleDelete(selectedCulture)}
+              disabled={!selectedCulture}
             >
               {t('buttons.delete')}
             </Button>
           </Tooltip>
-        </Box>
-      )}
+          <Box sx={{ flexGrow: 1 }} />
+      </Box>
 
       <Dialog open={Boolean(deleteDialogCulture)} onClose={() => setDeleteDialogCulture(null)}>
         <DialogTitle>{t('buttons.delete')}</DialogTitle>
@@ -939,6 +978,34 @@ function Cultures(): React.ReactElement {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setHistoryOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+
+
+      <Dialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Tastenkürzel</DialogTitle>
+        <DialogContent>
+          <List dense>
+            <ListItem>
+              <ListItemText primary="Undo" secondary="Ctrl+Z" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Redo" secondary="Ctrl+Y oder Ctrl+Shift+Z" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Tastenkürzel öffnen" secondary="?" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Command Palette" secondary="Alt+K" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Dialog schließen" secondary="Esc" />
+            </ListItem>
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShortcutsOpen(false)}>Schließen</Button>
         </DialogActions>
       </Dialog>
 
