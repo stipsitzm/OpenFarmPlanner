@@ -108,7 +108,7 @@ function Cultures(): React.ReactElement {
   const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<Array<{ history_id: number; history_date: string; summary: string; culture_id?: number }>>([]);
-  const [historyScope, setHistoryScope] = useState<'culture' | 'global'>('culture');
+  const [historyScope, setHistoryScope] = useState<'culture' | 'global' | 'project'>('culture');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
@@ -234,13 +234,20 @@ function Cultures(): React.ReactElement {
   };
 
   const handleOpenGlobalHistory = async () => {
-    const response = await cultureAPI.globalHistory();
+    const response = await cultureAPI.projectHistory();
     setHistoryItems(response.data);
-    setHistoryScope('global');
+    setHistoryScope('project');
     setHistoryOpen(true);
   };
 
   const handleRestoreVersion = async (historyId: number) => {
+    if (historyScope === 'project') {
+      await cultureAPI.projectRestore(historyId);
+      await fetchCultures();
+      setHistoryOpen(false);
+      return;
+    }
+
     if (historyScope === 'global') {
       await cultureAPI.globalRestore(historyId);
       await fetchCultures();
@@ -915,7 +922,7 @@ function Cultures(): React.ReactElement {
       {/* Snackbar for notifications */}
 
       <Dialog open={historyOpen} onClose={() => setHistoryOpen(false)} fullWidth maxWidth="sm"> 
-        <DialogTitle>{historyScope === "global" ? "Projekt-Verlauf" : "Versionen"}</DialogTitle>
+        <DialogTitle>{historyScope === "project" ? "Projekt-Snapshots" : historyScope === "global" ? "Globaler Kultur-Verlauf" : "Versionen"}</DialogTitle>
         <DialogContent>
           <List>
             {historyItems.map((item) => (
@@ -924,7 +931,7 @@ function Cultures(): React.ReactElement {
               }>
                 <ListItemText
                   primary={new Date(item.history_date).toLocaleString()}
-                  secondary={historyScope === 'global' ? `${item.summary}${item.culture_id ? ` (Kultur #${item.culture_id})` : ''}` : item.summary}
+                  secondary={historyScope === 'culture' ? item.summary : `${item.summary}${item.culture_id ? ` (Kultur #${item.culture_id})` : ''}`}
                 />
               </ListItem>
             ))}

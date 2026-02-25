@@ -15,6 +15,8 @@ from .views import (
     MediaFileUploadView,
     GlobalHistoryListView,
     GlobalHistoryRestoreView,
+    ProjectHistoryListView,
+    ProjectHistoryRestoreView,
     CultureUndeleteView,
 )
 
@@ -28,6 +30,8 @@ router.register(r'planting-plans', PlantingPlanViewSet)
 router.register(r'tasks', TaskViewSet)
 
 urlpatterns = [
+    path('history/project/', ProjectHistoryListView.as_view(), name='project-history-list'),
+    path('history/project/restore/', ProjectHistoryRestoreView.as_view(), name='project-history-restore'),
     path('cultures/<int:pk>/undelete/', CultureUndeleteView.as_view(), name='culture-undelete'),
     path('history/global/', GlobalHistoryListView.as_view(), name='global-history-list'),
     path('history/global/restore/', GlobalHistoryRestoreView.as_view(), name='global-history-restore'),

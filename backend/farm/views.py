@@ -8,8 +8,10 @@ for its respective model.
 from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
+import json
 
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q, Count
 from django.db.models.functions import Coalesce, Ceil, Cast
@@ -20,7 +22,7 @@ from rest_framework.views import APIView
 from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, culture_media_upload_path, CultureRevision
+from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, culture_media_upload_path, CultureRevision, ProjectRevision
 from .serializers import (
     LocationSerializer,
     FieldSerializer,
@@ -51,6 +53,56 @@ def _iso_week_key(day: date) -> str:
     """Return ISO week key in the format YYYY-Www using ISO year and week."""
     iso_year, iso_week, _ = day.isocalendar()
     return f"{iso_year}-W{iso_week:02d}"
+
+
+def _serialize_project_state() -> dict[str, list[dict]]:
+    """Serialize all major project entities to JSON-compatible dictionaries."""
+    return {
+        'locations': list(Location.objects.order_by('id').values()),
+        'fields': list(Field.objects.order_by('id').values()),
+        'beds': list(Bed.objects.order_by('id').values()),
+        'suppliers': list(Supplier.objects.order_by('id').values()),
+        'media_files': list(MediaFile.objects.order_by('id').values()),
+        'cultures': list(Culture.all_objects.order_by('id').values()),
+        'planting_plans': list(PlantingPlan.objects.order_by('id').values()),
+        'tasks': list(Task.objects.order_by('id').values()),
+        'note_attachments': list(NoteAttachment.objects.order_by('id').values()),
+    }
+
+
+def _create_project_revision(summary: str) -> None:
+    snapshot = json.loads(json.dumps(_serialize_project_state(), cls=DjangoJSONEncoder))
+    ProjectRevision.objects.create(snapshot=snapshot, summary=summary)
+
+
+def _restore_project_state(snapshot: dict[str, list[dict]]) -> None:
+    with transaction.atomic():
+        Task.objects.all().delete()
+        NoteAttachment.objects.all().delete()
+        PlantingPlan.objects.all().delete()
+        Culture.all_objects.all().delete()
+        Bed.objects.all().delete()
+        Field.objects.all().delete()
+        Location.objects.all().delete()
+        Supplier.objects.all().delete()
+        MediaFile.objects.all().delete()
+
+        for model, key in [
+            (Location, 'locations'),
+            (Field, 'fields'),
+            (Bed, 'beds'),
+            (Supplier, 'suppliers'),
+            (MediaFile, 'media_files'),
+            (Culture, 'cultures'),
+            (PlantingPlan, 'planting_plans'),
+            (Task, 'tasks'),
+            (NoteAttachment, 'note_attachments'),
+        ]:
+            rows = snapshot.get(key, [])
+            if not rows:
+                continue
+            model.objects.bulk_create([model(**row) for row in rows])
+
 
 
 class YieldCalendarListView(generics.GenericAPIView):
@@ -158,7 +210,15 @@ class YieldCalendarListView(generics.GenericAPIView):
         return Response(response_data)
 
 
-class LocationViewSet(viewsets.ModelViewSet):
+class ProjectRevisionMixin:
+    """Create a project snapshot after mutating operations."""
+
+    def create_project_revision(self, summary: str) -> None:
+        _create_project_revision(summary)
+
+
+
+class LocationViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Location model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -171,8 +231,22 @@ class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
 
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"Location created #{instance.pk}")
 
-class SupplierViewSet(viewsets.ModelViewSet):
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"Location updated #{instance.pk}")
+
+    def perform_destroy(self, instance):
+        instance_id = instance.pk
+        instance.delete()
+        self.create_project_revision(f"Location deleted #{instance_id}")
+
+
+
+class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Supplier model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -185,6 +259,16 @@ class SupplierViewSet(viewsets.ModelViewSet):
     """
     queryset = Supplier.objects.all()
     serializer_class = SupplierSerializer
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"Supplier updated #{instance.pk}")
+
+    def perform_destroy(self, instance):
+        instance_id = instance.pk
+        instance.delete()
+        self.create_project_revision(f"Supplier deleted #{instance_id}")
+
     
     def get_queryset(self):
         """Filter suppliers by name if query parameter is provided.
@@ -230,13 +314,14 @@ class SupplierViewSet(viewsets.ModelViewSet):
         data = serializer.data
         data['created'] = created
         
+        self.create_project_revision(f"Supplier {'created' if created else 'used'} #{supplier.pk}")
         return Response(
             data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
         )
 
 
-class FieldViewSet(viewsets.ModelViewSet):
+class FieldViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Field model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -249,8 +334,22 @@ class FieldViewSet(viewsets.ModelViewSet):
     queryset = Field.objects.all()
     serializer_class = FieldSerializer
 
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"Field created #{instance.pk}")
 
-class BedViewSet(viewsets.ModelViewSet):
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"Field updated #{instance.pk}")
+
+    def perform_destroy(self, instance):
+        instance_id = instance.pk
+        instance.delete()
+        self.create_project_revision(f"Field deleted #{instance_id}")
+
+
+
+class BedViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Bed model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -263,8 +362,22 @@ class BedViewSet(viewsets.ModelViewSet):
     queryset = Bed.objects.all()
     serializer_class = BedSerializer
 
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"Bed created #{instance.pk}")
 
-class CultureViewSet(viewsets.ModelViewSet):
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"Bed updated #{instance.pk}")
+
+    def perform_destroy(self, instance):
+        instance_id = instance.pk
+        instance.delete()
+        self.create_project_revision(f"Bed deleted #{instance_id}")
+
+
+
+class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Culture model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -276,6 +389,11 @@ class CultureViewSet(viewsets.ModelViewSet):
     """
     queryset = Culture.objects.all()
     serializer_class = CultureSerializer
+
+    
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"Culture created #{instance.pk}")
 
     def get_queryset(self):
         include_deleted = self.request.query_params.get('include_deleted') in {'1', 'true', 'True'}
@@ -534,6 +652,7 @@ class CultureViewSet(viewsets.ModelViewSet):
         if culture.image_file_id:
             MediaFile.objects.filter(id=culture.image_file_id, orphaned_at__isnull=True).update(orphaned_at=timezone.now())
 
+        self.create_project_revision(f"Culture soft-deleted #{culture.pk}")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['post'], url_path='undelete')
@@ -543,6 +662,7 @@ class CultureViewSet(viewsets.ModelViewSet):
         culture.save()
         if culture.image_file_id:
             MediaFile.objects.filter(id=culture.image_file_id).update(orphaned_at=None)
+        self.create_project_revision(f"Culture undeleted #{culture.pk}")
         return Response(self.get_serializer(culture).data, status=status.HTTP_200_OK)
 
     def perform_update(self, serializer):
@@ -553,6 +673,7 @@ class CultureViewSet(viewsets.ModelViewSet):
             MediaFile.objects.filter(id=previous_media_id, orphaned_at__isnull=True).update(orphaned_at=timezone.now())
         if updated.image_file_id:
             MediaFile.objects.filter(id=updated.image_file_id).update(orphaned_at=None)
+        self.create_project_revision(f"Culture updated #{updated.pk}")
 
     @action(detail=True, methods=['get'], url_path='history')
     def history(self, request, pk=None):
@@ -591,10 +712,11 @@ class CultureViewSet(viewsets.ModelViewSet):
             culture.deleted_at = None
             culture.save()
 
+        self.create_project_revision(f"Culture restored #{culture.pk}")
         return Response(self.get_serializer(culture).data, status=status.HTTP_200_OK)
 
 
-class PlantingPlanViewSet(viewsets.ModelViewSet):
+class PlantingPlanViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for PlantingPlan model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -613,8 +735,22 @@ class PlantingPlanViewSet(viewsets.ModelViewSet):
     )
     serializer_class = PlantingPlanSerializer
 
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"PlantingPlan created #{instance.pk}")
 
-class TaskViewSet(viewsets.ModelViewSet):
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"PlantingPlan updated #{instance.pk}")
+
+    def perform_destroy(self, instance):
+        instance_id = instance.pk
+        instance.delete()
+        self.create_project_revision(f"PlantingPlan deleted #{instance_id}")
+
+
+
+class TaskViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Task model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -626,6 +762,20 @@ class TaskViewSet(viewsets.ModelViewSet):
     """
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"Task created #{instance.pk}")
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"Task updated #{instance.pk}")
+
+    def perform_destroy(self, instance):
+        instance_id = instance.pk
+        instance.delete()
+        self.create_project_revision(f"Task deleted #{instance_id}")
+
 
 
 
@@ -640,7 +790,42 @@ class CultureUndeleteView(APIView):
         culture.save()
         if culture.image_file_id:
             MediaFile.objects.filter(id=culture.image_file_id).update(orphaned_at=None)
+        _create_project_revision(f"Culture undeleted #{culture.pk}")
         return Response(CultureSerializer(culture).data, status=status.HTTP_200_OK)
+
+
+class ProjectHistoryListView(APIView):
+    """List full-project snapshots."""
+
+    def get(self, request):
+        since = timezone.now() - timedelta(days=30)
+        rows = ProjectRevision.objects.filter(created_at__gte=since).order_by('-created_at')
+        payload = [
+            {
+                'history_id': row.id,
+                'history_date': row.created_at,
+                'history_type': 'project_snapshot',
+                'history_user': None,
+                'summary': row.summary or f"Project snapshot #{row.id}",
+            }
+            for row in rows
+        ]
+        return Response(CultureHistoryEntrySerializer(payload, many=True).data)
+
+
+class ProjectHistoryRestoreView(APIView):
+    """Restore whole project state from a snapshot."""
+
+    def post(self, request):
+        serializer = CultureRestoreSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        revision_id = serializer.validated_data['history_id']
+
+        revision = get_object_or_404(ProjectRevision.objects.all(), id=revision_id)
+        _restore_project_state(revision.snapshot)
+        _create_project_revision(f"Project restored from snapshot #{revision_id}")
+
+        return Response({'detail': 'Project restored successfully.'}, status=status.HTTP_200_OK)
 
 
 class GlobalHistoryListView(APIView):
@@ -688,6 +873,7 @@ class GlobalHistoryRestoreView(APIView):
             culture.deleted_at = None
             culture.save()
 
+        _create_project_revision(f"Culture undeleted #{culture.pk}")
         return Response(CultureSerializer(culture).data, status=status.HTTP_200_OK)
 
 
@@ -702,6 +888,7 @@ class MediaFileUploadView(APIView):
         rel_path = culture_media_upload_path(None, upload.name)
         saved_path = default_storage.save(rel_path, upload)
         media = MediaFile.objects.create(storage_path=saved_path)
+        _create_project_revision(f"Media uploaded #{media.pk}")
         return Response({'id': media.id, 'storage_path': media.storage_path, 'uploaded_at': media.uploaded_at}, status=status.HTTP_201_CREATED)
 
 class NoteAttachmentListCreateView(APIView):
@@ -746,6 +933,7 @@ class NoteAttachmentListCreateView(APIView):
         attachment.save()
 
         serializer = NoteAttachmentSerializer(attachment, context={'request': request})
+        _create_project_revision(f"NoteAttachment created #{attachment.pk}")
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -754,8 +942,10 @@ class NoteAttachmentDeleteView(APIView):
 
     def delete(self, request, attachment_id: int):
         attachment = get_object_or_404(NoteAttachment, pk=attachment_id)
+        attachment_id = attachment.pk
         attachment.image.delete(save=False)
         attachment.delete()
+        _create_project_revision(f"NoteAttachment deleted #{attachment_id}")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

@@ -70,6 +70,58 @@ class CultureHistoryTests(TestCase):
         self.culture.refresh_from_db()
         self.assertIsNone(self.culture.deleted_at)
 
+
+
+    def test_project_history_snapshot_created_on_mutation(self):
+        self.client.put(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/',
+            data={
+                'name': 'Snapshot Trigger',
+                'variety': self.culture.variety,
+                'growth_duration_days': self.culture.growth_duration_days,
+                'harvest_duration_days': self.culture.harvest_duration_days,
+            },
+            content_type='application/json',
+        )
+
+        response = self.client.get('/openfarmplanner/api/history/project/')
+        self.assertEqual(response.status_code, 200)
+        self.assertGreaterEqual(len(response.json()), 1)
+
+    def test_project_restore_restores_previous_project_state(self):
+        self.client.put(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/',
+            data={
+                'name': 'Carrot',
+                'variety': self.culture.variety,
+                'growth_duration_days': self.culture.growth_duration_days,
+                'harvest_duration_days': self.culture.harvest_duration_days,
+            },
+            content_type='application/json',
+        )
+        before = self.client.get('/openfarmplanner/api/history/project/')
+        first_revision_id = before.json()[0]['history_id']
+
+        self.client.put(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/',
+            data={
+                'name': 'Changed Name',
+                'variety': self.culture.variety,
+                'growth_duration_days': self.culture.growth_duration_days,
+                'harvest_duration_days': self.culture.harvest_duration_days,
+            },
+            content_type='application/json',
+        )
+
+        restore_response = self.client.post(
+            '/openfarmplanner/api/history/project/restore/',
+            data={'history_id': first_revision_id},
+            content_type='application/json',
+        )
+        self.assertEqual(restore_response.status_code, 200)
+        self.culture.refresh_from_db()
+        self.assertEqual(self.culture.name, 'Carrot')
+
     def test_cleanup_history_command(self):
         old = self.culture.revisions.first()
         old.created_at = timezone.now() - timedelta(days=40)

@@ -509,6 +509,18 @@ class CultureRevision(models.Model):
 
 
 
+class ProjectRevision(models.Model):
+    """Snapshot of the full project state for point-in-time restore."""
+
+    snapshot = models.JSONField()
+    summary = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+
 class PlantingPlan(TimestampedModel):
     """A planting schedule linking a culture to a bed with dates."""
     culture = models.ForeignKey(Culture, on_delete=models.CASCADE, related_name='planting_plans')

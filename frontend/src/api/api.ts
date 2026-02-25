@@ -25,6 +25,8 @@ export const cultureAPI = {
   undelete: (id: number) => http.post<Culture>(`/cultures/${id}/undelete/`, {}),
   globalHistory: () => http.get<CultureHistoryEntry[]>('/history/global/'),
   globalRestore: (history_id: number) => http.post<Culture>('/history/global/restore/', { history_id }),
+  projectHistory: () => http.get<CultureHistoryEntry[]>('/history/project/'),
+  projectRestore: (history_id: number) => http.post<{ detail: string }>('/history/project/restore/', { history_id }),
   // Legacy import flow split into preview/apply endpoints.
   importPreview: (data: Record<string, unknown>[]) => http.post<{
     results: Array<{
