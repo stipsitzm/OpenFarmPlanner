@@ -54,7 +54,6 @@ function Cultures(): React.ReactElement {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCultureParam = searchParams.get('cultureId');
-  const navActionParam = searchParams.get('navAction');
   const parseCultureId = (value: string | null): number | undefined => {
     if (!value) {
       return undefined;
@@ -237,13 +236,6 @@ function Cultures(): React.ReactElement {
     setHistoryOpen(true);
   };
 
-  const handleOpenGlobalHistory = useCallback(async () => {
-    const response = await cultureAPI.projectHistory();
-    setHistoryItems(response.data);
-    setHistoryScope('project');
-    setHistoryOpen(true);
-  }, []);
-
   const handleRestoreVersion = async (historyId: number) => {
     if (historyScope === 'project') {
       await cultureAPI.projectRestore(historyId);
@@ -342,20 +334,6 @@ function Cultures(): React.ReactElement {
     setImportMenuAnchor(null);
   };
 
-  const handleOpenShortcuts = () => {
-    setShortcutsOpen(true);
-  };
-
-  const clearNavAction = useCallback(() => {
-    setSearchParams((params) => {
-      const nextParams = new URLSearchParams(params);
-      nextParams.delete('navAction');
-      nextParams.delete('navActionNonce');
-      return nextParams;
-    }, { replace: true });
-  }, [setSearchParams]);
-
-
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== '?') {
@@ -374,23 +352,6 @@ function Cultures(): React.ReactElement {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
-
-  useEffect(() => {
-    if (!navActionParam) {
-      return;
-    }
-
-    if (navActionParam === 'project-history') {
-      void handleOpenGlobalHistory();
-      clearNavAction();
-      return;
-    }
-
-    if (navActionParam === 'shortcuts') {
-      handleOpenShortcuts();
-      clearNavAction();
-    }
-  }, [clearNavAction, handleOpenGlobalHistory, navActionParam]);
 
   const resetImportState = () => {
     setImportPreviewCount(0);

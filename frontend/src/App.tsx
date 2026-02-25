@@ -9,7 +9,21 @@
  */
 
 import { createBrowserRouter, RouterProvider, Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { IconButton, Menu, MenuItem } from '@mui/material';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Snackbar,
+} from '@mui/material';
 import { useTranslation } from './i18n';
 import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 import { useRegisterCommands } from './commands/CommandProvider';
@@ -23,6 +37,8 @@ import PlantingPlans from './pages/PlantingPlans';
 import GanttChart from './pages/GanttChart';
 import SeedDemandPage from './pages/SeedDemand';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { cultureAPI } from './api/api';
+import type { CultureHistoryEntry } from './api/types';
 import './App.css';
 
 
@@ -48,10 +64,50 @@ function RootLayout(): React.ReactElement {
     setGlobalMenuAnchor(null);
   };
 
-  const navigateToCulturesAction = (action: 'project-history' | 'shortcuts') => {
-    const nonce = Date.now().toString();
-    navigate(`/cultures?navAction=${action}&navActionNonce=${nonce}`);
+  const [projectHistoryOpen, setProjectHistoryOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+
+  const showSnackbar = (message: string, severity: 'success' | 'error') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleOpenProjectHistory = async () => {
     handleGlobalMenuClose();
+    setHistoryLoading(true);
+    try {
+      const response = await cultureAPI.projectHistory();
+      setHistoryItems(response.data);
+      setProjectHistoryOpen(true);
+    } catch (error) {
+      console.error('Error loading project history:', error);
+      showSnackbar('Projekt-History konnte nicht geladen werden.', 'error');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleRestoreProjectVersion = async (historyId: number) => {
+    try {
+      await cultureAPI.projectRestore(historyId);
+      showSnackbar('Projektversion wurde wiederhergestellt.', 'success');
+      setProjectHistoryOpen(false);
+      window.location.reload();
+    } catch (error) {
+      console.error('Error restoring project version:', error);
+      showSnackbar('Projektversion konnte nicht wiederhergestellt werden.', 'error');
+    }
+  };
+
+  const handleOpenShortcuts = () => {
+    handleGlobalMenuClose();
+    setShortcutsOpen(true);
   };
 
   const globalCommands = useMemo<CommandSpec[]>(() => [
@@ -130,10 +186,10 @@ function RootLayout(): React.ReactElement {
             open={Boolean(globalMenuAnchor)}
             onClose={handleGlobalMenuClose}
           >
-            <MenuItem onClick={() => navigateToCulturesAction('project-history')}>
+            <MenuItem onClick={() => void handleOpenProjectHistory()} disabled={historyLoading}>
               Projekt-History…
             </MenuItem>
-            <MenuItem onClick={() => navigateToCulturesAction('shortcuts')}>
+            <MenuItem onClick={handleOpenShortcuts}>
               Tastenkürzel
             </MenuItem>
           </Menu>
@@ -141,6 +197,67 @@ function RootLayout(): React.ReactElement {
       </nav>
 
       <Outlet />
+
+      <Dialog open={projectHistoryOpen} onClose={() => setProjectHistoryOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Projekt-Snapshots</DialogTitle>
+        <DialogContent>
+          <List>
+            {historyItems.map((item) => (
+              <ListItem
+                key={item.history_id}
+                secondaryAction={
+                  <Button onClick={() => void handleRestoreProjectVersion(item.history_id)}>Restore this version</Button>
+                }
+              >
+                <ListItemText
+                  primary={new Date(item.history_date).toLocaleString()}
+                  secondary={`${item.summary}${item.culture_id ? ` (Kultur #${item.culture_id})` : ''}`}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setProjectHistoryOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Tastenkürzel</DialogTitle>
+        <DialogContent>
+          <List dense>
+            <ListItem>
+              <ListItemText primary="Undo" secondary="Ctrl+Z" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Redo" secondary="Ctrl+Y oder Ctrl+Shift+Z" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Tastenkürzel öffnen" secondary="?" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Command Palette" secondary="Alt+K" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Dialog schließen" secondary="Esc" />
+            </ListItem>
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShortcutsOpen(false)}>Schließen</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 }
