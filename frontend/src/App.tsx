@@ -9,11 +9,12 @@
  */
 
 import { createBrowserRouter, RouterProvider, Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { IconButton, Menu, MenuItem } from '@mui/material';
 import { useTranslation } from './i18n';
 import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 import { useRegisterCommands } from './commands/CommandProvider';
 import type { CommandSpec } from './commands/types';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Home from './pages/Home';
 import Locations from './pages/Locations';
 import FieldsBedsHierarchy from './pages/FieldsBedsHierarchy';
@@ -21,6 +22,7 @@ import Cultures from './pages/Cultures';
 import PlantingPlans from './pages/PlantingPlans';
 import GanttChart from './pages/GanttChart';
 import SeedDemandPage from './pages/SeedDemand';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import './App.css';
 
 
@@ -35,7 +37,22 @@ function RootLayout(): React.ReactElement {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const routes = ['/', '/locations', '/fields-beds', '/cultures', '/planting-plans', '/gantt-chart', '/seed-demand'];
+
+  const handleGlobalMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setGlobalMenuAnchor(event.currentTarget);
+  };
+
+  const handleGlobalMenuClose = () => {
+    setGlobalMenuAnchor(null);
+  };
+
+  const navigateToCulturesAction = (action: 'project-history' | 'shortcuts') => {
+    const nonce = Date.now().toString();
+    navigate(`/cultures?navAction=${action}&navActionNonce=${nonce}`);
+    handleGlobalMenuClose();
+  };
 
   const globalCommands = useMemo<CommandSpec[]>(() => [
     {
@@ -95,6 +112,31 @@ function RootLayout(): React.ReactElement {
           <NavLink to="/seed-demand" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('seedDemand')}
           </NavLink>
+        </div>
+        <div className="nav-actions">
+          <IconButton
+            aria-label="Mehr"
+            aria-controls={globalMenuAnchor ? 'global-actions-menu' : undefined}
+            aria-haspopup="true"
+            onClick={handleGlobalMenuOpen}
+            size="small"
+            sx={{ color: 'white' }}
+          >
+            <MoreVertIcon fontSize="small" />
+          </IconButton>
+          <Menu
+            id="global-actions-menu"
+            anchorEl={globalMenuAnchor}
+            open={Boolean(globalMenuAnchor)}
+            onClose={handleGlobalMenuClose}
+          >
+            <MenuItem onClick={() => navigateToCulturesAction('project-history')}>
+              Projekt-History…
+            </MenuItem>
+            <MenuItem onClick={() => navigateToCulturesAction('shortcuts')}>
+              Tastenkürzel
+            </MenuItem>
+          </Menu>
         </div>
       </nav>
 

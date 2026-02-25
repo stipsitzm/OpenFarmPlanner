@@ -23,7 +23,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   List,
   ListItem,
   ListItemText,
@@ -38,7 +37,6 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import {
   buildAllCulturesExport,
   buildAllCulturesFilename,
@@ -56,6 +54,7 @@ function Cultures(): React.ReactElement {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCultureParam = searchParams.get('cultureId');
+  const navActionParam = searchParams.get('navAction');
   const parseCultureId = (value: string | null): number | undefined => {
     if (!value) {
       return undefined;
@@ -80,7 +79,6 @@ function Cultures(): React.ReactElement {
   const [showForm, setShowForm] = useState(false);
   const [editingCulture, setEditingCulture] = useState<Culture | undefined>(undefined);
   const [importMenuAnchor, setImportMenuAnchor] = useState<null | HTMLElement>(null);
-  const [systemMenuAnchor, setSystemMenuAnchor] = useState<null | HTMLElement>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importPreviewCount, setImportPreviewCount] = useState(0);
   const [importValidCount, setImportValidCount] = useState(0);
@@ -239,13 +237,12 @@ function Cultures(): React.ReactElement {
     setHistoryOpen(true);
   };
 
-  const handleOpenGlobalHistory = async () => {
-    handleSystemMenuClose();
+  const handleOpenGlobalHistory = useCallback(async () => {
     const response = await cultureAPI.projectHistory();
     setHistoryItems(response.data);
     setHistoryScope('project');
     setHistoryOpen(true);
-  };
+  }, []);
 
   const handleRestoreVersion = async (historyId: number) => {
     if (historyScope === 'project') {
@@ -345,18 +342,19 @@ function Cultures(): React.ReactElement {
     setImportMenuAnchor(null);
   };
 
-  const handleSystemMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setSystemMenuAnchor(event.currentTarget);
-  };
-
-  const handleSystemMenuClose = () => {
-    setSystemMenuAnchor(null);
-  };
-
   const handleOpenShortcuts = () => {
     setShortcutsOpen(true);
-    handleSystemMenuClose();
   };
+
+  const clearNavAction = useCallback(() => {
+    setSearchParams((params) => {
+      const nextParams = new URLSearchParams(params);
+      nextParams.delete('navAction');
+      nextParams.delete('navActionNonce');
+      return nextParams;
+    }, { replace: true });
+  }, [setSearchParams]);
+
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -376,6 +374,23 @@ function Cultures(): React.ReactElement {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!navActionParam) {
+      return;
+    }
+
+    if (navActionParam === 'project-history') {
+      void handleOpenGlobalHistory();
+      clearNavAction();
+      return;
+    }
+
+    if (navActionParam === 'shortcuts') {
+      handleOpenShortcuts();
+      clearNavAction();
+    }
+  }, [clearNavAction, handleOpenGlobalHistory, navActionParam]);
 
   const resetImportState = () => {
     setImportPreviewCount(0);
@@ -696,28 +711,7 @@ function Cultures(): React.ReactElement {
               <ArrowDropDownIcon />
             </Button>
           </ButtonGroup>
-          <IconButton
-            aria-label="Mehr"
-            aria-controls={systemMenuAnchor ? 'culture-system-menu' : undefined}
-            aria-haspopup="true"
-            onClick={handleSystemMenuOpen}
-          >
-            <MoreVertIcon />
-          </IconButton>
         </Box>
-        <Menu
-          id="culture-system-menu"
-          anchorEl={systemMenuAnchor}
-          open={Boolean(systemMenuAnchor)}
-          onClose={handleSystemMenuClose}
-        >
-          <MenuItem aria-label="Projekt-History" onClick={handleOpenGlobalHistory}>
-            Projekt-History…
-          </MenuItem>
-          <MenuItem aria-label="Tastenkürzel" onClick={handleOpenShortcuts}>
-            Tastenkürzel
-          </MenuItem>
-        </Menu>
         <Menu
           id="culture-import-menu"
           anchorEl={importMenuAnchor}
