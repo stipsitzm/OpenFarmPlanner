@@ -18,6 +18,7 @@ import {
   Alert,
   Box,
   Button,
+  ButtonGroup,
   Dialog,
   DialogActions,
   DialogContent,
@@ -33,6 +34,7 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
@@ -78,6 +80,7 @@ function Cultures(): React.ReactElement {
   const [showForm, setShowForm] = useState(false);
   const [editingCulture, setEditingCulture] = useState<Culture | undefined>(undefined);
   const [importMenuAnchor, setImportMenuAnchor] = useState<null | HTMLElement>(null);
+  const [systemMenuAnchor, setSystemMenuAnchor] = useState<null | HTMLElement>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importPreviewCount, setImportPreviewCount] = useState(0);
   const [importValidCount, setImportValidCount] = useState(0);
@@ -237,7 +240,7 @@ function Cultures(): React.ReactElement {
   };
 
   const handleOpenGlobalHistory = async () => {
-    handleImportMenuClose();
+    handleSystemMenuClose();
     const response = await cultureAPI.projectHistory();
     setHistoryItems(response.data);
     setHistoryScope('project');
@@ -342,10 +345,17 @@ function Cultures(): React.ReactElement {
     setImportMenuAnchor(null);
   };
 
+  const handleSystemMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setSystemMenuAnchor(event.currentTarget);
+  };
+
+  const handleSystemMenuClose = () => {
+    setSystemMenuAnchor(null);
+  };
 
   const handleOpenShortcuts = () => {
     setShortcutsOpen(true);
-    handleImportMenuClose();
+    handleSystemMenuClose();
   };
 
   useEffect(() => {
@@ -671,23 +681,35 @@ function Cultures(): React.ReactElement {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <h1>{t('title')}</h1>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNew}>
-            {t('buttons.addNew')}
-          </Button>
+          <ButtonGroup variant="contained" aria-label={t('buttons.addNew')}>
+            <Button startIcon={<AddIcon />} onClick={handleAddNew}>
+              {t('buttons.addNew')}
+            </Button>
+            <Button
+              size="small"
+              aria-label={t('import.menuLabel')}
+              aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
+              aria-haspopup="true"
+              onClick={handleImportMenuOpen}
+              sx={{ minWidth: 32, px: 0.5 }}
+            >
+              <ArrowDropDownIcon />
+            </Button>
+          </ButtonGroup>
           <IconButton
             aria-label="Mehr"
-            aria-controls={importMenuAnchor ? 'culture-system-menu' : undefined}
+            aria-controls={systemMenuAnchor ? 'culture-system-menu' : undefined}
             aria-haspopup="true"
-            onClick={handleImportMenuOpen}
+            onClick={handleSystemMenuOpen}
           >
             <MoreVertIcon />
           </IconButton>
         </Box>
         <Menu
           id="culture-system-menu"
-          anchorEl={importMenuAnchor}
-          open={Boolean(importMenuAnchor)}
-          onClose={handleImportMenuClose}
+          anchorEl={systemMenuAnchor}
+          open={Boolean(systemMenuAnchor)}
+          onClose={handleSystemMenuClose}
         >
           <MenuItem aria-label="Projekt-History" onClick={handleOpenGlobalHistory}>
             Projekt-History…
@@ -695,6 +717,13 @@ function Cultures(): React.ReactElement {
           <MenuItem aria-label="Tastenkürzel" onClick={handleOpenShortcuts}>
             Tastenkürzel
           </MenuItem>
+        </Menu>
+        <Menu
+          id="culture-import-menu"
+          anchorEl={importMenuAnchor}
+          open={Boolean(importMenuAnchor)}
+          onClose={handleImportMenuClose}
+        >
           <MenuItem aria-label="JSON exportieren (Alt+J)" onClick={handleExportCurrentCulture} disabled={!selectedCulture}>
             JSON exportieren (Alt+J)
           </MenuItem>
@@ -747,9 +776,6 @@ function Cultures(): React.ReactElement {
               </Button>
             </span>
           </Tooltip>
-          <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
-            Versionen
-          </Button>
           <Tooltip title="Anbauplan erstellen (Alt+P)">
             <Button
               aria-label="Anbauplan erstellen (Alt+P)"
@@ -772,6 +798,9 @@ function Cultures(): React.ReactElement {
               {t('buttons.edit')}
             </Button>
           </Tooltip>
+          <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
+            Versionen
+          </Button>
           <Tooltip title="Kultur löschen (Alt+Shift+D)">
             <Button
               aria-label="Kultur löschen (Alt+Shift+D)"
