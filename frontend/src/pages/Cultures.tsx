@@ -47,6 +47,7 @@ import {
 import { parseCultureImportJson } from '../cultures/importUtils';
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import type { CommandSpec } from '../commands/types';
+import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -106,6 +107,10 @@ function Cultures(): React.ReactElement {
   }>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
   const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyItems, setHistoryItems] = useState<Array<{ history_id: number; history_date: string; summary: string; culture_id?: number }>>([]);
+  const [historyScope, setHistoryScope] = useState<'culture' | 'global' | 'project'>('culture');
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
@@ -220,6 +225,39 @@ function Cultures(): React.ReactElement {
     setDeleteDialogCulture(culture);
   };
 
+  const handleOpenHistory = async () => {
+    handleImportMenuClose();
+    if (!selectedCulture?.id) {
+      return;
+    }
+    const response = await cultureAPI.history(selectedCulture.id);
+    setHistoryItems(response.data);
+    setHistoryScope('culture');
+    setHistoryOpen(true);
+  };
+
+  const handleRestoreVersion = async (historyId: number) => {
+    if (historyScope === 'project') {
+      await cultureAPI.projectRestore(historyId);
+      await fetchCultures();
+      setHistoryOpen(false);
+      return;
+    }
+
+    if (historyScope === 'global') {
+      await cultureAPI.globalRestore(historyId);
+      await fetchCultures();
+      setHistoryOpen(false);
+      return;
+    }
+
+    if (!selectedCulture?.id) return;
+    await cultureAPI.restore(selectedCulture.id, historyId);
+    await fetchCultures();
+    setHistoryOpen(false);
+  };
+
+
   const handleDeleteConfirm = async () => {
     if (!deleteDialogCulture?.id) {
       return;
@@ -295,6 +333,25 @@ function Cultures(): React.ReactElement {
   const handleImportMenuClose = () => {
     setImportMenuAnchor(null);
   };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== '?') {
+        return;
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+      if (isTypingInEditableElement(document.activeElement)) {
+        return;
+      }
+      event.preventDefault();
+      setShortcutsOpen(true);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const resetImportState = () => {
     setImportPreviewCount(0);
@@ -599,7 +656,7 @@ function Cultures(): React.ReactElement {
     <div className="page-container">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <h1>{t('title')}</h1>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <ButtonGroup variant="contained" aria-label={t('buttons.addNew')}>
             <Button startIcon={<AddIcon />} onClick={handleAddNew}>
               {t('buttons.addNew')}
@@ -650,8 +707,16 @@ function Cultures(): React.ReactElement {
       </Box>
 
       {/* Action buttons for selected culture */}
-      {selectedCulture && (
-        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 1,
+          mb: 2,
+          flexWrap: 'wrap',
+          minHeight: 44,
+          alignItems: 'center',
+        }}
+      >
           <Tooltip title="Vorherige Kultur (Alt+Shift+←)">
             <span>
               <Button aria-label="Vorherige Kultur (Alt+Shift+←)" variant="outlined" onClick={() => goToRelativeCulture('previous')} disabled={cultures.length < 2}>
@@ -672,6 +737,7 @@ function Cultures(): React.ReactElement {
               variant="contained"
               startIcon={<AgricultureIcon />}
               onClick={handleCreatePlantingPlan}
+              disabled={!selectedCulture}
             >
               {t('buttons.createPlantingPlan')}
             </Button>
@@ -681,24 +747,29 @@ function Cultures(): React.ReactElement {
               aria-label="Kultur bearbeiten (Alt+E)"
               variant="outlined"
               startIcon={<EditIcon />}
-              onClick={() => handleEdit(selectedCulture)}
+              onClick={() => selectedCulture && handleEdit(selectedCulture)}
+              disabled={!selectedCulture}
             >
               {t('buttons.edit')}
             </Button>
           </Tooltip>
+          <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
+            Versionen
+          </Button>
           <Tooltip title="Kultur löschen (Alt+Shift+D)">
             <Button
               aria-label="Kultur löschen (Alt+Shift+D)"
               variant="outlined"
               color="error"
               startIcon={<DeleteIcon />}
-              onClick={() => handleDelete(selectedCulture)}
+              onClick={() => selectedCulture && handleDelete(selectedCulture)}
+              disabled={!selectedCulture}
             >
               {t('buttons.delete')}
             </Button>
           </Tooltip>
-        </Box>
-      )}
+          <Box sx={{ flexGrow: 1 }} />
+      </Box>
 
       <Dialog open={Boolean(deleteDialogCulture)} onClose={() => setDeleteDialogCulture(null)}>
         <DialogTitle>{t('buttons.delete')}</DialogTitle>
@@ -872,6 +943,56 @@ function Cultures(): React.ReactElement {
       </Dialog>
 
       {/* Snackbar for notifications */}
+
+      <Dialog open={historyOpen} onClose={() => setHistoryOpen(false)} fullWidth maxWidth="sm"> 
+        <DialogTitle>{historyScope === "project" ? "Projekt-Snapshots" : historyScope === "global" ? "Globaler Kultur-Verlauf" : "Versionen"}</DialogTitle>
+        <DialogContent>
+          <List>
+            {historyItems.map((item) => (
+              <ListItem key={item.history_id} secondaryAction={
+                <Button onClick={() => handleRestoreVersion(item.history_id)}>Restore this version</Button>
+              }>
+                <ListItemText
+                  primary={new Date(item.history_date).toLocaleString()}
+                  secondary={historyScope === 'culture' ? item.summary : `${item.summary}${item.culture_id ? ` (Kultur #${item.culture_id})` : ''}`}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHistoryOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+
+
+      <Dialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Tastenkürzel</DialogTitle>
+        <DialogContent>
+          <List dense>
+            <ListItem>
+              <ListItemText primary="Undo" secondary="Ctrl+Z" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Redo" secondary="Ctrl+Y oder Ctrl+Shift+Z" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Tastenkürzel öffnen" secondary="?" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Command Palette" secondary="Alt+K" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Dialog schließen" secondary="Esc" />
+            </ListItem>
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShortcutsOpen(false)}>Schließen</Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}

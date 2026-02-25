@@ -10,6 +10,8 @@ import type {
   SeedDemand,
   YieldCalendarWeek,
   NoteAttachment,
+  CultureHistoryEntry,
+  MediaFileRef,
 } from './types';
 
 export const cultureAPI = {
@@ -18,6 +20,13 @@ export const cultureAPI = {
   create: (data: Culture) => http.post<Culture>('/cultures/', data),
   update: (id: number, data: Culture) => http.put<Culture>(`/cultures/${id}/`, data),
   delete: (id: number) => http.delete(`/cultures/${id}/`),
+  history: (id: number) => http.get<CultureHistoryEntry[]>(`/cultures/${id}/history/`),
+  restore: (id: number, history_id: number) => http.post<Culture>(`/cultures/${id}/restore/`, { history_id }),
+  undelete: (id: number) => http.post<Culture>(`/cultures/${id}/undelete/`, {}),
+  globalHistory: () => http.get<CultureHistoryEntry[]>('/history/global/'),
+  globalRestore: (history_id: number) => http.post<Culture>('/history/global/restore/', { history_id }),
+  projectHistory: () => http.get<CultureHistoryEntry[]>('/history/project/'),
+  projectRestore: (history_id: number) => http.post<{ detail: string }>('/history/project/restore/', { history_id }),
   // Legacy import flow split into preview/apply endpoints.
   importPreview: (data: Record<string, unknown>[]) => http.post<{
     results: Array<{
@@ -67,6 +76,15 @@ export const plantingPlanAPI = {
   delete: (id: number) => http.delete(`/planting-plans/${id}/`),
 };
 
+
+
+export const mediaFileAPI = {
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file, file.name || 'culture-media');
+    return http.post<MediaFileRef>('/media-files/upload/', formData);
+  },
+};
 
 export const noteAttachmentAPI = {
   list: (noteId: number) => http.get<NoteAttachment[]>(`/notes/${noteId}/attachments/`),
@@ -119,6 +137,8 @@ export type {
   SeedDemand,
   YieldCalendarWeek,
   NoteAttachment,
+  CultureHistoryEntry,
+  MediaFileRef,
 };
 
 export default {
@@ -131,4 +151,5 @@ export default {
   seedDemand: seedDemandAPI,
   yieldCalendar: yieldCalendarAPI,
   noteAttachments: noteAttachmentAPI,
+  mediaFiles: mediaFileAPI,
 };

@@ -1,7 +1,10 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
+from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
+import json
 from typing import Any
 import re
 import uuid
@@ -12,6 +15,25 @@ def note_attachment_upload_path(instance: 'NoteAttachment', filename: str) -> st
     extension = (filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'bin')
     return f"notes/{instance.planting_plan_id}/{uuid.uuid4().hex}.{extension}"
 
+
+
+
+def culture_media_upload_path(instance: 'MediaFile', filename: str) -> str:
+    """Build unique storage path for culture files."""
+    extension = (filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'bin')
+    return f"culture-media/{timezone.now().strftime('%Y/%m')}/{uuid.uuid4().hex}.{extension}"
+
+
+class MediaFile(models.Model):
+    """Stored media metadata used as file references in domain models."""
+
+    storage_path = models.CharField(max_length=500, unique=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    orphaned_at = models.DateTimeField(null=True, blank=True)
+    sha256 = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
 
 class TimestampedModel(models.Model):
     """Abstract base model with created/updated timestamps."""
@@ -126,6 +148,13 @@ class Bed(TimestampedModel):
         ordering = ['field', 'name']
 
 
+class ActiveCultureManager(models.Manager):
+    """Default manager that hides soft-deleted cultures."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(deleted_at__isnull=True)
+
+
 class Culture(TimestampedModel):
     """A crop or plant type with growth, harvest, and planning metadata."""
     NUTRIENT_DEMAND_CHOICES = [
@@ -150,6 +179,15 @@ class Culture(TimestampedModel):
     # Use growth_duration_days instead of days_to_harvest.
     notes = models.TextField(blank=True)
     seed_supplier = models.CharField(max_length=200, blank=True, help_text="Seed supplier/manufacturer (legacy field)")
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    image_file = models.ForeignKey(
+        'MediaFile',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='cultures',
+        help_text='Referenced media file for this culture image'
+    )
     supplier = models.ForeignKey(
         'Supplier',
         null=True,
@@ -282,6 +320,9 @@ class Culture(TimestampedModel):
     )
     
     # Display settings.
+
+    objects = ActiveCultureManager()
+    all_objects = models.Manager()
     display_color = models.CharField(
         max_length=7,
         blank=True,
@@ -333,16 +374,41 @@ class Culture(TimestampedModel):
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the culture and auto-generate display color and normalized fields."""
         from .utils import normalize_text
-        
+
+        previous = None
+        if self.pk:
+            previous = Culture.all_objects.filter(pk=self.pk).values().first()
+
         # Generate display color on creation if not set.
         if not self.pk and not self.display_color:
             self.display_color = self._generate_display_color()
-        
+
         # Always update normalized fields based on current values
         self.name_normalized = normalize_text(self.name) or ''
         self.variety_normalized = normalize_text(self.variety)
-        
+
         super().save(*args, **kwargs)
+
+        current = Culture.all_objects.filter(pk=self.pk).values().first() or {}
+        serializable_snapshot: dict[str, Any] = json.loads(
+            json.dumps(current, cls=DjangoJSONEncoder)
+        )
+
+        changed_fields: list[str] = []
+        if previous:
+            for key, value in current.items():
+                if key in {'created_at', 'updated_at'}:
+                    continue
+                if previous.get(key) != value:
+                    changed_fields.append(key)
+        else:
+            changed_fields.append('created')
+
+        CultureRevision.objects.create(
+            culture=self,
+            snapshot=serializable_snapshot,
+            changed_fields=changed_fields,
+        )
 
     def _generate_display_color(self) -> str:
         """Generate a display color using a Golden Angle HSL strategy."""
@@ -423,10 +489,37 @@ class Culture(TimestampedModel):
         constraints = [
             models.UniqueConstraint(
                 fields=['name_normalized', 'variety_normalized', 'supplier'],
+                condition=models.Q(deleted_at__isnull=True),
                 name='unique_culture_normalized',
                 violation_error_message='A culture with this name, variety, and supplier already exists.'
             )
         ]
+
+
+class CultureRevision(models.Model):
+    """Versioned snapshot of a culture record."""
+
+    culture = models.ForeignKey('Culture', on_delete=models.CASCADE, related_name='revisions')
+    snapshot = models.JSONField()
+    changed_fields = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+    user_name = models.CharField(max_length=150, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+
+class ProjectRevision(models.Model):
+    """Snapshot of the full project state for point-in-time restore."""
+
+    snapshot = models.JSONField()
+    summary = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
 
 
 class PlantingPlan(TimestampedModel):
