@@ -365,3 +365,35 @@ Keyboard handling is centralized in `useKeyboardShortcuts` and only calls `preve
 Planting plan notes support photo attachments through `/openfarmplanner/api/notes/{noteId}/attachments/` (list + multipart upload) and `/openfarmplanner/api/attachments/{attachmentId}/` (delete). Uploaded images are validated and transformed server-side into a processed image (max side 1280px, EXIF orientation applied, metadata stripped, re-encoded), and only the processed file is stored.
 
 The notes drawer UI includes photo upload, an optional crop/zoom step before upload, thumbnail gallery, full-size preview dialog, and delete actions. The browser additionally resizes/re-encodes before upload to reduce traffic, while the backend remains the source of truth for final validation and processing.
+
+## Quality Gate (one command)
+
+Run all backend and frontend static-analysis checks and write readable reports:
+
+```bash
+make quality
+```
+
+This command runs `scripts/quality.sh`, which:
+
+- creates `reports/latest/` with the newest reports;
+- creates an archived timestamped folder in `reports/<YYYYmmdd-HHMMSS>/`;
+- runs backend checks:
+  - **Ruff** for Python linting (rules: E, F, I, UP, B, C90)
+  - **Radon** for cyclomatic complexity summary
+  - **Pytest + coverage** (when pytest is configured)
+- runs frontend checks:
+  - **ESLint** for TypeScript/React linting
+  - **Madge** for circular dependency detection under `frontend/src`
+
+Reports are plain-text files to make them easy to feed into Codex for planning and refactoring.
+
+### Report locations
+
+- Latest run: `reports/latest/`
+- Archived runs: `reports/<timestamp>/`
+
+### Notes
+
+- The quality script does **not fail on findings** (lint violations, circular dependencies, test failures).
+- The quality script **fails only on setup/tooling problems** (missing tool/config or tool crash).

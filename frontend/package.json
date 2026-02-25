@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "mutation:test": "stryker run",
-    "mutation:report": "open mutation-report/index.html"
+    "mutation:report": "open mutation-report/index.html",
+    "lint:circular": "madge --circular src",
+    "quality:frontend": "npm run lint && npm run lint:circular"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -51,6 +53,7 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
-    "vitest": "^4.0.15"
+    "vitest": "^4.0.15",
+    "madge": "7.0.0"
   }
 }
