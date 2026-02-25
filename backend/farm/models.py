@@ -488,7 +488,8 @@ class Culture(TimestampedModel):
         ordering = ['name', 'variety']
         constraints = [
             models.UniqueConstraint(
-                fields=['name_normalized', 'variety_normalized', 'supplier', 'deleted_at'],
+                fields=['name_normalized', 'variety_normalized', 'supplier'],
+                condition=models.Q(deleted_at__isnull=True),
                 name='unique_culture_normalized',
                 violation_error_message='A culture with this name, variety, and supplier already exists.'
             )
