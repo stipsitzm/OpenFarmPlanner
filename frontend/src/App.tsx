@@ -87,7 +87,7 @@ function RootLayout(): React.ReactElement {
       setProjectHistoryOpen(true);
     } catch (error) {
       console.error('Error loading project history:', error);
-      showSnackbar('Projekt-History konnte nicht geladen werden.', 'error');
+      showSnackbar('Versionsverlauf konnte nicht geladen werden.', 'error');
     } finally {
       setHistoryLoading(false);
     }
@@ -123,6 +123,18 @@ function RootLayout(): React.ReactElement {
         const currentIndex = routes.indexOf(normalizedPath);
         const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % routes.length;
         navigate(routes[nextIndex]);
+      },
+    },
+    {
+      id: 'global.openVersionHistory',
+      title: 'Versionsverlauf öffnen (Alt+Shift+V)',
+      keywords: ['versionsverlauf', 'history', 'projekt'],
+      shortcutHint: 'Alt+Shift+V',
+      keys: { alt: true, shift: true, key: 'V' },
+      contextTags: ['global'],
+      isAvailable: () => true,
+      run: () => {
+        void handleOpenProjectHistory();
       },
     },
     {
@@ -187,7 +199,7 @@ function RootLayout(): React.ReactElement {
             onClose={handleGlobalMenuClose}
           >
             <MenuItem onClick={() => void handleOpenProjectHistory()} disabled={historyLoading}>
-              Projekt-History…
+              Versionsverlauf…
             </MenuItem>
             <MenuItem onClick={handleOpenShortcuts}>
               Tastenkürzel
@@ -199,7 +211,7 @@ function RootLayout(): React.ReactElement {
       <Outlet />
 
       <Dialog open={projectHistoryOpen} onClose={() => setProjectHistoryOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Projekt-Snapshots</DialogTitle>
+        <DialogTitle>Versionsverlauf</DialogTitle>
         <DialogContent>
           <List>
             {historyItems.map((item) => (
@@ -237,6 +249,9 @@ function RootLayout(): React.ReactElement {
             </ListItem>
             <ListItem>
               <ListItemText primary="Command Palette" secondary="Alt+K" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Versionsverlauf öffnen" secondary="Alt+Shift+V" />
             </ListItem>
             <ListItem>
               <ListItemText primary="Dialog schließen" secondary="Esc" />
