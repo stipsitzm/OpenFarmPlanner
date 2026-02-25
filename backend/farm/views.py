@@ -10,14 +10,17 @@ from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q, Count
 from django.db.models.functions import Coalesce, Ceil, Cast
 from rest_framework import viewsets, status, generics, parsers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404
-from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment
+from django.utils import timezone
+from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, culture_media_upload_path, CultureRevision
 from .serializers import (
     LocationSerializer,
     FieldSerializer,
@@ -28,7 +31,10 @@ from .serializers import (
     SupplierSerializer,
     SeedDemandSerializer,
     NoteAttachmentSerializer,
+    CultureHistoryEntrySerializer,
+    CultureRestoreSerializer,
 )
+
 from .image_processing import (
     process_note_image,
     ImageProcessingError,
@@ -511,6 +517,52 @@ class CultureViewSet(viewsets.ModelViewSet):
             'errors': errors
         }, status=status.HTTP_200_OK)
     
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        previous_media_id = instance.image_file_id
+        updated = serializer.save()
+        if previous_media_id and previous_media_id != updated.image_file_id:
+            MediaFile.objects.filter(id=previous_media_id, orphaned_at__isnull=True).update(orphaned_at=timezone.now())
+        if updated.image_file_id:
+            MediaFile.objects.filter(id=updated.image_file_id).update(orphaned_at=None)
+
+    @action(detail=True, methods=['get'], url_path='history')
+    def history(self, request, pk=None):
+        culture = self.get_object()
+        since = timezone.now() - timedelta(days=30)
+        rows = culture.revisions.filter(created_at__gte=since).order_by('-created_at')
+        payload = [
+            {
+                'history_id': row.id,
+                'history_date': row.created_at,
+                'history_type': 'snapshot',
+                'history_user': row.user_name or None,
+                'summary': ', '.join(row.changed_fields[:5]) if row.changed_fields else 'snapshot',
+            }
+            for row in rows
+        ]
+        return Response(CultureHistoryEntrySerializer(payload, many=True).data)
+
+    @action(detail=True, methods=['post'], url_path='restore')
+    def restore(self, request, pk=None):
+        culture = self.get_object()
+        serializer = CultureRestoreSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        revision_id = serializer.validated_data['history_id']
+
+        revision = get_object_or_404(culture.revisions.all(), id=revision_id)
+        snapshot = revision.snapshot
+        allowed_fields = {f.name for f in Culture._meta.fields if f.name not in {'id', 'created_at', 'updated_at'}}
+
+        with transaction.atomic():
+            for key, value in snapshot.items():
+                if key in allowed_fields:
+                    setattr(culture, key, value)
+            culture.save()
+
+        return Response(self.get_serializer(culture).data, status=status.HTTP_200_OK)
+
+
 class PlantingPlanViewSet(viewsets.ModelViewSet):
     """ViewSet for PlantingPlan model providing CRUD operations.
     
@@ -545,6 +597,21 @@ class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
 
 
+
+
+
+class MediaFileUploadView(APIView):
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+
+    def post(self, request):
+        upload = request.FILES.get('file')
+        if upload is None:
+            return Response({'file': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
+
+        rel_path = culture_media_upload_path(None, upload.name)
+        saved_path = default_storage.save(rel_path, upload)
+        media = MediaFile.objects.create(storage_path=saved_path)
+        return Response({'id': media.id, 'storage_path': media.storage_path, 'uploaded_at': media.uploaded_at}, status=status.HTTP_201_CREATED)
 
 class NoteAttachmentListCreateView(APIView):
     """List and upload image attachments for a planting plan note."""

@@ -12,6 +12,7 @@ from .views import (
     YieldCalendarListView,
     NoteAttachmentListCreateView,
     NoteAttachmentDeleteView,
+    MediaFileUploadView,
 )
 
 router = DefaultRouter()
@@ -24,6 +25,7 @@ router.register(r'planting-plans', PlantingPlanViewSet)
 router.register(r'tasks', TaskViewSet)
 
 urlpatterns = [
+    path('media-files/upload/', MediaFileUploadView.as_view(), name='media-file-upload'),
     path('notes/<int:note_id>/attachments/', NoteAttachmentListCreateView.as_view(), name='note-attachments'),
     path('attachments/<int:attachment_id>/', NoteAttachmentDeleteView.as_view(), name='note-attachment-delete'),
     path('seed-demand/', SeedDemandListView.as_view(), name='seed-demand-list'),

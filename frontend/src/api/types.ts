@@ -20,6 +20,8 @@ export interface Culture {
   variety?: string;
   seed_supplier?: string;
   supplier?: Supplier | null;
+  image_file?: MediaFileRef | null;
+  image_file_id?: number | null;
   notes?: string;
   
   crop_family?: string;
@@ -149,4 +151,19 @@ export interface NoteAttachment {
   height?: number;
   size_bytes?: number;
   mime_type?: string;
+}
+
+
+export interface MediaFileRef {
+  id: number;
+  storage_path: string;
+  uploaded_at?: string;
+}
+
+export interface CultureHistoryEntry {
+  history_id: number;
+  history_date: string;
+  history_type: string;
+  history_user: string | null;
+  summary: string;
 }

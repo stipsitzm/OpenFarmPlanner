@@ -106,6 +106,8 @@ function Cultures(): React.ReactElement {
   }>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
   const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyItems, setHistoryItems] = useState<Array<{ history_id: number; history_date: string; summary: string }>>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
@@ -219,6 +221,23 @@ function Cultures(): React.ReactElement {
   const handleDelete = (culture: Culture) => {
     setDeleteDialogCulture(culture);
   };
+
+  const handleOpenHistory = async () => {
+    if (!selectedCulture?.id) {
+      return;
+    }
+    const response = await cultureAPI.history(selectedCulture.id);
+    setHistoryItems(response.data);
+    setHistoryOpen(true);
+  };
+
+  const handleRestoreVersion = async (historyId: number) => {
+    if (!selectedCulture?.id) return;
+    await cultureAPI.restore(selectedCulture.id, historyId);
+    await fetchCultures();
+    setHistoryOpen(false);
+  };
+
 
   const handleDeleteConfirm = async () => {
     if (!deleteDialogCulture?.id) {
@@ -676,6 +695,7 @@ function Cultures(): React.ReactElement {
               {t('buttons.createPlantingPlan')}
             </Button>
           </Tooltip>
+          <Button variant="outlined" onClick={handleOpenHistory}>Version history…</Button>
           <Tooltip title="Kultur bearbeiten (Alt+E)">
             <Button
               aria-label="Kultur bearbeiten (Alt+E)"
@@ -872,6 +892,28 @@ function Cultures(): React.ReactElement {
       </Dialog>
 
       {/* Snackbar for notifications */}
+
+      <Dialog open={historyOpen} onClose={() => setHistoryOpen(false)} fullWidth maxWidth="sm"> 
+        <DialogTitle>Versionen</DialogTitle>
+        <DialogContent>
+          <List>
+            {historyItems.map((item) => (
+              <ListItem key={item.history_id} secondaryAction={
+                <Button onClick={() => handleRestoreVersion(item.history_id)}>Restore this version</Button>
+              }>
+                <ListItemText
+                  primary={new Date(item.history_date).toLocaleString()}
+                  secondary={item.summary}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHistoryOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}

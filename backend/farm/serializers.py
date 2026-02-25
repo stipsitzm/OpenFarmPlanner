@@ -2,7 +2,7 @@
 
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
-from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment
+from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile
 
 
 class CentimetersField(serializers.FloatField):
@@ -20,6 +20,14 @@ class CentimetersField(serializers.FloatField):
 
 
 class LocationSerializer(serializers.ModelSerializer):
+    def get_image_file(self, obj):
+        if not obj.image_file_id:
+            return None
+        return {
+            'id': obj.image_file_id,
+            'storage_path': obj.image_file.storage_path,
+        }
+
     class Meta:
         model = Location
         fields = '__all__'
@@ -28,6 +36,14 @@ class LocationSerializer(serializers.ModelSerializer):
 class SupplierSerializer(serializers.ModelSerializer):
     created = serializers.BooleanField(read_only=True, default=False)
     
+    def get_image_file(self, obj):
+        if not obj.image_file_id:
+            return None
+        return {
+            'id': obj.image_file_id,
+            'storage_path': obj.image_file.storage_path,
+        }
+
     class Meta:
         model = Supplier
         fields = ['id', 'name', 'created_at', 'updated_at', 'created']
@@ -36,6 +52,14 @@ class SupplierSerializer(serializers.ModelSerializer):
 
 class FieldSerializer(serializers.ModelSerializer):
     location_name = serializers.CharField(source='location.name', read_only=True)
+
+    def get_image_file(self, obj):
+        if not obj.image_file_id:
+            return None
+        return {
+            'id': obj.image_file_id,
+            'storage_path': obj.image_file.storage_path,
+        }
 
     class Meta:
         model = Field
@@ -56,6 +80,14 @@ class FieldSerializer(serializers.ModelSerializer):
 
 class BedSerializer(serializers.ModelSerializer):
     field_name = serializers.CharField(source='field.name', read_only=True)
+
+    def get_image_file(self, obj):
+        if not obj.image_file_id:
+            return None
+        return {
+            'id': obj.image_file_id,
+            'storage_path': obj.image_file.storage_path,
+        }
 
     class Meta:
         model = Bed
@@ -101,6 +133,15 @@ class CultureSerializer(serializers.ModelSerializer):
         help_text='Sowing depth in centimeters'
     )
     
+    image_file = serializers.SerializerMethodField()
+    image_file_id = serializers.PrimaryKeyRelatedField(
+        queryset=MediaFile.objects.all(),
+        source='image_file',
+        write_only=True,
+        required=False,
+        allow_null=True,
+    )
+
     supplier = SupplierSerializer(read_only=True)
     supplier_id = serializers.PrimaryKeyRelatedField(
         queryset=Supplier.objects.all(),
@@ -161,6 +202,14 @@ class CultureSerializer(serializers.ModelSerializer):
         help_text='Calculated plants per square meter based on spacing (read-only)'
     )
     
+    def get_image_file(self, obj):
+        if not obj.image_file_id:
+            return None
+        return {
+            'id': obj.image_file_id,
+            'storage_path': obj.image_file.storage_path,
+        }
+
     class Meta:
         model = Culture
         fields = '__all__'
@@ -273,6 +322,14 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
         help_text='Unit for area input: M2 (square meters) or PLANTS (plant count)'
     )
 
+    def get_image_file(self, obj):
+        if not obj.image_file_id:
+            return None
+        return {
+            'id': obj.image_file_id,
+            'storage_path': obj.image_file.storage_path,
+        }
+
     class Meta:
         model = PlantingPlan
         fields = '__all__'
@@ -359,6 +416,14 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
 class TaskSerializer(serializers.ModelSerializer):
     planting_plan_name = serializers.CharField(source='planting_plan.__str__', read_only=True)
 
+    def get_image_file(self, obj):
+        if not obj.image_file_id:
+            return None
+        return {
+            'id': obj.image_file_id,
+            'storage_path': obj.image_file.storage_path,
+        }
+
     class Meta:
         model = Task
         fields = '__all__'
@@ -413,6 +478,14 @@ class NoteAttachmentSerializer(serializers.ModelSerializer):
 
     image_url = serializers.SerializerMethodField()
 
+    def get_image_file(self, obj):
+        if not obj.image_file_id:
+            return None
+        return {
+            'id': obj.image_file_id,
+            'storage_path': obj.image_file.storage_path,
+        }
+
     class Meta:
         model = NoteAttachment
         fields = [
@@ -444,3 +517,15 @@ class NoteAttachmentSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(obj.image.url)
         return obj.image.url
+
+
+class CultureHistoryEntrySerializer(serializers.Serializer):
+    history_id = serializers.IntegerField()
+    history_date = serializers.DateTimeField()
+    history_type = serializers.CharField()
+    history_user = serializers.CharField(allow_null=True)
+    summary = serializers.CharField()
+
+
+class CultureRestoreSerializer(serializers.Serializer):
+    history_id = serializers.IntegerField()
