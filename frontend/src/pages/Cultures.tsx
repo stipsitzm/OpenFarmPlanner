@@ -634,6 +634,9 @@ function Cultures(): React.ReactElement {
               <ArrowDropDownIcon />
             </Button>
           </ButtonGroup>
+          <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
+            Version history…
+          </Button>
         </Box>
         <Menu
           id="culture-import-menu"
@@ -695,7 +698,6 @@ function Cultures(): React.ReactElement {
               {t('buttons.createPlantingPlan')}
             </Button>
           </Tooltip>
-          <Button variant="outlined" onClick={handleOpenHistory}>Version history…</Button>
           <Tooltip title="Kultur bearbeiten (Alt+E)">
             <Button
               aria-label="Kultur bearbeiten (Alt+E)"

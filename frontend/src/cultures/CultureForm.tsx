@@ -12,7 +12,7 @@
  * @returns JSX element rendering the culture form
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../i18n';
 import type { Culture } from '../api/types';
 import { mediaFileAPI } from '../api/api';
@@ -116,6 +116,8 @@ export function CultureForm({
     },
   });
 
+  const formRef = useRef<HTMLFormElement | null>(null);
+
   // Validate on every change
   const validateAndSet = (draft: Partial<Culture>) => {
     const result = validateCulture(draft, t);
@@ -171,23 +173,37 @@ export function CultureForm({
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable)) {
+      const active = document.activeElement;
+      const isInsideForm = active instanceof Element && Boolean(formRef.current?.contains(active));
+      if (!isInsideForm) {
         return;
       }
-      if (!event.ctrlKey) return;
+
+      if (!(event.ctrlKey || event.metaKey)) {
+        return;
+      }
+
       if (event.key.toLowerCase() === 'z' && event.shiftKey) {
-        if (undoRedo.redo()) event.preventDefault();
+        if (undoRedo.redo()) {
+          event.preventDefault();
+        }
         return;
       }
+
       if (event.key.toLowerCase() === 'z') {
-        if (undoRedo.undo()) event.preventDefault();
+        if (undoRedo.undo()) {
+          event.preventDefault();
+        }
         return;
       }
+
       if (event.key.toLowerCase() === 'y') {
-        if (undoRedo.redo()) event.preventDefault();
+        if (undoRedo.redo()) {
+          event.preventDefault();
+        }
       }
     };
+
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [undoRedo]);
@@ -203,7 +219,7 @@ export function CultureForm({
       maxWidth="md"
       fullWidth
     >
-      <form onSubmit={handleSubmit}>
+      <form ref={formRef} onSubmit={handleSubmit}>
         <DialogTitle id="culture-form-dialog-title">
           {isEdit ? t('form.editTitle') : t('form.createTitle')}
         </DialogTitle>
@@ -231,6 +247,12 @@ export function CultureForm({
                 : t('messages.fixErrors', { defaultValue: 'Please fix validation errors' })}
             </Typography>
           )}
+          <Button onClick={undoRedo.undo} disabled={isSaving || !undoRedo.canUndo}>
+            Undo (Ctrl+Z)
+          </Button>
+          <Button onClick={undoRedo.redo} disabled={isSaving || !undoRedo.canRedo}>
+            Redo (Ctrl+Y)
+          </Button>
           <Button onClick={onCancel} disabled={isSaving}>
             {t('form.cancel')}
           </Button>
