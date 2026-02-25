@@ -1,8 +1,10 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
+import json
 from typing import Any
 import re
 import uuid
@@ -377,12 +379,9 @@ class Culture(TimestampedModel):
         super().save(*args, **kwargs)
 
         current = Culture.objects.filter(pk=self.pk).values().first() or {}
-        serializable_snapshot: dict[str, Any] = {}
-        for key, value in current.items():
-            if hasattr(value, 'isoformat'):
-                serializable_snapshot[key] = value.isoformat()
-            else:
-                serializable_snapshot[key] = value
+        serializable_snapshot: dict[str, Any] = json.loads(
+            json.dumps(current, cls=DjangoJSONEncoder)
+        )
 
         changed_fields: list[str] = []
         if previous:
