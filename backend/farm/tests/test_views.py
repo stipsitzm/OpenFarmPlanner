@@ -723,3 +723,100 @@ class PlantingPlanAttachmentCountApiTest(DRFAPITestCase):
         with self.assertNumQueries(2):
             response = self.client.get('/openfarmplanner/api/planting-plans/')
             self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class PlantingPlanRemainingAreaApiTest(DRFAPITestCase):
+    """Tests for remaining-area endpoint on planting plans."""
+
+    def setUp(self):
+        self.location = Location.objects.create(name='Remaining Location')
+        self.field = Field.objects.create(name='Remaining Field', location=self.location)
+        self.bed = Bed.objects.create(name='Remaining Bed', field=self.field, area_sqm=20)
+        self.other_bed = Bed.objects.create(name='Other Bed', field=self.field, area_sqm=15)
+        self.culture = Culture.objects.create(
+            name='Lettuce',
+            growth_duration_days=30,
+            harvest_duration_days=10,
+        )
+
+        self.plan_one = PlantingPlan.objects.create(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=date(2024, 3, 1),
+            area_usage_sqm=6,
+        )
+        self.plan_two = PlantingPlan.objects.create(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=date(2024, 3, 15),
+            area_usage_sqm=4,
+        )
+        PlantingPlan.objects.create(
+            culture=self.culture,
+            bed=self.other_bed,
+            planting_date=date(2024, 3, 10),
+            area_usage_sqm=8,
+        )
+
+    def test_remaining_area_returns_overlap_sum(self):
+        response = self.client.get(
+            '/openfarmplanner/api/planting-plans/remaining-area/',
+            {
+                'bed_id': self.bed.id,
+                'start_date': '2024-03-20',
+                'end_date': '2024-04-10',
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['bed_id'], self.bed.id)
+        self.assertEqual(response.data['bed_area_sqm'], 20.0)
+        self.assertEqual(response.data['overlapping_used_area_sqm'], 10.0)
+        self.assertEqual(response.data['remaining_area_sqm'], 10.0)
+
+    def test_remaining_area_excludes_current_plan(self):
+        response = self.client.get(
+            '/openfarmplanner/api/planting-plans/remaining-area/',
+            {
+                'bed_id': self.bed.id,
+                'start_date': '2024-03-20',
+                'end_date': '2024-04-10',
+                'exclude_plan_id': self.plan_two.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['overlapping_used_area_sqm'], 6.0)
+        self.assertEqual(response.data['remaining_area_sqm'], 14.0)
+
+    def test_remaining_area_validates_required_params(self):
+        response = self.client.get('/openfarmplanner/api/planting-plans/remaining-area/')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('detail', response.data)
+
+    def test_remaining_area_rejects_invalid_date_range(self):
+        response = self.client.get(
+            '/openfarmplanner/api/planting-plans/remaining-area/',
+            {
+                'bed_id': self.bed.id,
+                'start_date': '2024-04-10',
+                'end_date': '2024-03-20',
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('detail', response.data)
+
+    def test_remaining_area_rejects_invalid_bed_id_type(self):
+        response = self.client.get(
+            '/openfarmplanner/api/planting-plans/remaining-area/',
+            {
+                'bed_id': 'abc',
+                'start_date': '2024-03-20',
+                'end_date': '2024-04-10',
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('detail', response.data)

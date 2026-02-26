@@ -1,74 +1,108 @@
 /**
  * Edit cell for area_m2 field in PlantingPlans grid.
- * 
- * Manages local state for immediate UI feedback and communicates
- * value changes to DataGrid via setEditCellValue in onChange handler.
- * The partner plants_count field is computed after save via mapToRow.
+ *
+ * Provides a numeric input for area editing with optional normalization on blur.
  */
 
-import { useState, useRef } from 'react';
-import { TextField } from '@mui/material';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Box, TextField } from '@mui/material';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
-import type { Culture } from '../../api/types';
 
 export interface AreaM2EditCellProps extends GridRenderEditCellParams {
-  cultures: Culture[];
+  bedAreaSqm?: number;
   onLastEditedFieldChange: (field: 'area_m2') => void;
+  normalizeAreaOnBlur?: (value: number | null) => Promise<number | null>;
 }
 
 export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
-  const { id, value, field, hasFocus, onLastEditedFieldChange } = props;
+  const {
+    id,
+    value,
+    field,
+    hasFocus,
+    bedAreaSqm,
+    onLastEditedFieldChange,
+    normalizeAreaOnBlur,
+  } = props;
   const apiRef = useGridApiContext();
-  
-  console.log('[DEBUG] AreaM2EditCell mounted for row', id, 'with value:', value);
-  
-  // Track initial value to prevent premature updates that steal focus
-  const initialValueRef = useRef(value);
-  
-  // Local state for immediate UI feedback
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [inputValue, setInputValue] = useState<string>(
-    typeof value === 'number' && !isNaN(value) ? value.toString() : ''
+    typeof value === 'number' && !Number.isNaN(value) ? value.toString() : ''
   );
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    console.log('[DEBUG] AreaM2EditCell input changed to:', val);
-    setInputValue(val);
-    
-    // Immediately update DataGrid with the new value
-    const numValue = val === '' ? null : parseFloat(val);
-    
-    // Only call setEditCellValue if value actually changed from initial
-    // This prevents premature grid updates on mount that can steal focus
-    if (numValue !== initialValueRef.current) {
-      console.log('[DEBUG] AreaM2EditCell calling setEditCellValue with:', numValue);
-      apiRef.current.setEditCellValue({
-        id,
-        field,
-        value: numValue
-      });
+
+  const maxDisabled = bedAreaSqm === undefined || bedAreaSqm === null;
+
+  const areaExceeded = useMemo(() => {
+    const parsed = Number.parseFloat(inputValue);
+    if (Number.isNaN(parsed) || maxDisabled) {
+      return false;
     }
-    
+    return parsed > (bedAreaSqm ?? 0);
+  }, [inputValue, maxDisabled, bedAreaSqm]);
+
+  useEffect(() => {
+    if (hasFocus) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [hasFocus]);
+
+  const applyValue = async (nextValue: number | null): Promise<void> => {
     onLastEditedFieldChange('area_m2');
+    await apiRef.current.setEditCellValue({
+      id,
+      field,
+      value: nextValue,
+    });
   };
-  
+
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const val = e.target.value;
+    setInputValue(val);
+    const numValue = val === '' ? null : Number.parseFloat(val);
+    await applyValue(Number.isNaN(numValue as number) ? null : numValue);
+  };
+
+  const handleBlur = async (): Promise<void> => {
+    if (!normalizeAreaOnBlur) {
+      return;
+    }
+    const parsedValue = inputValue === '' ? null : Number.parseFloat(inputValue);
+    if (parsedValue !== null && Number.isNaN(parsedValue)) {
+      return;
+    }
+    const normalized = await normalizeAreaOnBlur(parsedValue);
+    if (normalized !== parsedValue) {
+      setInputValue(normalized === null ? '' : normalized.toString());
+      await applyValue(normalized);
+    }
+  };
+
   return (
-    <TextField
-      type="number"
-      autoFocus={hasFocus}
-      value={inputValue}
-      onChange={handleChange}
-      slotProps={{
-        htmlInput: {
-          min: 0,
-          step: 0.01,
-          tabIndex: hasFocus ? 0 : -1,
-        },
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        width: '100%',
       }}
-      size="small"
-      fullWidth
-      sx={{ '& .MuiInputBase-root': { height: '100%' } }}
-    />
+    >
+      <TextField
+        type="number"
+        inputRef={inputRef}
+        value={inputValue}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        size="small"
+        error={areaExceeded}
+        slotProps={{
+          htmlInput: {
+            min: 0,
+            step: 0.01,
+          },
+        }}
+        sx={{ minWidth: 96, flex: 1 }}
+      />
+    </Box>
   );
 }

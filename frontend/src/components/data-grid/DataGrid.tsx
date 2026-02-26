@@ -531,8 +531,9 @@ export function EditableDataGrid<T extends EditableRow>({
     <>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
-      <Box sx={{ width: '100%' }}>
-        <DataGrid
+      <Box sx={{ width: '100%', overflowX: 'auto', overflowY: 'visible' }}>
+        <Box sx={{ display: 'inline-block', width: 'fit-content', minWidth: 0 }}>
+          <DataGrid
           rows={rows}
           columns={columnsWithActions}
           rowModesModel={rowModesModel}
@@ -551,9 +552,10 @@ export function EditableDataGrid<T extends EditableRow>({
           slots={{
             footer: CustomFooter,
           }}
-          sx={dataGridSx}
+          sx={{ ...dataGridSx, width: 'auto' }}
           onCellClick={(params) => handleEditableCellClick(params, rowModesModel, setRowModesModel)}
-        />
+          />
+        </Box>
       </Box>
 
       {/* Notes Editor Drawer */}

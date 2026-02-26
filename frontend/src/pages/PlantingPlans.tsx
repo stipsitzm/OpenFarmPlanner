@@ -10,10 +10,11 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { GridColDef, GridCellParams } from '@mui/x-data-grid';
-import { Box, Button, Tooltip } from '@mui/material';
+import { Alert, Box, Button, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
+import { AreaM2EditCell } from '../components/data-grid/AreaM2EditCell';
 import {
   EditableDataGrid,
   createSingleSelectColumn,
@@ -36,12 +37,34 @@ interface PlantingPlanRow extends PlantingPlan, EditableRow {
   note_attachment_count?: number;
 }
 
+const estimateColumnWidth = (values: string[], min: number, max: number): number => {
+  const longest = values.reduce((length, value) => Math.max(length, value.length), 0);
+  const estimated = longest * 8 + 52;
+  return Math.max(min, Math.min(max, estimated));
+};
+
+const formatAreaM2 = (value: number): string => `${value.toFixed(2)} m²`;
+
+const toIsoDateString = (value: unknown): string | null => {
+  if (value instanceof Date) {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value;
+  }
+  return null;
+};
+
 
 function PlantingPlans(): React.ReactElement {
   const { t } = useTranslation(['plantingPlans', 'common']);
   const [searchParams, setSearchParams] = useSearchParams();
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
+  const [areaWarning, setAreaWarning] = useState<string>('');
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<PlantingPlanRow | null>(null);
@@ -71,6 +94,34 @@ function PlantingPlans(): React.ReactElement {
       }),
     [beds]
   );
+
+  const dynamicWidths = useMemo(() => {
+    const cultureWidth = estimateColumnWidth(
+      [t('plantingPlans:columns.culture'), ...cultureOptions.map((option) => option.label)],
+      200,
+      420,
+    );
+    const bedWidth = estimateColumnWidth(
+      [t('plantingPlans:columns.bed'), ...bedOptions.map((option) => option.label)],
+      260,
+      560,
+    );
+
+    return {
+      culture: cultureWidth,
+      bed: bedWidth,
+      plantingDate: estimateColumnWidth([t('plantingPlans:columns.plantingDate'), '2026-12-31'], 140, 180),
+      harvestDate: estimateColumnWidth([t('plantingPlans:columns.harvestStartDate'), '2026-12-31'], 145, 190),
+      harvestEndDate: estimateColumnWidth([t('plantingPlans:columns.harvestEndDate'), '2026-12-31'], 145, 190),
+      area: estimateColumnWidth(
+        [t('plantingPlans:columns.areaM2'), ...beds.filter((bed) => typeof bed.area_sqm === 'number').map((bed) => formatAreaM2(bed.area_sqm as number))],
+        112,
+        150,
+      ),
+      plants: estimateColumnWidth([t('plantingPlans:columns.plantsCount'), '≈ 9999'], 120, 150),
+      notes: 260,
+    };
+  }, [bedOptions, beds, cultureOptions, t]);
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
@@ -185,22 +236,40 @@ function PlantingPlans(): React.ReactElement {
     createSingleSelectColumn<PlantingPlanRow>({
       field: 'culture',
       headerName: t('plantingPlans:columns.culture'),
-      flex: 1,
-      minWidth: 180,
+      flex: 0,
+      minWidth: dynamicWidths.culture,
       options: cultureOptions,
     }),
-    createSingleSelectColumn<PlantingPlanRow>({
-      field: 'bed',
-      headerName: t('plantingPlans:columns.bed'),
-      flex: 1.2,
-      minWidth: 200,
-      options: bedOptions,
-    }),
+    {
+      ...createSingleSelectColumn<PlantingPlanRow>({
+        field: 'bed',
+        headerName: t('plantingPlans:columns.bed'),
+        flex: 0,
+        minWidth: dynamicWidths.bed,
+        options: bedOptions,
+      }),
+      valueSetter: (value, row) => {
+        const nextRow = row as PlantingPlanRow;
+        const numericValue = typeof value === 'number' ? value : Number(value);
+        const selectedBed = beds.find((bed) => bed.id === numericValue);
+        const isNewRow = Boolean(nextRow.isNew);
+        const currentArea = nextRow.area_m2;
+        const shouldAutofill = isNewRow && (currentArea === undefined || currentArea === null);
+
+        return {
+          ...nextRow,
+          bed: numericValue,
+          area_m2: shouldAutofill && selectedBed?.area_sqm !== undefined
+            ? selectedBed.area_sqm
+            : currentArea,
+        } as PlantingPlanRow;
+      },
+    },
     {
       field: 'planting_date',
       headerName: t('plantingPlans:columns.plantingDate'),
-      flex: 0.8,
-      minWidth: 130,
+      flex: 0,
+      minWidth: dynamicWidths.plantingDate,
       type: 'date',
       editable: true,
       valueGetter: (value) => value ? new Date(value) : null,
@@ -212,8 +281,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'harvest_date',
       headerName: t('plantingPlans:columns.harvestStartDate'),
-      flex: 0.8,
-      minWidth: 130,
+      flex: 0,
+      minWidth: dynamicWidths.harvestDate,
       editable: false,
       type: 'date',
       valueGetter: (value) => value ? new Date(value) : null,
@@ -221,8 +290,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'harvest_end_date',
       headerName: t('plantingPlans:columns.harvestEndDate'),
-      flex: 0.8,
-      minWidth: 130,
+      flex: 0,
+      minWidth: dynamicWidths.harvestEndDate,
       editable: false,
       type: 'date',
       valueGetter: (value) => value ? new Date(value) : null,
@@ -230,8 +299,10 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'area_m2',
       headerName: t('plantingPlans:columns.areaM2'),
-      flex: 0.7,
-      minWidth: 100,
+      flex: 0,
+      minWidth: dynamicWidths.area,
+      width: dynamicWidths.area,
+      maxWidth: dynamicWidths.area,
       editable: true,
       type: 'number',
       renderHeader: () => (
@@ -243,7 +314,64 @@ function PlantingPlans(): React.ReactElement {
         if (params.hasChanged) {
           lastEditedFieldRef.current = 'area_m2';
         }
-        return params.props;
+        const bed = beds.find((item) => item.id === (params.row as PlantingPlanRow).bed);
+        const bedArea = bed?.area_sqm;
+        const numericValue = Number(params.props.value);
+        const hasAreaError =
+          bedArea !== undefined
+          && bedArea !== null
+          && Number.isFinite(numericValue)
+          && numericValue > bedArea;
+        return { ...params.props, error: hasAreaError };
+      },
+      renderEditCell: (params) => {
+        const row = params.row as PlantingPlanRow;
+        const selectedBed = beds.find((item) => item.id === row.bed);
+
+        return (
+          <AreaM2EditCell
+            {...params}
+            bedAreaSqm={selectedBed?.area_sqm}
+            onLastEditedFieldChange={() => {
+              lastEditedFieldRef.current = 'area_m2';
+            }}
+            normalizeAreaOnBlur={async (value) => {
+              const bedId = typeof row.bed === 'number' ? row.bed : Number(row.bed);
+              const startDate = toIsoDateString(row.planting_date);
+              const endDate =
+                toIsoDateString(row.harvest_end_date)
+                ?? toIsoDateString(row.harvest_date)
+                ?? startDate;
+
+              if (!bedId || !startDate || !endDate || value === null) {
+                return value;
+              }
+
+              const requestParams = {
+                bed_id: bedId,
+                start_date: startDate,
+                end_date: endDate,
+                ...(row.id > 0 ? { exclude_plan_id: row.id } : {}),
+              };
+
+              const response = await plantingPlanAPI.remainingArea(requestParams);
+              const remaining = response.data.remaining_area_sqm;
+
+              if (value > remaining) {
+                setAreaWarning(
+                  `Fläche wurde auf Restfläche begrenzt (${remaining.toFixed(2)} m²). Bitte Speichern bestätigen, dann wird der Restwert übernommen.`
+                );
+                return remaining;
+              }
+
+              if (areaWarning) {
+                setAreaWarning('');
+              }
+
+              return value;
+            }}
+          />
+        );
       },
       valueFormatter: (value) => {
         const numericValue = Number(value);
@@ -257,8 +385,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'plants_count',
       headerName: t('plantingPlans:columns.plantsCount'),
-      flex: 0.7,
-      minWidth: 100,
+      flex: 0,
+      minWidth: dynamicWidths.plants,
       editable: true,
       type: 'number',
       renderHeader: () => (
@@ -291,13 +419,15 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'notes',
       headerName: t('common:fields.notes'),
-      width: 250,
+      width: dynamicWidths.notes,
       // Notes field will be overridden by NotesCell in EditableDataGrid
     },
-  ], [bedOptions, cultureOptions, cultures, t]);
+  ], [bedOptions, beds, cultureOptions, cultures, dynamicWidths, t]);
 
   return (
-    <div className="page-container">
+    <div className="page-container" style={{ maxWidth: 'none', margin: 0, paddingLeft: 16, paddingRight: 16 }}>
+      {areaWarning ? <Alert severity="warning" sx={{ mb: 2 }}>{areaWarning}</Alert> : null}
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <h1>{t('plantingPlans:title')}</h1>
         <Button
@@ -359,21 +489,7 @@ function PlantingPlans(): React.ReactElement {
           console.log('[DEBUG] mapToApiData called with row:', row);
           console.log('[DEBUG] mapToApiData lastEditedField:', lastEditedFieldRef.current);
           
-          const isDate = (val: unknown): val is Date => val instanceof Date;
-
-          // Convert date from Date object to string if needed
-          // Use local date string to avoid timezone offset issues
-          let plantingDate: string;
-          if (isDate(row.planting_date)) {
-            const year = row.planting_date.getFullYear();
-            const month = String(row.planting_date.getMonth() + 1).padStart(2, '0');
-            const day = String(row.planting_date.getDate()).padStart(2, '0');
-            plantingDate = `${year}-${month}-${day}`;
-          } else if (typeof row.planting_date === 'string') {
-            plantingDate = row.planting_date;
-          } else {
-            plantingDate = '';
-          }
+          const plantingDate = toIsoDateString(row.planting_date) ?? '';
           
           // Ensure culture and bed are numeric IDs, not label strings
           // DataGrid singleSelect can sometimes provide the label instead of value
@@ -448,6 +564,16 @@ function PlantingPlans(): React.ReactElement {
               fields: missingFields.join(', ') 
             });
           }
+
+          const selectedBed = beds.find((bed) => bed.id === row.bed);
+          if (
+            selectedBed?.area_sqm !== undefined
+            && selectedBed.area_sqm !== null
+            && typeof row.area_m2 === 'number'
+            && row.area_m2 > selectedBed.area_sqm
+          ) {
+            return 'Fläche darf die Beetfläche nicht überschreiten.';
+          }
           
           return null;
         }}
@@ -471,6 +597,7 @@ function PlantingPlans(): React.ReactElement {
           ],
         }}
       />
+
     </div>
   );
 }

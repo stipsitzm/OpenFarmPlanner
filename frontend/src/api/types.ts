@@ -118,6 +118,16 @@ export interface PlantingPlan {
 }
 
 
+
+export interface RemainingAreaResponse {
+  bed_id: number;
+  bed_area_sqm: number;
+  overlapping_used_area_sqm: number;
+  remaining_area_sqm: number;
+  start_date: string;
+  end_date: string;
+}
+
 export interface YieldCalendarCulture {
   culture_id: number;
   culture_name: string;

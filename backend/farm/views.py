@@ -22,6 +22,7 @@ from rest_framework.views import APIView
 from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, culture_media_upload_path, CultureRevision, ProjectRevision
 from .serializers import (
     LocationSerializer,
@@ -36,6 +37,8 @@ from .serializers import (
     CultureHistoryEntrySerializer,
     CultureRestoreSerializer,
 )
+
+from .services_area import calculate_remaining_bed_area
 
 from .image_processing import (
     process_note_image,
@@ -749,6 +752,67 @@ class PlantingPlanViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         self.create_project_revision(f"PlantingPlan deleted #{instance_id}")
 
 
+    @action(detail=False, methods=['get'], url_path='remaining-area')
+    def remaining_area(self, request):
+        """Calculate remaining bed area for a time interval.
+
+        :param request: DRF request with bed_id, start_date, end_date and optional exclude_plan_id.
+        :return: Remaining area payload for the requested bed and interval.
+        """
+        bed_id_param = request.query_params.get('bed_id')
+        start_date_param = request.query_params.get('start_date')
+        end_date_param = request.query_params.get('end_date')
+        exclude_plan_id_param = request.query_params.get('exclude_plan_id')
+
+        if not bed_id_param or not start_date_param or not end_date_param:
+            return Response(
+                {'detail': 'bed_id, start_date and end_date are required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            bed_id = int(bed_id_param)
+        except ValueError:
+            return Response({'detail': 'bed_id must be an integer.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        start_date = parse_date(start_date_param)
+        end_date = parse_date(end_date_param)
+        if start_date is None or end_date is None:
+            return Response(
+                {'detail': 'start_date and end_date must use YYYY-MM-DD format.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        exclude_plan_id: int | None = None
+        if exclude_plan_id_param:
+            try:
+                exclude_plan_id = int(exclude_plan_id_param)
+            except ValueError:
+                return Response(
+                    {'detail': 'exclude_plan_id must be an integer.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        try:
+            payload = calculate_remaining_bed_area(
+                bed_id=bed_id,
+                start_date=start_date,
+                end_date=end_date,
+                exclude_plan_id=exclude_plan_id,
+            )
+        except ValueError as error:
+            return Response({'detail': str(error)}, status=status.HTTP_400_BAD_REQUEST)
+        except Bed.DoesNotExist:
+            return Response({'detail': 'Bed not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            'bed_id': payload['bed_id'],
+            'bed_area_sqm': float(payload['bed_area_sqm']),
+            'overlapping_used_area_sqm': float(payload['overlapping_used_area_sqm']),
+            'remaining_area_sqm': float(payload['remaining_area_sqm']),
+            'start_date': start_date.isoformat(),
+            'end_date': end_date.isoformat(),
+        })
 
 class TaskViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Task model providing CRUD operations.

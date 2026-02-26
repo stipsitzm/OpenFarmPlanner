@@ -95,12 +95,26 @@ describe('API Client', () => {
     plantingPlanAPI.create(planData as never);
     plantingPlanAPI.update(4, planData as never);
     plantingPlanAPI.delete(4);
+    plantingPlanAPI.remainingArea({
+      bed_id: 3,
+      start_date: '2024-03-01',
+      end_date: '2024-04-01',
+      exclude_plan_id: 4,
+    });
 
     expect(getMock).toHaveBeenCalledWith('/planting-plans/');
     expect(getMock).toHaveBeenCalledWith('/planting-plans/4/');
     expect(postMock).toHaveBeenCalledWith('/planting-plans/', planData);
     expect(putMock).toHaveBeenCalledWith('/planting-plans/4/', planData);
     expect(deleteMock).toHaveBeenCalledWith('/planting-plans/4/');
+    expect(getMock).toHaveBeenCalledWith('/planting-plans/remaining-area/', {
+      params: {
+        bed_id: 3,
+        start_date: '2024-03-01',
+        end_date: '2024-04-01',
+        exclude_plan_id: 4,
+      },
+    });
   });
 
   it('calls field and location endpoints', () => {

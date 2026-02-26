@@ -12,6 +12,7 @@ import type {
   NoteAttachment,
   CultureHistoryEntry,
   MediaFileRef,
+  RemainingAreaResponse,
 } from './types';
 
 export const cultureAPI = {
@@ -74,6 +75,8 @@ export const plantingPlanAPI = {
   create: (data: PlantingPlan) => http.post<PlantingPlan>('/planting-plans/', data),
   update: (id: number, data: PlantingPlan) => http.put<PlantingPlan>(`/planting-plans/${id}/`, data),
   delete: (id: number) => http.delete(`/planting-plans/${id}/`),
+  remainingArea: (params: { bed_id: number; start_date: string; end_date: string; exclude_plan_id?: number }) =>
+    http.get<RemainingAreaResponse>('/planting-plans/remaining-area/', { params }),
 };
 
 
@@ -139,6 +142,7 @@ export type {
   NoteAttachment,
   CultureHistoryEntry,
   MediaFileRef,
+  RemainingAreaResponse,
 };
 
 export default {
