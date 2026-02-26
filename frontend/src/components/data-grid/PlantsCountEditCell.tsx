@@ -18,7 +18,7 @@ export interface PlantsCountEditCellProps extends GridRenderEditCellParams {
 }
 
 export function PlantsCountEditCell(props: PlantsCountEditCellProps): React.ReactElement {
-  const { id, value, field, onLastEditedFieldChange } = props;
+  const { id, value, field, hasFocus, onLastEditedFieldChange } = props;
   const apiRef = useGridApiContext();
   
   console.log('[DEBUG] PlantsCountEditCell mounted for row', id, 'with value:', value);
@@ -56,10 +56,15 @@ export function PlantsCountEditCell(props: PlantsCountEditCellProps): React.Reac
   return (
     <TextField
       type="number"
+      autoFocus={hasFocus}
       value={inputValue}
       onChange={handleChange}
       slotProps={{
-        htmlInput: { min: 0, step: 1 },
+        htmlInput: {
+          min: 0,
+          step: 1,
+          tabIndex: hasFocus ? 0 : -1,
+        },
       }}
       size="small"
       fullWidth
