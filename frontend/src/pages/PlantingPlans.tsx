@@ -10,7 +10,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { GridColDef, GridCellParams } from '@mui/x-data-grid';
-import { Box, Button, Tooltip } from '@mui/material';
+import { Alert, Box, Button, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
@@ -62,6 +62,7 @@ function PlantingPlans(): React.ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
+  const [areaWarning, setAreaWarning] = useState<string>('');
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<PlantingPlanRow | null>(null);
@@ -326,7 +327,7 @@ function PlantingPlans(): React.ReactElement {
             onLastEditedFieldChange={() => {
               lastEditedFieldRef.current = 'area_m2';
             }}
-            onApplyRest={async () => {
+            normalizeAreaOnBlur={async (value) => {
               const bedId = typeof row.bed === 'number' ? row.bed : Number(row.bed);
               const startDate = toIsoDateString(row.planting_date);
               const endDate =
@@ -334,19 +335,32 @@ function PlantingPlans(): React.ReactElement {
                 ?? toIsoDateString(row.harvest_date)
                 ?? startDate;
 
-              if (!bedId || !startDate || !endDate) {
-                return null;
+              if (!bedId || !startDate || !endDate || value === null) {
+                return value;
               }
 
-              const params = {
+              const requestParams = {
                 bed_id: bedId,
                 start_date: startDate,
                 end_date: endDate,
                 ...(row.id > 0 ? { exclude_plan_id: row.id } : {}),
               };
 
-              const response = await plantingPlanAPI.remainingArea(params);
-              return response.data.remaining_area_sqm;
+              const response = await plantingPlanAPI.remainingArea(requestParams);
+              const remaining = response.data.remaining_area_sqm;
+
+              if (value > remaining) {
+                setAreaWarning(
+                  `Fläche wurde auf Restfläche begrenzt (${remaining.toFixed(2)} m²).`
+                );
+                return remaining;
+              }
+
+              if (areaWarning) {
+                setAreaWarning('');
+              }
+
+              return value;
             }}
           />
         );
@@ -573,6 +587,8 @@ function PlantingPlans(): React.ReactElement {
           ],
         }}
       />
+
+      {areaWarning ? <Alert severity="warning" sx={{ mt: 2 }}>{areaWarning}</Alert> : null}
     </div>
   );
 }

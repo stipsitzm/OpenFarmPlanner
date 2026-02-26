@@ -1,18 +1,18 @@
 /**
  * Edit cell for area_m2 field in PlantingPlans grid.
  *
- * Provides a numeric input with quick action buttons for Max and Rest values.
+ * Provides a numeric input for area editing with optional normalization on blur.
  */
 
 import { useMemo, useState } from 'react';
-import { Box, Button, TextField } from '@mui/material';
+import { Box, TextField } from '@mui/material';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
 
 export interface AreaM2EditCellProps extends GridRenderEditCellParams {
   bedAreaSqm?: number;
   onLastEditedFieldChange: (field: 'area_m2') => void;
-  onApplyRest: () => Promise<number | null>;
+  normalizeAreaOnBlur?: (value: number | null) => Promise<number | null>;
 }
 
 export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
@@ -24,13 +24,12 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     tabIndex,
     bedAreaSqm,
     onLastEditedFieldChange,
-    onApplyRest,
+    normalizeAreaOnBlur,
   } = props;
   const apiRef = useGridApiContext();
   const [inputValue, setInputValue] = useState<string>(
     typeof value === 'number' && !Number.isNaN(value) ? value.toString() : ''
   );
-  const [isLoadingRest, setIsLoadingRest] = useState<boolean>(false);
 
   const maxDisabled = bedAreaSqm === undefined || bedAreaSqm === null;
 
@@ -58,26 +57,18 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     await applyValue(Number.isNaN(numValue as number) ? null : numValue);
   };
 
-  const handleMaxClick = async (): Promise<void> => {
-    if (maxDisabled) {
+  const handleBlur = async (): Promise<void> => {
+    if (!normalizeAreaOnBlur) {
       return;
     }
-    const maxValue = Number(bedAreaSqm);
-    setInputValue(maxValue.toString());
-    await applyValue(maxValue);
-  };
-
-  const handleRestClick = async (): Promise<void> => {
-    setIsLoadingRest(true);
-    try {
-      const restValue = await onApplyRest();
-      if (restValue === null) {
-        return;
-      }
-      setInputValue(restValue.toString());
-      await applyValue(restValue);
-    } finally {
-      setIsLoadingRest(false);
+    const parsedValue = inputValue === '' ? null : Number.parseFloat(inputValue);
+    if (parsedValue !== null && Number.isNaN(parsedValue)) {
+      return;
+    }
+    const normalized = await normalizeAreaOnBlur(parsedValue);
+    if (normalized !== parsedValue) {
+      setInputValue(normalized === null ? '' : normalized.toString());
+      await applyValue(normalized);
     }
   };
 
@@ -96,6 +87,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
         autoFocus={hasFocus}
         value={inputValue}
         onChange={handleChange}
+        onBlur={handleBlur}
         size="small"
         error={areaExceeded}
         helperText={areaExceeded ? 'Überschreitet Beetfläche' : ''}
@@ -108,18 +100,6 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
         }}
         sx={{ minWidth: 110, flex: 1 }}
       />
-      <Button size="small" variant="outlined" onClick={handleMaxClick} disabled={maxDisabled} tabIndex={-1}>
-        Max
-      </Button>
-      <Button
-        size="small"
-        variant="outlined"
-        onClick={handleRestClick}
-        disabled={isLoadingRest || maxDisabled}
-        tabIndex={-1}
-      >
-        Rest
-      </Button>
     </Box>
   );
 }
