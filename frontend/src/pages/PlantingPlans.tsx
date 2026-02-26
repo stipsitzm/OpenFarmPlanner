@@ -98,28 +98,28 @@ function PlantingPlans(): React.ReactElement {
   const dynamicWidths = useMemo(() => {
     const cultureWidth = estimateColumnWidth(
       [t('plantingPlans:columns.culture'), ...cultureOptions.map((option) => option.label)],
-      170,
-      360,
+      200,
+      420,
     );
     const bedWidth = estimateColumnWidth(
       [t('plantingPlans:columns.bed'), ...bedOptions.map((option) => option.label)],
-      220,
-      460,
+      260,
+      560,
     );
 
     return {
       culture: cultureWidth,
       bed: bedWidth,
-      plantingDate: estimateColumnWidth([t('plantingPlans:columns.plantingDate'), '2026-12-31'], 120, 150),
-      harvestDate: estimateColumnWidth([t('plantingPlans:columns.harvestStartDate'), '2026-12-31'], 120, 160),
-      harvestEndDate: estimateColumnWidth([t('plantingPlans:columns.harvestEndDate'), '2026-12-31'], 120, 160),
+      plantingDate: estimateColumnWidth([t('plantingPlans:columns.plantingDate'), '2026-12-31'], 140, 180),
+      harvestDate: estimateColumnWidth([t('plantingPlans:columns.harvestStartDate'), '2026-12-31'], 145, 190),
+      harvestEndDate: estimateColumnWidth([t('plantingPlans:columns.harvestEndDate'), '2026-12-31'], 145, 190),
       area: estimateColumnWidth(
         [t('plantingPlans:columns.areaM2'), ...beds.filter((bed) => typeof bed.area_sqm === 'number').map((bed) => formatAreaM2(bed.area_sqm as number))],
-        78,
-        108,
+        112,
+        150,
       ),
-      plants: estimateColumnWidth([t('plantingPlans:columns.plantsCount'), '≈ 9999'], 100, 130),
-      notes: 220,
+      plants: estimateColumnWidth([t('plantingPlans:columns.plantsCount'), '≈ 9999'], 120, 150),
+      notes: 260,
     };
   }, [bedOptions, beds, cultureOptions, t]);
 
