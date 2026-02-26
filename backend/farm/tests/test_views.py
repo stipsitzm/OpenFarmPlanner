@@ -876,3 +876,31 @@ class PlantingPlanRemainingAreaApiTest(DRFAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('detail', response.data)
+
+
+class CultureEnrichmentApiTest(DRFAPITestCase):
+    """Tests for enrichment endpoints on cultures."""
+
+    def setUp(self):
+        self.culture = Culture.objects.create(name='Tomate', variety='Roma')
+
+    def test_enrich_single_returns_payload(self):
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/',
+            {'mode': 'complete'},
+            format='json',
+        )
+
+        self.assertIn(response.status_code, (200, 503))
+        if response.status_code == 200:
+            self.assertIn('suggested_fields', response.data)
+
+    def test_enrich_batch_returns_summary(self):
+        response = self.client.post(
+            '/openfarmplanner/api/cultures/enrich-batch/',
+            {'mode': 'complete_all', 'limit': 5},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('items', response.data)

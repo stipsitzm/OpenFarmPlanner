@@ -45,6 +45,7 @@ from .image_processing import (
     ImageProcessingError,
     ImageProcessingBackendUnavailableError,
 )
+from .services.enrichment import enrich_culture, EnrichmentError
 
 
 def _week_start_for_iso_year(iso_year: int) -> date:
@@ -753,6 +754,56 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
 
         self.create_project_revision(f"Culture restored #{culture.pk}")
         return Response(self.get_serializer(culture).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='enrich')
+    def enrich(self, request, pk=None):
+        """Create AI suggestions for one culture."""
+        culture = self.get_object()
+        mode = request.data.get('mode', 'complete')
+        try:
+            payload = enrich_culture(culture, mode)
+        except EnrichmentError as error:
+            return Response({'detail': str(error)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        except Exception as error:
+            return Response({'detail': f'Unexpected enrichment error: {error}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(payload, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='enrich-batch')
+    def enrich_batch(self, request):
+        """Create AI suggestions for multiple cultures (synchronous with hard limit)."""
+        mode = request.data.get('mode', 'complete_all')
+        requested_ids = request.data.get('culture_ids')
+        max_items = min(int(request.data.get('limit', 20)), 50)
+
+        if mode != 'complete_all':
+            return Response({'detail': 'Unsupported mode.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        queryset = self.get_queryset().order_by('id')
+        if isinstance(requested_ids, list) and requested_ids:
+            queryset = queryset.filter(id__in=requested_ids)
+
+        cultures = list(queryset[:max_items])
+        run_id = f"enr_batch_{int(timezone.now().timestamp())}"
+        items = []
+        for culture in cultures:
+            try:
+                item = enrich_culture(culture, 'complete')
+                items.append({'culture_id': culture.id, 'status': 'completed', 'result': item})
+            except EnrichmentError as error:
+                items.append({'culture_id': culture.id, 'status': 'failed', 'error': str(error)})
+
+        succeeded = sum(1 for item in items if item['status'] == 'completed')
+        failed = sum(1 for item in items if item['status'] == 'failed')
+
+        return Response({
+            'run_id': run_id,
+            'status': 'completed',
+            'total': len(items),
+            'processed': len(items),
+            'succeeded': succeeded,
+            'failed': failed,
+            'items': items,
+        }, status=status.HTTP_200_OK)
 
 
 class PlantingPlanViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
