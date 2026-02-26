@@ -972,12 +972,6 @@ function Cultures(): React.ReactElement {
         <DialogContent>
           <List dense>
             <ListItem>
-              <ListItemText primary="Undo" secondary="Ctrl+Z" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Redo" secondary="Ctrl+Y oder Ctrl+Shift+Z" />
-            </ListItem>
-            <ListItem>
               <ListItemText primary="Tastenkürzel öffnen" secondary="?" />
             </ListItem>
             <ListItem>

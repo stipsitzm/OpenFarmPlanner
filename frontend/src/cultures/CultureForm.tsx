@@ -12,11 +12,10 @@
  * @returns JSX element rendering the culture form
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from '../i18n';
 import type { Culture } from '../api/types';
 import { mediaFileAPI } from '../api/api';
-import { useUndoRedo } from '../hooks/useUndoRedo';
 import { extractApiErrorMessage } from '../api/errors';
 import {
   Dialog,
@@ -107,17 +106,6 @@ export function CultureForm({
   const [isValid, setIsValid] = useState(true);
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
 
-  const undoRedo = useUndoRedo({
-    applyCommand: (command, direction) => {
-      setFormData((prev) => ({
-        ...prev,
-        [command.fieldPath]: direction === 'undo' ? command.oldValue as never : command.newValue as never,
-      }));
-    },
-  });
-
-  const formRef = useRef<HTMLFormElement | null>(null);
-
   // Validate on every change
   const validateAndSet = (draft: Partial<Culture>) => {
     const result = validateCulture(draft, t);
@@ -130,19 +118,10 @@ export function CultureForm({
   // Strongly typed change handler
   const handleChange = <K extends keyof Culture>(name: K, value: Culture[K]) => {
     setFormData((prev) => {
-      const oldValue = prev[name];
       let updated = { ...prev, [name]: value };
       if (name === 'seed_rate_unit' && (!value || value === '')) {
         updated = { ...updated, seed_rate_value: null };
       }
-      undoRedo.pushCommand({
-        entityType: 'culture',
-        entityId: prev.id ?? 'draft',
-        fieldPath: String(name),
-        oldValue,
-        newValue: updated[name],
-        timestamp: Date.now(),
-      });
       setIsDirty(true);
       validateAndSet(updated);
       return updated;
@@ -170,44 +149,6 @@ export function CultureForm({
     }
   };
 
-
-  useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      const active = document.activeElement;
-      const isInsideForm = active instanceof Element && Boolean(formRef.current?.contains(active));
-      if (!isInsideForm) {
-        return;
-      }
-
-      if (!(event.ctrlKey || event.metaKey)) {
-        return;
-      }
-
-      if (event.key.toLowerCase() === 'z' && event.shiftKey) {
-        if (undoRedo.redo()) {
-          event.preventDefault();
-        }
-        return;
-      }
-
-      if (event.key.toLowerCase() === 'z') {
-        if (undoRedo.undo()) {
-          event.preventDefault();
-        }
-        return;
-      }
-
-      if (event.key.toLowerCase() === 'y') {
-        if (undoRedo.redo()) {
-          event.preventDefault();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [undoRedo]);
-
   return (
     <Dialog
       open
@@ -219,7 +160,7 @@ export function CultureForm({
       maxWidth="md"
       fullWidth
     >
-      <form ref={formRef} onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
         <DialogTitle id="culture-form-dialog-title">
           {isEdit ? t('form.editTitle') : t('form.createTitle')}
         </DialogTitle>
@@ -247,12 +188,6 @@ export function CultureForm({
                 : t('messages.fixErrors', { defaultValue: 'Please fix validation errors' })}
             </Typography>
           )}
-          <Button onClick={undoRedo.undo} disabled={isSaving || !undoRedo.canUndo}>
-            Undo (Ctrl+Z)
-          </Button>
-          <Button onClick={undoRedo.redo} disabled={isSaving || !undoRedo.canRedo}>
-            Redo (Ctrl+Y)
-          </Button>
           <Button onClick={onCancel} disabled={isSaving}>
             {t('form.cancel')}
           </Button>
