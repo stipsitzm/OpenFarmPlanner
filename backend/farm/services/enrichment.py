@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -77,6 +78,57 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             f"Culture identity: {identity}. Supplier: {supplier or 'unknown'}. Mode: {mode}. Existing values: {json.dumps(existing, ensure_ascii=False)}"
         )
 
+
+    def _extract_text_payload(self, payload: dict[str, Any]) -> str:
+        """Extract model text from Responses API payload across schema variants."""
+        output_text = payload.get("output_text")
+        if isinstance(output_text, str) and output_text.strip():
+            return output_text.strip()
+
+        parts: list[str] = []
+        for item in payload.get("output", []) or []:
+            if not isinstance(item, dict):
+                continue
+            if item.get("type") == "message":
+                for content in item.get("content", []) or []:
+                    if not isinstance(content, dict):
+                        continue
+                    text = content.get("text")
+                    if isinstance(text, str) and text.strip():
+                        parts.append(text.strip())
+
+        combined = "\n".join(parts).strip()
+        if combined:
+            return combined
+
+        raise EnrichmentError("Provider returned no text content")
+
+    def _parse_json_block(self, text: str) -> dict[str, Any]:
+        """Parse JSON from text, including fenced code blocks."""
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        fenced = re.search(r"```(?:json)?\s*(.*?)\s*```", text, re.DOTALL)
+        if fenced:
+            candidate = fenced.group(1)
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError as exc:
+                raise EnrichmentError(f"Provider returned non-JSON payload: {candidate[:400]}") from exc
+
+        start = text.find('{')
+        end = text.rfind('}')
+        if start != -1 and end != -1 and end > start:
+            candidate = text[start:end+1]
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError:
+                pass
+
+        raise EnrichmentError(f"Provider returned non-JSON payload: {text[:400]}")
+
     def enrich(self, context: EnrichmentContext) -> dict[str, Any]:
         if not self.api_key:
             raise EnrichmentError("OPENAI_API_KEY is not configured")
@@ -99,16 +151,8 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             raise EnrichmentError(f"OpenAI responses error: {response.status_code} {response.text[:300]}")
 
         payload = response.json()
-        text = payload.get("output_text", "")
-        if not text:
-            raise EnrichmentError("Provider returned empty output_text")
-
-        try:
-            parsed = json.loads(text)
-        except json.JSONDecodeError as exc:
-            raise EnrichmentError(f"Provider returned non-JSON payload: {text[:400]}") from exc
-
-        return parsed
+        text = self._extract_text_payload(payload)
+        return self._parse_json_block(text)
 
 
 class FallbackHeuristicProvider(BaseEnrichmentProvider):

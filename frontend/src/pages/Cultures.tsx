@@ -51,6 +51,7 @@ import { parseCultureImportJson } from '../cultures/importUtils';
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
+import { extractErrorMessage } from '../api/errors';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -688,7 +689,7 @@ function Cultures(): React.ReactElement {
       openEnrichmentDialog(response.data);
     } catch (error) {
       console.error('Error enriching culture:', error);
-      showSnackbar(t('ai.runError'), 'error');
+      showSnackbar(`${t('ai.runError')} ${extractErrorMessage(error)}`, 'error');
     } finally {
       setEnrichmentLoading(false);
     }
@@ -706,7 +707,7 @@ function Cultures(): React.ReactElement {
       }
     } catch (error) {
       console.error('Error enriching all cultures:', error);
-      showSnackbar(t('ai.runError'), 'error');
+      showSnackbar(`${t('ai.runError')} ${extractErrorMessage(error)}`, 'error');
     } finally {
       setEnrichmentLoading(false);
     }
