@@ -10,7 +10,6 @@ describe('validateCulture', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors.name).toBe('form.nameRequired');
     expect(result.errors.variety).toBe('form.varietyRequired');
-    expect(result.errors.supplier).toBe('form.supplierRequired');
     expect(result.errors.growth_duration_days).toBeUndefined();
     expect(result.errors.harvest_duration_days).toBeUndefined();
     expect(result.errors.propagation_duration_days).toBeUndefined();
@@ -18,20 +17,20 @@ describe('validateCulture', () => {
 
   it('validates seed rate value/unit dependencies and positive amount', () => {
     const missingUnit = validateCulture(
-      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as any, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 1 },
+      { name: 'Karotte', variety: 'Nantaise', growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 1 },
       t
     );
     expect(missingUnit.errors.seed_rate_unit).toBe('form.seedRateUnitRequired');
 
     const nonPositive = validateCulture(
-      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as any, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 0, seed_rate_unit: 'g_per_m2' },
+      { name: 'Karotte', variety: 'Nantaise', growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 0, seed_rate_unit: 'g_per_m2' },
       t
     );
     expect(nonPositive.errors.seed_rate_value).toBe('form.seedRateValueRequired');
     
     // Einheit ohne Menge ist erlaubt
     const unitWithoutValue = validateCulture(
-      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as any, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_unit: 'g_per_m2' },
+      { name: 'Karotte', variety: 'Nantaise', growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_unit: 'g_per_m2' },
       t
     );
     expect(unitWithoutValue.errors.seed_rate_value).toBeUndefined();

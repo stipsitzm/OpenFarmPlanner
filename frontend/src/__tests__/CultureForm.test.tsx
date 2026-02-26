@@ -26,9 +26,18 @@ vi.mock('../cultures/sections/BasicInfoSection', () => ({
   ),
 }));
 
+vi.mock('../cultures/sections/SpacingSection', () => ({
+  SpacingSection: ({ formData, onChange }: { formData: Partial<Culture>; onChange: <K extends keyof Culture>(name: K, value: Culture[K]) => void }) => (
+    <input
+      aria-label="row-spacing-input"
+      value={formData.row_spacing_cm ?? ''}
+      onChange={(event) => onChange('row_spacing_cm', Number(event.target.value))}
+    />
+  ),
+}));
+
 vi.mock('../cultures/sections/TimingSection', () => ({ TimingSection: () => null }));
 vi.mock('../cultures/sections/HarvestSection', () => ({ HarvestSection: () => null }));
-vi.mock('../cultures/sections/SpacingSection', () => ({ SpacingSection: () => null }));
 vi.mock('../cultures/sections/SeedingSection', () => ({ SeedingSection: () => null }));
 vi.mock('../cultures/sections/ColorSection', () => ({ ColorSection: () => null }));
 vi.mock('../cultures/sections/NotesSection', () => ({ NotesSection: () => null }));
@@ -44,7 +53,6 @@ const CULTURE_B: Culture = {
   id: 2,
   name: 'Salat',
   variety: 'Batavia',
-  supplier: { id: 11, name: 'Dreschflegel' },
 };
 
 describe('CultureForm', () => {
@@ -62,6 +70,23 @@ describe('CultureForm', () => {
       name: 'Neue Karotte',
       variety: 'Nantaise',
       supplier: { id: 10, name: 'Bingenheimer' },
+    }));
+  });
+
+  it('saves spacing values and no longer blocks save when supplier is empty', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(<CultureForm culture={CULTURE_B} onSave={onSave} onCancel={() => {}} />);
+
+    fireEvent.change(screen.getByLabelText('row-spacing-input'), { target: { value: '35' } });
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      id: 2,
+      name: 'Salat',
+      variety: 'Batavia',
+      row_spacing_cm: 35,
     }));
   });
 
@@ -83,7 +108,6 @@ describe('CultureForm', () => {
       id: 2,
       name: 'Salat',
       variety: 'Batavia',
-      supplier: { id: 11, name: 'Dreschflegel' },
     }));
   });
 });
