@@ -4,7 +4,7 @@
  * Provides a numeric input for area editing with optional normalization on blur.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, TextField } from '@mui/material';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
@@ -27,6 +27,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     normalizeAreaOnBlur,
   } = props;
   const apiRef = useGridApiContext();
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [inputValue, setInputValue] = useState<string>(
     typeof value === 'number' && !Number.isNaN(value) ? value.toString() : ''
   );
@@ -40,6 +41,13 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     }
     return parsed > (bedAreaSqm ?? 0);
   }, [inputValue, maxDisabled, bedAreaSqm]);
+
+  useEffect(() => {
+    if (hasFocus) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [hasFocus]);
 
   const applyValue = async (nextValue: number | null): Promise<void> => {
     onLastEditedFieldChange('area_m2');
@@ -77,28 +85,26 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
       sx={{
         display: 'flex',
         alignItems: 'center',
-        gap: 0.5,
         width: '100%',
-        minWidth: 260,
       }}
     >
       <TextField
         type="number"
         autoFocus={hasFocus}
+        inputRef={inputRef}
         value={inputValue}
         onChange={handleChange}
         onBlur={handleBlur}
         size="small"
         error={areaExceeded}
-        helperText={areaExceeded ? 'Überschreitet Beetfläche' : ''}
         slotProps={{
           htmlInput: {
             min: 0,
             step: 0.01,
-            tabIndex,
+            tabIndex: typeof tabIndex === 'number' ? tabIndex : (hasFocus ? 0 : -1),
           },
         }}
-        sx={{ minWidth: 110, flex: 1 }}
+        sx={{ minWidth: 96, flex: 1 }}
       />
     </Box>
   );

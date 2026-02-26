@@ -43,6 +43,8 @@ const estimateColumnWidth = (values: string[], min: number, max: number): number
   return Math.max(min, Math.min(max, estimated));
 };
 
+const formatAreaM2 = (value: number): string => `${value.toFixed(2)} m²`;
+
 const toIsoDateString = (value: unknown): string | null => {
   if (value instanceof Date) {
     const year = value.getFullYear();
@@ -111,11 +113,15 @@ function PlantingPlans(): React.ReactElement {
       plantingDate: 150,
       harvestDate: 150,
       harvestEndDate: 150,
-      area: 280,
+      area: estimateColumnWidth(
+        [t('plantingPlans:columns.areaM2'), ...beds.filter((bed) => typeof bed.area_sqm === 'number').map((bed) => formatAreaM2(bed.area_sqm as number))],
+        120,
+        180,
+      ),
       plants: 130,
       notes: 260,
     };
-  }, [bedOptions, cultureOptions, t]);
+  }, [bedOptions, beds, cultureOptions, t]);
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
@@ -351,7 +357,7 @@ function PlantingPlans(): React.ReactElement {
 
               if (value > remaining) {
                 setAreaWarning(
-                  `Fläche wurde auf Restfläche begrenzt (${remaining.toFixed(2)} m²).`
+                  `Fläche wurde auf Restfläche begrenzt (${remaining.toFixed(2)} m²). Bitte Speichern bestätigen, dann wird der Restwert übernommen.`
                 );
                 return remaining;
               }
@@ -418,6 +424,8 @@ function PlantingPlans(): React.ReactElement {
 
   return (
     <div className="page-container" style={{ maxWidth: 'none', margin: 0, paddingLeft: 16, paddingRight: 16 }}>
+      {areaWarning ? <Alert severity="warning" sx={{ mb: 2 }}>{areaWarning}</Alert> : null}
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <h1>{t('plantingPlans:title')}</h1>
         <Button
@@ -588,7 +596,6 @@ function PlantingPlans(): React.ReactElement {
         }}
       />
 
-      {areaWarning ? <Alert severity="warning" sx={{ mt: 2 }}>{areaWarning}</Alert> : null}
     </div>
   );
 }
