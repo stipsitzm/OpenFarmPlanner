@@ -35,6 +35,12 @@ export const dataGridSx = {
   '& .MuiDataGrid-columnHeaderTitleContainer': {
     gap: 0.25,
     minWidth: 0,
+    justifyContent: 'flex-start',
+  },
+  '& .MuiDataGrid-iconButtonContainer, & .MuiDataGrid-menuIcon': {
+    order: -1,
+    marginLeft: 0,
+    marginRight: 2,
   },
   '& .MuiDataGrid-columnHeaderTitleContainerContent': {
     minWidth: 0,
