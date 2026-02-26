@@ -34,7 +34,7 @@ export const dataGridSx = {
     display: 'flex',
     alignItems: 'center',
   },
-  '& .MuiDataGrid-menuIcon, & .MuiDataGrid-iconButtonContainer': {
+  '& .MuiDataGrid-menuIcon, & .MuiDataGrid-iconButtonContainer, & .MuiDataGrid-sortIcon': {
     order: -1,
     flex: '0 0 auto',
     marginLeft: '0 !important',
