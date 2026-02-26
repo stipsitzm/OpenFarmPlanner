@@ -16,7 +16,16 @@ export interface AreaM2EditCellProps extends GridRenderEditCellParams {
 }
 
 export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
-  const { id, value, field, hasFocus, bedAreaSqm, onLastEditedFieldChange, onApplyRest } = props;
+  const {
+    id,
+    value,
+    field,
+    hasFocus,
+    tabIndex,
+    bedAreaSqm,
+    onLastEditedFieldChange,
+    onApplyRest,
+  } = props;
   const apiRef = useGridApiContext();
   const [inputValue, setInputValue] = useState<string>(
     typeof value === 'number' && !Number.isNaN(value) ? value.toString() : ''
@@ -94,7 +103,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
           htmlInput: {
             min: 0,
             step: 0.01,
-            tabIndex: 0,
+            tabIndex,
           },
         }}
         sx={{ minWidth: 110, flex: 1 }}

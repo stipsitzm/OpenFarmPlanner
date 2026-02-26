@@ -84,7 +84,6 @@ export interface EditableDataGridProps<T extends EditableRow> {
   };
   commandApiRef?: MutableRefObject<EditableDataGridCommandApi | null>;
   onSelectedRowChange?: (row: T | null) => void;
-  fitContentWidth?: boolean;
 }
 
 export function EditableDataGrid<T extends EditableRow>({
@@ -107,7 +106,6 @@ export function EditableDataGrid<T extends EditableRow>({
   notes,
   commandApiRef,
   onSelectedRowChange,
-  fitContentWidth = false,
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -533,12 +531,7 @@ export function EditableDataGrid<T extends EditableRow>({
     <>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
-      <Box
-        sx={{
-          width: fitContentWidth ? 'max-content' : '100%',
-          minWidth: fitContentWidth ? '100%' : undefined,
-        }}
-      >
+      <Box sx={{ width: '100%' }}>
         <DataGrid
           rows={rows}
           columns={columnsWithActions}
