@@ -56,12 +56,14 @@ function formatNumber(value: number | null | undefined, t: (key: string) => stri
 /**
  * Formats a distance value (rounds to whole numbers since no one measures more precisely than 1cm)
  */
-function formatDistance(value: number | null | undefined, t: (key: string) => string): string {
+function formatDistance(value: number | null | undefined, t: (key: string) => string, decimals = 0): string {
   if (value === null || value === undefined) {
     return t('cultures:noData');
   }
-  
-  return Math.round(value).toString();
+
+  const factor = 10 ** decimals;
+  const rounded = Math.round(value * factor) / factor;
+  return rounded.toFixed(decimals);
 }
 
 
@@ -254,7 +256,7 @@ export function CultureDetail({
                   gap: 2,
                 }}
               >
-                {selectedCulture.distance_within_row_cm && (
+                {selectedCulture.distance_within_row_cm !== null && selectedCulture.distance_within_row_cm !== undefined && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
                       Abstand in der Reihe
@@ -264,7 +266,7 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
-                {selectedCulture.row_spacing_cm && (
+                {selectedCulture.row_spacing_cm !== null && selectedCulture.row_spacing_cm !== undefined && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
                       Reihenabstand
@@ -274,13 +276,13 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
-                {selectedCulture.sowing_depth_cm && (
+                {selectedCulture.sowing_depth_cm !== null && selectedCulture.sowing_depth_cm !== undefined && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
                       Saattiefe
                     </Typography>
                     <Typography variant="body1">
-                      {formatDistance(selectedCulture.sowing_depth_cm, t)} cm
+                      {formatDistance(selectedCulture.sowing_depth_cm, t, 1)} cm
                     </Typography>
                   </Box>
                 )}
