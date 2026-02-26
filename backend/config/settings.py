@@ -192,3 +192,11 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 100,
 }
 
+
+
+# AI enrichment settings
+AI_ENRICHMENT_ENABLED = os.getenv('AI_ENRICHMENT_ENABLED', 'True').lower() in ('true', '1', 'yes')
+AI_ENRICHMENT_PROVIDER = os.getenv('AI_ENRICHMENT_PROVIDER', os.getenv('ENRICHMENT_PROVIDER', 'openai_responses')).strip()
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '').strip()
+AI_ENRICHMENT_FAIL_FAST = os.getenv('AI_ENRICHMENT_FAIL_FAST', 'False' if DEBUG else 'True').lower() in ('true', '1', 'yes')
+AI_STARTUP_DIAGNOSTICS = os.getenv('AI_STARTUP_DIAGNOSTICS', 'True').lower() in ('true', '1', 'yes')

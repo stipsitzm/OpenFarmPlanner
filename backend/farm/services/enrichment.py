@@ -6,13 +6,13 @@ All user-facing text stays in German in the frontend; backend comments/logs are 
 from __future__ import annotations
 
 import json
-import os
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
 import requests
+from django.conf import settings
 
 from farm.models import Culture
 
@@ -47,8 +47,13 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
     model_name = "gpt-4.1"
     search_provider_name = "web_search"
 
-    def __init__(self) -> None:
-        self.api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    def __init__(self, api_key: str | None = None) -> None:
+        resolved_key = (api_key if api_key is not None else getattr(settings, 'OPENAI_API_KEY', '')).strip()
+        if not resolved_key:
+            raise EnrichmentError(
+                "AI provider 'openai_responses' is configured but OPENAI_API_KEY is missing."
+            )
+        self.api_key = resolved_key
 
     def _build_prompt(self, culture: Culture, mode: str) -> str:
         identity = f"{culture.name} {culture.variety or ''}".strip()
@@ -74,10 +79,10 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "Each suggested field must contain value, unit, confidence. "
             "evidence must be mapping field->list of {source_url,title,retrieved_at,snippet}. "
             "validation: warnings/errors arrays with field/code/message. "
-            "note_blocks must include German markdown sections: 'Dauerwerte', 'Aussaat & Abstände (zusammengefasst)', 'Ernte & Verwendung', 'Quellen'. Use concise, factual, technical bullet points only. Avoid conversational or human-like wording. "
+            "note_blocks must include German markdown sections: 'Dauerwerte', 'Aussaat & Abstände (zusammengefasst)', 'Ernte & Verwendung', 'Quellen'. "
+            "Use concise, factual, technical bullet points only. Avoid conversational or human-like wording. "
             f"Culture identity: {identity}. Supplier: {supplier or 'unknown'}. Mode: {mode}. Existing values: {json.dumps(existing, ensure_ascii=False)}"
         )
-
 
     def _extract_text_payload(self, payload: dict[str, Any]) -> str:
         """Extract model text from Responses API payload across schema variants."""
@@ -121,7 +126,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         start = text.find('{')
         end = text.rfind('}')
         if start != -1 and end != -1 and end > start:
-            candidate = text[start:end+1]
+            candidate = text[start:end + 1]
             try:
                 return json.loads(candidate)
             except json.JSONDecodeError:
@@ -130,27 +135,32 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         raise EnrichmentError(f"Provider returned non-JSON payload: {text[:400]}")
 
     def enrich(self, context: EnrichmentContext) -> dict[str, Any]:
-        if not self.api_key:
-            raise EnrichmentError("OPENAI_API_KEY is not configured")
+        try:
+            response = requests.post(
+                "https://api.openai.com/v1/responses",
+                timeout=70,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.model_name,
+                    "tools": [{"type": "web_search_preview"}],
+                    "input": self._build_prompt(context.culture, context.mode),
+                    "temperature": 0.2,
+                },
+            )
+        except requests.RequestException as exc:
+            raise EnrichmentError(f"OpenAI request failed: {exc}") from exc
 
-        response = requests.post(
-            "https://api.openai.com/v1/responses",
-            timeout=70,
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": self.model_name,
-                "tools": [{"type": "web_search_preview"}],
-                "input": self._build_prompt(context.culture, context.mode),
-                "temperature": 0.2,
-            },
-        )
         if response.status_code >= 400:
             raise EnrichmentError(f"OpenAI responses error: {response.status_code} {response.text[:300]}")
 
-        payload = response.json()
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            raise EnrichmentError("OpenAI response was not valid JSON") from exc
+
         text = self._extract_text_payload(payload)
         return self._parse_json_block(text)
 
@@ -206,17 +216,22 @@ def build_note_appendix(base_notes: str, note_blocks: str) -> str:
 
 
 def get_enrichment_provider() -> BaseEnrichmentProvider:
-    """Return provider by ENV or fallback."""
-    provider = os.getenv("ENRICHMENT_PROVIDER", "openai_responses").strip()
+    """Return provider by configured settings."""
+    provider = getattr(settings, 'AI_ENRICHMENT_PROVIDER', 'openai_responses').strip()
     if provider == "openai_responses":
-        return OpenAIResponsesProvider()
-    return FallbackHeuristicProvider()
+        return OpenAIResponsesProvider(api_key=getattr(settings, 'OPENAI_API_KEY', ''))
+    if provider == 'fallback':
+        return FallbackHeuristicProvider()
+    raise EnrichmentError(f"Unsupported AI_ENRICHMENT_PROVIDER '{provider}'")
 
 
 def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
     """Generate enrichment suggestions for one culture."""
     if mode not in {"complete", "reresearch"}:
         raise EnrichmentError("Unsupported mode")
+
+    if not getattr(settings, 'AI_ENRICHMENT_ENABLED', True):
+        raise EnrichmentError('AI enrichment is disabled by configuration.')
 
     provider = get_enrichment_provider()
     context = EnrichmentContext(culture=culture, mode=mode)

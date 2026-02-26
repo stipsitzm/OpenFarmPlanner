@@ -1,9 +1,9 @@
 from unittest.mock import Mock, patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from farm.models import Culture
-from farm.services.enrichment import OpenAIResponsesProvider
+from farm.services.enrichment import EnrichmentError, OpenAIResponsesProvider, enrich_culture
 
 
 class OpenAIResponsesProviderParsingTest(TestCase):
@@ -11,9 +11,8 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.culture = Culture.objects.create(name='Bohne', variety='Test')
 
     @patch('farm.services.enrichment.requests.post')
-    @patch('farm.services.enrichment.os.getenv', return_value='test-key')
-    def test_parses_output_text_json(self, _env, post_mock):
-        provider = OpenAIResponsesProvider()
+    def test_parses_output_text_json(self, post_mock):
+        provider = OpenAIResponsesProvider(api_key='test-key')
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
@@ -25,9 +24,8 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.assertIn('suggested_fields', parsed)
 
     @patch('farm.services.enrichment.requests.post')
-    @patch('farm.services.enrichment.os.getenv', return_value='test-key')
-    def test_parses_message_content_when_output_text_empty(self, _env, post_mock):
-        provider = OpenAIResponsesProvider()
+    def test_parses_message_content_when_output_text_empty(self, post_mock):
+        provider = OpenAIResponsesProvider(api_key='test-key')
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
@@ -44,3 +42,17 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
         parsed = provider.enrich(Mock(culture=self.culture, mode='reresearch'))
         self.assertIn('validation', parsed)
+
+    def test_missing_key_raises_clear_error(self):
+        with self.assertRaises(EnrichmentError):
+            OpenAIResponsesProvider(api_key='')
+
+
+class EnrichmentConfigBehaviorTest(TestCase):
+    def setUp(self):
+        self.culture = Culture.objects.create(name='Möhre', variety='Nantes')
+
+    @override_settings(AI_ENRICHMENT_ENABLED=False)
+    def test_enrich_culture_rejects_when_disabled(self):
+        with self.assertRaises(EnrichmentError):
+            enrich_culture(self.culture, 'complete')
