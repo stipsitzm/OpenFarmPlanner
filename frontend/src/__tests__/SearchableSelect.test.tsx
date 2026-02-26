@@ -9,8 +9,8 @@ import { SearchableSelect, type SearchableSelectOption } from '../components/inp
 
 describe('SearchableSelect', () => {
   let mockOptions: SearchableSelectOption[];
-  let mockOnChange: ReturnType<typeof vi.fn>;
-  let mockOnInputChange: ReturnType<typeof vi.fn>;
+  let mockOnChange: ReturnType<typeof vi.fn<[SearchableSelectOption<number> | null], void>>;
+  let mockOnInputChange: ReturnType<typeof vi.fn<[string], void>>;
 
   beforeEach(() => {
     mockOptions = [
@@ -19,8 +19,8 @@ describe('SearchableSelect', () => {
       { value: 3, label: 'Option 3', data: { extra: 'data3' } },
     ];
 
-    mockOnChange = vi.fn();
-    mockOnInputChange = vi.fn();
+    mockOnChange = vi.fn<[SearchableSelectOption<number> | null], void>();
+    mockOnInputChange = vi.fn<[string], void>();
   });
 
   describe('Rendering', () => {
@@ -97,7 +97,7 @@ describe('SearchableSelect', () => {
     });
 
     it('should render with size="small"', () => {
-      const { container } = render(
+      render(
         <SearchableSelect
           options={mockOptions}
           value={null}
@@ -111,7 +111,7 @@ describe('SearchableSelect', () => {
     });
 
     it('should render with size="medium"', () => {
-      const { container } = render(
+      render(
         <SearchableSelect
           options={mockOptions}
           value={null}
@@ -465,7 +465,7 @@ describe('SearchableSelect', () => {
     });
 
     it('should not focus input on mount when autoFocus is false', () => {
-      const { container } = render(
+      render(
         <SearchableSelect
           options={mockOptions}
           value={null}

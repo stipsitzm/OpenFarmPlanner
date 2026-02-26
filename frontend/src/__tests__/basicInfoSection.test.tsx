@@ -1,4 +1,3 @@
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
@@ -54,10 +53,15 @@ vi.mock('@mui/material', async () => {
 
 import { BasicInfoSection } from '../cultures/sections/BasicInfoSection';
 
-const t = (key: string, options?: Record<string, unknown>) => {
-  if (typeof options?.defaultValue === 'string') return options.defaultValue;
-  return key;
+const mockI18n = {
+  t: (key: string, options?: Record<string, unknown>) => {
+    if (typeof options?.defaultValue === 'string') return options.defaultValue;
+    return key;
+  },
+  $TFunctionBrand: undefined as any,
 };
+
+const t = mockI18n.t as any;
 
 describe('BasicInfoSection', () => {
   beforeEach(() => {

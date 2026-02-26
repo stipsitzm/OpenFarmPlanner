@@ -46,20 +46,20 @@ export function validateCulture(
   }
 
   // Optional numeric fields with explicit error keys
-  if (draft.growth_duration_days !== undefined && draft.growth_duration_days !== null && draft.growth_duration_days !== '') {
-    const numValue = typeof draft.growth_duration_days === 'string' ? parseFloat(draft.growth_duration_days as string) : draft.growth_duration_days;
+  if (draft.growth_duration_days !== undefined && draft.growth_duration_days !== null && (typeof draft.growth_duration_days !== 'string' || draft.growth_duration_days !== '')) {
+    const numValue = typeof draft.growth_duration_days === 'string' ? parseFloat(draft.growth_duration_days) : Number(draft.growth_duration_days);
     if (numValue < 0) {
       errors.growth_duration_days = t('form.growthDurationDaysError');
     }
   }
-  if (draft.harvest_duration_days !== undefined && draft.harvest_duration_days !== null && draft.harvest_duration_days !== '') {
-    const numValue = typeof draft.harvest_duration_days === 'string' ? parseFloat(draft.harvest_duration_days as string) : draft.harvest_duration_days;
+  if (draft.harvest_duration_days !== undefined && draft.harvest_duration_days !== null && (typeof draft.harvest_duration_days !== 'string' || draft.harvest_duration_days !== '')) {
+    const numValue = typeof draft.harvest_duration_days === 'string' ? parseFloat(draft.harvest_duration_days) : Number(draft.harvest_duration_days);
     if (numValue < 0) {
       errors.harvest_duration_days = t('form.harvestDurationDaysError');
     }
   }
-  if (draft.propagation_duration_days !== undefined && draft.propagation_duration_days !== null && draft.propagation_duration_days !== '') {
-    const numValue = typeof draft.propagation_duration_days === 'string' ? parseFloat(draft.propagation_duration_days as string) : draft.propagation_duration_days;
+  if (draft.propagation_duration_days !== undefined && draft.propagation_duration_days !== null && (typeof draft.propagation_duration_days !== 'string' || draft.propagation_duration_days !== '')) {
+    const numValue = typeof draft.propagation_duration_days === 'string' ? parseFloat(draft.propagation_duration_days) : Number(draft.propagation_duration_days);
     if (numValue < 0) {
       errors.propagation_duration_days = t('form.propagationDurationDaysError');
     }

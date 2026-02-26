@@ -54,7 +54,9 @@ const sortByConfig = <T extends Location | Field | Bed>(items: T[], sortConfig?:
 
   sorted.sort((left, right) => {
     if (sortConfig.field === 'area_sqm') {
-      const numericResult = compareNumeric(left.area_sqm, right.area_sqm, sortConfig.direction);
+      const leftArea = 'area_sqm' in left ? left.area_sqm : 0;
+      const rightArea = 'area_sqm' in right ? right.area_sqm : 0;
+      const numericResult = compareNumeric(leftArea, rightArea, sortConfig.direction);
       if (numericResult !== 0) {
         return numericResult;
       }
@@ -66,7 +68,9 @@ const sortByConfig = <T extends Location | Field | Bed>(items: T[], sortConfig?:
       return textResult;
     }
 
-    return compareNumeric(left.area_sqm, right.area_sqm, 'asc');
+    const leftArea = 'area_sqm' in left ? left.area_sqm : 0;
+    const rightArea = 'area_sqm' in right ? right.area_sqm : 0;
+    return compareNumeric(leftArea, rightArea, 'asc');
   });
 
   return sorted;

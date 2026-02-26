@@ -147,7 +147,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
     const grouped = new Map<CommandContextTag, CommandSpec[]>();
 
     helpCommands.forEach((command) => {
-      const tags = command.contextTags.length > 0 ? command.contextTags : ['global'];
+      const tags = command.contextTags.length > 0 ? command.contextTags : (['global'] as const);
       tags.forEach((tag) => {
         const existing = grouped.get(tag) ?? [];
         grouped.set(tag, [...existing, command]);

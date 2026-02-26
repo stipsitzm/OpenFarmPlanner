@@ -61,7 +61,7 @@ export function SearchableSelectEditCell({
       value={currentOption}
       inputValue={inputValue}
       onInputChange={setInputValue}
-      onChange={handleChange}
+      onChange={(newValue) => handleChange(undefined, newValue)}
       size="small"
       textFieldSx={{ '& .MuiInputBase-root': { height: '100%' } }}
     />
