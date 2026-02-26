@@ -794,3 +794,29 @@ class PlantingPlanRemainingAreaApiTest(DRFAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('detail', response.data)
+
+    def test_remaining_area_rejects_invalid_date_range(self):
+        response = self.client.get(
+            '/openfarmplanner/api/planting-plans/remaining-area/',
+            {
+                'bed_id': self.bed.id,
+                'start_date': '2024-04-10',
+                'end_date': '2024-03-20',
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('detail', response.data)
+
+    def test_remaining_area_rejects_invalid_bed_id_type(self):
+        response = self.client.get(
+            '/openfarmplanner/api/planting-plans/remaining-area/',
+            {
+                'bed_id': 'abc',
+                'start_date': '2024-03-20',
+                'end_date': '2024-04-10',
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('detail', response.data)

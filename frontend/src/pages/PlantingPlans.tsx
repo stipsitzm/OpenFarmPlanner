@@ -299,7 +299,10 @@ function PlantingPlans(): React.ReactElement {
             onApplyRest={async () => {
               const bedId = typeof row.bed === 'number' ? row.bed : Number(row.bed);
               const startDate = toIsoDateString(row.planting_date);
-              const endDate = toIsoDateString(row.harvest_end_date) ?? startDate;
+              const endDate =
+                toIsoDateString(row.harvest_end_date)
+                ?? toIsoDateString(row.harvest_date)
+                ?? startDate;
 
               if (!bedId || !startDate || !endDate) {
                 return null;
