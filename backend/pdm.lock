@@ -5,7 +5,7 @@
 groups = ["default", "quality", "test"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:b27ce2937dfaf54797476ace5a86e198083613a04cc67faab817bc827ddc842f"
+content_hash = "sha256:205f94e7ec246ea25ed37072364f257071671371e34f4779dc36585fc9829e1c"
 
 [[metadata.targets]]
 requires_python = ">=3.12"
@@ -99,7 +99,7 @@ name = "colorama"
 version = "0.4.6"
 requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 summary = "Cross-platform colored terminal text."
-groups = ["quality", "test"]
+groups = ["default", "quality", "test"]
 marker = "python_version > \"3.4\" or sys_platform == \"win32\""
 files = [
     {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
@@ -369,7 +369,7 @@ files = [
 name = "mando"
 version = "0.7.1"
 summary = "Create Python CLI apps with little to no effort at all!"
-groups = ["quality"]
+groups = ["default", "quality"]
 dependencies = [
     "argparse; python_version <= \"2.6\"",
     "funcsigs; python_version <= \"3.2\"",
@@ -592,7 +592,7 @@ files = [
 name = "radon"
 version = "6.0.1"
 summary = "Code Metrics in Python"
-groups = ["quality"]
+groups = ["default", "quality"]
 dependencies = [
     "colorama==0.4.1; python_version <= \"3.4\"",
     "colorama>=0.4.1; python_version > \"3.4\"",
@@ -652,7 +652,7 @@ name = "six"
 version = "1.17.0"
 requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 summary = "Python 2 and 3 compatibility utilities"
-groups = ["quality"]
+groups = ["default", "quality"]
 files = [
     {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
     {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},
