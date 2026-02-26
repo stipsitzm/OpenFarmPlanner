@@ -33,14 +33,20 @@ export const dataGridSx = {
     px: 0.5,
   },
   '& .MuiDataGrid-columnHeaderTitleContainer': {
-    gap: 0.25,
+    gap: 0,
     minWidth: 0,
     justifyContent: 'flex-start',
+    paddingLeft: 0,
   },
   '& .MuiDataGrid-iconButtonContainer, & .MuiDataGrid-menuIcon': {
     order: -1,
+    flex: '0 0 auto',
+    width: 'auto',
+    marginLeft: '0 !important',
+    marginRight: 0,
+  },
+  '& .MuiDataGrid-columnHeaderTitleContainer > .MuiDataGrid-menuIcon + .MuiDataGrid-columnHeaderTitleContainerContent, & .MuiDataGrid-columnHeaderTitleContainer > .MuiDataGrid-iconButtonContainer + .MuiDataGrid-columnHeaderTitleContainerContent': {
     marginLeft: 0,
-    marginRight: 2,
   },
   '& .MuiDataGrid-columnHeaderTitleContainerContent': {
     minWidth: 0,
