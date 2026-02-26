@@ -403,7 +403,7 @@ function PlantingPlans(): React.ReactElement {
   ], [bedOptions, beds, cultureOptions, cultures, dynamicWidths, t]);
 
   return (
-    <div className="page-container">
+    <div className="page-container" style={{ maxWidth: 'none', margin: 0, paddingLeft: 0, paddingRight: 0 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <h1>{t('plantingPlans:title')}</h1>
         <Button
@@ -562,6 +562,7 @@ function PlantingPlans(): React.ReactElement {
         tableKey="plantingPlans"
         defaultSortModel={[{ field: 'planting_date', sort: 'asc' }]}
         persistSortInUrl={true}
+        fitContentWidth={true}
         notes={{
           fields: [
             {

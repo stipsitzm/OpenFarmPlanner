@@ -94,7 +94,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
           htmlInput: {
             min: 0,
             step: 0.01,
-            tabIndex: hasFocus ? 0 : -1,
+            tabIndex: 0,
           },
         }}
         sx={{ minWidth: 110, flex: 1 }}
