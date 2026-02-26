@@ -46,7 +46,7 @@ jobs:
       - name: Install backend dependencies with PDM
         run: |
           cd backend
-          pdm install -G test
+          pdm install -dG test
 
       - name: Run backend tests
         run: |
@@ -77,7 +77,7 @@ jobs:
       - name: Install backend dependencies with PDM
         run: |
           cd backend
-          pdm install -G test -G quality
+          pdm install -dG test -dG quality
 
       - name: Install frontend dependencies
         run: |
