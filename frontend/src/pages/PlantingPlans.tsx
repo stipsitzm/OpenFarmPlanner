@@ -110,16 +110,16 @@ function PlantingPlans(): React.ReactElement {
     return {
       culture: cultureWidth,
       bed: bedWidth,
-      plantingDate: 150,
-      harvestDate: 150,
-      harvestEndDate: 150,
+      plantingDate: estimateColumnWidth([t('plantingPlans:columns.plantingDate'), '2026-12-31'], 120, 150),
+      harvestDate: estimateColumnWidth([t('plantingPlans:columns.harvestStartDate'), '2026-12-31'], 120, 160),
+      harvestEndDate: estimateColumnWidth([t('plantingPlans:columns.harvestEndDate'), '2026-12-31'], 120, 160),
       area: estimateColumnWidth(
         [t('plantingPlans:columns.areaM2'), ...beds.filter((bed) => typeof bed.area_sqm === 'number').map((bed) => formatAreaM2(bed.area_sqm as number))],
-        120,
-        180,
+        95,
+        135,
       ),
-      plants: 130,
-      notes: 260,
+      plants: estimateColumnWidth([t('plantingPlans:columns.plantsCount'), '≈ 9999'], 100, 130),
+      notes: 220,
     };
   }, [bedOptions, beds, cultureOptions, t]);
 
