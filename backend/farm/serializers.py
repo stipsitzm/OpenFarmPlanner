@@ -2,7 +2,18 @@
 
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
-from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile
+
+from .models import (
+    Bed,
+    Culture,
+    Field,
+    Location,
+    MediaFile,
+    NoteAttachment,
+    PlantingPlan,
+    Supplier,
+    Task,
+)
 
 
 class CentimetersField(serializers.FloatField):
@@ -296,7 +307,7 @@ class CultureSerializer(serializers.ModelSerializer):
             # Validate without mutating the real instance.
             temp_instance.clean()
         except ValidationError as e:
-            raise serializers.ValidationError(e.message_dict)
+            raise serializers.ValidationError(e.message_dict) from e
         
         return attrs
 
@@ -345,7 +356,6 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
         return round(obj.area_usage_sqm * plants_per_m2)
 
     def validate(self, attrs):
-        from decimal import Decimal as D
         
         # Handle area input conversion
         area_input_value = attrs.pop('area_input_value', None)
@@ -362,7 +372,10 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
             # Unit is required when value is provided
             if not area_input_unit:
                 raise serializers.ValidationError({
-                    'area_input_unit': 'Area input unit is required when area_input_value is provided.'
+                    'area_input_unit': (
+                        'Area input unit is required when '
+                        'area_input_value is provided.'
+                    )
                 })
             
             # Get culture (could be from attrs for create, or from instance for update)
@@ -385,7 +398,10 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
                 plants_per_m2 = culture.plants_per_m2
                 if plants_per_m2 is None or plants_per_m2 <= 0:
                     raise serializers.ValidationError({
-                        'area_input_unit': 'Culture spacing data is missing or invalid. Cannot calculate area from plant count.'
+                        'area_input_unit': (
+                            'Culture spacing data is missing or invalid. '
+                            'Cannot calculate area from plant count.'
+                        )
                     })
                 
                 # Calculate area in m²: plants / (plants_per_m2)
@@ -408,7 +424,7 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
         try:
             instance.clean()
         except ValidationError as e:
-            raise serializers.ValidationError(e.message_dict)
+            raise serializers.ValidationError(e.message_dict) from e
         
         return attrs
 

@@ -59,11 +59,11 @@ run_tool() {
 # Backend reports
 if [[ -d "$ROOT_DIR/backend" ]]; then
   if command -v pdm >/dev/null 2>&1; then
-    run_tool "Backend Ruff" "backend-ruff.txt" "0,1" pdm run --project "$ROOT_DIR/backend" ruff check "$ROOT_DIR/backend"
-    run_tool "Backend Radon CC" "backend-radon-cc.txt" "0" pdm run --project "$ROOT_DIR/backend" radon cc "$ROOT_DIR/backend/farm" -s -a
+    run_tool "Backend Ruff" "backend-ruff.txt" "0,1" bash -lc "cd \"$ROOT_DIR/backend\" && pdm run ruff check ."
+    run_tool "Backend Radon CC" "backend-radon-cc.txt" "0" bash -lc "cd \"$ROOT_DIR/backend\" && pdm run radon cc farm -s -a"
 
     if [[ -f "$ROOT_DIR/backend/pytest.ini" ]]; then
-      run_tool "Backend Pytest Coverage" "backend-pytest-cov.txt" "0,1,5" pdm run --project "$ROOT_DIR/backend" pytest --cov=farm --cov-report=term-missing
+      run_tool "Backend Pytest Coverage" "backend-pytest-cov.txt" "0,1,5" bash -lc "cd \"$ROOT_DIR/backend\" && pdm run pytest --cov=farm --cov-report=term-missing"
     else
       note="$ARCHIVE_DIR/backend-pytest-cov.txt"
       {

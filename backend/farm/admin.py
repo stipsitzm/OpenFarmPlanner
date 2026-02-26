@@ -5,7 +5,8 @@ providing customized list displays, filters, and search capabilities.
 """
 
 from django.contrib import admin
-from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier
+
+from .models import Bed, Culture, Field, Location, PlantingPlan, Supplier, Task
 
 
 @admin.register(Supplier)
