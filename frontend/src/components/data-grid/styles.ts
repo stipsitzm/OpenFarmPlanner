@@ -31,19 +31,6 @@ export const dataGridSx = {
   },
   '& .MuiDataGrid-columnHeaderTitleContainer': {
     minWidth: 0,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 0.5,
-  },
-  '& .MuiDataGrid-columnHeaderTitleContainerContent': {
-    order: 2,
-    minWidth: 0,
-  },
-  '& .MuiDataGrid-menuIcon, & .MuiDataGrid-iconButtonContainer, & .MuiDataGrid-sortIcon': {
-    order: 1,
-    marginLeft: '0 !important',
-    marginRight: 4,
   },
 
 };
