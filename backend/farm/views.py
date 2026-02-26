@@ -52,6 +52,24 @@ from .services.enrichment import enrich_culture, EnrichmentError
 logger = logging.getLogger(__name__)
 
 
+def _coerce_request_string(value, default='') -> str:
+    """Coerce request payload values to safe strings."""
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (int, float, bool)):
+        return str(value).strip()
+    if isinstance(value, list):
+        if not value:
+            return default
+        first = value[0]
+        if isinstance(first, str):
+            return first.strip()
+        return str(first).strip()
+    return default
+
+
 def _week_start_for_iso_year(iso_year: int) -> date:
     """Return Monday of ISO week 1 for an ISO year."""
     return date.fromisocalendar(iso_year, 1, 1)
@@ -763,7 +781,7 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     def enrich(self, request, pk=None):
         """Create AI suggestions for one culture."""
         culture = self.get_object()
-        mode = request.data.get('mode', 'complete')
+        mode = _coerce_request_string(request.data.get('mode'), 'complete')
         try:
             payload = enrich_culture(culture, mode)
         except EnrichmentError as error:
@@ -776,7 +794,7 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='enrich-batch')
     def enrich_batch(self, request):
         """Create AI suggestions for multiple cultures (synchronous with hard limit)."""
-        mode = request.data.get('mode', 'complete_all')
+        mode = _coerce_request_string(request.data.get('mode'), 'complete_all')
         requested_ids = request.data.get('culture_ids')
         max_items = min(int(request.data.get('limit', 20)), 50)
 

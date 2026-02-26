@@ -22,6 +22,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 
+def _env_str(name: str, default: str = "") -> str:
+    """Read environment values robustly as strings."""
+    value = os.getenv(name, default)
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    return str(value).strip()
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -196,7 +206,7 @@ REST_FRAMEWORK = {
 
 # AI enrichment settings
 AI_ENRICHMENT_ENABLED = os.getenv('AI_ENRICHMENT_ENABLED', 'True').lower() in ('true', '1', 'yes')
-AI_ENRICHMENT_PROVIDER = os.getenv('AI_ENRICHMENT_PROVIDER', os.getenv('ENRICHMENT_PROVIDER', 'openai_responses')).strip()
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '').strip()
+AI_ENRICHMENT_PROVIDER = _env_str('AI_ENRICHMENT_PROVIDER', _env_str('ENRICHMENT_PROVIDER', 'openai_responses'))
+OPENAI_API_KEY = _env_str('OPENAI_API_KEY', '')
 AI_ENRICHMENT_FAIL_FAST = os.getenv('AI_ENRICHMENT_FAIL_FAST', 'False' if DEBUG else 'True').lower() in ('true', '1', 'yes')
 AI_STARTUP_DIAGNOSTICS = os.getenv('AI_STARTUP_DIAGNOSTICS', 'True').lower() in ('true', '1', 'yes')

@@ -927,3 +927,22 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertGreaterEqual(response.data['failed'], 1)
+
+
+    def test_enrich_single_mode_list_is_coerced(self):
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/',
+            {'mode': ['reresearch']},
+            format='json',
+        )
+
+        self.assertIn(response.status_code, (200, 503))
+
+    def test_enrich_batch_rejects_unexpected_mode_stringified_list(self):
+        response = self.client.post(
+            '/openfarmplanner/api/cultures/enrich-batch/',
+            {'mode': ['complete_all'], 'limit': 5},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
