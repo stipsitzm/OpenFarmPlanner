@@ -34,6 +34,18 @@ export const dataGridSx = {
   },
   '& .MuiDataGrid-columnHeaderTitleContainer': {
     minWidth: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 0.5,
+  },
+  '& .MuiDataGrid-iconButtonContainer, & .MuiDataGrid-menuIcon, & .MuiDataGrid-sortIcon': {
+    order: -1,
+    marginLeft: '0 !important',
+    marginRight: 4,
+  },
+  '& .MuiDataGrid-menuIcon .MuiIconButton-root, & .MuiDataGrid-iconButtonContainer .MuiIconButton-root': {
+    padding: 2,
   },
 };
 
