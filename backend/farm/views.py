@@ -6,6 +6,7 @@ for its respective model.
 """
 
 from collections import defaultdict
+import logging
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import json
@@ -46,6 +47,9 @@ from .image_processing import (
     ImageProcessingBackendUnavailableError,
 )
 from .services.enrichment import enrich_culture, EnrichmentError
+
+
+logger = logging.getLogger(__name__)
 
 
 def _week_start_for_iso_year(iso_year: int) -> date:
@@ -765,7 +769,8 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         except EnrichmentError as error:
             return Response({'detail': str(error)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as error:
-            return Response({'detail': f'Unexpected enrichment error: {error}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception('Unexpected enrichment error for culture %s', culture.id)
+            return Response({'detail': f'Enrichment service failure: {error}'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response(payload, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'], url_path='enrich-batch')
@@ -791,6 +796,9 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
                 items.append({'culture_id': culture.id, 'status': 'completed', 'result': item})
             except EnrichmentError as error:
                 items.append({'culture_id': culture.id, 'status': 'failed', 'error': str(error)})
+            except Exception as error:
+                logger.exception('Unexpected batch enrichment error for culture %s', culture.id)
+                items.append({'culture_id': culture.id, 'status': 'failed', 'error': f'Unexpected enrichment failure: {error}'})
 
         succeeded = sum(1 for item in items if item['status'] == 'completed')
         failed = sum(1 for item in items if item['status'] == 'failed')

@@ -904,3 +904,26 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('items', response.data)
+
+
+    @patch('farm.views.enrich_culture', side_effect=AttributeError('boom'))
+    def test_enrich_single_unexpected_error_returns_503(self, _mock):
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/',
+            {'mode': 'complete'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn('detail', response.data)
+
+    @patch('farm.views.enrich_culture', side_effect=AttributeError('boom'))
+    def test_enrich_batch_unexpected_error_is_item_failure_not_500(self, _mock):
+        response = self.client.post(
+            '/openfarmplanner/api/cultures/enrich-batch/',
+            {'mode': 'complete_all', 'limit': 5},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertGreaterEqual(response.data['failed'], 1)
