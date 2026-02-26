@@ -42,5 +42,16 @@ export default defineConfig({
       ],
     },
   },
+  build: {
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          mui: ['@mui/material', '@mui/icons-material', '@mui/x-data-grid'],
+          i18n: ['i18next', 'react-i18next'],
+        },
+      },
+    },
+  },
 })
-
