@@ -63,7 +63,7 @@ if [[ -d "$ROOT_DIR/backend" ]]; then
     run_tool "Backend Radon CC" "backend-radon-cc.txt" "0" pdm run --project "$ROOT_DIR/backend" radon cc "$ROOT_DIR/backend/farm" -s -a
 
     if [[ -f "$ROOT_DIR/backend/pytest.ini" ]]; then
-      run_tool "Backend Pytest Coverage" "backend-pytest-cov.txt" "0,1,2,5" pdm run --project "$ROOT_DIR/backend" pytest --cov=farm --cov-report=term-missing
+      run_tool "Backend Pytest Coverage" "backend-pytest-cov.txt" "0,1,5" pdm run --project "$ROOT_DIR/backend" pytest --cov=farm --cov-report=term-missing
     else
       note="$ARCHIVE_DIR/backend-pytest-cov.txt"
       {
