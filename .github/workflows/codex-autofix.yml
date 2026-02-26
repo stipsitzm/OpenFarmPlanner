@@ -1,6 +1,6 @@
 name: Codex Auto-Fix on CI Failure
 
-on:
+"on":
   workflow_run:
     workflows: ["CI"]
     types: [completed]
