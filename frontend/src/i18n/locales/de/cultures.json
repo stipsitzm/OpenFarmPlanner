@@ -143,7 +143,9 @@
     "noSuggestions": "Keine Vorschläge erhalten.",
     "batchDone": "Batch-Vervollständigung abgeschlossen: {{ok}} erfolgreich, {{failed}} fehlgeschlagen.",
     "runError": "KI-Anfrage fehlgeschlagen.",
-    "applySuccess": "Ausgewählte Vorschläge wurden angewendet."
+    "applySuccess": "Ausgewählte Vorschläge wurden angewendet.",
+    "loadingTitle": "KI-Verarbeitung läuft",
+    "loadingText": "Bitte warten. Die Anfrage wird verarbeitet und Quellen werden gesammelt."
   },
   "import": {
     "menuLabel": "Weitere Aktionen",

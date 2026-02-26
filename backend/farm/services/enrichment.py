@@ -74,7 +74,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "Each suggested field must contain value, unit, confidence. "
             "evidence must be mapping field->list of {source_url,title,retrieved_at,snippet}. "
             "validation: warnings/errors arrays with field/code/message. "
-            "note_blocks must include German markdown sections: 'Dauerwerte', 'Aussaat & Abstände (zusammengefasst)', 'Ernte & Verwendung', 'Quellen'. "
+            "note_blocks must include German markdown sections: 'Dauerwerte', 'Aussaat & Abstände (zusammengefasst)', 'Ernte & Verwendung', 'Quellen'. Use concise, factual, technical bullet points only. Avoid conversational or human-like wording. "
             f"Culture identity: {identity}. Supplier: {supplier or 'unknown'}. Mode: {mode}. Existing values: {json.dumps(existing, ensure_ascii=False)}"
         )
 

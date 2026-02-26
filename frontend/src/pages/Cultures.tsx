@@ -31,6 +31,7 @@ import {
   Snackbar,
   Tooltip,
   Typography,
+  CircularProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -51,7 +52,7 @@ import { parseCultureImportJson } from '../cultures/importUtils';
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
-import { extractErrorMessage } from '../api/errors';
+import { extractApiErrorMessage } from '../api/errors';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -689,7 +690,7 @@ function Cultures(): React.ReactElement {
       openEnrichmentDialog(response.data);
     } catch (error) {
       console.error('Error enriching culture:', error);
-      showSnackbar(`${t('ai.runError')} ${extractErrorMessage(error)}`, 'error');
+      showSnackbar(extractApiErrorMessage(error, t, t('ai.runError')), 'error');
     } finally {
       setEnrichmentLoading(false);
     }
@@ -707,7 +708,7 @@ function Cultures(): React.ReactElement {
       }
     } catch (error) {
       console.error('Error enriching all cultures:', error);
-      showSnackbar(`${t('ai.runError')} ${extractErrorMessage(error)}`, 'error');
+      showSnackbar(extractApiErrorMessage(error, t, t('ai.runError')), 'error');
     } finally {
       setEnrichmentLoading(false);
     }
@@ -1070,6 +1071,16 @@ function Cultures(): React.ReactElement {
             {importStatus === 'success' ? t('import.done') : t('import.start')}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      <Dialog open={enrichmentLoading} aria-labelledby="enrichment-loading-title" maxWidth="xs" fullWidth>
+        <DialogTitle id="enrichment-loading-title">{t('ai.loadingTitle')}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
+            <CircularProgress size={24} />
+            <Typography>{t('ai.loadingText')}</Typography>
+          </Box>
+        </DialogContent>
       </Dialog>
 
       <Dialog open={enrichmentDialogOpen} onClose={() => setEnrichmentDialogOpen(false)} maxWidth="md" fullWidth>

@@ -28,21 +28,16 @@ export function extractApiErrorMessage(
   t: TFunction,
   fallbackMessage: string
 ): string {
-  console.log('extractApiErrorMessage called with:', error);
   
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError;
-    console.log('Is Axios error, status:', axiosError.response?.status);
-    console.log('Response data:', axiosError.response?.data);
     
     // Check if it's a 400 validation error
     if (axiosError.response?.status === 400) {
       const data = axiosError.response.data;
-      console.log('Data type:', typeof data);
       
       // If data is a string, return it directly
       if (typeof data === 'string') {
-        console.log('Returning string data:', data);
         return data;
       }
       
@@ -52,7 +47,6 @@ export function extractApiErrorMessage(
         
         // Extract field names dynamically from i18n
         Object.entries(data).forEach(([field, value]) => {
-          console.log(`Processing field ${field}:`, value);
           // Try different i18n keys, fallback to field name
           let fieldName = t(`fields.${field}`);
           if (fieldName === `fields.${field}`) {
@@ -73,26 +67,43 @@ export function extractApiErrorMessage(
           if (Array.isArray(value)) {
             value.forEach((msg: string) => {
               const errorMsg = `${fieldName}: ${msg}`;
-              console.log('Adding error:', errorMsg);
               errors.push(errorMsg);
             });
           } else if (typeof value === 'string') {
             const errorMsg = `${fieldName}: ${value}`;
-            console.log('Adding error:', errorMsg);
             errors.push(errorMsg);
           }
         });
         
         if (errors.length > 0) {
           const result = errors.join('\n');
-          console.log('Returning joined errors:', result);
           return result;
         }
       }
     }
   }
   
+  // Try generic detail extraction for non-400 errors (e.g. 503 with {detail: ...})
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as unknown;
+    if (typeof data === 'string' && data.trim().length > 0) {
+      return data;
+    }
+    if (data && typeof data === 'object') {
+      const detail = (data as { detail?: unknown }).detail;
+      if (typeof detail === 'string' && detail.trim().length > 0) {
+        return detail;
+      }
+      const message = (data as { message?: unknown }).message;
+      if (typeof message === 'string' && message.trim().length > 0) {
+        return message;
+      }
+    }
+    if (error.message) {
+      return error.message;
+    }
+  }
+
   // Fallback to generic error message
-  console.log('Fallback to generic error');
   return fallbackMessage;
 }
