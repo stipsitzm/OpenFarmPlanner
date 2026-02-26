@@ -15,7 +15,6 @@
 import { useState } from 'react';
 import { useTranslation } from '../i18n';
 import type { Culture } from '../api/types';
-import { mediaFileAPI } from '../api/api';
 import { extractApiErrorMessage } from '../api/errors';
 import {
   Dialog,
@@ -104,7 +103,6 @@ export function CultureForm({
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
-  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
 
   // Validate on every change
   const validateAndSet = (draft: Partial<Culture>) => {
@@ -134,12 +132,7 @@ export function CultureForm({
     if (!validateAndSet(formData)) return;
     setIsSaving(true);
     try {
-      let nextData = formData;
-      if (pendingImageFile) {
-        const upload = await mediaFileAPI.upload(pendingImageFile);
-        nextData = { ...nextData, image_file_id: upload.data.id };
-      }
-      await saveCulture(nextData);
+      await saveCulture(formData);
       setShowSaveSuccess(true);
       setIsDirty(false);
     } catch (error) {
@@ -174,10 +167,6 @@ export function CultureForm({
             <SeedingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <ColorSection formData={formData} errors={errors} onChange={handleChange} t={t} defaultColor={DEFAULT_DISPLAY_COLOR} />
             <NotesSection formData={formData} onChange={handleChange} t={t} errors={errors} />
-            <Button component="label" variant="outlined">Bild auswählen
-              <input hidden type="file" accept="image/*" onChange={(e) => setPendingImageFile(e.target.files?.[0] ?? null)} />
-            </Button>
-            {pendingImageFile && <Typography variant="body2">{pendingImageFile.name}</Typography>}
           </div>
         </DialogContent>
         <DialogActions sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
