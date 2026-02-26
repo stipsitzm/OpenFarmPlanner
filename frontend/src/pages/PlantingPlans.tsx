@@ -115,8 +115,8 @@ function PlantingPlans(): React.ReactElement {
       harvestEndDate: estimateColumnWidth([t('plantingPlans:columns.harvestEndDate'), '2026-12-31'], 120, 160),
       area: estimateColumnWidth(
         [t('plantingPlans:columns.areaM2'), ...beds.filter((bed) => typeof bed.area_sqm === 'number').map((bed) => formatAreaM2(bed.area_sqm as number))],
-        95,
-        135,
+        78,
+        108,
       ),
       plants: estimateColumnWidth([t('plantingPlans:columns.plantsCount'), '≈ 9999'], 100, 130),
       notes: 220,
@@ -301,6 +301,8 @@ function PlantingPlans(): React.ReactElement {
       headerName: t('plantingPlans:columns.areaM2'),
       flex: 0,
       minWidth: dynamicWidths.area,
+      width: dynamicWidths.area,
+      maxWidth: dynamicWidths.area,
       editable: true,
       type: 'number',
       renderHeader: () => (

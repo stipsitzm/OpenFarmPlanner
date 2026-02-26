@@ -29,6 +29,25 @@ export const dataGridSx = {
   '& .MuiDataGrid-cell:focus-within': {
     overflow: 'visible',
   },
+  '& .MuiDataGrid-columnHeader': {
+    px: 0.5,
+  },
+  '& .MuiDataGrid-columnHeaderTitleContainer': {
+    gap: 0.25,
+    minWidth: 0,
+  },
+  '& .MuiDataGrid-columnHeaderTitleContainerContent': {
+    minWidth: 0,
+    overflow: 'hidden',
+  },
+  '& .MuiDataGrid-columnHeaderTitle': {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  '& .MuiDataGrid-menuIcon .MuiIconButton-root, & .MuiDataGrid-iconButtonContainer .MuiIconButton-root': {
+    padding: 2,
+  },
 };
 
 /**
