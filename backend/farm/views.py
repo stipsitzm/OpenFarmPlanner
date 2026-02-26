@@ -431,27 +431,53 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         
         return None
     
-    def _find_matching_culture(self, name: str, variety: str | None, supplier: Supplier | None) -> Culture | None:
+    def _find_matching_culture(
+        self,
+        name: str,
+        variety: str | None,
+        supplier: Supplier | None,
+        supplier_name: str | None = None,
+    ) -> Culture | None:
         """Find existing culture by normalized fields.
         
         :param name: Culture name
         :param variety: Culture variety (optional)
         :param supplier: Supplier instance (optional)
+        :param supplier_name: Supplier name from import data for legacy matching
         :return: Matching Culture instance or None
         """
-        from .utils import normalize_text
+        from .utils import normalize_text, normalize_supplier_name
         
         name_norm = normalize_text(name) or ''
         variety_norm = normalize_text(variety)
         
-        try:
-            return Culture.objects.get(
-                name_normalized=name_norm,
-                variety_normalized=variety_norm,
-                supplier=supplier
-            )
-        except Culture.DoesNotExist:
-            return None
+        base_queryset = Culture.objects.filter(
+            name_normalized=name_norm,
+            variety_normalized=variety_norm,
+        )
+
+        # Prefer exact FK match when supplier could be resolved.
+        if supplier:
+            direct_match = base_queryset.filter(supplier=supplier).first()
+            if direct_match:
+                return direct_match
+
+        # Fallback for legacy/partial imports: match supplier names case-insensitively,
+        # whether supplier is stored as FK supplier or legacy seed_supplier text.
+        supplier_name_normalized = normalize_supplier_name(supplier_name)
+        if not supplier_name_normalized and supplier:
+            supplier_name_normalized = supplier.name_normalized
+
+        if supplier_name_normalized:
+            for candidate in base_queryset.select_related('supplier'):
+                candidate_supplier_normalized = normalize_supplier_name(
+                    candidate.supplier.name if candidate.supplier else candidate.seed_supplier
+                )
+                if candidate_supplier_normalized == supplier_name_normalized:
+                    return candidate
+
+        # Final fallback: legacy behavior when no supplier information is available.
+        return base_queryset.filter(supplier__isnull=True).first()
     
     def _compute_diff(self, existing_culture: Culture, import_data: dict) -> list[dict]:
         """Compute field differences between existing culture and import data.
@@ -531,7 +557,12 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
                 # Find matching culture
                 name = culture_data['name']
                 variety = culture_data.get('variety', '')
-                matching_culture = self._find_matching_culture(name, variety, supplier)
+                matching_culture = self._find_matching_culture(
+                    name,
+                    variety,
+                    supplier,
+                    culture_data.get('supplier_name') or culture_data.get('seed_supplier')
+                )
                 
                 if matching_culture:
                     # Compute diff
@@ -599,7 +630,12 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
                 # Find matching culture
                 name = culture_data['name']
                 variety = culture_data.get('variety', '')
-                matching_culture = self._find_matching_culture(name, variety, supplier)
+                matching_culture = self._find_matching_culture(
+                    name,
+                    variety,
+                    supplier,
+                    culture_data.get('supplier_name') or culture_data.get('seed_supplier')
+                )
                 
                 if matching_culture:
                     if confirm_updates:

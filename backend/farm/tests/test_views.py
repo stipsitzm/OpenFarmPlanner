@@ -351,6 +351,60 @@ class CultureImportAPITest(DRFAPITestCase):
         self.assertEqual(response.status_code, 200)
         result = response.data['results'][0]
         self.assertEqual(result['status'], 'update_candidate')
+
+    def test_import_preview_supplier_name_matches_seed_supplier_case_insensitive(self):
+        """Test preview matches legacy seed_supplier case-insensitively."""
+        Culture.objects.create(
+            name="Lettuce",
+            variety="Batavia",
+            seed_supplier="Rainsaat R-Codes",
+            growth_duration_days=45,
+            harvest_duration_days=20,
+        )
+        data = [{
+            'name': 'Lettuce',
+            'variety': 'Batavia',
+            'seed_supplier': 'RAINSAAT r-codes',
+            'growth_duration_days': 45,
+            'harvest_duration_days': 20,
+        }]
+
+        response = self.client.post('/openfarmplanner/api/cultures/import/preview/', data, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        result = response.data['results'][0]
+        self.assertEqual(result['status'], 'update_candidate')
+
+    def test_import_apply_supplier_name_matches_seed_supplier_case_insensitive(self):
+        """Test apply updates existing culture when seed_supplier differs only by case."""
+        existing = Culture.objects.create(
+            name="Carrot",
+            variety="Nantes",
+            seed_supplier="Rainsaat R-Codes",
+            growth_duration_days=70,
+            harvest_duration_days=30,
+            notes="Before import",
+        )
+        data = {
+            'items': [{
+                'name': 'carrot',
+                'variety': 'nantes',
+                'seed_supplier': 'rainsaat r-codes',
+                'growth_duration_days': 70,
+                'harvest_duration_days': 30,
+                'notes': 'After import',
+            }],
+            'confirm_updates': True,
+        }
+
+        response = self.client.post('/openfarmplanner/api/cultures/import/apply/', data, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['created_count'], 0)
+        self.assertEqual(response.data['updated_count'], 1)
+
+        existing.refresh_from_db()
+        self.assertEqual(existing.notes, 'After import')
     
     def test_import_apply_create_new(self):
         """Test apply endpoint creates new cultures."""
