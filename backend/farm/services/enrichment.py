@@ -36,6 +36,20 @@ def _coerce_text_value(value: object, field_name: str) -> str:
         return value.strip()
     if isinstance(value, (int, float, bool)):
         return str(value).strip()
+    if isinstance(value, list):
+        parts: list[str] = []
+        for item in value:
+            if isinstance(item, str):
+                text = item.strip()
+                if text:
+                    parts.append(text)
+            elif isinstance(item, (int, float, bool)):
+                parts.append(str(item).strip())
+            else:
+                parts.append(json.dumps(item, ensure_ascii=False))
+        return "\n".join(part for part in parts if part)
+    if isinstance(value, dict):
+        return json.dumps(value, ensure_ascii=False, indent=2)
     raise EnrichmentError(f"Invalid {field_name} type: expected text-like value.")
 
 
