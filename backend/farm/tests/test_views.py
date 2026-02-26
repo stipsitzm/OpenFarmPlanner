@@ -126,15 +126,17 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.data['package_size_g'], 40.0)
         self.assertEqual(response.data['display_color'], '#FF5733')
     
-    def test_culture_create_missing_required_fields(self):
-        """Test that creating culture without required fields fails"""
+    def test_culture_create_without_durations(self):
+        """Test that creating culture without durations is allowed"""
         data = {
-            'name': 'Incomplete Culture',
-            # Missing growth_duration_days and harvest_duration_days
+            'name': 'Culture Without Durations',
+            'variety': 'Optional Timing',
+            'supplier_name': self.supplier.name,
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('growth_duration_days', response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(response.data['growth_duration_days'])
+        self.assertIsNone(response.data['harvest_duration_days'])
     
     def test_culture_create_invalid_display_color(self):
         """Test that invalid display color format is rejected"""

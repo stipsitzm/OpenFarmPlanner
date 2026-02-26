@@ -280,13 +280,6 @@ class CultureSerializer(serializers.ModelSerializer):
         elif 'variety' in attrs:
             attrs['variety'] = (attrs.get('variety') or '').strip()
 
-        # Require key planning durations on create for API compatibility.
-        if not self.instance:
-            if attrs.get('growth_duration_days') is None:
-                errors['growth_duration_days'] = 'This field is required.'
-            if attrs.get('harvest_duration_days') is None:
-                errors['harvest_duration_days'] = 'This field is required.'
-
         if errors:
             raise serializers.ValidationError(errors)
 

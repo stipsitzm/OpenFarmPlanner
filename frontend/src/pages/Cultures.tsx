@@ -283,8 +283,13 @@ function Cultures(): React.ReactElement {
       const dataToSend = {
         ...culture,
         supplier_id: culture.supplier?.id || null,
+        supplier_name: culture.supplier && !culture.supplier.id ? culture.supplier.name : undefined,
         supplier: undefined, // Remove supplier object from payload
       };
+
+      delete (dataToSend as Partial<Culture> & Record<string, unknown>).distance_within_row_m;
+      delete (dataToSend as Partial<Culture> & Record<string, unknown>).row_spacing_m;
+      delete (dataToSend as Partial<Culture> & Record<string, unknown>).sowing_depth_m;
 
       let savedCulture: Culture;
       if (editingCulture) {
@@ -732,41 +737,47 @@ function Cultures(): React.ReactElement {
             </span>
           </Tooltip>
           <Tooltip title="Anbauplan erstellen (Alt+P)">
-            <Button
-              aria-label="Anbauplan erstellen (Alt+P)"
-              variant="contained"
-              startIcon={<AgricultureIcon />}
-              onClick={handleCreatePlantingPlan}
-              disabled={!selectedCulture}
-            >
-              {t('buttons.createPlantingPlan')}
-            </Button>
+            <span>
+              <Button
+                aria-label="Anbauplan erstellen (Alt+P)"
+                variant="contained"
+                startIcon={<AgricultureIcon />}
+                onClick={handleCreatePlantingPlan}
+                disabled={!selectedCulture}
+              >
+                {t('buttons.createPlantingPlan')}
+              </Button>
+            </span>
           </Tooltip>
           <Tooltip title="Kultur bearbeiten (Alt+E)">
-            <Button
-              aria-label="Kultur bearbeiten (Alt+E)"
-              variant="outlined"
-              startIcon={<EditIcon />}
-              onClick={() => selectedCulture && handleEdit(selectedCulture)}
-              disabled={!selectedCulture}
-            >
-              {t('buttons.edit')}
-            </Button>
+            <span>
+              <Button
+                aria-label="Kultur bearbeiten (Alt+E)"
+                variant="outlined"
+                startIcon={<EditIcon />}
+                onClick={() => selectedCulture && handleEdit(selectedCulture)}
+                disabled={!selectedCulture}
+              >
+                {t('buttons.edit')}
+              </Button>
+            </span>
           </Tooltip>
           <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
             Versionen
           </Button>
           <Tooltip title="Kultur löschen (Alt+Shift+D)">
-            <Button
-              aria-label="Kultur löschen (Alt+Shift+D)"
-              variant="outlined"
-              color="error"
-              startIcon={<DeleteIcon />}
-              onClick={() => selectedCulture && handleDelete(selectedCulture)}
-              disabled={!selectedCulture}
-            >
-              {t('buttons.delete')}
-            </Button>
+            <span>
+              <Button
+                aria-label="Kultur löschen (Alt+Shift+D)"
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={() => selectedCulture && handleDelete(selectedCulture)}
+                disabled={!selectedCulture}
+              >
+                {t('buttons.delete')}
+              </Button>
+            </span>
           </Tooltip>
           <Box sx={{ flexGrow: 1 }} />
       </Box>
@@ -971,12 +982,6 @@ function Cultures(): React.ReactElement {
         <DialogTitle>Tastenkürzel</DialogTitle>
         <DialogContent>
           <List dense>
-            <ListItem>
-              <ListItemText primary="Undo" secondary="Ctrl+Z" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Redo" secondary="Ctrl+Y oder Ctrl+Shift+Z" />
-            </ListItem>
             <ListItem>
               <ListItemText primary="Tastenkürzel öffnen" secondary="?" />
             </ListItem>

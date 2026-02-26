@@ -12,11 +12,9 @@
  * @returns JSX element rendering the culture form
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from '../i18n';
 import type { Culture } from '../api/types';
-import { mediaFileAPI } from '../api/api';
-import { useUndoRedo } from '../hooks/useUndoRedo';
 import { extractApiErrorMessage } from '../api/errors';
 import {
   Dialog,
@@ -72,6 +70,23 @@ const EMPTY_CULTURE: Partial<Culture> = {
   seed_rate_unit: null,
 };
 
+const buildInitialFormData = (culture?: Culture): Partial<Culture> => {
+  if (!culture) {
+    return EMPTY_CULTURE;
+  }
+
+  if (culture.supplier || !culture.seed_supplier) {
+    return culture;
+  }
+
+  return {
+    ...culture,
+    supplier: {
+      name: culture.seed_supplier,
+    },
+  };
+};
+
 /**
  * Renders the CultureForm as a modal dialog. The dialog can only be closed via Save or Cancel.
  *
@@ -100,23 +115,20 @@ export function CultureForm({
   };
 
   // Local form state (no autosave)
-  const [formData, setFormData] = useState<Partial<Culture>>(culture || EMPTY_CULTURE);
+  const [formData, setFormData] = useState<Partial<Culture>>(buildInitialFormData(culture));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
-  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
 
-  const undoRedo = useUndoRedo({
-    applyCommand: (command, direction) => {
-      setFormData((prev) => ({
-        ...prev,
-        [command.fieldPath]: direction === 'undo' ? command.oldValue as never : command.newValue as never,
-      }));
-    },
-  });
 
-  const formRef = useRef<HTMLFormElement | null>(null);
+  useEffect(() => {
+    setFormData(buildInitialFormData(culture));
+    setErrors({});
+    setIsDirty(false);
+    setIsValid(true);
+    setSaveError('');
+  }, [culture]);
 
   // Validate on every change
   const validateAndSet = (draft: Partial<Culture>) => {
@@ -130,19 +142,10 @@ export function CultureForm({
   // Strongly typed change handler
   const handleChange = <K extends keyof Culture>(name: K, value: Culture[K]) => {
     setFormData((prev) => {
-      const oldValue = prev[name];
       let updated = { ...prev, [name]: value };
       if (name === 'seed_rate_unit' && (!value || value === '')) {
         updated = { ...updated, seed_rate_value: null };
       }
-      undoRedo.pushCommand({
-        entityType: 'culture',
-        entityId: prev.id ?? 'draft',
-        fieldPath: String(name),
-        oldValue,
-        newValue: updated[name],
-        timestamp: Date.now(),
-      });
       setIsDirty(true);
       validateAndSet(updated);
       return updated;
@@ -155,12 +158,7 @@ export function CultureForm({
     if (!validateAndSet(formData)) return;
     setIsSaving(true);
     try {
-      let nextData = formData;
-      if (pendingImageFile) {
-        const upload = await mediaFileAPI.upload(pendingImageFile);
-        nextData = { ...nextData, image_file_id: upload.data.id };
-      }
-      await saveCulture(nextData);
+      await saveCulture(formData);
       setShowSaveSuccess(true);
       setIsDirty(false);
     } catch (error) {
@@ -169,44 +167,6 @@ export function CultureForm({
       setIsSaving(false);
     }
   };
-
-
-  useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      const active = document.activeElement;
-      const isInsideForm = active instanceof Element && Boolean(formRef.current?.contains(active));
-      if (!isInsideForm) {
-        return;
-      }
-
-      if (!(event.ctrlKey || event.metaKey)) {
-        return;
-      }
-
-      if (event.key.toLowerCase() === 'z' && event.shiftKey) {
-        if (undoRedo.redo()) {
-          event.preventDefault();
-        }
-        return;
-      }
-
-      if (event.key.toLowerCase() === 'z') {
-        if (undoRedo.undo()) {
-          event.preventDefault();
-        }
-        return;
-      }
-
-      if (event.key.toLowerCase() === 'y') {
-        if (undoRedo.redo()) {
-          event.preventDefault();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [undoRedo]);
 
   return (
     <Dialog
@@ -219,7 +179,7 @@ export function CultureForm({
       maxWidth="md"
       fullWidth
     >
-      <form ref={formRef} onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
         <DialogTitle id="culture-form-dialog-title">
           {isEdit ? t('form.editTitle') : t('form.createTitle')}
         </DialogTitle>
@@ -233,10 +193,6 @@ export function CultureForm({
             <SeedingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <ColorSection formData={formData} errors={errors} onChange={handleChange} t={t} defaultColor={DEFAULT_DISPLAY_COLOR} />
             <NotesSection formData={formData} onChange={handleChange} t={t} errors={errors} />
-            <Button component="label" variant="outlined">Bild auswählen
-              <input hidden type="file" accept="image/*" onChange={(e) => setPendingImageFile(e.target.files?.[0] ?? null)} />
-            </Button>
-            {pendingImageFile && <Typography variant="body2">{pendingImageFile.name}</Typography>}
           </div>
         </DialogContent>
         <DialogActions sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
@@ -247,12 +203,6 @@ export function CultureForm({
                 : t('messages.fixErrors', { defaultValue: 'Please fix validation errors' })}
             </Typography>
           )}
-          <Button onClick={undoRedo.undo} disabled={isSaving || !undoRedo.canUndo}>
-            Undo (Ctrl+Z)
-          </Button>
-          <Button onClick={undoRedo.redo} disabled={isSaving || !undoRedo.canRedo}>
-            Redo (Ctrl+Y)
-          </Button>
           <Button onClick={onCancel} disabled={isSaving}>
             {t('form.cancel')}
           </Button>

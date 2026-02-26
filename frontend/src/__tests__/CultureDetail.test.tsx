@@ -83,6 +83,29 @@ describe('CultureDetail Component', () => {
     expect(screen.getByText(/28\s+Tage/)).toBeInTheDocument();
   });
 
+
+  it('displays sowing depth with one decimal place', () => {
+    const mockOnSelect = vi.fn();
+    const culturesWithDepth: Culture[] = [
+      {
+        id: 10,
+        name: 'Karotte',
+        variety: 'Nantaise',
+        sowing_depth_cm: 2,
+      },
+    ];
+
+    render(
+      <CultureDetail
+        cultures={culturesWithDepth}
+        selectedCultureId={10}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getByText('2.0 cm')).toBeInTheDocument();
+  });
+
   it('displays notes when available', () => {
     const mockOnSelect = vi.fn();
     render(
