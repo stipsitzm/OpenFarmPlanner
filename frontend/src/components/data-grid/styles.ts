@@ -30,28 +30,10 @@ export const dataGridSx = {
     overflow: 'visible',
   },
   '& .MuiDataGrid-columnHeader': {
-    px: 0.5,
+    px: 1,
   },
   '& .MuiDataGrid-columnHeaderTitleContainer': {
-    gap: 2,
     minWidth: 0,
-    justifyContent: 'flex-start',
-    paddingLeft: 0,
-  },
-  '& .MuiDataGrid-iconButtonContainer, & .MuiDataGrid-menuIcon': {
-    order: -1,
-    flex: '0 0 auto',
-    width: 'auto',
-    minWidth: 0,
-    marginLeft: '0 !important',
-    marginRight: 1,
-  },
-  '& .MuiDataGrid-columnHeaderTitleContainer > .MuiDataGrid-menuIcon + .MuiDataGrid-columnHeaderTitleContainerContent, & .MuiDataGrid-columnHeaderTitleContainer > .MuiDataGrid-iconButtonContainer + .MuiDataGrid-columnHeaderTitleContainerContent': {
-    marginLeft: 0,
-  },
-  '& .MuiDataGrid-menuIcon .MuiIconButton-root, & .MuiDataGrid-iconButtonContainer .MuiIconButton-root': {
-    padding: 2,
-    margin: 0,
   },
 };
 
