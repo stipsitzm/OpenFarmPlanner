@@ -16,6 +16,7 @@ dependencies = [
     "asgiref>=3.8.1",
     "sqlparse>=0.5.0",
     "Pillow>=11.0.0",
+    "radon>=6.0.1",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
@@ -35,6 +36,10 @@ test = [
     "packaging>=24.0",
     "pygments>=2.18.0",
 ]
+quality = [
+    "ruff==0.8.6",
+    "radon==6.0.1",
+]
 
 [tool.pdm.scripts]
 migrate = "python manage.py migrate"
@@ -44,3 +49,19 @@ test = "python -m pytest"
 createsuperuser = "python manage.py createsuperuser"
 shell = "python manage.py shell"
 collectstatic = "python manage.py collectstatic --noinput"
+
+[tool.ruff]
+line-length = 100
+exclude = [
+    "node_modules",
+    "dist",
+    "build",
+    ".venv",
+    "farm/migrations",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C90"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10

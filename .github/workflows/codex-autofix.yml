@@ -1,6 +1,6 @@
 name: Codex Auto-Fix on CI Failure
 
-on:
+"on":
   workflow_run:
     workflows: ["CI"]
     types: [completed]
@@ -8,12 +8,18 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: read
+
+concurrency:
+  group: codex-autofix-${{ github.event.workflow_run.id }}
+  cancel-in-progress: true
 
 jobs:
   codex-autofix:
     if: >
       github.event.workflow_run.conclusion == 'failure' &&
-      secrets.OPENAI_API_KEY != ''
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.actor.login != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout failing commit
@@ -22,26 +28,44 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
+      - name: Fail fast if OPENAI_API_KEY is missing
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY is not configured; skipping auto-fix." >&2
+            exit 1
+          fi
+
       - name: Run Codex Auto-Fix
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
-            The CI workflow failed for this commit.
-            
+            The CI workflow run failed.
+
+            Failing run URL: ${{ github.event.workflow_run.html_url }}
+            Triggering event: ${{ github.event.workflow_run.event }}
+            Head branch: ${{ github.event.workflow_run.head_branch }}
+            Head SHA: ${{ github.event.workflow_run.head_sha }}
+
             Tasks:
-            1) Analyze the failing workflow logs and identify the exact backend/frontend test or build failures.
-            2) Implement the minimal safe code/test fixes needed to make CI pass.
-            3) Re-run both test suites:
-               - Frontend: cd frontend && npm run test:coverage
-               - Backend: cd backend && pytest --cov --cov-report=term-missing
-            4) Create a branch named: codex/auto-fix/${{ github.event.workflow_run.id }}
-            5) Open a PR to main.
-            6) Include a short summary in the PR body and link this failing run:
-               ${{ github.event.workflow_run.html_url }}
-            
-            Security constraints:
+            1) Inspect the failing CI jobs and identify the concrete root cause(s).
+            2) Implement the smallest safe change(s) needed to make CI pass.
+            3) Re-run relevant checks locally before committing:
+               - Frontend tests: cd frontend && npm run test:coverage
+               - Backend tests: cd backend && pdm run test
+               - Quality gate: make quality
+            4) Commit fixes on a new branch named:
+               codex/auto-fix/${{ github.event.workflow_run.id }}
+            5) Open a PR targeting main.
+            6) In the PR body include:
+               - failing run URL
+               - root cause summary
+               - exact commands run and outcomes
+
+            Constraints:
             - Do not add or expose secrets.
-            - Do not use pull_request_target.
-            - Keep changes minimal and scoped to fixing CI failures.
+            - Keep changes minimal and scoped to CI failures.
+            - Do not change production behavior unless required to fix CI.

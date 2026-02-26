@@ -1,13 +1,13 @@
-from django.db import models
-from django.core.exceptions import ValidationError
-from django.core.serializers.json import DjangoJSONEncoder
-from django.utils import timezone
+import json
+import uuid
 from datetime import timedelta
 from decimal import Decimal
-import json
 from typing import Any
-import re
-import uuid
+
+from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db import models
+from django.utils import timezone
 
 
 def note_attachment_upload_path(instance: 'NoteAttachment', filename: str) -> str:
@@ -95,7 +95,8 @@ class Field(TimestampedModel):
     """A field within a location that can contain multiple beds."""
     # Validation constants.
     MIN_AREA_SQM = Decimal('0.01')  # Minimum 0.01 sqm (10cm x 10cm)
-    MAX_AREA_SQM = Decimal('1000000.00')  # Maximum 100 hectares (safe value within DecimalField constraints)
+    MAX_AREA_SQM = Decimal('1000000.00')  # Maximum 100 hectares (safe value within
+    # DecimalField constraints)
     
     name = models.CharField(max_length=200)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='fields')
@@ -178,7 +179,11 @@ class Culture(TimestampedModel):
     variety = models.CharField(max_length=200)
     # Use growth_duration_days instead of days_to_harvest.
     notes = models.TextField(blank=True)
-    seed_supplier = models.CharField(max_length=200, blank=True, help_text="Seed supplier/manufacturer (legacy field)")
+    seed_supplier = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Seed supplier/manufacturer (legacy field)",
+    )
     deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
     image_file = models.ForeignKey(
         'MediaFile',
@@ -214,7 +219,11 @@ class Culture(TimestampedModel):
     )
     
     # Manual planning fields.
-    crop_family = models.CharField(max_length=200, blank=True, help_text="Crop family for rotation planning")
+    crop_family = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Crop family for rotation planning",
+    )
     nutrient_demand = models.CharField(
         max_length=20, 
         choices=NUTRIENT_DEMAND_CHOICES, 
@@ -428,7 +437,12 @@ class Culture(TimestampedModel):
         # Convert RGB to hex.
         return f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
 
-    def _hsl_to_rgb(self, h: float, s: float, l: float) -> tuple[int, int, int]:
+    def _hsl_to_rgb(
+        self,
+        h: float,
+        s: float,
+        lightness: float,
+    ) -> tuple[int, int, int]:
         """Convert HSL color to RGB."""
         h = h / 360.0
         
@@ -446,10 +460,14 @@ class Culture(TimestampedModel):
             return p
         
         if s == 0:
-            r = g = b = l
+            r = g = b = lightness
         else:
-            q = l * (1 + s) if l < 0.5 else l + s - l * s
-            p = 2 * l - q
+            q = (
+                lightness * (1 + s)
+                if lightness < 0.5
+                else lightness + s - lightness * s
+            )
+            p = 2 * lightness - q
             r = hue_to_rgb(p, q, h + 1/3)
             g = hue_to_rgb(p, q, h)
             b = hue_to_rgb(p, q, h - 1/3)
@@ -491,7 +509,9 @@ class Culture(TimestampedModel):
                 fields=['name_normalized', 'variety_normalized', 'supplier'],
                 condition=models.Q(deleted_at__isnull=True),
                 name='unique_culture_normalized',
-                violation_error_message='A culture with this name, variety, and supplier already exists.'
+                violation_error_message=(
+                    'A culture with this name, variety, and supplier already exists.'
+                )
             )
         ]
 
@@ -527,8 +547,16 @@ class PlantingPlan(TimestampedModel):
     culture = models.ForeignKey(Culture, on_delete=models.CASCADE, related_name='planting_plans')
     bed = models.ForeignKey(Bed, on_delete=models.CASCADE, related_name='planting_plans')
     planting_date = models.DateField()
-    harvest_date = models.DateField(blank=True, null=True, help_text="Harvest start date (Erntebeginn)")
-    harvest_end_date = models.DateField(blank=True, null=True, help_text="Harvest end date (Ernteende)")
+    harvest_date = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Harvest start date (Erntebeginn)",
+    )
+    harvest_end_date = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Harvest end date (Ernteende)",
+    )
     quantity = models.IntegerField(null=True, blank=True, help_text="Number of plants or seeds")
     area_usage_sqm = models.DecimalField(
         max_digits=10, 
@@ -557,7 +585,7 @@ class PlantingPlan(TimestampedModel):
                 )
                 
                 # Add current plan's area usage.
-                total_area_with_current = total_used_area + float(self.area_usage_sqm)
+                _ = total_used_area + float(self.area_usage_sqm)
                 
                 # if total_area_with_current > bed_area:
                 #     raise ValidationError({
@@ -588,12 +616,16 @@ class PlantingPlan(TimestampedModel):
         if should_recalculate and self.planting_date and self.culture:
             # Calculate harvest start date using growth_duration_days only.
             if self.culture.growth_duration_days:
-                self.harvest_date = self.planting_date + timedelta(days=self.culture.growth_duration_days)
+                self.harvest_date = self.planting_date + timedelta(
+                    days=self.culture.growth_duration_days
+                )
             else:
                 self.harvest_date = self.planting_date  # Fallback: no offset when value is missing.
             # Calculate harvest end date.
             if self.culture.growth_duration_days and self.culture.harvest_duration_days:
-                self.harvest_end_date = self.harvest_date + timedelta(days=self.culture.harvest_duration_days)
+                self.harvest_end_date = self.harvest_date + timedelta(
+                    days=self.culture.harvest_duration_days
+                )
             else:
                 self.harvest_end_date = self.harvest_date
         
@@ -618,7 +650,13 @@ class Task(TimestampedModel):
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    planting_plan = models.ForeignKey(PlantingPlan, on_delete=models.CASCADE, related_name='tasks', null=True, blank=True)
+    planting_plan = models.ForeignKey(
+        PlantingPlan,
+        on_delete=models.CASCADE,
+        related_name='tasks',
+        null=True,
+        blank=True,
+    )
     due_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
 
