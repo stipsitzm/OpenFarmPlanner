@@ -53,6 +53,7 @@ const CULTURE_B: Culture = {
   id: 2,
   name: 'Salat',
   variety: 'Batavia',
+  supplier: { id: 11, name: 'Dreschflegel' },
 };
 
 describe('CultureForm', () => {
@@ -73,7 +74,7 @@ describe('CultureForm', () => {
     }));
   });
 
-  it('saves spacing values and no longer blocks save when supplier is empty', async () => {
+  it('saves spacing values for culture edit', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
 
     render(<CultureForm culture={CULTURE_B} onSave={onSave} onCancel={() => {}} />);
@@ -87,6 +88,23 @@ describe('CultureForm', () => {
       name: 'Salat',
       variety: 'Batavia',
       row_spacing_cm: 35,
+      supplier: { id: 11, name: 'Dreschflegel' },
+    }));
+  });
+
+  it('maps legacy seed_supplier into supplier field for validation and save', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(<CultureForm culture={{ id: 3, name: 'Mangold', variety: 'Rainbow', seed_supplier: 'Legacy Seeds' }} onSave={onSave} onCancel={() => {}} />);
+
+    fireEvent.change(screen.getByLabelText('row-spacing-input'), { target: { value: '40' } });
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      id: 3,
+      supplier: { name: 'Legacy Seeds' },
+      row_spacing_cm: 40,
     }));
   });
 
@@ -108,6 +126,7 @@ describe('CultureForm', () => {
       id: 2,
       name: 'Salat',
       variety: 'Batavia',
+      supplier: { id: 11, name: 'Dreschflegel' },
     }));
   });
 });

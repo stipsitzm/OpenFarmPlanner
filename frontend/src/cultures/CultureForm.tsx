@@ -70,6 +70,23 @@ const EMPTY_CULTURE: Partial<Culture> = {
   seed_rate_unit: null,
 };
 
+const buildInitialFormData = (culture?: Culture): Partial<Culture> => {
+  if (!culture) {
+    return EMPTY_CULTURE;
+  }
+
+  if (culture.supplier || !culture.seed_supplier) {
+    return culture;
+  }
+
+  return {
+    ...culture,
+    supplier: {
+      name: culture.seed_supplier,
+    },
+  };
+};
+
 /**
  * Renders the CultureForm as a modal dialog. The dialog can only be closed via Save or Cancel.
  *
@@ -98,7 +115,7 @@ export function CultureForm({
   };
 
   // Local form state (no autosave)
-  const [formData, setFormData] = useState<Partial<Culture>>(culture || EMPTY_CULTURE);
+  const [formData, setFormData] = useState<Partial<Culture>>(buildInitialFormData(culture));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -106,7 +123,7 @@ export function CultureForm({
 
 
   useEffect(() => {
-    setFormData(culture || EMPTY_CULTURE);
+    setFormData(buildInitialFormData(culture));
     setErrors({});
     setIsDirty(false);
     setIsValid(true);
