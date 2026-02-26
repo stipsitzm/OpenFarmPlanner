@@ -47,7 +47,7 @@ export function SpacingSection({ formData, errors, onChange, t }: SpacingSection
           label={t('form.sowingDepthCm', { defaultValue: 'Saattiefe (cm)' })}
           placeholder={t('form.sowingDepthCmPlaceholder', { defaultValue: 'z.B. 2' })}
           value={formData.sowing_depth_cm ?? ''}
-          onChange={e => onChange('sowing_depth_cm', e.target.value ? parseInt(e.target.value) : undefined)}
+          onChange={e => onChange('sowing_depth_cm', e.target.value ? parseFloat(e.target.value) : undefined)}
           error={Boolean(errors.sowing_depth_cm)}
           helperText={errors.sowing_depth_cm}
           slotProps={{ htmlInput: { min: 0, step: 0.1 } }}

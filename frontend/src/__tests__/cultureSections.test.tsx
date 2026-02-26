@@ -70,11 +70,11 @@ describe('culture form UI sections', () => {
 
     fireEvent.change(screen.getByLabelText('Abstand in der Reihe (cm)'), { target: { value: '25' } });
     fireEvent.change(screen.getByLabelText('Reihenabstand (cm)'), { target: { value: '40' } });
-    fireEvent.change(screen.getByLabelText('Saattiefe (cm)'), { target: { value: '2' } });
+    fireEvent.change(screen.getByLabelText('Saattiefe (cm)'), { target: { value: '2.1' } });
 
     expect(onChange).toHaveBeenCalledWith('distance_within_row_cm', 25);
     expect(onChange).toHaveBeenCalledWith('row_spacing_cm', 40);
-    expect(onChange).toHaveBeenCalledWith('sowing_depth_cm', 2);
+    expect(onChange).toHaveBeenCalledWith('sowing_depth_cm', 2.1);
 
   });
 

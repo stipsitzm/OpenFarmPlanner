@@ -287,6 +287,10 @@ function Cultures(): React.ReactElement {
         supplier: undefined, // Remove supplier object from payload
       };
 
+      delete (dataToSend as Partial<Culture> & Record<string, unknown>).distance_within_row_m;
+      delete (dataToSend as Partial<Culture> & Record<string, unknown>).row_spacing_m;
+      delete (dataToSend as Partial<Culture> & Record<string, unknown>).sowing_depth_m;
+
       let savedCulture: Culture;
       if (editingCulture) {
         const response = await cultureAPI.update(editingCulture.id!, dataToSend as Culture);
