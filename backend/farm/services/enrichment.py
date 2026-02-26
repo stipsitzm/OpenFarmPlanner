@@ -17,6 +17,17 @@ from django.conf import settings
 from farm.models import Culture
 
 
+def _coerce_setting_to_str(value: object, setting_name: str) -> str:
+    """Coerce setting values to a safe string representation."""
+    if value is None:
+        return ''
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (int, float, bool)):
+        return str(value).strip()
+    raise EnrichmentError(f"Invalid {setting_name} type: expected string-like value.")
+
+
 class EnrichmentError(Exception):
     """Raised when enrichment provider fails."""
 
@@ -48,7 +59,8 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
     search_provider_name = "web_search"
 
     def __init__(self, api_key: str | None = None) -> None:
-        resolved_key = (api_key if api_key is not None else getattr(settings, 'OPENAI_API_KEY', '')).strip()
+        raw_key = api_key if api_key is not None else getattr(settings, 'OPENAI_API_KEY', '')
+        resolved_key = _coerce_setting_to_str(raw_key, 'OPENAI_API_KEY')
         if not resolved_key:
             raise EnrichmentError(
                 "AI provider 'openai_responses' is configured but OPENAI_API_KEY is missing."
@@ -217,7 +229,8 @@ def build_note_appendix(base_notes: str, note_blocks: str) -> str:
 
 def get_enrichment_provider() -> BaseEnrichmentProvider:
     """Return provider by configured settings."""
-    provider = getattr(settings, 'AI_ENRICHMENT_PROVIDER', 'openai_responses').strip()
+    raw_provider = getattr(settings, 'AI_ENRICHMENT_PROVIDER', 'openai_responses')
+    provider = _coerce_setting_to_str(raw_provider, 'AI_ENRICHMENT_PROVIDER')
     if provider == "openai_responses":
         return OpenAIResponsesProvider(api_key=getattr(settings, 'OPENAI_API_KEY', ''))
     if provider == 'fallback':

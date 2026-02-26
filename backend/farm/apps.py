@@ -7,6 +7,16 @@ from django.core.exceptions import ImproperlyConfigured
 logger = logging.getLogger(__name__)
 
 
+def _coerce_to_str(value: object) -> str:
+    if value is None:
+        return ''
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (int, float, bool)):
+        return str(value).strip()
+    return ''
+
+
 class FarmConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'farm'
@@ -25,8 +35,8 @@ class FarmConfig(AppConfig):
         if not getattr(settings, 'AI_ENRICHMENT_ENABLED', False):
             return
 
-        provider = getattr(settings, 'AI_ENRICHMENT_PROVIDER', 'openai_responses')
-        key = getattr(settings, 'OPENAI_API_KEY', '').strip()
+        provider = _coerce_to_str(getattr(settings, 'AI_ENRICHMENT_PROVIDER', 'openai_responses')) or 'openai_responses'
+        key = _coerce_to_str(getattr(settings, 'OPENAI_API_KEY', ''))
         fail_fast = getattr(settings, 'AI_ENRICHMENT_FAIL_FAST', False)
 
         if provider == 'openai_responses' and not key and fail_fast:

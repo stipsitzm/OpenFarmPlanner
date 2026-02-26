@@ -56,3 +56,13 @@ class EnrichmentConfigBehaviorTest(TestCase):
     def test_enrich_culture_rejects_when_disabled(self):
         with self.assertRaises(EnrichmentError):
             enrich_culture(self.culture, 'complete')
+
+    @override_settings(AI_ENRICHMENT_PROVIDER={'bad': 'type'})
+    def test_invalid_provider_type_raises_clear_error(self):
+        with self.assertRaises(EnrichmentError):
+            enrich_culture(self.culture, 'complete')
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY={'bad': 'type'})
+    def test_invalid_key_type_raises_clear_error(self):
+        with self.assertRaises(EnrichmentError):
+            enrich_culture(self.culture, 'complete')
