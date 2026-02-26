@@ -52,16 +52,31 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
-    def test_invalid_note_blocks_type_raises_clear_error(self, post_mock):
+    def test_note_blocks_object_is_coerced_into_notes(self, post_mock):
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
-            'output_text': '{"suggested_fields":{},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":{"x":1}}'
+            'output_text': '{"suggested_fields":{},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":{"title":"Quellen","content":"- x"}}'
         }
         post_mock.return_value = response
 
-        with self.assertRaises(EnrichmentError):
-            enrich_culture(self.culture, 'complete')
+        result = enrich_culture(self.culture, 'complete')
+        self.assertIn('notes', result['suggested_fields'])
+        self.assertIn('"title": "Quellen"', result['suggested_fields']['notes']['value'])
+
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_normalizes_cultivation_type_aliases(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{"cultivation_type":{"value":"bush bean","unit":null,"confidence":0.9}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        self.assertEqual(result['suggested_fields']['cultivation_type']['value'], 'direct_sowing')
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')

@@ -283,7 +283,7 @@ function Cultures(): React.ReactElement {
       setDeleteDialogCulture(null);
     } catch (error) {
       console.error('Error deleting culture:', error);
-      showSnackbar(t('messages.updateError'), 'error');
+      showSnackbar(extractApiErrorMessage(error, t, t('messages.updateError')), 'error');
     }
   };
 
@@ -739,7 +739,7 @@ function Cultures(): React.ReactElement {
       setEnrichmentDialogOpen(false);
     } catch (error) {
       console.error('Error applying enrichment suggestions:', error);
-      showSnackbar(t('messages.updateError'), 'error');
+      showSnackbar(extractApiErrorMessage(error, t, t('messages.updateError')), 'error');
     }
   };
   useEffect(() => {
