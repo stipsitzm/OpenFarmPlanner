@@ -12,7 +12,7 @@
  * @returns JSX element rendering the culture form
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from '../i18n';
 import type { Culture } from '../api/types';
 import { extractApiErrorMessage } from '../api/errors';
@@ -103,6 +103,15 @@ export function CultureForm({
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
+
+
+  useEffect(() => {
+    setFormData(culture || EMPTY_CULTURE);
+    setErrors({});
+    setIsDirty(false);
+    setIsValid(true);
+    setSaveError('');
+  }, [culture]);
 
   // Validate on every change
   const validateAndSet = (draft: Partial<Culture>) => {
