@@ -28,6 +28,17 @@ def _coerce_setting_to_str(value: object, setting_name: str) -> str:
     raise EnrichmentError(f"Invalid {setting_name} type: expected string-like value.")
 
 
+def _coerce_text_value(value: object, field_name: str) -> str:
+    """Coerce generic text values from provider output safely."""
+    if value is None:
+        return ''
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (int, float, bool)):
+        return str(value).strip()
+    raise EnrichmentError(f"Invalid {field_name} type: expected text-like value.")
+
+
 class EnrichmentError(Exception):
     """Raised when enrichment provider fails."""
 
@@ -216,10 +227,10 @@ class FallbackHeuristicProvider(BaseEnrichmentProvider):
         }
 
 
-def build_note_appendix(base_notes: str, note_blocks: str) -> str:
+def build_note_appendix(base_notes: object, note_blocks: object) -> str:
     """Append generated notes block to existing notes in markdown."""
-    base = (base_notes or "").strip()
-    addition = (note_blocks or "").strip()
+    base = _coerce_text_value(base_notes, 'notes')
+    addition = _coerce_text_value(note_blocks, 'note_blocks')
     if not addition:
         return base
     if not base:
@@ -254,6 +265,13 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
     evidence = raw.get("evidence", {})
     validation = raw.get("validation", {"warnings": [], "errors": []})
     note_blocks = raw.get("note_blocks", "")
+
+    if not isinstance(suggested_fields, dict):
+        raise EnrichmentError('Invalid suggested_fields payload type.')
+    if not isinstance(evidence, dict):
+        raise EnrichmentError('Invalid evidence payload type.')
+    if not isinstance(validation, dict):
+        raise EnrichmentError('Invalid validation payload type.')
 
     if note_blocks:
         suggested_fields["notes"] = {

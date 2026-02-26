@@ -48,6 +48,34 @@ class OpenAIResponsesProviderParsingTest(TestCase):
             OpenAIResponsesProvider(api_key='')
 
 
+
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_invalid_note_blocks_type_raises_clear_error(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":{"x":1}}'
+        }
+        post_mock.return_value = response
+
+        with self.assertRaises(EnrichmentError):
+            enrich_culture(self.culture, 'complete')
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_invalid_suggested_fields_type_raises_clear_error(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":[],"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":"ok"}'
+        }
+        post_mock.return_value = response
+
+        with self.assertRaises(EnrichmentError):
+            enrich_culture(self.culture, 'complete')
+
 class EnrichmentConfigBehaviorTest(TestCase):
     def setUp(self):
         self.culture = Culture.objects.create(name='Möhre', variety='Nantes')
