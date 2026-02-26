@@ -742,6 +742,33 @@ function Cultures(): React.ReactElement {
       showSnackbar(t('messages.updateError'), 'error');
     }
   };
+  useEffect(() => {
+    const onAiShortcut = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+      if (isTypingInEditableElement(document.activeElement)) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      if (key === 'u') {
+        event.preventDefault();
+        void handleEnrichCurrent('complete');
+      } else if (key === 'r') {
+        event.preventDefault();
+        void handleEnrichCurrent('reresearch');
+      } else if (key === 'a') {
+        event.preventDefault();
+        void handleEnrichAll();
+      }
+    };
+
+    window.addEventListener('keydown', onAiShortcut);
+    return () => window.removeEventListener('keydown', onAiShortcut);
+  }, [handleEnrichAll, handleEnrichCurrent]);
+
+
 
   return (
     <div className="page-container">
@@ -839,7 +866,7 @@ function Cultures(): React.ReactElement {
             <Button
               startIcon={<AutoAwesomeIcon />}
               onClick={() => void handleEnrichCurrent('complete')}
-              aria-label={t('buttons.aiComplete')}
+              aria-label="Kultur vervollständigen (KI) (Alt+U)"
             >
               {t('buttons.aiComplete')}
             </Button>
@@ -860,11 +887,11 @@ function Cultures(): React.ReactElement {
             open={Boolean(aiMenuAnchor)}
             onClose={handleAiMenuClose}
           >
-            <MenuItem onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading}>
+            <MenuItem aria-label="Kultur komplett neu recherchieren (KI) (Alt+R)" onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading}>
               <ManageSearchIcon sx={{ mr: 1 }} fontSize="small" />
               {t('buttons.aiReresearch')}
             </MenuItem>
-            <MenuItem onClick={() => void handleEnrichAll()} disabled={cultures.length === 0 || enrichmentLoading}>
+            <MenuItem aria-label="Alle Kulturen vervollständigen (KI) (Alt+A)" onClick={() => void handleEnrichAll()} disabled={cultures.length === 0 || enrichmentLoading}>
               <PlaylistAddCheckIcon sx={{ mr: 1 }} fontSize="small" />
               {t('buttons.aiCompleteAll')}
             </MenuItem>
@@ -1163,6 +1190,15 @@ function Cultures(): React.ReactElement {
             </ListItem>
             <ListItem>
               <ListItemText primary="Dialog schließen" secondary="Esc" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="KI: Kultur vervollständigen" secondary="Alt+U" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="KI: Kultur neu recherchieren" secondary="Alt+R" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="KI: Alle Kulturen vervollständigen" secondary="Alt+A" />
             </ListItem>
           </List>
         </DialogContent>
