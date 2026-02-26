@@ -22,8 +22,6 @@ import {
   type SearchableSelectOption,
   type EditableDataGridCommandApi,
 } from '../components/data-grid';
-import { AreaM2EditCell } from '../components/data-grid/AreaM2EditCell';
-import { PlantsCountEditCell } from '../components/data-grid/PlantsCountEditCell';
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import type { CommandSpec } from '../commands/types';
 
@@ -241,15 +239,12 @@ function PlantingPlans(): React.ReactElement {
             <div>{t('plantingPlans:columns.areaM2')}</div>
         </Tooltip>
       ),
-      renderEditCell: (params) => (
-        <AreaM2EditCell 
-          {...params} 
-          cultures={cultures}
-          onLastEditedFieldChange={(field) => {
-            lastEditedFieldRef.current = field;
-          }}
-        />
-      ),
+      preProcessEditCellProps: (params) => {
+        if (params.hasChanged) {
+          lastEditedFieldRef.current = 'area_m2';
+        }
+        return params.props;
+      },
       valueFormatter: (value) => {
         const numericValue = Number(value);
         if (!Number.isNaN(numericValue)) {
@@ -271,15 +266,12 @@ function PlantingPlans(): React.ReactElement {
             <div>{t('plantingPlans:columns.plantsCount')}</div>
         </Tooltip>
       ),
-      renderEditCell: (params) => (
-        <PlantsCountEditCell 
-          {...params} 
-          cultures={cultures}
-          onLastEditedFieldChange={(field) => {
-            lastEditedFieldRef.current = field;
-          }}
-        />
-      ),
+      preProcessEditCellProps: (params) => {
+        if (params.hasChanged) {
+          lastEditedFieldRef.current = 'plants_count';
+        }
+        return params.props;
+      },
       valueFormatter: (value) => {
         if (typeof value === 'number' && !isNaN(value)) {
           return `≈ ${Math.round(value)}`;
