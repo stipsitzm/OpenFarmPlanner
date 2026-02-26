@@ -29,6 +29,17 @@ export const dataGridSx = {
   '& .MuiDataGrid-cell:focus-within': {
     overflow: 'visible',
   },
+  '& .MuiDataGrid-columnHeaderTitleContainer': {
+    minWidth: 0,
+    display: 'flex',
+    alignItems: 'center',
+  },
+  '& .MuiDataGrid-menuIcon, & .MuiDataGrid-iconButtonContainer': {
+    order: -1,
+    flex: '0 0 auto',
+    marginLeft: '0 !important',
+    marginRight: 4,
+  },
 
 };
 
