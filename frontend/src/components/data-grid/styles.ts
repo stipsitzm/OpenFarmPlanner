@@ -23,6 +23,12 @@ export const dataGridSx = {
   '& .MuiDataGrid-cell--editable:hover': {
     backgroundColor: '#e3f2fd',
   },
+  '& .MuiDataGrid-cell--editing': {
+    overflow: 'visible',
+  },
+  '& .MuiDataGrid-cell:focus-within': {
+    overflow: 'visible',
+  },
 };
 
 /**

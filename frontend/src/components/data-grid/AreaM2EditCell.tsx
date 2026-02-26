@@ -73,7 +73,15 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
   };
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 0.5,
+        width: '100%',
+        minWidth: 260,
+      }}
+    >
       <TextField
         type="number"
         autoFocus={hasFocus}
@@ -89,12 +97,18 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
             tabIndex: hasFocus ? 0 : -1,
           },
         }}
-        sx={{ minWidth: 110 }}
+        sx={{ minWidth: 110, flex: 1 }}
       />
-      <Button size="small" variant="outlined" onClick={handleMaxClick} disabled={maxDisabled}>
+      <Button size="small" variant="outlined" onClick={handleMaxClick} disabled={maxDisabled} tabIndex={-1}>
         Max
       </Button>
-      <Button size="small" variant="outlined" onClick={handleRestClick} disabled={isLoadingRest || maxDisabled}>
+      <Button
+        size="small"
+        variant="outlined"
+        onClick={handleRestClick}
+        disabled={isLoadingRest || maxDisabled}
+        tabIndex={-1}
+      >
         Rest
       </Button>
     </Box>

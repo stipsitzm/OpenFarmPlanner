@@ -37,6 +37,12 @@ interface PlantingPlanRow extends PlantingPlan, EditableRow {
   note_attachment_count?: number;
 }
 
+const estimateColumnWidth = (values: string[], min: number, max: number): number => {
+  const longest = values.reduce((length, value) => Math.max(length, value.length), 0);
+  const estimated = longest * 8 + 52;
+  return Math.max(min, Math.min(max, estimated));
+};
+
 const toIsoDateString = (value: unknown): string | null => {
   if (value instanceof Date) {
     const year = value.getFullYear();
@@ -85,6 +91,30 @@ function PlantingPlans(): React.ReactElement {
       }),
     [beds]
   );
+
+  const dynamicWidths = useMemo(() => {
+    const cultureWidth = estimateColumnWidth(
+      [t('plantingPlans:columns.culture'), ...cultureOptions.map((option) => option.label)],
+      170,
+      360,
+    );
+    const bedWidth = estimateColumnWidth(
+      [t('plantingPlans:columns.bed'), ...bedOptions.map((option) => option.label)],
+      220,
+      460,
+    );
+
+    return {
+      culture: cultureWidth,
+      bed: bedWidth,
+      plantingDate: 150,
+      harvestDate: 150,
+      harvestEndDate: 150,
+      area: 280,
+      plants: 130,
+      notes: 260,
+    };
+  }, [bedOptions, cultureOptions, t]);
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
@@ -199,16 +229,16 @@ function PlantingPlans(): React.ReactElement {
     createSingleSelectColumn<PlantingPlanRow>({
       field: 'culture',
       headerName: t('plantingPlans:columns.culture'),
-      flex: 1,
-      minWidth: 180,
+      flex: 0,
+      minWidth: dynamicWidths.culture,
       options: cultureOptions,
     }),
     {
       ...createSingleSelectColumn<PlantingPlanRow>({
         field: 'bed',
         headerName: t('plantingPlans:columns.bed'),
-        flex: 1.2,
-        minWidth: 200,
+        flex: 0,
+        minWidth: dynamicWidths.bed,
         options: bedOptions,
       }),
       valueSetter: (value, row) => {
@@ -231,8 +261,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'planting_date',
       headerName: t('plantingPlans:columns.plantingDate'),
-      flex: 0.8,
-      minWidth: 130,
+      flex: 0,
+      minWidth: dynamicWidths.plantingDate,
       type: 'date',
       editable: true,
       valueGetter: (value) => value ? new Date(value) : null,
@@ -244,8 +274,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'harvest_date',
       headerName: t('plantingPlans:columns.harvestStartDate'),
-      flex: 0.8,
-      minWidth: 130,
+      flex: 0,
+      minWidth: dynamicWidths.harvestDate,
       editable: false,
       type: 'date',
       valueGetter: (value) => value ? new Date(value) : null,
@@ -253,8 +283,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'harvest_end_date',
       headerName: t('plantingPlans:columns.harvestEndDate'),
-      flex: 0.8,
-      minWidth: 130,
+      flex: 0,
+      minWidth: dynamicWidths.harvestEndDate,
       editable: false,
       type: 'date',
       valueGetter: (value) => value ? new Date(value) : null,
@@ -262,8 +292,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'area_m2',
       headerName: t('plantingPlans:columns.areaM2'),
-      flex: 0.7,
-      minWidth: 100,
+      flex: 0,
+      minWidth: dynamicWidths.area,
       editable: true,
       type: 'number',
       renderHeader: () => (
@@ -333,8 +363,8 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'plants_count',
       headerName: t('plantingPlans:columns.plantsCount'),
-      flex: 0.7,
-      minWidth: 100,
+      flex: 0,
+      minWidth: dynamicWidths.plants,
       editable: true,
       type: 'number',
       renderHeader: () => (
@@ -367,10 +397,10 @@ function PlantingPlans(): React.ReactElement {
     {
       field: 'notes',
       headerName: t('common:fields.notes'),
-      width: 250,
+      width: dynamicWidths.notes,
       // Notes field will be overridden by NotesCell in EditableDataGrid
     },
-  ], [bedOptions, beds, cultureOptions, cultures, t]);
+  ], [bedOptions, beds, cultureOptions, cultures, dynamicWidths, t]);
 
   return (
     <div className="page-container">
