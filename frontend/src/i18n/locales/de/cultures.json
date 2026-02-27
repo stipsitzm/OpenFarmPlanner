@@ -145,7 +145,8 @@
     "runError": "KI-Anfrage fehlgeschlagen.",
     "applySuccess": "Ausgewählte Vorschläge wurden angewendet.",
     "loadingTitle": "KI-Verarbeitung läuft",
-    "loadingText": "Bitte warten. Die Anfrage wird verarbeitet und Quellen werden gesammelt."
+    "loadingText": "Bitte warten. Die Anfrage wird verarbeitet und Quellen werden gesammelt.",
+    "cancelled": "KI-Vorgang abgebrochen."
   },
   "import": {
     "menuLabel": "Weitere Aktionen",

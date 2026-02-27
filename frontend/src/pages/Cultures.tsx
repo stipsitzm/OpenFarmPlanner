@@ -52,7 +52,7 @@ import { parseCultureImportJson } from '../cultures/importUtils';
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
-import { extractApiErrorMessage } from '../api/errors';
+import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -121,6 +121,7 @@ function Cultures(): React.ReactElement {
   const [enrichmentResult, setEnrichmentResult] = useState<EnrichmentResult | null>(null);
   const [selectedSuggestionFields, setSelectedSuggestionFields] = useState<string[]>([]);
   const [enrichmentLoading, setEnrichmentLoading] = useState(false);
+  const enrichmentAbortControllerRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
@@ -681,35 +682,58 @@ function Cultures(): React.ReactElement {
     setEnrichmentDialogOpen(true);
   };
 
+  const handleCancelEnrichment = useCallback(() => {
+    enrichmentAbortControllerRef.current?.abort();
+    enrichmentAbortControllerRef.current = null;
+    setEnrichmentLoading(false);
+    showSnackbar(t('ai.cancelled'), 'success');
+  }, [showSnackbar, t]);
+
   const handleEnrichCurrent = async (mode: 'complete' | 'reresearch') => {
     if (!selectedCulture?.id) return;
+    const controller = new AbortController();
+    enrichmentAbortControllerRef.current = controller;
     setEnrichmentLoading(true);
     handleAiMenuClose();
     try {
-      const response = await cultureAPI.enrich(selectedCulture.id, mode);
+      const response = await cultureAPI.enrich(selectedCulture.id, mode, controller.signal);
       openEnrichmentDialog(response.data);
     } catch (error) {
+      if (isApiRequestCanceled(error)) {
+        return;
+      }
       console.error('Error enriching culture:', error);
       showSnackbar(extractApiErrorMessage(error, t, t('ai.runError')), 'error');
     } finally {
+      if (enrichmentAbortControllerRef.current === controller) {
+        enrichmentAbortControllerRef.current = null;
+      }
       setEnrichmentLoading(false);
     }
   };
 
   const handleEnrichAll = async () => {
+    const controller = new AbortController();
+    enrichmentAbortControllerRef.current = controller;
     setEnrichmentLoading(true);
     handleAiMenuClose();
     try {
-      const response = await cultureAPI.enrichBatch();
+      const response = await cultureAPI.enrichBatch(undefined, controller.signal);
       showSnackbar(t('ai.batchDone', { ok: response.data.succeeded, failed: response.data.failed }), 'success');
       const first = response.data.items.find((item) => item.status === 'completed' && item.result)?.result;
       if (first) {
         openEnrichmentDialog(first);
       }
     } catch (error) {
+      if (isApiRequestCanceled(error)) {
+        return;
+      }
       console.error('Error enriching all cultures:', error);
       showSnackbar(extractApiErrorMessage(error, t, t('ai.runError')), 'error');
     } finally {
+      if (enrichmentAbortControllerRef.current === controller) {
+        enrichmentAbortControllerRef.current = null;
+      }
       setEnrichmentLoading(false);
     }
   };
@@ -742,6 +766,19 @@ function Cultures(): React.ReactElement {
       showSnackbar(extractApiErrorMessage(error, t, t('messages.updateError')), 'error');
     }
   };
+  useEffect(() => {
+    const onEscapeCancel = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || !enrichmentLoading) {
+        return;
+      }
+      event.preventDefault();
+      handleCancelEnrichment();
+    };
+
+    window.addEventListener('keydown', onEscapeCancel);
+    return () => window.removeEventListener('keydown', onEscapeCancel);
+  }, [enrichmentLoading, handleCancelEnrichment]);
+
   useEffect(() => {
     const onAiShortcut = (event: KeyboardEvent) => {
       if (!event.altKey || event.ctrlKey || event.metaKey) {

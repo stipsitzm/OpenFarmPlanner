@@ -86,3 +86,15 @@ export function extractApiErrorMessage(
   // Fallback to generic error message
   return fallbackMessage;
 }
+
+
+/**
+ * Detects whether an Axios request was canceled/aborted by the client.
+ */
+export function isApiRequestCanceled(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+  const axiosError = error as AxiosError;
+  return axiosError.code === 'ERR_CANCELED';
+}
