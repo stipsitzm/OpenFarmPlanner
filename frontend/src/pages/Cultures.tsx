@@ -700,6 +700,7 @@ function Cultures(): React.ReactElement {
       culture.growth_duration_days,
       culture.harvest_duration_days,
       culture.propagation_duration_days,
+      culture.expected_yield,
       culture.distance_within_row_cm,
       culture.row_spacing_cm,
       culture.sowing_depth_cm,
@@ -715,6 +716,11 @@ function Cultures(): React.ReactElement {
   const enrichableCultureIds = useMemo(
     () => cultures.filter((culture) => culture.id && cultureHasMissingEnrichmentFields(culture)).map((culture) => culture.id as number),
     [cultures, cultureHasMissingEnrichmentFields],
+  );
+
+  const selectedCultureNeedsCompletion = useMemo(
+    () => (selectedCulture ? cultureHasMissingEnrichmentFields(selectedCulture) : false),
+    [selectedCulture, cultureHasMissingEnrichmentFields],
   );
 
   const handleCancelEnrichment = useCallback(() => {
@@ -838,6 +844,9 @@ function Cultures(): React.ReactElement {
 
       const key = event.key.toLowerCase();
       if (key === 'u') {
+        if (!selectedCultureNeedsCompletion) {
+          return;
+        }
         event.preventDefault();
         void handleEnrichCurrent('complete');
       } else if (key === 'r') {
@@ -851,7 +860,7 @@ function Cultures(): React.ReactElement {
 
     window.addEventListener('keydown', onAiShortcut);
     return () => window.removeEventListener('keydown', onAiShortcut);
-  }, [handleEnrichAll, handleEnrichCurrent]);
+  }, [handleEnrichAll, handleEnrichCurrent, selectedCultureNeedsCompletion]);
 
 
 
@@ -948,13 +957,18 @@ function Cultures(): React.ReactElement {
             </span>
           </Tooltip>
           <ButtonGroup variant="contained" aria-label={t('ai.menuLabel')} disabled={!selectedCulture || enrichmentLoading}>
-            <Button
-              startIcon={<AutoAwesomeIcon />}
-              onClick={() => void handleEnrichCurrent('complete')}
-              aria-label="Kultur vervollständigen (KI) (Alt+U)"
-            >
-              {t('buttons.aiComplete')}
-            </Button>
+            <Tooltip title={!selectedCultureNeedsCompletion && selectedCulture ? t('ai.completeDisabledReason') : ''}>
+              <span>
+                <Button
+                  startIcon={<AutoAwesomeIcon />}
+                  onClick={() => void handleEnrichCurrent('complete')}
+                  aria-label="Kultur vervollständigen (KI) (Alt+U)"
+                  disabled={Boolean(selectedCulture) && !selectedCultureNeedsCompletion}
+                >
+                  {t('buttons.aiComplete')}
+                </Button>
+              </span>
+            </Tooltip>
             <Button
               size="small"
               aria-label={t('ai.menuLabel')}

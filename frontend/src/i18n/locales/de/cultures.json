@@ -149,7 +149,8 @@
     "cancelled": "KI-Vorgang abgebrochen.",
     "confirmAllTitle": "Alle Kulturen vervollständigen?",
     "confirmAllText": "Es würden {{count}} Kulturen vervollständigt, bei denen noch Angaben fehlen. Möchten Sie fortfahren?",
-    "batchNoMissing": "Es gibt keine Kulturen mit fehlenden Angaben."
+    "batchNoMissing": "Es gibt keine Kulturen mit fehlenden Angaben.",
+    "completeDisabledReason": "Diese Kultur ist bereits vollständig."
   },
   "import": {
     "menuLabel": "Weitere Aktionen",
