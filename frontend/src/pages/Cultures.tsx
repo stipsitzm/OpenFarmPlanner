@@ -11,7 +11,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n';
-import { cultureAPI, type Culture } from '../api/api';
+import { cultureAPI, type Culture, type EnrichmentResult } from '../api/api';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
 import {
@@ -31,12 +31,16 @@ import {
   Snackbar,
   Tooltip,
   Typography,
+  CircularProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import ManageSearchIcon from '@mui/icons-material/ManageSearch';
+import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import {
   buildAllCulturesExport,
   buildAllCulturesFilename,
@@ -48,6 +52,7 @@ import { parseCultureImportJson } from '../cultures/importUtils';
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
+import { extractApiErrorMessage } from '../api/errors';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -111,6 +116,11 @@ function Cultures(): React.ReactElement {
   const [historyItems, setHistoryItems] = useState<Array<{ history_id: number; history_date: string; summary: string; culture_id?: number }>>([]);
   const [historyScope, setHistoryScope] = useState<'culture' | 'global' | 'project'>('culture');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [aiMenuAnchor, setAiMenuAnchor] = useState<null | HTMLElement>(null);
+  const [enrichmentDialogOpen, setEnrichmentDialogOpen] = useState(false);
+  const [enrichmentResult, setEnrichmentResult] = useState<EnrichmentResult | null>(null);
+  const [selectedSuggestionFields, setSelectedSuggestionFields] = useState<string[]>([]);
+  const [enrichmentLoading, setEnrichmentLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
@@ -273,7 +283,7 @@ function Cultures(): React.ReactElement {
       setDeleteDialogCulture(null);
     } catch (error) {
       console.error('Error deleting culture:', error);
-      showSnackbar(t('messages.updateError'), 'error');
+      showSnackbar(extractApiErrorMessage(error, t, t('messages.updateError')), 'error');
     }
   };
 
@@ -657,6 +667,109 @@ function Cultures(): React.ReactElement {
 
   useRegisterCommands('cultures-page', commandSpecs);
 
+  const handleAiMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAiMenuAnchor(event.currentTarget);
+  };
+
+  const handleAiMenuClose = () => {
+    setAiMenuAnchor(null);
+  };
+
+  const openEnrichmentDialog = (result: EnrichmentResult) => {
+    setEnrichmentResult(result);
+    setSelectedSuggestionFields(Object.keys(result.suggested_fields || {}));
+    setEnrichmentDialogOpen(true);
+  };
+
+  const handleEnrichCurrent = async (mode: 'complete' | 'reresearch') => {
+    if (!selectedCulture?.id) return;
+    setEnrichmentLoading(true);
+    handleAiMenuClose();
+    try {
+      const response = await cultureAPI.enrich(selectedCulture.id, mode);
+      openEnrichmentDialog(response.data);
+    } catch (error) {
+      console.error('Error enriching culture:', error);
+      showSnackbar(extractApiErrorMessage(error, t, t('ai.runError')), 'error');
+    } finally {
+      setEnrichmentLoading(false);
+    }
+  };
+
+  const handleEnrichAll = async () => {
+    setEnrichmentLoading(true);
+    handleAiMenuClose();
+    try {
+      const response = await cultureAPI.enrichBatch();
+      showSnackbar(t('ai.batchDone', { ok: response.data.succeeded, failed: response.data.failed }), 'success');
+      const first = response.data.items.find((item) => item.status === 'completed' && item.result)?.result;
+      if (first) {
+        openEnrichmentDialog(first);
+      }
+    } catch (error) {
+      console.error('Error enriching all cultures:', error);
+      showSnackbar(extractApiErrorMessage(error, t, t('ai.runError')), 'error');
+    } finally {
+      setEnrichmentLoading(false);
+    }
+  };
+
+  const toggleSuggestionField = (field: string) => {
+    setSelectedSuggestionFields((prev) => prev.includes(field) ? prev.filter((item) => item !== field) : [...prev, field]);
+  };
+
+  const handleApplySuggestions = async () => {
+    if (!enrichmentResult?.culture_id || !selectedSuggestionFields.length) {
+      setEnrichmentDialogOpen(false);
+      return;
+    }
+
+    const targetCulture = cultures.find((item) => item.id === enrichmentResult.culture_id);
+    if (!targetCulture) return;
+
+    const patch: Record<string, unknown> = {};
+    selectedSuggestionFields.forEach((field) => {
+      patch[field] = enrichmentResult.suggested_fields[field]?.value;
+    });
+
+    try {
+      await cultureAPI.update(targetCulture.id!, { ...targetCulture, ...patch } as Culture);
+      await fetchCultures();
+      showSnackbar(t('ai.applySuccess'), 'success');
+      setEnrichmentDialogOpen(false);
+    } catch (error) {
+      console.error('Error applying enrichment suggestions:', error);
+      showSnackbar(extractApiErrorMessage(error, t, t('messages.updateError')), 'error');
+    }
+  };
+  useEffect(() => {
+    const onAiShortcut = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+      if (isTypingInEditableElement(document.activeElement)) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      if (key === 'u') {
+        event.preventDefault();
+        void handleEnrichCurrent('complete');
+      } else if (key === 'r') {
+        event.preventDefault();
+        void handleEnrichCurrent('reresearch');
+      } else if (key === 'a') {
+        event.preventDefault();
+        void handleEnrichAll();
+      }
+    };
+
+    window.addEventListener('keydown', onAiShortcut);
+    return () => window.removeEventListener('keydown', onAiShortcut);
+  }, [handleEnrichAll, handleEnrichCurrent]);
+
+
+
   return (
     <div className="page-container">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -749,6 +862,40 @@ function Cultures(): React.ReactElement {
               </Button>
             </span>
           </Tooltip>
+          <ButtonGroup variant="contained" aria-label={t('ai.menuLabel')} disabled={!selectedCulture || enrichmentLoading}>
+            <Button
+              startIcon={<AutoAwesomeIcon />}
+              onClick={() => void handleEnrichCurrent('complete')}
+              aria-label="Kultur vervollständigen (KI) (Alt+U)"
+            >
+              {t('buttons.aiComplete')}
+            </Button>
+            <Button
+              size="small"
+              aria-label={t('ai.menuLabel')}
+              aria-controls={aiMenuAnchor ? 'culture-ai-menu' : undefined}
+              aria-haspopup="true"
+              onClick={handleAiMenuOpen}
+              sx={{ minWidth: 32, px: 0.5 }}
+            >
+              <ArrowDropDownIcon />
+            </Button>
+          </ButtonGroup>
+          <Menu
+            id="culture-ai-menu"
+            anchorEl={aiMenuAnchor}
+            open={Boolean(aiMenuAnchor)}
+            onClose={handleAiMenuClose}
+          >
+            <MenuItem aria-label="Kultur komplett neu recherchieren (KI) (Alt+R)" onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading}>
+              <ManageSearchIcon sx={{ mr: 1 }} fontSize="small" />
+              {t('buttons.aiReresearch')}
+            </MenuItem>
+            <MenuItem aria-label="Alle Kulturen vervollständigen (KI) (Alt+A)" onClick={() => void handleEnrichAll()} disabled={cultures.length === 0 || enrichmentLoading}>
+              <PlaylistAddCheckIcon sx={{ mr: 1 }} fontSize="small" />
+              {t('buttons.aiCompleteAll')}
+            </MenuItem>
+          </Menu>
           <Tooltip title="Kultur bearbeiten (Alt+E)">
             <span>
               <Button
@@ -953,6 +1100,59 @@ function Cultures(): React.ReactElement {
         </DialogActions>
       </Dialog>
 
+      <Dialog open={enrichmentLoading} aria-labelledby="enrichment-loading-title" maxWidth="xs" fullWidth>
+        <DialogTitle id="enrichment-loading-title">{t('ai.loadingTitle')}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
+            <CircularProgress size={24} />
+            <Typography>{t('ai.loadingText')}</Typography>
+          </Box>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={enrichmentDialogOpen} onClose={() => setEnrichmentDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>{t('ai.suggestionsTitle')}</DialogTitle>
+        <DialogContent>
+          {!enrichmentResult || Object.keys(enrichmentResult.suggested_fields || {}).length === 0 ? (
+            <Typography>{t('ai.noSuggestions')}</Typography>
+          ) : (
+            <List>
+              {Object.entries(enrichmentResult.suggested_fields).map(([field, suggestion]) => (
+                <ListItem key={field} sx={{ alignItems: 'flex-start', flexDirection: 'column' }}>
+                  <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', gap: 1 }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedSuggestionFields.includes(field)}
+                      onChange={() => toggleSuggestionField(field)}
+                    />
+                    <ListItemText
+                      primary={`${field}: ${String(suggestion.value ?? '')}`}
+                      secondary={`${t('ai.confidence')}: ${(suggestion.confidence * 100).toFixed(0)}%`}
+                    />
+                  </Box>
+                  {(enrichmentResult.evidence[field] || []).length > 0 && (
+                    <Box sx={{ pl: 4 }}>
+                      <Typography variant="caption">{t('ai.evidence')}:</Typography>
+                      {(enrichmentResult.evidence[field] || []).map((ev) => (
+                        <Typography key={`${field}-${ev.source_url}`} variant="caption" display="block">
+                          • <a href={ev.source_url} target="_blank" rel="noreferrer">{ev.title || ev.source_url}</a>
+                        </Typography>
+                      ))}
+                    </Box>
+                  )}
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEnrichmentDialogOpen(false)}>{t('buttons.aiClose')}</Button>
+          <Button variant="contained" onClick={handleApplySuggestions} disabled={selectedSuggestionFields.length === 0}>
+            {t('buttons.aiApplySelected')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Snackbar for notifications */}
 
       <Dialog open={historyOpen} onClose={() => setHistoryOpen(false)} fullWidth maxWidth="sm"> 
@@ -990,6 +1190,15 @@ function Cultures(): React.ReactElement {
             </ListItem>
             <ListItem>
               <ListItemText primary="Dialog schließen" secondary="Esc" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="KI: Kultur vervollständigen" secondary="Alt+U" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="KI: Kultur neu recherchieren" secondary="Alt+R" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="KI: Alle Kulturen vervollständigen" secondary="Alt+A" />
             </ListItem>
           </List>
         </DialogContent>

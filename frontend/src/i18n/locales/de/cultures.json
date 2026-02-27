@@ -126,7 +126,26 @@
     "edit": "Bearbeiten",
     "delete": "Löschen",
     "deleteConfirm": "Möchten Sie diese Kultur wirklich löschen?",
-    "createPlantingPlan": "Anbauplan erstellen"
+    "createPlantingPlan": "Anbauplan erstellen",
+    "aiComplete": "Kultur vervollständigen (KI)",
+    "aiReresearch": "Kultur komplett neu recherchieren (KI)",
+    "aiCompleteAll": "Alle Kulturen vervollständigen (KI)",
+    "aiApplySelected": "Auswahl anwenden",
+    "aiClose": "Schließen"
+  },
+  "ai": {
+    "menuLabel": "KI-Aktionen",
+    "suggestionsTitle": "KI-Vorschläge prüfen",
+    "field": "Feld",
+    "value": "Vorschlag",
+    "confidence": "Sicherheit",
+    "evidence": "Quellen",
+    "noSuggestions": "Keine Vorschläge erhalten.",
+    "batchDone": "Batch-Vervollständigung abgeschlossen: {{ok}} erfolgreich, {{failed}} fehlgeschlagen.",
+    "runError": "KI-Anfrage fehlgeschlagen.",
+    "applySuccess": "Ausgewählte Vorschläge wurden angewendet.",
+    "loadingTitle": "KI-Verarbeitung läuft",
+    "loadingText": "Bitte warten. Die Anfrage wird verarbeitet und Quellen werden gesammelt."
   },
   "import": {
     "menuLabel": "Weitere Aktionen",

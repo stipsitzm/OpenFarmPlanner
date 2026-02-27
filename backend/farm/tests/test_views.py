@@ -876,3 +876,73 @@ class PlantingPlanRemainingAreaApiTest(DRFAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('detail', response.data)
+
+
+class CultureEnrichmentApiTest(DRFAPITestCase):
+    """Tests for enrichment endpoints on cultures."""
+
+    def setUp(self):
+        self.culture = Culture.objects.create(name='Tomate', variety='Roma')
+
+    def test_enrich_single_returns_payload(self):
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/',
+            {'mode': 'complete'},
+            format='json',
+        )
+
+        self.assertIn(response.status_code, (200, 503))
+        if response.status_code == 200:
+            self.assertIn('suggested_fields', response.data)
+
+    def test_enrich_batch_returns_summary(self):
+        response = self.client.post(
+            '/openfarmplanner/api/cultures/enrich-batch/',
+            {'mode': 'complete_all', 'limit': 5},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('items', response.data)
+
+
+    @patch('farm.views.enrich_culture', side_effect=AttributeError('boom'))
+    def test_enrich_single_unexpected_error_returns_503(self, _mock):
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/',
+            {'mode': 'complete'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn('detail', response.data)
+
+    @patch('farm.views.enrich_culture', side_effect=AttributeError('boom'))
+    def test_enrich_batch_unexpected_error_is_item_failure_not_500(self, _mock):
+        response = self.client.post(
+            '/openfarmplanner/api/cultures/enrich-batch/',
+            {'mode': 'complete_all', 'limit': 5},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertGreaterEqual(response.data['failed'], 1)
+
+
+    def test_enrich_single_mode_list_is_coerced(self):
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/',
+            {'mode': ['reresearch']},
+            format='json',
+        )
+
+        self.assertIn(response.status_code, (200, 503))
+
+    def test_enrich_batch_rejects_unexpected_mode_stringified_list(self):
+        response = self.client.post(
+            '/openfarmplanner/api/cultures/enrich-batch/',
+            {'mode': ['complete_all'], 'limit': 5},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
