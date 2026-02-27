@@ -976,6 +976,7 @@ function Cultures(): React.ReactElement {
       await fetchCultures();
       showSnackbar(t('ai.applySuccess'), 'success');
       setEnrichmentDialogOpen(false);
+      window.location.reload();
     } catch (error) {
       console.error('Error applying enrichment suggestions:', error);
       showSnackbar(extractApiErrorMessage(error, t, t('messages.updateError')), 'error');
