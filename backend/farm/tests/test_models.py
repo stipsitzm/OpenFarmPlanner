@@ -202,6 +202,7 @@ class CultureModelTest(TestCase):
             propagation_duration_days=4,
             harvest_method="per_plant",
             expected_yield=500.0,
+            expected_yield_unit='kg_per_m2',
             allow_deviation_delivery_weeks=True,
             distance_within_row_m=0.40,  # 40 cm = 0.40 m
             row_spacing_m=0.60,  # 60 cm = 0.60 m
@@ -216,6 +217,7 @@ class CultureModelTest(TestCase):
         self.assertEqual(culture.propagation_duration_days, 4)
         self.assertEqual(culture.harvest_method, "per_plant")
         self.assertEqual(float(culture.expected_yield), 500.0)
+        self.assertEqual(culture.expected_yield_unit, 'kg_per_m2')
         self.assertTrue(culture.allow_deviation_delivery_weeks)
         self.assertAlmostEqual(culture.distance_within_row_m, 0.40, places=4)
         self.assertAlmostEqual(culture.row_spacing_m, 0.60, places=4)
@@ -269,6 +271,20 @@ class CultureModelTest(TestCase):
         with self.assertRaises(ValidationError) as context:
             culture.clean()
         self.assertIn('growth_duration_days', context.exception.message_dict)
+
+    def test_expected_yield_requires_unit(self):
+        from django.core.exceptions import ValidationError
+
+        culture = Culture(
+            name="Bean",
+            growth_duration_days=10,
+            harvest_duration_days=3,
+            harvest_method='per_sqm',
+            expected_yield=0.8,
+        )
+        with self.assertRaises(ValidationError) as context:
+            culture.clean()
+        self.assertIn('expected_yield_unit', context.exception.message_dict)
     
     def test_display_color_format_validation(self):
         """Test that display color must be in hex format"""
@@ -290,6 +306,7 @@ class CultureModelTest(TestCase):
             name="Tomato",
             growth_duration_days=8,
             harvest_duration_days=4,
+            harvest_method='per_sqm',
             display_color="#FF5733"
         )
         culture2.clean()  # Should not raise
@@ -549,4 +566,3 @@ class CultureNormalizedFieldsTest(TestCase):
         )
         
         self.assertNotEqual(culture1.id, culture2.id)
-

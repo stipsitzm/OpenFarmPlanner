@@ -34,6 +34,7 @@ export interface Culture {
   
   harvest_method?: 'per_plant' | 'per_sqm' | '';
   expected_yield?: number;
+  expected_yield_unit?: 'kg_per_m2' | 'kg_per_m' | 'kg_per_plant' | '';
   allow_deviation_delivery_weeks?: boolean;
   
   distance_within_row_cm?: number;
@@ -210,6 +211,13 @@ export interface EnrichmentResult {
   search_provider: string;
   suggested_fields: Record<string, EnrichmentFieldSuggestion>;
   evidence: Record<string, EnrichmentEvidenceEntry[]>;
+  structured_sources?: Array<{
+    title: string;
+    url: string;
+    type: 'variety_specific' | 'general_crop';
+    retrieved_at: string;
+    claim_summary: string;
+  }>;
   validation: {
     warnings: EnrichmentValidationItem[];
     errors: EnrichmentValidationItem[];

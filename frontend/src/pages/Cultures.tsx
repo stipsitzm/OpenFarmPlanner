@@ -702,6 +702,7 @@ function Cultures(): React.ReactElement {
       culture.propagation_duration_days,
       culture.harvest_method,
       culture.expected_yield,
+      culture.expected_yield_unit,
       culture.package_size_g,
       culture.distance_within_row_cm,
       culture.row_spacing_cm,
@@ -1227,6 +1228,15 @@ function Cultures(): React.ReactElement {
       <Dialog open={enrichmentDialogOpen} onClose={() => setEnrichmentDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>{t('ai.suggestionsTitle')}</DialogTitle>
         <DialogContent>
+          {(enrichmentResult?.validation?.warnings || []).length > 0 && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {(enrichmentResult?.validation?.warnings || []).map((warning) => (
+                <Typography key={`${warning.field}-${warning.code}`} variant="body2">
+                  • {warning.message}
+                </Typography>
+              ))}
+            </Alert>
+          )}
           {!enrichmentResult || Object.keys(enrichmentResult.suggested_fields || {}).length === 0 ? (
             <Typography>{t('ai.noSuggestions')}</Typography>
           ) : (

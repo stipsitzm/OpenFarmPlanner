@@ -398,6 +398,13 @@ export function CultureDetail({
                     </Typography>
                     <Typography variant="body1">
                       {formatNumber(selectedCulture.expected_yield, t)}
+                      {selectedCulture.expected_yield_unit === 'kg_per_m2'
+                        ? ' kg/m²'
+                        : selectedCulture.expected_yield_unit === 'kg_per_m'
+                          ? ' kg/m'
+                          : selectedCulture.expected_yield_unit === 'kg_per_plant'
+                            ? ' kg/Pflanze'
+                            : ''}
                     </Typography>
                   </Box>
                 )}

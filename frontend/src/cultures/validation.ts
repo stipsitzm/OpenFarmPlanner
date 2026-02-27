@@ -99,6 +99,36 @@ export function validateCulture(
     errors.harvest_method = t('form.harvestMethodRequired');
   }
 
+  if (
+    draft.expected_yield !== undefined &&
+    draft.expected_yield !== null &&
+    typeof draft.expected_yield === 'number' &&
+    !draft.expected_yield_unit
+  ) {
+    errors.expected_yield_unit = t('form.expectedYieldUnitRequired');
+  }
+
+  if (
+    (draft.expected_yield === undefined || draft.expected_yield === null) &&
+    draft.expected_yield_unit
+  ) {
+    errors.expected_yield = t('form.expectedYieldValueRequired');
+  }
+
+  if (
+    (draft.seeding_requirement === undefined || draft.seeding_requirement === null) &&
+    draft.seeding_requirement_type
+  ) {
+    errors.seeding_requirement = t('form.seedingRequirementValueRequired');
+  }
+  if (
+    draft.seeding_requirement !== undefined &&
+    draft.seeding_requirement !== null &&
+    !draft.seeding_requirement_type
+  ) {
+    errors.seeding_requirement_type = t('form.seedingRequirementTypeRequired');
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors,

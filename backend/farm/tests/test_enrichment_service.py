@@ -172,6 +172,83 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         result = enrich_culture(self.culture, 'complete')
         self.assertEqual(result['suggested_fields']['harvest_method']['value'], 'per_sqm')
 
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_warns_when_expected_yield_unit_missing(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{"expected_yield":{"value":0.8,"unit":"kg","confidence":0.8}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
+        self.assertIn('expected_yield_unit_missing', warning_codes)
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_builds_structured_sources_from_evidence(self, post_mock):
+        self.culture.variety = 'Faraday'
+        self.culture.seed_supplier = 'ReinSaat'
+        self.culture.save(update_fields=['variety', 'seed_supplier'])
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {},
+                'evidence': {
+                    'expected_yield': [
+                        {
+                            'source_url': 'https://example.com/faraday',
+                            'title': 'Faraday - ReinSaat',
+                            'retrieved_at': '2026-01-01T00:00:00Z',
+                            'snippet': 'Buschbohne Faraday bei ReinSaat',
+                        },
+                        {
+                            'source_url': 'https://example.com/beans-guide',
+                            'title': 'Buschbohnen Leitfaden',
+                            'retrieved_at': '2026-01-01T00:00:00Z',
+                            'snippet': 'Allgemeine Hinweise zu Buschbohnen',
+                        },
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '## Dauerwerte\n- x',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        self.assertIn('structured_sources', result)
+        source_types = {entry.get('type') for entry in result['structured_sources']}
+        self.assertIn('variety_specific', source_types)
+        self.assertIn('general_crop', source_types)
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_adds_density_plausibility_warning_when_seed_density_is_high(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'seed_rate_value': {'value': 30, 'unit': 'seeds/m', 'confidence': 0.8},
+                    'seed_rate_unit': {'value': 'seeds/m', 'unit': None, 'confidence': 0.8},
+                    'row_spacing_cm': {'value': 40, 'unit': 'cm', 'confidence': 0.8},
+                },
+                'evidence': {},
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
+        self.assertIn('density_out_of_range', warning_codes)
+
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')

@@ -56,6 +56,7 @@ const EMPTY_CULTURE: Partial<Culture> = {
   harvest_duration_days: undefined,
   propagation_duration_days: undefined,
   expected_yield: undefined,
+  expected_yield_unit: '',
   allow_deviation_delivery_weeks: false,
   distance_within_row_cm: undefined,
   row_spacing_cm: undefined,

@@ -70,9 +70,12 @@
     "harvestMethod": "Erntemethode",
     "harvestMethodPerPlant": "Pro Pflanze",
     "harvestMethodPerSqm": "Pro m²",
-    "expectedYield": "Erwarteter Ertrag (kg)",
+    "expectedYield": "Erwarteter Ertrag",
     "expectedYieldPlaceholder": "z.B. 500",
     "expectedYieldError": "Erwarteter Ertrag muss ≥ 0 sein",
+    "expectedYieldUnit": "Ertragseinheit",
+    "expectedYieldUnitRequired": "Ertragseinheit ist erforderlich, wenn ein Ertrag angegeben ist.",
+    "expectedYieldValueRequired": "Ertragswert ist erforderlich, wenn eine Ertragseinheit angegeben ist.",
     "allowDeviationDeliveryWeeks": "Abweichende Lieferwochen erlauben",
     "distanceWithinRowCm": "Abstand in der Reihe (cm)",
     "distanceWithinRowCmPlaceholder": "z.B. 40",
@@ -104,7 +107,9 @@
     "sowingCalculationSafetyPercentError": "Sicherheitszuschlag muss zwischen 0 und 100 liegen",
     "propagationDurationDaysRequired": "Anzuchtdauer ist erforderlich",
     "propagationDurationDaysTooLong": "Anzuchtdauer darf nicht länger als die Wachstumsdauer sein",
-    "harvestMethodRequired": "Erntemethode ist bei angegebenem Ertrag erforderlich"
+    "harvestMethodRequired": "Erntemethode ist bei angegebenem Ertrag erforderlich",
+    "seedingRequirementTypeRequired": "Saatgutbedarf-Typ ist erforderlich, wenn ein Saatgutbedarf angegeben ist.",
+    "seedingRequirementValueRequired": "Saatgutbedarf ist erforderlich, wenn ein Saatgutbedarf-Typ angegeben ist."
   },
   "messages": {
     "createSuccess": "Kultur erfolgreich erstellt",
