@@ -698,6 +698,41 @@ function Cultures(): React.ReactElement {
     `Batch KI-Kosten (Schätzung): ${formatUsd(result.costEstimate.total)} (${result.succeeded} Kulturen)`
   );
 
+
+
+  const enrichmentFieldLabelMap: Record<string, string> = {
+    growth_duration_days: 'form.growthDurationDays',
+    harvest_duration_days: 'form.harvestDurationDays',
+    propagation_duration_days: 'form.propagationDurationDays',
+    harvest_method: 'form.harvestMethod',
+    expected_yield: 'form.expectedYield',
+    package_size_g: 'form.packageSizeLabel',
+    distance_within_row_cm: 'form.distanceWithinRowCm',
+    row_spacing_cm: 'form.rowSpacingCm',
+    sowing_depth_cm: 'form.sowingDepthCm',
+    seed_rate_value: 'form.seedRateValue',
+    seed_rate_unit: 'form.seedRateUnit',
+    thousand_kernel_weight_g: 'form.thousandKernelWeightLabel',
+    nutrient_demand: 'form.nutrientDemand',
+    cultivation_type: 'form.cultivationType',
+    notes: 'form.notes',
+    seeding_requirement: 'form.seedRateSectionTitle',
+    seeding_requirement_type: 'form.seedRateSectionTitle',
+  };
+
+  const toStartCase = (value: string): string => value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  const getEnrichmentFieldLabel = (field: string): string => {
+    const translationKey = enrichmentFieldLabelMap[field];
+    if (!translationKey) {
+      return toStartCase(field);
+    }
+    const translated = t(translationKey);
+    return translated === translationKey ? toStartCase(field) : translated;
+  };
+
   const openEnrichmentDialog = (result: EnrichmentResult) => {
     setEnrichmentResult(result);
     setSelectedSuggestionFields(Object.keys(result.suggested_fields || {}));
@@ -1277,7 +1312,7 @@ function Cultures(): React.ReactElement {
                       onChange={() => toggleSuggestionField(field)}
                     />
                     <ListItemText
-                      primary={`${field}: ${String(suggestion.value ?? '')}`}
+                      primary={`${getEnrichmentFieldLabel(field)}: ${String(suggestion.value ?? '')}`}
                       secondary={`${t('ai.confidence')}: ${(suggestion.confidence * 100).toFixed(0)}%`}
                     />
                   </Box>
