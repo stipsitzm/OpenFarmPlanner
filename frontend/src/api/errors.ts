@@ -17,6 +17,20 @@ function translatedOrFallback(t: TFunction, key: string, fallback: string): stri
   return translated === key ? fallback : translated;
 }
 
+
+function looksLikeHtml(payload: string): boolean {
+  const normalized = payload.trim().toLowerCase();
+  return normalized.startsWith('<!doctype html') || normalized.startsWith('<html') || normalized.includes('<body');
+}
+
+function genericServerFailureMessage(t: TFunction, fallbackMessage: string): string {
+  return translatedOrFallback(
+    t,
+    'ai.serverUnavailable',
+    fallbackMessage,
+  );
+}
+
 function formatServiceError(detail: string, t: TFunction, fallbackMessage: string): string {
   const normalized = detail.toLowerCase();
 
@@ -78,11 +92,24 @@ export function extractApiErrorMessage(
     const data = axiosError.response?.data;
 
     if (typeof data === 'string') {
-      return status === 503 ? formatServiceError(data, t, fallbackMessage) : data;
+      if (looksLikeHtml(data)) {
+        return genericServerFailureMessage(t, fallbackMessage);
+      }
+      if (status === 503) {
+        return formatServiceError(data, t, fallbackMessage);
+      }
+      if (status !== undefined && status >= 500) {
+        return genericServerFailureMessage(t, fallbackMessage);
+      }
+      return data;
     }
 
     if (status === 503 && data && typeof data === 'object' && 'detail' in data && typeof data.detail === 'string') {
       return formatServiceError(data.detail, t, fallbackMessage);
+    }
+
+    if (status !== undefined && status >= 500) {
+      return genericServerFailureMessage(t, fallbackMessage);
     }
 
     // Check if it's a 400 validation error
