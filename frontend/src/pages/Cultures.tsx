@@ -12,6 +12,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture, type EnrichmentResult } from '../api/api';
+import type { EnrichmentBatchResult, EnrichmentCostEstimate, EnrichmentUsage } from '../api/types';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
 import {
@@ -52,7 +53,7 @@ import { parseCultureImportJson } from '../cultures/importUtils';
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
-import { extractApiErrorMessage } from '../api/errors';
+import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -108,7 +109,7 @@ function Cultures(): React.ReactElement {
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
-    severity: 'success' | 'error';
+    severity: 'success' | 'error' | 'info';
   }>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
   const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
@@ -121,11 +122,19 @@ function Cultures(): React.ReactElement {
   const [enrichmentResult, setEnrichmentResult] = useState<EnrichmentResult | null>(null);
   const [selectedSuggestionFields, setSelectedSuggestionFields] = useState<string[]>([]);
   const [enrichmentLoading, setEnrichmentLoading] = useState(false);
+  const [enrichmentCostBanner, setEnrichmentCostBanner] = useState<string | null>(null);
+  const [enrichAllConfirmOpen, setEnrichAllConfirmOpen] = useState(false);
+  const enrichmentLoadingRef = useRef(false);
+  const enrichmentAbortControllerRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
+  const showSnackbar = useCallback((message: string, severity: 'success' | 'error' | 'info') => {
     setSnackbar({ open: true, message, severity });
   }, []);
+
+  useEffect(() => {
+    enrichmentLoadingRef.current = enrichmentLoading;
+  }, [enrichmentLoading]);
 
   const updateSelectedCultureId = useCallback((id: number | undefined, source: 'internal' | 'query') => {
     selectionSyncSourceRef.current = source;
@@ -675,41 +684,166 @@ function Cultures(): React.ReactElement {
     setAiMenuAnchor(null);
   };
 
+
+  const formatUsd = (value: number): string => {
+    const decimals = value < 1 ? 3 : 2;
+    return `$${value.toFixed(decimals)}`;
+  };
+
+  const formatCostMessage = (costEstimate: EnrichmentCostEstimate, usage: EnrichmentUsage): string => (
+    `KI-Kosten (Schätzung): ${formatUsd(costEstimate.total)}  • Tokens: ${usage.inputTokens.toLocaleString('de-DE')} in / ${usage.outputTokens.toLocaleString('de-DE')} out  • Web-Suche: ${costEstimate.breakdown.web_search_call_count} Calls`
+  );
+
+  const formatBatchCostMessage = (result: EnrichmentBatchResult): string => (
+    `Batch KI-Kosten (Schätzung): ${formatUsd(result.costEstimate.total)} (${result.succeeded} Kulturen)`
+  );
+
+
+
+  const enrichmentFieldLabelMap: Record<string, string> = {
+    growth_duration_days: 'form.growthDurationDays',
+    harvest_duration_days: 'form.harvestDurationDays',
+    propagation_duration_days: 'form.propagationDurationDays',
+    harvest_method: 'form.harvestMethod',
+    expected_yield: 'form.expectedYield',
+    package_size_g: 'form.packageSizeLabel',
+    distance_within_row_cm: 'form.distanceWithinRowCm',
+    row_spacing_cm: 'form.rowSpacingCm',
+    sowing_depth_cm: 'form.sowingDepthCm',
+    seed_rate_value: 'form.seedRateValue',
+    seed_rate_unit: 'form.seedRateUnit',
+    thousand_kernel_weight_g: 'form.thousandKernelWeightLabel',
+    nutrient_demand: 'form.nutrientDemand',
+    cultivation_type: 'form.cultivationType',
+    notes: 'form.notes',
+    seeding_requirement: 'form.seedRateSectionTitle',
+    seeding_requirement_type: 'form.seedRateSectionTitle',
+  };
+
+  const toStartCase = (value: string): string => value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  const getEnrichmentFieldLabel = (field: string): string => {
+    const translationKey = enrichmentFieldLabelMap[field];
+    if (!translationKey) {
+      return toStartCase(field);
+    }
+    const translated = t(translationKey);
+    return translated === translationKey ? toStartCase(field) : translated;
+  };
+
   const openEnrichmentDialog = (result: EnrichmentResult) => {
     setEnrichmentResult(result);
     setSelectedSuggestionFields(Object.keys(result.suggested_fields || {}));
     setEnrichmentDialogOpen(true);
   };
 
+
+  const cultureHasMissingEnrichmentFields = useCallback((culture: Culture): boolean => {
+    const isMissing = (value: unknown): boolean => {
+      if (value === null || value === undefined) return true;
+      if (typeof value === 'string') return value.trim().length === 0;
+      return false;
+    };
+
+    return [
+      culture.growth_duration_days,
+      culture.harvest_duration_days,
+      culture.propagation_duration_days,
+      culture.harvest_method,
+      culture.expected_yield,
+      culture.package_size_g,
+      culture.distance_within_row_cm,
+      culture.row_spacing_cm,
+      culture.sowing_depth_cm,
+      culture.seed_rate_value,
+      culture.seed_rate_unit,
+      culture.thousand_kernel_weight_g,
+      culture.nutrient_demand,
+      culture.cultivation_type,
+      culture.notes,
+    ].some(isMissing);
+  }, []);
+
+  const enrichableCultureIds = useMemo(
+    () => cultures.filter((culture) => culture.id && cultureHasMissingEnrichmentFields(culture)).map((culture) => culture.id as number),
+    [cultures, cultureHasMissingEnrichmentFields],
+  );
+
+  const selectedCultureNeedsCompletion = useMemo(
+    () => (selectedCulture ? cultureHasMissingEnrichmentFields(selectedCulture) : false),
+    [selectedCulture, cultureHasMissingEnrichmentFields],
+  );
+
+  const handleCancelEnrichment = useCallback(() => {
+    if (!enrichmentLoadingRef.current) {
+      return;
+    }
+    enrichmentAbortControllerRef.current?.abort();
+    enrichmentAbortControllerRef.current = null;
+    setEnrichmentLoading(false);
+    showSnackbar(t('ai.cancelled'), 'success');
+  }, [showSnackbar, t]);
+
   const handleEnrichCurrent = async (mode: 'complete' | 'reresearch') => {
     if (!selectedCulture?.id) return;
+    const controller = new AbortController();
+    enrichmentAbortControllerRef.current = controller;
     setEnrichmentLoading(true);
     handleAiMenuClose();
     try {
-      const response = await cultureAPI.enrich(selectedCulture.id, mode);
+      const response = await cultureAPI.enrich(selectedCulture.id, mode, controller.signal);
       openEnrichmentDialog(response.data);
+      const costMessage = formatCostMessage(response.data.costEstimate, response.data.usage);
+      setEnrichmentCostBanner(costMessage);
+      showSnackbar(costMessage, 'info');
     } catch (error) {
+      if (isApiRequestCanceled(error)) {
+        return;
+      }
       console.error('Error enriching culture:', error);
       showSnackbar(extractApiErrorMessage(error, t, t('ai.runError')), 'error');
     } finally {
+      if (enrichmentAbortControllerRef.current === controller) {
+        enrichmentAbortControllerRef.current = null;
+      }
       setEnrichmentLoading(false);
     }
   };
 
   const handleEnrichAll = async () => {
+    if (enrichableCultureIds.length === 0) {
+      setEnrichAllConfirmOpen(false);
+      showSnackbar(t('ai.batchNoMissing'), 'success');
+      return;
+    }
+
+    const controller = new AbortController();
+    enrichmentAbortControllerRef.current = controller;
     setEnrichmentLoading(true);
+    setEnrichAllConfirmOpen(false);
     handleAiMenuClose();
     try {
-      const response = await cultureAPI.enrichBatch();
+      const response = await cultureAPI.enrichBatch({ culture_ids: enrichableCultureIds, limit: enrichableCultureIds.length }, controller.signal);
       showSnackbar(t('ai.batchDone', { ok: response.data.succeeded, failed: response.data.failed }), 'success');
+      const costMessage = formatBatchCostMessage(response.data);
+      setEnrichmentCostBanner(costMessage);
+      showSnackbar(costMessage, 'info');
       const first = response.data.items.find((item) => item.status === 'completed' && item.result)?.result;
       if (first) {
         openEnrichmentDialog(first);
       }
     } catch (error) {
+      if (isApiRequestCanceled(error)) {
+        return;
+      }
       console.error('Error enriching all cultures:', error);
       showSnackbar(extractApiErrorMessage(error, t, t('ai.runError')), 'error');
     } finally {
+      if (enrichmentAbortControllerRef.current === controller) {
+        enrichmentAbortControllerRef.current = null;
+      }
       setEnrichmentLoading(false);
     }
   };
@@ -743,6 +877,22 @@ function Cultures(): React.ReactElement {
     }
   };
   useEffect(() => {
+    const onEscapeCancel = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') {
+        return;
+      }
+      if (!enrichmentLoadingRef.current) {
+        return;
+      }
+      event.preventDefault();
+      handleCancelEnrichment();
+    };
+
+    window.addEventListener('keydown', onEscapeCancel, { capture: true });
+    return () => window.removeEventListener('keydown', onEscapeCancel, { capture: true });
+  }, [handleCancelEnrichment]);
+
+  useEffect(() => {
     const onAiShortcut = (event: KeyboardEvent) => {
       if (!event.altKey || event.ctrlKey || event.metaKey) {
         return;
@@ -753,6 +903,9 @@ function Cultures(): React.ReactElement {
 
       const key = event.key.toLowerCase();
       if (key === 'u') {
+        if (!selectedCultureNeedsCompletion) {
+          return;
+        }
         event.preventDefault();
         void handleEnrichCurrent('complete');
       } else if (key === 'r') {
@@ -760,13 +913,13 @@ function Cultures(): React.ReactElement {
         void handleEnrichCurrent('reresearch');
       } else if (key === 'a') {
         event.preventDefault();
-        void handleEnrichAll();
+        setEnrichAllConfirmOpen(true);
       }
     };
 
     window.addEventListener('keydown', onAiShortcut);
     return () => window.removeEventListener('keydown', onAiShortcut);
-  }, [handleEnrichAll, handleEnrichCurrent]);
+  }, [handleEnrichAll, handleEnrichCurrent, selectedCultureNeedsCompletion]);
 
 
 
@@ -816,6 +969,12 @@ function Cultures(): React.ReactElement {
         />
       </Box>
       
+      {enrichmentCostBanner && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          {enrichmentCostBanner}
+        </Alert>
+      )}
+
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <CultureDetail
           cultures={cultures}
@@ -863,13 +1022,18 @@ function Cultures(): React.ReactElement {
             </span>
           </Tooltip>
           <ButtonGroup variant="contained" aria-label={t('ai.menuLabel')} disabled={!selectedCulture || enrichmentLoading}>
-            <Button
-              startIcon={<AutoAwesomeIcon />}
-              onClick={() => void handleEnrichCurrent('complete')}
-              aria-label="Kultur vervollständigen (KI) (Alt+U)"
-            >
-              {t('buttons.aiComplete')}
-            </Button>
+            <Tooltip title={!selectedCultureNeedsCompletion && selectedCulture ? t('ai.completeDisabledReason') : ''}>
+              <span>
+                <Button
+                  startIcon={<AutoAwesomeIcon />}
+                  onClick={() => void handleEnrichCurrent('complete')}
+                  aria-label="Kultur vervollständigen (KI) (Alt+U)"
+                  disabled={Boolean(selectedCulture) && !selectedCultureNeedsCompletion}
+                >
+                  {t('buttons.aiComplete')}
+                </Button>
+              </span>
+            </Tooltip>
             <Button
               size="small"
               aria-label={t('ai.menuLabel')}
@@ -891,7 +1055,7 @@ function Cultures(): React.ReactElement {
               <ManageSearchIcon sx={{ mr: 1 }} fontSize="small" />
               {t('buttons.aiReresearch')}
             </MenuItem>
-            <MenuItem aria-label="Alle Kulturen vervollständigen (KI) (Alt+A)" onClick={() => void handleEnrichAll()} disabled={cultures.length === 0 || enrichmentLoading}>
+            <MenuItem aria-label="Alle Kulturen vervollständigen (KI) (Alt+A)" onClick={() => setEnrichAllConfirmOpen(true)} disabled={cultures.length === 0 || enrichmentLoading}>
               <PlaylistAddCheckIcon sx={{ mr: 1 }} fontSize="small" />
               {t('buttons.aiCompleteAll')}
             </MenuItem>
@@ -1100,6 +1264,19 @@ function Cultures(): React.ReactElement {
         </DialogActions>
       </Dialog>
 
+      <Dialog open={enrichAllConfirmOpen} onClose={() => setEnrichAllConfirmOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{t('ai.confirmAllTitle')}</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {t('ai.confirmAllText', { count: enrichableCultureIds.length })}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEnrichAllConfirmOpen(false)}>{t('buttons.aiClose')}</Button>
+          <Button variant="contained" onClick={() => void handleEnrichAll()}>{t('buttons.aiCompleteAll')}</Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={enrichmentLoading} aria-labelledby="enrichment-loading-title" maxWidth="xs" fullWidth>
         <DialogTitle id="enrichment-loading-title">{t('ai.loadingTitle')}</DialogTitle>
         <DialogContent>
@@ -1113,6 +1290,15 @@ function Cultures(): React.ReactElement {
       <Dialog open={enrichmentDialogOpen} onClose={() => setEnrichmentDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>{t('ai.suggestionsTitle')}</DialogTitle>
         <DialogContent>
+          {(enrichmentResult?.validation?.warnings || []).length > 0 && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {(enrichmentResult?.validation?.warnings || []).map((warning) => (
+                <Typography key={`${warning.field}-${warning.code}`} variant="body2">
+                  • {warning.message}
+                </Typography>
+              ))}
+            </Alert>
+          )}
           {!enrichmentResult || Object.keys(enrichmentResult.suggested_fields || {}).length === 0 ? (
             <Typography>{t('ai.noSuggestions')}</Typography>
           ) : (
@@ -1126,7 +1312,7 @@ function Cultures(): React.ReactElement {
                       onChange={() => toggleSuggestionField(field)}
                     />
                     <ListItemText
-                      primary={`${field}: ${String(suggestion.value ?? '')}`}
+                      primary={`${getEnrichmentFieldLabel(field)}: ${String(suggestion.value ?? '')}`}
                       secondary={`${t('ai.confidence')}: ${(suggestion.confidence * 100).toFixed(0)}%`}
                     />
                   </Box>

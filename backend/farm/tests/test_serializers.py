@@ -40,6 +40,7 @@ class SerializerBranchCoverageTest(TestCase):
                 'variety': 'Lollo Rosso',
                 'growth_duration_days': 6,
                 'harvest_duration_days': 2,
+                'harvest_method': 'per_sqm',
                 'supplier_name': '  ACME Seeds GmbH ',
             }
         )
@@ -50,6 +51,7 @@ class SerializerBranchCoverageTest(TestCase):
         self.assertIsNotNone(culture.supplier)
         self.assertEqual(culture.supplier.name_normalized, 'acme seeds')
         self.assertEqual(Supplier.objects.count(), 1)
+
 
     def test_planting_plan_serializer_rejects_invalid_area_input(self):
         serializer = PlantingPlanSerializer()

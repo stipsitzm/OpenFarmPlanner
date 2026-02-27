@@ -70,7 +70,7 @@
     "harvestMethod": "Erntemethode",
     "harvestMethodPerPlant": "Pro Pflanze",
     "harvestMethodPerSqm": "Pro m²",
-    "expectedYield": "Erwarteter Ertrag (kg)",
+    "expectedYield": "Erwarteter Ertrag",
     "expectedYieldPlaceholder": "z.B. 500",
     "expectedYieldError": "Erwarteter Ertrag muss ≥ 0 sein",
     "allowDeviationDeliveryWeeks": "Abweichende Lieferwochen erlauben",
@@ -104,7 +104,9 @@
     "sowingCalculationSafetyPercentError": "Sicherheitszuschlag muss zwischen 0 und 100 liegen",
     "propagationDurationDaysRequired": "Anzuchtdauer ist erforderlich",
     "propagationDurationDaysTooLong": "Anzuchtdauer darf nicht länger als die Wachstumsdauer sein",
-    "harvestMethodRequired": "Erntemethode ist bei angegebenem Ertrag erforderlich"
+    "harvestMethodRequired": "Erntemethode ist bei angegebenem Ertrag erforderlich",
+    "seedingRequirementTypeRequired": "Saatgutbedarf-Typ ist erforderlich, wenn ein Saatgutbedarf angegeben ist.",
+    "seedingRequirementValueRequired": "Saatgutbedarf ist erforderlich, wenn ein Saatgutbedarf-Typ angegeben ist."
   },
   "messages": {
     "createSuccess": "Kultur erfolgreich erstellt",
@@ -145,7 +147,16 @@
     "runError": "KI-Anfrage fehlgeschlagen.",
     "applySuccess": "Ausgewählte Vorschläge wurden angewendet.",
     "loadingTitle": "KI-Verarbeitung läuft",
-    "loadingText": "Bitte warten. Die Anfrage wird verarbeitet und Quellen werden gesammelt."
+    "loadingText": "Bitte warten. Die Anfrage wird verarbeitet und Quellen werden gesammelt.",
+    "cancelled": "KI-Vorgang abgebrochen.",
+    "confirmAllTitle": "Alle Kulturen vervollständigen?",
+    "confirmAllText": "Es würden {{count}} Kulturen vervollständigt, bei denen noch Angaben fehlen. Möchten Sie fortfahren?",
+    "batchNoMissing": "Es gibt keine Kulturen mit fehlenden Angaben.",
+    "completeDisabledReason": "Diese Kultur ist bereits vollständig.",
+    "quotaExceeded": "OpenAI-Kontingent aufgebraucht. Bitte Abrechnung/Plan prüfen und erneut versuchen.",
+    "providerRateLimited": "OpenAI hat die Anfrage wegen Limitierung abgelehnt. Bitte später erneut versuchen.",
+    "providerUnavailable": "OpenAI ist derzeit nicht erreichbar. Bitte später erneut versuchen.",
+    "webResearchUnavailable": "Web-Recherche ist nicht konfiguriert. Bitte Backend-Konfiguration prüfen."
   },
   "import": {
     "menuLabel": "Weitere Aktionen",

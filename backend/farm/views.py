@@ -821,6 +821,32 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         succeeded = sum(1 for item in items if item['status'] == 'completed')
         failed = sum(1 for item in items if item['status'] == 'failed')
 
+        total_input_tokens = 0
+        total_cached_input_tokens = 0
+        total_output_tokens = 0
+        total_cost = 0.0
+        total_input_cost = 0.0
+        total_cached_input_cost = 0.0
+        total_output_cost = 0.0
+        total_web_search_cost = 0.0
+        total_web_search_call_count = 0
+        for item in items:
+            result = item.get('result') if isinstance(item, dict) else None
+            if not isinstance(result, dict):
+                continue
+            usage = result.get('usage') if isinstance(result.get('usage'), dict) else {}
+            cost = result.get('costEstimate') if isinstance(result.get('costEstimate'), dict) else {}
+            breakdown = cost.get('breakdown') if isinstance(cost.get('breakdown'), dict) else {}
+            total_input_tokens += int(usage.get('inputTokens') or 0)
+            total_cached_input_tokens += int(usage.get('cachedInputTokens') or 0)
+            total_output_tokens += int(usage.get('outputTokens') or 0)
+            total_cost += float(cost.get('total') or 0)
+            total_input_cost += float(breakdown.get('input') or 0)
+            total_cached_input_cost += float(breakdown.get('cached_input') or 0)
+            total_output_cost += float(breakdown.get('output') or 0)
+            total_web_search_cost += float(breakdown.get('web_search_calls') or 0)
+            total_web_search_call_count += int(breakdown.get('web_search_call_count') or 0)
+
         return Response({
             'run_id': run_id,
             'status': 'completed',
@@ -829,6 +855,23 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
             'succeeded': succeeded,
             'failed': failed,
             'items': items,
+            'usage': {
+                'inputTokens': total_input_tokens,
+                'cachedInputTokens': total_cached_input_tokens,
+                'outputTokens': total_output_tokens,
+            },
+            'costEstimate': {
+                'currency': 'USD',
+                'total': total_cost,
+                'model': 'gpt-4.1',
+                'breakdown': {
+                    'input': total_input_cost,
+                    'cached_input': total_cached_input_cost,
+                    'output': total_output_cost,
+                    'web_search_calls': total_web_search_cost,
+                    'web_search_call_count': total_web_search_call_count,
+                },
+            },
         }, status=status.HTTP_200_OK)
 
 

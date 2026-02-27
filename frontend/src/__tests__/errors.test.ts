@@ -45,6 +45,47 @@ describe('extractApiErrorMessage', () => {
     expect(result).toBe(fallbackMessage);
   });
 
+
+
+  it('maps 503 insufficient_quota details to a friendly message', () => {
+    const t = createT({
+      'ai.quotaExceeded': 'OpenAI-Kontingent aufgebraucht.',
+    });
+
+    const error = createAxiosError(503, {
+      detail: 'OpenAI responses error: 429 {"error":{"code":"insufficient_quota"}}',
+    });
+
+    const result = extractApiErrorMessage(error, t, fallbackMessage);
+
+    expect(result).toBe('OpenAI-Kontingent aufgebraucht.');
+  });
+
+  it('maps 503 no-web-research detail to a friendly message', () => {
+    const t = createT({
+      'ai.webResearchUnavailable': 'Web-Recherche ist nicht konfiguriert.',
+    });
+
+    const error = createAxiosError(503, {
+      detail: 'No web-research provider configured.',
+    });
+
+    const result = extractApiErrorMessage(error, t, fallbackMessage);
+
+    expect(result).toBe('Web-Recherche ist nicht konfiguriert.');
+  });
+
+  it('returns 503 detail unchanged when no special mapping applies', () => {
+    const t = createT({});
+
+    const error = createAxiosError(503, {
+      detail: 'Temporärer Dienstfehler',
+    });
+
+    const result = extractApiErrorMessage(error, t, fallbackMessage);
+
+    expect(result).toBe('Temporärer Dienstfehler');
+  });
   it('returns server message directly when 400 data is a string', () => {
     const t = createT({});
     const error = createAxiosError(400, 'Ungültige Anfrage');

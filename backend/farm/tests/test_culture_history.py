@@ -9,7 +9,7 @@ from farm.models import Culture, MediaFile, CultureRevision
 
 class CultureHistoryTests(TestCase):
     def setUp(self):
-        self.culture = Culture.objects.create(name='Carrot', variety='Nantes', growth_duration_days=60, harvest_duration_days=20)
+        self.culture = Culture.objects.create(name='Carrot', variety='Nantes', growth_duration_days=60, harvest_duration_days=20, harvest_method='per_plant')
 
     def test_history_list_endpoint(self):
         self.culture.name = 'Carrot Updated'
@@ -80,6 +80,7 @@ class CultureHistoryTests(TestCase):
                 'variety': self.culture.variety,
                 'growth_duration_days': self.culture.growth_duration_days,
                 'harvest_duration_days': self.culture.harvest_duration_days,
+                'harvest_method': self.culture.harvest_method,
             },
             content_type='application/json',
         )
@@ -96,6 +97,7 @@ class CultureHistoryTests(TestCase):
                 'variety': self.culture.variety,
                 'growth_duration_days': self.culture.growth_duration_days,
                 'harvest_duration_days': self.culture.harvest_duration_days,
+                'harvest_method': self.culture.harvest_method,
             },
             content_type='application/json',
         )
@@ -109,6 +111,7 @@ class CultureHistoryTests(TestCase):
                 'variety': self.culture.variety,
                 'growth_duration_days': self.culture.growth_duration_days,
                 'harvest_duration_days': self.culture.harvest_duration_days,
+                'harvest_method': self.culture.harvest_method,
             },
             content_type='application/json',
         )

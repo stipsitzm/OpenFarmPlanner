@@ -173,7 +173,7 @@ class Culture(TimestampedModel):
         ('per_plant', 'Per Plant'),
         ('per_sqm', 'Per m²'),
     ]
-    
+
     # Basic information.
     name = models.CharField(max_length=200)
     variety = models.CharField(max_length=200)
@@ -355,6 +355,15 @@ class Culture(TimestampedModel):
         
         if self.expected_yield is not None and self.expected_yield < 0:
             errors['expected_yield'] = 'Expected yield must be non-negative.'
+
+        if self.harvest_duration_days is not None and not self.harvest_method:
+            errors['harvest_method'] = 'Harvest method is required when harvest duration is set.'
+
+        if self.seeding_requirement is None and self.seeding_requirement_type:
+            errors['seeding_requirement'] = 'Seeding requirement value is required when seeding requirement type is set.'
+
+        if self.seeding_requirement is not None and not self.seeding_requirement_type:
+            errors['seeding_requirement_type'] = 'Seeding requirement type is required when seeding requirement is set.'
         
         if self.distance_within_row_m is not None and self.distance_within_row_m < 0:
             errors['distance_within_row_m'] = 'Distance within row must be non-negative.'
@@ -514,6 +523,34 @@ class Culture(TimestampedModel):
                 )
             )
         ]
+
+
+class EnrichmentAccountingRun(models.Model):
+    """Stores token usage and estimated costs per enrichment invocation."""
+
+    MODE_CHOICES = [
+        ('complete', 'Complete'),
+        ('reresearch', 'Re-research'),
+    ]
+
+    culture = models.ForeignKey(
+        Culture,
+        on_delete=models.CASCADE,
+        related_name='enrichment_accounting_runs',
+    )
+    mode = models.CharField(max_length=20, choices=MODE_CHOICES)
+    provider = models.CharField(max_length=50)
+    model = models.CharField(max_length=100)
+    input_tokens = models.IntegerField(default=0)
+    cached_input_tokens = models.IntegerField(default=0)
+    output_tokens = models.IntegerField(default=0)
+    web_search_call_count = models.IntegerField(default=0)
+    estimated_cost_usd = models.DecimalField(max_digits=12, decimal_places=6, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
 
 
 class CultureRevision(models.Model):

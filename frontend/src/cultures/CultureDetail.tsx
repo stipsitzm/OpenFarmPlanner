@@ -397,7 +397,7 @@ export function CultureDetail({
                       Erwarteter Ertrag
                     </Typography>
                     <Typography variant="body1">
-                      {formatNumber(selectedCulture.expected_yield, t)}
+                      {formatNumber(selectedCulture.expected_yield, t)} kg
                     </Typography>
                   </Box>
                 )}

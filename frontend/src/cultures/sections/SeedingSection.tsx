@@ -39,7 +39,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
             onBlur={() => onChange('seed_rate_value', formData.seed_rate_value)}
             error={Boolean(errors.seed_rate_value)}
             helperText={errors.seed_rate_value}
-            slotProps={{ htmlInput: { min: 0, step: 1 } }}
+            slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
           />
         </Tooltip>
         <Tooltip title={t('form.seedRateHelp')} arrow>

@@ -269,6 +269,7 @@ class CultureModelTest(TestCase):
         with self.assertRaises(ValidationError) as context:
             culture.clean()
         self.assertIn('growth_duration_days', context.exception.message_dict)
+
     
     def test_display_color_format_validation(self):
         """Test that display color must be in hex format"""
@@ -290,6 +291,7 @@ class CultureModelTest(TestCase):
             name="Tomato",
             growth_duration_days=8,
             harvest_duration_days=4,
+            harvest_method='per_sqm',
             display_color="#FF5733"
         )
         culture2.clean()  # Should not raise
@@ -549,4 +551,3 @@ class CultureNormalizedFieldsTest(TestCase):
         )
         
         self.assertNotEqual(culture1.id, culture2.id)
-

@@ -89,14 +89,27 @@ export function validateCulture(
     errors.display_color = t('form.displayColorError');
   }
 
-  // Wenn expected_yield gesetzt ist, muss auch harvest_method gewählt sein
+  // If expected_yield is set, harvest_method must also be selected
   if (
     draft.expected_yield !== undefined &&
     draft.expected_yield !== null &&
-    typeof draft.expected_yield === 'number' &&
     !draft.harvest_method
   ) {
     errors.harvest_method = t('form.harvestMethodRequired');
+  }
+
+  if (
+    (draft.seeding_requirement === undefined || draft.seeding_requirement === null) &&
+    draft.seeding_requirement_type
+  ) {
+    errors.seeding_requirement = t('form.seedingRequirementValueRequired');
+  }
+  if (
+    draft.seeding_requirement !== undefined &&
+    draft.seeding_requirement !== null &&
+    !draft.seeding_requirement_type
+  ) {
+    errors.seeding_requirement_type = t('form.seedingRequirementTypeRequired');
   }
 
   return {

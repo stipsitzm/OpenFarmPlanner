@@ -79,6 +79,7 @@ def test_seed_rate_unit_legacy_value_is_normalized(api_client: APIClient):
         'variety': 'Runner',
         'growth_duration_days': 70,
         'harvest_duration_days': 10,
+        'harvest_method': 'per_plant',
         'seed_rate_value': 2,
         'seed_rate_unit': 'pcs_per_plant',
         'supplier_name': 'Test Supplier',

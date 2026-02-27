@@ -70,6 +70,7 @@ class ApiEndpointsTest(DRFAPITestCase):
             'name': 'Culture with Supplier',
             'growth_duration_days': 8,
             'harvest_duration_days': 3,
+            'harvest_method': 'per_plant',
             'supplier_name': self.supplier.name
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
@@ -86,7 +87,8 @@ class ApiEndpointsTest(DRFAPITestCase):
             'name': 'New Culture',
             'variety': 'Test Variety',
             'growth_duration_days': 6,
-            'harvest_duration_days': 2
+            'harvest_duration_days': 2,
+            'harvest_method': 'per_plant',
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -144,6 +146,7 @@ class ApiEndpointsTest(DRFAPITestCase):
             'name': 'Test Culture',
             'growth_duration_days': 6,
             'harvest_duration_days': 2,
+            'harvest_method': 'per_plant',
             'display_color': 'invalid'  # Not hex format
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
@@ -156,6 +159,7 @@ class ApiEndpointsTest(DRFAPITestCase):
             'name': 'Updated Culture',
             'growth_duration_days': 8,
             'harvest_duration_days': 3,
+            'harvest_method': 'per_plant',
             'crop_family': 'Updated Family',
             'nutrient_demand': 'medium'
         }
@@ -299,6 +303,7 @@ class CultureImportAPITest(DRFAPITestCase):
             supplier=self.supplier,
             growth_duration_days=60,
             harvest_duration_days=30,
+            harvest_method='per_plant',
             notes="Existing notes"
         )
     
@@ -385,6 +390,7 @@ class CultureImportAPITest(DRFAPITestCase):
             seed_supplier="Rainsaat R-Codes",
             growth_duration_days=70,
             harvest_duration_days=30,
+            harvest_method='per_plant',
             notes="Before import",
         )
         data = {
@@ -394,6 +400,7 @@ class CultureImportAPITest(DRFAPITestCase):
                 'seed_supplier': 'rainsaat r-codes',
                 'growth_duration_days': 70,
                 'harvest_duration_days': 30,
+                'harvest_method': 'per_plant',
                 'notes': 'After import',
             }],
             'confirm_updates': True,
@@ -415,7 +422,8 @@ class CultureImportAPITest(DRFAPITestCase):
                 'name': 'Cucumber',
                 'variety': 'English',
                 'growth_duration_days': 50,
-                'harvest_duration_days': 20
+                'harvest_duration_days': 20,
+                'harvest_method': 'per_plant',
             }],
             'confirm_updates': False
         }
@@ -465,6 +473,7 @@ class CultureImportAPITest(DRFAPITestCase):
                 'supplier_id': self.supplier.id,
                 'growth_duration_days': 65,
                 'harvest_duration_days': 30,
+                'harvest_method': 'per_plant',
                 'notes': 'Updated notes'
             }],
             'confirm_updates': True
@@ -490,14 +499,16 @@ class CultureImportAPITest(DRFAPITestCase):
                     'name': 'Cucumber',
                     'variety': 'English',
                     'growth_duration_days': 50,
-                    'harvest_duration_days': 20
+                    'harvest_duration_days': 20,
+                    'harvest_method': 'per_plant',
                 },
                 {
                     'name': 'Tomato',
                     'variety': 'Cherry',
                     'supplier_id': self.supplier.id,
                     'growth_duration_days': 65,
-                    'harvest_duration_days': 30
+                    'harvest_duration_days': 30,
+                    'harvest_method': 'per_plant',
                 }
             ],
             'confirm_updates': True
@@ -894,6 +905,49 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
         self.assertIn(response.status_code, (200, 503))
         if response.status_code == 200:
             self.assertIn('suggested_fields', response.data)
+
+
+
+    @patch('farm.views.enrich_culture')
+    def test_enrich_single_contains_usage_and_cost_estimate(self, enrich_mock):
+        enrich_mock.return_value = {
+            'run_id': 'enr_1_1',
+            'culture_id': self.culture.id,
+            'mode': 'complete',
+            'status': 'completed',
+            'started_at': '2026-01-01T00:00:00Z',
+            'finished_at': '2026-01-01T00:00:01Z',
+            'model': 'gpt-4.1',
+            'provider': 'openai_responses',
+            'search_provider': 'web_search',
+            'suggested_fields': {},
+            'evidence': {},
+            'structured_sources': [],
+            'validation': {'warnings': [], 'errors': []},
+            'usage': {'inputTokens': 100, 'cachedInputTokens': 10, 'outputTokens': 20},
+            'costEstimate': {
+                'currency': 'USD',
+                'total': 0.012,
+                'model': 'gpt-4.1',
+                'breakdown': {
+                    'input': 0.001,
+                    'cached_input': 0.0001,
+                    'output': 0.0002,
+                    'web_search_calls': 0.01,
+                    'web_search_call_count': 1,
+                },
+            },
+        }
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/',
+            {'mode': 'complete'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('usage', response.data)
+        self.assertIn('costEstimate', response.data)
 
     def test_enrich_batch_returns_summary(self):
         response = self.client.post(

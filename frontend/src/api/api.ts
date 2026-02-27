@@ -50,13 +50,13 @@ export const cultureAPI = {
     skipped_count: number;
     errors: Array<{ index: number; error: unknown }>;
   }>('/cultures/import/apply/', data),
-  enrich: (id: number, mode: 'complete' | 'reresearch') =>
-    http.post<EnrichmentResult>(`/cultures/${id}/enrich/`, { mode }),
-  enrichBatch: (data?: { culture_ids?: number[]; limit?: number }) =>
+  enrich: (id: number, mode: 'complete' | 'reresearch', signal?: AbortSignal) =>
+    http.post<EnrichmentResult>(`/cultures/${id}/enrich/`, { mode }, { signal }),
+  enrichBatch: (data?: { culture_ids?: number[]; limit?: number }, signal?: AbortSignal) =>
     http.post<EnrichmentBatchResult>('/cultures/enrich-batch/', {
       mode: 'complete_all',
       ...data,
-    }),
+    }, { signal }),
 };
 
 export const supplierAPI = {
