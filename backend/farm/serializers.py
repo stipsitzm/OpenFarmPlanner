@@ -3,6 +3,8 @@
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
+from .enum_normalization import normalize_seed_rate_unit
+
 from .models import (
     Bed,
     Culture,
@@ -13,6 +15,7 @@ from .models import (
     PlantingPlan,
     Supplier,
     Task,
+    SeedPackage,
 )
 
 
@@ -117,6 +120,28 @@ class BedSerializer(serializers.ModelSerializer):
         return value
 
 
+class SeedPackageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SeedPackage
+        fields = [
+            'id',
+            'culture',
+            'size_value',
+            'size_unit',
+            'available',
+            'article_number',
+            'source_url',
+            'evidence_text',
+            'last_seen_at',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+        extra_kwargs = {'culture': {'required': False}}
+
+
+
+
 class CultureSerializer(serializers.ModelSerializer):
     """Serializer for culture data with unit conversion and supplier helpers."""
     variety = serializers.CharField(
@@ -191,11 +216,6 @@ class CultureSerializer(serializers.ModelSerializer):
         allow_null=True,
         help_text='Weight of 1000 kernels in grams'
     )
-    package_size_g = serializers.FloatField(
-        required=False,
-        allow_null=True,
-        help_text='Package size in grams'
-    )
     seeding_requirement = serializers.FloatField(
         required=False,
         allow_null=True,
@@ -206,6 +226,8 @@ class CultureSerializer(serializers.ModelSerializer):
         allow_blank=True,
         help_text="Type of seeding requirement (e.g. 'g', 'seeds')"
     )
+    seed_packages = SeedPackageSerializer(many=True, required=False)
+
     plants_per_m2 = serializers.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -226,13 +248,48 @@ class CultureSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
 
+
+    def validate_seed_packages(self, value):
+        seen: set[tuple[str, str]] = set()
+        for idx, item in enumerate(value):
+            size_value = item.get('size_value')
+            size_unit = item.get('size_unit')
+            if size_value is None or float(size_value) <= 0:
+                raise serializers.ValidationError({idx: 'size_value must be > 0'})
+            key = (str(size_value), str(size_unit))
+            if key in seen:
+                raise serializers.ValidationError({idx: 'Duplicate package size for same unit.'})
+            seen.add(key)
+        return value
+
+    def create(self, validated_data):
+        seed_packages = validated_data.pop('seed_packages', self.initial_data.get('seed_packages', []))
+        culture = super().create(validated_data)
+        if isinstance(seed_packages, list):
+            for package_data in seed_packages:
+                if isinstance(package_data, dict):
+                    SeedPackage.objects.create(culture=culture, **package_data)
+        return culture
+
+    def update(self, instance, validated_data):
+        seed_packages = validated_data.pop('seed_packages', self.initial_data.get('seed_packages', None))
+        culture = super().update(instance, validated_data)
+        if seed_packages is not None:
+            culture.seed_packages.all().delete()
+            if isinstance(seed_packages, list):
+                for package_data in seed_packages:
+                    if isinstance(package_data, dict):
+                        SeedPackage.objects.create(culture=culture, **package_data)
+        return culture
+
     def validate_seed_rate_unit(self, value):
         """Normalize legacy seed rate unit values and validate supported units."""
         if value is None or value == '':
             return value
-        
-        if value == 'pcs_per_plant':
-            return 'seeds_per_plant'
+
+        normalized_value = normalize_seed_rate_unit(value)
+        if normalized_value:
+            value = normalized_value
 
         allowed_values = {'g_per_m2', 'seeds/m', 'seeds_per_plant'}
         if value not in allowed_values:
@@ -486,6 +543,19 @@ class CultureImportApplySummarySerializer(serializers.Serializer):
     )
 
 
+class SeedDemandPackageSelectionSerializer(serializers.Serializer):
+    size_value = serializers.FloatField()
+    size_unit = serializers.CharField()
+    count = serializers.IntegerField()
+
+
+class SeedDemandPackageSuggestionSerializer(serializers.Serializer):
+    selection = SeedDemandPackageSelectionSerializer(many=True)
+    total_amount = serializers.FloatField()
+    overage = serializers.FloatField()
+    pack_count = serializers.IntegerField()
+
+
 class SeedDemandSerializer(serializers.Serializer):
     """Read-only serializer for aggregated seed demand per culture."""
     culture_id = serializers.IntegerField()
@@ -493,8 +563,8 @@ class SeedDemandSerializer(serializers.Serializer):
     variety = serializers.CharField(allow_blank=True, allow_null=True)
     supplier = serializers.CharField(allow_blank=True, allow_null=True)
     total_grams = serializers.FloatField(allow_null=True)
-    package_size_g = serializers.FloatField(allow_null=True)
-    packages_needed = serializers.IntegerField(allow_null=True)
+    seed_packages = serializers.ListField(child=serializers.DictField(), required=False)
+    package_suggestion = SeedDemandPackageSuggestionSerializer(allow_null=True, required=False)
     warning = serializers.CharField(allow_null=True)
 
 

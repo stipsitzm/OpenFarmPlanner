@@ -2,12 +2,12 @@
  * SeedingSection: Saatgutmenge (Menge + Einheit)
  * @remarks Presentational, no internal state
  */
-import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Tooltip } from '@mui/material';
-import type { Culture, SeedRateUnit } from '../../api/types';
+import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Tooltip, Checkbox, IconButton, Button } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import type { Culture, SeedPackage, SeedRateUnit } from '../../api/types';
 import type { TFunction } from 'i18next';
 import { fieldSx, spacingFieldSx } from './styles.tsx';
 import { fieldRowSx } from './styles.tsx';
-
 
 interface SeedingSectionProps {
   formData: Partial<Culture>;
@@ -23,6 +23,21 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
       return;
     }
     onChange('seed_rate_unit', value as SeedRateUnit);
+  };
+
+  const packages = formData.seed_packages ?? [];
+
+  const updatePackage = (index: number, patch: Partial<SeedPackage>) => {
+    const next = packages.map((item, idx) => (idx === index ? { ...item, ...patch } : item));
+    onChange('seed_packages', next);
+  };
+
+  const addPackage = () => {
+    onChange('seed_packages', [...packages, { size_value: 0, size_unit: 'g', available: true }]);
+  };
+
+  const deletePackage = (index: number) => {
+    onChange('seed_packages', packages.filter((_item, idx) => idx !== index));
   };
 
   return (
@@ -74,18 +89,6 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
             slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
           />
         </Tooltip>
-        <Tooltip title={t('form.packageSizeHelp', { defaultValue: 'Packungsgröße in Gramm.' })} arrow>
-          <TextField
-            sx={fieldSx}
-            type="number"
-            label={t('form.packageSizeLabel', { defaultValue: 'Packungsgröße (g)' })}
-            value={formData.package_size_g ?? ''}
-            onChange={e => onChange('package_size_g', e.target.value ? parseFloat(e.target.value) : undefined)}
-            error={Boolean(errors.package_size_g)}
-            helperText={errors.package_size_g}
-            slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
-          />
-        </Tooltip>
         <Tooltip title={t('form.sowingCalculationSafetyPercentHelp', { defaultValue: 'Prozentualer Zuschlag zur berechneten Saatgutmenge.' })} arrow>
           <TextField
             sx={{ ...spacingFieldSx, ml: 'auto' }}
@@ -98,6 +101,45 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
             slotProps={{ htmlInput: { min: 0, max: 100, step: 1 } }}
           />
         </Tooltip>
+      </Box>
+
+      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Seed packages</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {packages.map((pkg, index) => (
+          <Box key={index} sx={{ display: 'grid', gridTemplateColumns: '120px 120px 120px 1fr 1fr 40px', gap: 1, alignItems: 'center' }}>
+            <TextField
+              type="number"
+              label="Size"
+              value={pkg.size_value}
+              onChange={(e) => updatePackage(index, { size_value: e.target.value ? parseFloat(e.target.value) : 0 })}
+              error={Boolean(errors[`seed_packages.${index}.size_value`] || errors.seed_packages)}
+              helperText={errors[`seed_packages.${index}.size_value`]}
+              slotProps={{ htmlInput: { min: 0.001, step: 0.001 } }}
+            />
+            <FormControl>
+              <InputLabel>Unit</InputLabel>
+              <Select
+                label="Unit"
+                value={pkg.size_unit}
+                onChange={(e) => updatePackage(index, { size_unit: e.target.value as 'g' | 'seeds' })}
+              >
+                <MenuItem value="g">g</MenuItem>
+                <MenuItem value="seeds">seeds</MenuItem>
+              </Select>
+            </FormControl>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Checkbox checked={pkg.available} onChange={(e) => updatePackage(index, { available: e.target.checked })} />
+              <Typography variant="body2">available</Typography>
+            </Box>
+            <TextField label="Article #" value={pkg.article_number ?? ''} onChange={(e) => updatePackage(index, { article_number: e.target.value })} />
+            <TextField label="Source URL" value={pkg.source_url ?? ''} onChange={(e) => updatePackage(index, { source_url: e.target.value })} />
+            <IconButton onClick={() => deletePackage(index)} aria-label="delete-seed-package"><DeleteIcon fontSize="small" /></IconButton>
+          </Box>
+        ))}
+        {errors.seed_packages && <Typography variant="caption" color="error">{errors.seed_packages}</Typography>}
+        <Box>
+          <Button type="button" onClick={addPackage} variant="outlined" size="small">Add pack</Button>
+        </Box>
       </Box>
     </>
   );

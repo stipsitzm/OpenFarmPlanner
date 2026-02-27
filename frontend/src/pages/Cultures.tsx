@@ -54,6 +54,7 @@ import { useCommandContextTag, useRegisterCommands } from '../commands/CommandPr
 import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
+import { normalizeCultivationType, normalizeHarvestMethod, normalizeNutrientDemand, normalizeSeedingRequirementType, normalizeSeedRateUnit } from '../cultures/enumNormalization';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -131,6 +132,8 @@ function Cultures(): React.ReactElement {
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error' | 'info') => {
     setSnackbar({ open: true, message, severity });
   }, []);
+
+
 
   useEffect(() => {
     enrichmentLoadingRef.current = enrichmentLoading;
@@ -301,6 +304,11 @@ function Cultures(): React.ReactElement {
       // Transform culture data for API: replace supplier object with supplier_id
       const dataToSend = {
         ...culture,
+        seed_rate_unit: normalizeSeedRateUnit(culture.seed_rate_unit),
+        harvest_method: normalizeHarvestMethod(culture.harvest_method),
+        nutrient_demand: normalizeNutrientDemand(culture.nutrient_demand),
+        cultivation_type: normalizeCultivationType(culture.cultivation_type),
+        seeding_requirement_type: normalizeSeedingRequirementType(culture.seeding_requirement_type),
         supplier_id: culture.supplier?.id || null,
         supplier_name: culture.supplier && !culture.supplier.id ? culture.supplier.name : undefined,
         supplier: undefined, // Remove supplier object from payload
@@ -706,7 +714,7 @@ function Cultures(): React.ReactElement {
     propagation_duration_days: 'form.propagationDurationDays',
     harvest_method: 'form.harvestMethod',
     expected_yield: 'form.expectedYield',
-    package_size_g: 'form.packageSizeLabel',
+    seed_packages: 'form.seedPackagesLabel',
     distance_within_row_cm: 'form.distanceWithinRowCm',
     row_spacing_cm: 'form.rowSpacingCm',
     sowing_depth_cm: 'form.sowingDepthCm',
@@ -733,6 +741,73 @@ function Cultures(): React.ReactElement {
     return translated === translationKey ? toStartCase(field) : translated;
   };
 
+  const normalizeSuggestedSeedPackages = (value: unknown): Array<{
+    size_value: number;
+    size_unit: 'g' | 'seeds';
+    available: boolean;
+    article_number?: string;
+    source_url?: string;
+    evidence_text?: string;
+  }> => {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    const seen = new Set<string>();
+    return value
+      .map((item) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+
+        const raw = item as Record<string, unknown>;
+        const sizeValue = Number(raw.size_value);
+        const sizeUnit: 'g' | 'seeds' | null = raw.size_unit === 'g' || raw.size_unit === 'seeds'
+          ? raw.size_unit
+          : null;
+
+        if (!Number.isFinite(sizeValue) || sizeValue <= 0 || !sizeUnit) {
+          return null;
+        }
+
+        const key = `${sizeUnit}:${sizeValue}`;
+        if (seen.has(key)) {
+          return null;
+        }
+        seen.add(key);
+
+        return {
+          size_value: sizeValue,
+          size_unit: sizeUnit,
+          available: raw.available !== false,
+          article_number: typeof raw.article_number === 'string' ? raw.article_number : undefined,
+          source_url: typeof raw.source_url === 'string' ? raw.source_url : undefined,
+          evidence_text: typeof raw.evidence_text === 'string' ? raw.evidence_text : undefined,
+        };
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+  };
+
+  const formatSuggestionValue = (field: string, value: unknown): string => {
+    if (field === 'seed_packages') {
+      const packages = normalizeSuggestedSeedPackages(value);
+      if (!packages.length) {
+        return t('ai.noSuggestions');
+      }
+      return packages
+        .map((pkg) => `${pkg.size_value} ${pkg.size_unit}${pkg.available ? '' : ' (nicht verfügbar)'}`)
+        .join(', ');
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((entry) => String(entry)).join(', ');
+    }
+    if (value && typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    return String(value ?? '');
+  };
+
   const openEnrichmentDialog = (result: EnrichmentResult) => {
     setEnrichmentResult(result);
     setSelectedSuggestionFields(Object.keys(result.suggested_fields || {}));
@@ -743,6 +818,7 @@ function Cultures(): React.ReactElement {
   const cultureHasMissingEnrichmentFields = useCallback((culture: Culture): boolean => {
     const isMissing = (value: unknown): boolean => {
       if (value === null || value === undefined) return true;
+      if (Array.isArray(value)) return value.length === 0;
       if (typeof value === 'string') return value.trim().length === 0;
       return false;
     };
@@ -753,7 +829,7 @@ function Cultures(): React.ReactElement {
       culture.propagation_duration_days,
       culture.harvest_method,
       culture.expected_yield,
-      culture.package_size_g,
+      culture.seed_packages,
       culture.distance_within_row_cm,
       culture.row_spacing_cm,
       culture.sowing_depth_cm,
@@ -863,14 +939,44 @@ function Cultures(): React.ReactElement {
 
     const patch: Record<string, unknown> = {};
     selectedSuggestionFields.forEach((field) => {
-      patch[field] = enrichmentResult.suggested_fields[field]?.value;
+      const suggestionValue = enrichmentResult.suggested_fields[field]?.value;
+      if (field === 'seed_packages') {
+        patch[field] = normalizeSuggestedSeedPackages(suggestionValue);
+        return;
+      }
+      if (field === 'seed_rate_unit') {
+        patch[field] = normalizeSeedRateUnit(suggestionValue);
+        return;
+      }
+      if (field === 'harvest_method') {
+        patch[field] = normalizeHarvestMethod(suggestionValue);
+        return;
+      }
+      if (field === 'nutrient_demand') {
+        patch[field] = normalizeNutrientDemand(suggestionValue);
+        return;
+      }
+      if (field === 'cultivation_type') {
+        patch[field] = normalizeCultivationType(suggestionValue);
+        return;
+      }
+      patch[field] = suggestionValue;
     });
 
     try {
-      await cultureAPI.update(targetCulture.id!, { ...targetCulture, ...patch } as Culture);
+      await cultureAPI.update(targetCulture.id!, {
+        ...targetCulture,
+        seed_rate_unit: normalizeSeedRateUnit(targetCulture.seed_rate_unit),
+        harvest_method: normalizeHarvestMethod(targetCulture.harvest_method),
+        nutrient_demand: normalizeNutrientDemand(targetCulture.nutrient_demand),
+        cultivation_type: normalizeCultivationType(targetCulture.cultivation_type),
+        seeding_requirement_type: normalizeSeedingRequirementType(targetCulture.seeding_requirement_type),
+        ...patch,
+      } as Culture);
       await fetchCultures();
       showSnackbar(t('ai.applySuccess'), 'success');
       setEnrichmentDialogOpen(false);
+      window.location.reload();
     } catch (error) {
       console.error('Error applying enrichment suggestions:', error);
       showSnackbar(extractApiErrorMessage(error, t, t('messages.updateError')), 'error');
@@ -1312,7 +1418,7 @@ function Cultures(): React.ReactElement {
                       onChange={() => toggleSuggestionField(field)}
                     />
                     <ListItemText
-                      primary={`${getEnrichmentFieldLabel(field)}: ${String(suggestion.value ?? '')}`}
+                      primary={`${getEnrichmentFieldLabel(field)}: ${formatSuggestionValue(field, suggestion.value)}`}
                       secondary={`${t('ai.confidence')}: ${(suggestion.confidence * 100).toFixed(0)}%`}
                     />
                   </Box>

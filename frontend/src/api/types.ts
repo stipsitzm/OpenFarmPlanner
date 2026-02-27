@@ -1,3 +1,15 @@
+export interface SeedPackage {
+  id?: number;
+  culture?: number;
+  size_value: number;
+  size_unit: 'g' | 'seeds';
+  available: boolean;
+  article_number?: string;
+  source_url?: string;
+  evidence_text?: string;
+  last_seen_at?: string | null;
+}
+
 export interface Supplier {
   id?: number;
   name: string;
@@ -10,9 +22,10 @@ export type SeedRateUnit = 'g_per_m2' | 'seeds/m' | 'seeds_per_plant';
 
 export interface Culture {
   thousand_kernel_weight_g?: number;
-  package_size_g?: number;
+  package_size_g?: number; // deprecated, replaced by seed_packages
   seeding_requirement?: number;
   seeding_requirement_type?: 'per_sqm' | 'per_plant' | '';
+  seed_packages?: SeedPackage[];
   seed_rate_value?: number | null;
   seed_rate_unit?: SeedRateUnit | null;
   id?: number;
@@ -58,8 +71,13 @@ export interface SeedDemand {
   variety?: string | null;
   supplier?: string | null;
   total_grams: number | null;
-  package_size_g: number | null;
-  packages_needed: number | null;
+  seed_packages?: Array<{ size_value: number; size_unit: 'g' | 'seeds'; available: boolean }>;
+  package_suggestion?: {
+    selection: Array<{ size_value: number; size_unit: 'g' | 'seeds'; count: number }>;
+    total_amount: number;
+    overage: number;
+    pack_count: number;
+  } | null;
   warning: string | null;
 }
 

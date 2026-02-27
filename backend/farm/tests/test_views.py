@@ -73,7 +73,7 @@ class ApiEndpointsTest(DRFAPITestCase):
             'harvest_method': 'per_plant',
             'supplier_name': self.supplier.name
         }
-        response = self.client.post('/openfarmplanner/api/cultures/', data)
+        response = self.client.post('/openfarmplanner/api/cultures/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['supplier']['id'], self.supplier.id)
 
@@ -116,16 +116,14 @@ class ApiEndpointsTest(DRFAPITestCase):
             'row_spacing_cm': 60.0,
             'sowing_depth_cm': 1.5,
             'thousand_kernel_weight_g': 472.02,
-            'package_size_g': 40,
             'display_color': '#FF5733'
         }
-        response = self.client.post('/openfarmplanner/api/cultures/', data)
+        response = self.client.post('/openfarmplanner/api/cultures/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['name'], 'Comprehensive Culture')
         self.assertEqual(response.data['crop_family'], 'Solanaceae')
         self.assertEqual(response.data['nutrient_demand'], 'high')
         self.assertEqual(response.data['thousand_kernel_weight_g'], 472.02)
-        self.assertEqual(response.data['package_size_g'], 40.0)
         self.assertEqual(response.data['display_color'], '#FF5733')
     
     def test_culture_create_without_durations(self):

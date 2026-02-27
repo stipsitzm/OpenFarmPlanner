@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
 
-from farm.models import Culture, EnrichmentAccountingRun
+from farm.models import Culture, EnrichmentAccountingRun, SeedPackage
 from farm.services.enrichment import (
     EnrichmentError,
     OpenAIResponsesProvider,
@@ -162,13 +162,13 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.culture.harvest_duration_days = None
         self.culture.harvest_method = 'per_sqm'
         self.culture.expected_yield = 1.5
-        self.culture.package_size_g = 500
-        self.culture.save(update_fields=['growth_duration_days', 'harvest_duration_days', 'harvest_method', 'expected_yield', 'package_size_g'])
+        self.culture.save(update_fields=['growth_duration_days', 'harvest_duration_days', 'harvest_method', 'expected_yield'])
+        SeedPackage.objects.create(culture=self.culture, size_value=500, size_unit='g', available=True)
 
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
-            'output_text': '{"suggested_fields":{"growth_duration_days":{"value":120,"unit":"days","confidence":0.8},"harvest_duration_days":{"value":60,"unit":"days","confidence":0.8},"harvest_method":{"value":"per plant","unit":null,"confidence":0.7},"expected_yield":{"value":2.1,"unit":"kg/m²","confidence":0.7},"package_size_g":{"value":750,"unit":"g","confidence":0.7}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+            'output_text': '{"suggested_fields":{"growth_duration_days":{"value":120,"unit":"days","confidence":0.8},"harvest_duration_days":{"value":60,"unit":"days","confidence":0.8},"harvest_method":{"value":"per plant","unit":null,"confidence":0.7},"expected_yield":{"value":2.1,"unit":"kg/m²","confidence":0.7},"seed_packages":{"value":[{"size_value":750,"size_unit":"g","available":true}],"unit":null,"confidence":0.7}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
         }
         post_mock.return_value = response
 
@@ -177,7 +177,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.assertIn('harvest_duration_days', result['suggested_fields'])
         self.assertNotIn('harvest_method', result['suggested_fields'])
         self.assertNotIn('expected_yield', result['suggested_fields'])
-        self.assertNotIn('package_size_g', result['suggested_fields'])
+        self.assertNotIn('seed_packages', result['suggested_fields'])
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
@@ -237,27 +237,15 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
-    def test_drops_package_size_when_evidence_supplier_mismatches(self, post_mock):
-        self.culture.seed_supplier = 'ReinSaat'
-        self.culture.save(update_fields=['seed_supplier'])
-
+    def test_rejects_suspicious_fractional_seed_package_without_explicit_evidence(self, post_mock):
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
             'output_text': json.dumps({
                 'suggested_fields': {
-                    'package_size_g': {'value': 250, 'unit': 'g', 'confidence': 0.8},
+                    'seed_packages': {'value': [{'size_value': 0.195, 'size_unit': 'g', 'available': True, 'evidence_text': 'computed from TKG'}], 'unit': None, 'confidence': 0.8},
                 },
-                'evidence': {
-                    'package_size_g': [
-                        {
-                            'source_url': 'https://example.com/other-supplier',
-                            'title': 'Other Supplier Product Page',
-                            'retrieved_at': '2026-01-01T00:00:00Z',
-                            'snippet': 'Package contains 250 g',
-                        }
-                    ],
-                },
+                'evidence': {},
                 'validation': {'warnings': [], 'errors': []},
                 'note_blocks': '',
             }, ensure_ascii=False),
@@ -265,41 +253,9 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         post_mock.return_value = response
 
         result = enrich_culture(self.culture, 'complete')
-        self.assertNotIn('package_size_g', result['suggested_fields'])
+        self.assertEqual(result['suggested_fields']['seed_packages']['value'], [])
         warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
-        self.assertIn('package_size_supplier_mismatch', warning_codes)
-
-    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
-    @patch('farm.services.enrichment.requests.post')
-    def test_keeps_package_size_when_evidence_matches_supplier(self, post_mock):
-        self.culture.seed_supplier = 'ReinSaat'
-        self.culture.save(update_fields=['seed_supplier'])
-
-        response = Mock()
-        response.status_code = 200
-        response.json.return_value = {
-            'output_text': json.dumps({
-                'suggested_fields': {
-                    'package_size_g': {'value': 500, 'unit': 'g', 'confidence': 0.9},
-                },
-                'evidence': {
-                    'package_size_g': [
-                        {
-                            'source_url': 'https://reinsaat.at/product/faraday',
-                            'title': 'Faraday – ReinSaat',
-                            'retrieved_at': '2026-01-01T00:00:00Z',
-                            'snippet': 'Packungsgröße 500 g',
-                        }
-                    ],
-                },
-                'validation': {'warnings': [], 'errors': []},
-                'note_blocks': '',
-            }, ensure_ascii=False),
-        }
-        post_mock.return_value = response
-
-        result = enrich_culture(self.culture, 'complete')
-        self.assertIn('package_size_g', result['suggested_fields'])
+        self.assertIn('seed_package_fractional_suspicious', warning_codes)
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')

@@ -312,11 +312,6 @@ class Culture(TimestampedModel):
         blank=True,
         help_text="Weight of 1000 kernels in grams"
     )
-    package_size_g = models.FloatField(
-        null=True,
-        blank=True,
-        help_text="Package size in grams"
-    )
     seeding_requirement = models.FloatField(
         null=True,
         blank=True,
@@ -377,8 +372,6 @@ class Culture(TimestampedModel):
         if self.thousand_kernel_weight_g is not None and self.thousand_kernel_weight_g < 0:
             errors['thousand_kernel_weight_g'] = 'Thousand kernel weight must be non-negative.'
 
-        if self.package_size_g is not None and self.package_size_g < 0:
-            errors['package_size_g'] = 'Package size must be non-negative.'
         
         # Validate hex color format if provided.
         if self.display_color:
@@ -577,6 +570,43 @@ class ProjectRevision(models.Model):
     class Meta:
         ordering = ['-created_at']
 
+
+
+class SeedPackage(TimestampedModel):
+    """Sold package option for a culture."""
+
+    UNIT_GRAMS = 'g'
+    UNIT_SEEDS = 'seeds'
+    UNIT_CHOICES = [
+        (UNIT_GRAMS, 'Grams'),
+        (UNIT_SEEDS, 'Seeds'),
+    ]
+
+    culture = models.ForeignKey('Culture', on_delete=models.CASCADE, related_name='seed_packages')
+    size_value = models.DecimalField(max_digits=10, decimal_places=3)
+    size_unit = models.CharField(max_length=10, choices=UNIT_CHOICES)
+    available = models.BooleanField(default=True)
+    article_number = models.CharField(max_length=120, blank=True)
+    source_url = models.URLField(blank=True)
+    evidence_text = models.CharField(max_length=200, blank=True)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['size_unit', 'size_value']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['culture', 'size_value', 'size_unit'],
+                name='unique_seed_package_per_culture_size_unit',
+            )
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        if self.size_value is not None and self.size_value <= 0:
+            raise ValidationError({'size_value': 'Package size must be greater than zero.'})
+
+    def __str__(self) -> str:
+        return f"{self.culture.name} {self.size_value} {self.size_unit}"
 
 
 class PlantingPlan(TimestampedModel):

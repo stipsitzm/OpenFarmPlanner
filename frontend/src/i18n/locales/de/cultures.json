@@ -93,6 +93,7 @@
     "seedRateUnitRequired": "Wenn eine Menge angegeben wird, muss auch eine Einheit gewählt werden.",
     "seedRateValueRequired": "Die Menge muss größer als 0 sein.",
     "thousandKernelWeightLabel": "Tausendkorngewicht (g)",
+    "seedPackagesLabel": "Saatgut-Packungsgrößen",
     "thousandKernelWeightHelp": "Gewicht von 1000 Körnern in Gramm.",
     "thousandKernelWeightError": "Tausendkorngewicht muss ≥ 0 sein",
     "packageSizeLabel": "Packungsgröße (g)",
