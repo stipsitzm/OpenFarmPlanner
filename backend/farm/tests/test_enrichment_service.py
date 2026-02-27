@@ -1,4 +1,6 @@
 import json
+
+import requests
 from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
@@ -377,3 +379,24 @@ class EnrichmentConfigBehaviorTest(TestCase):
     def test_invalid_key_type_raises_clear_error(self):
         with self.assertRaises(EnrichmentError):
             enrich_culture(self.culture, 'complete')
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_provider_error_is_not_auto_fallback_by_default(self, post_mock):
+        post_mock.side_effect = requests.RequestException('boom')
+
+        with self.assertRaises(EnrichmentError):
+            enrich_culture(self.culture, 'complete')
+
+    @override_settings(
+        AI_ENRICHMENT_PROVIDER='openai_responses',
+        OPENAI_API_KEY='test-key',
+        AI_ENRICHMENT_AUTO_FALLBACK_ON_ERROR=True,
+    )
+    @patch('farm.services.enrichment.requests.post')
+    def test_provider_error_uses_fallback_when_opted_in(self, post_mock):
+        post_mock.side_effect = requests.RequestException('boom')
+
+        result = enrich_culture(self.culture, 'complete')
+        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
+        self.assertIn('fallback_mode', warning_codes)

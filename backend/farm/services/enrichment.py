@@ -675,7 +675,8 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
     try:
         raw = provider.enrich(context)
     except EnrichmentError:
-        if provider.provider_name == 'fallback':
+        allow_auto_fallback = bool(getattr(settings, 'AI_ENRICHMENT_AUTO_FALLBACK_ON_ERROR', False))
+        if provider.provider_name == 'fallback' or not allow_auto_fallback:
             raise
         provider = FallbackHeuristicProvider()
         raw = provider.enrich(context)
