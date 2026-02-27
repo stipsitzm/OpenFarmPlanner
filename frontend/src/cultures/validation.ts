@@ -84,6 +84,21 @@ export function validateCulture(
       }
     }
   });
+
+  if (draft.seed_packages && Array.isArray(draft.seed_packages)) {
+    const seen = new Set<string>();
+    draft.seed_packages.forEach((pkg, index) => {
+      if (!pkg || typeof pkg.size_value !== 'number' || pkg.size_value <= 0) {
+        errors[`seed_packages.${index}.size_value`] = 'Packgröße muss > 0 sein';
+      }
+      const key = `${pkg.size_unit}:${pkg.size_value}`;
+      if (seen.has(key)) {
+        errors.seed_packages = 'Doppelte Packungsgrößen sind nicht erlaubt';
+      }
+      seen.add(key);
+    });
+  }
+
   // Display color validation
   if (draft.display_color && !/^#[0-9A-Fa-f]{6}$/.test(draft.display_color)) {
     errors.display_color = t('form.displayColorError');

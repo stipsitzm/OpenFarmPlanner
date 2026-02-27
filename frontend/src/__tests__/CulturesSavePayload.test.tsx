@@ -101,6 +101,5 @@ describe('Cultures save payload', () => {
     expect(payload.row_spacing_m).toBeUndefined();
     expect(payload.distance_within_row_m).toBeUndefined();
     expect(payload.sowing_depth_m).toBeUndefined();
-    expect(payload.package_size_g).toBeNull();
   });
 });

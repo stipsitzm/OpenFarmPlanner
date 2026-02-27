@@ -102,9 +102,8 @@ describe('culture form UI sections', () => {
     fireEvent.change(thousandKernelWeightInput, { target: { value: '472.02' } });
     expect(onChange).toHaveBeenCalledWith('thousand_kernel_weight_g', 472.02);
 
-    const packageSizeInput = screen.getByLabelText('Packungsgröße (g)');
-    fireEvent.change(packageSizeInput, { target: { value: '40' } });
-    expect(onChange).toHaveBeenCalledWith('package_size_g', 40);
+    fireEvent.click(screen.getByRole('button', { name: 'Add pack' }));
+    expect(onChange).toHaveBeenCalledWith('seed_packages', [{ size_value: 0, size_unit: 'g', available: true }]);
 
     expect(screen.getByText('Bitte wählen')).toBeInTheDocument();
   });

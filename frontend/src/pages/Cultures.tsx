@@ -301,7 +301,6 @@ function Cultures(): React.ReactElement {
       // Transform culture data for API: replace supplier object with supplier_id
       const dataToSend = {
         ...culture,
-        package_size_g: culture.package_size_g ?? null,
         supplier_id: culture.supplier?.id || null,
         supplier_name: culture.supplier && !culture.supplier.id ? culture.supplier.name : undefined,
         supplier: undefined, // Remove supplier object from payload
@@ -707,7 +706,7 @@ function Cultures(): React.ReactElement {
     propagation_duration_days: 'form.propagationDurationDays',
     harvest_method: 'form.harvestMethod',
     expected_yield: 'form.expectedYield',
-    package_size_g: 'form.packageSizeLabel',
+    seed_packages: 'Seed packages',
     distance_within_row_cm: 'form.distanceWithinRowCm',
     row_spacing_cm: 'form.rowSpacingCm',
     sowing_depth_cm: 'form.sowingDepthCm',
@@ -754,7 +753,7 @@ function Cultures(): React.ReactElement {
       culture.propagation_duration_days,
       culture.harvest_method,
       culture.expected_yield,
-      culture.package_size_g,
+      culture.seed_packages,
       culture.distance_within_row_cm,
       culture.row_spacing_cm,
       culture.sowing_depth_cm,

@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 from rest_framework.test import APIClient
 
-from farm.models import Location, Field, Bed, Culture, PlantingPlan
+from farm.models import Location, Field, Bed, Culture, PlantingPlan, SeedPackage
 
 
 @pytest.fixture
@@ -36,11 +36,11 @@ def test_seed_demand_applies_safety_margin(api_client: APIClient, bed: Bed):
         harvest_duration_days=14,
         seed_rate_value=10,
         seed_rate_unit='g_per_m2',
-        package_size_g=25,
         sowing_calculation_safety_percent=10,
     )
     _create_plan(culture, bed, 5)
     _create_plan(culture, bed, 5)
+    SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g', available=True)
 
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     assert response.status_code == 200
@@ -48,7 +48,7 @@ def test_seed_demand_applies_safety_margin(api_client: APIClient, bed: Bed):
     row = response.json()['results'][0]
     assert row['culture_name'] == 'Carrot'
     assert row['total_grams'] == pytest.approx(110.0)
-    assert row['packages_needed'] == 5
+    assert row['package_suggestion']['pack_count'] == 5
     assert row['warning'] is None
 
 
@@ -60,16 +60,16 @@ def test_seed_demand_rounds_packages_up(api_client: APIClient, bed: Bed):
         harvest_duration_days=14,
         seed_rate_value=18.42,
         seed_rate_unit='g_per_m2',
-        package_size_g=25,
     )
     _create_plan(culture, bed, 10)
+    SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g', available=True)
 
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     assert response.status_code == 200
 
     row = next(item for item in response.json()['results'] if item['culture_name'] == 'Cabbage')
     assert row['total_grams'] == pytest.approx(184.2)
-    assert row['packages_needed'] == 8
+    assert row['package_suggestion']['pack_count'] == 8
 
 
 @pytest.mark.django_db
@@ -101,10 +101,10 @@ def test_seed_demand_returns_warning_when_gram_conversion_missing(api_client: AP
         harvest_duration_days=10,
         seed_rate_value=50,
         seed_rate_unit='seeds/m',
-        package_size_g=25,
         row_spacing_m=0.3,
     )
     _create_plan(culture, bed, 10)
+    SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g', available=True)
 
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     assert response.status_code == 200

@@ -24,7 +24,7 @@ from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, culture_media_upload_path, CultureRevision, ProjectRevision
+from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, culture_media_upload_path, CultureRevision, ProjectRevision
 from .serializers import (
     LocationSerializer,
     FieldSerializer,
@@ -37,6 +37,7 @@ from .serializers import (
     NoteAttachmentSerializer,
     CultureHistoryEntrySerializer,
     CultureRestoreSerializer,
+    SeedPackageSerializer,
 )
 
 from .services_area import calculate_remaining_bed_area
@@ -47,6 +48,7 @@ from .image_processing import (
     ImageProcessingBackendUnavailableError,
 )
 from .services.enrichment import enrich_culture, EnrichmentError
+from .services.seed_packages import PackageOption, compute_seed_package_suggestion
 
 
 logger = logging.getLogger(__name__)
@@ -521,7 +523,7 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
             'harvest_method', 'expected_yield', 'allow_deviation_delivery_weeks',
             'distance_within_row_cm', 'row_spacing_cm', 'sowing_depth_cm',
             'seed_rate_value', 'seed_rate_unit', 'sowing_calculation_safety_percent',
-            'thousand_kernel_weight_g', 'package_size_g',
+            'thousand_kernel_weight_g',
             'seeding_requirement', 'seeding_requirement_type', 'display_color'
         ]
         
@@ -875,6 +877,25 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
 
+
+
+class SeedPackageViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
+    queryset = SeedPackage.objects.select_related('culture').all().order_by('size_unit', 'size_value')
+    serializer_class = SeedPackageSerializer
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"Seed package created #{instance.pk}")
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"Seed package updated #{instance.pk}")
+
+    def perform_destroy(self, instance):
+        package_id = instance.pk
+        instance.delete()
+        self.create_project_revision(f"Seed package deleted #{package_id}")
+
 class PlantingPlanViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for PlantingPlan model providing CRUD operations.
     
@@ -1175,11 +1196,10 @@ class SeedDemandListView(generics.ListAPIView):
     serializer_class = SeedDemandSerializer
 
     def get_queryset(self):
-        """Build aggregated queryset with DB-side calculations and warnings."""
         total_area_expr = Coalesce(Sum('area_usage_sqm'), Value(0.0), output_field=FloatField())
         total_quantity_expr = Coalesce(Sum('quantity'), Value(0.0), output_field=FloatField())
 
-        queryset = (
+        return (
             PlantingPlan.objects
             .values(
                 'culture_id',
@@ -1193,7 +1213,6 @@ class SeedDemandListView(generics.ListAPIView):
                 seed_rate_value=F('culture__seed_rate_value'),
                 seed_rate_unit=F('culture__seed_rate_unit'),
                 thousand_kernel_weight_g=F('culture__thousand_kernel_weight_g'),
-                package_size_g=F('culture__package_size_g'),
                 safety_margin_percent=Coalesce(F('culture__sowing_calculation_safety_percent'), Value(0.0), output_field=FloatField()),
                 row_spacing_m=F('culture__row_spacing_m'),
             )
@@ -1246,15 +1265,6 @@ class SeedDemandListView(generics.ListAPIView):
                     ),
                     default=Value(None, output_field=FloatField()),
                 ),
-            )
-            .annotate(
-                packages_needed=Case(
-                    When(
-                        Q(total_grams__isnull=False) & Q(package_size_g__gt=0),
-                        then=Cast(Ceil(F('total_grams') / F('package_size_g')), IntegerField()),
-                    ),
-                    default=Value(None, output_field=IntegerField()),
-                ),
                 warning=Case(
                     When(Q(seed_rate_unit__isnull=True) | Q(seed_rate_unit=''), then=Value('Missing seed rate unit.')),
                     When(seed_rate_value__isnull=True, then=Value('Missing seed rate value.')),
@@ -1270,4 +1280,52 @@ class SeedDemandListView(generics.ListAPIView):
             .order_by('culture_name', 'variety')
         )
 
-        return queryset
+    def list(self, request, *args, **kwargs):
+        rows = list(self.get_queryset())
+        culture_ids = [row['culture_id'] for row in rows]
+        package_map: dict[int, list[SeedPackage]] = defaultdict(list)
+        for package in SeedPackage.objects.filter(culture_id__in=culture_ids, available=True).order_by('size_unit', 'size_value'):
+            package_map[package.culture_id].append(package)
+
+        for row in rows:
+            total_grams = row.get('total_grams')
+            packages = package_map.get(row['culture_id'], [])
+            row['seed_packages'] = [
+                {
+                    'size_value': float(pkg.size_value),
+                    'size_unit': pkg.size_unit,
+                    'available': pkg.available,
+                }
+                for pkg in packages
+            ]
+
+            if total_grams is None:
+                row['package_suggestion'] = None
+                continue
+
+            suggestion = compute_seed_package_suggestion(
+                required_amount=Decimal(str(total_grams)),
+                packages=[PackageOption(size_value=pkg.size_value, size_unit=pkg.size_unit) for pkg in packages],
+                unit='g',
+            )
+            if suggestion.pack_count == 0:
+                row['package_suggestion'] = None
+                continue
+
+            row['package_suggestion'] = {
+                'selection': [
+                    {
+                        'size_value': float(item.size_value),
+                        'size_unit': item.size_unit,
+                        'count': item.count,
+                    }
+                    for item in suggestion.selection
+                ],
+                'total_amount': float(suggestion.total_amount),
+                'overage': float(suggestion.overage),
+                'pack_count': suggestion.pack_count,
+            }
+
+        serializer = self.get_serializer(rows, many=True)
+        return Response({'count': len(rows), 'next': None, 'previous': None, 'results': serializer.data})
+

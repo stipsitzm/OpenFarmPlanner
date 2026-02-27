@@ -18,6 +18,7 @@ from .views import (
     ProjectHistoryListView,
     ProjectHistoryRestoreView,
     CultureUndeleteView,
+    SeedPackageViewSet,
 )
 
 router = DefaultRouter()
@@ -26,6 +27,7 @@ router.register(r'suppliers', SupplierViewSet)
 router.register(r'fields', FieldViewSet)
 router.register(r'beds', BedViewSet)
 router.register(r'cultures', CultureViewSet)
+router.register(r'seed-packages', SeedPackageViewSet)
 router.register(r'planting-plans', PlantingPlanViewSet)
 router.register(r'tasks', TaskViewSet)
 

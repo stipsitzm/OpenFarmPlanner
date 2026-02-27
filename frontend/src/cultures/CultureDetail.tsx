@@ -340,13 +340,15 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
-                {selectedCulture.package_size_g !== undefined && selectedCulture.package_size_g !== null && (
+                {selectedCulture.seed_packages && selectedCulture.seed_packages.length > 0 && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
-                      Packungsgröße
+                      Packungsgrößen
                     </Typography>
                     <Typography variant="body1">
-                      {formatNumber(selectedCulture.package_size_g, t)} g
+                      {selectedCulture.seed_packages
+                        .map((pkg) => `${formatNumber(pkg.size_value, t)} ${pkg.size_unit}`)
+                        .join(', ')}
                     </Typography>
                   </Box>
                 )}
