@@ -301,6 +301,7 @@ function Cultures(): React.ReactElement {
       // Transform culture data for API: replace supplier object with supplier_id
       const dataToSend = {
         ...culture,
+        package_size_g: culture.package_size_g ?? null,
         supplier_id: culture.supplier?.id || null,
         supplier_name: culture.supplier && !culture.supplier.id ? culture.supplier.name : undefined,
         supplier: undefined, // Remove supplier object from payload

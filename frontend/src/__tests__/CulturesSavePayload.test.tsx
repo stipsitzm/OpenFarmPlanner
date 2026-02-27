@@ -34,6 +34,7 @@ vi.mock('../cultures/CultureDetail', () => ({
         supplier: { id: 10, name: 'Bingenheimer' },
         row_spacing_cm: 20,
         row_spacing_m: 0.2,
+        package_size_g: 25,
       } as Culture)}
     >
       select-culture
@@ -52,6 +53,7 @@ vi.mock('../cultures/CultureForm', () => ({
         supplier: { id: 10, name: 'Bingenheimer' },
         row_spacing_cm: 35,
         row_spacing_m: 0.2,
+        package_size_g: undefined,
       } as Culture)}
     >
       submit-edit
@@ -99,5 +101,6 @@ describe('Cultures save payload', () => {
     expect(payload.row_spacing_m).toBeUndefined();
     expect(payload.distance_within_row_m).toBeUndefined();
     expect(payload.sowing_depth_m).toBeUndefined();
+    expect(payload.package_size_g).toBeNull();
   });
 });
