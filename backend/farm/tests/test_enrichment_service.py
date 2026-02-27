@@ -434,6 +434,9 @@ class EnrichmentCostEstimateTest(TestCase):
         self.assertEqual(estimate['currency'], 'USD')
         self.assertAlmostEqual(estimate['breakdown']['input'], 0.002, places=6)
         self.assertAlmostEqual(estimate['breakdown']['output'], 0.004, places=6)
+        self.assertAlmostEqual(estimate['breakdown']['subtotal'], 0.006, places=6)
+        self.assertAlmostEqual(estimate['breakdown']['tax'], 0.0012, places=6)
+        self.assertAlmostEqual(estimate['total'], 0.0072, places=6)
 
     def test_cost_estimate_with_cached_tokens(self):
         estimate = _build_cost_estimate(
@@ -446,6 +449,7 @@ class EnrichmentCostEstimateTest(TestCase):
 
         self.assertAlmostEqual(estimate['breakdown']['input'], 0.003, places=6)
         self.assertAlmostEqual(estimate['breakdown']['cached_input'], 0.00025, places=6)
+        self.assertAlmostEqual(estimate['total'], 0.0039, places=6)
 
     def test_cost_estimate_with_web_search_calls(self):
         estimate = _build_cost_estimate(
@@ -458,6 +462,7 @@ class EnrichmentCostEstimateTest(TestCase):
 
         self.assertEqual(estimate['breakdown']['web_search_call_count'], 3)
         self.assertAlmostEqual(estimate['breakdown']['web_search_calls'], 0.03, places=6)
+        self.assertAlmostEqual(estimate['total'], 0.036, places=6)
 
     def test_counts_web_search_calls_from_output_items(self):
         payload = {

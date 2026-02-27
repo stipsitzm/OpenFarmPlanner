@@ -21,6 +21,7 @@ INPUT_COST_PER_MILLION = Decimal('2.00')
 CACHED_INPUT_COST_PER_MILLION = Decimal('0.50')
 OUTPUT_COST_PER_MILLION = Decimal('8.00')
 WEB_SEARCH_CALL_COST_USD = Decimal('0.01')
+TAX_RATE = Decimal('0.20')
 
 
 def _extract_usage(payload: dict[str, Any]) -> dict[str, int]:
@@ -87,7 +88,9 @@ def _build_cost_estimate(
     cached_input_cost = (Decimal(cached_input_tokens) / Decimal(1_000_000)) * CACHED_INPUT_COST_PER_MILLION
     output_cost = (Decimal(output_tokens) / Decimal(1_000_000)) * OUTPUT_COST_PER_MILLION
     web_search_cost = Decimal(web_search_call_count) * WEB_SEARCH_CALL_COST_USD
-    total_cost = input_cost + cached_input_cost + output_cost + web_search_cost
+    subtotal_cost = input_cost + cached_input_cost + output_cost + web_search_cost
+    tax_amount = subtotal_cost * TAX_RATE
+    total_cost = subtotal_cost + tax_amount
     return {
         'currency': 'USD',
         'total': float(total_cost),
@@ -98,6 +101,8 @@ def _build_cost_estimate(
             'output': float(output_cost),
             'web_search_calls': float(web_search_cost),
             'web_search_call_count': web_search_call_count,
+            'subtotal': float(subtotal_cost),
+            'tax': float(tax_amount),
         },
     }
 
