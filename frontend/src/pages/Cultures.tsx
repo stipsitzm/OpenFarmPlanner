@@ -706,7 +706,7 @@ function Cultures(): React.ReactElement {
     propagation_duration_days: 'form.propagationDurationDays',
     harvest_method: 'form.harvestMethod',
     expected_yield: 'form.expectedYield',
-    seed_packages: 'Seed packages',
+    seed_packages: 'form.seedPackagesLabel',
     distance_within_row_cm: 'form.distanceWithinRowCm',
     row_spacing_cm: 'form.rowSpacingCm',
     sowing_depth_cm: 'form.sowingDepthCm',
@@ -733,6 +733,73 @@ function Cultures(): React.ReactElement {
     return translated === translationKey ? toStartCase(field) : translated;
   };
 
+  const normalizeSuggestedSeedPackages = (value: unknown): Array<{
+    size_value: number;
+    size_unit: 'g' | 'seeds';
+    available: boolean;
+    article_number?: string;
+    source_url?: string;
+    evidence_text?: string;
+  }> => {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    const seen = new Set<string>();
+    return value
+      .map((item) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+
+        const raw = item as Record<string, unknown>;
+        const sizeValue = Number(raw.size_value);
+        const sizeUnit = raw.size_unit === 'g' || raw.size_unit === 'seeds'
+          ? raw.size_unit
+          : null;
+
+        if (!Number.isFinite(sizeValue) || sizeValue <= 0 || !sizeUnit) {
+          return null;
+        }
+
+        const key = `${sizeUnit}:${sizeValue}`;
+        if (seen.has(key)) {
+          return null;
+        }
+        seen.add(key);
+
+        return {
+          size_value: sizeValue,
+          size_unit: sizeUnit,
+          available: raw.available !== false,
+          article_number: typeof raw.article_number === 'string' ? raw.article_number : undefined,
+          source_url: typeof raw.source_url === 'string' ? raw.source_url : undefined,
+          evidence_text: typeof raw.evidence_text === 'string' ? raw.evidence_text : undefined,
+        };
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+  };
+
+  const formatSuggestionValue = (field: string, value: unknown): string => {
+    if (field === 'seed_packages') {
+      const packages = normalizeSuggestedSeedPackages(value);
+      if (!packages.length) {
+        return t('ai.noSuggestions');
+      }
+      return packages
+        .map((pkg) => `${pkg.size_value} ${pkg.size_unit}${pkg.available ? '' : ' (nicht verfügbar)'}`)
+        .join(', ');
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((entry) => String(entry)).join(', ');
+    }
+    if (value && typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    return String(value ?? '');
+  };
+
   const openEnrichmentDialog = (result: EnrichmentResult) => {
     setEnrichmentResult(result);
     setSelectedSuggestionFields(Object.keys(result.suggested_fields || {}));
@@ -743,6 +810,7 @@ function Cultures(): React.ReactElement {
   const cultureHasMissingEnrichmentFields = useCallback((culture: Culture): boolean => {
     const isMissing = (value: unknown): boolean => {
       if (value === null || value === undefined) return true;
+      if (Array.isArray(value)) return value.length === 0;
       if (typeof value === 'string') return value.trim().length === 0;
       return false;
     };
@@ -863,7 +931,12 @@ function Cultures(): React.ReactElement {
 
     const patch: Record<string, unknown> = {};
     selectedSuggestionFields.forEach((field) => {
-      patch[field] = enrichmentResult.suggested_fields[field]?.value;
+      const suggestionValue = enrichmentResult.suggested_fields[field]?.value;
+      if (field === 'seed_packages') {
+        patch[field] = normalizeSuggestedSeedPackages(suggestionValue);
+        return;
+      }
+      patch[field] = suggestionValue;
     });
 
     try {
@@ -1312,7 +1385,7 @@ function Cultures(): React.ReactElement {
                       onChange={() => toggleSuggestionField(field)}
                     />
                     <ListItemText
-                      primary={`${getEnrichmentFieldLabel(field)}: ${String(suggestion.value ?? '')}`}
+                      primary={`${getEnrichmentFieldLabel(field)}: ${formatSuggestionValue(field, suggestion.value)}`}
                       secondary={`${t('ai.confidence')}: ${(suggestion.confidence * 100).toFixed(0)}%`}
                     />
                   </Box>
