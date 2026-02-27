@@ -546,6 +546,67 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.assertIn('yield_per_plant_unusual', warning_codes)
 
 
+
+    @override_settings(AI_ENRICHMENT_MODEL='gpt-5-mini')
+    def test_provider_uses_configured_default_model(self):
+        provider = OpenAIResponsesProvider(api_key='test-key')
+        self.assertEqual(provider.model_name, 'gpt-5-mini')
+
+    @override_settings(AI_ENRICHMENT_MODEL='gpt-5')
+    def test_provider_model_is_overrideable_via_settings(self):
+        provider = OpenAIResponsesProvider(api_key='test-key')
+        self.assertEqual(provider.model_name, 'gpt-5')
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_numeric_suggestions_without_evidence_are_marked_needs_confirmation(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'growth_duration_days': {'value': 75, 'unit': 'days', 'confidence': 0.8},
+                },
+                'evidence': {},
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
+        self.assertIn('numeric_value_needs_confirmation', warning_codes)
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_spacing_seedrate_conflict_is_reported_as_error(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'distance_within_row_cm': {'value': 40, 'unit': 'cm', 'confidence': 0.8},
+                    'row_spacing_cm': {'value': 80, 'unit': 'cm', 'confidence': 0.8},
+                    'seed_rate_unit': {'value': 'seeds/m', 'unit': None, 'confidence': 0.9},
+                    'seed_rate_value': {'value': 500, 'unit': 'seeds/m', 'confidence': 0.9},
+                },
+                'evidence': {
+                    'distance_within_row_cm': [{'source_url': 'https://example.org/a', 'title': 'A', 'snippet': '40 cm'}],
+                    'row_spacing_cm': [{'source_url': 'https://example.org/b', 'title': 'B', 'snippet': '80 cm'}],
+                    'seed_rate_unit': [{'source_url': 'https://example.org/c', 'title': 'C', 'snippet': 'seeds/m'}],
+                    'seed_rate_value': [{'source_url': 'https://example.org/d', 'title': 'D', 'snippet': '500 seeds/m'}],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        error_codes = [error.get('code') for error in result['validation']['errors']]
+        self.assertIn('spacing_seedrate_conflict', error_codes)
+
 class EnrichmentConfigBehaviorTest(TestCase):
     def setUp(self):
         self.culture = Culture.objects.create(name='Möhre', variety='Nantes')

@@ -207,6 +207,7 @@ REST_FRAMEWORK = {
 # AI enrichment settings
 AI_ENRICHMENT_ENABLED = os.getenv('AI_ENRICHMENT_ENABLED', 'True').lower() in ('true', '1', 'yes')
 AI_ENRICHMENT_PROVIDER = _env_str('AI_ENRICHMENT_PROVIDER', _env_str('ENRICHMENT_PROVIDER', 'openai_responses'))
+AI_ENRICHMENT_MODEL = _env_str('AI_ENRICHMENT_MODEL', 'gpt-5-mini')
 OPENAI_API_KEY = _env_str('OPENAI_API_KEY', '')
 AI_ENRICHMENT_FAIL_FAST = os.getenv('AI_ENRICHMENT_FAIL_FAST', 'False' if DEBUG else 'True').lower() in ('true', '1', 'yes')
 AI_STARTUP_DIAGNOSTICS = os.getenv('AI_STARTUP_DIAGNOSTICS', 'True').lower() in ('true', '1', 'yes')
