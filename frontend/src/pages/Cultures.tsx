@@ -762,7 +762,7 @@ function Cultures(): React.ReactElement {
 
         const raw = item as Record<string, unknown>;
         const sizeValue = Number(raw.size_value);
-        const sizeUnit = raw.size_unit === 'g' || raw.size_unit === 'seeds'
+        const sizeUnit: 'g' | 'seeds' | null = raw.size_unit === 'g' || raw.size_unit === 'seeds'
           ? raw.size_unit
           : null;
 
