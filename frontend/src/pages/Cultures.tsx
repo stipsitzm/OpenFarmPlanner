@@ -132,6 +132,36 @@ function Cultures(): React.ReactElement {
     setSnackbar({ open: true, message, severity });
   }, []);
 
+  const normalizeSeedRateUnit = (value: unknown): Culture['seed_rate_unit'] => {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    const normalized = String(value).trim().toLowerCase();
+    if (!normalized) {
+      return null;
+    }
+
+    const map: Record<string, Culture['seed_rate_unit']> = {
+      g_per_m2: 'g_per_m2',
+      'g/m²': 'g_per_m2',
+      'g/m2': 'g_per_m2',
+      'g per m²': 'g_per_m2',
+      'g per m2': 'g_per_m2',
+      'g per plant': 'seeds_per_plant',
+      'seeds/m': 'seeds/m',
+      'seeds per meter': 'seeds/m',
+      'seeds per metre': 'seeds/m',
+      'korn / lfm': 'seeds/m',
+      seeds_per_plant: 'seeds_per_plant',
+      pcs_per_plant: 'seeds_per_plant',
+      'seeds per plant': 'seeds_per_plant',
+      'korn / pflanze': 'seeds_per_plant',
+    };
+
+    return map[normalized] ?? null;
+  };
+
   useEffect(() => {
     enrichmentLoadingRef.current = enrichmentLoading;
   }, [enrichmentLoading]);
@@ -301,6 +331,7 @@ function Cultures(): React.ReactElement {
       // Transform culture data for API: replace supplier object with supplier_id
       const dataToSend = {
         ...culture,
+        seed_rate_unit: normalizeSeedRateUnit(culture.seed_rate_unit),
         supplier_id: culture.supplier?.id || null,
         supplier_name: culture.supplier && !culture.supplier.id ? culture.supplier.name : undefined,
         supplier: undefined, // Remove supplier object from payload
@@ -936,11 +967,19 @@ function Cultures(): React.ReactElement {
         patch[field] = normalizeSuggestedSeedPackages(suggestionValue);
         return;
       }
+      if (field === 'seed_rate_unit') {
+        patch[field] = normalizeSeedRateUnit(suggestionValue);
+        return;
+      }
       patch[field] = suggestionValue;
     });
 
     try {
-      await cultureAPI.update(targetCulture.id!, { ...targetCulture, ...patch } as Culture);
+      await cultureAPI.update(targetCulture.id!, {
+        ...targetCulture,
+        seed_rate_unit: normalizeSeedRateUnit(targetCulture.seed_rate_unit),
+        ...patch,
+      } as Culture);
       await fetchCultures();
       showSnackbar(t('ai.applySuccess'), 'success');
       setEnrichmentDialogOpen(false);
