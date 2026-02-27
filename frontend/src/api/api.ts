@@ -13,6 +13,8 @@ import type {
   CultureHistoryEntry,
   MediaFileRef,
   RemainingAreaResponse,
+  EnrichmentResult,
+  EnrichmentBatchResult,
 } from './types';
 
 export const cultureAPI = {
@@ -48,6 +50,13 @@ export const cultureAPI = {
     skipped_count: number;
     errors: Array<{ index: number; error: unknown }>;
   }>('/cultures/import/apply/', data),
+  enrich: (id: number, mode: 'complete' | 'reresearch') =>
+    http.post<EnrichmentResult>(`/cultures/${id}/enrich/`, { mode }),
+  enrichBatch: (data?: { culture_ids?: number[]; limit?: number }) =>
+    http.post<EnrichmentBatchResult>('/cultures/enrich-batch/', {
+      mode: 'complete_all',
+      ...data,
+    }),
 };
 
 export const supplierAPI = {
@@ -143,6 +152,8 @@ export type {
   CultureHistoryEntry,
   MediaFileRef,
   RemainingAreaResponse,
+  EnrichmentResult,
+  EnrichmentBatchResult,
 };
 
 export default {

@@ -178,3 +178,57 @@ export interface CultureHistoryEntry {
   history_user: string | null;
   summary: string;
 }
+
+export interface EnrichmentFieldSuggestion {
+  value: unknown;
+  unit: string | null;
+  confidence: number;
+}
+
+export interface EnrichmentEvidenceEntry {
+  source_url: string;
+  title: string;
+  retrieved_at: string;
+  snippet?: string;
+}
+
+export interface EnrichmentValidationItem {
+  field: string;
+  code: string;
+  message: string;
+}
+
+export interface EnrichmentResult {
+  run_id: string;
+  culture_id: number;
+  mode: 'complete' | 'reresearch';
+  status: string;
+  started_at: string;
+  finished_at: string;
+  model: string;
+  provider: string;
+  search_provider: string;
+  suggested_fields: Record<string, EnrichmentFieldSuggestion>;
+  evidence: Record<string, EnrichmentEvidenceEntry[]>;
+  validation: {
+    warnings: EnrichmentValidationItem[];
+    errors: EnrichmentValidationItem[];
+  };
+}
+
+export interface EnrichmentBatchItem {
+  culture_id: number;
+  status: 'completed' | 'failed';
+  result?: EnrichmentResult;
+  error?: string;
+}
+
+export interface EnrichmentBatchResult {
+  run_id: string;
+  status: string;
+  total: number;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  items: EnrichmentBatchItem[];
+}
