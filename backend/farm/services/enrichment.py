@@ -211,6 +211,24 @@ def _missing_enrichment_fields(culture: Culture) -> list[str]:
     return [field for field in field_names if _is_missing_culture_field(culture, field)]
 
 
+
+
+def _append_unresolved_fields_hint(notes_markdown: str, unresolved_fields: list[str]) -> str:
+    """Append a German hint if some fields remain unresolved after research."""
+    cleaned_notes = notes_markdown.strip()
+    if not unresolved_fields:
+        return cleaned_notes
+
+    hint = (
+        "Hinweis: Für folgende Felder konnten keine verlässlichen Informationen ermittelt werden: "
+        f"{', '.join(unresolved_fields)}."
+    )
+    if hint in cleaned_notes:
+        return cleaned_notes
+    if not cleaned_notes:
+        return hint
+    return f"{cleaned_notes}\n\n{hint}"
+
 class EnrichmentError(Exception):
     """Raised when enrichment provider fails."""
 
@@ -566,12 +584,35 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
                 "message": f"Dropped AI suggestion '{normalized_value}' for {field_name}; expected one of {sorted(allowed_values)}.",
             })
 
+    unresolved_fields: list[str] = []
     if mode == "complete":
         suggested_fields = {
             field_name: suggestion
             for field_name, suggestion in suggested_fields.items()
             if field_name == 'notes' or _is_missing_culture_field(culture, field_name)
         }
+
+        unresolved_fields = [
+            field_name
+            for field_name in _missing_enrichment_fields(culture)
+            if field_name not in suggested_fields
+        ]
+        if unresolved_fields:
+            warnings = validation.setdefault("warnings", [])
+            if isinstance(warnings, list):
+                warnings.append({
+                    "field": "complete",
+                    "code": "fields_still_missing_after_research",
+                    "message": (
+                        "Für folgende Felder konnten keine verlässlichen Informationen ermittelt werden: "
+                        f"{', '.join(unresolved_fields)}."
+                    ),
+                })
+
+            notes_suggestion = suggested_fields.get('notes')
+            if isinstance(notes_suggestion, dict):
+                base_value = _coerce_text_value(notes_suggestion.get('value', ''), 'notes')
+                notes_suggestion['value'] = _append_unresolved_fields_hint(base_value, unresolved_fields)
 
     now = datetime.now(timezone.utc).isoformat()
     return {

@@ -213,7 +213,38 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.assertIn('## Dauerwerte\n- Neu Dauer.', notes)
         self.assertIn('## Ernte & Verwendung\n- Neu Ernte.', notes)
         self.assertNotIn('https://old.example', notes)
-        self.assertTrue(notes.rstrip().endswith('## Quellen\n- https://new.example'))
+        self.assertIn('## Quellen\n- https://new.example', notes)
+        self.assertIn('Hinweis: Für folgende Felder konnten keine verlässlichen Informationen ermittelt werden:', notes)
+
+
+
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_complete_mode_adds_warning_and_note_hint_for_unresolved_fields(self, post_mock):
+        self.culture.notes = "## Dauerwerte\n- Alt"
+        self.culture.growth_duration_days = 110
+        self.culture.save(update_fields=['notes', 'growth_duration_days'])
+
+        response = Mock()
+        response.status_code = 200
+        note_blocks = "## Dauerwerte\n- Neu\n\n## Quellen\n- https://example.org"
+        response.json.return_value = {
+            'output_text': json.dumps({
+                "suggested_fields": {
+                    "harvest_duration_days": {"value": 60, "unit": "days", "confidence": 0.8}
+                },
+                "evidence": {},
+                "validation": {"warnings": [], "errors": []},
+                "note_blocks": note_blocks,
+            }, ensure_ascii=False)
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
+        self.assertIn('fields_still_missing_after_research', warning_codes)
+        self.assertIn('Hinweis: Für folgende Felder konnten keine verlässlichen Informationen ermittelt werden:', result['suggested_fields']['notes']['value'])
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')

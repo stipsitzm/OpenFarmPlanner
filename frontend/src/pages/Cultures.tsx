@@ -121,6 +121,7 @@ function Cultures(): React.ReactElement {
   const [enrichmentResult, setEnrichmentResult] = useState<EnrichmentResult | null>(null);
   const [selectedSuggestionFields, setSelectedSuggestionFields] = useState<string[]>([]);
   const [enrichmentLoading, setEnrichmentLoading] = useState(false);
+  const [enrichAllConfirmOpen, setEnrichAllConfirmOpen] = useState(false);
   const enrichmentAbortControllerRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -682,6 +683,35 @@ function Cultures(): React.ReactElement {
     setEnrichmentDialogOpen(true);
   };
 
+
+  const cultureHasMissingEnrichmentFields = useCallback((culture: Culture): boolean => {
+    const isMissing = (value: unknown): boolean => {
+      if (value === null || value === undefined) return true;
+      if (typeof value === 'string') return value.trim().length === 0;
+      return false;
+    };
+
+    return [
+      culture.growth_duration_days,
+      culture.harvest_duration_days,
+      culture.propagation_duration_days,
+      culture.distance_within_row_cm,
+      culture.row_spacing_cm,
+      culture.sowing_depth_cm,
+      culture.seed_rate_value,
+      culture.seed_rate_unit,
+      culture.thousand_kernel_weight_g,
+      culture.nutrient_demand,
+      culture.cultivation_type,
+      culture.notes,
+    ].some(isMissing);
+  }, []);
+
+  const enrichableCultureIds = useMemo(
+    () => cultures.filter((culture) => culture.id && cultureHasMissingEnrichmentFields(culture)).map((culture) => culture.id as number),
+    [cultures, cultureHasMissingEnrichmentFields],
+  );
+
   const handleCancelEnrichment = useCallback(() => {
     enrichmentAbortControllerRef.current?.abort();
     enrichmentAbortControllerRef.current = null;
@@ -713,12 +743,19 @@ function Cultures(): React.ReactElement {
   };
 
   const handleEnrichAll = async () => {
+    if (enrichableCultureIds.length === 0) {
+      setEnrichAllConfirmOpen(false);
+      showSnackbar(t('ai.batchNoMissing'), 'success');
+      return;
+    }
+
     const controller = new AbortController();
     enrichmentAbortControllerRef.current = controller;
     setEnrichmentLoading(true);
+    setEnrichAllConfirmOpen(false);
     handleAiMenuClose();
     try {
-      const response = await cultureAPI.enrichBatch(undefined, controller.signal);
+      const response = await cultureAPI.enrichBatch({ culture_ids: enrichableCultureIds, limit: enrichableCultureIds.length }, controller.signal);
       showSnackbar(t('ai.batchDone', { ok: response.data.succeeded, failed: response.data.failed }), 'success');
       const first = response.data.items.find((item) => item.status === 'completed' && item.result)?.result;
       if (first) {
@@ -797,7 +834,7 @@ function Cultures(): React.ReactElement {
         void handleEnrichCurrent('reresearch');
       } else if (key === 'a') {
         event.preventDefault();
-        void handleEnrichAll();
+        setEnrichAllConfirmOpen(true);
       }
     };
 
@@ -928,7 +965,7 @@ function Cultures(): React.ReactElement {
               <ManageSearchIcon sx={{ mr: 1 }} fontSize="small" />
               {t('buttons.aiReresearch')}
             </MenuItem>
-            <MenuItem aria-label="Alle Kulturen vervollständigen (KI) (Alt+A)" onClick={() => void handleEnrichAll()} disabled={cultures.length === 0 || enrichmentLoading}>
+            <MenuItem aria-label="Alle Kulturen vervollständigen (KI) (Alt+A)" onClick={() => setEnrichAllConfirmOpen(true)} disabled={cultures.length === 0 || enrichmentLoading}>
               <PlaylistAddCheckIcon sx={{ mr: 1 }} fontSize="small" />
               {t('buttons.aiCompleteAll')}
             </MenuItem>
@@ -1134,6 +1171,19 @@ function Cultures(): React.ReactElement {
           >
             {importStatus === 'success' ? t('import.done') : t('import.start')}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={enrichAllConfirmOpen} onClose={() => setEnrichAllConfirmOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{t('ai.confirmAllTitle')}</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {t('ai.confirmAllText', { count: enrichableCultureIds.length })}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEnrichAllConfirmOpen(false)}>{t('buttons.aiClose')}</Button>
+          <Button variant="contained" onClick={() => void handleEnrichAll()}>{t('buttons.aiCompleteAll')}</Button>
         </DialogActions>
       </Dialog>
 
