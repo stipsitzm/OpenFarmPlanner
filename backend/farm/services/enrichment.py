@@ -15,6 +15,7 @@ from typing import Any
 import requests
 from django.conf import settings
 
+from farm.enum_normalization import normalize_choice_value as normalize_backend_choice_value
 from farm.models import Culture, EnrichmentAccountingRun
 
 INPUT_COST_PER_MILLION = Decimal('2.00')
@@ -170,53 +171,19 @@ def _coerce_text_value(value: object, field_name: str) -> str:
 
 def _normalize_choice_value(field_name: str, value: object) -> object:
     """Normalize AI-provided enum-like values into backend-compatible choices."""
-    text = _coerce_text_value(value, field_name).lower().strip()
-    if field_name == 'cultivation_type':
-        mapping = {
-            'direct_sowing': 'direct_sowing',
-            'direct sowing': 'direct_sowing',
-            'direktsaat': 'direct_sowing',
-            'sowing direct': 'direct_sowing',
-            'pre_cultivation': 'pre_cultivation',
-            'pre cultivation': 'pre_cultivation',
-            'anzucht': 'pre_cultivation',
-            'transplant': 'pre_cultivation',
-            'transplanting': 'pre_cultivation',
-            'bush bean': 'direct_sowing',
-            'buschbohne': 'direct_sowing',
-        }
-        return mapping.get(text, text)
-    if field_name == 'nutrient_demand':
-        mapping = {
-            'low': 'low',
-            'niedrig': 'low',
-            'medium': 'medium',
-            'mittel': 'medium',
-            'high': 'high',
-            'hoch': 'high',
-        }
-        return mapping.get(text, text)
-    if field_name == 'harvest_method':
-        mapping = {
-            'per_plant': 'per_plant',
-            'per plant': 'per_plant',
-            'pflanze': 'per_plant',
-            'pro pflanze': 'per_plant',
-            'per_sqm': 'per_sqm',
-            'per sqm': 'per_sqm',
-            'per m2': 'per_sqm',
-            'pro m2': 'per_sqm',
-            'pro m²': 'per_sqm',
-            'per square meter': 'per_sqm',
-        }
-        return mapping.get(text, text)
-    return value
+    try:
+        return normalize_backend_choice_value(field_name, value)
+    except Exception:
+        return value
 
 
 def _allowed_choice_values(field_name: str) -> set[str]:
     """Get allowed model choice values for enum-like Culture fields."""
+    if field_name == 'seed_rate_unit':
+        return {'g_per_m2', 'seeds/m', 'seeds_per_plant'}
+
     field = Culture._meta.get_field(field_name)
-    return {str(choice[0]) for choice in field.choices if choice[0] is not None}
+    return {str(choice[0]) for choice in (field.choices or []) if choice[0] is not None}
 
 
 
@@ -949,7 +916,7 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
             "confidence": 0.8 if provider.provider_name != "fallback" else 0.4,
         }
 
-    for field_name in ("cultivation_type", "nutrient_demand", "harvest_method"):
+    for field_name in ("cultivation_type", "nutrient_demand", "harvest_method", "seed_rate_unit"):
         if field_name not in suggested_fields or not isinstance(suggested_fields[field_name], dict):
             continue
 

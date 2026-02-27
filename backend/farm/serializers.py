@@ -3,6 +3,8 @@
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
+from .enum_normalization import normalize_seed_rate_unit
+
 from .models import (
     Bed,
     Culture,
@@ -285,25 +287,9 @@ class CultureSerializer(serializers.ModelSerializer):
         if value is None or value == '':
             return value
 
-        normalized = str(value).strip().lower()
-        mapping = {
-            'pcs_per_plant': 'seeds_per_plant',
-            'g/m²': 'g_per_m2',
-            'g/m2': 'g_per_m2',
-            'g per m²': 'g_per_m2',
-            'g per m2': 'g_per_m2',
-            'gramm pro quadratmeter': 'g_per_m2',
-            'gramm pro m²': 'g_per_m2',
-            'gramm pro m2': 'g_per_m2',
-            'gramm pro 100 quadratmeter': 'g_per_m2',
-            'seeds per meter': 'seeds/m',
-            'seeds per metre': 'seeds/m',
-            'korn / lfm': 'seeds/m',
-            'seeds per plant': 'seeds_per_plant',
-            'korn / pflanze': 'seeds_per_plant',
-            'g per plant': 'seeds_per_plant',
-        }
-        value = mapping.get(normalized, value)
+        normalized_value = normalize_seed_rate_unit(value)
+        if normalized_value:
+            value = normalized_value
 
         allowed_values = {'g_per_m2', 'seeds/m', 'seeds_per_plant'}
         if value not in allowed_values:
