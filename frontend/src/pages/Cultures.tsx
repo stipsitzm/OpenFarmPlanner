@@ -12,6 +12,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture, type EnrichmentResult } from '../api/api';
+import type { EnrichmentBatchResult, EnrichmentCostEstimate, EnrichmentUsage } from '../api/types';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
 import {
@@ -108,7 +109,7 @@ function Cultures(): React.ReactElement {
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
-    severity: 'success' | 'error';
+    severity: 'success' | 'error' | 'info';
   }>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
   const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
@@ -121,12 +122,13 @@ function Cultures(): React.ReactElement {
   const [enrichmentResult, setEnrichmentResult] = useState<EnrichmentResult | null>(null);
   const [selectedSuggestionFields, setSelectedSuggestionFields] = useState<string[]>([]);
   const [enrichmentLoading, setEnrichmentLoading] = useState(false);
+  const [enrichmentCostBanner, setEnrichmentCostBanner] = useState<string | null>(null);
   const [enrichAllConfirmOpen, setEnrichAllConfirmOpen] = useState(false);
   const enrichmentLoadingRef = useRef(false);
   const enrichmentAbortControllerRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
+  const showSnackbar = useCallback((message: string, severity: 'success' | 'error' | 'info') => {
     setSnackbar({ open: true, message, severity });
   }, []);
 
@@ -682,6 +684,20 @@ function Cultures(): React.ReactElement {
     setAiMenuAnchor(null);
   };
 
+
+  const formatUsd = (value: number): string => {
+    const decimals = value < 1 ? 3 : 2;
+    return `$${value.toFixed(decimals)}`;
+  };
+
+  const formatCostMessage = (costEstimate: EnrichmentCostEstimate, usage: EnrichmentUsage): string => (
+    `KI-Kosten (Schätzung): ${formatUsd(costEstimate.total)}  • Tokens: ${usage.inputTokens.toLocaleString('de-DE')} in / ${usage.outputTokens.toLocaleString('de-DE')} out  • Web-Suche: ${costEstimate.breakdown.web_search_call_count} Calls`
+  );
+
+  const formatBatchCostMessage = (result: EnrichmentBatchResult): string => (
+    `Batch KI-Kosten (Schätzung): ${formatUsd(result.costEstimate.total)} (${result.succeeded} Kulturen)`
+  );
+
   const openEnrichmentDialog = (result: EnrichmentResult) => {
     setEnrichmentResult(result);
     setSelectedSuggestionFields(Object.keys(result.suggested_fields || {}));
@@ -744,6 +760,9 @@ function Cultures(): React.ReactElement {
     try {
       const response = await cultureAPI.enrich(selectedCulture.id, mode, controller.signal);
       openEnrichmentDialog(response.data);
+      const costMessage = formatCostMessage(response.data.costEstimate, response.data.usage);
+      setEnrichmentCostBanner(costMessage);
+      showSnackbar(costMessage, 'info');
     } catch (error) {
       if (isApiRequestCanceled(error)) {
         return;
@@ -773,6 +792,9 @@ function Cultures(): React.ReactElement {
     try {
       const response = await cultureAPI.enrichBatch({ culture_ids: enrichableCultureIds, limit: enrichableCultureIds.length }, controller.signal);
       showSnackbar(t('ai.batchDone', { ok: response.data.succeeded, failed: response.data.failed }), 'success');
+      const costMessage = formatBatchCostMessage(response.data);
+      setEnrichmentCostBanner(costMessage);
+      showSnackbar(costMessage, 'info');
       const first = response.data.items.find((item) => item.status === 'completed' && item.result)?.result;
       if (first) {
         openEnrichmentDialog(first);
@@ -912,6 +934,12 @@ function Cultures(): React.ReactElement {
         />
       </Box>
       
+      {enrichmentCostBanner && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          {enrichmentCostBanner}
+        </Alert>
+      )}
+
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <CultureDetail
           cultures={cultures}

@@ -8,13 +8,123 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
+from decimal import Decimal
 from datetime import datetime, timezone
 from typing import Any
 
 import requests
 from django.conf import settings
 
-from farm.models import Culture
+from farm.models import Culture, EnrichmentAccountingRun
+
+INPUT_COST_PER_MILLION = Decimal('2.00')
+CACHED_INPUT_COST_PER_MILLION = Decimal('0.50')
+OUTPUT_COST_PER_MILLION = Decimal('8.00')
+WEB_SEARCH_CALL_COST_USD = Decimal('0.01')
+
+
+def _extract_usage(payload: dict[str, Any]) -> dict[str, int]:
+    """Extract token usage values from an OpenAI Responses payload.
+
+    :param payload: Raw JSON payload returned by the provider.
+    :return: Dictionary with input_tokens, cached_input_tokens and output_tokens.
+    """
+    usage = payload.get('usage') if isinstance(payload.get('usage'), dict) else {}
+    input_tokens = int(usage.get('input_tokens') or 0)
+    output_tokens = int(usage.get('output_tokens') or 0)
+    input_details = usage.get('input_tokens_details') if isinstance(usage.get('input_tokens_details'), dict) else {}
+    cached_input_tokens = int(input_details.get('cached_tokens') or 0)
+    if cached_input_tokens > input_tokens:
+        cached_input_tokens = input_tokens
+    return {
+        'input_tokens': input_tokens,
+        'cached_input_tokens': cached_input_tokens,
+        'output_tokens': output_tokens,
+    }
+
+
+def _count_web_search_calls(payload: dict[str, Any]) -> int:
+    """Count web search tool call items in a Responses payload.
+
+    :param payload: Raw JSON payload returned by the provider.
+    :return: Number of detected web search tool calls.
+    """
+    count = 0
+    for item in payload.get('output', []) or []:
+        if not isinstance(item, dict):
+            continue
+
+        item_type = str(item.get('type') or '').lower()
+        tool_type = str(item.get('tool_type') or item.get('name') or '').lower()
+        if 'web_search' in item_type or 'web_search' in tool_type:
+            count += 1
+            continue
+
+        if item_type in {'tool_call', 'tool'} and 'web' in tool_type and 'search' in tool_type:
+            count += 1
+    return count
+
+
+def _build_cost_estimate(
+    *,
+    input_tokens: int,
+    cached_input_tokens: int,
+    output_tokens: int,
+    web_search_call_count: int,
+    model: str,
+) -> dict[str, Any]:
+    """Build a deterministic USD cost estimate for one enrichment invocation.
+
+    :param input_tokens: Total model input tokens.
+    :param cached_input_tokens: Cached subset of input tokens.
+    :param output_tokens: Total model output tokens.
+    :param web_search_call_count: Number of web search tool calls.
+    :param model: Provider model name.
+    :return: Cost payload with total and breakdown.
+    """
+    non_cached_input_tokens = max(input_tokens - cached_input_tokens, 0)
+    input_cost = (Decimal(non_cached_input_tokens) / Decimal(1_000_000)) * INPUT_COST_PER_MILLION
+    cached_input_cost = (Decimal(cached_input_tokens) / Decimal(1_000_000)) * CACHED_INPUT_COST_PER_MILLION
+    output_cost = (Decimal(output_tokens) / Decimal(1_000_000)) * OUTPUT_COST_PER_MILLION
+    web_search_cost = Decimal(web_search_call_count) * WEB_SEARCH_CALL_COST_USD
+    total_cost = input_cost + cached_input_cost + output_cost + web_search_cost
+    return {
+        'currency': 'USD',
+        'total': float(total_cost),
+        'model': model,
+        'breakdown': {
+            'input': float(input_cost),
+            'cached_input': float(cached_input_cost),
+            'output': float(output_cost),
+            'web_search_calls': float(web_search_cost),
+            'web_search_call_count': web_search_call_count,
+        },
+    }
+
+
+def _persist_accounting_run(culture: Culture, mode: str, result: dict[str, Any]) -> None:
+    """Persist one accounting row for an enrichment invocation.
+
+    :param culture: Culture associated with the run.
+    :param mode: Enrichment mode used for this run.
+    :param result: Final enrichment response payload.
+    :return: None.
+    """
+    usage = result.get('usage') if isinstance(result.get('usage'), dict) else {}
+    cost_estimate = result.get('costEstimate') if isinstance(result.get('costEstimate'), dict) else {}
+    breakdown = cost_estimate.get('breakdown') if isinstance(cost_estimate.get('breakdown'), dict) else {}
+
+    EnrichmentAccountingRun.objects.create(
+        culture=culture,
+        mode=mode,
+        provider=str(result.get('provider') or ''),
+        model=str(result.get('model') or ''),
+        input_tokens=int(usage.get('inputTokens') or 0),
+        cached_input_tokens=int(usage.get('cachedInputTokens') or 0),
+        output_tokens=int(usage.get('outputTokens') or 0),
+        web_search_call_count=int(breakdown.get('web_search_call_count') or 0),
+        estimated_cost_usd=Decimal(str(cost_estimate.get('total') or 0)),
+    )
 
 
 def _coerce_setting_to_str(value: object, setting_name: str) -> str:
@@ -512,7 +622,18 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             raise EnrichmentError("OpenAI response was not valid JSON") from exc
 
         text = self._extract_text_payload(payload)
-        return self._parse_json_block(text)
+        parsed = self._parse_json_block(text)
+        usage = _extract_usage(payload)
+        web_search_call_count = _count_web_search_calls(payload)
+        parsed["usage"] = usage
+        parsed["cost_estimate"] = _build_cost_estimate(
+            input_tokens=usage['input_tokens'],
+            cached_input_tokens=usage['cached_input_tokens'],
+            output_tokens=usage['output_tokens'],
+            web_search_call_count=web_search_call_count,
+            model=self.model_name,
+        )
+        return parsed
 
 
 class FallbackHeuristicProvider(BaseEnrichmentProvider):
@@ -551,6 +672,18 @@ class FallbackHeuristicProvider(BaseEnrichmentProvider):
             },
             "note_blocks": note_block,
             "metadata": {"generated_at": now},
+            "usage": {
+                "input_tokens": 0,
+                "cached_input_tokens": 0,
+                "output_tokens": 0,
+            },
+            "cost_estimate": _build_cost_estimate(
+                input_tokens=0,
+                cached_input_tokens=0,
+                output_tokens=0,
+                web_search_call_count=0,
+                model=self.model_name,
+            ),
         }
 
 
@@ -685,6 +818,19 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
     evidence = raw.get("evidence", {})
     validation = raw.get("validation", {"warnings": [], "errors": []})
     note_blocks = raw.get("note_blocks", "")
+    raw_usage = raw.get('usage') if isinstance(raw.get('usage'), dict) else {}
+    usage = {
+        'inputTokens': int(raw_usage.get('input_tokens') or 0),
+        'cachedInputTokens': int(raw_usage.get('cached_input_tokens') or 0),
+        'outputTokens': int(raw_usage.get('output_tokens') or 0),
+    }
+    cost_estimate = raw.get('cost_estimate') if isinstance(raw.get('cost_estimate'), dict) else _build_cost_estimate(
+        input_tokens=usage['inputTokens'],
+        cached_input_tokens=usage['cachedInputTokens'],
+        output_tokens=usage['outputTokens'],
+        web_search_call_count=0,
+        model=provider.model_name,
+    )
 
     if not isinstance(suggested_fields, dict):
         raise EnrichmentError('Invalid suggested_fields payload type.')
@@ -780,7 +926,7 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
         notes_suggestion['value'] = build_note_appendix(base_value, rendered_sources)
 
     now = datetime.now(timezone.utc).isoformat()
-    return {
+    result = {
         "run_id": f"enr_{culture.id}_{int(datetime.now().timestamp())}",
         "culture_id": culture.id,
         "mode": mode,
@@ -794,4 +940,8 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
         "evidence": evidence,
         "structured_sources": structured_sources,
         "validation": validation,
+        "usage": usage,
+        "costEstimate": cost_estimate,
     }
+    _persist_accounting_run(culture, mode, result)
+    return result

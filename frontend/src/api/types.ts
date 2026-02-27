@@ -179,6 +179,25 @@ export interface CultureHistoryEntry {
   summary: string;
 }
 
+export interface EnrichmentUsage {
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+}
+
+export interface EnrichmentCostEstimate {
+  currency: 'USD';
+  total: number;
+  model: string;
+  breakdown: {
+    input: number;
+    cached_input: number;
+    output: number;
+    web_search_calls: number;
+    web_search_call_count: number;
+  };
+}
+
 export interface EnrichmentFieldSuggestion {
   value: unknown;
   unit: string | null;
@@ -221,6 +240,8 @@ export interface EnrichmentResult {
     warnings: EnrichmentValidationItem[];
     errors: EnrichmentValidationItem[];
   };
+  usage: EnrichmentUsage;
+  costEstimate: EnrichmentCostEstimate;
 }
 
 export interface EnrichmentBatchItem {
@@ -238,4 +259,6 @@ export interface EnrichmentBatchResult {
   succeeded: number;
   failed: number;
   items: EnrichmentBatchItem[];
+  usage: EnrichmentUsage;
+  costEstimate: EnrichmentCostEstimate;
 }

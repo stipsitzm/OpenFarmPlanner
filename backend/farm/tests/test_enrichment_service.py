@@ -5,8 +5,14 @@ from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
 
-from farm.models import Culture
-from farm.services.enrichment import EnrichmentError, OpenAIResponsesProvider, enrich_culture
+from farm.models import Culture, EnrichmentAccountingRun
+from farm.services.enrichment import (
+    EnrichmentError,
+    OpenAIResponsesProvider,
+    _build_cost_estimate,
+    _count_web_search_calls,
+    enrich_culture,
+)
 
 
 class OpenAIResponsesProviderParsingTest(TestCase):
@@ -86,6 +92,19 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         notes = result['suggested_fields']['notes']['value']
         self.assertEqual(notes.count('## Dauerwerte'), 1)
         self.assertEqual(notes.count('## Quellen'), 1)
+
+
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='fallback', OPENAI_API_KEY='')
+    def test_persists_accounting_run_for_each_invocation(self):
+        result = enrich_culture(self.culture, 'complete')
+
+        self.assertIn('usage', result)
+        self.assertIn('costEstimate', result)
+        self.assertEqual(EnrichmentAccountingRun.objects.count(), 1)
+        run = EnrichmentAccountingRun.objects.first()
+        self.assertEqual(run.culture_id, self.culture.id)
+        self.assertEqual(run.provider, 'fallback')
 
     @patch('farm.services.enrichment.requests.post')
     def test_complete_prompt_includes_missing_fields_only_instruction(self, post_mock):
@@ -400,3 +419,53 @@ class EnrichmentConfigBehaviorTest(TestCase):
         result = enrich_culture(self.culture, 'complete')
         warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
         self.assertIn('fallback_mode', warning_codes)
+
+
+class EnrichmentCostEstimateTest(TestCase):
+    def test_cost_estimate_without_cached_tokens(self):
+        estimate = _build_cost_estimate(
+            input_tokens=1000,
+            cached_input_tokens=0,
+            output_tokens=500,
+            web_search_call_count=0,
+            model='gpt-4.1',
+        )
+
+        self.assertEqual(estimate['currency'], 'USD')
+        self.assertAlmostEqual(estimate['breakdown']['input'], 0.002, places=6)
+        self.assertAlmostEqual(estimate['breakdown']['output'], 0.004, places=6)
+
+    def test_cost_estimate_with_cached_tokens(self):
+        estimate = _build_cost_estimate(
+            input_tokens=2000,
+            cached_input_tokens=500,
+            output_tokens=0,
+            web_search_call_count=0,
+            model='gpt-4.1',
+        )
+
+        self.assertAlmostEqual(estimate['breakdown']['input'], 0.003, places=6)
+        self.assertAlmostEqual(estimate['breakdown']['cached_input'], 0.00025, places=6)
+
+    def test_cost_estimate_with_web_search_calls(self):
+        estimate = _build_cost_estimate(
+            input_tokens=0,
+            cached_input_tokens=0,
+            output_tokens=0,
+            web_search_call_count=3,
+            model='gpt-4.1',
+        )
+
+        self.assertEqual(estimate['breakdown']['web_search_call_count'], 3)
+        self.assertAlmostEqual(estimate['breakdown']['web_search_calls'], 0.03, places=6)
+
+    def test_counts_web_search_calls_from_output_items(self):
+        payload = {
+            'output': [
+                {'type': 'web_search_call'},
+                {'type': 'tool_call', 'name': 'web_search_preview'},
+                {'type': 'message'},
+            ]
+        }
+
+        self.assertEqual(_count_web_search_calls(payload), 2)

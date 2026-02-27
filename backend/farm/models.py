@@ -525,6 +525,34 @@ class Culture(TimestampedModel):
         ]
 
 
+class EnrichmentAccountingRun(models.Model):
+    """Stores token usage and estimated costs per enrichment invocation."""
+
+    MODE_CHOICES = [
+        ('complete', 'Complete'),
+        ('reresearch', 'Re-research'),
+    ]
+
+    culture = models.ForeignKey(
+        Culture,
+        on_delete=models.CASCADE,
+        related_name='enrichment_accounting_runs',
+    )
+    mode = models.CharField(max_length=20, choices=MODE_CHOICES)
+    provider = models.CharField(max_length=50)
+    model = models.CharField(max_length=100)
+    input_tokens = models.IntegerField(default=0)
+    cached_input_tokens = models.IntegerField(default=0)
+    output_tokens = models.IntegerField(default=0)
+    web_search_call_count = models.IntegerField(default=0)
+    estimated_cost_usd = models.DecimalField(max_digits=12, decimal_places=6, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+
 class CultureRevision(models.Model):
     """Versioned snapshot of a culture record."""
 

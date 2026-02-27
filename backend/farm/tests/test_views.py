@@ -895,6 +895,49 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
         if response.status_code == 200:
             self.assertIn('suggested_fields', response.data)
 
+
+
+    @patch('farm.views.enrich_culture')
+    def test_enrich_single_contains_usage_and_cost_estimate(self, enrich_mock):
+        enrich_mock.return_value = {
+            'run_id': 'enr_1_1',
+            'culture_id': self.culture.id,
+            'mode': 'complete',
+            'status': 'completed',
+            'started_at': '2026-01-01T00:00:00Z',
+            'finished_at': '2026-01-01T00:00:01Z',
+            'model': 'gpt-4.1',
+            'provider': 'openai_responses',
+            'search_provider': 'web_search',
+            'suggested_fields': {},
+            'evidence': {},
+            'structured_sources': [],
+            'validation': {'warnings': [], 'errors': []},
+            'usage': {'inputTokens': 100, 'cachedInputTokens': 10, 'outputTokens': 20},
+            'costEstimate': {
+                'currency': 'USD',
+                'total': 0.012,
+                'model': 'gpt-4.1',
+                'breakdown': {
+                    'input': 0.001,
+                    'cached_input': 0.0001,
+                    'output': 0.0002,
+                    'web_search_calls': 0.01,
+                    'web_search_call_count': 1,
+                },
+            },
+        }
+
+        response = self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/',
+            {'mode': 'complete'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('usage', response.data)
+        self.assertIn('costEstimate', response.data)
+
     def test_enrich_batch_returns_summary(self):
         response = self.client.post(
             '/openfarmplanner/api/cultures/enrich-batch/',
