@@ -83,27 +83,6 @@ export function extractApiErrorMessage(
     }
   }
   
-  // Try generic detail extraction for non-400 errors (e.g. 503 with {detail: ...})
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data as unknown;
-    if (typeof data === 'string' && data.trim().length > 0) {
-      return data;
-    }
-    if (data && typeof data === 'object') {
-      const detail = (data as { detail?: unknown }).detail;
-      if (typeof detail === 'string' && detail.trim().length > 0) {
-        return detail;
-      }
-      const message = (data as { message?: unknown }).message;
-      if (typeof message === 'string' && message.trim().length > 0) {
-        return message;
-      }
-    }
-    if (error.message) {
-      return error.message;
-    }
-  }
-
   // Fallback to generic error message
   return fallbackMessage;
 }
