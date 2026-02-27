@@ -828,6 +828,14 @@ def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidenc
     accepted: list[dict[str, Any]] = []
     warnings = validation.setdefault('warnings', [])
 
+    def normalize_size_unit(raw_value: object) -> str:
+        unit = str(raw_value or '').strip().lower().replace('.', '')
+        if unit in {'g', 'gram', 'grams', 'gramm', 'gramme'}:
+            return 'g'
+        if unit in {'seed', 'seeds', 'korn', 'körner', 'koerner', 'samen', 'stk', 'stück', 'stueck', 'pcs', 'piece', 'pieces'}:
+            return 'seeds'
+        return ''
+
     for item in suggestions:
         if not isinstance(item, dict):
             continue
@@ -835,7 +843,7 @@ def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidenc
             size_value = float(item.get('size_value'))
         except (TypeError, ValueError):
             continue
-        size_unit = str(item.get('size_unit') or '').strip()
+        size_unit = normalize_size_unit(item.get('size_unit'))
         evidence_text = str(item.get('evidence_text') or '')
 
         if size_unit not in {'g', 'seeds'}:

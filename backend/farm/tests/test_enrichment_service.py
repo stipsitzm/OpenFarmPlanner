@@ -237,6 +237,37 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
+    def test_accepts_seed_package_unit_aliases(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'seed_packages': {
+                        'value': [
+                            {'size_value': 5, 'size_unit': 'gramm', 'available': True},
+                            {'size_value': 200, 'size_unit': 'korn', 'available': True},
+                        ],
+                        'unit': None,
+                        'confidence': 0.8,
+                    },
+                },
+                'evidence': {},
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        packages = result['suggested_fields']['seed_packages']['value']
+        self.assertEqual(len(packages), 2)
+        self.assertEqual(packages[0]['size_unit'], 'g')
+        self.assertEqual(packages[1]['size_unit'], 'seeds')
+
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
     def test_rejects_suspicious_fractional_seed_package_without_explicit_evidence(self, post_mock):
         response = Mock()
         response.status_code = 200
