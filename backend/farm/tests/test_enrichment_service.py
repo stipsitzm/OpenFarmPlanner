@@ -314,11 +314,11 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
-    def test_defaults_harvest_method_when_harvest_data_present(self, post_mock):
+    def test_defaults_harvest_method_when_harvest_duration_present(self, post_mock):
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
-            'output_text': '{"suggested_fields":{"expected_yield":{"value":0.8,"unit":"kg","confidence":0.8}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+            'output_text': '{"suggested_fields":{"harvest_duration_days":{"value":30,"unit":"days","confidence":0.8}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
         }
         post_mock.return_value = response
 
@@ -433,6 +433,118 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
         with self.assertRaises(EnrichmentError):
             enrich_culture(self.culture, 'complete')
+
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_expected_yield_requires_explicit_context(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'expected_yield': {'value': 12, 'unit': 'kg', 'confidence': 0.8},
+                },
+                'evidence': {
+                    'expected_yield': [
+                        {'source_url': 'https://example.org/yield', 'title': 'Yield', 'snippet': 'Typical yield around 12 kg'}
+                    ]
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        error_codes = [error.get('code') for error in result['validation']['errors']]
+        self.assertIn('yield_context_missing', error_codes)
+        self.assertNotIn('harvest_method', result['suggested_fields'])
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_missing_evidence_blocks_expected_yield_override(self, post_mock):
+        self.culture.expected_yield = 2.5
+        self.culture.harvest_method = 'per_sqm'
+        self.culture.save(update_fields=['expected_yield', 'harvest_method'])
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'expected_yield': {'value': 15, 'unit': 'kg/m²', 'confidence': 0.8},
+                },
+                'evidence': {
+                    'expected_yield': [
+                        {'source_url': '', 'title': 'No URL', 'snippet': ''}
+                    ]
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'reresearch')
+        self.assertNotIn('expected_yield', result['suggested_fields'])
+        error_codes = [error.get('code') for error in result['validation']['errors']]
+        self.assertIn('yield_evidence_missing_override_blocked', error_codes)
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_expected_yield_per_sqm_hard_limit_is_error(self, post_mock):
+        self.culture.harvest_method = 'per_sqm'
+        self.culture.save(update_fields=['harvest_method'])
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'expected_yield': {'value': 150, 'unit': 'kg/m²', 'confidence': 0.8},
+                },
+                'evidence': {
+                    'expected_yield': [
+                        {'source_url': 'https://example.org/yield', 'title': 'Yield', 'snippet': 'Claim: 150 kg/m²'}
+                    ]
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        error_codes = [error.get('code') for error in result['validation']['errors']]
+        self.assertIn('yield_per_sqm_impossible', error_codes)
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_expected_yield_per_plant_unusual_is_warning(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'expected_yield': {'value': 9, 'unit': 'kg/plant', 'confidence': 0.8},
+                    'harvest_method': {'value': 'per_plant', 'unit': None, 'confidence': 0.9},
+                },
+                'evidence': {
+                    'expected_yield': [
+                        {'source_url': 'https://example.org/yield', 'title': 'Yield', 'snippet': 'Claim: 9 kg per plant'}
+                    ]
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
+        self.assertIn('yield_per_plant_unusual', warning_codes)
+
 
 class EnrichmentConfigBehaviorTest(TestCase):
     def setUp(self):
