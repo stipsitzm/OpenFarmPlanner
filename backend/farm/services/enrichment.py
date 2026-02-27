@@ -923,7 +923,6 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
                     "model": self.model_name,
                     "tools": [{"type": "web_search_preview"}],
                     "input": self._build_prompt(context.culture, context.mode),
-                    "temperature": 0.2,
                 },
             )
         except requests.RequestException as exc:

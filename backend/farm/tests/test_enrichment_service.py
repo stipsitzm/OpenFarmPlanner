@@ -33,6 +33,22 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.assertIn('suggested_fields', parsed)
 
     @patch('farm.services.enrichment.requests.post')
+    def test_request_payload_omits_temperature_for_model_compatibility(self, post_mock):
+        provider = OpenAIResponsesProvider(api_key='test-key')
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        provider.enrich(Mock(culture=self.culture, mode='complete'))
+
+        call_kwargs = post_mock.call_args.kwargs
+        payload = call_kwargs.get('json', {})
+        self.assertNotIn('temperature', payload)
+
+    @patch('farm.services.enrichment.requests.post')
     def test_parses_message_content_when_output_text_empty(self, post_mock):
         provider = OpenAIResponsesProvider(api_key='test-key')
         response = Mock()
