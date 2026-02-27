@@ -122,12 +122,17 @@ function Cultures(): React.ReactElement {
   const [selectedSuggestionFields, setSelectedSuggestionFields] = useState<string[]>([]);
   const [enrichmentLoading, setEnrichmentLoading] = useState(false);
   const [enrichAllConfirmOpen, setEnrichAllConfirmOpen] = useState(false);
+  const enrichmentLoadingRef = useRef(false);
   const enrichmentAbortControllerRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
   }, []);
+
+  useEffect(() => {
+    enrichmentLoadingRef.current = enrichmentLoading;
+  }, [enrichmentLoading]);
 
   const updateSelectedCultureId = useCallback((id: number | undefined, source: 'internal' | 'query') => {
     selectionSyncSourceRef.current = source;
@@ -713,6 +718,9 @@ function Cultures(): React.ReactElement {
   );
 
   const handleCancelEnrichment = useCallback(() => {
+    if (!enrichmentLoadingRef.current) {
+      return;
+    }
     enrichmentAbortControllerRef.current?.abort();
     enrichmentAbortControllerRef.current = null;
     setEnrichmentLoading(false);
@@ -805,16 +813,19 @@ function Cultures(): React.ReactElement {
   };
   useEffect(() => {
     const onEscapeCancel = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || !enrichmentLoading) {
+      if (event.key !== 'Escape') {
+        return;
+      }
+      if (!enrichmentLoadingRef.current) {
         return;
       }
       event.preventDefault();
       handleCancelEnrichment();
     };
 
-    window.addEventListener('keydown', onEscapeCancel);
-    return () => window.removeEventListener('keydown', onEscapeCancel);
-  }, [enrichmentLoading, handleCancelEnrichment]);
+    window.addEventListener('keydown', onEscapeCancel, { capture: true });
+    return () => window.removeEventListener('keydown', onEscapeCancel, { capture: true });
+  }, [handleCancelEnrichment]);
 
   useEffect(() => {
     const onAiShortcut = (event: KeyboardEvent) => {

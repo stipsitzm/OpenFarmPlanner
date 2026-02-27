@@ -139,18 +139,20 @@ class OpenAIResponsesProviderParsingTest(TestCase):
     def test_complete_mode_keeps_only_missing_fields(self, post_mock):
         self.culture.growth_duration_days = 110
         self.culture.harvest_duration_days = None
-        self.culture.save(update_fields=['growth_duration_days', 'harvest_duration_days'])
+        self.culture.expected_yield = 1.5
+        self.culture.save(update_fields=['growth_duration_days', 'harvest_duration_days', 'expected_yield'])
 
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
-            'output_text': '{"suggested_fields":{"growth_duration_days":{"value":120,"unit":"days","confidence":0.8},"harvest_duration_days":{"value":60,"unit":"days","confidence":0.8}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+            'output_text': '{"suggested_fields":{"growth_duration_days":{"value":120,"unit":"days","confidence":0.8},"harvest_duration_days":{"value":60,"unit":"days","confidence":0.8},"expected_yield":{"value":2.1,"unit":"kg/m²","confidence":0.7}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
         }
         post_mock.return_value = response
 
         result = enrich_culture(self.culture, 'complete')
         self.assertNotIn('growth_duration_days', result['suggested_fields'])
         self.assertIn('harvest_duration_days', result['suggested_fields'])
+        self.assertNotIn('expected_yield', result['suggested_fields'])
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
