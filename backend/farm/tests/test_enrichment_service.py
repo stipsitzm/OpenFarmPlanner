@@ -234,6 +234,73 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.assertIn('variety_specific', source_types)
         self.assertIn('general_crop', source_types)
 
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_drops_package_size_when_evidence_supplier_mismatches(self, post_mock):
+        self.culture.seed_supplier = 'ReinSaat'
+        self.culture.save(update_fields=['seed_supplier'])
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'package_size_g': {'value': 250, 'unit': 'g', 'confidence': 0.8},
+                },
+                'evidence': {
+                    'package_size_g': [
+                        {
+                            'source_url': 'https://example.com/other-supplier',
+                            'title': 'Other Supplier Product Page',
+                            'retrieved_at': '2026-01-01T00:00:00Z',
+                            'snippet': 'Package contains 250 g',
+                        }
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        self.assertNotIn('package_size_g', result['suggested_fields'])
+        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
+        self.assertIn('package_size_supplier_mismatch', warning_codes)
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_keeps_package_size_when_evidence_matches_supplier(self, post_mock):
+        self.culture.seed_supplier = 'ReinSaat'
+        self.culture.save(update_fields=['seed_supplier'])
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'package_size_g': {'value': 500, 'unit': 'g', 'confidence': 0.9},
+                },
+                'evidence': {
+                    'package_size_g': [
+                        {
+                            'source_url': 'https://reinsaat.at/product/faraday',
+                            'title': 'Faraday – ReinSaat',
+                            'retrieved_at': '2026-01-01T00:00:00Z',
+                            'snippet': 'Packungsgröße 500 g',
+                        }
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        self.assertIn('package_size_g', result['suggested_fields'])
+
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
     def test_adds_density_plausibility_warning_when_seed_density_is_high(self, post_mock):

@@ -409,6 +409,49 @@ def _compute_plausibility_warnings(culture: Culture, suggested_fields: dict[str,
     return warnings
 
 
+
+
+def _normalize_supplier_text(value: str) -> str:
+    """Normalize supplier text for case-insensitive source matching.
+
+    :param value: Raw supplier or source text.
+    :return: Normalized alphanumeric text.
+    """
+    return re.sub(r'[^a-z0-9]+', ' ', value.lower()).strip()
+
+
+def _is_supplier_matching_evidence(supplier_name: str, evidence_entries: object) -> bool:
+    """Check whether evidence entries reference the expected supplier.
+
+    :param supplier_name: Expected supplier name from culture data.
+    :param evidence_entries: Evidence payload for a suggested field.
+    :return: True if supplier can be matched, otherwise False.
+    """
+    normalized_supplier = _normalize_supplier_text(supplier_name)
+    if not normalized_supplier:
+        return True
+    if not isinstance(evidence_entries, list):
+        return False
+
+    supplier_tokens = [token for token in normalized_supplier.split() if len(token) >= 3]
+    for entry in evidence_entries:
+        if not isinstance(entry, dict):
+            continue
+        source_text = ' '.join([
+            _coerce_text_value(entry.get('source_url', ''), 'evidence.source_url'),
+            _coerce_text_value(entry.get('title', ''), 'evidence.title'),
+            _coerce_text_value(entry.get('snippet', ''), 'evidence.snippet'),
+        ])
+        normalized_source = _normalize_supplier_text(source_text)
+        if not normalized_source:
+            continue
+        if normalized_supplier in normalized_source:
+            return True
+        if supplier_tokens and all(token in normalized_source for token in supplier_tokens):
+            return True
+
+    return False
+
 def _build_structured_sources(
     culture: Culture,
     evidence: dict[str, Any],
@@ -544,7 +587,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "evidence must be mapping field->list of {source_url,title,retrieved_at,snippet}. "
             "validation: warnings/errors arrays with field/code/message. "
             "note_blocks must be pure German markdown text only (no JSON objects, no code fences) and include sections: 'Dauerwerte', 'Aussaat & Abstände (zusammengefasst)', 'Ernte & Verwendung', 'Quellen'. "
-            "Use concise, factual, technical bullet points only. Avoid conversational or human-like wording. "
+            "Use concise, factual, technical bullet points only. Avoid conversational or human-like wording. If a supplier is provided, prioritize this exact supplier for variety/package data; do not use package sizes from other suppliers. "
             f"{requested_fields_text}"
             f"Culture identity: {identity}. Supplier: {supplier or 'unknown'}. Mode: {mode}. Existing values: {json.dumps(existing, ensure_ascii=False)}"
         )
@@ -872,6 +915,22 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
                 "code": "invalid_choice_dropped",
                 "message": f"Dropped AI suggestion '{normalized_value}' for {field_name}; expected one of {sorted(allowed_values)}.",
             })
+
+    supplier_name = (culture.supplier.name if culture.supplier else (culture.seed_supplier or '')).strip()
+    if supplier_name and 'package_size_g' in suggested_fields:
+        package_size_evidence = evidence.get('package_size_g')
+        if not _is_supplier_matching_evidence(supplier_name, package_size_evidence):
+            suggested_fields.pop('package_size_g', None)
+            warnings = validation.setdefault("warnings", [])
+            if isinstance(warnings, list):
+                warnings.append({
+                    'field': 'package_size_g',
+                    'code': 'package_size_supplier_mismatch',
+                    'message': (
+                        'Packungsgröße wurde verworfen, weil die Quellen nicht eindeutig '
+                        'zum eingetragenen Saatgutlieferanten passen.'
+                    ),
+                })
 
     unresolved_fields: list[str] = []
     if mode == "complete":
