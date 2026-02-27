@@ -89,7 +89,14 @@ export function validateCulture(
     errors.display_color = t('form.displayColorError');
   }
 
-  // Wenn expected_yield gesetzt ist, muss auch harvest_method gewählt sein
+  // If expected_yield is set, harvest_method must also be selected
+  if (
+    draft.expected_yield !== undefined &&
+    draft.expected_yield !== null &&
+    !draft.harvest_method
+  ) {
+    errors.harvest_method = t('form.harvestMethodRequired');
+  }
 
   if (
     (draft.seeding_requirement === undefined || draft.seeding_requirement === null) &&
