@@ -148,6 +148,13 @@ function Cultures(): React.ReactElement {
       'g/m2': 'g_per_m2',
       'g per m²': 'g_per_m2',
       'g per m2': 'g_per_m2',
+      'gramm pro quadratmeter': 'g_per_m2',
+      'gramm pro m²': 'g_per_m2',
+      'gramm pro m2': 'g_per_m2',
+      'gramm je quadratmeter': 'g_per_m2',
+      'gramm pro 100 quadratmeter': 'g_per_m2',
+      'g pro 100 m²': 'g_per_m2',
+      'g pro 100 m2': 'g_per_m2',
       'g per plant': 'seeds_per_plant',
       'seeds/m': 'seeds/m',
       'seeds per meter': 'seeds/m',
@@ -160,6 +167,63 @@ function Cultures(): React.ReactElement {
     };
 
     return map[normalized] ?? null;
+  };
+
+  const normalizeHarvestMethod = (value: unknown): Culture['harvest_method'] => {
+    if (value === null || value === undefined) return '';
+    const normalized = String(value).trim().toLowerCase();
+    const map: Record<string, Culture['harvest_method']> = {
+      per_plant: 'per_plant',
+      'per plant': 'per_plant',
+      'pro pflanze': 'per_plant',
+      per_sqm: 'per_sqm',
+      'per sqm': 'per_sqm',
+      'per m2': 'per_sqm',
+      'pro m²': 'per_sqm',
+    };
+    return map[normalized] ?? '';
+  };
+
+  const normalizeNutrientDemand = (value: unknown): Culture['nutrient_demand'] => {
+    if (value === null || value === undefined) return '';
+    const normalized = String(value).trim().toLowerCase();
+    const map: Record<string, Culture['nutrient_demand']> = {
+      low: 'low',
+      niedrig: 'low',
+      medium: 'medium',
+      mittel: 'medium',
+      high: 'high',
+      hoch: 'high',
+    };
+    return map[normalized] ?? '';
+  };
+
+  const normalizeCultivationType = (value: unknown): Culture['cultivation_type'] => {
+    if (value === null || value === undefined) return '';
+    const normalized = String(value).trim().toLowerCase();
+    const map: Record<string, Culture['cultivation_type']> = {
+      pre_cultivation: 'pre_cultivation',
+      'pre cultivation': 'pre_cultivation',
+      anzucht: 'pre_cultivation',
+      direct_sowing: 'direct_sowing',
+      'direct sowing': 'direct_sowing',
+      direktsaat: 'direct_sowing',
+    };
+    return map[normalized] ?? '';
+  };
+
+  const normalizeSeedingRequirementType = (value: unknown): Culture['seeding_requirement_type'] => {
+    if (value === null || value === undefined) return '';
+    const normalized = String(value).trim().toLowerCase();
+    const map: Record<string, Culture['seeding_requirement_type']> = {
+      per_sqm: 'per_sqm',
+      'per sqm': 'per_sqm',
+      'per m2': 'per_sqm',
+      per_plant: 'per_plant',
+      'per plant': 'per_plant',
+      'pro pflanze': 'per_plant',
+    };
+    return map[normalized] ?? '';
   };
 
   useEffect(() => {
@@ -332,6 +396,10 @@ function Cultures(): React.ReactElement {
       const dataToSend = {
         ...culture,
         seed_rate_unit: normalizeSeedRateUnit(culture.seed_rate_unit),
+        harvest_method: normalizeHarvestMethod(culture.harvest_method),
+        nutrient_demand: normalizeNutrientDemand(culture.nutrient_demand),
+        cultivation_type: normalizeCultivationType(culture.cultivation_type),
+        seeding_requirement_type: normalizeSeedingRequirementType(culture.seeding_requirement_type),
         supplier_id: culture.supplier?.id || null,
         supplier_name: culture.supplier && !culture.supplier.id ? culture.supplier.name : undefined,
         supplier: undefined, // Remove supplier object from payload
@@ -971,6 +1039,18 @@ function Cultures(): React.ReactElement {
         patch[field] = normalizeSeedRateUnit(suggestionValue);
         return;
       }
+      if (field === 'harvest_method') {
+        patch[field] = normalizeHarvestMethod(suggestionValue);
+        return;
+      }
+      if (field === 'nutrient_demand') {
+        patch[field] = normalizeNutrientDemand(suggestionValue);
+        return;
+      }
+      if (field === 'cultivation_type') {
+        patch[field] = normalizeCultivationType(suggestionValue);
+        return;
+      }
       patch[field] = suggestionValue;
     });
 
@@ -978,6 +1058,10 @@ function Cultures(): React.ReactElement {
       await cultureAPI.update(targetCulture.id!, {
         ...targetCulture,
         seed_rate_unit: normalizeSeedRateUnit(targetCulture.seed_rate_unit),
+        harvest_method: normalizeHarvestMethod(targetCulture.harvest_method),
+        nutrient_demand: normalizeNutrientDemand(targetCulture.nutrient_demand),
+        cultivation_type: normalizeCultivationType(targetCulture.cultivation_type),
+        seeding_requirement_type: normalizeSeedingRequirementType(targetCulture.seeding_requirement_type),
         ...patch,
       } as Culture);
       await fetchCultures();

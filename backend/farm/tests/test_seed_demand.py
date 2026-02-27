@@ -94,6 +94,24 @@ def test_seed_rate_unit_legacy_value_is_normalized(api_client: APIClient):
 
 
 @pytest.mark.django_db
+def test_seed_rate_unit_text_variant_is_normalized_to_g_per_m2(api_client: APIClient):
+    payload = {
+        'name': 'Spinach',
+        'variety': 'Matador',
+        'growth_duration_days': 55,
+        'harvest_duration_days': 10,
+        'harvest_method': 'per_sqm',
+        'seed_rate_value': 2,
+        'seed_rate_unit': 'Gramm pro 100 Quadratmeter',
+        'supplier_name': 'Test Supplier',
+    }
+
+    response = api_client.post('/openfarmplanner/api/cultures/', payload, format='json')
+    assert response.status_code == 201
+    assert response.json()['seed_rate_unit'] == 'g_per_m2'
+
+
+@pytest.mark.django_db
 def test_seed_demand_returns_warning_when_gram_conversion_missing(api_client: APIClient, bed: Bed):
     culture = Culture.objects.create(
         name='Radish',

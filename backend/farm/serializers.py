@@ -284,9 +284,26 @@ class CultureSerializer(serializers.ModelSerializer):
         """Normalize legacy seed rate unit values and validate supported units."""
         if value is None or value == '':
             return value
-        
-        if value == 'pcs_per_plant':
-            return 'seeds_per_plant'
+
+        normalized = str(value).strip().lower()
+        mapping = {
+            'pcs_per_plant': 'seeds_per_plant',
+            'g/m²': 'g_per_m2',
+            'g/m2': 'g_per_m2',
+            'g per m²': 'g_per_m2',
+            'g per m2': 'g_per_m2',
+            'gramm pro quadratmeter': 'g_per_m2',
+            'gramm pro m²': 'g_per_m2',
+            'gramm pro m2': 'g_per_m2',
+            'gramm pro 100 quadratmeter': 'g_per_m2',
+            'seeds per meter': 'seeds/m',
+            'seeds per metre': 'seeds/m',
+            'korn / lfm': 'seeds/m',
+            'seeds per plant': 'seeds_per_plant',
+            'korn / pflanze': 'seeds_per_plant',
+            'g per plant': 'seeds_per_plant',
+        }
+        value = mapping.get(normalized, value)
 
         allowed_values = {'g_per_m2', 'seeds/m', 'seeds_per_plant'}
         if value not in allowed_values:
