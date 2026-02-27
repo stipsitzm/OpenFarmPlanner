@@ -672,7 +672,13 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
 
     provider = get_enrichment_provider()
     context = EnrichmentContext(culture=culture, mode=mode)
-    raw = provider.enrich(context)
+    try:
+        raw = provider.enrich(context)
+    except EnrichmentError:
+        if provider.provider_name == 'fallback':
+            raise
+        provider = FallbackHeuristicProvider()
+        raw = provider.enrich(context)
 
     suggested_fields = raw.get("suggested_fields", {})
     evidence = raw.get("evidence", {})
