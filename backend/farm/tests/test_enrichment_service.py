@@ -172,19 +172,6 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         result = enrich_culture(self.culture, 'complete')
         self.assertEqual(result['suggested_fields']['harvest_method']['value'], 'per_sqm')
 
-    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
-    @patch('farm.services.enrichment.requests.post')
-    def test_warns_when_expected_yield_unit_missing(self, post_mock):
-        response = Mock()
-        response.status_code = 200
-        response.json.return_value = {
-            'output_text': '{"suggested_fields":{"expected_yield":{"value":0.8,"unit":"kg","confidence":0.8}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
-        }
-        post_mock.return_value = response
-
-        result = enrich_culture(self.culture, 'complete')
-        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
-        self.assertIn('expected_yield_unit_missing', warning_codes)
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
@@ -249,6 +236,21 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
         self.assertIn('density_out_of_range', warning_codes)
 
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_defaults_harvest_method_when_harvest_data_present(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{"expected_yield":{"value":0.8,"unit":"kg","confidence":0.8}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        self.assertEqual(result['suggested_fields']['harvest_method']['value'], 'per_sqm')
+        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
+        self.assertIn('harvest_method_defaulted', warning_codes)
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')

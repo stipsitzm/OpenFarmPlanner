@@ -181,11 +181,6 @@ class CultureSerializer(serializers.ModelSerializer):
         allow_null=True,
         help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds_per_plant')"
     )
-    expected_yield_unit = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        help_text="Unit for expected yield (e.g. kg_per_m2, kg_per_m, kg_per_plant)",
-    )
     sowing_calculation_safety_percent = serializers.FloatField(
         required=False,
         allow_null=True,
@@ -288,12 +283,6 @@ class CultureSerializer(serializers.ModelSerializer):
         if errors:
             raise serializers.ValidationError(errors)
 
-        expected_yield = attrs.get('expected_yield', getattr(self.instance, 'expected_yield', None) if self.instance else None)
-        expected_yield_unit = attrs.get('expected_yield_unit', getattr(self.instance, 'expected_yield_unit', '') if self.instance else '')
-        if expected_yield is not None and not expected_yield_unit:
-            errors['expected_yield_unit'] = 'Expected yield unit is required when expected yield is set.'
-        if expected_yield is None and expected_yield_unit:
-            errors['expected_yield'] = 'Expected yield value is required when expected yield unit is set.'
 
         harvest_duration_days = attrs.get('harvest_duration_days', getattr(self.instance, 'harvest_duration_days', None) if self.instance else None)
         harvest_method = attrs.get('harvest_method', getattr(self.instance, 'harvest_method', '') if self.instance else '')

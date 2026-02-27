@@ -46,23 +46,6 @@ export function HarvestSection({ formData, errors, onChange, t }: HarvestSection
           helperText={errors.expected_yield}
           slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
         />
-        <FormControl sx={fieldSx} error={Boolean(errors.expected_yield_unit)}>
-          <InputLabel>{t('form.expectedYieldUnit')}</InputLabel>
-          <Select
-            value={formData.expected_yield_unit || ''}
-            onChange={e => onChange('expected_yield_unit', e.target.value)}
-            label={t('form.expectedYieldUnit')}
-            fullWidth
-          >
-            <MenuItem value="">{t('noData')}</MenuItem>
-            <MenuItem value="kg_per_m2">kg/m²</MenuItem>
-            <MenuItem value="kg_per_m">kg/m</MenuItem>
-            <MenuItem value="kg_per_plant">kg/Pflanze</MenuItem>
-          </Select>
-          {errors.expected_yield_unit && (
-            <Typography variant="caption" color="error">{errors.expected_yield_unit}</Typography>
-          )}
-        </FormControl>
       </Box>
     </>
   );

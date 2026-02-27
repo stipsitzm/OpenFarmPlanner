@@ -27,11 +27,8 @@
 
 ## Recommended schema changes
 
-1. Add `expected_yield_unit` to `Culture` with controlled choices:
-   - `kg_per_m2`, `kg_per_m`, `kg_per_plant`.
-2. Keep `expected_yield` numeric value as-is for migration safety.
-3. Enforce consistency rules:
-   - `expected_yield` requires `expected_yield_unit`.
+1. Keep `expected_yield` as numeric kilograms (no additional unit field).
+2. Enforce consistency rules:
    - `harvest_duration_days` requires `harvest_method`.
    - `seeding_requirement_type` must be set iff `seeding_requirement` is set.
 
@@ -88,8 +85,7 @@ with deduplication by `(url, title)`.
 ## Test plan
 
 1. Enrichment service tests:
-- expected_yield without unit is rejected/warned.
-- expected_yield + unit normalization accepted.
+- expected_yield is treated as kilograms in UI and enrichment notes.
 - harvest_method fallback/validation in complete mode.
 - derived density warning (low/high).
 - TKG borderline warning + evidence-required flag.
@@ -104,6 +100,5 @@ with deduplication by `(url, title)`.
 
 ## Migration considerations
 
-- Add nullable `expected_yield_unit` with blank default to avoid breaking legacy rows.
-- Backfill can remain optional; unresolved rows can be flagged in UI/enrichment warnings.
-- No destructive migration required.
+- No schema migration required for yield units.
+- Keep existing numeric data backward-compatible.

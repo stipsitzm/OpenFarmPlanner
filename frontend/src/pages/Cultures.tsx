@@ -702,7 +702,6 @@ function Cultures(): React.ReactElement {
       culture.propagation_duration_days,
       culture.harvest_method,
       culture.expected_yield,
-      culture.expected_yield_unit,
       culture.package_size_g,
       culture.distance_within_row_cm,
       culture.row_spacing_cm,

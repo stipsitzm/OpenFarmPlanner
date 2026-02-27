@@ -34,7 +34,6 @@ export interface Culture {
   
   harvest_method?: 'per_plant' | 'per_sqm' | '';
   expected_yield?: number;
-  expected_yield_unit?: 'kg_per_m2' | 'kg_per_m' | 'kg_per_plant' | '';
   allow_deviation_delivery_weeks?: boolean;
   
   distance_within_row_cm?: number;

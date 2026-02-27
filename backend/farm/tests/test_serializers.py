@@ -52,18 +52,6 @@ class SerializerBranchCoverageTest(TestCase):
         self.assertEqual(culture.supplier.name_normalized, 'acme seeds')
         self.assertEqual(Supplier.objects.count(), 1)
 
-    def test_culture_serializer_requires_expected_yield_unit_when_expected_yield_set(self):
-        serializer = CultureSerializer(
-            data={
-                'name': 'Bohne',
-                'variety': 'Faraday',
-                'expected_yield': 0.8,
-                'harvest_method': 'per_sqm',
-            }
-        )
-
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('expected_yield_unit', serializer.errors)
 
     def test_planting_plan_serializer_rejects_invalid_area_input(self):
         serializer = PlantingPlanSerializer()

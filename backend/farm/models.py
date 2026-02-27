@@ -174,12 +174,6 @@ class Culture(TimestampedModel):
         ('per_sqm', 'Per m²'),
     ]
 
-    EXPECTED_YIELD_UNIT_CHOICES = [
-        ('kg_per_m2', 'kg/m²'),
-        ('kg_per_m', 'kg/m'),
-        ('kg_per_plant', 'kg/plant'),
-    ]
-    
     # Basic information.
     name = models.CharField(max_length=200)
     variety = models.CharField(max_length=200)
@@ -274,12 +268,6 @@ class Culture(TimestampedModel):
         blank=True,
         help_text="Expected yield amount"
     )
-    expected_yield_unit = models.CharField(
-        max_length=20,
-        choices=EXPECTED_YIELD_UNIT_CHOICES,
-        blank=True,
-        help_text="Unit for expected yield",
-    )
     allow_deviation_delivery_weeks = models.BooleanField(
         default=False,
         help_text="Allow deviating delivery weeks"
@@ -367,12 +355,6 @@ class Culture(TimestampedModel):
         
         if self.expected_yield is not None and self.expected_yield < 0:
             errors['expected_yield'] = 'Expected yield must be non-negative.'
-
-        if self.expected_yield is not None and not self.expected_yield_unit:
-            errors['expected_yield_unit'] = 'Expected yield unit is required when expected yield is set.'
-
-        if self.expected_yield is None and self.expected_yield_unit:
-            errors['expected_yield'] = 'Expected yield value is required when expected yield unit is set.'
 
         if self.harvest_duration_days is not None and not self.harvest_method:
             errors['harvest_method'] = 'Harvest method is required when harvest duration is set.'
