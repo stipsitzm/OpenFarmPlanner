@@ -169,6 +169,53 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         result = enrich_culture(self.culture, 'reresearch')
         self.assertIn('growth_duration_days', result['suggested_fields'])
 
+
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_complete_mode_keeps_notes_suggestion_even_when_notes_exist(self, post_mock):
+        self.culture.notes = "## Dauerwerte\n- Alt"
+        self.culture.save(update_fields=['notes'])
+
+        response = Mock()
+        response.status_code = 200
+        note_blocks = "## Dauerwerte\n- Neu\n\n## Quellen\n- https://example.org"
+        response.json.return_value = {
+            'output_text': json.dumps({"suggested_fields": {}, "evidence": {}, "validation": {"warnings": [], "errors": []}, "note_blocks": note_blocks}, ensure_ascii=False)
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        self.assertIn('notes', result['suggested_fields'])
+        self.assertIn('## Dauerwerte', result['suggested_fields']['notes']['value'])
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_notes_are_integrated_with_clean_section_order(self, post_mock):
+        self.culture.notes = (
+            "Hinweis: bestehend.\n\n"
+            "## Ernte & Verwendung\n- Alt Ernte.\n\n"
+            "## Quellen\n- https://old.example"
+        )
+        self.culture.save(update_fields=['notes'])
+
+        response = Mock()
+        response.status_code = 200
+        note_blocks = "## Dauerwerte\n- Neu Dauer.\n\n## Ernte & Verwendung\n- Neu Ernte.\n\n## Quellen\n- https://new.example"
+        response.json.return_value = {
+            'output_text': json.dumps({"suggested_fields": {}, "evidence": {}, "validation": {"warnings": [], "errors": []}, "note_blocks": note_blocks}, ensure_ascii=False)
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        notes = result['suggested_fields']['notes']['value']
+        self.assertTrue(notes.startswith('Hinweis: bestehend.'))
+        self.assertIn('## Dauerwerte\n- Neu Dauer.', notes)
+        self.assertIn('## Ernte & Verwendung\n- Neu Ernte.', notes)
+        self.assertNotIn('https://old.example', notes)
+        self.assertTrue(notes.rstrip().endswith('## Quellen\n- https://new.example'))
+
+
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
     def test_invalid_suggested_fields_type_raises_clear_error(self, post_mock):

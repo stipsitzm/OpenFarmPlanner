@@ -207,7 +207,6 @@ def _missing_enrichment_fields(culture: Culture) -> list[str]:
         'thousand_kernel_weight_g',
         'nutrient_demand',
         'cultivation_type',
-        'notes',
     ]
     return [field for field in field_names if _is_missing_culture_field(culture, field)]
 
@@ -408,15 +407,101 @@ class FallbackHeuristicProvider(BaseEnrichmentProvider):
         }
 
 
+def _parse_notes_sections(markdown_text: str) -> tuple[str, dict[str, str], list[tuple[str, str]]]:
+    """Parse markdown into intro text, known sections and other sections."""
+    known_titles = {
+        'dauerwerte': 'Dauerwerte',
+        'aussaat & abstände (zusammengefasst)': 'Aussaat & Abstände (zusammengefasst)',
+        'ernte & verwendung': 'Ernte & Verwendung',
+        'quellen': 'Quellen',
+    }
+
+    intro_lines: list[str] = []
+    known_sections: dict[str, list[str]] = {title: [] for title in known_titles.values()}
+    other_sections: list[tuple[str, list[str]]] = []
+
+    current_title: str | None = None
+    current_lines = intro_lines
+
+    for line in markdown_text.splitlines():
+        heading = re.match(r"^##+\s+(.*?)\s*$", line.strip())
+        if heading:
+            raw_title = heading.group(1).strip()
+            normalized_title = raw_title.lower()
+            canonical_title = known_titles.get(normalized_title)
+            if canonical_title:
+                current_title = canonical_title
+                current_lines = known_sections[canonical_title]
+            else:
+                current_title = raw_title
+                existing = next((item for item in other_sections if item[0] == raw_title), None)
+                if existing is None:
+                    bucket: list[str] = []
+                    other_sections.append((raw_title, bucket))
+                    current_lines = bucket
+                else:
+                    current_lines = existing[1]
+            continue
+        current_lines.append(line)
+
+    intro = "\n".join(intro_lines).strip()
+    known = {title: "\n".join(lines).strip() for title, lines in known_sections.items() if "\n".join(lines).strip()}
+    others = [(title, "\n".join(lines).strip()) for title, lines in other_sections if "\n".join(lines).strip()]
+    return intro, known, others
+
+
+def _combine_text_blocks(*blocks: str) -> str:
+    """Combine markdown blocks while removing exact duplicates."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for block in blocks:
+        cleaned = block.strip()
+        if not cleaned or cleaned in seen:
+            continue
+        seen.add(cleaned)
+        out.append(cleaned)
+    return "\n\n".join(out).strip()
+
+
 def build_note_appendix(base_notes: object, note_blocks: object) -> str:
-    """Append generated notes block to existing notes in markdown."""
+    """Integrate generated notes into a clean, sectioned markdown structure."""
     base = _coerce_text_value(base_notes, 'notes')
     addition = _note_blocks_to_markdown(note_blocks)
     if not addition:
         return base
     if not base:
         return addition
-    return f"{base}\n\n---\n\n{addition}"
+
+    base_intro, base_known, base_other = _parse_notes_sections(base)
+    add_intro, add_known, add_other = _parse_notes_sections(addition)
+
+    ordered_known_titles = [
+        'Dauerwerte',
+        'Aussaat & Abstände (zusammengefasst)',
+        'Ernte & Verwendung',
+    ]
+
+    merged_parts: list[str] = []
+    intro = _combine_text_blocks(base_intro, add_intro)
+    if intro:
+        merged_parts.append(intro)
+
+    for title in ordered_known_titles:
+        merged_content = add_known.get(title) or base_known.get(title, '')
+        if merged_content:
+            merged_parts.append(f"## {title}\n{merged_content}")
+
+    other_map: dict[str, str] = {title: content for title, content in base_other}
+    for title, content in add_other:
+        other_map[title] = content
+    for title, content in other_map.items():
+        merged_parts.append(f"## {title}\n{content}")
+
+    sources_content = add_known.get('Quellen') or base_known.get('Quellen', '')
+    if sources_content:
+        merged_parts.append(f"## Quellen\n{sources_content}")
+
+    return "\n\n".join(part.strip() for part in merged_parts if part.strip()).strip()
 
 
 def get_enrichment_provider() -> BaseEnrichmentProvider:
@@ -485,7 +570,7 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
         suggested_fields = {
             field_name: suggestion
             for field_name, suggestion in suggested_fields.items()
-            if _is_missing_culture_field(culture, field_name)
+            if field_name == 'notes' or _is_missing_culture_field(culture, field_name)
         }
 
     now = datetime.now(timezone.utc).isoformat()
