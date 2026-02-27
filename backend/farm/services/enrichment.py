@@ -115,9 +115,14 @@ def _note_blocks_to_markdown(note_blocks: object) -> str:
     """Convert provider note blocks to clean markdown (avoid raw JSON artifacts)."""
     def render_blocks(blocks: list[dict[str, Any]]) -> str:
         parts: list[str] = []
+        seen: set[tuple[str, str]] = set()
         for block in blocks:
             title = _coerce_text_value(block.get('title', ''), 'note_blocks.title').strip()
             content = _coerce_text_value(block.get('content', ''), 'note_blocks.content').strip()
+            key = (title, content)
+            if key in seen:
+                continue
+            seen.add(key)
             if title:
                 heading = title if title.startswith('#') else f"## {title}"
                 parts.append(heading)
@@ -125,19 +130,34 @@ def _note_blocks_to_markdown(note_blocks: object) -> str:
                 parts.append(content)
         return "\n\n".join(part for part in parts if part).strip()
 
+    def parse_blocks_from_text(text: str) -> list[dict[str, Any]]:
+        stripped = text.strip()
+        if not stripped:
+            return []
+        parsed = _extract_json_objects(stripped)
+        if parsed:
+            return parsed
+
+        fenced = re.search(r"```(?:json)?\s*(.*?)\s*```", stripped, re.DOTALL)
+        if fenced:
+            return _extract_json_objects(fenced.group(1).strip())
+        return []
+
     if note_blocks is None:
         return ''
     if isinstance(note_blocks, str):
-        stripped = note_blocks.strip()
-        if not stripped:
+        blocks = parse_blocks_from_text(note_blocks)
+        if not note_blocks.strip():
             return ''
-        parsed = _extract_json_objects(stripped)
-        markdown = render_blocks(parsed)
-        return markdown or stripped
+        markdown = render_blocks(blocks)
+        return markdown or note_blocks.strip()
     if isinstance(note_blocks, dict):
         return render_blocks([note_blocks])
     if isinstance(note_blocks, list):
-        dict_blocks = [item for item in note_blocks if isinstance(item, dict)]
+        dict_blocks: list[dict[str, Any]] = [item for item in note_blocks if isinstance(item, dict)]
+        for item in note_blocks:
+            if isinstance(item, str):
+                dict_blocks.extend(parse_blocks_from_text(item))
         markdown = render_blocks(dict_blocks)
         if markdown:
             return markdown
@@ -171,6 +191,25 @@ def _is_missing_culture_field(culture: Culture, suggested_field: str) -> bool:
         return metric_map[suggested_field] is None
 
     return True
+
+
+def _missing_enrichment_fields(culture: Culture) -> list[str]:
+    """List enrichment fields that are still empty for complete mode."""
+    field_names = [
+        'growth_duration_days',
+        'harvest_duration_days',
+        'propagation_duration_days',
+        'distance_within_row_cm',
+        'row_spacing_cm',
+        'sowing_depth_cm',
+        'seed_rate_value',
+        'seed_rate_unit',
+        'thousand_kernel_weight_g',
+        'nutrient_demand',
+        'cultivation_type',
+        'notes',
+    ]
+    return [field for field in field_names if _is_missing_culture_field(culture, field)]
 
 
 class EnrichmentError(Exception):
@@ -226,6 +265,13 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "seed_rate_unit": culture.seed_rate_unit,
             "notes": culture.notes,
         }
+        missing_fields = _missing_enrichment_fields(culture)
+        requested_fields_text = (
+            f"In mode 'complete', ONLY research and suggest these missing fields: {', '.join(missing_fields) or 'none'}. "
+            "If no fields are missing, keep suggested_fields empty and do not invent replacements. "
+            if mode == 'complete'
+            else "In mode 'reresearch', you may suggest improvements for all supported fields. "
+        )
 
         return (
             "You are a horticulture research assistant. Use web search evidence. "
@@ -238,6 +284,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "validation: warnings/errors arrays with field/code/message. "
             "note_blocks must be pure German markdown text only (no JSON objects, no code fences) and include sections: 'Dauerwerte', 'Aussaat & Abstände (zusammengefasst)', 'Ernte & Verwendung', 'Quellen'. "
             "Use concise, factual, technical bullet points only. Avoid conversational or human-like wording. "
+            f"{requested_fields_text}"
             f"Culture identity: {identity}. Supplier: {supplier or 'unknown'}. Mode: {mode}. Existing values: {json.dumps(existing, ensure_ascii=False)}"
         )
 

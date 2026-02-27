@@ -1,3 +1,4 @@
+import json
 from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
@@ -63,6 +64,44 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         result = enrich_culture(self.culture, 'complete')
         self.assertIn('notes', result['suggested_fields'])
         self.assertIn('## Quellen', result['suggested_fields']['notes']['value'])
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_note_blocks_stringified_json_blocks_are_rendered_and_deduplicated(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        duplicated_blocks = (
+            '{"title":"Dauerwerte","content":"- Reifezeit: ca. 110 Tage."}'
+            ' {"title":"Dauerwerte","content":"- Reifezeit: ca. 110 Tage."}'
+            ' {"title":"Quellen","content":"- https://example.org"}'
+        )
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":' + json.dumps(duplicated_blocks) + '}'
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        notes = result['suggested_fields']['notes']['value']
+        self.assertEqual(notes.count('## Dauerwerte'), 1)
+        self.assertEqual(notes.count('## Quellen'), 1)
+
+    @patch('farm.services.enrichment.requests.post')
+    def test_complete_prompt_includes_missing_fields_only_instruction(self, post_mock):
+        self.culture.growth_duration_days = 110
+        self.culture.save(update_fields=['growth_duration_days'])
+        provider = OpenAIResponsesProvider(api_key='test-key')
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        provider.enrich(Mock(culture=self.culture, mode='complete'))
+
+        sent_input = post_mock.call_args.kwargs['json']['input']
+        self.assertIn("ONLY research and suggest these missing fields", sent_input)
+        self.assertNotIn('growth_duration_days', sent_input.split("ONLY research and suggest these missing fields:", 1)[1].split('.', 1)[0])
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
