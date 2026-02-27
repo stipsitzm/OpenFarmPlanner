@@ -89,6 +89,90 @@ def _allowed_choice_values(field_name: str) -> set[str]:
     field = Culture._meta.get_field(field_name)
     return {str(choice[0]) for choice in field.choices if choice[0] is not None}
 
+
+
+def _extract_json_objects(text: str) -> list[dict[str, Any]]:
+    """Extract JSON objects from free text, best-effort."""
+    decoder = json.JSONDecoder()
+    idx = 0
+    items: list[dict[str, Any]] = []
+    while idx < len(text):
+        start = text.find('{', idx)
+        if start == -1:
+            break
+        try:
+            obj, end = decoder.raw_decode(text[start:])
+        except json.JSONDecodeError:
+            idx = start + 1
+            continue
+        if isinstance(obj, dict):
+            items.append(obj)
+        idx = start + end
+    return items
+
+
+def _note_blocks_to_markdown(note_blocks: object) -> str:
+    """Convert provider note blocks to clean markdown (avoid raw JSON artifacts)."""
+    def render_blocks(blocks: list[dict[str, Any]]) -> str:
+        parts: list[str] = []
+        for block in blocks:
+            title = _coerce_text_value(block.get('title', ''), 'note_blocks.title').strip()
+            content = _coerce_text_value(block.get('content', ''), 'note_blocks.content').strip()
+            if title:
+                heading = title if title.startswith('#') else f"## {title}"
+                parts.append(heading)
+            if content:
+                parts.append(content)
+        return "\n\n".join(part for part in parts if part).strip()
+
+    if note_blocks is None:
+        return ''
+    if isinstance(note_blocks, str):
+        stripped = note_blocks.strip()
+        if not stripped:
+            return ''
+        parsed = _extract_json_objects(stripped)
+        markdown = render_blocks(parsed)
+        return markdown or stripped
+    if isinstance(note_blocks, dict):
+        return render_blocks([note_blocks])
+    if isinstance(note_blocks, list):
+        dict_blocks = [item for item in note_blocks if isinstance(item, dict)]
+        markdown = render_blocks(dict_blocks)
+        if markdown:
+            return markdown
+        return _coerce_text_value(note_blocks, 'note_blocks')
+    return _coerce_text_value(note_blocks, 'note_blocks')
+
+
+def _is_missing_culture_field(culture: Culture, suggested_field: str) -> bool:
+    """Return True if a suggestion targets an empty value in the current culture."""
+    direct_map = {
+        'growth_duration_days': culture.growth_duration_days,
+        'harvest_duration_days': culture.harvest_duration_days,
+        'propagation_duration_days': culture.propagation_duration_days,
+        'seed_rate_value': culture.seed_rate_value,
+        'seed_rate_unit': culture.seed_rate_unit,
+        'thousand_kernel_weight_g': culture.thousand_kernel_weight_g,
+        'nutrient_demand': culture.nutrient_demand,
+        'cultivation_type': culture.cultivation_type,
+        'notes': culture.notes,
+    }
+    if suggested_field in direct_map:
+        value = direct_map[suggested_field]
+        return value is None or (isinstance(value, str) and not value.strip())
+
+    metric_map = {
+        'distance_within_row_cm': culture.distance_within_row_m,
+        'row_spacing_cm': culture.row_spacing_m,
+        'sowing_depth_cm': culture.sowing_depth_m,
+    }
+    if suggested_field in metric_map:
+        return metric_map[suggested_field] is None
+
+    return True
+
+
 class EnrichmentError(Exception):
     """Raised when enrichment provider fails."""
 
@@ -152,7 +236,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "Each suggested field must contain value, unit, confidence. For cultivation_type, only output one of: pre_cultivation, direct_sowing. For nutrient_demand, only output one of: low, medium, high. Do not output labels, translations, or crop-kind words for enum fields. "
             "evidence must be mapping field->list of {source_url,title,retrieved_at,snippet}. "
             "validation: warnings/errors arrays with field/code/message. "
-            "note_blocks must include German markdown sections: 'Dauerwerte', 'Aussaat & Abstände (zusammengefasst)', 'Ernte & Verwendung', 'Quellen'. "
+            "note_blocks must be pure German markdown text only (no JSON objects, no code fences) and include sections: 'Dauerwerte', 'Aussaat & Abstände (zusammengefasst)', 'Ernte & Verwendung', 'Quellen'. "
             "Use concise, factual, technical bullet points only. Avoid conversational or human-like wording. "
             f"Culture identity: {identity}. Supplier: {supplier or 'unknown'}. Mode: {mode}. Existing values: {json.dumps(existing, ensure_ascii=False)}"
         )
@@ -280,7 +364,7 @@ class FallbackHeuristicProvider(BaseEnrichmentProvider):
 def build_note_appendix(base_notes: object, note_blocks: object) -> str:
     """Append generated notes block to existing notes in markdown."""
     base = _coerce_text_value(base_notes, 'notes')
-    addition = _coerce_text_value(note_blocks, 'note_blocks')
+    addition = _note_blocks_to_markdown(note_blocks)
     if not addition:
         return base
     if not base:
@@ -349,6 +433,13 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
                 "code": "invalid_choice_dropped",
                 "message": f"Dropped AI suggestion '{normalized_value}' for {field_name}; expected one of {sorted(allowed_values)}.",
             })
+
+    if mode == "complete":
+        suggested_fields = {
+            field_name: suggestion
+            for field_name, suggestion in suggested_fields.items()
+            if _is_missing_culture_field(culture, field_name)
+        }
 
     now = datetime.now(timezone.utc).isoformat()
     return {

@@ -62,7 +62,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
         result = enrich_culture(self.culture, 'complete')
         self.assertIn('notes', result['suggested_fields'])
-        self.assertIn('"title": "Quellen"', result['suggested_fields']['notes']['value'])
+        self.assertIn('## Quellen', result['suggested_fields']['notes']['value'])
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
@@ -92,6 +92,43 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         result = enrich_culture(self.culture, 'complete')
         self.assertNotIn('cultivation_type', result['suggested_fields'])
         self.assertTrue(any(w.get('code') == 'invalid_choice_dropped' for w in result['validation']['warnings']))
+
+
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_complete_mode_keeps_only_missing_fields(self, post_mock):
+        self.culture.growth_duration_days = 110
+        self.culture.harvest_duration_days = None
+        self.culture.save(update_fields=['growth_duration_days', 'harvest_duration_days'])
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{"growth_duration_days":{"value":120,"unit":"days","confidence":0.8},"harvest_duration_days":{"value":60,"unit":"days","confidence":0.8}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        self.assertNotIn('growth_duration_days', result['suggested_fields'])
+        self.assertIn('harvest_duration_days', result['suggested_fields'])
+
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_reresearch_mode_keeps_existing_field_suggestions(self, post_mock):
+        self.culture.growth_duration_days = 110
+        self.culture.save(update_fields=['growth_duration_days'])
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{"growth_duration_days":{"value":120,"unit":"days","confidence":0.8}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'reresearch')
+        self.assertIn('growth_duration_days', result['suggested_fields'])
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
