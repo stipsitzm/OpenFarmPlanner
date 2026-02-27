@@ -334,19 +334,316 @@ def _append_unresolved_fields_hint(notes_markdown: str, unresolved_fields: list[
     return f"{cleaned_notes}\n\n{hint}"
 
 
+def _number_value_from_suggestion(suggested_fields: dict[str, Any], field_name: str, fallback: float | None) -> float | None:
+    """Read a numeric suggestion value with fallback to persisted value."""
+    suggestion = suggested_fields.get(field_name)
+    if isinstance(suggestion, dict):
+        raw = suggestion.get('value')
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return fallback
+    return fallback
+
+
+def _resolve_yield_context(culture: Culture, suggested_fields: dict[str, Any]) -> str:
+    """Resolve expected yield context from suggestions or persisted harvest_method."""
+    harvest_method_suggestion = suggested_fields.get('harvest_method')
+    if isinstance(harvest_method_suggestion, dict):
+        return _coerce_text_value(harvest_method_suggestion.get('value'), 'harvest_method').strip()
+    return (culture.harvest_method or '').strip()
+
+
+def _has_usable_yield_evidence(evidence: dict[str, Any]) -> bool:
+    """Return True when expected_yield evidence includes URL and claim summary."""
+    entries = evidence.get('expected_yield')
+    if not isinstance(entries, list):
+        return False
+
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        url = _coerce_text_value(item.get('source_url', ''), 'evidence.source_url')
+        claim = _coerce_text_value(item.get('snippet', ''), 'evidence.snippet')
+        if not claim:
+            claim = _coerce_text_value(item.get('claim_summary', ''), 'evidence.claim_summary')
+        if url and len(claim.strip()) >= 8:
+            return True
+    return False
+
+
+def _append_validation_issue(validation: dict[str, Any], level: str, issue: dict[str, str]) -> None:
+    bucket = validation.setdefault(level, [])
+    if isinstance(bucket, list):
+        bucket.append(issue)
+
+
+def _validate_expected_yield_suggestion(culture: Culture, suggested_fields: dict[str, Any], evidence: dict[str, Any], validation: dict[str, Any]) -> None:
+    """Validate expected_yield context, evidence quality and plausibility."""
+    if 'expected_yield' not in suggested_fields or not isinstance(suggested_fields.get('expected_yield'), dict):
+        return
+
+    value = _number_value_from_suggestion(suggested_fields, 'expected_yield', None)
+    if value is None:
+        suggested_fields.pop('expected_yield', None)
+        _append_validation_issue(validation, 'errors', {
+            'field': 'expected_yield',
+            'code': 'yield_not_numeric',
+            'message': 'Dropped expected_yield suggestion because value is not numeric.',
+        })
+        return
+
+    context = _resolve_yield_context(culture, suggested_fields)
+    if context not in {'per_plant', 'per_sqm'}:
+        _append_validation_issue(validation, 'errors', {
+            'field': 'expected_yield',
+            'code': 'yield_context_missing',
+            'message': 'Expected yield requires explicit harvest_method context (per_plant or per_sqm).',
+        })
+        return
+
+    has_evidence = _has_usable_yield_evidence(evidence)
+    has_existing_yield = culture.expected_yield is not None
+    if not has_evidence and has_existing_yield:
+        suggested_fields.pop('expected_yield', None)
+        _append_validation_issue(validation, 'errors', {
+            'field': 'expected_yield',
+            'code': 'yield_evidence_missing_override_blocked',
+            'message': 'Dropped expected_yield override because evidence is missing URL and claim summary.',
+        })
+        return
+    if not has_evidence:
+        _append_validation_issue(validation, 'warnings', {
+            'field': 'expected_yield',
+            'code': 'yield_needs_manual_confirmation',
+            'message': 'Expected yield evidence is incomplete; confirm manually before applying.',
+        })
+
+    if value <= 0:
+        _append_validation_issue(validation, 'errors', {
+            'field': 'expected_yield',
+            'code': 'yield_non_positive',
+            'message': 'Expected yield must be greater than zero.',
+        })
+        return
+
+    if context == 'per_sqm':
+        if value > 120:
+            _append_validation_issue(validation, 'errors', {
+                'field': 'expected_yield',
+                'code': 'yield_per_sqm_impossible',
+                'message': f'Expected yield {value:.2f} kg/m² exceeds hard sanity limit (120).',
+            })
+            return
+        if value > 40:
+            _append_validation_issue(validation, 'warnings', {
+                'field': 'expected_yield',
+                'code': 'yield_per_sqm_unusual',
+                'message': f'Expected yield {value:.2f} kg/m² is unusually high; verify source quality.',
+            })
+    else:
+        if value > 25:
+            _append_validation_issue(validation, 'errors', {
+                'field': 'expected_yield',
+                'code': 'yield_per_plant_impossible',
+                'message': f'Expected yield {value:.2f} kg/plant exceeds hard sanity limit (25).',
+            })
+            return
+        if value > 8:
+            _append_validation_issue(validation, 'warnings', {
+                'field': 'expected_yield',
+                'code': 'yield_per_plant_unusual',
+                'message': f'Expected yield {value:.2f} kg/plant is unusually high; verify source quality.',
+            })
+
+    distance_cm = _number_value_from_suggestion(
+        suggested_fields,
+        'distance_within_row_cm',
+        (culture.distance_within_row_m * 100.0) if culture.distance_within_row_m else None,
+    )
+    row_spacing_cm = _number_value_from_suggestion(
+        suggested_fields,
+        'row_spacing_cm',
+        (culture.row_spacing_m * 100.0) if culture.row_spacing_m else None,
+    )
+    if not distance_cm or not row_spacing_cm or distance_cm <= 0 or row_spacing_cm <= 0:
+        _append_validation_issue(validation, 'warnings', {
+            'field': 'expected_yield',
+            'code': 'yield_crosscheck_skipped_missing_spacing',
+            'message': 'Skipped yield context cross-check because spacing data is incomplete.',
+        })
+        return
+
+    plants_per_m2 = 10000.0 / (distance_cm * row_spacing_cm)
+    if context == 'per_plant':
+        implied_per_sqm = value * plants_per_m2
+        if implied_per_sqm > 120:
+            _append_validation_issue(validation, 'errors', {
+                'field': 'expected_yield',
+                'code': 'yield_crosscheck_impossible',
+                'message': f'Derived yield {implied_per_sqm:.2f} kg/m² from spacing exceeds hard limit (120).',
+            })
+        elif implied_per_sqm > 40:
+            _append_validation_issue(validation, 'warnings', {
+                'field': 'expected_yield',
+                'code': 'yield_crosscheck_unusual',
+                'message': f'Derived yield {implied_per_sqm:.2f} kg/m² from spacing is unusually high.',
+            })
+
+
+def _is_numeric_suggestion(suggestion: object) -> bool:
+    """Return True when suggested field contains a numeric value."""
+    if not isinstance(suggestion, dict):
+        return False
+    try:
+        float(suggestion.get('value'))
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def _field_has_traceable_evidence(evidence: dict[str, Any], field_name: str) -> bool:
+    """Require URL + claim summary for numeric enrichment fields."""
+    entries = evidence.get(field_name)
+    if not isinstance(entries, list):
+        return False
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        url = _coerce_text_value(item.get('source_url', ''), f'evidence.{field_name}.source_url')
+        claim = _coerce_text_value(item.get('snippet', ''), f'evidence.{field_name}.snippet')
+        if not claim:
+            claim = _coerce_text_value(item.get('claim_summary', ''), f'evidence.{field_name}.claim_summary')
+        if url and claim.strip():
+            return True
+    return False
+
+
+def _validate_numeric_field_traceability(
+    suggested_fields: dict[str, Any],
+    evidence: dict[str, Any],
+    validation: dict[str, Any],
+) -> None:
+    """Flag numeric suggestions that do not carry traceable source metadata."""
+    for field_name, suggestion in suggested_fields.items():
+        if not _is_numeric_suggestion(suggestion):
+            continue
+        if _field_has_traceable_evidence(evidence, field_name):
+            continue
+        _append_validation_issue(validation, 'warnings', {
+            'field': field_name,
+            'code': 'numeric_value_needs_confirmation',
+            'message': f'Numeric suggestion for {field_name} has no traceable source URL+claim summary and needs confirmation.',
+        })
+
+
+def _validate_agronomic_consistency(culture: Culture, suggested_fields: dict[str, Any], validation: dict[str, Any]) -> None:
+    """Run consistency checks across spacing, seed-rate, TKG and yield inputs."""
+    distance_cm = _number_value_from_suggestion(
+        suggested_fields,
+        'distance_within_row_cm',
+        (culture.distance_within_row_m * 100.0) if culture.distance_within_row_m else None,
+    )
+    row_spacing_cm = _number_value_from_suggestion(
+        suggested_fields,
+        'row_spacing_cm',
+        (culture.row_spacing_m * 100.0) if culture.row_spacing_m else None,
+    )
+
+    plants_per_m2_from_spacing = None
+    if distance_cm and row_spacing_cm and distance_cm > 0 and row_spacing_cm > 0:
+        plants_per_m2_from_spacing = 10000.0 / (distance_cm * row_spacing_cm)
+        if plants_per_m2_from_spacing < 1 or plants_per_m2_from_spacing > 400:
+            _append_validation_issue(validation, 'errors', {
+                'field': 'distance_within_row_cm',
+                'code': 'spacing_density_impossible',
+                'message': f'Derived plants_per_m2={plants_per_m2_from_spacing:.1f} from spacing is outside sanity range (1-400).',
+            })
+        elif plants_per_m2_from_spacing < 3 or plants_per_m2_from_spacing > 120:
+            _append_validation_issue(validation, 'warnings', {
+                'field': 'distance_within_row_cm',
+                'code': 'spacing_density_unusual',
+                'message': f'Derived plants_per_m2={plants_per_m2_from_spacing:.1f} from spacing is unusual.',
+            })
+
+    seed_rate_unit = None
+    seed_rate_unit_suggestion = suggested_fields.get('seed_rate_unit')
+    if isinstance(seed_rate_unit_suggestion, dict):
+        seed_rate_unit = _coerce_text_value(seed_rate_unit_suggestion.get('value'), 'seed_rate_unit').strip()
+    elif culture.seed_rate_unit:
+        seed_rate_unit = culture.seed_rate_unit
+
+    seed_rate_value = _number_value_from_suggestion(suggested_fields, 'seed_rate_value', culture.seed_rate_value)
+    tkg = _number_value_from_suggestion(suggested_fields, 'thousand_kernel_weight_g', culture.thousand_kernel_weight_g)
+
+    if seed_rate_unit == 'seeds/m' and seed_rate_value and row_spacing_cm and row_spacing_cm > 0:
+        plants_per_m2_from_seed_rate = seed_rate_value * (100.0 / row_spacing_cm)
+        if plants_per_m2_from_seed_rate < 1 or plants_per_m2_from_seed_rate > 400:
+            _append_validation_issue(validation, 'errors', {
+                'field': 'seed_rate_value',
+                'code': 'seed_rate_density_impossible',
+                'message': f'Derived plants_per_m2={plants_per_m2_from_seed_rate:.1f} from seed_rate is outside sanity range (1-400).',
+            })
+        if plants_per_m2_from_spacing and plants_per_m2_from_spacing > 0:
+            ratio = plants_per_m2_from_seed_rate / plants_per_m2_from_spacing
+            if ratio > 2.5 or ratio < 0.4:
+                _append_validation_issue(validation, 'errors', {
+                    'field': 'seed_rate_value',
+                    'code': 'spacing_seedrate_conflict',
+                    'message': (
+                        f'Spacing-derived density ({plants_per_m2_from_spacing:.1f}) conflicts with seed-rate-derived density '
+                        f'({plants_per_m2_from_seed_rate:.1f}).'
+                    ),
+                })
+
+    if seed_rate_unit == 'g_per_m2' and seed_rate_value and tkg and tkg > 0:
+        seeds_per_m2 = (seed_rate_value / tkg) * 1000.0
+        if seeds_per_m2 < 1 or seeds_per_m2 > 3000:
+            _append_validation_issue(validation, 'errors', {
+                'field': 'seed_rate_value',
+                'code': 'seedrate_tkg_density_impossible',
+                'message': f'Derived seeds_per_m2={seeds_per_m2:.1f} from g_per_m2 and TKG is outside sanity range (1-3000).',
+            })
+        elif seeds_per_m2 < 10 or seeds_per_m2 > 1200:
+            _append_validation_issue(validation, 'warnings', {
+                'field': 'seed_rate_value',
+                'code': 'seedrate_tkg_density_unusual',
+                'message': f'Derived seeds_per_m2={seeds_per_m2:.1f} from g_per_m2 and TKG is unusual.',
+            })
+
+
+def _build_numeric_traceability_notes(suggested_fields: dict[str, Any], evidence: dict[str, Any]) -> str:
+    """Create deterministic source mapping notes for numeric suggestions."""
+    lines = ['## Werte & Quellen-Zuordnung']
+    for field_name, suggestion in sorted(suggested_fields.items(), key=lambda item: item[0]):
+        if not _is_numeric_suggestion(suggestion):
+            continue
+
+        value = suggestion.get('value') if isinstance(suggestion, dict) else None
+        unit = suggestion.get('unit') if isinstance(suggestion, dict) else None
+        entries = evidence.get(field_name)
+        source_line = 'needs confirmation (no reliable source metadata)'
+        if isinstance(entries, list):
+            for item in entries:
+                if not isinstance(item, dict):
+                    continue
+                url = _coerce_text_value(item.get('source_url', ''), f'evidence.{field_name}.source_url')
+                claim = _coerce_text_value(item.get('snippet', ''), f'evidence.{field_name}.snippet')
+                if not claim:
+                    claim = _coerce_text_value(item.get('claim_summary', ''), f'evidence.{field_name}.claim_summary')
+                if url and claim:
+                    source_type = 'variety-specific' if 'variet' in claim.lower() else 'general crop'
+                    source_line = f'[{url}] {claim[:180]} ({source_type})'
+                    break
+        lines.append(f"- `{field_name}` = {value}{f' {unit}' if unit else ''} -> {source_line}")
+
+    lines.append('- Calculation notes: derived consistency checks may compare spacing, seed-rate, TKG, and yield context.')
+    return "\n".join(lines)
+
+
 def _compute_plausibility_warnings(culture: Culture, suggested_fields: dict[str, Any]) -> list[dict[str, str]]:
     """Generate plausibility warnings without mutating suggested values."""
     warnings: list[dict[str, str]] = []
-
-    def number_value(field_name: str, fallback: float | None) -> float | None:
-        suggestion = suggested_fields.get(field_name)
-        if isinstance(suggestion, dict):
-            raw = suggestion.get('value')
-            try:
-                return float(raw)
-            except (TypeError, ValueError):
-                return fallback
-        return fallback
 
     seed_rate_unit = None
     seed_rate_suggestion = suggested_fields.get('seed_rate_unit')
@@ -356,8 +653,8 @@ def _compute_plausibility_warnings(culture: Culture, suggested_fields: dict[str,
         seed_rate_unit = culture.seed_rate_unit
 
     if seed_rate_unit == 'seeds/m':
-        seed_rate_value = number_value('seed_rate_value', culture.seed_rate_value)
-        row_spacing_cm = number_value('row_spacing_cm', (culture.row_spacing_m * 100.0) if culture.row_spacing_m else None)
+        seed_rate_value = _number_value_from_suggestion(suggested_fields, 'seed_rate_value', culture.seed_rate_value)
+        row_spacing_cm = _number_value_from_suggestion(suggested_fields, 'row_spacing_cm', (culture.row_spacing_m * 100.0) if culture.row_spacing_m else None)
         if seed_rate_value and row_spacing_cm and row_spacing_cm > 0:
             plants_per_m2 = seed_rate_value * (100.0 / row_spacing_cm)
             if plants_per_m2 < 8 or plants_per_m2 > 45:
@@ -367,7 +664,7 @@ def _compute_plausibility_warnings(culture: Culture, suggested_fields: dict[str,
                     'message': f'Derived plants_per_m2={plants_per_m2:.1f} is outside plausible range (8-45).',
                 })
 
-    tkg = number_value('thousand_kernel_weight_g', culture.thousand_kernel_weight_g)
+    tkg = _number_value_from_suggestion(suggested_fields, 'thousand_kernel_weight_g', culture.thousand_kernel_weight_g)
     if tkg is not None and tkg > 650:
         warnings.append({
             'field': 'thousand_kernel_weight_g',
@@ -443,7 +740,8 @@ def _build_structured_sources(
             retrieved_at = _coerce_text_value(item.get('retrieved_at', ''), 'evidence.retrieved_at')
             if not url:
                 continue
-            key = (url, title)
+            claim_summary = snippet[:240] if snippet else title
+            key = (url, claim_summary or title or url)
             if key in seen:
                 continue
             seen.add(key)
@@ -451,8 +749,6 @@ def _build_structured_sources(
             lc = f"{title} {url} {snippet}".lower()
             is_variety_specific = bool(variety_name and variety_name in lc) or bool(supplier_name and supplier_name in lc)
             source_type = 'variety_specific' if is_variety_specific else 'general_crop'
-            claim_summary = snippet[:240] if snippet else title
-
             sources.append({
                 'title': title or url,
                 'url': url,
@@ -509,7 +805,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
     """OpenAI Responses API provider using web_search capable tools."""
 
     provider_name = "openai_responses"
-    model_name = "gpt-4.1"
+    model_name = "gpt-5-mini"
     search_provider_name = "web_search"
 
     def __init__(self, api_key: str | None = None) -> None:
@@ -520,6 +816,8 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
                 "AI provider 'openai_responses' is configured but OPENAI_API_KEY is missing."
             )
         self.api_key = resolved_key
+        configured_model = _coerce_setting_to_str(getattr(settings, 'AI_ENRICHMENT_MODEL', 'gpt-5-mini'), 'AI_ENRICHMENT_MODEL')
+        self.model_name = configured_model or 'gpt-5-mini'
 
     def _build_prompt(self, culture: Culture, mode: str) -> str:
         identity = f"{culture.name} {culture.variety or ''}".strip()
@@ -553,8 +851,8 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "Suggested fields may include growth_duration_days, harvest_duration_days, propagation_duration_days, harvest_method, expected_yield, seed_packages, "
             "distance_within_row_cm, row_spacing_cm, sowing_depth_cm, seed_rate_value, seed_rate_unit, thousand_kernel_weight_g, nutrient_demand, cultivation_type. "
             "Package size means sold packet options (e.g., 2 g, 5 g, 10 g, 25 g). Do NOT infer from per-seed mass, TKG, sowing rate or grams per meter. If unavailable, return seed_packages as empty list and never guess. "
-            "Each suggested field must contain value, unit, confidence. For cultivation_type, only output one of: pre_cultivation, direct_sowing. For nutrient_demand, only output one of: low, medium, high. For harvest_method, only output one of: per_plant, per_sqm. For seed_rate_unit, only output one of: g_per_m2, seeds/m, seeds_per_plant. Never output free-text variants like 'g per plant' or 'grams per 100 sqm'. Do not output labels, translations, or crop-kind words for enum fields. "
-            "evidence must be mapping field->list of {source_url,title,retrieved_at,snippet}. "
+            "Each suggested field must contain value, unit, confidence. For cultivation_type, only output one of: pre_cultivation, direct_sowing. For nutrient_demand, only output one of: low, medium, high. For harvest_method, only output one of: per_plant, per_sqm. For seed_rate_unit, only output one of: g_per_m2, seeds/m, seeds_per_plant. If expected_yield is suggested, also include harvest_method or ensure it is already provided in existing values. Never output free-text variants like 'g per plant' or 'grams per 100 sqm'. Do not output labels, translations, or crop-kind words for enum fields. "
+            "evidence must be mapping field->list of {source_url,title,retrieved_at,snippet}. For expected_yield include source_url and snippet claim summary in every evidence item. "
             "validation: warnings/errors arrays with field/code/message. "
             "note_blocks must be pure German markdown text only (no JSON objects, no code fences) and include sections: 'Dauerwerte', 'Aussaat & Abstände (zusammengefasst)', 'Ernte & Verwendung', 'Quellen'. "
             "Use concise, factual, technical bullet points only. Avoid conversational or human-like wording. If a supplier is provided, prioritize this exact supplier for variety/package data; do not use package sizes from other suppliers. "
@@ -625,7 +923,6 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
                     "model": self.model_name,
                     "tools": [{"type": "web_search_preview"}],
                     "input": self._build_prompt(context.culture, context.mode),
-                    "temperature": 0.2,
                 },
             )
         except requests.RequestException as exc:
@@ -828,6 +1125,14 @@ def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidenc
     accepted: list[dict[str, Any]] = []
     warnings = validation.setdefault('warnings', [])
 
+    def normalize_size_unit(raw_value: object) -> str:
+        unit = str(raw_value or '').strip().lower().replace('.', '')
+        if unit in {'g', 'gram', 'grams', 'gramm', 'gramme'}:
+            return 'g'
+        if unit in {'seed', 'seeds', 'korn', 'körner', 'koerner', 'samen', 'stk', 'stück', 'stueck', 'pcs', 'piece', 'pieces'}:
+            return 'seeds'
+        return ''
+
     for item in suggestions:
         if not isinstance(item, dict):
             continue
@@ -835,7 +1140,7 @@ def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidenc
             size_value = float(item.get('size_value'))
         except (TypeError, ValueError):
             continue
-        size_unit = str(item.get('size_unit') or '').strip()
+        size_unit = normalize_size_unit(item.get('size_unit'))
         evidence_text = str(item.get('evidence_text') or '')
 
         if size_unit not in {'g', 'seeds'}:
@@ -916,6 +1221,13 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
             "confidence": 0.8 if provider.provider_name != "fallback" else 0.4,
         }
 
+    if "notes" not in suggested_fields and any(_is_numeric_suggestion(item) for item in suggested_fields.values()):
+        suggested_fields["notes"] = {
+            "value": culture.notes or "",
+            "unit": None,
+            "confidence": 0.5,
+        }
+
     for field_name in ("cultivation_type", "nutrient_demand", "harvest_method", "seed_rate_unit"):
         if field_name not in suggested_fields or not isinstance(suggested_fields[field_name], dict):
             continue
@@ -936,8 +1248,10 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
                 "message": f"Dropped AI suggestion '{normalized_value}' for {field_name}; expected one of {sorted(allowed_values)}.",
             })
 
-    supplier_name = (culture.supplier.name if culture.supplier else (culture.seed_supplier or '')).strip()
     _validate_seed_package_suggestions(suggested_fields, evidence, validation)
+    _validate_expected_yield_suggestion(culture, suggested_fields, evidence, validation)
+    _validate_numeric_field_traceability(suggested_fields, evidence, validation)
+    _validate_agronomic_consistency(culture, suggested_fields, validation)
 
     unresolved_fields: list[str] = []
     if mode == "complete":
@@ -973,7 +1287,7 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
     if (
         'harvest_method' not in suggested_fields
         and not (culture.harvest_method or '').strip()
-        and ('expected_yield' in suggested_fields or 'harvest_duration_days' in suggested_fields)
+        and ('harvest_duration_days' in suggested_fields)
     ):
         suggested_fields['harvest_method'] = {'value': 'per_sqm', 'unit': None, 'confidence': 0.45}
         warnings = validation.setdefault("warnings", [])
@@ -981,7 +1295,7 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
             warnings.append({
                 'field': 'harvest_method',
                 'code': 'harvest_method_defaulted',
-                'message': 'Defaulted harvest_method to per_sqm because harvest data was suggested without method.',
+                'message': 'Defaulted harvest_method to per_sqm because harvest_duration_days was suggested without method.',
             })
 
     plausibility_warnings = _compute_plausibility_warnings(culture, suggested_fields)
@@ -992,9 +1306,15 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
 
     notes_suggestion = suggested_fields.get('notes')
     rendered_sources = _render_sources_markdown(structured_sources)
-    if rendered_sources and isinstance(notes_suggestion, dict):
+    numeric_traceability = _build_numeric_traceability_notes(suggested_fields, evidence)
+    if isinstance(notes_suggestion, dict):
         base_value = _coerce_text_value(notes_suggestion.get('value', ''), 'notes')
-        notes_suggestion['value'] = build_note_appendix(base_value, rendered_sources)
+        combined = base_value
+        if rendered_sources:
+            combined = build_note_appendix(combined, rendered_sources)
+        if numeric_traceability:
+            combined = build_note_appendix(combined, numeric_traceability)
+        notes_suggestion['value'] = combined
 
     now = datetime.now(timezone.utc).isoformat()
     result = {

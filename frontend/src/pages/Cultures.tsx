@@ -810,9 +810,20 @@ function Cultures(): React.ReactElement {
 
   const openEnrichmentDialog = (result: EnrichmentResult) => {
     setEnrichmentResult(result);
-    setSelectedSuggestionFields(Object.keys(result.suggested_fields || {}));
+    const invalidFields = new Set((result.validation?.errors || []).map((issue) => issue.field));
+    setSelectedSuggestionFields(Object.keys(result.suggested_fields || {}).filter((field) => !invalidFields.has(field)));
     setEnrichmentDialogOpen(true);
   };
+
+  const invalidSuggestionFields = useMemo(() => {
+    const invalid = new Set<string>();
+    (enrichmentResult?.validation?.errors || []).forEach((issue) => {
+      if (issue?.field) {
+        invalid.add(issue.field);
+      }
+    });
+    return invalid;
+  }, [enrichmentResult]);
 
 
   const cultureHasMissingEnrichmentFields = useCallback((culture: Culture): boolean => {
@@ -938,7 +949,8 @@ function Cultures(): React.ReactElement {
     if (!targetCulture) return;
 
     const patch: Record<string, unknown> = {};
-    selectedSuggestionFields.forEach((field) => {
+    const applicableFields = selectedSuggestionFields.filter((field) => !invalidSuggestionFields.has(field));
+    applicableFields.forEach((field) => {
       const suggestionValue = enrichmentResult.suggested_fields[field]?.value;
       if (field === 'seed_packages') {
         patch[field] = normalizeSuggestedSeedPackages(suggestionValue);
@@ -1396,6 +1408,15 @@ function Cultures(): React.ReactElement {
       <Dialog open={enrichmentDialogOpen} onClose={() => setEnrichmentDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>{t('ai.suggestionsTitle')}</DialogTitle>
         <DialogContent>
+          {(enrichmentResult?.validation?.errors || []).length > 0 && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {(enrichmentResult?.validation?.errors || []).map((issue) => (
+                <Typography key={`${issue.field}-${issue.code}`} variant="body2">
+                  • {issue.message}
+                </Typography>
+              ))}
+            </Alert>
+          )}
           {(enrichmentResult?.validation?.warnings || []).length > 0 && (
             <Alert severity="warning" sx={{ mb: 2 }}>
               {(enrichmentResult?.validation?.warnings || []).map((warning) => (
@@ -1416,11 +1437,15 @@ function Cultures(): React.ReactElement {
                       type="checkbox"
                       checked={selectedSuggestionFields.includes(field)}
                       onChange={() => toggleSuggestionField(field)}
+                      disabled={invalidSuggestionFields.has(field)}
                     />
                     <ListItemText
                       primary={`${getEnrichmentFieldLabel(field)}: ${formatSuggestionValue(field, suggestion.value)}`}
                       secondary={`${t('ai.confidence')}: ${(suggestion.confidence * 100).toFixed(0)}%`}
                     />
+                    {invalidSuggestionFields.has(field) && (
+                      <Typography variant="caption" color="error">{t('ai.runError')}</Typography>
+                    )}
                   </Box>
                   {(enrichmentResult.evidence[field] || []).length > 0 && (
                     <Box sx={{ pl: 4 }}>
@@ -1439,7 +1464,7 @@ function Cultures(): React.ReactElement {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEnrichmentDialogOpen(false)}>{t('buttons.aiClose')}</Button>
-          <Button variant="contained" onClick={handleApplySuggestions} disabled={selectedSuggestionFields.length === 0}>
+          <Button variant="contained" onClick={handleApplySuggestions} disabled={selectedSuggestionFields.filter((field) => !invalidSuggestionFields.has(field)).length === 0}>
             {t('buttons.aiApplySelected')}
           </Button>
         </DialogActions>

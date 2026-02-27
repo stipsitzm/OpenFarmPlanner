@@ -47,6 +47,29 @@ describe('extractApiErrorMessage', () => {
 
 
 
+
+  it('returns generic server message for HTML error pages', () => {
+    const t = createT({
+      'ai.serverUnavailable': 'Server derzeit nicht erreichbar.',
+    });
+    const error = createAxiosError(500, '<!DOCTYPE html><html><body>500 Internal Server Error</body></html>');
+
+    const result = extractApiErrorMessage(error, t, fallbackMessage);
+
+    expect(result).toBe('Server derzeit nicht erreichbar.');
+  });
+
+  it('returns generic server message for 500 object responses', () => {
+    const t = createT({
+      'ai.serverUnavailable': 'Server derzeit nicht erreichbar.',
+    });
+    const error = createAxiosError(500, { detail: 'Internal server error' });
+
+    const result = extractApiErrorMessage(error, t, fallbackMessage);
+
+    expect(result).toBe('Server derzeit nicht erreichbar.');
+  });
+
   it('maps 503 insufficient_quota details to a friendly message', () => {
     const t = createT({
       'ai.quotaExceeded': 'OpenAI-Kontingent aufgebraucht.',

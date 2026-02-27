@@ -5,7 +5,7 @@ from datetime import date
 from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
 
-from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier, NoteAttachment
+from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier, NoteAttachment, SeedPackage
 
 class ApiEndpointsTest(DRFAPITestCase):
     def setUp(self):
@@ -166,6 +166,33 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.data['name'], 'Updated Culture')
         self.assertEqual(response.data['crop_family'], 'Updated Family')
     
+
+    def test_seed_demand_includes_packages_needed_key_when_grams_missing(self):
+        culture = Culture.objects.create(
+            name='Radish',
+            growth_duration_days=35,
+            harvest_duration_days=10,
+            seed_rate_value=50,
+            seed_rate_unit='seeds/m',
+            row_spacing_m=0.3,
+        )
+        PlantingPlan.objects.create(
+            culture=culture,
+            bed=self.bed,
+            planting_date=date(2024, 3, 1),
+            quantity=10,
+            area_usage_sqm=10,
+        )
+        SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g', available=True)
+
+        response = self.client.get('/openfarmplanner/api/seed-demand/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        row = next(item for item in response.data['results'] if item['culture_name'] == 'Radish')
+        self.assertIsNone(row['total_grams'])
+        self.assertIn('packages_needed', row)
+        self.assertIsNone(row['packages_needed'])
+
     def test_bed_list(self):
         response = self.client.get('/openfarmplanner/api/beds/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
