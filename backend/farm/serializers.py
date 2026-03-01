@@ -129,10 +129,6 @@ class SeedPackageSerializer(serializers.ModelSerializer):
             'size_value',
             'size_unit',
             'available',
-            'article_number',
-            'source_url',
-            'evidence_text',
-            'last_seen_at',
             'created_at',
             'updated_at',
         ]
@@ -563,6 +559,7 @@ class SeedDemandSerializer(serializers.Serializer):
     variety = serializers.CharField(allow_blank=True, allow_null=True)
     supplier = serializers.CharField(allow_blank=True, allow_null=True)
     total_grams = serializers.FloatField(allow_null=True)
+    packages_needed = serializers.IntegerField(allow_null=True, required=False)
     seed_packages = serializers.ListField(child=serializers.DictField(), required=False)
     package_suggestion = SeedDemandPackageSuggestionSerializer(allow_null=True, required=False)
     warning = serializers.CharField(allow_null=True)

@@ -131,8 +131,6 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               <Checkbox checked={pkg.available} onChange={(e) => updatePackage(index, { available: e.target.checked })} />
               <Typography variant="body2">available</Typography>
             </Box>
-            <TextField label="Article #" value={pkg.article_number ?? ''} onChange={(e) => updatePackage(index, { article_number: e.target.value })} />
-            <TextField label="Source URL" value={pkg.source_url ?? ''} onChange={(e) => updatePackage(index, { source_url: e.target.value })} />
             <IconButton onClick={() => deletePackage(index)} aria-label="delete-seed-package"><DeleteIcon fontSize="small" /></IconButton>
           </Box>
         ))}

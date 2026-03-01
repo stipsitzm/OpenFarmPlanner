@@ -1301,6 +1301,7 @@ class SeedDemandListView(generics.ListAPIView):
 
             if total_grams is None:
                 row['package_suggestion'] = None
+                row['packages_needed'] = None
                 continue
 
             suggestion = compute_seed_package_suggestion(
@@ -1310,8 +1311,10 @@ class SeedDemandListView(generics.ListAPIView):
             )
             if suggestion.pack_count == 0:
                 row['package_suggestion'] = None
+                row['packages_needed'] = None
                 continue
 
+            row['packages_needed'] = suggestion.pack_count
             row['package_suggestion'] = {
                 'selection': [
                     {
