@@ -1301,6 +1301,7 @@ class SeedDemandListView(generics.ListAPIView):
 
             if total_grams is None:
                 row['package_suggestion'] = None
+                row['packages_needed'] = None
                 continue
 
             suggestion = compute_seed_package_suggestion(
@@ -1310,6 +1311,7 @@ class SeedDemandListView(generics.ListAPIView):
             )
             if suggestion.pack_count == 0:
                 row['package_suggestion'] = None
+                row['packages_needed'] = None
                 continue
 
             row['package_suggestion'] = {
@@ -1325,6 +1327,7 @@ class SeedDemandListView(generics.ListAPIView):
                 'overage': float(suggestion.overage),
                 'pack_count': suggestion.pack_count,
             }
+            row['packages_needed'] = suggestion.pack_count
 
         serializer = self.get_serializer(rows, many=True)
         return Response({'count': len(rows), 'next': None, 'previous': None, 'results': serializer.data})

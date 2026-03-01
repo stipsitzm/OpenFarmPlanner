@@ -570,6 +570,7 @@ class SeedDemandSerializer(serializers.Serializer):
     total_grams = serializers.FloatField(allow_null=True)
     seed_packages = serializers.ListField(child=serializers.DictField(), required=False)
     package_suggestion = SeedDemandPackageSuggestionSerializer(allow_null=True, required=False)
+    packages_needed = serializers.IntegerField(allow_null=True, required=False)
     warning = serializers.CharField(allow_null=True)
 
 
