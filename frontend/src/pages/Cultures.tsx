@@ -302,8 +302,21 @@ function Cultures(): React.ReactElement {
   const handleSave = async (culture: Culture) => {
     try {
       // Transform culture data for API: replace supplier object with supplier_id
+      const normalizedSeedPackages = Array.isArray(culture.seed_packages)
+        ? culture.seed_packages.map((pkg) => ({
+            size_value: Math.round((Number(pkg.size_value) || 0) * 10) / 10,
+            size_unit: 'g' as const,
+            available: pkg.available !== false,
+            article_number: pkg.article_number ?? '',
+            source_url: pkg.source_url ?? '',
+            evidence_text: pkg.evidence_text ?? '',
+            last_seen_at: pkg.last_seen_at ?? null,
+          }))
+        : culture.seed_packages;
+
       const dataToSend = {
         ...culture,
+        seed_packages: normalizedSeedPackages,
         seed_rate_unit: normalizeSeedRateUnit(culture.seed_rate_unit),
         harvest_method: normalizeHarvestMethod(culture.harvest_method),
         nutrient_demand: normalizeNutrientDemand(culture.nutrient_demand),

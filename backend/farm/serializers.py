@@ -1,5 +1,7 @@
 """DRF serializers for the farm app API."""
 
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
@@ -137,9 +139,51 @@ class SeedPackageSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+        validators = []
         extra_kwargs = {'culture': {'required': False}, 'size_unit': {'default': SeedPackage.UNIT_GRAMS}}
 
 
+
+
+
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        culture = attrs.get('culture')
+        size_value = attrs.get('size_value')
+        size_unit = attrs.get('size_unit')
+
+        if culture is None or size_value is None or size_unit is None:
+            return attrs
+
+        existing = SeedPackage.objects.filter(
+            culture=culture,
+            size_value=size_value,
+            size_unit=size_unit,
+        )
+
+        raw_initial_data = getattr(self, 'initial_data', None)
+        incoming_id = raw_initial_data.get('id') if isinstance(raw_initial_data, dict) else None
+        if incoming_id is not None:
+            try:
+                incoming_id = int(incoming_id)
+            except (TypeError, ValueError):
+                incoming_id = None
+
+        if incoming_id is not None:
+            existing = existing.exclude(pk=incoming_id)
+        elif self.instance is not None:
+            existing = existing.exclude(pk=self.instance.pk)
+        elif raw_initial_data is None:
+            # Nested serializer items in Culture updates do not reliably include initial_data.
+            # CultureSerializer handles de-duplication before replacing packages, so skip here.
+            return attrs
+
+        if existing.exists():
+            raise serializers.ValidationError('The fields culture, size_value, size_unit must make a unique set.')
+
+        return attrs
 
 
 class CultureSerializer(serializers.ModelSerializer):
@@ -250,39 +294,61 @@ class CultureSerializer(serializers.ModelSerializer):
 
 
     def validate_seed_packages(self, value):
-        seen: set[str] = set()
+        seen: set[Decimal] = set()
+        normalized_packages = []
+        quantum = Decimal('0.1')
+
         for idx, item in enumerate(value):
-            size_value = item.get('size_value')
+            raw_size_value = item.get('size_value')
             size_unit = item.get('size_unit') or SeedPackage.UNIT_GRAMS
-            if size_value is None or float(size_value) <= 0:
+
+            try:
+                size_value = Decimal(str(raw_size_value))
+            except (InvalidOperation, TypeError):
+                raise serializers.ValidationError({idx: 'size_value must be a valid number.'})
+
+            if size_value <= 0:
                 raise serializers.ValidationError({idx: 'size_value must be > 0'})
             if size_unit != SeedPackage.UNIT_GRAMS:
                 raise serializers.ValidationError({idx: 'Only grams (g) are supported for package size.'})
-            if round(float(size_value), 1) != float(size_value):
+
+            normalized_size = size_value.quantize(quantum, rounding=ROUND_HALF_UP)
+            if size_value != normalized_size:
                 raise serializers.ValidationError({idx: 'size_value must have at most one decimal place.'})
-            key = str(size_value)
-            if key in seen:
+
+            if normalized_size in seen:
                 raise serializers.ValidationError({idx: 'Duplicate package size.'})
-            seen.add(key)
-        return value
+            seen.add(normalized_size)
+
+            normalized_item = dict(item)
+            normalized_item['size_unit'] = SeedPackage.UNIT_GRAMS
+            normalized_item['size_value'] = normalized_size
+            normalized_item.pop('culture', None)
+            normalized_packages.append(normalized_item)
+
+        return normalized_packages
 
     def create(self, validated_data):
-        seed_packages = validated_data.pop('seed_packages', self.initial_data.get('seed_packages', []))
+        seed_packages = validated_data.pop('seed_packages', [])
         culture = super().create(validated_data)
         if isinstance(seed_packages, list):
             for package_data in seed_packages:
                 if isinstance(package_data, dict):
+                    package_data = dict(package_data)
+                    package_data.pop('culture', None)
                     SeedPackage.objects.create(culture=culture, **package_data)
         return culture
 
     def update(self, instance, validated_data):
-        seed_packages = validated_data.pop('seed_packages', self.initial_data.get('seed_packages', None))
+        seed_packages = validated_data.pop('seed_packages', None)
         culture = super().update(instance, validated_data)
         if seed_packages is not None:
             culture.seed_packages.all().delete()
             if isinstance(seed_packages, list):
                 for package_data in seed_packages:
                     if isinstance(package_data, dict):
+                        package_data = dict(package_data)
+                        package_data.pop('culture', None)
                         SeedPackage.objects.create(culture=culture, **package_data)
         return culture
 

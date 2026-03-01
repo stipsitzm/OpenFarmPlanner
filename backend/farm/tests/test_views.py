@@ -5,7 +5,7 @@ from datetime import date
 from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
 
-from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier, NoteAttachment
+from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier, NoteAttachment, SeedPackage
 
 class ApiEndpointsTest(DRFAPITestCase):
     def setUp(self):
@@ -166,6 +166,44 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.data['name'], 'Updated Culture')
         self.assertEqual(response.data['crop_family'], 'Updated Family')
     
+    def test_culture_update_with_seed_packages_payload_from_get(self):
+        """PUT with seed package objects (including id/culture) should stay valid."""
+        supplier = Supplier.objects.create(name='Seed Supplier')
+        culture = Culture.objects.create(
+            name='Payload Culture',
+            variety='Classic',
+            supplier=supplier,
+            growth_duration_days=10,
+            harvest_duration_days=2,
+            harvest_method='per_plant',
+        )
+        package = SeedPackage.objects.create(culture=culture, size_value='25.0', size_unit='g', available=True)
+
+        payload = {
+            'id': culture.id,
+            'name': culture.name,
+            'variety': culture.variety,
+            'supplier_id': supplier.id,
+            'growth_duration_days': culture.growth_duration_days,
+            'harvest_duration_days': culture.harvest_duration_days,
+            'harvest_method': culture.harvest_method,
+            'seed_packages': [
+                {
+                    'id': package.id,
+                    'culture': culture.id,
+                    'size_value': 25.0,
+                    'size_unit': 'g',
+                    'available': True,
+                }
+            ],
+        }
+
+        response = self.client.put(f'/openfarmplanner/api/cultures/{culture.id}/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['seed_packages']), 1)
+        self.assertEqual(response.data['seed_packages'][0]['size_unit'], 'g')
+        self.assertEqual(float(response.data['seed_packages'][0]['size_value']), 25.0)
+
     def test_bed_list(self):
         response = self.client.get('/openfarmplanner/api/beds/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
