@@ -57,6 +57,7 @@ export default function SeedDemandPage(): React.ReactElement {
                 <TableCell>Kultur</TableCell>
                 <TableCell>Lieferant</TableCell>
                 <TableCell align="right">Gesamt (g)</TableCell>
+                <TableCell align="right">Pakete</TableCell>
                 <TableCell>Vorschlag</TableCell>
               </TableRow>
             </TableHead>
@@ -70,6 +71,7 @@ export default function SeedDemandPage(): React.ReactElement {
                   </TableCell>
                   <TableCell>{row.supplier || '-'}</TableCell>
                   <TableCell align="right">{row.total_grams === null ? '-' : row.total_grams.toFixed(2)}</TableCell>
+                  <TableCell align="right">{row.packages_needed ?? '-'}</TableCell>
                   <TableCell>{row.package_suggestion ? `Vorschlag: ${row.package_suggestion.selection.map((item) => `${item.size_value} ${item.size_unit} × ${item.count}`).join(' + ')} = ${row.package_suggestion.total_amount} ${row.package_suggestion.selection[0]?.size_unit ?? 'g'} (over: ${row.package_suggestion.overage})` : 'No pack sizes available for this culture'}</TableCell>
                 </TableRow>
               ))}

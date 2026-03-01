@@ -856,9 +856,6 @@ def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidenc
             'size_value': size_value,
             'size_unit': size_unit,
             'available': bool(item.get('available', True)),
-            'article_number': item.get('article_number') or '',
-            'source_url': item.get('source_url') or '',
-            'evidence_text': evidence_text[:200],
         })
 
     suggested_fields['seed_packages'] = {'value': accepted, 'unit': None, 'confidence': payload.get('confidence', 0.6) if isinstance(payload, dict) else 0.6}

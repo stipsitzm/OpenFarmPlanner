@@ -745,9 +745,6 @@ function Cultures(): React.ReactElement {
     size_value: number;
     size_unit: 'g' | 'seeds';
     available: boolean;
-    article_number?: string;
-    source_url?: string;
-    evidence_text?: string;
   }> => {
     if (!Array.isArray(value)) {
       return [];
@@ -780,9 +777,6 @@ function Cultures(): React.ReactElement {
           size_value: sizeValue,
           size_unit: sizeUnit,
           available: raw.available !== false,
-          article_number: typeof raw.article_number === 'string' ? raw.article_number : undefined,
-          source_url: typeof raw.source_url === 'string' ? raw.source_url : undefined,
-          evidence_text: typeof raw.evidence_text === 'string' ? raw.evidence_text : undefined,
         };
       })
       .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
