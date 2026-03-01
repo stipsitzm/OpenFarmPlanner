@@ -96,4 +96,33 @@ describe('Cultures enrichment cost banner', () => {
     expect(screen.getAllByText(/Tokens: 1\.234 in \/ 567 out/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Web-Suche: 2 Calls/).length).toBeGreaterThan(0);
   });
+
+  it('triggers AI actions via keyboard shortcuts', async () => {
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <Cultures />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'select-culture' }));
+
+    fireEvent.keyDown(window, { altKey: true, key: 'u' });
+    await waitFor(() => {
+      expect(enrichMock).toHaveBeenCalled();
+    });
+    expect(enrichMock.mock.calls.at(-1)?.[1]).toBe('complete');
+
+    fireEvent.keyDown(window, { altKey: true, key: 'r' });
+    await waitFor(() => {
+      expect(enrichMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
+    expect(enrichMock.mock.calls.at(-1)?.[1]).toBe('reresearch');
+
+    fireEvent.keyDown(window, { altKey: true, key: 'a' });
+    expect(await screen.findByText('Alle Kulturen vervollständigen?')).toBeInTheDocument();
+  });
+
+
 });

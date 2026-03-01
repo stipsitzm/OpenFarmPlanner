@@ -669,6 +669,37 @@ function Cultures(): React.ReactElement {
         isAvailable: () => Boolean(selectedCultureId),
         run: handleCreatePlantingPlan,
       },
+
+      {
+        id: 'culture.aiCompleteCurrent',
+        title: 'Kultur per KI vervollständigen (Alt+U)',
+        keywords: ['ki', 'ai', 'vervollständigen', 'complete', 'kultur'],
+        shortcutHint: 'Alt+U',
+        keys: { alt: true, key: 'u' },
+        contextTags: ['cultures'],
+        isAvailable: () => Boolean(selectedCulture) && !enrichmentLoading,
+        run: () => { void handleEnrichCurrent('complete'); },
+      },
+      {
+        id: 'culture.aiReresearchCurrent',
+        title: 'Kultur per KI neu recherchieren (Alt+R)',
+        keywords: ['ki', 'ai', 'recherche', 'reresearch', 'kultur'],
+        shortcutHint: 'Alt+R',
+        keys: { alt: true, key: 'r' },
+        contextTags: ['cultures'],
+        isAvailable: () => Boolean(selectedCulture) && !enrichmentLoading,
+        run: () => { void handleEnrichCurrent('reresearch'); },
+      },
+      {
+        id: 'culture.aiCompleteAll',
+        title: 'Alle Kulturen per KI vervollständigen (Alt+A)',
+        keywords: ['ki', 'ai', 'alle', 'kulturen', 'vervollständigen'],
+        shortcutHint: 'Alt+A',
+        keys: { alt: true, key: 'a' },
+        contextTags: ['cultures'],
+        isAvailable: () => cultures.length > 0 && !enrichmentLoading,
+        run: () => setEnrichAllConfirmOpen(true),
+      },
       {
         id: 'culture.previous',
         title: 'Vorherige Kultur (Alt+Shift+←)',
@@ -690,7 +721,7 @@ function Cultures(): React.ReactElement {
         run: () => goToRelativeCulture('next'),
       },
     ];
-  }, [cultures.length, goToRelativeCulture, handleCreatePlantingPlan, handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, selectedCulture, selectedCultureId]);
+  }, [cultures.length, enrichmentLoading, goToRelativeCulture, handleCreatePlantingPlan, handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, selectedCulture, selectedCultureId]);
 
   useRegisterCommands('cultures-page', commandSpecs);
 

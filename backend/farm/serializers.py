@@ -408,7 +408,6 @@ class CultureSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
 
 
-        harvest_duration_days = attrs.get('harvest_duration_days', getattr(self.instance, 'harvest_duration_days', None) if self.instance else None)
         seeding_requirement = attrs.get('seeding_requirement', getattr(self.instance, 'seeding_requirement', None) if self.instance else None)
         seeding_requirement_type = attrs.get('seeding_requirement_type', getattr(self.instance, 'seeding_requirement_type', '') if self.instance else '')
         if seeding_requirement is None and seeding_requirement_type:
