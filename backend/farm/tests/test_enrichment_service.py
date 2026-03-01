@@ -163,12 +163,12 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.culture.harvest_method = 'per_sqm'
         self.culture.expected_yield = 1.5
         self.culture.save(update_fields=['growth_duration_days', 'harvest_duration_days', 'harvest_method', 'expected_yield'])
-        SeedPackage.objects.create(culture=self.culture, size_value=500, size_unit='g', available=True)
+        SeedPackage.objects.create(culture=self.culture, size_value=500, available=True)
 
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
-            'output_text': '{"suggested_fields":{"growth_duration_days":{"value":120,"unit":"days","confidence":0.8},"harvest_duration_days":{"value":60,"unit":"days","confidence":0.8},"harvest_method":{"value":"per plant","unit":null,"confidence":0.7},"expected_yield":{"value":2.1,"unit":"kg/m²","confidence":0.7},"seed_packages":{"value":[{"size_value":750,"size_unit":"g","available":true}],"unit":null,"confidence":0.7}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+            'output_text': '{"suggested_fields":{"growth_duration_days":{"value":120,"unit":"days","confidence":0.8},"harvest_duration_days":{"value":60,"unit":"days","confidence":0.8},"harvest_method":{"value":"per plant","unit":null,"confidence":0.7},"expected_yield":{"value":2.1,"unit":"kg/m²","confidence":0.7},"seed_packages":{"value":[{"size_value":750,"available":true}],"unit":null,"confidence":0.7}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
         }
         post_mock.return_value = response
 
@@ -245,8 +245,8 @@ class OpenAIResponsesProviderParsingTest(TestCase):
                 'suggested_fields': {
                     'seed_packages': {
                         'value': [
-                            {'size_value': 5, 'size_unit': 'gramm', 'available': True},
-                            {'size_value': 200, 'size_unit': 'korn', 'available': True},
+                            {'size_value': 5, 'available': True},
+                            {'size_value': 200, 'available': True},
                         ],
                         'unit': None,
                         'confidence': 0.8,
@@ -262,8 +262,6 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         result = enrich_culture(self.culture, 'complete')
         packages = result['suggested_fields']['seed_packages']['value']
         self.assertEqual(len(packages), 2)
-        self.assertEqual(packages[0]['size_unit'], 'g')
-        self.assertEqual(packages[1]['size_unit'], 'seeds')
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
@@ -274,7 +272,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         response.json.return_value = {
             'output_text': json.dumps({
                 'suggested_fields': {
-                    'seed_packages': {'value': [{'size_value': 0.195, 'size_unit': 'g', 'available': True, 'evidence_text': 'computed from TKG'}], 'unit': None, 'confidence': 0.8},
+                    'seed_packages': {'value': [{'size_value': 0.195, 'available': True, 'evidence_text': 'computed from TKG'}], 'unit': None, 'confidence': 0.8},
                 },
                 'evidence': {},
                 'validation': {'warnings': [], 'errors': []},

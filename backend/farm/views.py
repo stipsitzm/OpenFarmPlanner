@@ -880,7 +880,7 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
 
 
 class SeedPackageViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
-    queryset = SeedPackage.objects.select_related('culture').all().order_by('size_unit', 'size_value')
+    queryset = SeedPackage.objects.select_related('culture').all().order_by('size_value')
     serializer_class = SeedPackageSerializer
 
     def perform_create(self, serializer):
@@ -1284,7 +1284,7 @@ class SeedDemandListView(generics.ListAPIView):
         rows = list(self.get_queryset())
         culture_ids = [row['culture_id'] for row in rows]
         package_map: dict[int, list[SeedPackage]] = defaultdict(list)
-        for package in SeedPackage.objects.filter(culture_id__in=culture_ids, available=True).order_by('size_unit', 'size_value'):
+        for package in SeedPackage.objects.filter(culture_id__in=culture_ids, available=True).order_by('size_value'):
             package_map[package.culture_id].append(package)
 
         for row in rows:
@@ -1293,7 +1293,6 @@ class SeedDemandListView(generics.ListAPIView):
             row['seed_packages'] = [
                 {
                     'size_value': float(pkg.size_value),
-                    'size_unit': pkg.size_unit,
                     'available': pkg.available,
                 }
                 for pkg in packages
@@ -1305,7 +1304,7 @@ class SeedDemandListView(generics.ListAPIView):
 
             suggestion = compute_seed_package_suggestion(
                 required_amount=Decimal(str(total_grams)),
-                packages=[PackageOption(size_value=pkg.size_value, size_unit=pkg.size_unit) for pkg in packages],
+                packages=[PackageOption(size_value=pkg.size_value, size_unit='g') for pkg in packages],
                 unit='g',
             )
             if suggestion.pack_count == 0:
@@ -1316,7 +1315,6 @@ class SeedDemandListView(generics.ListAPIView):
                 'selection': [
                     {
                         'size_value': float(item.size_value),
-                        'size_unit': item.size_unit,
                         'count': item.count,
                     }
                     for item in suggestion.selection

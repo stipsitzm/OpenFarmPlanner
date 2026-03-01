@@ -573,30 +573,20 @@ class ProjectRevision(models.Model):
 
 
 class SeedPackage(TimestampedModel):
-    """Sold package option for a culture."""
-
-    UNIT_GRAMS = 'g'
-    UNIT_SEEDS = 'seeds'
-    UNIT_CHOICES = [
-        (UNIT_GRAMS, 'Grams'),
-        (UNIT_SEEDS, 'Seeds'),
-    ]
+    """Sold package option for a culture (always in grams)."""
 
     culture = models.ForeignKey('Culture', on_delete=models.CASCADE, related_name='seed_packages')
-    size_value = models.DecimalField(max_digits=10, decimal_places=3)
-    size_unit = models.CharField(max_length=10, choices=UNIT_CHOICES)
+    size_value = models.DecimalField(max_digits=10, decimal_places=3, help_text="Package size in grams")
     available = models.BooleanField(default=True)
-    article_number = models.CharField(max_length=120, blank=True)
-    source_url = models.URLField(blank=True)
     evidence_text = models.CharField(max_length=200, blank=True)
     last_seen_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ['size_unit', 'size_value']
+        ordering = ['size_value']
         constraints = [
             models.UniqueConstraint(
-                fields=['culture', 'size_value', 'size_unit'],
-                name='unique_seed_package_per_culture_size_unit',
+                fields=['culture', 'size_value'],
+                name='unique_seed_package_per_culture_size',
             )
         ]
 
@@ -606,7 +596,7 @@ class SeedPackage(TimestampedModel):
             raise ValidationError({'size_value': 'Package size must be greater than zero.'})
 
     def __str__(self) -> str:
-        return f"{self.culture.name} {self.size_value} {self.size_unit}"
+        return f"{self.culture.name} {self.size_value}g"
 
 
 class PlantingPlan(TimestampedModel):

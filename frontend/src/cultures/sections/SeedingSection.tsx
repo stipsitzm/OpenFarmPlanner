@@ -33,7 +33,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
   };
 
   const addPackage = () => {
-    onChange('seed_packages', [...packages, { size_value: 0, size_unit: 'g', available: true }]);
+    onChange('seed_packages', [...packages, { size_value: 0, available: true }]);
   };
 
   const deletePackage = (index: number) => {
@@ -103,36 +103,23 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
         </Tooltip>
       </Box>
 
-      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Seed packages</Typography>
+      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Seed packages (in grams)</Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {packages.map((pkg, index) => (
-          <Box key={index} sx={{ display: 'grid', gridTemplateColumns: '120px 120px 120px 1fr 1fr 40px', gap: 1, alignItems: 'center' }}>
+          <Box key={index} sx={{ display: 'grid', gridTemplateColumns: '150px 150px 40px', gap: 1, alignItems: 'center' }}>
             <TextField
               type="number"
-              label="Size"
+              label="Size (g)"
               value={pkg.size_value}
               onChange={(e) => updatePackage(index, { size_value: e.target.value ? parseFloat(e.target.value) : 0 })}
               error={Boolean(errors[`seed_packages.${index}.size_value`] || errors.seed_packages)}
               helperText={errors[`seed_packages.${index}.size_value`]}
               slotProps={{ htmlInput: { min: 0.001, step: 0.001 } }}
             />
-            <FormControl>
-              <InputLabel>Unit</InputLabel>
-              <Select
-                label="Unit"
-                value={pkg.size_unit}
-                onChange={(e) => updatePackage(index, { size_unit: e.target.value as 'g' | 'seeds' })}
-              >
-                <MenuItem value="g">g</MenuItem>
-                <MenuItem value="seeds">seeds</MenuItem>
-              </Select>
-            </FormControl>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Checkbox checked={pkg.available} onChange={(e) => updatePackage(index, { available: e.target.checked })} />
               <Typography variant="body2">available</Typography>
             </Box>
-            <TextField label="Article #" value={pkg.article_number ?? ''} onChange={(e) => updatePackage(index, { article_number: e.target.value })} />
-            <TextField label="Source URL" value={pkg.source_url ?? ''} onChange={(e) => updatePackage(index, { source_url: e.target.value })} />
             <IconButton onClick={() => deletePackage(index)} aria-label="delete-seed-package"><DeleteIcon fontSize="small" /></IconButton>
           </Box>
         ))}

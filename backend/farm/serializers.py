@@ -127,10 +127,7 @@ class SeedPackageSerializer(serializers.ModelSerializer):
             'id',
             'culture',
             'size_value',
-            'size_unit',
             'available',
-            'article_number',
-            'source_url',
             'evidence_text',
             'last_seen_at',
             'created_at',
@@ -545,7 +542,6 @@ class CultureImportApplySummarySerializer(serializers.Serializer):
 
 class SeedDemandPackageSelectionSerializer(serializers.Serializer):
     size_value = serializers.FloatField()
-    size_unit = serializers.CharField()
     count = serializers.IntegerField()
 
 

@@ -347,7 +347,7 @@ export function CultureDetail({
                     </Typography>
                     <Typography variant="body1">
                       {selectedCulture.seed_packages
-                        .map((pkg) => `${formatNumber(pkg.size_value, t)} ${pkg.size_unit}`)
+                        .map((pkg) => `${formatNumber(pkg.size_value, t)} g`)
                         .join(', ')}
                     </Typography>
                   </Box>

@@ -86,16 +86,15 @@ export function validateCulture(
   });
 
   if (draft.seed_packages && Array.isArray(draft.seed_packages)) {
-    const seen = new Set<string>();
+    const seen = new Set<number>();
     draft.seed_packages.forEach((pkg, index) => {
       if (!pkg || typeof pkg.size_value !== 'number' || pkg.size_value <= 0) {
         errors[`seed_packages.${index}.size_value`] = 'Packgröße muss > 0 sein';
       }
-      const key = `${pkg.size_unit}:${pkg.size_value}`;
-      if (seen.has(key)) {
+      if (seen.has(pkg.size_value)) {
         errors.seed_packages = 'Doppelte Packungsgrößen sind nicht erlaubt';
       }
-      seen.add(key);
+      seen.add(pkg.size_value);
     });
   }
 

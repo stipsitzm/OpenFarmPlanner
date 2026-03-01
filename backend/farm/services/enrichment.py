@@ -269,7 +269,7 @@ def _is_missing_culture_field(culture: Culture, suggested_field: str) -> bool:
         'propagation_duration_days': culture.propagation_duration_days,
         'harvest_method': culture.harvest_method,
         'expected_yield': culture.expected_yield,
-        'seed_packages': [{'size_value': float(p.size_value), 'size_unit': p.size_unit, 'available': p.available} for p in culture.seed_packages.all()],
+        'seed_packages': [{'size_value': float(p.size_value), 'available': p.available} for p in culture.seed_packages.all()],
         'seed_rate_value': culture.seed_rate_value,
         'seed_rate_unit': culture.seed_rate_unit,
         'thousand_kernel_weight_g': culture.thousand_kernel_weight_g,
@@ -989,15 +989,12 @@ def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidenc
             size_value = float(item.get('size_value'))
         except (TypeError, ValueError):
             continue
-        size_unit = normalize_size_unit(item.get('size_unit'))
         evidence_text = str(item.get('evidence_text') or '')
 
-        if size_unit not in {'g', 'seeds'}:
-            continue
-        if size_unit == 'g' and (size_value < 0.1 or size_value > 1000):
+        if size_value < 0.1 or size_value > 1000:
             continue
         decimals = str(size_value).split('.')
-        if size_unit == 'g' and len(decimals) > 1 and len(decimals[1].rstrip('0')) >= 3 and '0.195 g' not in evidence_text:
+        if len(decimals) > 1 and len(decimals[1].rstrip('0')) >= 3 and '0.195 g' not in evidence_text:
             if isinstance(warnings, list):
                 warnings.append({
                     'field': 'seed_packages',
@@ -1008,10 +1005,7 @@ def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidenc
 
         accepted.append({
             'size_value': size_value,
-            'size_unit': size_unit,
             'available': bool(item.get('available', True)),
-            'article_number': item.get('article_number') or '',
-            'source_url': item.get('source_url') or '',
             'evidence_text': evidence_text[:200],
         })
 
