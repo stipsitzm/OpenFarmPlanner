@@ -739,12 +739,27 @@ function Cultures(): React.ReactElement {
     return `$${value.toFixed(decimals)}`;
   };
 
+  const withVat20 = (netValue: number): number => netValue * 1.2;
+
+  const estimateGrossCost = (costEstimate: EnrichmentCostEstimate): number => {
+    const breakdown = costEstimate.breakdown;
+    const subtotal = typeof breakdown.subtotal === 'number'
+      ? breakdown.subtotal
+      : (breakdown.input + breakdown.cached_input + breakdown.output + breakdown.web_search_calls);
+
+    if (typeof breakdown.tax === 'number') {
+      return subtotal + breakdown.tax;
+    }
+
+    return withVat20(subtotal);
+  };
+
   const formatCostMessage = (costEstimate: EnrichmentCostEstimate, usage: EnrichmentUsage): string => (
-    `KI-Kosten (Schätzung): ${formatUsd(costEstimate.total)}  • Tokens: ${usage.inputTokens.toLocaleString('de-DE')} in / ${usage.outputTokens.toLocaleString('de-DE')} out  • Web-Suche: ${costEstimate.breakdown.web_search_call_count} Calls`
+    `KI-Kosten (Schätzung, inkl. 20% MwSt.): ${formatUsd(estimateGrossCost(costEstimate))}  • Tokens: ${usage.inputTokens.toLocaleString('de-DE')} in / ${usage.outputTokens.toLocaleString('de-DE')} out  • Web-Suche: ${costEstimate.breakdown.web_search_call_count} Calls`
   );
 
   const formatBatchCostMessage = (result: EnrichmentBatchResult): string => (
-    `Batch KI-Kosten (Schätzung): ${formatUsd(result.costEstimate.total)} (${result.succeeded} Kulturen)`
+    `Batch KI-Kosten (Schätzung, inkl. 20% MwSt.): ${formatUsd(estimateGrossCost(result.costEstimate))} (${result.succeeded} Kulturen)`
   );
 
   const getDialogCostInfo = (result: EnrichmentResult | null): string | null => {

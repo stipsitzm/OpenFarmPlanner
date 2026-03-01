@@ -91,7 +91,7 @@ describe('Cultures enrichment cost banner', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Kultur vervollständigen (KI) (Alt+U)' }));
 
     await waitFor(() => {
-      expect(screen.getAllByText(/KI-Kosten \(Schätzung\): \$0\.012/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/KI-Kosten \(Schätzung, inkl\. 20% MwSt\.\): \$0\.019/).length).toBeGreaterThan(0);
     });
     expect(screen.getAllByText(/Tokens: 1\.234 in \/ 567 out/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Web-Suche: 2 Calls/).length).toBeGreaterThan(0);
