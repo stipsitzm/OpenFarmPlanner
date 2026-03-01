@@ -747,7 +747,12 @@ function Cultures(): React.ReactElement {
     `Batch KI-Kosten (Schätzung): ${formatUsd(result.costEstimate.total)} (${result.succeeded} Kulturen)`
   );
 
-
+  const getDialogCostInfo = (result: EnrichmentResult | null): string | null => {
+    if (!result?.costEstimate || !result?.usage) {
+      return null;
+    }
+    return formatCostMessage(result.costEstimate, result.usage);
+  };
 
   const enrichmentFieldLabelMap: Record<string, string> = {
     growth_duration_days: 'form.growthDurationDays',
@@ -1431,6 +1436,11 @@ function Cultures(): React.ReactElement {
       <Dialog open={enrichmentDialogOpen} onClose={() => setEnrichmentDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>{t('ai.suggestionsTitle')}</DialogTitle>
         <DialogContent>
+          {getDialogCostInfo(enrichmentResult) && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              {getDialogCostInfo(enrichmentResult)}
+            </Alert>
+          )}
           {(enrichmentResult?.validation?.warnings || []).length > 0 && (
             <Alert severity="warning" sx={{ mb: 2 }}>
               {(enrichmentResult?.validation?.warnings || []).map((warning) => (

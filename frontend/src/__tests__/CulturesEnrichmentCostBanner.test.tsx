@@ -95,6 +95,7 @@ describe('Cultures enrichment cost banner', () => {
     });
     expect(screen.getAllByText(/Tokens: 1\.234 in \/ 567 out/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Web-Suche: 2 Calls/).length).toBeGreaterThan(0);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('triggers AI actions via keyboard shortcuts', async () => {
