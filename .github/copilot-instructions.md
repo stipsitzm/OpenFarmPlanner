@@ -18,6 +18,24 @@ For specific coding rules, see:
 - `./instructions/python-backend.instructions.md`
 - `./instructions/react-frontend.instructions.md`
 
+## Django Migrations
+
+**NEVER edit an existing migration file once it has been created.**  Migrations
+may already be applied to production or developer databases.  Editing an applied
+migration causes migration state to diverge from the actual schema and makes
+rollbacks break (e.g. `DuplicateColumn` errors when Django tries to add back a
+column that was never actually dropped).
+
+- Always create a **new** migration for any further schema change.
+- If a schema fix is needed after an already-applied migration, create a new
+  "fix" migration.  Use `RunSQL` with `ALTER TABLE … DROP COLUMN IF EXISTS` (or
+  the equivalent safe DDL) so that the operation is idempotent and does not fail
+  whether or not the column is already absent.
+- For the reverse of such a fix migration, use a no-op (`SELECT 1;`) rather than
+  trying to recreate deprecated columns.
+- Use `SeparateDatabaseAndState` to keep Django's migration state in sync when
+  the raw SQL already covers the database change.
+
 ## Commit Messages (Conventional Commits)
 
 
