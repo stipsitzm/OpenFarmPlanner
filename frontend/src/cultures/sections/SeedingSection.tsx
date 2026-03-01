@@ -31,6 +31,15 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
 
   const packages = formData.seed_packages ?? [];
 
+
+  const parseSizeValue = (value: string): number => {
+    if (!value) {
+      return 0;
+    }
+    const parsed = Number(value.replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
   useEffect(() => {
     if (packages.length > prevPackageCountRef.current && lastPackageSizeInputRef.current) {
       lastPackageSizeInputRef.current.focus();
@@ -123,7 +132,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               type="number"
               label="Size (g)"
               value={pkg.size_value}
-              onChange={(e) => updatePackage(index, { size_value: e.target.value ? parseFloat(e.target.value) : 0, size_unit: 'g' })}
+              onChange={(e) => updatePackage(index, { size_value: parseSizeValue(e.target.value), size_unit: 'g' })}
               error={Boolean(errors[`seed_packages.${index}.size_value`] || errors.seed_packages)}
               helperText={errors[`seed_packages.${index}.size_value`]}
               slotProps={{

@@ -105,8 +105,11 @@ describe('culture form UI sections', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add pack' }));
     expect(onChange).toHaveBeenCalledWith('seed_packages', [{ size_value: 0, size_unit: 'g' }]);
 
+
     expect(screen.getByText('Bitte wählen')).toBeInTheDocument();
   });
+
+
 
   it('renders HarvestSection and parses expected yield input including empty value', () => {
     const onChange = vi.fn();

@@ -11,6 +11,24 @@ export interface ValidationResult {
   errors: Record<string, string>;
 }
 
+const toNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().replace(',', '.');
+    if (!normalized) {
+      return null;
+    }
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
 /**
  * Validates a draft culture object for the form.
  *
@@ -47,20 +65,20 @@ export function validateCulture(
 
   // Optional numeric fields with explicit error keys
   if (draft.growth_duration_days !== undefined && draft.growth_duration_days !== null && (typeof draft.growth_duration_days !== 'string' || draft.growth_duration_days !== '')) {
-    const numValue = typeof draft.growth_duration_days === 'string' ? parseFloat(draft.growth_duration_days) : Number(draft.growth_duration_days);
-    if (numValue < 0) {
+    const numValue = toNumber(draft.growth_duration_days);
+    if (numValue !== null && numValue < 0) {
       errors.growth_duration_days = t('form.growthDurationDaysError');
     }
   }
   if (draft.harvest_duration_days !== undefined && draft.harvest_duration_days !== null && (typeof draft.harvest_duration_days !== 'string' || draft.harvest_duration_days !== '')) {
-    const numValue = typeof draft.harvest_duration_days === 'string' ? parseFloat(draft.harvest_duration_days) : Number(draft.harvest_duration_days);
-    if (numValue < 0) {
+    const numValue = toNumber(draft.harvest_duration_days);
+    if (numValue !== null && numValue < 0) {
       errors.harvest_duration_days = t('form.harvestDurationDaysError');
     }
   }
   if (draft.propagation_duration_days !== undefined && draft.propagation_duration_days !== null && (typeof draft.propagation_duration_days !== 'string' || draft.propagation_duration_days !== '')) {
-    const numValue = typeof draft.propagation_duration_days === 'string' ? parseFloat(draft.propagation_duration_days) : Number(draft.propagation_duration_days);
-    if (numValue < 0) {
+    const numValue = toNumber(draft.propagation_duration_days);
+    if (numValue !== null && numValue < 0) {
       errors.propagation_duration_days = t('form.propagationDurationDaysError');
     }
   }
@@ -78,8 +96,8 @@ export function validateCulture(
   numericFields.forEach(field => {
     const value = draft[field as keyof Culture];
     if (value !== undefined && value !== null && value !== '') {
-      const numValue = typeof value === 'string' ? parseFloat(value as string) : (value as number);
-      if (numValue < 0) {
+      const numValue = toNumber(value);
+      if (numValue !== null && numValue < 0) {
         errors[field] = t(`form.${field}Error`, { defaultValue: t('form.growthDurationDaysError') });
       }
     }
@@ -88,16 +106,19 @@ export function validateCulture(
   if (draft.seed_packages && Array.isArray(draft.seed_packages)) {
     const seen = new Set<string>();
     draft.seed_packages.forEach((pkg, index) => {
-      if (!pkg || typeof pkg.size_value !== 'number' || pkg.size_value <= 0) {
+      const sizeValue = toNumber(pkg?.size_value);
+      if (sizeValue === null || sizeValue <= 0) {
         errors[`seed_packages.${index}.size_value`] = 'Packgröße muss > 0 sein';
-      } else if (Math.round(pkg.size_value * 10) !== pkg.size_value * 10) {
+      } else if (Math.round(sizeValue * 10) !== sizeValue * 10) {
         errors[`seed_packages.${index}.size_value`] = 'Packgröße darf maximal eine Nachkommastelle haben';
       }
-      const key = `${pkg.size_value}`;
-      if (seen.has(key)) {
-        errors.seed_packages = 'Doppelte Packungsgrößen sind nicht erlaubt';
+      const key = `${sizeValue}`;
+      if (sizeValue !== null) {
+        if (seen.has(key)) {
+          errors.seed_packages = 'Doppelte Packungsgrößen sind nicht erlaubt';
+        }
+        seen.add(key);
       }
-      seen.add(key);
     });
   }
 
