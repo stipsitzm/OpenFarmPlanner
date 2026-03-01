@@ -11,6 +11,7 @@ from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import json
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
@@ -849,6 +850,18 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
             total_web_search_cost += float(breakdown.get('web_search_calls') or 0)
             total_web_search_call_count += int(breakdown.get('web_search_call_count') or 0)
 
+        cost_model_name = next(
+            (
+                str((item.get('result') or {}).get('costEstimate', {}).get('model') or '')
+                for item in items
+                if isinstance(item, dict)
+                and isinstance(item.get('result'), dict)
+                and isinstance((item.get('result') or {}).get('costEstimate'), dict)
+                and (item.get('result') or {}).get('costEstimate', {}).get('model')
+            ),
+            getattr(settings, 'AI_ENRICHMENT_MODEL', 'gpt-5'),
+        )
+
         return Response({
             'run_id': run_id,
             'status': 'completed',
@@ -865,7 +878,7 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
             'costEstimate': {
                 'currency': 'USD',
                 'total': total_cost,
-                'model': 'gpt-4.1',
+                'model': cost_model_name,
                 'breakdown': {
                     'input': total_input_cost,
                     'cached_input': total_cached_input_cost,

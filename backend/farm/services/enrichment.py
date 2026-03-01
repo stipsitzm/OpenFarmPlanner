@@ -509,7 +509,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
     """OpenAI Responses API provider using web_search capable tools."""
 
     provider_name = "openai_responses"
-    model_name = "gpt-4.1"
+    model_name = _coerce_setting_to_str(getattr(settings, 'AI_ENRICHMENT_MODEL', 'gpt-5'), 'AI_ENRICHMENT_MODEL') or 'gpt-5'
     search_provider_name = "web_search"
 
     def __init__(self, api_key: str | None = None) -> None:
