@@ -838,7 +838,7 @@ def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidenc
         size_unit = str(item.get('size_unit') or '').strip()
         evidence_text = str(item.get('evidence_text') or '')
 
-        if size_unit not in {'g', 'seeds'}:
+        if size_unit not in {'g'}:
             continue
         if size_unit == 'g' and (size_value < 0.1 or size_value > 1000):
             continue

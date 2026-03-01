@@ -90,8 +90,10 @@ export function validateCulture(
     draft.seed_packages.forEach((pkg, index) => {
       if (!pkg || typeof pkg.size_value !== 'number' || pkg.size_value <= 0) {
         errors[`seed_packages.${index}.size_value`] = 'Packgröße muss > 0 sein';
+      } else if (Math.round(pkg.size_value * 10) !== pkg.size_value * 10) {
+        errors[`seed_packages.${index}.size_value`] = 'Packgröße darf maximal eine Nachkommastelle haben';
       }
-      const key = `${pkg.size_unit}:${pkg.size_value}`;
+      const key = `${pkg.size_value}`;
       if (seen.has(key)) {
         errors.seed_packages = 'Doppelte Packungsgrößen sind nicht erlaubt';
       }

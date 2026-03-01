@@ -137,7 +137,7 @@ class SeedPackageSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-        extra_kwargs = {'culture': {'required': False}}
+        extra_kwargs = {'culture': {'required': False}, 'size_unit': {'default': SeedPackage.UNIT_GRAMS}}
 
 
 
@@ -250,15 +250,19 @@ class CultureSerializer(serializers.ModelSerializer):
 
 
     def validate_seed_packages(self, value):
-        seen: set[tuple[str, str]] = set()
+        seen: set[str] = set()
         for idx, item in enumerate(value):
             size_value = item.get('size_value')
-            size_unit = item.get('size_unit')
+            size_unit = item.get('size_unit') or SeedPackage.UNIT_GRAMS
             if size_value is None or float(size_value) <= 0:
                 raise serializers.ValidationError({idx: 'size_value must be > 0'})
-            key = (str(size_value), str(size_unit))
+            if size_unit != SeedPackage.UNIT_GRAMS:
+                raise serializers.ValidationError({idx: 'Only grams (g) are supported for package size.'})
+            if round(float(size_value), 1) != float(size_value):
+                raise serializers.ValidationError({idx: 'size_value must have at most one decimal place.'})
+            key = str(size_value)
             if key in seen:
-                raise serializers.ValidationError({idx: 'Duplicate package size for same unit.'})
+                raise serializers.ValidationError({idx: 'Duplicate package size.'})
             seen.add(key)
         return value
 

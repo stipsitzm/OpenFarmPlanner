@@ -576,15 +576,13 @@ class SeedPackage(TimestampedModel):
     """Sold package option for a culture."""
 
     UNIT_GRAMS = 'g'
-    UNIT_SEEDS = 'seeds'
     UNIT_CHOICES = [
         (UNIT_GRAMS, 'Grams'),
-        (UNIT_SEEDS, 'Seeds'),
     ]
 
     culture = models.ForeignKey('Culture', on_delete=models.CASCADE, related_name='seed_packages')
-    size_value = models.DecimalField(max_digits=10, decimal_places=3)
-    size_unit = models.CharField(max_length=10, choices=UNIT_CHOICES)
+    size_value = models.DecimalField(max_digits=10, decimal_places=1)
+    size_unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default=UNIT_GRAMS)
     available = models.BooleanField(default=True)
     article_number = models.CharField(max_length=120, blank=True)
     source_url = models.URLField(blank=True)
@@ -604,6 +602,8 @@ class SeedPackage(TimestampedModel):
         super().clean()
         if self.size_value is not None and self.size_value <= 0:
             raise ValidationError({'size_value': 'Package size must be greater than zero.'})
+        if self.size_unit != self.UNIT_GRAMS:
+            raise ValidationError({'size_unit': 'Only grams (g) are supported for package size.'})
 
     def __str__(self) -> str:
         return f"{self.culture.name} {self.size_value} {self.size_unit}"

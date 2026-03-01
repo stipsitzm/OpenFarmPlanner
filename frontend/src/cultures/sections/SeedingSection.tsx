@@ -106,27 +106,16 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
       <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Seed packages</Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {packages.map((pkg, index) => (
-          <Box key={index} sx={{ display: 'grid', gridTemplateColumns: '120px 120px 120px 1fr 1fr 40px', gap: 1, alignItems: 'center' }}>
+          <Box key={index} sx={{ display: 'grid', gridTemplateColumns: '180px 120px 1fr 1fr 40px', gap: 1, alignItems: 'center' }}>
             <TextField
               type="number"
-              label="Size"
+              label="Size (g)"
               value={pkg.size_value}
-              onChange={(e) => updatePackage(index, { size_value: e.target.value ? parseFloat(e.target.value) : 0 })}
+              onChange={(e) => updatePackage(index, { size_value: e.target.value ? parseFloat(e.target.value) : 0, size_unit: 'g' })}
               error={Boolean(errors[`seed_packages.${index}.size_value`] || errors.seed_packages)}
               helperText={errors[`seed_packages.${index}.size_value`]}
-              slotProps={{ htmlInput: { min: 0.001, step: 0.001 } }}
+              slotProps={{ htmlInput: { min: 0.1, step: 0.1 } }}
             />
-            <FormControl>
-              <InputLabel>Unit</InputLabel>
-              <Select
-                label="Unit"
-                value={pkg.size_unit}
-                onChange={(e) => updatePackage(index, { size_unit: e.target.value as 'g' | 'seeds' })}
-              >
-                <MenuItem value="g">g</MenuItem>
-                <MenuItem value="seeds">seeds</MenuItem>
-              </Select>
-            </FormControl>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Checkbox checked={pkg.available} onChange={(e) => updatePackage(index, { available: e.target.checked })} />
               <Typography variant="body2">available</Typography>

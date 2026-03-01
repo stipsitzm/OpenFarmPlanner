@@ -743,7 +743,7 @@ function Cultures(): React.ReactElement {
 
   const normalizeSuggestedSeedPackages = (value: unknown): Array<{
     size_value: number;
-    size_unit: 'g' | 'seeds';
+    size_unit: 'g';
     available: boolean;
     article_number?: string;
     source_url?: string;
@@ -762,7 +762,7 @@ function Cultures(): React.ReactElement {
 
         const raw = item as Record<string, unknown>;
         const sizeValue = Number(raw.size_value);
-        const sizeUnit: 'g' | 'seeds' | null = raw.size_unit === 'g' || raw.size_unit === 'seeds'
+        const sizeUnit: 'g' | null = raw.size_unit === 'g'
           ? raw.size_unit
           : null;
 
