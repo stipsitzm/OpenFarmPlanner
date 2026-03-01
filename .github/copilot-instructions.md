@@ -18,6 +18,12 @@ For specific coding rules, see:
 - `./instructions/python-backend.instructions.md`
 - `./instructions/react-frontend.instructions.md`
 
+## Django Migrations
+
+- Never modify an existing migration file after it is created.
+- Always create a new migration for every follow-up schema change.
+- If a previous migration needs correction, add a new fix migration instead of editing the old one.
+
 ## Commit Messages (Conventional Commits)
 
 

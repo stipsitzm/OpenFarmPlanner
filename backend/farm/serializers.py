@@ -357,10 +357,11 @@ class CultureSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
 
         try:
+            model_field_names = {field.name for field in Culture._meta.fields}
+
             if self.instance:
                 temp_attrs = {}
-                for field in Culture._meta.fields:
-                    field_name = field.name
+                for field_name in model_field_names:
                     if field_name in attrs:
                         temp_attrs[field_name] = attrs[field_name]
                     elif hasattr(self.instance, field_name):
@@ -368,7 +369,7 @@ class CultureSerializer(serializers.ModelSerializer):
                 temp_instance = Culture(**temp_attrs)
                 temp_instance.pk = self.instance.pk
             else:
-                temp_instance = Culture(**attrs)
+                temp_instance = Culture(**{k: v for k, v in attrs.items() if k in model_field_names})
             
             # Validate without mutating the real instance.
             temp_instance.clean()
