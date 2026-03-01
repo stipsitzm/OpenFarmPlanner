@@ -351,9 +351,6 @@ class Culture(TimestampedModel):
         if self.expected_yield is not None and self.expected_yield < 0:
             errors['expected_yield'] = 'Expected yield must be non-negative.'
 
-        if self.harvest_duration_days is not None and not self.harvest_method:
-            errors['harvest_method'] = 'Harvest method is required when harvest duration is set.'
-
         if self.seeding_requirement is None and self.seeding_requirement_type:
             errors['seeding_requirement'] = 'Seeding requirement value is required when seeding requirement type is set.'
 
