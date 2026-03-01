@@ -583,9 +583,6 @@ class SeedPackage(TimestampedModel):
     culture = models.ForeignKey('Culture', on_delete=models.CASCADE, related_name='seed_packages')
     size_value = models.DecimalField(max_digits=10, decimal_places=1)
     size_unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default=UNIT_GRAMS)
-    available = models.BooleanField(default=True)
-    article_number = models.CharField(max_length=120, blank=True)
-    source_url = models.URLField(blank=True)
     evidence_text = models.CharField(max_length=200, blank=True)
     last_seen_at = models.DateTimeField(null=True, blank=True)
 

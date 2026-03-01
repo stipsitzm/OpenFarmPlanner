@@ -306,9 +306,6 @@ function Cultures(): React.ReactElement {
         ? culture.seed_packages.map((pkg) => ({
             size_value: Math.round((Number(pkg.size_value) || 0) * 10) / 10,
             size_unit: 'g' as const,
-            available: pkg.available !== false,
-            article_number: pkg.article_number ?? '',
-            source_url: pkg.source_url ?? '',
             evidence_text: pkg.evidence_text ?? '',
             last_seen_at: pkg.last_seen_at ?? null,
           }))
@@ -757,9 +754,6 @@ function Cultures(): React.ReactElement {
   const normalizeSuggestedSeedPackages = (value: unknown): Array<{
     size_value: number;
     size_unit: 'g';
-    available: boolean;
-    article_number?: string;
-    source_url?: string;
     evidence_text?: string;
   }> => {
     if (!Array.isArray(value)) {
@@ -792,9 +786,6 @@ function Cultures(): React.ReactElement {
         return {
           size_value: sizeValue,
           size_unit: sizeUnit,
-          available: raw.available !== false,
-          article_number: typeof raw.article_number === 'string' ? raw.article_number : undefined,
-          source_url: typeof raw.source_url === 'string' ? raw.source_url : undefined,
           evidence_text: typeof raw.evidence_text === 'string' ? raw.evidence_text : undefined,
         };
       })
@@ -808,7 +799,7 @@ function Cultures(): React.ReactElement {
         return t('ai.noSuggestions');
       }
       return packages
-        .map((pkg) => `${pkg.size_value} ${pkg.size_unit}${pkg.available ? '' : ' (nicht verfügbar)'}`)
+        .map((pkg) => `${pkg.size_value} ${pkg.size_unit}`)
         .join(', ');
     }
 

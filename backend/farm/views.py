@@ -1284,7 +1284,7 @@ class SeedDemandListView(generics.ListAPIView):
         rows = list(self.get_queryset())
         culture_ids = [row['culture_id'] for row in rows]
         package_map: dict[int, list[SeedPackage]] = defaultdict(list)
-        for package in SeedPackage.objects.filter(culture_id__in=culture_ids, available=True).order_by('size_unit', 'size_value'):
+        for package in SeedPackage.objects.filter(culture_id__in=culture_ids).order_by('size_unit', 'size_value'):
             package_map[package.culture_id].append(package)
 
         for row in rows:
@@ -1294,7 +1294,6 @@ class SeedDemandListView(generics.ListAPIView):
                 {
                     'size_value': float(pkg.size_value),
                     'size_unit': pkg.size_unit,
-                    'available': pkg.available,
                 }
                 for pkg in packages
             ]

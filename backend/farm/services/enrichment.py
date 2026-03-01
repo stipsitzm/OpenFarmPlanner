@@ -269,7 +269,7 @@ def _is_missing_culture_field(culture: Culture, suggested_field: str) -> bool:
         'propagation_duration_days': culture.propagation_duration_days,
         'harvest_method': culture.harvest_method,
         'expected_yield': culture.expected_yield,
-        'seed_packages': [{'size_value': float(p.size_value), 'size_unit': p.size_unit, 'available': p.available} for p in culture.seed_packages.all()],
+        'seed_packages': [{'size_value': float(p.size_value), 'size_unit': p.size_unit} for p in culture.seed_packages.all()],
         'seed_rate_value': culture.seed_rate_value,
         'seed_rate_unit': culture.seed_rate_unit,
         'thousand_kernel_weight_g': culture.thousand_kernel_weight_g,
@@ -530,7 +530,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "propagation_duration_days": culture.propagation_duration_days,
             "harvest_method": culture.harvest_method,
             "expected_yield": float(culture.expected_yield) if culture.expected_yield is not None else None,
-            "seed_packages": [{"size_value": float(p.size_value), "size_unit": p.size_unit, "available": p.available} for p in culture.seed_packages.all()],
+            "seed_packages": [{"size_value": float(p.size_value), "size_unit": p.size_unit} for p in culture.seed_packages.all()],
             "distance_within_row_cm": round(culture.distance_within_row_m * 100, 2) if culture.distance_within_row_m else None,
             "row_spacing_cm": round(culture.row_spacing_m * 100, 2) if culture.row_spacing_m else None,
             "sowing_depth_cm": round(culture.sowing_depth_m * 100, 2) if culture.sowing_depth_m else None,
@@ -855,9 +855,6 @@ def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidenc
         accepted.append({
             'size_value': size_value,
             'size_unit': size_unit,
-            'available': bool(item.get('available', True)),
-            'article_number': item.get('article_number') or '',
-            'source_url': item.get('source_url') or '',
             'evidence_text': evidence_text[:200],
         })
 

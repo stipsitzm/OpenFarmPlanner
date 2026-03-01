@@ -163,7 +163,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.culture.harvest_method = 'per_sqm'
         self.culture.expected_yield = 1.5
         self.culture.save(update_fields=['growth_duration_days', 'harvest_duration_days', 'harvest_method', 'expected_yield'])
-        SeedPackage.objects.create(culture=self.culture, size_value=500, size_unit='g', available=True)
+        SeedPackage.objects.create(culture=self.culture, size_value=500, size_unit='g')
 
         response = Mock()
         response.status_code = 200

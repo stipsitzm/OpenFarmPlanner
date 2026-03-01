@@ -2,7 +2,8 @@
  * SeedingSection: Saatgutmenge (Menge + Einheit)
  * @remarks Presentational, no internal state
  */
-import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Tooltip, Checkbox, IconButton, Button } from '@mui/material';
+import { useEffect, useRef } from 'react';
+import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Tooltip, IconButton, Button } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import type { Culture, SeedPackage, SeedRateUnit } from '../../api/types';
 import type { TFunction } from 'i18next';
@@ -17,6 +18,9 @@ interface SeedingSectionProps {
 }
 
 export function SeedingSection({ formData, errors, onChange, t }: SeedingSectionProps) {
+  const lastPackageSizeInputRef = useRef<HTMLInputElement | null>(null);
+  const prevPackageCountRef = useRef<number>(0);
+
   const handleSeedRateUnitChange = (value: string) => {
     if (!value) {
       onChange('seed_rate_unit', null);
@@ -27,13 +31,21 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
 
   const packages = formData.seed_packages ?? [];
 
+  useEffect(() => {
+    if (packages.length > prevPackageCountRef.current && lastPackageSizeInputRef.current) {
+      lastPackageSizeInputRef.current.focus();
+      lastPackageSizeInputRef.current.select();
+    }
+    prevPackageCountRef.current = packages.length;
+  }, [packages.length]);
+
   const updatePackage = (index: number, patch: Partial<SeedPackage>) => {
     const next = packages.map((item, idx) => (idx === index ? { ...item, ...patch } : item));
     onChange('seed_packages', next);
   };
 
   const addPackage = () => {
-    onChange('seed_packages', [...packages, { size_value: 0, size_unit: 'g', available: true }]);
+    onChange('seed_packages', [...packages, { size_value: 0, size_unit: 'g' }]);
   };
 
   const deletePackage = (index: number) => {
@@ -106,7 +118,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
       <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Seed packages</Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {packages.map((pkg, index) => (
-          <Box key={index} sx={{ display: 'grid', gridTemplateColumns: '180px 120px 1fr 1fr 40px', gap: 1, alignItems: 'center' }}>
+          <Box key={index} sx={{ display: 'grid', gridTemplateColumns: '180px 40px', gap: 1, alignItems: 'center' }}>
             <TextField
               type="number"
               label="Size (g)"
@@ -114,14 +126,14 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               onChange={(e) => updatePackage(index, { size_value: e.target.value ? parseFloat(e.target.value) : 0, size_unit: 'g' })}
               error={Boolean(errors[`seed_packages.${index}.size_value`] || errors.seed_packages)}
               helperText={errors[`seed_packages.${index}.size_value`]}
-              slotProps={{ htmlInput: { min: 0.1, step: 0.1 } }}
+              slotProps={{
+                htmlInput: {
+                  min: 0.1,
+                  step: 0.1,
+                  ref: index === packages.length - 1 ? lastPackageSizeInputRef : undefined,
+                },
+              }}
             />
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Checkbox checked={pkg.available} onChange={(e) => updatePackage(index, { available: e.target.checked })} />
-              <Typography variant="body2">available</Typography>
-            </Box>
-            <TextField label="Article #" value={pkg.article_number ?? ''} onChange={(e) => updatePackage(index, { article_number: e.target.value })} />
-            <TextField label="Source URL" value={pkg.source_url ?? ''} onChange={(e) => updatePackage(index, { source_url: e.target.value })} />
             <IconButton onClick={() => deletePackage(index)} aria-label="delete-seed-package"><DeleteIcon fontSize="small" /></IconButton>
           </Box>
         ))}

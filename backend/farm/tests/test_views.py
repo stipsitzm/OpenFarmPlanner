@@ -177,7 +177,7 @@ class ApiEndpointsTest(DRFAPITestCase):
             harvest_duration_days=2,
             harvest_method='per_plant',
         )
-        package = SeedPackage.objects.create(culture=culture, size_value='25.0', size_unit='g', available=True)
+        package = SeedPackage.objects.create(culture=culture, size_value='25.0', size_unit='g')
 
         payload = {
             'id': culture.id,
@@ -193,8 +193,7 @@ class ApiEndpointsTest(DRFAPITestCase):
                     'culture': culture.id,
                     'size_value': 25.0,
                     'size_unit': 'g',
-                    'available': True,
-                }
+                                    }
             ],
         }
 
