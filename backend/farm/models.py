@@ -53,6 +53,7 @@ class Supplier(TimestampedModel):
     homepage_url = models.URLField(help_text="Supplier homepage URL")
     slug = models.SlugField(max_length=200, unique=True, blank=True)
     allowed_domains = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
     name_normalized = models.CharField(
         max_length=200,
         unique=True,
@@ -62,10 +63,37 @@ class Supplier(TimestampedModel):
 
     @staticmethod
     def _normalize_domain(hostname: str) -> str:
-        host = (hostname or '').strip().lower()
-        if host.startswith('www.'):
-            host = host[4:]
-        return host
+        """Normalize one domain value and strip common URL parts."""
+        raw = (hostname or '').strip().lower()
+        if not raw:
+            return ''
+        if '://' in raw:
+            raw = urlparse(raw).hostname or ''
+        raw = raw.split('/')[0].split(':')[0].strip().lower().rstrip('.')
+        if raw.startswith('www.'):
+            raw = raw[4:]
+        return raw
+
+    @classmethod
+    def normalize_allowed_domains(cls, domains: list[str] | tuple[str, ...] | None) -> list[str]:
+        """Normalize user-provided allowed domains and deduplicate while preserving order."""
+        normalized: list[str] = []
+        for domain in (domains or []):
+            item = cls._normalize_domain(str(domain))
+            if item and item not in normalized:
+                normalized.append(item)
+            if item and f'www.{item}' not in normalized:
+                normalized.append(f'www.{item}')
+        return normalized
+
+    @staticmethod
+    def _is_valid_domain(domain: str) -> bool:
+        """Return True if the string looks like a bare hostname."""
+        if not domain or len(domain) > 253:
+            return False
+        if '/' in domain or ':' in domain or ' ' in domain:
+            return False
+        return bool(re.fullmatch(r'(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}', domain))
 
     def _derive_slug_base(self) -> str:
         try:
@@ -95,13 +123,27 @@ class Supplier(TimestampedModel):
             suffix += 1
         self.slug = candidate
 
-    def _derive_allowed_domains(self) -> list[str]:
+    def _derive_default_allowed_domains(self) -> list[str]:
+        """Build default allowed domains from homepage host and explicit www variant."""
         try:
             hostname = urlparse(self.homepage_url).hostname or ''
         except Exception:  # noqa: BLE001
             hostname = ''
         normalized = self._normalize_domain(hostname)
-        return [normalized] if normalized else []
+        if not normalized:
+            return []
+        return [normalized, f'www.{normalized}']
+
+    def clean(self) -> None:
+        """Validate and normalize mutable supplier fields."""
+        super().clean()
+        domains = self.normalize_allowed_domains(self.allowed_domains if isinstance(self.allowed_domains, list) else [])
+        if not domains:
+            domains = self._derive_default_allowed_domains()
+        invalid = [domain for domain in domains if not self._is_valid_domain(self._normalize_domain(domain))]
+        if invalid:
+            raise ValidationError({'allowed_domains': 'Allowed domains must be valid hostnames without scheme or path.'})
+        self.allowed_domains = domains
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save supplier and auto-generate normalized helper fields."""
@@ -110,9 +152,11 @@ class Supplier(TimestampedModel):
         if self.name:
             self.name = ' '.join(self.name.split())
         self.name_normalized = normalize_supplier_name(self.name) or ''
+        self.allowed_domains = self.normalize_allowed_domains(self.allowed_domains if isinstance(self.allowed_domains, list) else [])
+        if not self.allowed_domains:
+            self.allowed_domains = self._derive_default_allowed_domains()
         if not self.slug:
             self._assign_unique_slug()
-        self.allowed_domains = self._derive_allowed_domains()
 
         super().save(*args, **kwargs)
 

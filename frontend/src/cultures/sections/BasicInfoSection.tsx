@@ -54,7 +54,7 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
         return;
       }
       try {
-        const response = await supplierAPI.create(value, homepageUrl.trim());
+        const response = await supplierAPI.create(value, homepageUrl.trim(), []);
         onChange('supplier', response.data);
       } catch (error) {
         console.error('Error creating supplier:', error);
@@ -119,7 +119,7 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
           label={t('form.supplierHomepage', { defaultValue: 'Lieferanten-Homepage' })}
           value={formData.supplier?.homepage_url || ''}
           InputProps={{ readOnly: true }}
-          helperText={formData.supplier?.allowed_domains?.[0] ? `Domain: ${formData.supplier.allowed_domains[0]}` : ''}
+          helperText={(formData.supplier?.allowed_domains || []).length > 0 ? `Domains: ${(formData.supplier?.allowed_domains || []).join(', ')}` : ''}
         />
         <TextField
           sx={fieldSx}

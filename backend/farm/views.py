@@ -75,12 +75,12 @@ def _coerce_request_string(value, default='') -> str:
 
 
 
-def _supplier_enrichment_requirement_error() -> Response:
-    """Return standardized supplier URL requirement error for enrichment endpoints."""
+def _supplier_enrichment_requirement_error(code: str, message: str) -> Response:
+    """Return standardized supplier enrichment requirement errors."""
     return Response(
         {
-            'code': 'supplier_url_required',
-            'message': 'Supplier is required for AI enrichment.',
+            'code': code,
+            'message': message,
         },
         status=status.HTTP_400_BAD_REQUEST,
     )
@@ -337,6 +337,8 @@ class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         """
         name = request.data.get('name', '').strip()
         homepage_url = request.data.get('homepage_url', '').strip()
+        allowed_domains = request.data.get('allowed_domains', [])
+        is_active = bool(request.data.get('is_active', True))
 
         if not name:
             return Response(
@@ -355,8 +357,26 @@ class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
 
         supplier, created = Supplier.objects.get_or_create(
             name_normalized=normalized,
-            defaults={'name': name, 'homepage_url': homepage_url}
+            defaults={
+                'name': name,
+                'homepage_url': homepage_url,
+                'allowed_domains': allowed_domains if isinstance(allowed_domains, list) else [],
+                'is_active': is_active,
+            }
         )
+        if not created:
+            update_fields: list[str] = []
+            if homepage_url and supplier.homepage_url != homepage_url:
+                supplier.homepage_url = homepage_url
+                update_fields.append('homepage_url')
+            if isinstance(allowed_domains, list):
+                supplier.allowed_domains = allowed_domains
+                update_fields.append('allowed_domains')
+            if supplier.is_active != is_active:
+                supplier.is_active = is_active
+                update_fields.append('is_active')
+            if update_fields:
+                supplier.save()
         
         serializer = self.get_serializer(supplier)
         data = serializer.data
@@ -804,7 +824,9 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         """Create AI suggestions for one culture."""
         culture = self.get_object()
         if not culture.supplier_id:
-            return _supplier_enrichment_requirement_error()
+            return _supplier_enrichment_requirement_error('supplier_missing', 'Supplier is required for AI enrichment.')
+        if not (culture.supplier and culture.supplier.allowed_domains):
+            return _supplier_enrichment_requirement_error('allowed_domains_missing', 'Supplier allowed domains are required for AI enrichment.')
         mode = _coerce_request_string(request.data.get('mode'), 'complete')
         try:
             payload = enrich_culture(culture, mode)
@@ -834,7 +856,10 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         items = []
         for culture in cultures:
             if not culture.supplier_id:
-                items.append({'culture_id': culture.id, 'status': 'failed', 'error': 'supplier_url_required'})
+                items.append({'culture_id': culture.id, 'status': 'failed', 'error': 'supplier_missing'})
+                continue
+            if not (culture.supplier and culture.supplier.allowed_domains):
+                items.append({'culture_id': culture.id, 'status': 'failed', 'error': 'allowed_domains_missing'})
                 continue
             try:
                 item = enrich_culture(culture, 'complete')

@@ -10,9 +10,10 @@ export interface SeedPackage {
 export interface Supplier {
   id?: number;
   name: string;
-  homepage_url: string;
-  slug: string;
+  homepage_url?: string;
+  slug?: string;
   allowed_domains: string[];
+  is_active?: boolean;
   created_at?: string;
   updated_at?: string;
   created?: boolean;

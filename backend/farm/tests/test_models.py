@@ -42,7 +42,15 @@ class SupplierModelTest(TestCase):
     def test_supplier_slug_and_allowed_domains_derived_from_homepage(self):
         supplier = Supplier.objects.create(name="ReinSaat GmbH", homepage_url="https://www.reinsaat.at")
         self.assertEqual(supplier.slug, 'reinsaat')
-        self.assertEqual(supplier.allowed_domains, ['reinsaat.at'])
+        self.assertEqual(supplier.allowed_domains, ['reinsaat.at', 'www.reinsaat.at'])
+
+    def test_supplier_allowed_domains_can_be_set_and_normalized(self):
+        supplier = Supplier.objects.create(
+            name="Domain Supplier",
+            homepage_url="https://example.org",
+            allowed_domains=['HTTP://Shop.Example.ORG/path']
+        )
+        self.assertEqual(supplier.allowed_domains, ['shop.example.org', 'www.shop.example.org'])
 
     def test_is_supplier_domain_helper(self):
         supplier = Supplier.objects.create(name="Demo Supplier", homepage_url="https://www.reinsaat.at")

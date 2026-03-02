@@ -869,3 +869,67 @@ class EnrichmentCostEstimateTest(TestCase):
         }
 
         self.assertEqual(_count_web_search_calls(payload), 2)
+
+
+class EnrichmentDomainEnforcementTest(TestCase):
+    def setUp(self):
+        self.supplier = Supplier.objects.create(
+            name='ReinSaat',
+            homepage_url='https://www.reinsaat.at',
+            allowed_domains=['reinsaat.at', 'www.reinsaat.at'],
+        )
+        self.culture = Culture.objects.create(name='Salat', variety='Bijella', supplier=self.supplier)
+
+    @override_settings(AI_ENRICHMENT_ENABLED=True)
+    @patch('farm.services.enrichment.get_enrichment_provider')
+    def test_filters_non_whitelisted_evidence_and_warns(self, provider_mock):
+        provider = Mock()
+        provider.provider_name = 'fallback'
+        provider.model_name = 'gpt-5'
+        provider.search_provider_name = 'web_search'
+        provider.enrich.return_value = {
+            'suggested_fields': {
+                'growth_duration_days': {'value': 70, 'unit': 'days', 'confidence': 0.8},
+            },
+            'evidence': {
+                'growth_duration_days': [
+                    {'source_url': 'https://evil.example/salat', 'title': 'x', 'retrieved_at': '', 'snippet': 'x', 'supplier_specific': False},
+                ],
+            },
+            'validation': {'warnings': [], 'errors': []},
+            'note_blocks': '',
+            'usage': {'input_tokens': 1, 'cached_input_tokens': 0, 'output_tokens': 1},
+        }
+        provider_mock.return_value = provider
+
+        result = enrich_culture(self.culture, 'reresearch')
+        self.assertEqual(result['evidence']['growth_duration_days'], [])
+        warning_codes = [item.get('code') for item in result['validation']['warnings']]
+        self.assertIn('evidence_domain_not_allowed', warning_codes)
+
+    @override_settings(AI_ENRICHMENT_ENABLED=True)
+    @patch('farm.services.enrichment.get_enrichment_provider')
+    def test_seed_packages_require_supplier_evidence(self, provider_mock):
+        provider = Mock()
+        provider.provider_name = 'fallback'
+        provider.model_name = 'gpt-5'
+        provider.search_provider_name = 'web_search'
+        provider.enrich.return_value = {
+            'suggested_fields': {
+                'seed_packages': {'value': [{'size_value': 2.0, 'size_unit': 'g'}], 'unit': None, 'confidence': 0.8},
+            },
+            'evidence': {
+                'seed_packages': [
+                    {'source_url': 'https://other.example/pkg', 'title': 'pkg', 'retrieved_at': '', 'snippet': 'pkg', 'supplier_specific': False},
+                ],
+            },
+            'validation': {'warnings': [], 'errors': []},
+            'note_blocks': '',
+            'usage': {'input_tokens': 1, 'cached_input_tokens': 0, 'output_tokens': 1},
+        }
+        provider_mock.return_value = provider
+
+        result = enrich_culture(self.culture, 'reresearch')
+        self.assertEqual(result['suggested_fields']['seed_packages']['value'], [])
+        warning_codes = [item.get('code') for item in result['validation']['warnings']]
+        self.assertIn('missing_supplier_evidence', warning_codes)

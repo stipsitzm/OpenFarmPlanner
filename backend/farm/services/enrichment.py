@@ -458,6 +458,72 @@ def _url_matches_supplier_domains(url: str, supplier_domains: set[str]) -> bool:
     return any(host == domain or host.endswith(f'.{domain}') for domain in supplier_domains)
 
 
+
+def _filter_evidence_to_allowed_domains(
+    evidence: dict[str, Any],
+    supplier_domains: set[str],
+    validation: dict[str, Any],
+) -> None:
+    """Filter evidence entries to supplier allowed domains and register warnings."""
+    warnings = validation.setdefault('warnings', [])
+    for field_name, entries in list(evidence.items()):
+        if not isinstance(entries, list):
+            continue
+        kept: list[dict[str, Any]] = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            source_url = _coerce_text_value(entry.get('source_url', ''), 'evidence.source_url')
+            if _url_matches_supplier_domains(source_url, supplier_domains):
+                kept.append(entry)
+            elif isinstance(warnings, list):
+                warnings.append({
+                    'field': field_name,
+                    'code': 'evidence_domain_not_allowed',
+                    'message': f'Removed evidence outside supplier domain whitelist: {source_url}',
+                })
+        evidence[field_name] = kept
+
+
+def _enforce_supplier_evidence_requirements(
+    suggested_fields: dict[str, Any],
+    evidence: dict[str, Any],
+    validation: dict[str, Any],
+) -> None:
+    """Drop suggestions that have no supplier-domain evidence after filtering."""
+    warnings = validation.setdefault('warnings', [])
+    for field_name, suggestion in list(suggested_fields.items()):
+        if field_name == 'notes':
+            continue
+        remaining_evidence = evidence.get(field_name)
+        has_evidence = isinstance(remaining_evidence, list) and len(remaining_evidence) > 0
+        if field_name == 'seed_packages' and not has_evidence:
+            suggested_fields['seed_packages'] = {'value': [], 'unit': None, 'confidence': 0.0}
+            if isinstance(warnings, list):
+                warnings.append({'field': 'seed_packages', 'code': 'missing_supplier_evidence', 'message': 'Seed package suggestions require supplier-domain evidence.'})
+            continue
+        if field_name in {'growth_duration_days', 'harvest_duration_days', 'propagation_duration_days', 'seed_rate_value', 'seed_rate_unit', 'distance_within_row_cm', 'row_spacing_cm', 'sowing_depth_cm', 'thousand_kernel_weight_g'} and not has_evidence:
+            suggested_fields.pop(field_name, None)
+            if isinstance(warnings, list):
+                warnings.append({'field': field_name, 'code': 'missing_supplier_evidence', 'message': 'Dropped suggestion because supplier-domain evidence is missing.'})
+
+
+def _add_category_mismatch_warning(culture: Culture, evidence: dict[str, Any], validation: dict[str, Any]) -> None:
+    """Warn when likely supplier product page path does not match crop category."""
+    supplier_entries = evidence.get('seed_packages') or evidence.get('growth_duration_days') or []
+    if not isinstance(supplier_entries, list) or not supplier_entries:
+        return
+    first = supplier_entries[0] if isinstance(supplier_entries[0], dict) else {}
+    source_url = _coerce_text_value(first.get('source_url', ''), 'evidence.source_url').lower()
+    crop = (culture.name or '').strip().lower()
+    if not source_url or not crop:
+        return
+    penalties = {'mais', 'corn', 'tomaten', 'tomato', 'karotte', 'carrot'}
+    if crop not in source_url and any(seg in source_url for seg in penalties if seg not in crop):
+        warnings = validation.setdefault('warnings', [])
+        if isinstance(warnings, list):
+            warnings.append({'field': 'supplier_product_page', 'code': 'supplier_page_category_mismatch', 'message': 'Selected supplier page path appears category-mismatched.'})
+
 def _is_supplier_entry(entry: dict[str, Any], supplier_name: str, supplier_domains: set[str]) -> bool:
     """Return True if evidence entry is explicitly or implicitly supplier-specific."""
     tagged = entry.get('supplier_specific')
@@ -613,7 +679,6 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "seed_rate_value": culture.seed_rate_value,
             "seed_rate_unit": culture.seed_rate_unit,
             "notes": culture.notes,
-            "supplier_product_url": culture.supplier_product_url,
             "supplier_allowed_domains": list(_supplier_domains_for_culture(culture)),
         }
         if target_fields is None:
@@ -632,28 +697,22 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
 
         supplier_query = f"{supplier} {culture.variety or culture.name}".strip()
         fallback_query = (culture.variety or culture.name).strip()
+        supplier_domains = sorted(_supplier_domains_for_culture(culture))
+        primary_domain = supplier_domains[0] if supplier_domains else ''
         supplier_strategy = (
             "Supplier-first rules are mandatory. "
-            f"1) FIRST search exclusively for '{supplier_query}'. "
-            "2) Package sizes MUST come exclusively from this supplier. "
-            "3) If supplier-specific data exists and conflicts with other sources, ALWAYS prefer supplier data. "
-            "4) Only if no supplier data exists for a specific field, fallback to general crop sources. "
-            "5) If package sizes cannot be found from this supplier, return seed_packages as empty list and never use other suppliers for package sizes. "
-            f"Search strategy: Query 1 '{supplier_query} cultivation data'; "
-            f"Query 2 '{supplier_query} sowing depth'; "
-            f"Query 3 '{supplier_query} package sizes'; "
-            f"only if no results, Query 4 '{fallback_query} cultivation general'. "
-            "Tag every evidence entry with supplier_specific: true or false. "
+            "All evidence URLs must be inside supplier.allowed_domains. Ignore all other domains. "
+            "First, find the supplier product page for this crop and variety on supplier domains, then extract facts from that page and relevant supplier category pages. "
+            "If no product page can be found on supplier domains, keep suggested_fields mostly empty and add validation error code supplier_product_not_found. "
+            "Package sizes MUST come exclusively from supplier evidence; otherwise return seed_packages as empty list. "
+            f"Search strategy: Query 1 'site:{primary_domain} {culture.variety or ''} {culture.name}'; "
+            f"Query 2 'site:{primary_domain} {culture.variety or ''} {supplier or ''}'; "
+            f"Query 3 'site:{primary_domain} {culture.variety or ''} Packungsgrößen OR Portionsinhalt OR TKG'; "
+            f"Optional Query 4 'site:{primary_domain} {fallback_query} category'. "
+            "Tag every evidence entry with supplier_specific true/false. "
         )
-        if supplier_only:
-            supplier_domains = ', '.join(sorted(_supplier_domains_for_culture(culture)))
-            supplier_strategy += "Phase constraint: use supplier-specific sources only in this phase. "
-            if culture.supplier_product_url:
-                supplier_strategy += f"First open this supplier product URL: {culture.supplier_product_url}. "
-            if supplier_domains:
-                supplier_strategy += (
-                    f"Only open and trust sources from supplier domains: {supplier_domains}. "
-                )
+        if supplier_only and supplier_domains:
+            supplier_strategy += f"Allowed supplier domains whitelist: {', '.join(supplier_domains)}. "
 
         return (
             "You are a horticulture research assistant. Use web search evidence. "
@@ -1432,7 +1491,10 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
         raise EnrichmentError('AI enrichment is disabled by configuration.')
 
     if not culture.supplier_id:
-        raise EnrichmentError('supplier_url_required: Supplier is required for AI enrichment.')
+        raise EnrichmentError('supplier_missing: Supplier is required for AI enrichment.')
+
+    if not (culture.supplier and culture.supplier.allowed_domains):
+        raise EnrichmentError('allowed_domains_missing: Supplier allowed domains are required for AI enrichment.')
 
     provider = get_enrichment_provider()
     context = EnrichmentContext(culture=culture, mode=mode)
@@ -1476,6 +1538,11 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
                 'message': 'Invalid evidence payload type; treating as empty mapping.',
             })
 
+    supplier_domains = _supplier_domains_for_culture(culture)
+    _filter_evidence_to_allowed_domains(evidence, supplier_domains, validation)
+    _enforce_supplier_evidence_requirements(suggested_fields, evidence, validation)
+    _add_category_mismatch_warning(culture, evidence, validation)
+
     structured_sources = _build_structured_sources(culture, evidence)
 
     if note_blocks:
@@ -1510,6 +1577,10 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
     _normalize_suggested_field_values(suggested_fields, validation)
     _enforce_supplier_first_output(culture, suggested_fields, evidence, validation)
     _apply_source_weighted_confidence(culture, suggested_fields, evidence)
+    if not any(isinstance(entries, list) and entries for entries in evidence.values()):
+        errors = validation.setdefault('errors', [])
+        if isinstance(errors, list):
+            errors.append({'field': 'supplier_product_page', 'code': 'supplier_product_not_found', 'message': 'No supplier product page was found on allowed domains.'})
 
     unresolved_fields: list[str] = []
     if mode == "complete":

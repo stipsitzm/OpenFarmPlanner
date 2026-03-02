@@ -61,10 +61,22 @@ class SupplierSerializer(serializers.ModelSerializer):
             'storage_path': obj.image_file.storage_path,
         }
 
+    def validate_allowed_domains(self, value):
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError('Expected a list of domain strings.')
+        normalized = Supplier.normalize_allowed_domains(value)
+        invalid = [domain for domain in normalized if not Supplier._is_valid_domain(Supplier._normalize_domain(domain))]
+        if invalid:
+            raise serializers.ValidationError('Allowed domains must be valid hostnames without scheme or path.')
+        return normalized
+
+
     class Meta:
         model = Supplier
-        fields = ['id', 'name', 'homepage_url', 'slug', 'allowed_domains', 'created_at', 'updated_at', 'created']
-        read_only_fields = ['created_at', 'updated_at', 'slug', 'allowed_domains']
+        fields = ['id', 'name', 'homepage_url', 'slug', 'allowed_domains', 'is_active', 'created_at', 'updated_at', 'created']
+        read_only_fields = ['created_at', 'updated_at', 'slug']
 
 
 class FieldSerializer(serializers.ModelSerializer):

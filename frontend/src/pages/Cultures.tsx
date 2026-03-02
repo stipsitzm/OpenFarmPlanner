@@ -608,10 +608,10 @@ function Cultures(): React.ReactElement {
   }, [cultures, selectedCultureId, updateSelectedCultureId]);
 
   const canRunEnrichmentForCulture = useCallback((culture?: Culture | null): boolean => {
-    return Boolean(culture?.supplier);
+    return Boolean(culture?.supplier && (culture.supplier.allowed_domains || []).length > 0);
   }, []);
 
-  const enrichmentDisabledReason = 'Für KI-Recherche muss zuerst ein Lieferant ausgewählt werden.';
+  const enrichmentDisabledReason = 'Für KI-Recherche muss ein Lieferant mit erlaubten Domains konfiguriert sein.';
 
   const commandSpecs = useMemo<CommandSpec[]>(() => {
     return [

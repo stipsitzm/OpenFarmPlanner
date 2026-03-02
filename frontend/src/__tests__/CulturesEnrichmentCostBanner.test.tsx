@@ -6,9 +6,10 @@ import Cultures from '../pages/Cultures';
 import { CommandProvider } from '../commands/CommandProvider';
 import type { Culture } from '../api/types';
 
-const { listMock, enrichMock } = vi.hoisted(() => ({
+const { listMock, enrichMock, selectedCultureMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   enrichMock: vi.fn(),
+  selectedCultureMock: { id: 1, name: 'Buschbohne', variety: 'Faraday', supplier: { id: 9, name: 'ReinSaat', homepage_url: 'https://www.reinsaat.at', slug: 'reinsaat', allowed_domains: ['reinsaat.at'] }, supplier_product_url: null } as Culture,
 }));
 
 vi.mock('../api/api', async () => {
@@ -27,7 +28,7 @@ vi.mock('../cultures/CultureDetail', () => ({
   CultureDetail: ({ onCultureSelect }: { onCultureSelect: (culture: Culture | null) => void }): ReactElement => (
     <button
       type="button"
-      onClick={() => onCultureSelect({ id: 1, name: 'Buschbohne', variety: 'Faraday', supplier: { id: 9, name: 'ReinSaat', homepage_url: 'https://www.reinsaat.at', slug: 'reinsaat', allowed_domains: ['reinsaat.at'] }, supplier_product_url: 'https://www.reinsaat.at/faraday' } as Culture)}
+      onClick={() => onCultureSelect(selectedCultureMock)}
     >
       select-culture
     </button>
@@ -38,12 +39,18 @@ describe('Cultures enrichment cost banner', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    selectedCultureMock.id = 1;
+    selectedCultureMock.name = 'Buschbohne';
+    selectedCultureMock.variety = 'Faraday';
+    selectedCultureMock.supplier = { id: 9, name: 'ReinSaat', homepage_url: 'https://www.reinsaat.at', slug: 'reinsaat', allowed_domains: ['reinsaat.at'] };
+    selectedCultureMock.supplier_product_url = null;
+
     listMock.mockResolvedValue({
       data: {
         count: 1,
         next: null,
         previous: null,
-        results: [{ id: 1, name: 'Buschbohne', variety: 'Faraday', supplier: { id: 9, name: 'ReinSaat', homepage_url: 'https://www.reinsaat.at', slug: 'reinsaat', allowed_domains: ['reinsaat.at'] }, supplier_product_url: 'https://www.reinsaat.at/faraday' }],
+        results: [selectedCultureMock],
       },
     });
 
@@ -126,5 +133,19 @@ describe('Cultures enrichment cost banner', () => {
     expect(await screen.findByText('Alle Kulturen vervollständigen?')).toBeInTheDocument();
   });
 
+  it('disables AI action when supplier has no allowed domains', async () => {
+    selectedCultureMock.supplier = { id: 9, name: 'ReinSaat', homepage_url: 'https://www.reinsaat.at', slug: 'reinsaat', allowed_domains: [] };
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <Cultures />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'select-culture' }));
+    const aiButton = screen.getByRole('button', { name: 'Kultur vervollständigen (KI) (Alt+U)' });
+    expect(aiButton.className).toContain('Mui-disabled');
+  });
 
 });

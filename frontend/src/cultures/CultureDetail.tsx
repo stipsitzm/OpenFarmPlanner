@@ -172,6 +172,16 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
+                {selectedCulture.supplier?.homepage_url && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Lieferanten-URL
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.supplier.homepage_url}
+                    </Typography>
+                  </Box>
+                )}
                 {selectedCulture.nutrient_demand && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">

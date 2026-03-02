@@ -243,10 +243,20 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('supplier_product_url', response.data)
 
-    def test_enrich_requires_supplier_and_supplier_product_url(self):
+    def test_enrich_requires_supplier(self):
         response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/', {'mode': 'complete'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data.get('code'), 'supplier_url_required')
+        self.assertEqual(response.data.get('code'), 'supplier_missing')
+
+
+    def test_enrich_requires_allowed_domains(self):
+        self.culture.supplier = self.supplier
+        self.culture.save(update_fields=['supplier'])
+        self.supplier.allowed_domains = []
+        self.supplier.save()
+        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/', {'mode': 'complete'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get('code'), 'allowed_domains_missing')
 
     def test_field_create_with_invalid_area_too_small(self):
         data = {
