@@ -11,6 +11,7 @@ from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import json
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
@@ -849,6 +850,18 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
             total_web_search_cost += float(breakdown.get('web_search_calls') or 0)
             total_web_search_call_count += int(breakdown.get('web_search_call_count') or 0)
 
+        cost_model_name = next(
+            (
+                str((item.get('result') or {}).get('costEstimate', {}).get('model') or '')
+                for item in items
+                if isinstance(item, dict)
+                and isinstance(item.get('result'), dict)
+                and isinstance((item.get('result') or {}).get('costEstimate'), dict)
+                and (item.get('result') or {}).get('costEstimate', {}).get('model')
+            ),
+            getattr(settings, 'AI_ENRICHMENT_MODEL', 'gpt-5'),
+        )
+
         return Response({
             'run_id': run_id,
             'status': 'completed',
@@ -865,7 +878,7 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
             'costEstimate': {
                 'currency': 'USD',
                 'total': total_cost,
-                'model': 'gpt-4.1',
+                'model': cost_model_name,
                 'breakdown': {
                     'input': total_input_cost,
                     'cached_input': total_cached_input_cost,
@@ -1284,7 +1297,7 @@ class SeedDemandListView(generics.ListAPIView):
         rows = list(self.get_queryset())
         culture_ids = [row['culture_id'] for row in rows]
         package_map: dict[int, list[SeedPackage]] = defaultdict(list)
-        for package in SeedPackage.objects.filter(culture_id__in=culture_ids, available=True).order_by('size_unit', 'size_value'):
+        for package in SeedPackage.objects.filter(culture_id__in=culture_ids).order_by('size_unit', 'size_value'):
             package_map[package.culture_id].append(package)
 
         for row in rows:
@@ -1294,13 +1307,13 @@ class SeedDemandListView(generics.ListAPIView):
                 {
                     'size_value': float(pkg.size_value),
                     'size_unit': pkg.size_unit,
-                    'available': pkg.available,
                 }
                 for pkg in packages
             ]
 
             if total_grams is None:
                 row['package_suggestion'] = None
+                row['packages_needed'] = None
                 continue
 
             suggestion = compute_seed_package_suggestion(
@@ -1310,6 +1323,7 @@ class SeedDemandListView(generics.ListAPIView):
             )
             if suggestion.pack_count == 0:
                 row['package_suggestion'] = None
+                row['packages_needed'] = None
                 continue
 
             row['package_suggestion'] = {
@@ -1325,6 +1339,7 @@ class SeedDemandListView(generics.ListAPIView):
                 'overage': float(suggestion.overage),
                 'pack_count': suggestion.pack_count,
             }
+            row['packages_needed'] = suggestion.pack_count
 
         serializer = self.get_serializer(rows, many=True)
         return Response({'count': len(rows), 'next': None, 'previous': None, 'results': serializer.data})

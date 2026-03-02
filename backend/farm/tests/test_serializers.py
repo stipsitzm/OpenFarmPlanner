@@ -53,6 +53,20 @@ class SerializerBranchCoverageTest(TestCase):
         self.assertEqual(Supplier.objects.count(), 1)
 
 
+    def test_culture_serializer_allows_harvest_duration_without_harvest_method(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Kohl',
+                'variety': 'Türkis',
+                'growth_duration_days': 90,
+                'harvest_duration_days': 21,
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+
+
     def test_planting_plan_serializer_rejects_invalid_area_input(self):
         serializer = PlantingPlanSerializer()
 

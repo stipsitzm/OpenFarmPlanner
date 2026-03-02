@@ -2,10 +2,7 @@ export interface SeedPackage {
   id?: number;
   culture?: number;
   size_value: number;
-  size_unit: 'g' | 'seeds';
-  available: boolean;
-  article_number?: string;
-  source_url?: string;
+  size_unit: 'g';
   evidence_text?: string;
   last_seen_at?: string | null;
 }
@@ -71,9 +68,9 @@ export interface SeedDemand {
   variety?: string | null;
   supplier?: string | null;
   total_grams: number | null;
-  seed_packages?: Array<{ size_value: number; size_unit: 'g' | 'seeds'; available: boolean }>;
+  seed_packages?: Array<{ size_value: number; size_unit: 'g' }>;
   package_suggestion?: {
-    selection: Array<{ size_value: number; size_unit: 'g' | 'seeds'; count: number }>;
+    selection: Array<{ size_value: number; size_unit: 'g'; count: number }>;
     total_amount: number;
     overage: number;
     pack_count: number;

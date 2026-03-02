@@ -302,8 +302,18 @@ function Cultures(): React.ReactElement {
   const handleSave = async (culture: Culture) => {
     try {
       // Transform culture data for API: replace supplier object with supplier_id
+      const normalizedSeedPackages = Array.isArray(culture.seed_packages)
+        ? culture.seed_packages.map((pkg) => ({
+            size_value: Math.round((Number(pkg.size_value) || 0) * 10) / 10,
+            size_unit: 'g' as const,
+            evidence_text: pkg.evidence_text ?? '',
+            last_seen_at: pkg.last_seen_at ?? null,
+          }))
+        : culture.seed_packages;
+
       const dataToSend = {
         ...culture,
+        seed_packages: normalizedSeedPackages,
         seed_rate_unit: normalizeSeedRateUnit(culture.seed_rate_unit),
         harvest_method: normalizeHarvestMethod(culture.harvest_method),
         nutrient_demand: normalizeNutrientDemand(culture.nutrient_demand),
@@ -659,6 +669,37 @@ function Cultures(): React.ReactElement {
         isAvailable: () => Boolean(selectedCultureId),
         run: handleCreatePlantingPlan,
       },
+
+      {
+        id: 'culture.aiCompleteCurrent',
+        title: 'Kultur per KI vervollständigen (Alt+U)',
+        keywords: ['ki', 'ai', 'vervollständigen', 'complete', 'kultur'],
+        shortcutHint: 'Alt+U',
+        keys: { alt: true, key: 'u' },
+        contextTags: ['cultures'],
+        isAvailable: () => Boolean(selectedCulture) && !enrichmentLoading,
+        run: () => { void handleEnrichCurrent('complete'); },
+      },
+      {
+        id: 'culture.aiReresearchCurrent',
+        title: 'Kultur per KI neu recherchieren (Alt+R)',
+        keywords: ['ki', 'ai', 'recherche', 'reresearch', 'kultur'],
+        shortcutHint: 'Alt+R',
+        keys: { alt: true, key: 'r' },
+        contextTags: ['cultures'],
+        isAvailable: () => Boolean(selectedCulture) && !enrichmentLoading,
+        run: () => { void handleEnrichCurrent('reresearch'); },
+      },
+      {
+        id: 'culture.aiCompleteAll',
+        title: 'Alle Kulturen per KI vervollständigen (Alt+A)',
+        keywords: ['ki', 'ai', 'alle', 'kulturen', 'vervollständigen'],
+        shortcutHint: 'Alt+A',
+        keys: { alt: true, key: 'a' },
+        contextTags: ['cultures'],
+        isAvailable: () => cultures.length > 0 && !enrichmentLoading,
+        run: () => setEnrichAllConfirmOpen(true),
+      },
       {
         id: 'culture.previous',
         title: 'Vorherige Kultur (Alt+Shift+←)',
@@ -680,7 +721,7 @@ function Cultures(): React.ReactElement {
         run: () => goToRelativeCulture('next'),
       },
     ];
-  }, [cultures.length, goToRelativeCulture, handleCreatePlantingPlan, handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, selectedCulture, selectedCultureId]);
+  }, [cultures.length, enrichmentLoading, goToRelativeCulture, handleCreatePlantingPlan, handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, selectedCulture, selectedCultureId]);
 
   useRegisterCommands('cultures-page', commandSpecs);
 
@@ -698,15 +739,35 @@ function Cultures(): React.ReactElement {
     return `$${value.toFixed(decimals)}`;
   };
 
+  const withVat20 = (netValue: number): number => netValue * 1.2;
+
+  const estimateGrossCost = (costEstimate: EnrichmentCostEstimate): number => {
+    const breakdown = costEstimate.breakdown;
+    const subtotal = typeof breakdown.subtotal === 'number'
+      ? breakdown.subtotal
+      : (breakdown.input + breakdown.cached_input + breakdown.output + breakdown.web_search_calls);
+
+    if (typeof breakdown.tax === 'number') {
+      return subtotal + breakdown.tax;
+    }
+
+    return withVat20(subtotal);
+  };
+
   const formatCostMessage = (costEstimate: EnrichmentCostEstimate, usage: EnrichmentUsage): string => (
-    `KI-Kosten (Schätzung): ${formatUsd(costEstimate.total)}  • Tokens: ${usage.inputTokens.toLocaleString('de-DE')} in / ${usage.outputTokens.toLocaleString('de-DE')} out  • Web-Suche: ${costEstimate.breakdown.web_search_call_count} Calls`
+    `KI-Kosten (Schätzung, inkl. 20% MwSt.): ${formatUsd(estimateGrossCost(costEstimate))}  • Tokens: ${usage.inputTokens.toLocaleString('de-DE')} in / ${usage.outputTokens.toLocaleString('de-DE')} out  • Web-Suche: ${costEstimate.breakdown.web_search_call_count} Calls`
   );
 
   const formatBatchCostMessage = (result: EnrichmentBatchResult): string => (
-    `Batch KI-Kosten (Schätzung): ${formatUsd(result.costEstimate.total)} (${result.succeeded} Kulturen)`
+    `Batch KI-Kosten (Schätzung, inkl. 20% MwSt.): ${formatUsd(estimateGrossCost(result.costEstimate))} (${result.succeeded} Kulturen)`
   );
 
-
+  const getDialogCostInfo = (result: EnrichmentResult | null): string | null => {
+    if (!result?.costEstimate || !result?.usage) {
+      return null;
+    }
+    return formatCostMessage(result.costEstimate, result.usage);
+  };
 
   const enrichmentFieldLabelMap: Record<string, string> = {
     growth_duration_days: 'form.growthDurationDays',
@@ -743,10 +804,7 @@ function Cultures(): React.ReactElement {
 
   const normalizeSuggestedSeedPackages = (value: unknown): Array<{
     size_value: number;
-    size_unit: 'g' | 'seeds';
-    available: boolean;
-    article_number?: string;
-    source_url?: string;
+    size_unit: 'g';
     evidence_text?: string;
   }> => {
     if (!Array.isArray(value)) {
@@ -762,7 +820,7 @@ function Cultures(): React.ReactElement {
 
         const raw = item as Record<string, unknown>;
         const sizeValue = Number(raw.size_value);
-        const sizeUnit: 'g' | 'seeds' | null = raw.size_unit === 'g' || raw.size_unit === 'seeds'
+        const sizeUnit: 'g' | null = raw.size_unit === 'g'
           ? raw.size_unit
           : null;
 
@@ -779,9 +837,6 @@ function Cultures(): React.ReactElement {
         return {
           size_value: sizeValue,
           size_unit: sizeUnit,
-          available: raw.available !== false,
-          article_number: typeof raw.article_number === 'string' ? raw.article_number : undefined,
-          source_url: typeof raw.source_url === 'string' ? raw.source_url : undefined,
           evidence_text: typeof raw.evidence_text === 'string' ? raw.evidence_text : undefined,
         };
       })
@@ -795,7 +850,7 @@ function Cultures(): React.ReactElement {
         return t('ai.noSuggestions');
       }
       return packages
-        .map((pkg) => `${pkg.size_value} ${pkg.size_unit}${pkg.available ? '' : ' (nicht verfügbar)'}`)
+        .map((pkg) => `${pkg.size_value} ${pkg.size_unit}`)
         .join(', ');
     }
 
@@ -1396,6 +1451,11 @@ function Cultures(): React.ReactElement {
       <Dialog open={enrichmentDialogOpen} onClose={() => setEnrichmentDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>{t('ai.suggestionsTitle')}</DialogTitle>
         <DialogContent>
+          {getDialogCostInfo(enrichmentResult) && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              {getDialogCostInfo(enrichmentResult)}
+            </Alert>
+          )}
           {(enrichmentResult?.validation?.warnings || []).length > 0 && (
             <Alert severity="warning" sx={{ mb: 2 }}>
               {(enrichmentResult?.validation?.warnings || []).map((warning) => (

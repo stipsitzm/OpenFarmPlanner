@@ -351,9 +351,6 @@ class Culture(TimestampedModel):
         if self.expected_yield is not None and self.expected_yield < 0:
             errors['expected_yield'] = 'Expected yield must be non-negative.'
 
-        if self.harvest_duration_days is not None and not self.harvest_method:
-            errors['harvest_method'] = 'Harvest method is required when harvest duration is set.'
-
         if self.seeding_requirement is None and self.seeding_requirement_type:
             errors['seeding_requirement'] = 'Seeding requirement value is required when seeding requirement type is set.'
 
@@ -576,18 +573,13 @@ class SeedPackage(TimestampedModel):
     """Sold package option for a culture."""
 
     UNIT_GRAMS = 'g'
-    UNIT_SEEDS = 'seeds'
     UNIT_CHOICES = [
         (UNIT_GRAMS, 'Grams'),
-        (UNIT_SEEDS, 'Seeds'),
     ]
 
     culture = models.ForeignKey('Culture', on_delete=models.CASCADE, related_name='seed_packages')
-    size_value = models.DecimalField(max_digits=10, decimal_places=3)
-    size_unit = models.CharField(max_length=10, choices=UNIT_CHOICES)
-    available = models.BooleanField(default=True)
-    article_number = models.CharField(max_length=120, blank=True)
-    source_url = models.URLField(blank=True)
+    size_value = models.DecimalField(max_digits=10, decimal_places=1)
+    size_unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default=UNIT_GRAMS)
     evidence_text = models.CharField(max_length=200, blank=True)
     last_seen_at = models.DateTimeField(null=True, blank=True)
 
@@ -604,6 +596,8 @@ class SeedPackage(TimestampedModel):
         super().clean()
         if self.size_value is not None and self.size_value <= 0:
             raise ValidationError({'size_value': 'Package size must be greater than zero.'})
+        if self.size_unit != self.UNIT_GRAMS:
+            raise ValidationError({'size_unit': 'Only grams (g) are supported for package size.'})
 
     def __str__(self) -> str:
         return f"{self.culture.name} {self.size_value} {self.size_unit}"

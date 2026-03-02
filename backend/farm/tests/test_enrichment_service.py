@@ -69,7 +69,9 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         }
         post_mock.return_value = response
 
-        result = enrich_culture(self.culture, 'complete')
+        self.culture.seed_supplier = 'ReinSaat'
+        self.culture.save(update_fields=['seed_supplier'])
+        result = enrich_culture(self.culture, 'reresearch')
         self.assertIn('notes', result['suggested_fields'])
         self.assertIn('## Quellen', result['suggested_fields']['notes']['value'])
 
@@ -163,7 +165,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.culture.harvest_method = 'per_sqm'
         self.culture.expected_yield = 1.5
         self.culture.save(update_fields=['growth_duration_days', 'harvest_duration_days', 'harvest_method', 'expected_yield'])
-        SeedPackage.objects.create(culture=self.culture, size_value=500, size_unit='g', available=True)
+        SeedPackage.objects.create(culture=self.culture, size_value=500, size_unit='g')
 
         response = Mock()
         response.status_code = 200
@@ -256,6 +258,42 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.assertEqual(result['suggested_fields']['seed_packages']['value'], [])
         warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
         self.assertIn('seed_package_fractional_suspicious', warning_codes)
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_keeps_weight_and_count_seed_package_options_from_string_list(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'seed_packages': {
+                        'value': ['2.5 g', '500 K (Topfpillen)', '0.4 g (Portion)'],
+                        'unit': None,
+                        'confidence': 0.8,
+                    },
+                },
+                'evidence': {
+                    'seed_packages': [
+                        {
+                            'source_url': 'https://example.com/packages',
+                            'title': 'Package options',
+                            'retrieved_at': '2026-01-01T00:00:00Z',
+                            'snippet': '2.5 g, 500 K (Topfpillen), 0.4 g (Portion)',
+                        }
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        values = result['suggested_fields']['seed_packages']['value']
+        self.assertTrue(values)
+        self.assertTrue(any(item.get('package_type') == 'weight_g' and item.get('size_value') == 2.5 for item in values))
+        self.assertTrue(any(item.get('package_type') == 'count_seeds' and item.get('count_value') == 500 for item in values))
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
@@ -392,16 +430,17 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
-    def test_invalid_suggested_fields_type_raises_clear_error(self, post_mock):
+    def test_invalid_suggested_fields_type_is_normalized_with_warning(self, post_mock):
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
-            'output_text': '{"suggested_fields":[],"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":"ok"}'
+            'output_text': '{"suggested_fields":[],"evidence":{"expected_yield":[{"source_url":"https://reinsaat.example","title":"ReinSaat","retrieved_at":"2026-01-01T00:00:00Z","snippet":"ReinSaat data","supplier_specific":true}]},"validation":{"warnings":[],"errors":[]},"note_blocks":"ok"}'
         }
         post_mock.return_value = response
 
-        with self.assertRaises(EnrichmentError):
-            enrich_culture(self.culture, 'complete')
+        result = enrich_culture(self.culture, 'complete')
+        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
+        self.assertIn('suggested_fields_list_normalized', warning_codes)
 
 class EnrichmentConfigBehaviorTest(TestCase):
     def setUp(self):
@@ -444,6 +483,244 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.assertIn('fallback_mode', warning_codes)
 
 
+    @override_settings(
+        AI_ENRICHMENT_PROVIDER='openai_responses',
+        OPENAI_API_KEY='test-key',
+        AI_ENRICHMENT_MODEL='gpt-4.1-nano',
+    )
+    @patch('farm.services.enrichment.requests.post')
+    def test_provider_uses_runtime_model_setting_in_request_payload(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'model': 'gpt-4.1-nano',
+            'output_text': '{"suggested_fields":{},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+
+        self.assertEqual(post_mock.call_args.kwargs['json']['model'], 'gpt-4.1-nano')
+        self.assertEqual(result['model'], 'gpt-4.1-nano')
+
+    @override_settings(
+        AI_ENRICHMENT_PROVIDER='openai_responses',
+        OPENAI_API_KEY='test-key',
+        AI_ENRICHMENT_TIMEOUT_SECONDS=210,
+        AI_ENRICHMENT_CONNECT_TIMEOUT_SECONDS=12,
+        AI_ENRICHMENT_READ_TIMEOUT_SECONDS=345,
+        OPENAI_RESPONSES_API_URL='https://api.openai.com/v1/responses',
+    )
+    @patch('farm.services.enrichment.requests.post')
+    def test_provider_uses_configured_endpoint_and_split_timeouts(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        enrich_culture(self.culture, 'complete')
+
+        self.assertEqual(post_mock.call_args.args[0], 'https://api.openai.com/v1/responses')
+        self.assertEqual(post_mock.call_args.kwargs['timeout'], (12.0, 345.0))
+
+    @override_settings(
+        AI_ENRICHMENT_PROVIDER='openai_responses',
+        OPENAI_API_KEY='test-key',
+        AI_ENRICHMENT_TIMEOUT_SECONDS=240,
+    )
+    @patch('farm.services.enrichment.requests.post')
+    def test_provider_falls_back_to_legacy_timeout_setting_for_read_timeout(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        enrich_culture(self.culture, 'complete')
+
+        self.assertEqual(post_mock.call_args.kwargs['timeout'], (10.0, 240.0))
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_normalizes_suggested_fields_list_payload_without_crash(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': [
+                    {'field': 'seed_packages', 'value': ['2.5 g'], 'unit': None, 'confidence': 0.7},
+                    {'field': 'expected_yield', 'value': 1.2, 'unit': 'kg/m²', 'confidence': 0.6},
+                ],
+                'evidence': {'seed_packages': []},
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'reresearch')
+
+        self.assertIn('seed_packages', result['suggested_fields'])
+        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
+        self.assertIn('suggested_fields_list_normalized', warning_codes)
+
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_seed_packages_numeric_values_with_unit_g_are_structured(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'seed_packages': {
+                        'value': [0.4, 1, 2.5],
+                        'unit': 'g',
+                        'confidence': '0.8',
+                    },
+                },
+                'evidence': {
+                    'seed_packages': [
+                        {
+                            'source_url': 'https://reinsaat.example/packs',
+                            'title': 'ReinSaat packs',
+                            'retrieved_at': '2026-01-01T00:00:00Z',
+                            'snippet': 'ReinSaat 0.4 g, 1 g, 2.5 g',
+                            'supplier_specific': True,
+                        },
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        post_mock.return_value = response
+
+        self.culture.seed_supplier = 'ReinSaat'
+        self.culture.save(update_fields=['seed_supplier'])
+        result = enrich_culture(self.culture, 'reresearch')
+
+        values = result['suggested_fields']['seed_packages']['value']
+        self.assertEqual([item['size_value'] for item in values], [0.4, 1.0, 2.5])
+        self.assertTrue(all(item['size_unit'] == 'g' for item in values))
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_seed_packages_without_supplier_specific_evidence_are_rejected(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'seed_packages': {
+                        'value': ['2.5 g'],
+                        'unit': None,
+                        'confidence': 0.7,
+                    }
+                },
+                'evidence': {
+                    'seed_packages': [
+                        {
+                            'source_url': 'https://other.example/packs',
+                            'title': 'Other supplier packs',
+                            'retrieved_at': '2026-01-01T00:00:00Z',
+                            'snippet': 'Other supplier 2.5 g',
+                            'supplier_specific': False,
+                        },
+                    ]
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        post_mock.return_value = response
+
+        self.culture.seed_supplier = 'ReinSaat'
+        self.culture.save(update_fields=['seed_supplier'])
+        result = enrich_culture(self.culture, 'reresearch')
+
+        self.assertEqual(result['suggested_fields']['seed_packages']['value'], [])
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_supplier_filter_drops_non_matching_seed_packages(self, post_mock):
+        self.culture.seed_supplier = 'ReinSaat'
+        self.culture.save(update_fields=['seed_supplier'])
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'seed_packages': {
+                        'value': [
+                            {'raw_text': '2.5 g', 'evidence_text': 'OtherSupplier 2.5 g option', 'package_type': 'weight_g', 'size_value': 2.5, 'size_unit': 'g'},
+                            {'raw_text': '5 g', 'evidence_text': 'AnotherSeller 5 g option', 'package_type': 'weight_g', 'size_value': 5, 'size_unit': 'g'},
+                        ],
+                        'unit': None,
+                        'confidence': 0.7,
+                    }
+                },
+                'evidence': {
+                    'seed_packages': [
+                        {'source_url': 'https://reinsaat.example', 'title': 'ReinSaat Salat', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': 'ReinSaat Salat 2.5 g', 'supplier_specific': True},
+                    ]
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'reresearch')
+        self.assertEqual(result['suggested_fields']['seed_packages']['value'], [])
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_adds_leaf_lettuce_plausibility_warning(self, post_mock):
+        self.culture.name = 'Kopfsalat'
+        self.culture.save(update_fields=['name'])
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'harvest_duration_days': {'value': 60, 'unit': 'days', 'confidence': 0.8},
+                },
+                'evidence': {},
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'reresearch')
+        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
+        self.assertIn('harvest_duration_unrealistic_for_leaf_lettuce', warning_codes)
+
+    @patch('farm.services.enrichment.requests.post')
+    def test_prompt_contains_strict_supplier_first_rules(self, post_mock):
+        self.culture.seed_supplier = 'ReinSaat'
+        self.culture.variety = 'Lollo'
+        self.culture.save(update_fields=['seed_supplier', 'variety'])
+
+        provider = OpenAIResponsesProvider(api_key='test-key')
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        provider.enrich(Mock(culture=self.culture, mode='complete'))
+
+        sent_input = post_mock.call_args.kwargs['json']['input']
+        self.assertIn("FIRST search exclusively", sent_input)
+        self.assertIn("Package sizes MUST come exclusively from this supplier", sent_input)
+        self.assertIn("supplier_specific", sent_input)
+
+
 class EnrichmentCostEstimateTest(TestCase):
     def test_cost_estimate_without_cached_tokens(self):
         estimate = _build_cost_estimate(
@@ -451,7 +728,7 @@ class EnrichmentCostEstimateTest(TestCase):
             cached_input_tokens=0,
             output_tokens=500,
             web_search_call_count=0,
-            model='gpt-4.1',
+            model='gpt-5',
         )
 
         self.assertEqual(estimate['currency'], 'USD')
@@ -467,7 +744,7 @@ class EnrichmentCostEstimateTest(TestCase):
             cached_input_tokens=500,
             output_tokens=0,
             web_search_call_count=0,
-            model='gpt-4.1',
+            model='gpt-5',
         )
 
         self.assertAlmostEqual(estimate['breakdown']['input'], 0.003, places=6)
@@ -480,7 +757,7 @@ class EnrichmentCostEstimateTest(TestCase):
             cached_input_tokens=0,
             output_tokens=0,
             web_search_call_count=3,
-            model='gpt-4.1',
+            model='gpt-5',
         )
 
         self.assertEqual(estimate['breakdown']['web_search_call_count'], 3)
