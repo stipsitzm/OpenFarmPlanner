@@ -235,7 +235,6 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.assertIn('structured_sources', result)
         source_types = {entry.get('type') for entry in result['structured_sources']}
         self.assertIn('variety_specific', source_types)
-        self.assertIn('general_crop', source_types)
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
@@ -569,6 +568,86 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.assertIn('suggested_fields_list_normalized', warning_codes)
 
 
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_confidence_text_values_are_mapped_to_numeric(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'expected_yield': {'value': 1.4, 'unit': 'kg/m²', 'confidence': 'high'},
+                    'seed_rate_value': {'value': 20, 'unit': None, 'confidence': 'medium'},
+                },
+                'evidence': {
+                    'expected_yield': [
+                        {
+                            'source_url': 'https://reinsaat.at/yield',
+                            'title': 'ReinSaat yield',
+                            'retrieved_at': '2026-01-01T00:00:00Z',
+                            'snippet': 'ReinSaat expected yield',
+                            'supplier_specific': True,
+                        },
+                    ],
+                    'seed_rate_value': [
+                        {
+                            'source_url': 'https://reinsaat.at/seed-rate',
+                            'title': 'ReinSaat seed rate',
+                            'retrieved_at': '2026-01-01T00:00:00Z',
+                            'snippet': 'ReinSaat seed rate',
+                            'supplier_specific': True,
+                        },
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        post_mock.return_value = response
+
+        self.culture.seed_supplier = 'ReinSaat'
+        self.culture.save(update_fields=['seed_supplier'])
+        result = enrich_culture(self.culture, 'reresearch')
+
+        self.assertEqual(result['suggested_fields']['expected_yield']['confidence'], 1.0)
+        self.assertEqual(result['suggested_fields']['seed_rate_value']['confidence'], 0.7)
+
+    @patch('farm.services.enrichment.requests.post')
+    def test_supplier_only_phase_filters_non_supplier_evidence_entries(self, post_mock):
+        provider = OpenAIResponsesProvider(api_key='test-key')
+        self.culture.seed_supplier = 'ReinSaat'
+        self.culture.save(update_fields=['seed_supplier'])
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'expected_yield': {'value': 1.2, 'unit': 'kg/m²', 'confidence': 0.8},
+                    'growth_duration_days': {'value': 60, 'unit': 'days', 'confidence': 0.6},
+                },
+                'evidence': {
+                    'expected_yield': [
+                        {'source_url': 'https://reinsaat.at/yield', 'title': 'ReinSaat', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': 'supplier', 'supplier_specific': True},
+                        {'source_url': 'https://other.example/yield', 'title': 'Other', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': 'general', 'supplier_specific': False},
+                    ],
+                    'growth_duration_days': [
+                        {'source_url': 'https://other.example/growth', 'title': 'Other', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': 'general only', 'supplier_specific': False},
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        post_mock.return_value = response
+
+        result = provider.enrich(Mock(culture=self.culture, mode='reresearch'))
+
+        self.assertIn('expected_yield', result['suggested_fields'])
+        self.assertNotIn('growth_duration_days', result['suggested_fields'])
+        self.assertEqual(len(result['evidence']['expected_yield']), 1)
+        self.assertTrue(all(item.get('supplier_specific') is True for item in result['evidence']['expected_yield']))
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
     def test_seed_packages_numeric_values_with_unit_g_are_structured(self, post_mock):

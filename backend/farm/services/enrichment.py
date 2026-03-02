@@ -10,6 +10,7 @@ import re
 from dataclasses import dataclass
 from decimal import Decimal
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 from typing import Any
 
 import requests
@@ -430,6 +431,39 @@ def _is_supplier_matching_evidence(supplier_name: str, evidence_entries: object)
 
     return False
 
+
+def _supplier_domains_for_culture(culture: Culture) -> set[str]:
+    """Return known supplier domains used for strict supplier-only filtering."""
+    supplier_name = (culture.supplier.name if culture.supplier else (culture.seed_supplier or '')).lower()
+    domains: set[str] = set()
+    if 'reinsaat' in supplier_name:
+        domains.add('reinsaat.at')
+    return domains
+
+
+def _url_matches_supplier_domains(url: str, supplier_domains: set[str]) -> bool:
+    """Return True when the URL host belongs to the supplier domain set."""
+    if not supplier_domains:
+        return False
+    try:
+        host = (urlparse(url).hostname or '').lower()
+    except Exception:  # noqa: BLE001
+        return False
+    if not host:
+        return False
+    return any(host == domain or host.endswith(f'.{domain}') for domain in supplier_domains)
+
+
+def _is_supplier_entry(entry: dict[str, Any], supplier_name: str, supplier_domains: set[str]) -> bool:
+    """Return True if evidence entry is explicitly or implicitly supplier-specific."""
+    tagged = entry.get('supplier_specific')
+    if isinstance(tagged, bool):
+        return tagged
+    url = _coerce_text_value(entry.get('source_url', ''), 'evidence.source_url')
+    if _url_matches_supplier_domains(url, supplier_domains):
+        return True
+    return _is_supplier_matching_evidence(supplier_name, [entry])
+
 def _build_structured_sources(
     culture: Culture,
     evidence: dict[str, Any],
@@ -606,7 +640,12 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "Tag every evidence entry with supplier_specific: true or false. "
         )
         if supplier_only:
+            supplier_domains = ', '.join(sorted(_supplier_domains_for_culture(culture)))
             supplier_strategy += "Phase constraint: use supplier-specific sources only in this phase. "
+            if supplier_domains:
+                supplier_strategy += (
+                    f"Only open and trust sources from supplier domains: {supplier_domains}. "
+                )
 
         return (
             "You are a horticulture research assistant. Use web search evidence. "
@@ -693,7 +732,10 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
                 },
                 json={
                     "model": model_name,
-                    "tools": [{"type": "web_search_preview"}],
+                    "tools": [{
+                        "type": "web_search_preview",
+                        "user_location": {"type": "approximate", "country": "AT"},
+                    }],
                     "input": prompt,
                 },
             )
@@ -718,9 +760,14 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         """Merge two provider payloads without changing the output contract."""
         merged = dict(base)
 
-        base_fields = base.get('suggested_fields') if isinstance(base.get('suggested_fields'), dict) else {}
-        fallback_fields = fallback.get('suggested_fields') if isinstance(fallback.get('suggested_fields'), dict) else {}
-        merged['suggested_fields'] = {**fallback_fields, **base_fields}
+        base_suggested_fields = base.get('suggested_fields')
+        fallback_suggested_fields = fallback.get('suggested_fields')
+        if isinstance(base_suggested_fields, dict) and isinstance(fallback_suggested_fields, dict):
+            merged['suggested_fields'] = {**fallback_suggested_fields, **base_suggested_fields}
+        elif base_suggested_fields not in (None, {}):
+            merged['suggested_fields'] = base_suggested_fields
+        else:
+            merged['suggested_fields'] = fallback_suggested_fields if fallback_suggested_fields is not None else {}
 
         base_evidence = base.get('evidence') if isinstance(base.get('evidence'), dict) else {}
         fallback_evidence = fallback.get('evidence') if isinstance(fallback.get('evidence'), dict) else {}
@@ -757,12 +804,59 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             return False
         return any(_is_supplier_matching_evidence(supplier_name, entries) for entries in evidence.values())
 
+    def _apply_supplier_only_filter(self, payload: dict[str, Any], culture: Culture) -> dict[str, Any]:
+        """Filter provider payload to strict supplier evidence and dependent suggestions."""
+        supplier_name = culture.supplier.name if culture.supplier else (culture.seed_supplier or '')
+        supplier_domains = _supplier_domains_for_culture(culture)
+        evidence = payload.get('evidence') if isinstance(payload.get('evidence'), dict) else {}
+        raw_suggested_fields = payload.get('suggested_fields')
+        suggested_fields = raw_suggested_fields if isinstance(raw_suggested_fields, dict) else raw_suggested_fields
+        validation = payload.get('validation') if isinstance(payload.get('validation'), dict) else {'warnings': [], 'errors': []}
+        warnings = validation.setdefault('warnings', [])
+
+        filtered_evidence: dict[str, list[dict[str, Any]]] = {}
+        for field_name, entries in evidence.items():
+            if not isinstance(entries, list):
+                continue
+            kept: list[dict[str, Any]] = []
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                if _is_supplier_entry(entry, supplier_name, supplier_domains):
+                    entry = dict(entry)
+                    entry['supplier_specific'] = True
+                    kept.append(entry)
+            if kept:
+                filtered_evidence[field_name] = kept
+
+        filtered_suggestions: Any = suggested_fields
+        if isinstance(suggested_fields, dict):
+            filtered: dict[str, Any] = {}
+            for field_name, suggestion in suggested_fields.items():
+                if field_name == 'notes' or field_name in filtered_evidence:
+                    filtered[field_name] = suggestion
+                else:
+                    if isinstance(warnings, list):
+                        warnings.append({
+                            'field': field_name,
+                            'code': 'supplier_only_non_supplier_suggestion_dropped',
+                            'message': 'Dropped suggestion in supplier-only phase because supplier evidence is missing.',
+                        })
+            filtered_suggestions = filtered
+
+        payload['evidence'] = filtered_evidence
+        payload['suggested_fields'] = filtered_suggestions
+        payload['validation'] = validation
+        payload['_supplier_only_phase'] = True
+        return payload
+
     def enrich(self, context: EnrichmentContext) -> dict[str, Any]:
         model_name = self.model_name
         supplier_name = context.culture.supplier.name if context.culture.supplier else (context.culture.seed_supplier or '')
 
         phase_one_prompt = self._build_prompt(context.culture, context.mode, supplier_only=True)
         primary_result, primary_usage, primary_search_calls = self._request_enrichment_payload(phase_one_prompt, model_name)
+        primary_result = self._apply_supplier_only_filter(primary_result, context.culture)
 
         combined_result = primary_result
         total_usage = dict(primary_usage)
@@ -1261,10 +1355,20 @@ def _normalize_suggested_field_values(suggested_fields: dict[str, Any], validati
     """Normalize value formats for numeric fields while preserving response schema."""
     warnings = validation.setdefault('warnings', [])
 
+    confidence_aliases = {
+        'low': 0.3,
+        'medium': 0.6,
+        'high': 0.9,
+    }
     for suggestion in suggested_fields.values():
         if not isinstance(suggestion, dict):
             continue
         raw_confidence = suggestion.get('confidence', 0.0)
+        if isinstance(raw_confidence, str):
+            mapped = confidence_aliases.get(raw_confidence.strip().lower())
+            if mapped is not None:
+                suggestion['confidence'] = mapped
+                continue
         try:
             confidence = float(raw_confidence)
         except (TypeError, ValueError):
