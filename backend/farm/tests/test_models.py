@@ -297,6 +297,18 @@ class CultureModelTest(TestCase):
         culture2.clean()  # Should not raise
 
 
+    def test_harvest_duration_does_not_require_harvest_method(self):
+        culture = Culture(
+            name='Kohl',
+            variety='Türkis',
+            growth_duration_days=90,
+            harvest_duration_days=21,
+        )
+
+        culture.clean()
+
+
+
 class PlantingPlanModelTest(TestCase):
     def setUp(self):
         self.location = Location.objects.create(name="Test Location")

@@ -103,10 +103,13 @@ describe('culture form UI sections', () => {
     expect(onChange).toHaveBeenCalledWith('thousand_kernel_weight_g', 472.02);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add pack' }));
-    expect(onChange).toHaveBeenCalledWith('seed_packages', [{ size_value: 0, size_unit: 'g', available: true }]);
+    expect(onChange).toHaveBeenCalledWith('seed_packages', [{ size_value: 0, size_unit: 'g' }]);
+
 
     expect(screen.getByText('Bitte wählen')).toBeInTheDocument();
   });
+
+
 
   it('renders HarvestSection and parses expected yield input including empty value', () => {
     const onChange = vi.fn();

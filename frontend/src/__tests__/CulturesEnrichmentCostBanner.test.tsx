@@ -55,7 +55,7 @@ describe('Cultures enrichment cost banner', () => {
         status: 'completed',
         started_at: '2026-01-01T00:00:00Z',
         finished_at: '2026-01-01T00:00:01Z',
-        model: 'gpt-4.1',
+        model: 'gpt-5',
         provider: 'openai_responses',
         search_provider: 'web_search',
         suggested_fields: {},
@@ -65,7 +65,7 @@ describe('Cultures enrichment cost banner', () => {
         costEstimate: {
           currency: 'USD',
           total: 0.01234,
-          model: 'gpt-4.1',
+          model: 'gpt-5',
           breakdown: {
             input: 0.002,
             cached_input: 0.0001,
@@ -91,9 +91,39 @@ describe('Cultures enrichment cost banner', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Kultur vervollständigen (KI) (Alt+U)' }));
 
     await waitFor(() => {
-      expect(screen.getAllByText(/KI-Kosten \(Schätzung\): \$0\.012/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/KI-Kosten \(Schätzung, inkl\. 20% MwSt\.\): \$0\.019/).length).toBeGreaterThan(0);
     });
     expect(screen.getAllByText(/Tokens: 1\.234 in \/ 567 out/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Web-Suche: 2 Calls/).length).toBeGreaterThan(0);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
+
+  it('triggers AI actions via keyboard shortcuts', async () => {
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <Cultures />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'select-culture' }));
+
+    fireEvent.keyDown(window, { altKey: true, key: 'u' });
+    await waitFor(() => {
+      expect(enrichMock).toHaveBeenCalled();
+    });
+    expect(enrichMock.mock.calls.at(-1)?.[1]).toBe('complete');
+
+    fireEvent.keyDown(window, { altKey: true, key: 'r' });
+    await waitFor(() => {
+      expect(enrichMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
+    expect(enrichMock.mock.calls.at(-1)?.[1]).toBe('reresearch');
+
+    fireEvent.keyDown(window, { altKey: true, key: 'a' });
+    expect(await screen.findByText('Alle Kulturen vervollständigen?')).toBeInTheDocument();
+  });
+
+
 });

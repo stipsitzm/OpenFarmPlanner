@@ -269,7 +269,7 @@ def _is_missing_culture_field(culture: Culture, suggested_field: str) -> bool:
         'propagation_duration_days': culture.propagation_duration_days,
         'harvest_method': culture.harvest_method,
         'expected_yield': culture.expected_yield,
-        'seed_packages': [{'size_value': float(p.size_value), 'size_unit': p.size_unit, 'available': p.available} for p in culture.seed_packages.all()],
+        'seed_packages': [{'size_value': float(p.size_value), 'size_unit': p.size_unit} for p in culture.seed_packages.all()],
         'seed_rate_value': culture.seed_rate_value,
         'seed_rate_unit': culture.seed_rate_unit,
         'thousand_kernel_weight_g': culture.thousand_kernel_weight_g,
@@ -374,6 +374,15 @@ def _compute_plausibility_warnings(culture: Culture, suggested_fields: dict[str,
             'code': 'tkg_high_needs_confirmation',
             'message': f'Thousand kernel weight {tkg:.1f} g is high; confirm with strong evidence.',
         })
+
+    if 'salat' in (culture.name or '').lower():
+        harvest_duration = number_value('harvest_duration_days', culture.harvest_duration_days)
+        if harvest_duration is not None and harvest_duration > 50:
+            warnings.append({
+                'field': 'harvest_duration_days',
+                'code': 'harvest_duration_unrealistic_for_leaf_lettuce',
+                'message': 'Harvest duration appears unrealistic for leaf lettuce.',
+            })
 
     return warnings
 
@@ -509,7 +518,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
     """OpenAI Responses API provider using web_search capable tools."""
 
     provider_name = "openai_responses"
-    model_name = "gpt-4.1"
+    model_name = 'gpt-5'
     search_provider_name = "web_search"
 
     def __init__(self, api_key: str | None = None) -> None:
@@ -521,7 +530,36 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             )
         self.api_key = resolved_key
 
-    def _build_prompt(self, culture: Culture, mode: str) -> str:
+    def _resolved_model_name(self) -> str:
+        return _coerce_setting_to_str(getattr(settings, 'AI_ENRICHMENT_MODEL', 'gpt-5'), 'AI_ENRICHMENT_MODEL') or 'gpt-5'
+
+    @property
+    def model_name(self) -> str:
+        return self._resolved_model_name()
+
+    def _responses_url(self) -> str:
+        raw = getattr(settings, 'OPENAI_RESPONSES_API_URL', 'https://api.openai.com/v1/responses')
+        url = _coerce_setting_to_str(raw, 'OPENAI_RESPONSES_API_URL')
+        return url or 'https://api.openai.com/v1/responses'
+
+    def _request_timeout(self) -> tuple[float, float]:
+        connect_timeout = float(getattr(settings, 'AI_ENRICHMENT_CONNECT_TIMEOUT_SECONDS', 10))
+        read_timeout_setting = getattr(settings, 'AI_ENRICHMENT_READ_TIMEOUT_SECONDS', None)
+        if read_timeout_setting in (None, ''):
+            read_timeout = float(getattr(settings, 'AI_ENRICHMENT_TIMEOUT_SECONDS', 180))
+        else:
+            read_timeout = float(read_timeout_setting)
+        return (connect_timeout, read_timeout)
+
+    def _build_prompt(
+        self,
+        culture: Culture,
+        mode: str,
+        *,
+        target_fields: list[str] | None = None,
+        supplier_only: bool = True,
+    ) -> str:
+        """Build the deterministic prompt for enrichment extraction."""
         identity = f"{culture.name} {culture.variety or ''}".strip()
         supplier = culture.supplier.name if culture.supplier else (culture.seed_supplier or "")
         existing = {
@@ -530,7 +568,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "propagation_duration_days": culture.propagation_duration_days,
             "harvest_method": culture.harvest_method,
             "expected_yield": float(culture.expected_yield) if culture.expected_yield is not None else None,
-            "seed_packages": [{"size_value": float(p.size_value), "size_unit": p.size_unit, "available": p.available} for p in culture.seed_packages.all()],
+            "seed_packages": [{"size_value": float(p.size_value), "size_unit": p.size_unit} for p in culture.seed_packages.all()],
             "distance_within_row_cm": round(culture.distance_within_row_m * 100, 2) if culture.distance_within_row_m else None,
             "row_spacing_cm": round(culture.row_spacing_m * 100, 2) if culture.row_spacing_m else None,
             "sowing_depth_cm": round(culture.sowing_depth_m * 100, 2) if culture.sowing_depth_m else None,
@@ -538,13 +576,37 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "seed_rate_unit": culture.seed_rate_unit,
             "notes": culture.notes,
         }
-        missing_fields = _missing_enrichment_fields(culture)
+        if target_fields is None:
+            target_fields = _missing_enrichment_fields(culture) if mode == 'complete' else []
+
         requested_fields_text = (
-            f"In mode 'complete', ONLY research and suggest these missing fields: {', '.join(missing_fields) or 'none'}. "
+            f"In mode 'complete', ONLY research and suggest these missing fields: {', '.join(target_fields) or 'none'}. "
             "If no fields are missing, keep suggested_fields empty and do not invent replacements. "
             if mode == 'complete'
-            else "In mode 'reresearch', you may suggest improvements for all supported fields. "
+            else (
+                f"In mode 'reresearch', limit suggestions to these target fields: {', '.join(target_fields)}. "
+                if target_fields
+                else "In mode 'reresearch', you may suggest improvements for all supported fields. "
+            )
         )
+
+        supplier_query = f"{supplier} {culture.variety or culture.name}".strip()
+        fallback_query = (culture.variety or culture.name).strip()
+        supplier_strategy = (
+            "Supplier-first rules are mandatory. "
+            f"1) FIRST search exclusively for '{supplier_query}'. "
+            "2) Package sizes MUST come exclusively from this supplier. "
+            "3) If supplier-specific data exists and conflicts with other sources, ALWAYS prefer supplier data. "
+            "4) Only if no supplier data exists for a specific field, fallback to general crop sources. "
+            "5) If package sizes cannot be found from this supplier, return seed_packages as empty list and never use other suppliers for package sizes. "
+            f"Search strategy: Query 1 '{supplier_query} cultivation data'; "
+            f"Query 2 '{supplier_query} sowing depth'; "
+            f"Query 3 '{supplier_query} package sizes'; "
+            f"only if no results, Query 4 '{fallback_query} cultivation general'. "
+            "Tag every evidence entry with supplier_specific: true or false. "
+        )
+        if supplier_only:
+            supplier_strategy += "Phase constraint: use supplier-specific sources only in this phase. "
 
         return (
             "You are a horticulture research assistant. Use web search evidence. "
@@ -554,10 +616,11 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "distance_within_row_cm, row_spacing_cm, sowing_depth_cm, seed_rate_value, seed_rate_unit, thousand_kernel_weight_g, nutrient_demand, cultivation_type. "
             "Package size means sold packet options (e.g., 2 g, 5 g, 10 g, 25 g). Do NOT infer from per-seed mass, TKG, sowing rate or grams per meter. If unavailable, return seed_packages as empty list and never guess. "
             "Each suggested field must contain value, unit, confidence. For cultivation_type, only output one of: pre_cultivation, direct_sowing. For nutrient_demand, only output one of: low, medium, high. For harvest_method, only output one of: per_plant, per_sqm. For seed_rate_unit, only output one of: g_per_m2, seeds/m, seeds_per_plant. Never output free-text variants like 'g per plant' or 'grams per 100 sqm'. Do not output labels, translations, or crop-kind words for enum fields. "
-            "evidence must be mapping field->list of {source_url,title,retrieved_at,snippet}. "
+            "evidence must be mapping field->list of {source_url,title,retrieved_at,snippet,supplier_specific}. "
             "validation: warnings/errors arrays with field/code/message. "
             "note_blocks must be pure German markdown text only (no JSON objects, no code fences) and include sections: 'Dauerwerte', 'Aussaat & Abstände (zusammengefasst)', 'Ernte & Verwendung', 'Quellen'. "
-            "Use concise, factual, technical bullet points only. Avoid conversational or human-like wording. If a supplier is provided, prioritize this exact supplier for variety/package data; do not use package sizes from other suppliers. "
+            "Use concise, factual, technical bullet points only. Avoid conversational or human-like wording. "
+            f"{supplier_strategy}"
             f"{requested_fields_text}"
             f"Culture identity: {identity}. Supplier: {supplier or 'unknown'}. Mode: {mode}. Existing values: {json.dumps(existing, ensure_ascii=False)}"
         )
@@ -587,45 +650,51 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         raise EnrichmentError("Provider returned no text content")
 
     def _parse_json_block(self, text: str) -> dict[str, Any]:
-        """Parse JSON from text, including fenced code blocks."""
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            pass
+        """Parse JSON from text, including fenced code blocks and mixed prose."""
+
+        def _try_json(candidate: str) -> dict[str, Any] | None:
+            try:
+                parsed = json.loads(candidate)
+            except json.JSONDecodeError:
+                return None
+            return parsed if isinstance(parsed, dict) else None
+
+        direct = _try_json(text.strip())
+        if direct is not None:
+            return direct
 
         fenced = re.search(r"```(?:json)?\s*(.*?)\s*```", text, re.DOTALL)
         if fenced:
-            candidate = fenced.group(1)
-            try:
-                return json.loads(candidate)
-            except json.JSONDecodeError as exc:
-                raise EnrichmentError(f"Provider returned non-JSON payload: {candidate[:400]}") from exc
+            fenced_payload = _try_json(fenced.group(1).strip())
+            if fenced_payload is not None:
+                return fenced_payload
 
-        start = text.find('{')
-        end = text.rfind('}')
-        if start != -1 and end != -1 and end > start:
-            candidate = text[start:end + 1]
+        decoder = json.JSONDecoder()
+        for match in re.finditer(r"[\{\[]", text):
+            start = match.start()
             try:
-                return json.loads(candidate)
+                parsed, _ = decoder.raw_decode(text[start:])
             except json.JSONDecodeError:
-                pass
+                continue
+            if isinstance(parsed, dict):
+                return parsed
 
         raise EnrichmentError(f"Provider returned non-JSON payload: {text[:400]}")
 
-    def enrich(self, context: EnrichmentContext) -> dict[str, Any]:
+    def _request_enrichment_payload(self, prompt: str, model_name: str) -> tuple[dict[str, Any], dict[str, int], int]:
+        """Execute one Responses API call and return parsed payload with usage metadata."""
         try:
             response = requests.post(
-                "https://api.openai.com/v1/responses",
-                timeout=70,
+                self._responses_url(),
+                timeout=self._request_timeout(),
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": self.model_name,
+                    "model": model_name,
                     "tools": [{"type": "web_search_preview"}],
-                    "input": self._build_prompt(context.culture, context.mode),
-                    "temperature": 0.2,
+                    "input": prompt,
                 },
             )
         except requests.RequestException as exc:
@@ -643,15 +712,89 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         parsed = self._parse_json_block(text)
         usage = _extract_usage(payload)
         web_search_call_count = _count_web_search_calls(payload)
-        parsed["usage"] = usage
-        parsed["cost_estimate"] = _build_cost_estimate(
-            input_tokens=usage['input_tokens'],
-            cached_input_tokens=usage['cached_input_tokens'],
-            output_tokens=usage['output_tokens'],
-            web_search_call_count=web_search_call_count,
-            model=self.model_name,
+        return parsed, usage, web_search_call_count
+
+    def _merge_phase_payloads(self, base: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
+        """Merge two provider payloads without changing the output contract."""
+        merged = dict(base)
+
+        base_fields = base.get('suggested_fields') if isinstance(base.get('suggested_fields'), dict) else {}
+        fallback_fields = fallback.get('suggested_fields') if isinstance(fallback.get('suggested_fields'), dict) else {}
+        merged['suggested_fields'] = {**fallback_fields, **base_fields}
+
+        base_evidence = base.get('evidence') if isinstance(base.get('evidence'), dict) else {}
+        fallback_evidence = fallback.get('evidence') if isinstance(fallback.get('evidence'), dict) else {}
+        merged_evidence: dict[str, Any] = {}
+        for field in set(base_evidence) | set(fallback_evidence):
+            combined_entries: list[Any] = []
+            seen_keys: set[str] = set()
+            for entries in [base_evidence.get(field), fallback_evidence.get(field)]:
+                if not isinstance(entries, list):
+                    continue
+                for entry in entries:
+                    key = json.dumps(entry, sort_keys=True, ensure_ascii=False) if isinstance(entry, dict) else str(entry)
+                    if key in seen_keys:
+                        continue
+                    seen_keys.add(key)
+                    combined_entries.append(entry)
+            merged_evidence[field] = combined_entries
+        merged['evidence'] = merged_evidence
+
+        base_validation = base.get('validation') if isinstance(base.get('validation'), dict) else {}
+        fallback_validation = fallback.get('validation') if isinstance(fallback.get('validation'), dict) else {}
+        merged['validation'] = {
+            'warnings': (base_validation.get('warnings') or []) + (fallback_validation.get('warnings') or []),
+            'errors': (base_validation.get('errors') or []) + (fallback_validation.get('errors') or []),
+        }
+
+        if not merged.get('note_blocks') and fallback.get('note_blocks'):
+            merged['note_blocks'] = fallback.get('note_blocks')
+        return merged
+
+    def _has_supplier_specific_evidence(self, supplier_name: str, evidence: object) -> bool:
+        """Return True when any evidence entry references the configured supplier."""
+        if not isinstance(evidence, dict):
+            return False
+        return any(_is_supplier_matching_evidence(supplier_name, entries) for entries in evidence.values())
+
+    def enrich(self, context: EnrichmentContext) -> dict[str, Any]:
+        model_name = self.model_name
+        supplier_name = context.culture.supplier.name if context.culture.supplier else (context.culture.seed_supplier or '')
+
+        phase_one_prompt = self._build_prompt(context.culture, context.mode, supplier_only=True)
+        primary_result, primary_usage, primary_search_calls = self._request_enrichment_payload(phase_one_prompt, model_name)
+
+        combined_result = primary_result
+        total_usage = dict(primary_usage)
+        total_search_calls = primary_search_calls
+
+        should_fallback = not self._has_supplier_specific_evidence(supplier_name, primary_result.get('evidence'))
+        if should_fallback:
+            target_fields = _missing_enrichment_fields(context.culture) if context.mode == 'complete' else []
+            fallback_prompt = self._build_prompt(
+                context.culture,
+                context.mode,
+                target_fields=target_fields,
+                supplier_only=False,
+            )
+            fallback_result, fallback_usage, fallback_search_calls = self._request_enrichment_payload(fallback_prompt, model_name)
+            combined_result = self._merge_phase_payloads(primary_result, fallback_result)
+            total_usage = {
+                'input_tokens': primary_usage['input_tokens'] + fallback_usage['input_tokens'],
+                'cached_input_tokens': primary_usage['cached_input_tokens'] + fallback_usage['cached_input_tokens'],
+                'output_tokens': primary_usage['output_tokens'] + fallback_usage['output_tokens'],
+            }
+            total_search_calls += fallback_search_calls
+
+        combined_result["usage"] = total_usage
+        combined_result["cost_estimate"] = _build_cost_estimate(
+            input_tokens=total_usage['input_tokens'],
+            cached_input_tokens=total_usage['cached_input_tokens'],
+            output_tokens=total_usage['output_tokens'],
+            web_search_call_count=total_search_calls,
+            model=model_name,
         )
-        return parsed
+        return combined_result
 
 
 class FallbackHeuristicProvider(BaseEnrichmentProvider):
@@ -814,6 +957,153 @@ def get_enrichment_provider() -> BaseEnrichmentProvider:
 
 
 
+def _normalize_suggested_fields_payload(payload: object, validation: dict[str, Any]) -> dict[str, Any]:
+    """Normalize suggested_fields payload to mapping form without raising hard errors."""
+    warnings = validation.setdefault('warnings', [])
+    if isinstance(payload, dict):
+        return payload
+
+    if isinstance(payload, list):
+        normalized: dict[str, Any] = {}
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            field_name = _coerce_text_value(item.get('field'), 'suggested_fields.field').strip()
+            if not field_name:
+                continue
+            normalized[field_name] = {
+                'value': item.get('value'),
+                'unit': item.get('unit'),
+                'confidence': item.get('confidence', 0.6),
+            }
+        if isinstance(warnings, list):
+            warnings.append({
+                'field': 'suggested_fields',
+                'code': 'suggested_fields_list_normalized',
+                'message': 'Normalized suggested_fields list payload into mapping format.',
+            })
+        return normalized
+
+    if isinstance(warnings, list):
+        warnings.append({
+            'field': 'suggested_fields',
+            'code': 'invalid_suggested_fields_payload',
+            'message': 'Invalid suggested_fields payload type; treating as empty mapping.',
+        })
+    return {}
+
+
+def _supplier_specific_entries(supplier_name: str, entries: object) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Split evidence entries into supplier-specific and general groups."""
+    supplier_entries: list[dict[str, Any]] = []
+    general_entries: list[dict[str, Any]] = []
+    if not isinstance(entries, list):
+        return supplier_entries, general_entries
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        tagged_supplier = entry.get('supplier_specific')
+        is_supplier = bool(tagged_supplier) if isinstance(tagged_supplier, bool) else _is_supplier_matching_evidence(supplier_name, [entry])
+        if is_supplier:
+            supplier_entries.append(entry)
+        else:
+            general_entries.append(entry)
+    return supplier_entries, general_entries
+
+
+def _enforce_supplier_first_output(
+    culture: Culture,
+    suggested_fields: dict[str, Any],
+    evidence: dict[str, Any],
+    validation: dict[str, Any],
+) -> None:
+    """Deterministically enforce supplier-first suggestions before returning the result."""
+    supplier_name = (culture.supplier.name if culture.supplier else (culture.seed_supplier or '')).strip()
+    warnings = validation.setdefault('warnings', [])
+
+    for field_name, suggestion in list(suggested_fields.items()):
+        if field_name == 'notes':
+            continue
+        supplier_entries, general_entries = _supplier_specific_entries(supplier_name, evidence.get(field_name))
+        has_supplier_evidence = bool(supplier_entries)
+
+        if field_name == 'seed_packages' and isinstance(suggestion, dict) and isinstance(suggestion.get('value'), list):
+            original_count = len(suggestion.get('value', []))
+            filtered: list[dict[str, Any]] = []
+            for item in suggestion.get('value', []):
+                if not isinstance(item, dict):
+                    continue
+                item_text = _coerce_text_value(item.get('evidence_text') or item.get('raw_text'), 'seed_packages.evidence_text')
+                item_matches = _is_supplier_matching_evidence(supplier_name, [{'title': '', 'source_url': '', 'snippet': item_text}])
+                if has_supplier_evidence and not item_matches:
+                    continue
+                filtered.append(item)
+            suggestion['value'] = filtered
+            if not filtered:
+                suggestion['value'] = []
+            if isinstance(warnings, list) and len(filtered) != original_count:
+                warnings.append({
+                    'field': 'seed_packages',
+                    'code': 'supplier_filter_applied',
+                    'message': 'Dropped non supplier-specific package suggestions.',
+                })
+            continue
+
+        if has_supplier_evidence and general_entries:
+            evidence[field_name] = supplier_entries
+            if isinstance(warnings, list):
+                warnings.append({
+                    'field': field_name,
+                    'code': 'supplier_evidence_preferred',
+                    'message': 'Supplier-specific evidence exists; non-supplier evidence was removed.',
+                })
+
+        if has_supplier_evidence and not _is_supplier_matching_evidence(supplier_name, evidence.get(field_name)):
+            suggested_fields.pop(field_name, None)
+            if isinstance(warnings, list):
+                warnings.append({
+                    'field': field_name,
+                    'code': 'supplier_mismatch_dropped',
+                    'message': 'Dropped suggestion because evidence did not match supplier.',
+                })
+
+
+def _apply_source_weighted_confidence(
+    culture: Culture,
+    suggested_fields: dict[str, Any],
+    evidence: dict[str, Any],
+) -> None:
+    """Adjust confidence scores according to supplier and source characteristics."""
+    supplier_name = (culture.supplier.name if culture.supplier else (culture.seed_supplier or '')).strip()
+    for field_name, suggestion in suggested_fields.items():
+        if not isinstance(suggestion, dict):
+            continue
+        try:
+            base_confidence = float(suggestion.get('confidence', 0.0))
+        except (TypeError, ValueError):
+            continue
+
+        supplier_entries, general_entries = _supplier_specific_entries(supplier_name, evidence.get(field_name))
+        adjusted = base_confidence
+        if supplier_entries:
+            adjusted += 0.1
+        elif general_entries:
+            adjusted -= 0.1
+
+        entries = supplier_entries or general_entries
+        independent_urls = {
+            _coerce_text_value(entry.get('source_url'), 'evidence.source_url')
+            for entry in entries
+            if isinstance(entry, dict)
+        }
+        independent_urls.discard('')
+        if len(independent_urls) >= 2:
+            adjusted += 0.05
+
+        suggestion['confidence'] = round(min(1.0, max(0.0, adjusted)), 3)
+
+
 
 def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidence: dict[str, Any], validation: dict[str, Any]) -> None:
     payload = suggested_fields.get('seed_packages')
@@ -828,36 +1118,109 @@ def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidenc
     accepted: list[dict[str, Any]] = []
     warnings = validation.setdefault('warnings', [])
 
+    def parse_suggestion(item: Any) -> dict[str, Any] | None:
+        if isinstance(item, dict):
+            try:
+                size_value = float(item.get('size_value'))
+            except (TypeError, ValueError):
+                return None
+            size_unit = str(item.get('size_unit') or '').strip().lower()
+            if size_unit != 'g':
+                return None
+            evidence_text = str(item.get('evidence_text') or '')
+            return {
+                'package_type': 'weight_g',
+                'size_value': size_value,
+                'size_unit': 'g',
+                'raw_text': str(item.get('raw_text') or f'{size_value} g'),
+                'evidence_text': evidence_text,
+            }
+
+        if isinstance(item, str):
+            raw_text = item.strip()
+            if not raw_text:
+                return None
+
+            weight_match = re.search(r'(\d+(?:[\.,]\d+)?)\s*g\b', raw_text, flags=re.IGNORECASE)
+            if weight_match:
+                return {
+                    'package_type': 'weight_g',
+                    'size_value': float(weight_match.group(1).replace(',', '.')),
+                    'size_unit': 'g',
+                    'raw_text': raw_text,
+                    'evidence_text': raw_text,
+                }
+
+            count_match = re.search(r'(\d+)\s*[kK]\b', raw_text)
+            if count_match:
+                return {
+                    'package_type': 'count_seeds',
+                    'count_value': int(count_match.group(1)),
+                    'count_unit': 'K',
+                    'raw_text': raw_text,
+                    'evidence_text': raw_text,
+                }
+
+            return {
+                'package_type': 'raw_text',
+                'raw_text': raw_text,
+                'evidence_text': raw_text,
+            }
+
+        return None
+
     for item in suggestions:
-        if not isinstance(item, dict):
-            continue
-        try:
-            size_value = float(item.get('size_value'))
-        except (TypeError, ValueError):
-            continue
-        size_unit = str(item.get('size_unit') or '').strip()
-        evidence_text = str(item.get('evidence_text') or '')
-
-        if size_unit not in {'g', 'seeds'}:
-            continue
-        if size_unit == 'g' and (size_value < 0.1 or size_value > 1000):
-            continue
-        decimals = str(size_value).split('.')
-        if size_unit == 'g' and len(decimals) > 1 and len(decimals[1].rstrip('0')) >= 3 and '0.195 g' not in evidence_text:
-            if isinstance(warnings, list):
-                warnings.append({
-                    'field': 'seed_packages',
-                    'code': 'seed_package_fractional_suspicious',
-                    'message': 'Looks like per-seed mass, not a sold pack size.',
-                })
+        parsed = parse_suggestion(item)
+        if not parsed:
             continue
 
+        package_type = parsed.get('package_type')
+        evidence_text = str(parsed.get('evidence_text') or '')
+
+        if package_type == 'weight_g':
+            size_value = float(parsed.get('size_value') or 0)
+            if size_value <= 0 or size_value < 0.1 or size_value > 1000:
+                continue
+            decimals = str(size_value).split('.')
+            if len(decimals) > 1 and len(decimals[1].rstrip('0')) >= 3 and '0.195 g' not in evidence_text:
+                if isinstance(warnings, list):
+                    warnings.append({
+                        'field': 'seed_packages',
+                        'code': 'seed_package_fractional_suspicious',
+                        'message': 'Looks like per-seed mass, not a sold pack size.',
+                    })
+                continue
+            accepted.append({
+                'package_type': 'weight_g',
+                'size_value': size_value,
+                'size_unit': 'g',
+                'raw_text': str(parsed.get('raw_text') or f'{size_value} g'),
+                'evidence_text': evidence_text[:200],
+            })
+            continue
+
+        if package_type == 'count_seeds':
+            count_value = int(parsed.get('count_value') or 0)
+            if count_value <= 0:
+                continue
+            accepted.append({
+                'package_type': 'count_seeds',
+                'count_value': count_value,
+                'count_unit': 'K',
+                'raw_text': str(parsed.get('raw_text') or f'{count_value} K'),
+                'evidence_text': evidence_text[:200],
+            })
+            continue
+
+        if isinstance(warnings, list):
+            warnings.append({
+                'field': 'seed_packages',
+                'code': 'seed_package_unparsed_retained',
+                'message': 'Retained unparsed package option as raw text.',
+            })
         accepted.append({
-            'size_value': size_value,
-            'size_unit': size_unit,
-            'available': bool(item.get('available', True)),
-            'article_number': item.get('article_number') or '',
-            'source_url': item.get('source_url') or '',
+            'package_type': 'raw_text',
+            'raw_text': str(parsed.get('raw_text') or ''),
             'evidence_text': evidence_text[:200],
         })
 
@@ -900,12 +1263,18 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
         model=provider.model_name,
     )
 
-    if not isinstance(suggested_fields, dict):
-        raise EnrichmentError('Invalid suggested_fields payload type.')
-    if not isinstance(evidence, dict):
-        raise EnrichmentError('Invalid evidence payload type.')
     if not isinstance(validation, dict):
-        raise EnrichmentError('Invalid validation payload type.')
+        validation = {'warnings': [], 'errors': []}
+    suggested_fields = _normalize_suggested_fields_payload(suggested_fields, validation)
+    if not isinstance(evidence, dict):
+        evidence = {}
+        warnings = validation.setdefault('warnings', [])
+        if isinstance(warnings, list):
+            warnings.append({
+                'field': 'evidence',
+                'code': 'invalid_evidence_payload',
+                'message': 'Invalid evidence payload type; treating as empty mapping.',
+            })
 
     structured_sources = _build_structured_sources(culture, evidence)
 
@@ -938,6 +1307,8 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
 
     supplier_name = (culture.supplier.name if culture.supplier else (culture.seed_supplier or '')).strip()
     _validate_seed_package_suggestions(suggested_fields, evidence, validation)
+    _enforce_supplier_first_output(culture, suggested_fields, evidence, validation)
+    _apply_source_weighted_confidence(culture, suggested_fields, evidence)
 
     unresolved_fields: list[str] = []
     if mode == "complete":
