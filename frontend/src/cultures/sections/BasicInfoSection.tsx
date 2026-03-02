@@ -123,15 +123,6 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
         />
         <TextField
           sx={fieldSx}
-          label={t('form.supplierProductUrl', { defaultValue: 'Lieferanten-Produkt-URL' })}
-          type="url"
-          value={formData.supplier_product_url || ''}
-          onChange={e => onChange('supplier_product_url', e.target.value)}
-          error={Boolean(errors.supplier_product_url)}
-          helperText={errors.supplier_product_url || (formData.supplier?.allowed_domains?.[0] ? `Muss eine URL auf der Domain ${formData.supplier.allowed_domains[0]} sein.` : '')}
-        />
-        <TextField
-          sx={fieldSx}
           label={t('form.cropFamily')}
           placeholder={t('form.cropFamilyPlaceholder')}
           value={formData.crop_family}
