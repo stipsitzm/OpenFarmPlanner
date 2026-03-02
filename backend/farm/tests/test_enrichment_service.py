@@ -443,6 +443,46 @@ class EnrichmentConfigBehaviorTest(TestCase):
         warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
         self.assertIn('fallback_mode', warning_codes)
 
+    @override_settings(
+        AI_ENRICHMENT_PROVIDER='openai_responses',
+        OPENAI_API_KEY='test-key',
+        AI_ENRICHMENT_TIMEOUT_SECONDS=210,
+        AI_ENRICHMENT_CONNECT_TIMEOUT_SECONDS=12,
+        AI_ENRICHMENT_READ_TIMEOUT_SECONDS=345,
+        OPENAI_RESPONSES_API_URL='https://api.openai.com/v1/responses',
+    )
+    @patch('farm.services.enrichment.requests.post')
+    def test_provider_uses_configured_endpoint_and_split_timeouts(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        enrich_culture(self.culture, 'complete')
+
+        self.assertEqual(post_mock.call_args.args[0], 'https://api.openai.com/v1/responses')
+        self.assertEqual(post_mock.call_args.kwargs['timeout'], (12.0, 345.0))
+
+    @override_settings(
+        AI_ENRICHMENT_PROVIDER='openai_responses',
+        OPENAI_API_KEY='test-key',
+        AI_ENRICHMENT_TIMEOUT_SECONDS=240,
+    )
+    @patch('farm.services.enrichment.requests.post')
+    def test_provider_falls_back_to_legacy_timeout_setting_for_read_timeout(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': '{"suggested_fields":{},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        enrich_culture(self.culture, 'complete')
+
+        self.assertEqual(post_mock.call_args.kwargs['timeout'], (10.0, 240.0))
+
 
 class EnrichmentCostEstimateTest(TestCase):
     def test_cost_estimate_without_cached_tokens(self):

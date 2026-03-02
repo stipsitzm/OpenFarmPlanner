@@ -139,6 +139,10 @@ def build_parser() -> argparse.ArgumentParser:
         default="trace_runs",
         help="Output directory relative to backend folder (default: trace_runs)",
     )
+    parser.add_argument("--timeout", type=float, help="Override AI_ENRICHMENT_TIMEOUT_SECONDS for this run")
+    parser.add_argument("--connect-timeout", type=float, help="Override connect timeout seconds")
+    parser.add_argument("--read-timeout", type=float, help="Override read timeout seconds")
+    parser.add_argument("--endpoint", help="Override OPENAI_RESPONSES_API_URL for this run")
     return parser
 
 
@@ -178,6 +182,20 @@ def main() -> int:
     run_dir.mkdir(parents=True, exist_ok=True)
 
     original_model = getattr(settings, "AI_ENRICHMENT_MODEL", None)
+    original_timeout = getattr(settings, "AI_ENRICHMENT_TIMEOUT_SECONDS", None)
+    original_connect_timeout = getattr(settings, "AI_ENRICHMENT_CONNECT_TIMEOUT_SECONDS", None)
+    original_read_timeout = getattr(settings, "AI_ENRICHMENT_READ_TIMEOUT_SECONDS", None)
+    original_endpoint = getattr(settings, "OPENAI_RESPONSES_API_URL", None)
+
+    if args.timeout is not None:
+        settings.AI_ENRICHMENT_TIMEOUT_SECONDS = args.timeout
+    if args.connect_timeout is not None:
+        settings.AI_ENRICHMENT_CONNECT_TIMEOUT_SECONDS = args.connect_timeout
+    if args.read_timeout is not None:
+        settings.AI_ENRICHMENT_READ_TIMEOUT_SECONDS = args.read_timeout
+    if args.endpoint:
+        settings.OPENAI_RESPONSES_API_URL = args.endpoint
+
     started_at = datetime.now(timezone.utc)
 
     summary: list[dict[str, Any]] = []
@@ -196,6 +214,13 @@ def main() -> int:
             settings.AI_ENRICHMENT_MODEL = model
             trace.mark("model_overridden", original_model=original_model, override_model=model)
             trace.mark("culture_loaded", culture_name=culture.name, variety=culture.variety)
+            trace.mark(
+                "request_configuration",
+                endpoint=getattr(settings, "OPENAI_RESPONSES_API_URL", None),
+                timeout_seconds=getattr(settings, "AI_ENRICHMENT_TIMEOUT_SECONDS", None),
+                connect_timeout_seconds=getattr(settings, "AI_ENRICHMENT_CONNECT_TIMEOUT_SECONDS", None),
+                read_timeout_seconds=getattr(settings, "AI_ENRICHMENT_READ_TIMEOUT_SECONDS", None),
+            )
 
             with enrichment_trace_hooks(trace):
                 call_started = time.perf_counter()
@@ -230,6 +255,10 @@ def main() -> int:
             "duration_seconds": duration_s,
             "model_used": (result or {}).get("model") if isinstance(result, dict) else model,
             "model_override": model,
+            "endpoint": getattr(settings, "OPENAI_RESPONSES_API_URL", None),
+            "timeout_seconds": getattr(settings, "AI_ENRICHMENT_TIMEOUT_SECONDS", None),
+            "connect_timeout_seconds": getattr(settings, "AI_ENRICHMENT_CONNECT_TIMEOUT_SECONDS", None),
+            "read_timeout_seconds": getattr(settings, "AI_ENRICHMENT_READ_TIMEOUT_SECONDS", None),
             "prompt_sha256": trace.prompt_sha256,
             "prompt": trace.prompt,
             "provider_request": trace.provider_request,
@@ -271,6 +300,12 @@ def main() -> int:
 
     aggregate_file = run_dir / "all_models_summary.json"
     _write_json(aggregate_file, aggregate)
+
+    settings.AI_ENRICHMENT_MODEL = original_model
+    settings.AI_ENRICHMENT_TIMEOUT_SECONDS = original_timeout
+    settings.AI_ENRICHMENT_CONNECT_TIMEOUT_SECONDS = original_connect_timeout
+    settings.AI_ENRICHMENT_READ_TIMEOUT_SECONDS = original_read_timeout
+    settings.OPENAI_RESPONSES_API_URL = original_endpoint
 
     ok_count = len(models) - failures
     print(

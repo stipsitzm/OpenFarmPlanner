@@ -521,6 +521,20 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             )
         self.api_key = resolved_key
 
+    def _responses_url(self) -> str:
+        raw = getattr(settings, 'OPENAI_RESPONSES_API_URL', 'https://api.openai.com/v1/responses')
+        url = _coerce_setting_to_str(raw, 'OPENAI_RESPONSES_API_URL')
+        return url or 'https://api.openai.com/v1/responses'
+
+    def _request_timeout(self) -> tuple[float, float]:
+        connect_timeout = float(getattr(settings, 'AI_ENRICHMENT_CONNECT_TIMEOUT_SECONDS', 10))
+        read_timeout_setting = getattr(settings, 'AI_ENRICHMENT_READ_TIMEOUT_SECONDS', None)
+        if read_timeout_setting in (None, ''):
+            read_timeout = float(getattr(settings, 'AI_ENRICHMENT_TIMEOUT_SECONDS', 180))
+        else:
+            read_timeout = float(read_timeout_setting)
+        return (connect_timeout, read_timeout)
+
     def _build_prompt(self, culture: Culture, mode: str) -> str:
         identity = f"{culture.name} {culture.variety or ''}".strip()
         supplier = culture.supplier.name if culture.supplier else (culture.seed_supplier or "")
@@ -615,8 +629,8 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
     def enrich(self, context: EnrichmentContext) -> dict[str, Any]:
         try:
             response = requests.post(
-                "https://api.openai.com/v1/responses",
-                timeout=getattr(settings, 'AI_ENRICHMENT_TIMEOUT_SECONDS', 70),
+                self._responses_url(),
+                timeout=self._request_timeout(),
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
