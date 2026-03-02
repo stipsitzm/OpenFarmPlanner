@@ -3,41 +3,51 @@ from datetime import date, timedelta
 from django.test import TestCase
 from django.utils import timezone
 
-from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier, Task
+from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier, Task, is_supplier_domain
 
 class SupplierModelTest(TestCase):
     def test_supplier_creation(self):
         """Test creating a supplier"""
-        supplier = Supplier.objects.create(name="Green Seeds Co.")
+        supplier = Supplier.objects.create(name="Green Seeds Co.", homepage_url="https://green.example")
         self.assertEqual(str(supplier), "Green Seeds Co.")
         self.assertEqual(supplier.name, "Green Seeds Co.")
 
     def test_supplier_name_normalization(self):
         """Test that supplier names are normalized (lowercased, stripped)"""
-        supplier = Supplier.objects.create(name="  ACME Seeds  ")
+        supplier = Supplier.objects.create(name="  ACME Seeds  ", homepage_url="https://acme.example")
         self.assertEqual(supplier.name_normalized, "acme seeds")
 
     def test_supplier_normalization_removes_legal_suffixes(self):
         """Test that legal suffixes are removed from normalized names"""
-        supplier1 = Supplier.objects.create(name="Green Inc.")
+        supplier1 = Supplier.objects.create(name="Green Inc.", homepage_url="https://green-inc.example")
         self.assertEqual(supplier1.name_normalized, "green")
         
-        supplier2 = Supplier.objects.create(name="Farm Ltd")
+        supplier2 = Supplier.objects.create(name="Farm Ltd", homepage_url="https://farm.example")
         self.assertEqual(supplier2.name_normalized, "farm")
         
-        supplier3 = Supplier.objects.create(name="Seeds GmbH")
+        supplier3 = Supplier.objects.create(name="Seeds GmbH", homepage_url="https://seeds.example")
         self.assertEqual(supplier3.name_normalized, "seeds")
 
     def test_supplier_normalization_deduplication(self):
         """Test that suppliers with same normalized name cannot be created"""
         from django.db import IntegrityError
         
-        Supplier.objects.create(name="ACME Seeds")
+        Supplier.objects.create(name="ACME Seeds", homepage_url="https://acme.example")
         
         # Try to create another with same normalized name
         with self.assertRaises(IntegrityError):
-            Supplier.objects.create(name="acme seeds")
+            Supplier.objects.create(name="acme seeds", homepage_url="https://acme-2.example")
 
+
+    def test_supplier_slug_and_allowed_domains_derived_from_homepage(self):
+        supplier = Supplier.objects.create(name="ReinSaat GmbH", homepage_url="https://www.reinsaat.at")
+        self.assertEqual(supplier.slug, 'reinsaat')
+        self.assertEqual(supplier.allowed_domains, ['reinsaat.at'])
+
+    def test_is_supplier_domain_helper(self):
+        supplier = Supplier.objects.create(name="Demo Supplier", homepage_url="https://www.reinsaat.at")
+        self.assertTrue(is_supplier_domain('https://shop.reinsaat.at/product', supplier))
+        self.assertFalse(is_supplier_domain('https://other.example/product', supplier))
 
 class LocationModelTest(TestCase):
     def test_location_creation(self):

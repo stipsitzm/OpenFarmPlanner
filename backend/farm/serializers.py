@@ -18,6 +18,7 @@ from .models import (
     Supplier,
     Task,
     SeedPackage,
+    is_supplier_domain,
 )
 
 
@@ -62,8 +63,8 @@ class SupplierSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Supplier
-        fields = ['id', 'name', 'created_at', 'updated_at', 'created']
-        read_only_fields = ['created_at', 'updated_at']
+        fields = ['id', 'name', 'homepage_url', 'slug', 'allowed_domains', 'created_at', 'updated_at', 'created']
+        read_only_fields = ['created_at', 'updated_at', 'slug', 'allowed_domains']
 
 
 class FieldSerializer(serializers.ModelSerializer):
@@ -407,6 +408,20 @@ class CultureSerializer(serializers.ModelSerializer):
         if errors:
             raise serializers.ValidationError(errors)
 
+        supplier = attrs.get('supplier', getattr(self.instance, 'supplier', None) if self.instance else None)
+        supplier_product_url = attrs.get(
+            'supplier_product_url',
+            getattr(self.instance, 'supplier_product_url', None) if self.instance else None,
+        )
+        if supplier_product_url:
+            if not supplier or not is_supplier_domain(supplier_product_url, supplier):
+                errors['supplier_product_url'] = {
+                    'code': 'supplier_product_url_domain_mismatch',
+                    'message': 'Supplier product URL must match supplier allowed domains.',
+                }
+
+        if errors:
+            raise serializers.ValidationError(errors)
 
         seeding_requirement = attrs.get('seeding_requirement', getattr(self.instance, 'seeding_requirement', None) if self.instance else None)
         seeding_requirement_type = attrs.get('seeding_requirement_type', getattr(self.instance, 'seeding_requirement_type', '') if self.instance else '')

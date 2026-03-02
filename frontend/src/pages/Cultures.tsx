@@ -607,6 +607,21 @@ function Cultures(): React.ReactElement {
     updateSelectedCultureId(cultures[nextIndex]?.id, 'internal');
   }, [cultures, selectedCultureId, updateSelectedCultureId]);
 
+  const canRunEnrichmentForCulture = useCallback((culture?: Culture | null): boolean => {
+    if (!culture?.supplier || !culture.supplier_product_url) {
+      return false;
+    }
+    try {
+      const host = new URL(culture.supplier_product_url).hostname.toLowerCase().replace(/^www\./, '');
+      const domains = (culture.supplier.allowed_domains || []).map((domain) => domain.toLowerCase().replace(/^www\./, ''));
+      return domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const enrichmentDisabledReason = 'Für KI-Recherche muss zuerst ein Lieferant ausgewählt und die Lieferanten-Produkt-URL eingetragen werden.';
+
   const commandSpecs = useMemo<CommandSpec[]>(() => {
     return [
       {
@@ -677,7 +692,7 @@ function Cultures(): React.ReactElement {
         shortcutHint: 'Alt+U',
         keys: { alt: true, key: 'u' },
         contextTags: ['cultures'],
-        isAvailable: () => Boolean(selectedCulture) && !enrichmentLoading,
+        isAvailable: () => Boolean(selectedCulture) && canRunEnrichmentForCulture(selectedCulture) && !enrichmentLoading,
         run: () => { void handleEnrichCurrent('complete'); },
       },
       {
@@ -687,7 +702,7 @@ function Cultures(): React.ReactElement {
         shortcutHint: 'Alt+R',
         keys: { alt: true, key: 'r' },
         contextTags: ['cultures'],
-        isAvailable: () => Boolean(selectedCulture) && !enrichmentLoading,
+        isAvailable: () => Boolean(selectedCulture) && canRunEnrichmentForCulture(selectedCulture) && !enrichmentLoading,
         run: () => { void handleEnrichCurrent('reresearch'); },
       },
       {
@@ -697,7 +712,7 @@ function Cultures(): React.ReactElement {
         shortcutHint: 'Alt+A',
         keys: { alt: true, key: 'a' },
         contextTags: ['cultures'],
-        isAvailable: () => cultures.length > 0 && !enrichmentLoading,
+        isAvailable: () => cultures.some((culture) => canRunEnrichmentForCulture(culture)) && !enrichmentLoading,
         run: () => setEnrichAllConfirmOpen(true),
       },
       {
@@ -721,7 +736,7 @@ function Cultures(): React.ReactElement {
         run: () => goToRelativeCulture('next'),
       },
     ];
-  }, [cultures.length, enrichmentLoading, goToRelativeCulture, handleCreatePlantingPlan, handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, selectedCulture, selectedCultureId]);
+  }, [canRunEnrichmentForCulture, cultures, cultures.length, enrichmentLoading, goToRelativeCulture, handleCreatePlantingPlan, handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, selectedCulture, selectedCultureId]);
 
   useRegisterCommands('cultures-page', commandSpecs);
 
@@ -898,9 +913,11 @@ function Cultures(): React.ReactElement {
   }, []);
 
   const enrichableCultureIds = useMemo(
-    () => cultures.filter((culture) => culture.id && cultureHasMissingEnrichmentFields(culture)).map((culture) => culture.id as number),
-    [cultures, cultureHasMissingEnrichmentFields],
+    () => cultures.filter((culture) => culture.id && canRunEnrichmentForCulture(culture) && cultureHasMissingEnrichmentFields(culture)).map((culture) => culture.id as number),
+    [cultures, cultureHasMissingEnrichmentFields, canRunEnrichmentForCulture],
   );
+
+
 
   const selectedCultureNeedsCompletion = useMemo(
     () => (selectedCulture ? cultureHasMissingEnrichmentFields(selectedCulture) : false),
@@ -1182,7 +1199,7 @@ function Cultures(): React.ReactElement {
               </Button>
             </span>
           </Tooltip>
-          <ButtonGroup variant="contained" aria-label={t('ai.menuLabel')} disabled={!selectedCulture || enrichmentLoading}>
+          <Tooltip title={!canRunEnrichmentForCulture(selectedCulture) ? enrichmentDisabledReason : ''}><span><ButtonGroup variant="contained" aria-label={t('ai.menuLabel')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
             <Tooltip title={!selectedCultureNeedsCompletion && selectedCulture ? t('ai.completeDisabledReason') : ''}>
               <span>
                 <Button
@@ -1205,18 +1222,18 @@ function Cultures(): React.ReactElement {
             >
               <ArrowDropDownIcon />
             </Button>
-          </ButtonGroup>
+          </ButtonGroup></span></Tooltip>
           <Menu
             id="culture-ai-menu"
             anchorEl={aiMenuAnchor}
             open={Boolean(aiMenuAnchor)}
             onClose={handleAiMenuClose}
           >
-            <MenuItem aria-label="Kultur komplett neu recherchieren (KI) (Alt+R)" onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading}>
+            <MenuItem aria-label="Kultur komplett neu recherchieren (KI) (Alt+R)" onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
               <ManageSearchIcon sx={{ mr: 1 }} fontSize="small" />
               {t('buttons.aiReresearch')}
             </MenuItem>
-            <MenuItem aria-label="Alle Kulturen vervollständigen (KI) (Alt+A)" onClick={() => setEnrichAllConfirmOpen(true)} disabled={cultures.length === 0 || enrichmentLoading}>
+            <MenuItem aria-label="Alle Kulturen vervollständigen (KI) (Alt+A)" onClick={() => setEnrichAllConfirmOpen(true)} disabled={cultures.length === 0 || enrichmentLoading || !cultures.some((culture) => canRunEnrichmentForCulture(culture))}>
               <PlaylistAddCheckIcon sx={{ mr: 1 }} fontSize="small" />
               {t('buttons.aiCompleteAll')}
             </MenuItem>

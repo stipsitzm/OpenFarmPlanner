@@ -10,6 +10,9 @@ export interface SeedPackage {
 export interface Supplier {
   id?: number;
   name: string;
+  homepage_url: string;
+  slug: string;
+  allowed_domains: string[];
   created_at?: string;
   updated_at?: string;
   created?: boolean;
@@ -30,6 +33,7 @@ export interface Culture {
   variety?: string;
   seed_supplier?: string;
   supplier?: Supplier | null;
+  supplier_product_url?: string | null;
   image_file?: MediaFileRef | null;
   image_file_id?: number | null;
   notes?: string;

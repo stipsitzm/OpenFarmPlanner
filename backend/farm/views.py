@@ -73,6 +73,19 @@ def _coerce_request_string(value, default='') -> str:
     return default
 
 
+
+
+def _supplier_enrichment_requirement_error() -> Response:
+    """Return standardized supplier URL requirement error for enrichment endpoints."""
+    return Response(
+        {
+            'code': 'supplier_url_required',
+            'message': 'Supplier and supplier_product_url are required for AI enrichment.',
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+
+
 def _week_start_for_iso_year(iso_year: int) -> date:
     """Return Monday of ISO week 1 for an ISO year."""
     return date.fromisocalendar(iso_year, 1, 1)
@@ -323,20 +336,26 @@ class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         :return: Response with supplier data and created flag
         """
         name = request.data.get('name', '').strip()
-        
+        homepage_url = request.data.get('homepage_url', '').strip()
+
         if not name:
             return Response(
                 {'name': 'This field is required.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+        if not homepage_url:
+            return Response(
+                {'homepage_url': 'This field is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         # Get or create supplier by normalized name
         from .utils import normalize_supplier_name
         normalized = normalize_supplier_name(name) or ''
-        
+
         supplier, created = Supplier.objects.get_or_create(
             name_normalized=normalized,
-            defaults={'name': name}
+            defaults={'name': name, 'homepage_url': homepage_url}
         )
         
         serializer = self.get_serializer(supplier)
@@ -784,6 +803,8 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     def enrich(self, request, pk=None):
         """Create AI suggestions for one culture."""
         culture = self.get_object()
+        if not culture.supplier_id or not (culture.supplier_product_url or '').strip():
+            return _supplier_enrichment_requirement_error()
         mode = _coerce_request_string(request.data.get('mode'), 'complete')
         try:
             payload = enrich_culture(culture, mode)
@@ -812,6 +833,9 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         run_id = f"enr_batch_{int(timezone.now().timestamp())}"
         items = []
         for culture in cultures:
+            if not culture.supplier_id or not (culture.supplier_product_url or '').strip():
+                items.append({'culture_id': culture.id, 'status': 'failed', 'error': 'supplier_url_required'})
+                continue
             try:
                 item = enrich_culture(culture, 'complete')
                 items.append({'culture_id': culture.id, 'status': 'completed', 'result': item})

@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
 
-from farm.models import Culture, EnrichmentAccountingRun, SeedPackage
+from farm.models import Culture, EnrichmentAccountingRun, SeedPackage, Supplier
 from scripts.trace_enrichment_run import TraceState, enrichment_trace_hooks
 from farm.services.enrichment import (
     EnrichmentError,
@@ -18,7 +18,8 @@ from farm.services.enrichment import (
 
 class OpenAIResponsesProviderParsingTest(TestCase):
     def setUp(self):
-        self.culture = Culture.objects.create(name='Bohne', variety='Test')
+        self.supplier = Supplier.objects.create(name='ReinSaat', homepage_url='https://example.com')
+        self.culture = Culture.objects.create(name='Bohne', variety='Test', supplier=self.supplier, supplier_product_url='https://example.com/product')
 
     @patch('farm.services.enrichment.requests.post')
     def test_parses_output_text_json(self, post_mock):
@@ -277,9 +278,10 @@ class OpenAIResponsesProviderParsingTest(TestCase):
                     'seed_packages': [
                         {
                             'source_url': 'https://example.com/packages',
-                            'title': 'Package options',
+                            'title': 'ReinSaat Package options',
                             'retrieved_at': '2026-01-01T00:00:00Z',
                             'snippet': '2.5 g, 500 K (Topfpillen), 0.4 g (Portion)',
+                            'supplier_specific': True,
                         }
                     ],
                 },
@@ -444,7 +446,8 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
 class EnrichmentConfigBehaviorTest(TestCase):
     def setUp(self):
-        self.culture = Culture.objects.create(name='Möhre', variety='Nantes')
+        self.supplier = Supplier.objects.create(name='ReinSaat', homepage_url='https://example.com')
+        self.culture = Culture.objects.create(name='Möhre', variety='Nantes', supplier=self.supplier, supplier_product_url='https://example.com/moehre')
 
     @override_settings(AI_ENRICHMENT_ENABLED=False)
     def test_enrich_culture_rejects_when_disabled(self):

@@ -27,7 +27,7 @@ vi.mock('../cultures/CultureDetail', () => ({
   CultureDetail: ({ onCultureSelect }: { onCultureSelect: (culture: Culture | null) => void }): ReactElement => (
     <button
       type="button"
-      onClick={() => onCultureSelect({ id: 1, name: 'Buschbohne', variety: 'Faraday' } as Culture)}
+      onClick={() => onCultureSelect({ id: 1, name: 'Buschbohne', variety: 'Faraday', supplier: { id: 9, name: 'ReinSaat', homepage_url: 'https://www.reinsaat.at', slug: 'reinsaat', allowed_domains: ['reinsaat.at'] }, supplier_product_url: 'https://www.reinsaat.at/faraday' } as Culture)}
     >
       select-culture
     </button>
@@ -43,7 +43,7 @@ describe('Cultures enrichment cost banner', () => {
         count: 1,
         next: null,
         previous: null,
-        results: [{ id: 1, name: 'Buschbohne', variety: 'Faraday' }],
+        results: [{ id: 1, name: 'Buschbohne', variety: 'Faraday', supplier: { id: 9, name: 'ReinSaat', homepage_url: 'https://www.reinsaat.at', slug: 'reinsaat', allowed_domains: ['reinsaat.at'] }, supplier_product_url: 'https://www.reinsaat.at/faraday' }],
       },
     });
 
@@ -97,6 +97,7 @@ describe('Cultures enrichment cost banner', () => {
     expect(screen.getAllByText(/Web-Suche: 2 Calls/).length).toBeGreaterThan(0);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
+
 
   it('triggers AI actions via keyboard shortcuts', async () => {
     render(

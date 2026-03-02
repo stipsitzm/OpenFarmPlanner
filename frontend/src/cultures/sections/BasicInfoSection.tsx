@@ -49,8 +49,12 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
 
     if (typeof value === 'string') {
       // User typed a new supplier name - create it
+      const homepageUrl = window.prompt('Homepage URL des Lieferanten (z. B. https://www.reinsaat.at)') || '';
+      if (!homepageUrl.trim()) {
+        return;
+      }
       try {
-        const response = await supplierAPI.create(value);
+        const response = await supplierAPI.create(value, homepageUrl.trim());
         onChange('supplier', response.data);
       } catch (error) {
         console.error('Error creating supplier:', error);
@@ -109,6 +113,22 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
               error={Boolean(errors.supplier)}
             />
           )}
+        />
+        <TextField
+          sx={fieldSx}
+          label={t('form.supplierHomepage', { defaultValue: 'Lieferanten-Homepage' })}
+          value={formData.supplier?.homepage_url || ''}
+          InputProps={{ readOnly: true }}
+          helperText={formData.supplier?.allowed_domains?.[0] ? `Domain: ${formData.supplier.allowed_domains[0]}` : ''}
+        />
+        <TextField
+          sx={fieldSx}
+          label={t('form.supplierProductUrl', { defaultValue: 'Lieferanten-Produkt-URL' })}
+          type="url"
+          value={formData.supplier_product_url || ''}
+          onChange={e => onChange('supplier_product_url', e.target.value)}
+          error={Boolean(errors.supplier_product_url)}
+          helperText={errors.supplier_product_url || (formData.supplier?.allowed_domains?.[0] ? `Muss eine URL auf der Domain ${formData.supplier.allowed_domains[0]} sein.` : '')}
         />
         <TextField
           sx={fieldSx}

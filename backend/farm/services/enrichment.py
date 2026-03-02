@@ -433,12 +433,16 @@ def _is_supplier_matching_evidence(supplier_name: str, evidence_entries: object)
 
 
 def _supplier_domains_for_culture(culture: Culture) -> set[str]:
-    """Return known supplier domains used for strict supplier-only filtering."""
-    supplier_name = (culture.supplier.name if culture.supplier else (culture.seed_supplier or '')).lower()
-    domains: set[str] = set()
-    if 'reinsaat' in supplier_name:
-        domains.add('reinsaat.at')
-    return domains
+    """Return normalized supplier domains from culture supplier metadata."""
+    supplier = culture.supplier
+    if not supplier:
+        return set()
+    domains = {
+        str(domain).strip().lower().removeprefix('www.')
+        for domain in (supplier.allowed_domains or [])
+        if str(domain).strip()
+    }
+    return {domain for domain in domains if domain}
 
 
 def _url_matches_supplier_domains(url: str, supplier_domains: set[str]) -> bool:
@@ -609,6 +613,8 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "seed_rate_value": culture.seed_rate_value,
             "seed_rate_unit": culture.seed_rate_unit,
             "notes": culture.notes,
+            "supplier_product_url": culture.supplier_product_url,
+            "supplier_allowed_domains": list(_supplier_domains_for_culture(culture)),
         }
         if target_fields is None:
             target_fields = _missing_enrichment_fields(culture) if mode == 'complete' else []
@@ -642,6 +648,8 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         if supplier_only:
             supplier_domains = ', '.join(sorted(_supplier_domains_for_culture(culture)))
             supplier_strategy += "Phase constraint: use supplier-specific sources only in this phase. "
+            if culture.supplier_product_url:
+                supplier_strategy += f"First open this supplier product URL: {culture.supplier_product_url}. "
             if supplier_domains:
                 supplier_strategy += (
                     f"Only open and trust sources from supplier domains: {supplier_domains}. "
@@ -1267,7 +1275,7 @@ def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidenc
                     'size_value': float(weight_match.group(1).replace(',', '.')),
                     'size_unit': 'g',
                     'raw_text': raw_text,
-                    'evidence_text': raw_text,
+                    'evidence_text': '',
                 }
 
             count_match = re.search(r'(\d+)\s*[kK]\b', raw_text)
@@ -1277,13 +1285,13 @@ def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidenc
                     'count_value': int(count_match.group(1)),
                     'count_unit': 'K',
                     'raw_text': raw_text,
-                    'evidence_text': raw_text,
+                    'evidence_text': '',
                 }
 
             return {
                 'package_type': 'raw_text',
                 'raw_text': raw_text,
-                'evidence_text': raw_text,
+                'evidence_text': '',
             }
 
         return None
@@ -1422,6 +1430,9 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
 
     if not getattr(settings, 'AI_ENRICHMENT_ENABLED', True):
         raise EnrichmentError('AI enrichment is disabled by configuration.')
+
+    if not culture.supplier_id or not (culture.supplier_product_url or '').strip():
+        raise EnrichmentError('supplier_url_required: Supplier and supplier_product_url are required for AI enrichment.')
 
     provider = get_enrichment_provider()
     context = EnrichmentContext(culture=culture, mode=mode)

@@ -3,6 +3,7 @@ import uuid
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
+from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
@@ -47,34 +48,95 @@ class TimestampedModel(models.Model):
 
 class Supplier(TimestampedModel):
     """A seed supplier or manufacturer."""
-    
-    name = models.CharField(max_length=200, help_text="Supplier name")
+
+    name = models.CharField(max_length=200, unique=True, help_text="Supplier name")
+    homepage_url = models.URLField(help_text="Supplier homepage URL")
+    slug = models.SlugField(max_length=200, unique=True, blank=True)
+    allowed_domains = models.JSONField(default=list, blank=True)
     name_normalized = models.CharField(
         max_length=200,
         unique=True,
         editable=False,
         help_text="Normalized name for deduplication"
     )
-    
+
+    @staticmethod
+    def _normalize_domain(hostname: str) -> str:
+        host = (hostname or '').strip().lower()
+        if host.startswith('www.'):
+            host = host[4:]
+        return host
+
+    def _derive_slug_base(self) -> str:
+        try:
+            host = self._normalize_domain(urlparse(self.homepage_url).hostname or '')
+        except Exception:  # noqa: BLE001
+            host = ''
+        if host:
+            return host.split('.')[0]
+
+        from django.utils.text import slugify
+        return slugify(self.name) or 'supplier'
+
+    def _assign_unique_slug(self) -> None:
+        from django.utils.text import slugify
+
+        if self.slug:
+            base_slug = slugify(self.slug)
+        else:
+            base_slug = slugify(self._derive_slug_base())
+        base_slug = base_slug or 'supplier'
+
+        candidate = base_slug
+        suffix = 2
+        qs = Supplier.objects.exclude(pk=self.pk)
+        while qs.filter(slug=candidate).exists():
+            candidate = f"{base_slug}-{suffix}"
+            suffix += 1
+        self.slug = candidate
+
+    def _derive_allowed_domains(self) -> list[str]:
+        try:
+            hostname = urlparse(self.homepage_url).hostname or ''
+        except Exception:  # noqa: BLE001
+            hostname = ''
+        normalized = self._normalize_domain(hostname)
+        return [normalized] if normalized else []
+
     def save(self, *args: Any, **kwargs: Any) -> None:
-        """Save supplier and auto-generate normalized name."""
+        """Save supplier and auto-generate normalized helper fields."""
         from .utils import normalize_supplier_name
-        
-        # Always update name_normalized based on current name
-        self.name_normalized = normalize_supplier_name(self.name) or ''
-        
-        # Trim and collapse whitespace in the user-facing name
+
         if self.name:
             self.name = ' '.join(self.name.split())
-        
+        self.name_normalized = normalize_supplier_name(self.name) or ''
+        if not self.slug:
+            self._assign_unique_slug()
+        self.allowed_domains = self._derive_allowed_domains()
+
         super().save(*args, **kwargs)
-    
+
     def __str__(self) -> str:
         """Return the supplier name."""
         return self.name
-    
+
     class Meta:
         ordering = ['name']
+
+
+
+def is_supplier_domain(url: str, supplier: Supplier | None) -> bool:
+    """Return True when URL host matches supplier allowed domains."""
+    if not supplier or not url:
+        return False
+    try:
+        host = Supplier._normalize_domain(urlparse(url).hostname or '')
+    except Exception:  # noqa: BLE001
+        return False
+    if not host:
+        return False
+    domains = [Supplier._normalize_domain(domain) for domain in (supplier.allowed_domains or []) if domain]
+    return any(host == domain or host.endswith(f'.{domain}') for domain in domains)
 
 
 class Location(TimestampedModel):
@@ -201,6 +263,7 @@ class Culture(TimestampedModel):
         related_name='cultures',
         help_text="Seed supplier (preferred over seed_supplier text field)"
     )
+    supplier_product_url = models.URLField(null=True, blank=True, help_text='Supplier product page URL for enrichment')
     
     # Normalized fields for matching and deduplication.
     name_normalized = models.CharField(

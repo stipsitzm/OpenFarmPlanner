@@ -63,6 +63,22 @@ export function validateCulture(
     errors.supplier = t('form.supplierRequired');
   }
 
+
+  if (draft.supplier_product_url) {
+    const allowedDomain = draft.supplier?.allowed_domains?.[0];
+    try {
+      const host = new URL(draft.supplier_product_url).hostname.toLowerCase().replace(/^www\./, '');
+      if (allowedDomain) {
+        const normalized = allowedDomain.toLowerCase().replace(/^www\./, '');
+        if (!(host === normalized || host.endsWith(`.${normalized}`))) {
+          errors.supplier_product_url = `Muss eine URL auf der Domain ${normalized} sein.`;
+        }
+      }
+    } catch {
+      errors.supplier_product_url = 'Ungültige URL';
+    }
+  }
+
   // Optional numeric fields with explicit error keys
   if (draft.growth_duration_days !== undefined && draft.growth_duration_days !== null && (typeof draft.growth_duration_days !== 'string' || draft.growth_duration_days !== '')) {
     const numValue = toNumber(draft.growth_duration_days);
