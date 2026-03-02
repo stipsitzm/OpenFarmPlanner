@@ -80,7 +80,7 @@ def _supplier_enrichment_requirement_error() -> Response:
     return Response(
         {
             'code': 'supplier_url_required',
-            'message': 'Supplier and supplier_product_url are required for AI enrichment.',
+            'message': 'Supplier is required for AI enrichment.',
         },
         status=status.HTTP_400_BAD_REQUEST,
     )
@@ -803,7 +803,7 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     def enrich(self, request, pk=None):
         """Create AI suggestions for one culture."""
         culture = self.get_object()
-        if not culture.supplier_id or not (culture.supplier_product_url or '').strip():
+        if not culture.supplier_id:
             return _supplier_enrichment_requirement_error()
         mode = _coerce_request_string(request.data.get('mode'), 'complete')
         try:
@@ -833,7 +833,7 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         run_id = f"enr_batch_{int(timezone.now().timestamp())}"
         items = []
         for culture in cultures:
-            if not culture.supplier_id or not (culture.supplier_product_url or '').strip():
+            if not culture.supplier_id:
                 items.append({'culture_id': culture.id, 'status': 'failed', 'error': 'supplier_url_required'})
                 continue
             try:

@@ -1431,8 +1431,8 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
     if not getattr(settings, 'AI_ENRICHMENT_ENABLED', True):
         raise EnrichmentError('AI enrichment is disabled by configuration.')
 
-    if not culture.supplier_id or not (culture.supplier_product_url or '').strip():
-        raise EnrichmentError('supplier_url_required: Supplier and supplier_product_url are required for AI enrichment.')
+    if not culture.supplier_id:
+        raise EnrichmentError('supplier_url_required: Supplier is required for AI enrichment.')
 
     provider = get_enrichment_provider()
     context = EnrichmentContext(culture=culture, mode=mode)

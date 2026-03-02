@@ -608,19 +608,10 @@ function Cultures(): React.ReactElement {
   }, [cultures, selectedCultureId, updateSelectedCultureId]);
 
   const canRunEnrichmentForCulture = useCallback((culture?: Culture | null): boolean => {
-    if (!culture?.supplier || !culture.supplier_product_url) {
-      return false;
-    }
-    try {
-      const host = new URL(culture.supplier_product_url).hostname.toLowerCase().replace(/^www\./, '');
-      const domains = (culture.supplier.allowed_domains || []).map((domain) => domain.toLowerCase().replace(/^www\./, ''));
-      return domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
-    } catch {
-      return false;
-    }
+    return Boolean(culture?.supplier);
   }, []);
 
-  const enrichmentDisabledReason = 'Für KI-Recherche muss zuerst ein Lieferant ausgewählt und die Lieferanten-Produkt-URL eingetragen werden.';
+  const enrichmentDisabledReason = 'Für KI-Recherche muss zuerst ein Lieferant ausgewählt werden.';
 
   const commandSpecs = useMemo<CommandSpec[]>(() => {
     return [
