@@ -48,9 +48,9 @@ def enrichment_trace_hooks(trace: TraceState):
     original_build_prompt = enrichment_module.OpenAIResponsesProvider._build_prompt
     original_post = enrichment_module.requests.post
 
-    def traced_build_prompt(self, culture, mode):
+    def traced_build_prompt(self, culture, mode, *args, **kwargs):
         started = time.perf_counter()
-        prompt = original_build_prompt(self, culture, mode)
+        prompt = original_build_prompt(self, culture, mode, *args, **kwargs)
         duration_ms = (time.perf_counter() - started) * 1000
 
         trace.prompt = prompt if trace.include_full_prompt else None

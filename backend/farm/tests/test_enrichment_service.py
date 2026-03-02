@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 from django.test import TestCase, override_settings
 
 from farm.models import Culture, EnrichmentAccountingRun, SeedPackage
+from scripts.trace_enrichment_run import TraceState, enrichment_trace_hooks
 from farm.services.enrichment import (
     EnrichmentError,
     OpenAIResponsesProvider,
@@ -719,6 +720,18 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.assertIn("FIRST search exclusively", sent_input)
         self.assertIn("Package sizes MUST come exclusively from this supplier", sent_input)
         self.assertIn("supplier_specific", sent_input)
+
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    def test_tracing_hook_accepts_supplier_only_build_prompt_signature(self):
+        provider = OpenAIResponsesProvider(api_key='test-key')
+        trace = TraceState(include_full_prompt=False)
+
+        with enrichment_trace_hooks(trace):
+            prompt = provider._build_prompt(self.culture, 'complete', supplier_only=True)
+
+        self.assertTrue(prompt)
+        self.assertTrue(any(step.get('name') == 'prompt_built' for step in trace.steps))
 
 
 class EnrichmentCostEstimateTest(TestCase):
