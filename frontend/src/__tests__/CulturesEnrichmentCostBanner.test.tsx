@@ -55,7 +55,7 @@ describe('Cultures enrichment cost banner', () => {
         status: 'completed',
         started_at: '2026-01-01T00:00:00Z',
         finished_at: '2026-01-01T00:00:01Z',
-        model: 'gpt-4.1',
+        model: 'gpt-5',
         provider: 'openai_responses',
         search_provider: 'web_search',
         suggested_fields: {},
@@ -65,7 +65,7 @@ describe('Cultures enrichment cost banner', () => {
         costEstimate: {
           currency: 'USD',
           total: 0.01234,
-          model: 'gpt-4.1',
+          model: 'gpt-5',
           breakdown: {
             input: 0.002,
             cached_input: 0.0001,

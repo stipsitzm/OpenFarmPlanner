@@ -451,7 +451,7 @@ class EnrichmentCostEstimateTest(TestCase):
             cached_input_tokens=0,
             output_tokens=500,
             web_search_call_count=0,
-            model='gpt-4.1',
+            model='gpt-5',
         )
 
         self.assertEqual(estimate['currency'], 'USD')
@@ -467,7 +467,7 @@ class EnrichmentCostEstimateTest(TestCase):
             cached_input_tokens=500,
             output_tokens=0,
             web_search_call_count=0,
-            model='gpt-4.1',
+            model='gpt-5',
         )
 
         self.assertAlmostEqual(estimate['breakdown']['input'], 0.003, places=6)
@@ -480,7 +480,7 @@ class EnrichmentCostEstimateTest(TestCase):
             cached_input_tokens=0,
             output_tokens=0,
             web_search_call_count=3,
-            model='gpt-4.1',
+            model='gpt-5',
         )
 
         self.assertEqual(estimate['breakdown']['web_search_call_count'], 3)

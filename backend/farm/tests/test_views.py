@@ -952,7 +952,7 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
             'status': 'completed',
             'started_at': '2026-01-01T00:00:00Z',
             'finished_at': '2026-01-01T00:00:01Z',
-            'model': 'gpt-4.1',
+            'model': 'gpt-5',
             'provider': 'openai_responses',
             'search_provider': 'web_search',
             'suggested_fields': {},
@@ -963,7 +963,7 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
             'costEstimate': {
                 'currency': 'USD',
                 'total': 0.012,
-                'model': 'gpt-4.1',
+                'model': 'gpt-5',
                 'breakdown': {
                     'input': 0.001,
                     'cached_input': 0.0001,
