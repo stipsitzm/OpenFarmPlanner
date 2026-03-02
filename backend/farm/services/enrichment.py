@@ -849,33 +849,109 @@ def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidenc
     accepted: list[dict[str, Any]] = []
     warnings = validation.setdefault('warnings', [])
 
+    def parse_suggestion(item: Any) -> dict[str, Any] | None:
+        if isinstance(item, dict):
+            try:
+                size_value = float(item.get('size_value'))
+            except (TypeError, ValueError):
+                return None
+            size_unit = str(item.get('size_unit') or '').strip().lower()
+            if size_unit != 'g':
+                return None
+            evidence_text = str(item.get('evidence_text') or '')
+            return {
+                'package_type': 'weight_g',
+                'size_value': size_value,
+                'size_unit': 'g',
+                'raw_text': str(item.get('raw_text') or f'{size_value} g'),
+                'evidence_text': evidence_text,
+            }
+
+        if isinstance(item, str):
+            raw_text = item.strip()
+            if not raw_text:
+                return None
+
+            weight_match = re.search(r'(\d+(?:[\.,]\d+)?)\s*g\b', raw_text, flags=re.IGNORECASE)
+            if weight_match:
+                return {
+                    'package_type': 'weight_g',
+                    'size_value': float(weight_match.group(1).replace(',', '.')),
+                    'size_unit': 'g',
+                    'raw_text': raw_text,
+                    'evidence_text': raw_text,
+                }
+
+            count_match = re.search(r'(\d+)\s*[kK]\b', raw_text)
+            if count_match:
+                return {
+                    'package_type': 'count_seeds',
+                    'count_value': int(count_match.group(1)),
+                    'count_unit': 'K',
+                    'raw_text': raw_text,
+                    'evidence_text': raw_text,
+                }
+
+            return {
+                'package_type': 'raw_text',
+                'raw_text': raw_text,
+                'evidence_text': raw_text,
+            }
+
+        return None
+
     for item in suggestions:
-        if not isinstance(item, dict):
-            continue
-        try:
-            size_value = float(item.get('size_value'))
-        except (TypeError, ValueError):
-            continue
-        size_unit = str(item.get('size_unit') or '').strip()
-        evidence_text = str(item.get('evidence_text') or '')
-
-        if size_unit not in {'g'}:
-            continue
-        if size_unit == 'g' and (size_value < 0.1 or size_value > 1000):
-            continue
-        decimals = str(size_value).split('.')
-        if size_unit == 'g' and len(decimals) > 1 and len(decimals[1].rstrip('0')) >= 3 and '0.195 g' not in evidence_text:
-            if isinstance(warnings, list):
-                warnings.append({
-                    'field': 'seed_packages',
-                    'code': 'seed_package_fractional_suspicious',
-                    'message': 'Looks like per-seed mass, not a sold pack size.',
-                })
+        parsed = parse_suggestion(item)
+        if not parsed:
             continue
 
+        package_type = parsed.get('package_type')
+        evidence_text = str(parsed.get('evidence_text') or '')
+
+        if package_type == 'weight_g':
+            size_value = float(parsed.get('size_value') or 0)
+            if size_value <= 0 or size_value < 0.1 or size_value > 1000:
+                continue
+            decimals = str(size_value).split('.')
+            if len(decimals) > 1 and len(decimals[1].rstrip('0')) >= 3 and '0.195 g' not in evidence_text:
+                if isinstance(warnings, list):
+                    warnings.append({
+                        'field': 'seed_packages',
+                        'code': 'seed_package_fractional_suspicious',
+                        'message': 'Looks like per-seed mass, not a sold pack size.',
+                    })
+                continue
+            accepted.append({
+                'package_type': 'weight_g',
+                'size_value': size_value,
+                'size_unit': 'g',
+                'raw_text': str(parsed.get('raw_text') or f'{size_value} g'),
+                'evidence_text': evidence_text[:200],
+            })
+            continue
+
+        if package_type == 'count_seeds':
+            count_value = int(parsed.get('count_value') or 0)
+            if count_value <= 0:
+                continue
+            accepted.append({
+                'package_type': 'count_seeds',
+                'count_value': count_value,
+                'count_unit': 'K',
+                'raw_text': str(parsed.get('raw_text') or f'{count_value} K'),
+                'evidence_text': evidence_text[:200],
+            })
+            continue
+
+        if isinstance(warnings, list):
+            warnings.append({
+                'field': 'seed_packages',
+                'code': 'seed_package_unparsed_retained',
+                'message': 'Retained unparsed package option as raw text.',
+            })
         accepted.append({
-            'size_value': size_value,
-            'size_unit': size_unit,
+            'package_type': 'raw_text',
+            'raw_text': str(parsed.get('raw_text') or ''),
             'evidence_text': evidence_text[:200],
         })
 

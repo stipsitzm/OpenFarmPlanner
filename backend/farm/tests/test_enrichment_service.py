@@ -259,6 +259,42 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
+    def test_keeps_weight_and_count_seed_package_options_from_string_list(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'seed_packages': {
+                        'value': ['2.5 g', '500 K (Topfpillen)', '0.4 g (Portion)'],
+                        'unit': None,
+                        'confidence': 0.8,
+                    },
+                },
+                'evidence': {
+                    'seed_packages': [
+                        {
+                            'source_url': 'https://example.com/packages',
+                            'title': 'Package options',
+                            'retrieved_at': '2026-01-01T00:00:00Z',
+                            'snippet': '2.5 g, 500 K (Topfpillen), 0.4 g (Portion)',
+                        }
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        values = result['suggested_fields']['seed_packages']['value']
+        self.assertTrue(values)
+        self.assertTrue(any(item.get('package_type') == 'weight_g' and item.get('size_value') == 2.5 for item in values))
+        self.assertTrue(any(item.get('package_type') == 'count_seeds' and item.get('count_value') == 500 for item in values))
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
     def test_adds_density_plausibility_warning_when_seed_density_is_high(self, post_mock):
         response = Mock()
         response.status_code = 200
