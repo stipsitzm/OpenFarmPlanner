@@ -509,7 +509,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
     """OpenAI Responses API provider using web_search capable tools."""
 
     provider_name = "openai_responses"
-    model_name = _coerce_setting_to_str(getattr(settings, 'AI_ENRICHMENT_MODEL', 'gpt-5'), 'AI_ENRICHMENT_MODEL') or 'gpt-5'
+    model_name = 'gpt-5'
     search_provider_name = "web_search"
 
     def __init__(self, api_key: str | None = None) -> None:
@@ -520,6 +520,13 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
                 "AI provider 'openai_responses' is configured but OPENAI_API_KEY is missing."
             )
         self.api_key = resolved_key
+
+    def _resolved_model_name(self) -> str:
+        return _coerce_setting_to_str(getattr(settings, 'AI_ENRICHMENT_MODEL', 'gpt-5'), 'AI_ENRICHMENT_MODEL') or 'gpt-5'
+
+    @property
+    def model_name(self) -> str:
+        return self._resolved_model_name()
 
     def _responses_url(self) -> str:
         raw = getattr(settings, 'OPENAI_RESPONSES_API_URL', 'https://api.openai.com/v1/responses')
@@ -627,6 +634,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         raise EnrichmentError(f"Provider returned non-JSON payload: {text[:400]}")
 
     def enrich(self, context: EnrichmentContext) -> dict[str, Any]:
+        model_name = self.model_name
         try:
             response = requests.post(
                 self._responses_url(),
@@ -636,7 +644,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": self.model_name,
+                    "model": model_name,
                     "tools": [{"type": "web_search_preview"}],
                     "input": self._build_prompt(context.culture, context.mode),
                 },
@@ -662,7 +670,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             cached_input_tokens=usage['cached_input_tokens'],
             output_tokens=usage['output_tokens'],
             web_search_call_count=web_search_call_count,
-            model=self.model_name,
+            model=model_name,
         )
         return parsed
 

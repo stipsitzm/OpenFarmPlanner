@@ -443,6 +443,27 @@ class EnrichmentConfigBehaviorTest(TestCase):
         warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
         self.assertIn('fallback_mode', warning_codes)
 
+
+    @override_settings(
+        AI_ENRICHMENT_PROVIDER='openai_responses',
+        OPENAI_API_KEY='test-key',
+        AI_ENRICHMENT_MODEL='gpt-4.1-nano',
+    )
+    @patch('farm.services.enrichment.requests.post')
+    def test_provider_uses_runtime_model_setting_in_request_payload(self, post_mock):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'model': 'gpt-4.1-nano',
+            'output_text': '{"suggested_fields":{},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+
+        self.assertEqual(post_mock.call_args.kwargs['json']['model'], 'gpt-4.1-nano')
+        self.assertEqual(result['model'], 'gpt-4.1-nano')
+
     @override_settings(
         AI_ENRICHMENT_PROVIDER='openai_responses',
         OPENAI_API_KEY='test-key',

@@ -253,8 +253,10 @@ def main() -> int:
             "started_at": run_started.isoformat(),
             "finished_at": finished_at.isoformat(),
             "duration_seconds": duration_s,
-            "model_used": (result or {}).get("model") if isinstance(result, dict) else model,
             "model_override": model,
+            "model_reported_by_service": (result or {}).get("model") if isinstance(result, dict) else None,
+            "model_requested": ((trace.provider_request or {}).get("json") or {}).get("model"),
+            "model_effective": ((trace.provider_response or {}).get("json") or {}).get("model"),
             "endpoint": getattr(settings, "OPENAI_RESPONSES_API_URL", None),
             "timeout_seconds": getattr(settings, "AI_ENRICHMENT_TIMEOUT_SECONDS", None),
             "connect_timeout_seconds": getattr(settings, "AI_ENRICHMENT_CONNECT_TIMEOUT_SECONDS", None),
@@ -269,6 +271,34 @@ def main() -> int:
             "error": error_info,
         }
 
+        trace_validation_warnings: list[str] = []
+        model_requested = payload.get("model_requested")
+        model_effective = payload.get("model_effective")
+        model_override = payload.get("model_override")
+        model_reported = payload.get("model_reported_by_service")
+
+        if model_override and model_requested and model_override != model_requested:
+            trace_validation_warnings.append(
+                f"model_override ({model_override}) != model_requested ({model_requested})"
+            )
+        if model_override and model_effective and model_override != model_effective:
+            trace_validation_warnings.append(
+                f"model_override ({model_override}) != model_effective ({model_effective})"
+            )
+        if model_requested and model_effective and model_requested != model_effective:
+            trace_validation_warnings.append(
+                f"model_requested ({model_requested}) != model_effective ({model_effective})"
+            )
+        if model_reported and model_effective and model_reported != model_effective:
+            trace_validation_warnings.append(
+                f"model_reported_by_service ({model_reported}) != model_effective ({model_effective})"
+            )
+
+        payload["trace_validation"] = {
+            "warnings": trace_validation_warnings,
+            "has_mismatch": bool(trace_validation_warnings),
+        }
+
         model_file = run_dir / f"{model.replace('.', '_')}.json"
         _write_json(model_file, payload)
 
@@ -279,11 +309,12 @@ def main() -> int:
                 "duration_seconds": duration_s,
                 "output_file": str(model_file),
                 "error": error_info["message"] if error_info else None,
+                "trace_mismatch": payload["trace_validation"]["has_mismatch"],
             }
         )
 
         status = "OK" if success else "FAIL"
-        print(f"[{status}] model={model} duration={duration_s:.2f}s file={model_file}")
+        print(f"[{status}] model_override={model} requested={payload.get('model_requested')} effective={payload.get('model_effective')} duration={duration_s:.2f}s file={model_file}")
 
     ended_at = datetime.now(timezone.utc)
     aggregate = {
