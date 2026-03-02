@@ -11,6 +11,7 @@ from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import json
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
@@ -70,6 +71,19 @@ def _coerce_request_string(value, default='') -> str:
             return first.strip()
         return str(first).strip()
     return default
+
+
+
+
+def _supplier_enrichment_requirement_error() -> Response:
+    """Return standardized supplier URL requirement error for enrichment endpoints."""
+    return Response(
+        {
+            'code': 'supplier_url_required',
+            'message': 'Supplier and supplier_product_url are required for AI enrichment.',
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 def _week_start_for_iso_year(iso_year: int) -> date:
@@ -322,20 +336,26 @@ class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         :return: Response with supplier data and created flag
         """
         name = request.data.get('name', '').strip()
-        
+        homepage_url = request.data.get('homepage_url', '').strip()
+
         if not name:
             return Response(
                 {'name': 'This field is required.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+        if not homepage_url:
+            return Response(
+                {'homepage_url': 'This field is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         # Get or create supplier by normalized name
         from .utils import normalize_supplier_name
         normalized = normalize_supplier_name(name) or ''
-        
+
         supplier, created = Supplier.objects.get_or_create(
             name_normalized=normalized,
-            defaults={'name': name}
+            defaults={'name': name, 'homepage_url': homepage_url}
         )
         
         serializer = self.get_serializer(supplier)
@@ -783,6 +803,8 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     def enrich(self, request, pk=None):
         """Create AI suggestions for one culture."""
         culture = self.get_object()
+        if not culture.supplier_id or not (culture.supplier_product_url or '').strip():
+            return _supplier_enrichment_requirement_error()
         mode = _coerce_request_string(request.data.get('mode'), 'complete')
         try:
             payload = enrich_culture(culture, mode)
@@ -811,6 +833,9 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         run_id = f"enr_batch_{int(timezone.now().timestamp())}"
         items = []
         for culture in cultures:
+            if not culture.supplier_id or not (culture.supplier_product_url or '').strip():
+                items.append({'culture_id': culture.id, 'status': 'failed', 'error': 'supplier_url_required'})
+                continue
             try:
                 item = enrich_culture(culture, 'complete')
                 items.append({'culture_id': culture.id, 'status': 'completed', 'result': item})
@@ -849,6 +874,18 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
             total_web_search_cost += float(breakdown.get('web_search_calls') or 0)
             total_web_search_call_count += int(breakdown.get('web_search_call_count') or 0)
 
+        cost_model_name = next(
+            (
+                str((item.get('result') or {}).get('costEstimate', {}).get('model') or '')
+                for item in items
+                if isinstance(item, dict)
+                and isinstance(item.get('result'), dict)
+                and isinstance((item.get('result') or {}).get('costEstimate'), dict)
+                and (item.get('result') or {}).get('costEstimate', {}).get('model')
+            ),
+            getattr(settings, 'AI_ENRICHMENT_MODEL', 'gpt-5'),
+        )
+
         return Response({
             'run_id': run_id,
             'status': 'completed',
@@ -865,7 +902,7 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
             'costEstimate': {
                 'currency': 'USD',
                 'total': total_cost,
-                'model': 'gpt-4.1',
+                'model': cost_model_name,
                 'breakdown': {
                     'input': total_input_cost,
                     'cached_input': total_cached_input_cost,
@@ -1284,7 +1321,7 @@ class SeedDemandListView(generics.ListAPIView):
         rows = list(self.get_queryset())
         culture_ids = [row['culture_id'] for row in rows]
         package_map: dict[int, list[SeedPackage]] = defaultdict(list)
-        for package in SeedPackage.objects.filter(culture_id__in=culture_ids, available=True).order_by('size_unit', 'size_value'):
+        for package in SeedPackage.objects.filter(culture_id__in=culture_ids).order_by('size_unit', 'size_value'):
             package_map[package.culture_id].append(package)
 
         for row in rows:
@@ -1294,13 +1331,13 @@ class SeedDemandListView(generics.ListAPIView):
                 {
                     'size_value': float(pkg.size_value),
                     'size_unit': pkg.size_unit,
-                    'available': pkg.available,
                 }
                 for pkg in packages
             ]
 
             if total_grams is None:
                 row['package_suggestion'] = None
+                row['packages_needed'] = None
                 continue
 
             suggestion = compute_seed_package_suggestion(
@@ -1310,6 +1347,7 @@ class SeedDemandListView(generics.ListAPIView):
             )
             if suggestion.pack_count == 0:
                 row['package_suggestion'] = None
+                row['packages_needed'] = None
                 continue
 
             row['package_suggestion'] = {
@@ -1325,6 +1363,7 @@ class SeedDemandListView(generics.ListAPIView):
                 'overage': float(suggestion.overage),
                 'pack_count': suggestion.pack_count,
             }
+            row['packages_needed'] = suggestion.pack_count
 
         serializer = self.get_serializer(rows, many=True)
         return Response({'count': len(rows), 'next': None, 'previous': None, 'results': serializer.data})

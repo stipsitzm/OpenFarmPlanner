@@ -5,7 +5,7 @@ from datetime import date
 from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
 
-from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier, NoteAttachment
+from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier, NoteAttachment, SeedPackage
 
 class ApiEndpointsTest(DRFAPITestCase):
     def setUp(self):
@@ -21,7 +21,7 @@ class ApiEndpointsTest(DRFAPITestCase):
             growth_duration_days=7,
             harvest_duration_days=2
         )
-        self.supplier = Supplier.objects.create(name="Test Supplier Co.")
+        self.supplier = Supplier.objects.create(name="Test Supplier Co.", homepage_url='https://test-supplier-co..example')
 
     def test_supplier_list(self):
         """Test listing suppliers"""
@@ -32,7 +32,7 @@ class ApiEndpointsTest(DRFAPITestCase):
 
     def test_supplier_list_with_search(self):
         """Test searching suppliers"""
-        Supplier.objects.create(name="Another Supplier")
+        Supplier.objects.create(name="Another Supplier", homepage_url='https://another-supplier.example')
         response = self.client.get('/openfarmplanner/api/suppliers/?q=Test Supplier')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data['results']), 1)
@@ -42,7 +42,7 @@ class ApiEndpointsTest(DRFAPITestCase):
 
     def test_supplier_create_new(self):
         """Test creating a new supplier"""
-        data = {'name': 'New Supplier Inc.'}
+        data = {'name': 'New Supplier Inc.', 'homepage_url': 'https://new-supplier.example'}
         response = self.client.post('/openfarmplanner/api/suppliers/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Supplier.objects.count(), 2)
@@ -50,7 +50,7 @@ class ApiEndpointsTest(DRFAPITestCase):
 
     def test_supplier_create_existing(self):
         """Test creating supplier with exact duplicate name returns existing"""
-        data = {'name': 'Test Supplier Co.'}
+        data = {'name': 'Test Supplier Co.', 'homepage_url': 'https://test-supplier.example'}
         response = self.client.post('/openfarmplanner/api/suppliers/', data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(Supplier.objects.count(), 1)
@@ -58,7 +58,7 @@ class ApiEndpointsTest(DRFAPITestCase):
 
     def test_supplier_create_normalized_match(self):
         """Test creating supplier with normalized match returns existing"""
-        data = {'name': '  TEST SUPPLIER co.  '}
+        data = {'name': '  TEST SUPPLIER co.  ', 'homepage_url': 'https://test-supplier.example'}
         response = self.client.post('/openfarmplanner/api/suppliers/', data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(Supplier.objects.count(), 1)
@@ -166,6 +166,43 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.data['name'], 'Updated Culture')
         self.assertEqual(response.data['crop_family'], 'Updated Family')
     
+    def test_culture_update_with_seed_packages_payload_from_get(self):
+        """PUT with seed package objects (including id/culture) should stay valid."""
+        supplier = Supplier.objects.create(name='Seed Supplier', homepage_url='https://seed-supplier.example')
+        culture = Culture.objects.create(
+            name='Payload Culture',
+            variety='Classic',
+            supplier=supplier,
+            growth_duration_days=10,
+            harvest_duration_days=2,
+            harvest_method='per_plant',
+        )
+        package = SeedPackage.objects.create(culture=culture, size_value='25.0', size_unit='g')
+
+        payload = {
+            'id': culture.id,
+            'name': culture.name,
+            'variety': culture.variety,
+            'supplier_id': supplier.id,
+            'growth_duration_days': culture.growth_duration_days,
+            'harvest_duration_days': culture.harvest_duration_days,
+            'harvest_method': culture.harvest_method,
+            'seed_packages': [
+                {
+                    'id': package.id,
+                    'culture': culture.id,
+                    'size_value': 25.0,
+                    'size_unit': 'g',
+                                    }
+            ],
+        }
+
+        response = self.client.put(f'/openfarmplanner/api/cultures/{culture.id}/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['seed_packages']), 1)
+        self.assertEqual(response.data['seed_packages'][0]['size_unit'], 'g')
+        self.assertEqual(float(response.data['seed_packages'][0]['size_value']), 25.0)
+
     def test_bed_list(self):
         response = self.client.get('/openfarmplanner/api/beds/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -192,6 +229,25 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Field.objects.count(), 2)
     
+    def test_culture_supplier_product_url_domain_mismatch_rejected(self):
+        data = {
+            'name': 'Culture with URL mismatch',
+            'variety': 'X',
+            'supplier_id': self.supplier.id,
+            'supplier_product_url': 'https://other.example/product',
+            'growth_duration_days': 8,
+            'harvest_duration_days': 3,
+            'harvest_method': 'per_plant',
+        }
+        response = self.client.post('/openfarmplanner/api/cultures/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('supplier_product_url', response.data)
+
+    def test_enrich_requires_supplier_and_supplier_product_url(self):
+        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/', {'mode': 'complete'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get('code'), 'supplier_url_required')
+
     def test_field_create_with_invalid_area_too_small(self):
         data = {
             'name': 'Too Small Field',
@@ -294,7 +350,7 @@ class CultureImportAPITest(DRFAPITestCase):
     
     def setUp(self):
         """Set up test data."""
-        self.supplier = Supplier.objects.create(name="Test Supplier")
+        self.supplier = Supplier.objects.create(name="Test Supplier", homepage_url='https://test-supplier.example')
         self.existing_culture = Culture.objects.create(
             name="Tomato",
             variety="Cherry",
@@ -891,7 +947,8 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
     """Tests for enrichment endpoints on cultures."""
 
     def setUp(self):
-        self.culture = Culture.objects.create(name='Tomate', variety='Roma')
+        self.supplier = Supplier.objects.create(name='Default Supplier', homepage_url='https://supplier.example')
+        self.culture = Culture.objects.create(name='Tomate', variety='Roma', supplier=self.supplier, supplier_product_url='https://supplier.example/tomate')
 
     def test_enrich_single_returns_payload(self):
         response = self.client.post(
@@ -915,7 +972,7 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
             'status': 'completed',
             'started_at': '2026-01-01T00:00:00Z',
             'finished_at': '2026-01-01T00:00:01Z',
-            'model': 'gpt-4.1',
+            'model': 'gpt-5',
             'provider': 'openai_responses',
             'search_provider': 'web_search',
             'suggested_fields': {},
@@ -926,7 +983,7 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
             'costEstimate': {
                 'currency': 'USD',
                 'total': 0.012,
-                'model': 'gpt-4.1',
+                'model': 'gpt-5',
                 'breakdown': {
                     'input': 0.001,
                     'cached_input': 0.0001,

@@ -3,6 +3,7 @@ import uuid
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
+from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
@@ -47,34 +48,95 @@ class TimestampedModel(models.Model):
 
 class Supplier(TimestampedModel):
     """A seed supplier or manufacturer."""
-    
-    name = models.CharField(max_length=200, help_text="Supplier name")
+
+    name = models.CharField(max_length=200, unique=True, help_text="Supplier name")
+    homepage_url = models.URLField(help_text="Supplier homepage URL")
+    slug = models.SlugField(max_length=200, unique=True, blank=True)
+    allowed_domains = models.JSONField(default=list, blank=True)
     name_normalized = models.CharField(
         max_length=200,
         unique=True,
         editable=False,
         help_text="Normalized name for deduplication"
     )
-    
+
+    @staticmethod
+    def _normalize_domain(hostname: str) -> str:
+        host = (hostname or '').strip().lower()
+        if host.startswith('www.'):
+            host = host[4:]
+        return host
+
+    def _derive_slug_base(self) -> str:
+        try:
+            host = self._normalize_domain(urlparse(self.homepage_url).hostname or '')
+        except Exception:  # noqa: BLE001
+            host = ''
+        if host:
+            return host.split('.')[0]
+
+        from django.utils.text import slugify
+        return slugify(self.name) or 'supplier'
+
+    def _assign_unique_slug(self) -> None:
+        from django.utils.text import slugify
+
+        if self.slug:
+            base_slug = slugify(self.slug)
+        else:
+            base_slug = slugify(self._derive_slug_base())
+        base_slug = base_slug or 'supplier'
+
+        candidate = base_slug
+        suffix = 2
+        qs = Supplier.objects.exclude(pk=self.pk)
+        while qs.filter(slug=candidate).exists():
+            candidate = f"{base_slug}-{suffix}"
+            suffix += 1
+        self.slug = candidate
+
+    def _derive_allowed_domains(self) -> list[str]:
+        try:
+            hostname = urlparse(self.homepage_url).hostname or ''
+        except Exception:  # noqa: BLE001
+            hostname = ''
+        normalized = self._normalize_domain(hostname)
+        return [normalized] if normalized else []
+
     def save(self, *args: Any, **kwargs: Any) -> None:
-        """Save supplier and auto-generate normalized name."""
+        """Save supplier and auto-generate normalized helper fields."""
         from .utils import normalize_supplier_name
-        
-        # Always update name_normalized based on current name
-        self.name_normalized = normalize_supplier_name(self.name) or ''
-        
-        # Trim and collapse whitespace in the user-facing name
+
         if self.name:
             self.name = ' '.join(self.name.split())
-        
+        self.name_normalized = normalize_supplier_name(self.name) or ''
+        if not self.slug:
+            self._assign_unique_slug()
+        self.allowed_domains = self._derive_allowed_domains()
+
         super().save(*args, **kwargs)
-    
+
     def __str__(self) -> str:
         """Return the supplier name."""
         return self.name
-    
+
     class Meta:
         ordering = ['name']
+
+
+
+def is_supplier_domain(url: str, supplier: Supplier | None) -> bool:
+    """Return True when URL host matches supplier allowed domains."""
+    if not supplier or not url:
+        return False
+    try:
+        host = Supplier._normalize_domain(urlparse(url).hostname or '')
+    except Exception:  # noqa: BLE001
+        return False
+    if not host:
+        return False
+    domains = [Supplier._normalize_domain(domain) for domain in (supplier.allowed_domains or []) if domain]
+    return any(host == domain or host.endswith(f'.{domain}') for domain in domains)
 
 
 class Location(TimestampedModel):
@@ -201,6 +263,7 @@ class Culture(TimestampedModel):
         related_name='cultures',
         help_text="Seed supplier (preferred over seed_supplier text field)"
     )
+    supplier_product_url = models.URLField(null=True, blank=True, help_text='Supplier product page URL for enrichment')
     
     # Normalized fields for matching and deduplication.
     name_normalized = models.CharField(
@@ -350,9 +413,6 @@ class Culture(TimestampedModel):
         
         if self.expected_yield is not None and self.expected_yield < 0:
             errors['expected_yield'] = 'Expected yield must be non-negative.'
-
-        if self.harvest_duration_days is not None and not self.harvest_method:
-            errors['harvest_method'] = 'Harvest method is required when harvest duration is set.'
 
         if self.seeding_requirement is None and self.seeding_requirement_type:
             errors['seeding_requirement'] = 'Seeding requirement value is required when seeding requirement type is set.'
@@ -576,18 +636,13 @@ class SeedPackage(TimestampedModel):
     """Sold package option for a culture."""
 
     UNIT_GRAMS = 'g'
-    UNIT_SEEDS = 'seeds'
     UNIT_CHOICES = [
         (UNIT_GRAMS, 'Grams'),
-        (UNIT_SEEDS, 'Seeds'),
     ]
 
     culture = models.ForeignKey('Culture', on_delete=models.CASCADE, related_name='seed_packages')
-    size_value = models.DecimalField(max_digits=10, decimal_places=3)
-    size_unit = models.CharField(max_length=10, choices=UNIT_CHOICES)
-    available = models.BooleanField(default=True)
-    article_number = models.CharField(max_length=120, blank=True)
-    source_url = models.URLField(blank=True)
+    size_value = models.DecimalField(max_digits=10, decimal_places=1)
+    size_unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default=UNIT_GRAMS)
     evidence_text = models.CharField(max_length=200, blank=True)
     last_seen_at = models.DateTimeField(null=True, blank=True)
 
@@ -604,6 +659,8 @@ class SeedPackage(TimestampedModel):
         super().clean()
         if self.size_value is not None and self.size_value <= 0:
             raise ValidationError({'size_value': 'Package size must be greater than zero.'})
+        if self.size_unit != self.UNIT_GRAMS:
+            raise ValidationError({'size_unit': 'Only grams (g) are supported for package size.'})
 
     def __str__(self) -> str:
         return f"{self.culture.name} {self.size_value} {self.size_unit}"
