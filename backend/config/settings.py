@@ -209,5 +209,6 @@ AI_ENRICHMENT_ENABLED = os.getenv('AI_ENRICHMENT_ENABLED', 'True').lower() in ('
 AI_ENRICHMENT_PROVIDER = _env_str('AI_ENRICHMENT_PROVIDER', _env_str('ENRICHMENT_PROVIDER', 'openai_responses'))
 OPENAI_API_KEY = _env_str('OPENAI_API_KEY', '')
 AI_ENRICHMENT_MODEL = _env_str('AI_ENRICHMENT_MODEL', 'gpt-5')
+AI_ENRICHMENT_TIMEOUT_SECONDS = int(_env_str('AI_ENRICHMENT_TIMEOUT_SECONDS', '70') or '70')
 AI_ENRICHMENT_FAIL_FAST = os.getenv('AI_ENRICHMENT_FAIL_FAST', 'False' if DEBUG else 'True').lower() in ('true', '1', 'yes')
 AI_STARTUP_DIAGNOSTICS = os.getenv('AI_STARTUP_DIAGNOSTICS', 'True').lower() in ('true', '1', 'yes')

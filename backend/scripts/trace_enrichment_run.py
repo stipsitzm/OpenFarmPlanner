@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Run one enrichment invocation with detailed tracing output.
-
-This script reuses the project's existing enrichment service logic and records
-step-by-step timings and payload metadata for debugging long-running requests.
-"""
+"""Run enrichment traces across GPT-4/5 model variants with detailed output."""
 
 from __future__ import annotations
 
@@ -21,6 +17,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+DEFAULT_MODELS = [
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "gpt-4.1-nano",
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5-nano",
+]
+
 
 @dataclass
 class TraceState:
@@ -32,18 +37,12 @@ class TraceState:
     provider_response: dict[str, Any] | None = None
 
     def mark(self, name: str, **extra: Any) -> None:
-        self.steps.append(
-            {
-                "name": name,
-                "ts": datetime.now(timezone.utc).isoformat(),
-                **extra,
-            }
-        )
+        self.steps.append({"name": name, "ts": datetime.now(timezone.utc).isoformat(), **extra})
 
 
 @contextlib.contextmanager
 def enrichment_trace_hooks(trace: TraceState):
-    """Attach lightweight runtime hooks to capture prompt/request/response details."""
+    """Attach runtime hooks to capture prompt/request/response details."""
     import farm.services.enrichment as enrichment_module
 
     original_build_prompt = enrichment_module.OpenAIResponsesProvider._build_prompt
@@ -122,10 +121,14 @@ def setup_django() -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Trace one AI enrichment run with detailed timings.")
+    parser = argparse.ArgumentParser(description="Trace AI enrichment runs across GPT-4/5 models.")
     parser.add_argument("culture_id", type=int, help="Culture primary key")
     parser.add_argument("mode", choices=["complete", "reresearch"], help="Enrichment mode")
-    parser.add_argument("--model", dest="model_override", help="Optional AI_ENRICHMENT_MODEL override")
+    parser.add_argument("--model", dest="single_model", help="Run only one model (legacy compatibility)")
+    parser.add_argument(
+        "--models",
+        help="Comma-separated model list. Defaults to all GPT-4/5 variants.",
+    )
     parser.add_argument(
         "--include-full-prompt",
         action="store_true",
@@ -139,6 +142,19 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _resolve_models(args: argparse.Namespace) -> list[str]:
+    if args.single_model:
+        return [args.single_model.strip()]
+    if args.models:
+        return [m.strip() for m in args.models.split(",") if m.strip()]
+    return list(DEFAULT_MODELS)
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    with path.open("w", encoding="utf-8") as file:
+        json.dump(payload, file, ensure_ascii=False, indent=2)
+
+
 def main() -> int:
     args = build_parser().parse_args()
     setup_django()
@@ -147,89 +163,121 @@ def main() -> int:
     from farm.models import Culture
     from farm.services.enrichment import enrich_culture
 
-    trace = TraceState(include_full_prompt=args.include_full_prompt)
-
     backend_dir = Path(__file__).resolve().parents[1]
     output_dir = (backend_dir / args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    run_id = f"trace_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}_{uuid.uuid4().hex[:8]}"
-    output_path = output_dir / f"{run_id}.json"
+    models = _resolve_models(args)
+    if not models:
+        print("No models provided.", file=sys.stderr)
+        return 2
 
-    started_at = datetime.now(timezone.utc)
-    trace.mark("run_started", culture_id=args.culture_id, mode=args.mode)
+    culture = Culture.all_objects.get(pk=args.culture_id)
+    run_id = f"trace_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}_{uuid.uuid4().hex[:8]}"
+    run_dir = output_dir / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
 
     original_model = getattr(settings, "AI_ENRICHMENT_MODEL", None)
-    if args.model_override:
-        settings.AI_ENRICHMENT_MODEL = args.model_override
-        trace.mark("model_overridden", original_model=original_model, override_model=args.model_override)
+    started_at = datetime.now(timezone.utc)
 
-    success = False
-    result: dict[str, Any] | None = None
-    error_info: dict[str, Any] | None = None
+    summary: list[dict[str, Any]] = []
+    failures = 0
 
-    try:
-        culture = Culture.all_objects.get(pk=args.culture_id)
-        trace.mark("culture_loaded", culture_name=culture.name, variety=culture.variety)
+    for model in models:
+        trace = TraceState(include_full_prompt=args.include_full_prompt)
+        trace.mark("run_started", culture_id=args.culture_id, mode=args.mode, model=model)
 
-        with enrichment_trace_hooks(trace):
-            call_started = time.perf_counter()
-            trace.mark("enrich_call_started")
-            result = enrich_culture(culture, args.mode)
-            call_duration_ms = (time.perf_counter() - call_started) * 1000
-            trace.mark("enrich_call_finished", duration_ms=round(call_duration_ms, 3))
+        success = False
+        result: dict[str, Any] | None = None
+        error_info: dict[str, Any] | None = None
+        run_started = datetime.now(timezone.utc)
 
-        success = True
-    except Exception as exc:  # noqa: BLE001
-        error_info = {
-            "type": type(exc).__name__,
-            "message": str(exc),
-            "traceback": traceback.format_exc(),
-        }
-        trace.mark("run_failed", error_type=error_info["type"], error_message=error_info["message"])
-    finally:
-        if args.model_override:
+        try:
+            settings.AI_ENRICHMENT_MODEL = model
+            trace.mark("model_overridden", original_model=original_model, override_model=model)
+            trace.mark("culture_loaded", culture_name=culture.name, variety=culture.variety)
+
+            with enrichment_trace_hooks(trace):
+                call_started = time.perf_counter()
+                trace.mark("enrich_call_started")
+                result = enrich_culture(culture, args.mode)
+                call_duration_ms = (time.perf_counter() - call_started) * 1000
+                trace.mark("enrich_call_finished", duration_ms=round(call_duration_ms, 3))
+
+            success = True
+        except Exception as exc:  # noqa: BLE001
+            failures += 1
+            error_info = {
+                "type": type(exc).__name__,
+                "message": str(exc),
+                "traceback": traceback.format_exc(),
+            }
+            trace.mark("run_failed", error_type=error_info["type"], error_message=error_info["message"])
+        finally:
             settings.AI_ENRICHMENT_MODEL = original_model
 
-    finished_at = datetime.now(timezone.utc)
-    duration_s = (finished_at - started_at).total_seconds()
+        finished_at = datetime.now(timezone.utc)
+        duration_s = (finished_at - run_started).total_seconds()
 
-    payload = {
+        payload = {
+            "run_id": run_id,
+            "culture_id": args.culture_id,
+            "culture_name": culture.name,
+            "mode": args.mode,
+            "success": success,
+            "started_at": run_started.isoformat(),
+            "finished_at": finished_at.isoformat(),
+            "duration_seconds": duration_s,
+            "model_used": (result or {}).get("model") if isinstance(result, dict) else model,
+            "model_override": model,
+            "prompt_sha256": trace.prompt_sha256,
+            "prompt": trace.prompt,
+            "provider_request": trace.provider_request,
+            "provider_response": trace.provider_response,
+            "parsed_structured_output": result,
+            "validation": (result or {}).get("validation") if isinstance(result, dict) else None,
+            "steps": trace.steps,
+            "error": error_info,
+        }
+
+        model_file = run_dir / f"{model.replace('.', '_')}.json"
+        _write_json(model_file, payload)
+
+        summary.append(
+            {
+                "model": model,
+                "success": success,
+                "duration_seconds": duration_s,
+                "output_file": str(model_file),
+                "error": error_info["message"] if error_info else None,
+            }
+        )
+
+        status = "OK" if success else "FAIL"
+        print(f"[{status}] model={model} duration={duration_s:.2f}s file={model_file}")
+
+    ended_at = datetime.now(timezone.utc)
+    aggregate = {
         "run_id": run_id,
         "culture_id": args.culture_id,
+        "culture_name": culture.name,
         "mode": args.mode,
-        "success": success,
+        "models": models,
         "started_at": started_at.isoformat(),
-        "finished_at": finished_at.isoformat(),
-        "duration_seconds": duration_s,
-        "model_used": (result or {}).get("model") if isinstance(result, dict) else (args.model_override or original_model),
-        "model_override": args.model_override,
-        "prompt_sha256": trace.prompt_sha256,
-        "prompt": trace.prompt,
-        "provider_request": trace.provider_request,
-        "provider_response": trace.provider_response,
-        "parsed_structured_output": result,
-        "validation": (result or {}).get("validation") if isinstance(result, dict) else None,
-        "steps": trace.steps,
-        "error": error_info,
+        "finished_at": ended_at.isoformat(),
+        "duration_seconds": (ended_at - started_at).total_seconds(),
+        "results": summary,
     }
 
-    with output_path.open("w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
+    aggregate_file = run_dir / "all_models_summary.json"
+    _write_json(aggregate_file, aggregate)
 
-    if success:
-        print(
-            f"[OK] enrichment trace complete | duration={duration_s:.2f}s | "
-            f"model={payload['model_used']} | trace={output_path}"
-        )
-        return 0
-
+    ok_count = len(models) - failures
     print(
-        f"[FAIL] enrichment trace failed | duration={duration_s:.2f}s | "
-        f"model={payload['model_used']} | trace={output_path}",
-        file=sys.stderr,
+        f"[SUMMARY] {ok_count}/{len(models)} successful | run={run_id} | summary={aggregate_file}",
+        file=sys.stderr if failures else sys.stdout,
     )
-    return 1
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":

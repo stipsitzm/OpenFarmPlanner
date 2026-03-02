@@ -616,7 +616,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         try:
             response = requests.post(
                 "https://api.openai.com/v1/responses",
-                timeout=70,
+                timeout=getattr(settings, 'AI_ENRICHMENT_TIMEOUT_SECONDS', 70),
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
