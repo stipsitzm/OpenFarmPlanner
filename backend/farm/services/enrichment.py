@@ -25,6 +25,18 @@ OUTPUT_COST_PER_MILLION = Decimal('8.00')
 WEB_SEARCH_CALL_COST_USD = Decimal('0.01')
 TAX_RATE = Decimal('0.20')
 
+NUMERIC_SUGGESTED_FIELDS: tuple[str, ...] = (
+    'growth_duration_days',
+    'harvest_duration_days',
+    'propagation_duration_days',
+    'distance_within_row_cm',
+    'row_spacing_cm',
+    'sowing_depth_cm',
+    'seed_rate_value',
+    'thousand_kernel_weight_g',
+    'expected_yield',
+)
+
 
 def _extract_usage(payload: dict[str, Any]) -> dict[str, int]:
     """Extract token usage values from an OpenAI Responses payload.
@@ -107,6 +119,41 @@ def _build_cost_estimate(
             'tax': float(tax_amount),
         },
     }
+
+
+def normalize_numeric_field(raw_value: object) -> float | None:
+    """Normalize one numeric field value to a float.
+
+    Range strings are collapsed to a deterministic mean value.
+    """
+    if isinstance(raw_value, bool):
+        return None
+    if isinstance(raw_value, (int, float)):
+        return float(raw_value)
+    if not isinstance(raw_value, str):
+        return None
+
+    text = raw_value.strip()
+    if not text:
+        return None
+
+    if '-' in text or '–' in text:
+        range_matches = re.findall(r'\d+(?:[\.,]\d+)?', text)
+        if len(range_matches) >= 2:
+            try:
+                low = float(range_matches[0].replace(',', '.'))
+                high = float(range_matches[1].replace(',', '.'))
+            except ValueError:
+                return None
+            return (low + high) / 2.0
+
+    scalar_match = re.search(r'[-+]?\d+(?:[\.,]\d+)?', text)
+    if not scalar_match:
+        return None
+    try:
+        return float(scalar_match.group(0).replace(',', '.'))
+    except ValueError:
+        return None
 
 
 def _persist_accounting_run(culture: Culture, mode: str, result: dict[str, Any]) -> None:
@@ -724,6 +771,14 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "Each suggested field must contain value, unit, confidence. For cultivation_type, only output one of: pre_cultivation, direct_sowing. For nutrient_demand, only output one of: low, medium, high. For harvest_method, only output one of: per_plant, per_sqm. For seed_rate_unit, only output one of: g_per_m2, seeds/m, seeds_per_plant. Never output free-text variants like 'g per plant' or 'grams per 100 sqm'. Do not output labels, translations, or crop-kind words for enum fields. "
             "evidence must be mapping field->list of {source_url,title,retrieved_at,snippet,supplier_specific}. "
             "validation: warnings/errors arrays with field/code/message. "
+            "HARD RULE FOR NUMERIC FIELDS: For growth_duration_days, harvest_duration_days, propagation_duration_days, distance_within_row_cm, row_spacing_cm, sowing_depth_cm, seed_rate_value, thousand_kernel_weight_g, expected_yield, suggested_fields.<field>.value MUST always be a single JSON number (never a string). "
+            "Never output ranges like x-y or x–y in structured fields. If supplier evidence provides a range, collapse it deterministically to the arithmetic mean before any unit conversion, then output only the converted single number. "
+            "When collapsing a range, add validation warning code range_collapsed_to_mean with a message that includes the original raw range text and the chosen numeric value. "
+            "When a range exists, also mention the raw supplier range in note_blocks under the relevant section. "
+            "seed_rate_value must always be one single float in the selected seed_rate_unit. "
+            "If supplier provides scenario-specific rates (e.g., Pflanzung vs Direktsaat), choose exactly one value: prefer Pflanzung for cultivation_type=pre_cultivation and Direktsaat for cultivation_type=direct_sowing. "
+            "If cultivation_type is ambiguous, default to the mean of the Pflanzung range as one number and add warning code scenario_ambiguous_defaulted; in notes describe both scenarios and their raw ranges. "
+            "Units must be null when not applicable; never output empty unit strings. "
             "note_blocks must be pure German markdown text only (no JSON objects, no code fences) and include sections: 'Dauerwerte', 'Aussaat & Abstände (zusammengefasst)', 'Ernte & Verwendung', 'Quellen'. "
             "Use concise, factual, technical bullet points only. Avoid conversational or human-like wording. "
             f"{supplier_strategy}"
@@ -1442,6 +1497,52 @@ def _normalize_suggested_field_values(suggested_fields: dict[str, Any], validati
             confidence = 0.0
         suggestion['confidence'] = max(0.0, min(1.0, confidence))
 
+    for field_name, suggestion in suggested_fields.items():
+        if not isinstance(suggestion, dict):
+            continue
+        if field_name not in NUMERIC_SUGGESTED_FIELDS:
+            continue
+
+        raw_value = suggestion.get('value')
+        if isinstance(raw_value, str) and ('-' in raw_value or '–' in raw_value):
+            normalized_range_value = normalize_numeric_field(raw_value)
+            if normalized_range_value is None:
+                suggestion['value'] = None
+                if isinstance(warnings, list):
+                    warnings.append({
+                        'field': field_name,
+                        'code': 'unparseable_numeric',
+                        'message': f"Could not parse numeric value '{raw_value}'. Set value to null.",
+                    })
+            else:
+                suggestion['value'] = normalized_range_value
+                if isinstance(warnings, list):
+                    warnings.append({
+                        'field': field_name,
+                        'code': 'range_string_normalized',
+                        'message': f"Normalized range string '{raw_value}' to mean value {normalized_range_value}.",
+                    })
+            continue
+
+        normalized_numeric = normalize_numeric_field(raw_value)
+        if normalized_numeric is None:
+            if isinstance(raw_value, str):
+                suggestion['value'] = None
+                if isinstance(warnings, list):
+                    warnings.append({
+                        'field': field_name,
+                        'code': 'unparseable_numeric',
+                        'message': f"Could not parse numeric value '{raw_value}'. Set value to null.",
+                    })
+            continue
+        suggestion['value'] = normalized_numeric
+
+    for suggestion in suggested_fields.values():
+        if not isinstance(suggestion, dict):
+            continue
+        if suggestion.get('unit') == '':
+            suggestion['unit'] = None
+
     seed_rate = suggested_fields.get('seed_rate_value')
     if isinstance(seed_rate, dict):
         raw_value = seed_rate.get('value')
@@ -1459,10 +1560,7 @@ def _normalize_suggested_field_values(suggested_fields: dict[str, Any], validati
     expected_yield = suggested_fields.get('expected_yield')
     if isinstance(expected_yield, dict) and isinstance(expected_yield.get('value'), str):
         raw_value = expected_yield.get('value', '')
-        range_match = re.findall(r'\d+(?:[\.,]\d+)?', raw_value)
-        if len(range_match) >= 2:
-            min_value = float(range_match[0].replace(',', '.'))
-            expected_yield['value'] = min_value
+        if '-' in raw_value or '–' in raw_value:
             note = f"Expected yield range reported by model: {raw_value}."
             notes = suggested_fields.get('notes')
             if isinstance(notes, dict):
@@ -1470,17 +1568,6 @@ def _normalize_suggested_field_values(suggested_fields: dict[str, Any], validati
                 notes['value'] = f"{existing}\n\n{note}".strip()
             else:
                 suggested_fields['notes'] = {'value': note, 'unit': None, 'confidence': 0.5}
-            if isinstance(warnings, list):
-                warnings.append({
-                    'field': 'expected_yield',
-                    'code': 'expected_yield_range_collapsed',
-                    'message': 'Collapsed expected_yield range to minimum value and preserved range in notes.',
-                })
-        else:
-            try:
-                expected_yield['value'] = float(raw_value.replace(',', '.'))
-            except (TypeError, ValueError, AttributeError):
-                pass
 
 def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
     """Generate enrichment suggestions for one culture."""

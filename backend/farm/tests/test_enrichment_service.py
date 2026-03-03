@@ -13,6 +13,7 @@ from farm.services.enrichment import (
     _build_cost_estimate,
     _count_web_search_calls,
     enrich_culture,
+    normalize_numeric_field,
 )
 
 
@@ -933,3 +934,56 @@ class EnrichmentDomainEnforcementTest(TestCase):
         self.assertEqual(result['suggested_fields']['seed_packages']['value'], [])
         warning_codes = [item.get('code') for item in result['validation']['warnings']]
         self.assertIn('missing_supplier_evidence', warning_codes)
+
+
+class NumericNormalizationTest(TestCase):
+    def test_normalize_numeric_field_ascii_range(self):
+        self.assertAlmostEqual(normalize_numeric_field('0.04-0.05'), 0.045, places=6)
+
+    def test_normalize_numeric_field_en_dash_comma_range(self):
+        self.assertAlmostEqual(normalize_numeric_field('0,04–0,05'), 0.045, places=6)
+
+    def test_normalize_numeric_field_simple_range(self):
+        self.assertAlmostEqual(normalize_numeric_field('4–5'), 4.5, places=6)
+
+    @override_settings(AI_ENRICHMENT_ENABLED=True)
+    @patch('farm.services.enrichment.get_enrichment_provider')
+    def test_enrich_culture_normalizes_range_string_seed_rate_and_warns(self, provider_mock):
+        supplier = Supplier.objects.create(
+            name='ReinSaat',
+            homepage_url='https://www.reinsaat.at',
+            allowed_domains=['reinsaat.at'],
+        )
+        culture = Culture.objects.create(name='Salat', variety='Bijella', supplier=supplier)
+
+        provider = Mock()
+        provider.provider_name = 'fallback'
+        provider.model_name = 'gpt-5'
+        provider.search_provider_name = 'web_search'
+        provider.enrich.return_value = {
+            'suggested_fields': {
+                'seed_rate_value': {'value': '0.04-0.05', 'unit': '', 'confidence': 0.8},
+            },
+            'evidence': {
+                'seed_rate_value': [
+                    {
+                        'source_url': 'https://www.reinsaat.at/salat',
+                        'title': 'ReinSaat Salat',
+                        'retrieved_at': '2026-01-01T00:00:00Z',
+                        'snippet': 'Direktsaat 0.04-0.05',
+                        'supplier_specific': True,
+                    },
+                ],
+            },
+            'validation': {'warnings': [], 'errors': []},
+            'note_blocks': '## Aussaat & Abstände (zusammengefasst)\n- Direktsaat: 0.04-0.05',
+            'usage': {'input_tokens': 1, 'cached_input_tokens': 0, 'output_tokens': 1},
+        }
+        provider_mock.return_value = provider
+
+        result = enrich_culture(culture, 'reresearch')
+        self.assertAlmostEqual(result['suggested_fields']['seed_rate_value']['value'], 0.045, places=6)
+        self.assertIsInstance(result['suggested_fields']['seed_rate_value']['value'], float)
+        self.assertIsNone(result['suggested_fields']['seed_rate_value']['unit'])
+        warning_codes = [item.get('code') for item in result['validation']['warnings']]
+        self.assertIn('range_string_normalized', warning_codes)
