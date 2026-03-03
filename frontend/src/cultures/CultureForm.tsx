@@ -51,6 +51,7 @@ const EMPTY_CULTURE: Partial<Culture> = {
   crop_family: '',
   nutrient_demand: '',
   cultivation_type: 'pre_cultivation',
+  cultivation_types: ['pre_cultivation'],
   notes: '',
   growth_duration_days: undefined,
   harvest_duration_days: undefined,
@@ -67,6 +68,7 @@ const EMPTY_CULTURE: Partial<Culture> = {
   seeding_requirement_type: '',
   seed_rate_value: null,
   seed_rate_unit: null,
+  seed_rate_by_cultivation: null,
   seed_packages: [],
 };
 

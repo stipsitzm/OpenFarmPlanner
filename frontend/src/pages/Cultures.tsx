@@ -318,6 +318,10 @@ function Cultures(): React.ReactElement {
         harvest_method: normalizeHarvestMethod(culture.harvest_method),
         nutrient_demand: normalizeNutrientDemand(culture.nutrient_demand),
         cultivation_type: normalizeCultivationType(culture.cultivation_type),
+        cultivation_types: (culture.cultivation_types && culture.cultivation_types.length > 0)
+          ? culture.cultivation_types
+          : (culture.cultivation_type ? [normalizeCultivationType(culture.cultivation_type)] : ['pre_cultivation']),
+        seed_rate_by_cultivation: culture.seed_rate_by_cultivation ?? null,
         seeding_requirement_type: normalizeSeedingRequirementType(culture.seeding_requirement_type),
         supplier_id: culture.supplier?.id || null,
         supplier_name: culture.supplier && !culture.supplier.id ? culture.supplier.name : undefined,
@@ -1021,6 +1025,7 @@ function Cultures(): React.ReactElement {
       }
       if (field === 'cultivation_type') {
         patch[field] = normalizeCultivationType(suggestionValue);
+        patch.cultivation_types = [normalizeCultivationType(suggestionValue)].filter(Boolean);
         return;
       }
       patch[field] = suggestionValue;
@@ -1033,6 +1038,10 @@ function Cultures(): React.ReactElement {
         harvest_method: normalizeHarvestMethod(targetCulture.harvest_method),
         nutrient_demand: normalizeNutrientDemand(targetCulture.nutrient_demand),
         cultivation_type: normalizeCultivationType(targetCulture.cultivation_type),
+        cultivation_types: (targetCulture.cultivation_types && targetCulture.cultivation_types.length > 0)
+          ? targetCulture.cultivation_types
+          : (targetCulture.cultivation_type ? [normalizeCultivationType(targetCulture.cultivation_type)] : ['pre_cultivation']),
+        seed_rate_by_cultivation: targetCulture.seed_rate_by_cultivation ?? null,
         seeding_requirement_type: normalizeSeedingRequirementType(targetCulture.seeding_requirement_type),
         ...patch,
       } as Culture);

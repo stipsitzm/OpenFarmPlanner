@@ -119,4 +119,33 @@ describe('CultureDetail Component', () => {
     expect(screen.getByText('Frisch und süß.')).toBeInTheDocument();
   });
 
+  it('shows cultivation chips and per-method seed-rate table', () => {
+    const mockOnSelect = vi.fn();
+    const cultures: Culture[] = [
+      {
+        id: 11,
+        name: 'Möhre',
+        cultivation_types: ['pre_cultivation', 'direct_sowing'],
+        seed_rate_by_cultivation: {
+          pre_cultivation: { value: 2, unit: 'seeds_per_plant' },
+          direct_sowing: { value: 50, unit: 'seeds/m' },
+        },
+      },
+    ];
+
+    render(
+      <CultureDetail
+        cultures={cultures}
+        selectedCultureId={11}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getAllByText('Anzucht').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Direktsaat').length).toBeGreaterThan(0);
+    expect(screen.getByText('Saatgutmenge nach Anbauart')).toBeInTheDocument();
+    expect(screen.getByText('seeds_per_plant')).toBeInTheDocument();
+    expect(screen.getByText('seeds/m')).toBeInTheDocument();
+  });
+
 });

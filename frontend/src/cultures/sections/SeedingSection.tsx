@@ -21,6 +21,13 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
   const lastPackageSizeInputRef = useRef<HTMLInputElement | null>(null);
   const prevPackageCountRef = useRef<number>(0);
 
+  const selectedCultivationTypes = formData.cultivation_types?.length
+    ? formData.cultivation_types
+    : (formData.cultivation_type ? [formData.cultivation_type] : []);
+  const hasPreCultivation = selectedCultivationTypes.includes('pre_cultivation');
+  const hasDirectSowing = selectedCultivationTypes.includes('direct_sowing');
+  const hasBothMethods = hasPreCultivation && hasDirectSowing;
+
   const handleSeedRateUnitChange = (value: string) => {
     if (!value) {
       onChange('seed_rate_unit', null);
@@ -57,6 +64,29 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
     onChange('seed_packages', [...packages, { size_value: 0, size_unit: 'g' }]);
   };
 
+  const updateSeedRateByCultivation = (method: 'pre_cultivation' | 'direct_sowing', patch: { value?: number | null; unit?: SeedRateUnit }) => {
+    const current = { ...(formData.seed_rate_by_cultivation || {}) };
+    const nextMethodValue = {
+      ...(current[method] || {}),
+      ...patch,
+    };
+    if (!nextMethodValue.value || nextMethodValue.value <= 0) {
+      delete current[method];
+    } else {
+      current[method] = {
+        value: nextMethodValue.value,
+        unit: nextMethodValue.unit || (method === 'pre_cultivation' ? 'seeds_per_plant' : 'seeds/m'),
+      };
+    }
+    onChange('seed_rate_by_cultivation', Object.keys(current).length ? current : null);
+
+    const fallback = current.pre_cultivation || current.direct_sowing;
+    if (fallback) {
+      onChange('seed_rate_value', fallback.value);
+      onChange('seed_rate_unit', fallback.unit);
+    }
+  };
+
   const deletePackage = (index: number) => {
     onChange('seed_packages', packages.filter((_item, idx) => idx !== index));
   };
@@ -65,39 +95,76 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
     <>
       <Typography variant="h6" sx={{ mt: 2 }}>{t('form.seedRateSectionTitle', { defaultValue: 'Saatgutmenge' })}</Typography>
       <Box sx={fieldRowSx}>
-        <Tooltip title={t('form.seedRateHelp')} arrow>
-          <TextField
-            sx={fieldSx}
-            type="number"
-            label="Menge"
-            value={formData.seed_rate_value ?? ''}
-            onChange={e => onChange('seed_rate_value', e.target.value ? parseFloat(e.target.value) : null)}
-            onBlur={() => onChange('seed_rate_value', formData.seed_rate_value)}
-            error={Boolean(errors.seed_rate_value)}
-            helperText={errors.seed_rate_value}
-            slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
-          />
-        </Tooltip>
-        <Tooltip title={t('form.seedRateHelp')} arrow>
-          <FormControl sx={fieldSx} error={Boolean(errors.seed_rate_unit)}>
-            <InputLabel>Einheit</InputLabel>
-            <Select
-              value={formData.seed_rate_unit ?? ''}
-              label="Einheit"
-              onChange={e => handleSeedRateUnitChange(e.target.value)}
-              onBlur={() => onChange('seed_rate_unit', formData.seed_rate_unit)}
-              fullWidth
-            >
-              <MenuItem value="">-</MenuItem>
-              <MenuItem value="g_per_m2">g / m²</MenuItem>
-              <MenuItem value="seeds/m">Korn / lfm</MenuItem>
-              <MenuItem value="seeds_per_plant">Korn / Pflanze</MenuItem>
-            </Select>
-            {errors.seed_rate_unit && (
-              <Typography variant="caption" color="error">{errors.seed_rate_unit}</Typography>
-            )}
-          </FormControl>
-        </Tooltip>
+        {!hasBothMethods && (
+          <>
+            <Tooltip title={t('form.seedRateHelp')} arrow>
+              <TextField
+                sx={fieldSx}
+                type="number"
+                label="Menge"
+                value={formData.seed_rate_value ?? ''}
+                onChange={e => onChange('seed_rate_value', e.target.value ? parseFloat(e.target.value) : null)}
+                onBlur={() => onChange('seed_rate_value', formData.seed_rate_value)}
+                error={Boolean(errors.seed_rate_value)}
+                helperText={errors.seed_rate_value}
+                slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
+              />
+            </Tooltip>
+            <Tooltip title={t('form.seedRateHelp')} arrow>
+              <FormControl sx={fieldSx} error={Boolean(errors.seed_rate_unit)}>
+                <InputLabel>Einheit</InputLabel>
+                <Select
+                  value={hasPreCultivation && !hasDirectSowing ? 'seeds_per_plant' : (formData.seed_rate_unit ?? '')}
+                  label="Einheit"
+                  onChange={e => handleSeedRateUnitChange(e.target.value)}
+                  onBlur={() => onChange('seed_rate_unit', formData.seed_rate_unit)}
+                  fullWidth
+                  disabled={hasPreCultivation && !hasDirectSowing}
+                >
+                  <MenuItem value="">-</MenuItem>
+                  <MenuItem value="g_per_m2">g / m²</MenuItem>
+                  <MenuItem value="seeds/m">Korn / lfm</MenuItem>
+                  <MenuItem value="seeds_per_plant">Korn / Pflanze</MenuItem>
+                </Select>
+                {errors.seed_rate_unit && (
+                  <Typography variant="caption" color="error">{errors.seed_rate_unit}</Typography>
+                )}
+              </FormControl>
+            </Tooltip>
+          </>
+        )}
+
+        {hasBothMethods && (
+          <>
+            <TextField
+              sx={fieldSx}
+              type="number"
+              label="Anzucht Menge"
+              value={formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? ''}
+              onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { value: e.target.value ? parseFloat(e.target.value) : null, unit: 'seeds_per_plant' })}
+              helperText="Korn / Pflanze"
+            />
+            <FormControl sx={fieldSx}>
+              <InputLabel>Direktsaat Einheit</InputLabel>
+              <Select
+                value={formData.seed_rate_by_cultivation?.direct_sowing?.unit ?? 'seeds/m'}
+                label="Direktsaat Einheit"
+                onChange={(e) => updateSeedRateByCultivation('direct_sowing', { unit: e.target.value as SeedRateUnit, value: formData.seed_rate_by_cultivation?.direct_sowing?.value ?? null })}
+                fullWidth
+              >
+                <MenuItem value="seeds/m">Korn / lfm</MenuItem>
+                <MenuItem value="g_per_m2">g / m²</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              sx={fieldSx}
+              type="number"
+              label="Direktsaat Menge"
+              value={formData.seed_rate_by_cultivation?.direct_sowing?.value ?? ''}
+              onChange={(e) => updateSeedRateByCultivation('direct_sowing', { value: e.target.value ? parseFloat(e.target.value) : null, unit: formData.seed_rate_by_cultivation?.direct_sowing?.unit || 'seeds/m' })}
+            />
+          </>
+        )}
         <Tooltip title={t('form.thousandKernelWeightHelp', { defaultValue: 'Gewicht von 1000 Körnern in Gramm.' })} arrow>
           <TextField
             sx={fieldSx}

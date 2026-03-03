@@ -20,6 +20,14 @@ export interface Supplier {
 }
 
 export type SeedRateUnit = 'g_per_m2' | 'seeds/m' | 'seeds_per_plant';
+export type CultivationType = 'pre_cultivation' | 'direct_sowing';
+
+export interface SeedRateByCultivationEntry {
+  value: number;
+  unit: SeedRateUnit;
+}
+
+export type SeedRateByCultivation = Partial<Record<CultivationType, SeedRateByCultivationEntry>>;
 
 export interface Culture {
   thousand_kernel_weight_g?: number;
@@ -29,6 +37,7 @@ export interface Culture {
   seed_packages?: SeedPackage[];
   seed_rate_value?: number | null;
   seed_rate_unit?: SeedRateUnit | null;
+  seed_rate_by_cultivation?: SeedRateByCultivation | null;
   id?: number;
   name: string;
   variety?: string;
@@ -41,7 +50,8 @@ export interface Culture {
   
   crop_family?: string;
   nutrient_demand?: 'low' | 'medium' | 'high' | '';
-  cultivation_type?: 'pre_cultivation' | 'direct_sowing' | '';
+  cultivation_type?: CultivationType | '';
+  cultivation_types?: CultivationType[];
   
   growth_duration_days?: number;
   harvest_duration_days?: number;
