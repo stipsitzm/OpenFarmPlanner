@@ -93,7 +93,7 @@ describe('Cultures save payload', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: 'select-culture' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Kultur bearbeiten (Alt+E)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Kultur bearbeiten (Alt+E)' }));
     fireEvent.click(await screen.findByRole('button', { name: 'submit-edit' }));
 
     await waitFor(() => expect(updateMock).toHaveBeenCalledTimes(1));
@@ -124,7 +124,7 @@ describe('Cultures save payload', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: 'select-culture' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Kultur bearbeiten (Alt+E)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Kultur bearbeiten (Alt+E)' }));
     fireEvent.click(await screen.findByRole('button', { name: 'submit-edit' }));
 
     await waitFor(() => expect(updateMock).toHaveBeenCalledTimes(1));

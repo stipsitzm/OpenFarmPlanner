@@ -1,8 +1,6 @@
 """DRF serializers for the farm app API."""
 
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-import re
-from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
@@ -508,31 +506,6 @@ class CultureSerializer(serializers.ModelSerializer):
                     'code': 'supplier_product_url_domain_mismatch',
                     'message': 'Supplier product URL must match supplier allowed domains.',
                 }
-
-        if errors:
-            raise serializers.ValidationError(errors)
-
-        notes_value = attrs.get('notes', getattr(self.instance, 'notes', '') if self.instance else '')
-        notes_text = str(notes_value or '').strip()
-        if notes_text:
-            lines = [line.rstrip() for line in notes_text.splitlines()]
-            quellen_index = -1
-            for idx, line in enumerate(lines):
-                normalized = line.strip().lower().lstrip('#').strip()
-                if normalized == 'quellen':
-                    quellen_index = idx
-            if quellen_index == -1:
-                errors['notes'] = 'Notes must contain a final Quellen section.'
-            else:
-                tail = lines[quellen_index + 1:]
-                if any(item.strip().startswith('#') for item in tail if item.strip()):
-                    errors['notes'] = 'Quellen section must be at the end of notes.'
-                else:
-                    for url in re.findall(r'https?://\S+', '\n'.join(tail)):
-                        parsed = urlparse(url.rstrip('.,;)'))
-                        if not parsed.scheme or not parsed.netloc:
-                            errors['notes'] = 'Quellen section contains invalid URLs.'
-                            break
 
         if errors:
             raise serializers.ValidationError(errors)

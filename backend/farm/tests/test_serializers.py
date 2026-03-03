@@ -105,7 +105,7 @@ class SerializerBranchCoverageTest(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('seed_rate_by_cultivation', serializer.errors)
 
-    def test_notes_require_quellen_at_end(self):
+    def test_notes_without_quellen_section_are_allowed(self):
         serializer = CultureSerializer(
             data={
                 'name': 'Kohl',
@@ -113,8 +113,7 @@ class SerializerBranchCoverageTest(TestCase):
                 'notes': '## Hinweise\n- abc',
             }
         )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('notes', serializer.errors)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
 
 
