@@ -3,7 +3,7 @@
  * @remarks Presentational, no internal state
  */
 import { useEffect, useRef } from 'react';
-import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Tooltip, IconButton, Button } from '@mui/material';
+import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Tooltip, IconButton, Button, InputAdornment } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import type { Culture, SeedPackage, SeedRateUnit } from '../../api/types';
 import type { TFunction } from 'i18next';
@@ -155,9 +155,20 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               label="Anzucht Menge"
               value={formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? ''}
               onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { value: e.target.value ? parseFloat(e.target.value) : null, unit: 'seeds_per_plant' })}
-              helperText="Korn / Pflanze"
+              slotProps={{
+                input: {
+                  endAdornment: <InputAdornment position="end">Korn / Pflanze</InputAdornment>,
+                },
+              }}
             />
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <TextField
+                sx={fieldSx}
+                type="number"
+                label="Direktsaat Menge"
+                value={formData.seed_rate_by_cultivation?.direct_sowing?.value ?? ''}
+                onChange={(e) => updateSeedRateByCultivation('direct_sowing', { value: e.target.value ? parseFloat(e.target.value) : null, unit: normalizedDirectSowingUnit })}
+              />
               <FormControl sx={fieldSx}>
                 <InputLabel>Direktsaat Einheit</InputLabel>
                 <Select
@@ -170,13 +181,6 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
                   <MenuItem value="g_per_lfm">g / lfm</MenuItem>
                 </Select>
               </FormControl>
-              <TextField
-                sx={fieldSx}
-                type="number"
-                label="Direktsaat Menge"
-                value={formData.seed_rate_by_cultivation?.direct_sowing?.value ?? ''}
-                onChange={(e) => updateSeedRateByCultivation('direct_sowing', { value: e.target.value ? parseFloat(e.target.value) : null, unit: normalizedDirectSowingUnit })}
-              />
             </Box>
           </Box>
         )}
