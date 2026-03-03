@@ -19,7 +19,11 @@ from farm.services.enrichment import (
 
 class OpenAIResponsesProviderParsingTest(TestCase):
     def setUp(self):
-        self.supplier = Supplier.objects.create(name='ReinSaat', homepage_url='https://example.com')
+        self.supplier = Supplier.objects.create(
+            name='ReinSaat',
+            homepage_url='https://example.com',
+            allowed_domains=['example.com', 'reinsaat.at', 'reinsaat.example'],
+        )
         self.culture = Culture.objects.create(name='Bohne', variety='Test', supplier=self.supplier, supplier_product_url='https://example.com/product')
 
     @patch('farm.services.enrichment.requests.post')
@@ -173,7 +177,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
-            'output_text': '{"suggested_fields":{"growth_duration_days":{"value":120,"unit":"days","confidence":0.8},"harvest_duration_days":{"value":60,"unit":"days","confidence":0.8},"harvest_method":{"value":"per plant","unit":null,"confidence":0.7},"expected_yield":{"value":2.1,"unit":"kg/m²","confidence":0.7},"seed_packages":{"value":[{"size_value":750,"size_unit":"g","available":true}],"unit":null,"confidence":0.7}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+            'output_text': '{"suggested_fields":{"growth_duration_days":{"value":120,"unit":"days","confidence":0.8},"harvest_duration_days":{"value":60,"unit":"days","confidence":0.8},"harvest_method":{"value":"per plant","unit":null,"confidence":0.7},"expected_yield":{"value":2.1,"unit":"kg/m²","confidence":0.7},"seed_packages":{"value":[{"size_value":750,"size_unit":"g","available":true}],"unit":null,"confidence":0.7}},"evidence":{"harvest_duration_days":[{"source_url":"https://example.com/harvest","title":"ReinSaat harvest","retrieved_at":"2026-01-01T00:00:00Z","snippet":"Erntezeit 60 Tage","supplier_specific":true}]},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
         }
         post_mock.return_value = response
 
@@ -249,7 +253,17 @@ class OpenAIResponsesProviderParsingTest(TestCase):
                 'suggested_fields': {
                     'seed_packages': {'value': [{'size_value': 0.195, 'size_unit': 'g', 'available': True, 'evidence_text': 'computed from TKG'}], 'unit': None, 'confidence': 0.8},
                 },
-                'evidence': {},
+                'evidence': {
+                    'seed_packages': [
+                        {
+                            'source_url': 'https://example.com/packages',
+                            'title': 'ReinSaat package options',
+                            'retrieved_at': '2026-01-01T00:00:00Z',
+                            'snippet': '0.195 g',
+                            'supplier_specific': True,
+                        },
+                    ],
+                },
                 'validation': {'warnings': [], 'errors': []},
                 'note_blocks': '',
             }, ensure_ascii=False),
@@ -310,7 +324,11 @@ class OpenAIResponsesProviderParsingTest(TestCase):
                     'seed_rate_unit': {'value': 'seeds/m', 'unit': None, 'confidence': 0.8},
                     'row_spacing_cm': {'value': 40, 'unit': 'cm', 'confidence': 0.8},
                 },
-                'evidence': {},
+                'evidence': {
+                    'seed_rate_value': [{'source_url': 'https://example.com/sowing', 'title': 'ReinSaat sowing', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': '30 seeds/m', 'supplier_specific': True}],
+                    'seed_rate_unit': [{'source_url': 'https://example.com/sowing', 'title': 'ReinSaat sowing', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': 'seeds/m', 'supplier_specific': True}],
+                    'row_spacing_cm': [{'source_url': 'https://example.com/sowing', 'title': 'ReinSaat sowing', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': '40 cm Reihenabstand', 'supplier_specific': True}],
+                },
                 'validation': {'warnings': [], 'errors': []},
                 'note_blocks': '',
             }, ensure_ascii=False),
@@ -346,7 +364,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
-            'output_text': '{"suggested_fields":{"growth_duration_days":{"value":120,"unit":"days","confidence":0.8}},"evidence":{},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
+            'output_text': '{"suggested_fields":{"growth_duration_days":{"value":120,"unit":"days","confidence":0.8}},"evidence":{"growth_duration_days":[{"source_url":"https://example.com/growth","title":"ReinSaat growth","retrieved_at":"2026-01-01T00:00:00Z","snippet":"120 Tage","supplier_specific":true}]},"validation":{"warnings":[],"errors":[]},"note_blocks":""}'
         }
         post_mock.return_value = response
 
@@ -447,7 +465,11 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
 class EnrichmentConfigBehaviorTest(TestCase):
     def setUp(self):
-        self.supplier = Supplier.objects.create(name='ReinSaat', homepage_url='https://example.com')
+        self.supplier = Supplier.objects.create(
+            name='ReinSaat',
+            homepage_url='https://example.com',
+            allowed_domains=['example.com', 'reinsaat.at', 'reinsaat.example'],
+        )
         self.culture = Culture.objects.create(name='Möhre', variety='Nantes', supplier=self.supplier, supplier_product_url='https://example.com/moehre')
 
     @override_settings(AI_ENRICHMENT_ENABLED=False)
@@ -772,7 +794,17 @@ class EnrichmentConfigBehaviorTest(TestCase):
                 'suggested_fields': {
                     'harvest_duration_days': {'value': 60, 'unit': 'days', 'confidence': 0.8},
                 },
-                'evidence': {},
+                'evidence': {
+                    'harvest_duration_days': [
+                        {
+                            'source_url': 'https://example.com/salat',
+                            'title': 'ReinSaat Salat',
+                            'retrieved_at': '2026-01-01T00:00:00Z',
+                            'snippet': 'Ernte nach 60 Tagen',
+                            'supplier_specific': True,
+                        },
+                    ],
+                },
                 'validation': {'warnings': [], 'errors': []},
                 'note_blocks': '',
             }),
@@ -800,8 +832,8 @@ class EnrichmentConfigBehaviorTest(TestCase):
         provider.enrich(Mock(culture=self.culture, mode='complete'))
 
         sent_input = post_mock.call_args.kwargs['json']['input']
-        self.assertIn("FIRST search exclusively", sent_input)
-        self.assertIn("Package sizes MUST come exclusively from this supplier", sent_input)
+        self.assertIn("Supplier-first rules are mandatory", sent_input)
+        self.assertIn("Package sizes MUST come exclusively from supplier evidence", sent_input)
         self.assertIn("supplier_specific", sent_input)
 
 

@@ -831,6 +831,11 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         try:
             payload = enrich_culture(culture, mode)
         except EnrichmentError as error:
+            detail = str(error)
+            if detail.startswith('supplier_missing:') or 'supplier_missing' in detail:
+                return _supplier_enrichment_requirement_error('supplier_missing', 'Supplier is required for AI enrichment.')
+            if detail.startswith('allowed_domains_missing:') or 'allowed_domains_missing' in detail:
+                return _supplier_enrichment_requirement_error('allowed_domains_missing', 'Supplier allowed domains are required for AI enrichment.')
             return Response({'detail': str(error)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as error:
             logger.exception('Unexpected enrichment error for culture %s', culture.id)
@@ -1392,4 +1397,3 @@ class SeedDemandListView(generics.ListAPIView):
 
         serializer = self.get_serializer(rows, many=True)
         return Response({'count': len(rows), 'next': None, 'previous': None, 'results': serializer.data})
-
