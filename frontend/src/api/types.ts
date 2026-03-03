@@ -19,7 +19,7 @@ export interface Supplier {
   created?: boolean;
 }
 
-export type SeedRateUnit = 'g_per_m2' | 'seeds/m' | 'seeds_per_plant';
+export type SeedRateUnit = 'g_per_m2' | 'g_per_lfm' | 'seeds/m' | 'seeds_per_plant';
 export type CultivationType = 'pre_cultivation' | 'direct_sowing';
 
 export interface SeedRateByCultivationEntry {

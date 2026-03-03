@@ -275,7 +275,7 @@ class Culture(TimestampedModel):
         ('direct_sowing', 'Direct Sowing'),  # Direktsaat
     ]
     CULTIVATION_TYPE_VALUES = {item[0] for item in CULTIVATION_TYPE_CHOICES}
-    DIRECT_SOWING_SEED_RATE_UNITS = {'g_per_m2', 'seeds/m'}
+    DIRECT_SOWING_SEED_RATE_UNITS = {'g_per_m2', 'g_per_lfm', 'seeds/m'}
     
     HARVEST_METHOD_CHOICES = [
         ('per_plant', 'Per Plant'),
@@ -503,7 +503,7 @@ class Culture(TimestampedModel):
                     if method == 'pre_cultivation' and unit != 'seeds_per_plant':
                         errors['seed_rate_by_cultivation'] = 'Pre-cultivation unit must be seeds_per_plant.'
                     if method == 'direct_sowing' and unit not in self.DIRECT_SOWING_SEED_RATE_UNITS:
-                        errors['seed_rate_by_cultivation'] = 'Direct-sowing unit must be g_per_m2 or seeds/m.'
+                        errors['seed_rate_by_cultivation'] = 'Direct-sowing unit must be g_per_m2, g_per_lfm, or seeds/m.'
 
         if self.distance_within_row_m is not None and self.distance_within_row_m < 0:
             errors['distance_within_row_m'] = 'Distance within row must be non-negative.'

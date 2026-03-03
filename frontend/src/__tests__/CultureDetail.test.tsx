@@ -144,8 +144,8 @@ describe('CultureDetail Component', () => {
     expect(screen.getAllByText('Anzucht').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Direktsaat').length).toBeGreaterThan(0);
     expect(screen.getByText('Saatgutmenge nach Anbauart')).toBeInTheDocument();
-    expect(screen.getByText('seeds_per_plant')).toBeInTheDocument();
-    expect(screen.getByText('seeds/m')).toBeInTheDocument();
+    expect(screen.getByText('Korn / Pflanze')).toBeInTheDocument();
+    expect(screen.getByText('Korn / lfm')).toBeInTheDocument();
   });
 
 });

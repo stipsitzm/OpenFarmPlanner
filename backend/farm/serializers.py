@@ -377,7 +377,7 @@ class CultureSerializer(serializers.ModelSerializer):
         if normalized_value:
             value = normalized_value
 
-        allowed_values = {'g_per_m2', 'seeds/m', 'seeds_per_plant'}
+        allowed_values = {'g_per_m2', 'g_per_lfm', 'seeds/m', 'seeds_per_plant'}
         if value not in allowed_values:
             raise serializers.ValidationError('Unsupported seed rate unit.')
         return value
@@ -461,8 +461,8 @@ class CultureSerializer(serializers.ModelSerializer):
                         if method == 'pre_cultivation' and unit != 'seeds_per_plant':
                             errors['seed_rate_by_cultivation'] = 'Pre-cultivation seed rate unit must be seeds_per_plant.'
                             break
-                        if method == 'direct_sowing' and unit not in {'g_per_m2', 'seeds/m'}:
-                            errors['seed_rate_by_cultivation'] = 'Direct sowing seed rate unit must be g_per_m2 or seeds/m.'
+                        if method == 'direct_sowing' and unit not in {'g_per_m2', 'g_per_lfm', 'seeds/m'}:
+                            errors['seed_rate_by_cultivation'] = 'Direct sowing seed rate unit must be g_per_m2, g_per_lfm, or seeds/m.'
                             break
 
                 if 'seed_rate_by_cultivation' not in errors:

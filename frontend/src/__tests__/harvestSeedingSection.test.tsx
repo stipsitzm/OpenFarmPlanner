@@ -45,12 +45,8 @@ describe('HarvestSection and SeedingSection', () => {
 
     const unitCombobox = screen.getAllByRole('combobox')[0];
     fireEvent.mouseDown(unitCombobox);
-    fireEvent.click(screen.getByRole('option', { name: 'Korn / lfm' }));
-    expect(onChange).toHaveBeenCalledWith('seed_rate_unit', 'seeds/m');
-
-    fireEvent.mouseDown(unitCombobox);
-    fireEvent.click(screen.getByRole('option', { name: 'Korn / Pflanze' }));
-    expect(onChange).toHaveBeenCalledWith('seed_rate_unit', 'seeds_per_plant');
+    fireEvent.click(screen.getByRole('option', { name: 'g / lfm' }));
+    expect(onChange).toHaveBeenCalledWith('seed_rate_unit', 'g_per_lfm');
 
     fireEvent.blur(unitCombobox);
     expect(onChange).toHaveBeenCalledWith('seed_rate_unit', 'g_per_m2');

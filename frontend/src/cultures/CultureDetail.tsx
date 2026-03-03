@@ -340,7 +340,17 @@ export function CultureDetail({
                           <TableRow key={method}>
                             <TableCell>{method === 'pre_cultivation' ? 'Anzucht' : 'Direktsaat'}</TableCell>
                             <TableCell>{payload?.value}</TableCell>
-                            <TableCell>{payload?.unit}</TableCell>
+                            <TableCell>
+                              {payload?.unit === 'g_per_m2'
+                                ? 'g / m²'
+                                : payload?.unit === 'g_per_lfm'
+                                  ? 'g / lfm'
+                                  : payload?.unit === 'seeds/m'
+                                    ? 'Korn / lfm'
+                                    : payload?.unit === 'seeds_per_plant'
+                                      ? 'Korn / Pflanze'
+                                      : payload?.unit}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

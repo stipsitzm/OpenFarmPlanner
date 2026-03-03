@@ -1307,6 +1307,17 @@ class SeedDemandListView(generics.ListAPIView):
                         ),
                     ),
                     When(
+                        Q(seed_rate_unit='g_per_lfm')
+                        & Q(seed_rate_value__isnull=False)
+                        & Q(row_spacing_m__gt=0)
+                        & Q(total_area_sqm__gt=0),
+                        then=ExpressionWrapper(
+                            (F('total_area_sqm') / F('row_spacing_m'))
+                            * F('seed_rate_value'),
+                            output_field=FloatField(),
+                        ),
+                    ),
+                    When(
                         Q(seed_rate_unit__in=['seeds_per_plant', 'pcs_per_plant'])
                         & Q(seed_rate_value__isnull=False)
                         & Q(thousand_kernel_weight_g__isnull=False)
@@ -1339,6 +1350,8 @@ class SeedDemandListView(generics.ListAPIView):
                     When(Q(seed_rate_unit='seeds/m') & Q(thousand_kernel_weight_g__isnull=True), then=Value('Missing thousand-kernel weight for conversion to grams.')),
                     When(Q(seed_rate_unit='seeds/m') & (Q(row_spacing_m__isnull=True) | Q(row_spacing_m__lte=0)), then=Value('Missing row spacing for conversion from seeds/m to grams.')),
                     When(Q(seed_rate_unit='seeds/m') & Q(total_area_sqm__lte=0), then=Value('Missing area usage for conversion from seeds/m to grams.')),
+                    When(Q(seed_rate_unit='g_per_lfm') & (Q(row_spacing_m__isnull=True) | Q(row_spacing_m__lte=0)), then=Value('Missing row spacing for conversion from g/lfm to grams.')),
+                    When(Q(seed_rate_unit='g_per_lfm') & Q(total_area_sqm__lte=0), then=Value('Missing area usage for conversion from g/lfm to grams.')),
                     When(Q(seed_rate_unit__in=['seeds_per_plant', 'pcs_per_plant']) & Q(thousand_kernel_weight_g__isnull=True), then=Value('Missing thousand-kernel weight for conversion to grams.')),
                     When(Q(seed_rate_unit__in=['seeds_per_plant', 'pcs_per_plant']) & Q(total_quantity__lte=0), then=Value('Missing plant quantity for conversion from seeds per plant to grams.')),
                     default=Value(None, output_field=CharField()),
