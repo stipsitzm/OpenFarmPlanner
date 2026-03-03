@@ -314,7 +314,9 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
-    def test_adds_density_plausibility_warning_when_seed_density_is_high(self, post_mock):
+    def test_corrects_direct_sowing_seed_rate_unit_to_g_per_lfm(self, post_mock):
+        self.culture.cultivation_type = 'direct_sowing'
+        self.culture.save(update_fields=['cultivation_type'])
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
@@ -322,12 +324,10 @@ class OpenAIResponsesProviderParsingTest(TestCase):
                 'suggested_fields': {
                     'seed_rate_value': {'value': 30, 'unit': 'seeds/m', 'confidence': 0.8},
                     'seed_rate_unit': {'value': 'seeds/m', 'unit': None, 'confidence': 0.8},
-                    'row_spacing_cm': {'value': 40, 'unit': 'cm', 'confidence': 0.8},
                 },
                 'evidence': {
                     'seed_rate_value': [{'source_url': 'https://example.com/sowing', 'title': 'ReinSaat sowing', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': '30 seeds/m', 'supplier_specific': True}],
                     'seed_rate_unit': [{'source_url': 'https://example.com/sowing', 'title': 'ReinSaat sowing', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': 'seeds/m', 'supplier_specific': True}],
-                    'row_spacing_cm': [{'source_url': 'https://example.com/sowing', 'title': 'ReinSaat sowing', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': '40 cm Reihenabstand', 'supplier_specific': True}],
                 },
                 'validation': {'warnings': [], 'errors': []},
                 'note_blocks': '',
@@ -336,8 +336,35 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         post_mock.return_value = response
 
         result = enrich_culture(self.culture, 'complete')
+        self.assertEqual(result['suggested_fields']['seed_rate_unit']['value'], 'g_per_lfm')
         warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
-        self.assertIn('density_out_of_range', warning_codes)
+        self.assertIn('seed_rate_unit_defaulted_for_direct_sowing', warning_codes)
+
+    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @patch('farm.services.enrichment.requests.post')
+    def test_corrects_pre_cultivation_seed_rate_unit_to_seeds_per_plant(self, post_mock):
+        self.culture.cultivation_type = 'pre_cultivation'
+        self.culture.save(update_fields=['cultivation_type'])
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'seed_rate_unit': {'value': 'g_per_m2', 'unit': None, 'confidence': 0.8},
+                },
+                'evidence': {
+                    'seed_rate_unit': [{'source_url': 'https://example.com/sowing', 'title': 'ReinSaat sowing', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': '3 g/m²', 'supplier_specific': True}],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }, ensure_ascii=False),
+        }
+        post_mock.return_value = response
+
+        result = enrich_culture(self.culture, 'complete')
+        self.assertEqual(result['suggested_fields']['seed_rate_unit']['value'], 'seeds_per_plant')
+        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
+        self.assertIn('seed_rate_unit_corrected_for_pre_cultivation', warning_codes)
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
@@ -835,6 +862,7 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.assertIn("Supplier-first rules are mandatory", sent_input)
         self.assertIn("Package sizes MUST come exclusively from supplier evidence", sent_input)
         self.assertIn("supplier_specific", sent_input)
+        self.assertIn("For seed_rate_unit, only output one of: g_per_m2, g_per_lfm, seeds_per_plant", sent_input)
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')

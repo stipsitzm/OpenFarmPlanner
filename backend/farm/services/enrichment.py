@@ -228,7 +228,7 @@ def _normalize_choice_value(field_name: str, value: object) -> object:
 def _allowed_choice_values(field_name: str) -> set[str]:
     """Get allowed model choice values for enum-like Culture fields."""
     if field_name == 'seed_rate_unit':
-        return {'g_per_m2', 'seeds/m', 'seeds_per_plant'}
+        return {'g_per_m2', 'g_per_lfm', 'seeds_per_plant'}
 
     field = Culture._meta.get_field(field_name)
     return {str(choice[0]) for choice in (field.choices or []) if choice[0] is not None}
@@ -433,6 +433,65 @@ def _compute_plausibility_warnings(culture: Culture, suggested_fields: dict[str,
             })
 
     return warnings
+
+
+def _enforce_seed_rate_unit_by_cultivation(culture: Culture, suggested_fields: dict[str, Any], validation: dict[str, Any]) -> None:
+    """Enforce cultivation-specific seed-rate unit constraints in enrichment output."""
+    cultivation_type_value = None
+    cultivation_type_suggestion = suggested_fields.get('cultivation_type')
+    if isinstance(cultivation_type_suggestion, dict):
+        raw = cultivation_type_suggestion.get('value')
+        if isinstance(raw, str) and raw.strip():
+            cultivation_type_value = raw.strip()
+    if not cultivation_type_value:
+        cultivation_type_value = culture.cultivation_type or ''
+
+    if cultivation_type_value not in {'pre_cultivation', 'direct_sowing'}:
+        return
+
+    warnings = validation.setdefault('warnings', [])
+    unit_suggestion = suggested_fields.get('seed_rate_unit')
+
+    if cultivation_type_value == 'pre_cultivation':
+        if isinstance(unit_suggestion, dict):
+            current_value = unit_suggestion.get('value')
+            if current_value != 'seeds_per_plant':
+                unit_suggestion['value'] = 'seeds_per_plant'
+                if isinstance(warnings, list):
+                    warnings.append({
+                        'field': 'seed_rate_unit',
+                        'code': 'seed_rate_unit_corrected_for_pre_cultivation',
+                        'message': 'Adjusted seed_rate_unit to seeds_per_plant for pre_cultivation.',
+                    })
+        else:
+            suggested_fields['seed_rate_unit'] = {'value': 'seeds_per_plant', 'unit': None, 'confidence': 0.6}
+            if isinstance(warnings, list):
+                warnings.append({
+                    'field': 'seed_rate_unit',
+                    'code': 'seed_rate_unit_defaulted_for_pre_cultivation',
+                    'message': 'Defaulted seed_rate_unit to seeds_per_plant for pre_cultivation.',
+                })
+        return
+
+    # direct_sowing
+    if isinstance(unit_suggestion, dict):
+        current_value = unit_suggestion.get('value')
+        if current_value not in {'g_per_m2', 'g_per_lfm'}:
+            unit_suggestion['value'] = 'g_per_lfm'
+            if isinstance(warnings, list):
+                warnings.append({
+                    'field': 'seed_rate_unit',
+                    'code': 'seed_rate_unit_corrected_for_direct_sowing',
+                    'message': 'Adjusted seed_rate_unit to g_per_lfm for direct_sowing.',
+                })
+    else:
+        suggested_fields['seed_rate_unit'] = {'value': 'g_per_lfm', 'unit': None, 'confidence': 0.5}
+        if isinstance(warnings, list):
+            warnings.append({
+                'field': 'seed_rate_unit',
+                'code': 'seed_rate_unit_defaulted_for_direct_sowing',
+                'message': 'Defaulted seed_rate_unit to g_per_lfm for direct_sowing.',
+            })
 
 
 
@@ -768,7 +827,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "Suggested fields may include growth_duration_days, harvest_duration_days, propagation_duration_days, harvest_method, expected_yield, seed_packages, "
             "distance_within_row_cm, row_spacing_cm, sowing_depth_cm, seed_rate_value, seed_rate_unit, thousand_kernel_weight_g, nutrient_demand, cultivation_type. "
             "Package size means sold packet options (e.g., 2 g, 5 g, 10 g, 25 g). Do NOT infer from per-seed mass, TKG, sowing rate or grams per meter. If unavailable, return seed_packages as empty list and never guess. "
-            "Each suggested field must contain value, unit, confidence. For cultivation_type, only output one of: pre_cultivation, direct_sowing. For nutrient_demand, only output one of: low, medium, high. For harvest_method, only output one of: per_plant, per_sqm. For seed_rate_unit, only output one of: g_per_m2, seeds/m, seeds_per_plant. Never output free-text variants like 'g per plant' or 'grams per 100 sqm'. Do not output labels, translations, or crop-kind words for enum fields. "
+            "Each suggested field must contain value, unit, confidence. For cultivation_type, only output one of: pre_cultivation, direct_sowing. For nutrient_demand, only output one of: low, medium, high. For harvest_method, only output one of: per_plant, per_sqm. For seed_rate_unit, only output one of: g_per_m2, g_per_lfm, seeds_per_plant. Never output free-text variants like 'g per plant' or 'grams per 100 sqm'. Do not output labels, translations, or crop-kind words for enum fields. "
             "evidence must be mapping field->list of {source_url,title,retrieved_at,snippet,supplier_specific}. "
             "validation: warnings/errors arrays with field/code/message. "
             "HARD RULE FOR NUMERIC FIELDS: For growth_duration_days, harvest_duration_days, propagation_duration_days, distance_within_row_cm, row_spacing_cm, sowing_depth_cm, seed_rate_value, thousand_kernel_weight_g, expected_yield, suggested_fields.<field>.value MUST always be a single JSON number (never a string). "
@@ -776,7 +835,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             "When collapsing a range, add validation warning code range_collapsed_to_mean with a message that includes the original raw range text and the chosen numeric value. "
             "When a range exists, also mention the raw supplier range in note_blocks under the relevant section. "
             "seed_rate_value must always be one single float in the selected seed_rate_unit. "
-            "If supplier provides scenario-specific rates (e.g., Pflanzung vs Direktsaat), choose exactly one value: prefer Pflanzung for cultivation_type=pre_cultivation and Direktsaat for cultivation_type=direct_sowing. "
+            "If supplier provides scenario-specific rates (e.g., Pflanzung vs Direktsaat), choose exactly one value: prefer Pflanzung for cultivation_type=pre_cultivation and Direktsaat for cultivation_type=direct_sowing. For pre_cultivation enforce seed_rate_unit=seeds_per_plant. For direct_sowing enforce seed_rate_unit in {g_per_m2, g_per_lfm}. "
             "If cultivation_type is ambiguous, default to the mean of the Pflanzung range as one number and add warning code scenario_ambiguous_defaulted; in notes describe both scenarios and their raw ranges. "
             "Units must be null when not applicable; never output empty unit strings. "
             "note_blocks must be pure German markdown text only (no JSON objects, no code fences) and include sections: 'Dauerwerte', 'Aussaat & Abstände (zusammengefasst)', 'Ernte & Verwendung', 'Quellen'. "
@@ -1662,6 +1721,7 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
     supplier_name = (culture.supplier.name if culture.supplier else (culture.seed_supplier or '')).strip()
     _validate_seed_package_suggestions(suggested_fields, evidence, validation)
     _normalize_suggested_field_values(suggested_fields, validation)
+    _enforce_seed_rate_unit_by_cultivation(culture, suggested_fields, validation)
     _enforce_supplier_first_output(culture, suggested_fields, evidence, validation)
     _apply_source_weighted_confidence(culture, suggested_fields, evidence)
     if not any(isinstance(entries, list) and entries for entries in evidence.values()):
