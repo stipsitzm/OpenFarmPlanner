@@ -136,7 +136,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
-    def test_normalizes_cultivation_type_aliases(self, post_mock):
+    def test_maps_cultivation_type_alias_to_allowed_sowing_methods(self, post_mock):
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
@@ -145,12 +145,12 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         post_mock.return_value = response
 
         result = enrich_culture(self.culture, 'complete')
-        self.assertEqual(result['suggested_fields']['cultivation_type']['value'], 'direct_sowing')
+        self.assertEqual(result['suggested_fields']['allowed_sowing_methods']['value'], ['direct_sowing'])
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
-    def test_drops_invalid_enum_values_not_in_model_choices(self, post_mock):
+    def test_invalid_cultivation_type_does_not_create_allowed_sowing_methods(self, post_mock):
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
@@ -159,8 +159,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         post_mock.return_value = response
 
         result = enrich_culture(self.culture, 'complete')
-        self.assertNotIn('cultivation_type', result['suggested_fields'])
-        self.assertTrue(any(w.get('code') == 'invalid_choice_dropped' for w in result['validation']['warnings']))
+        self.assertNotIn('allowed_sowing_methods', result['suggested_fields'])
 
 
 
@@ -314,7 +313,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
-    def test_corrects_direct_sowing_seed_rate_unit_to_g_per_lfm(self, post_mock):
+    def test_maps_legacy_seed_rate_fields_to_direct_method_fields(self, post_mock):
         self.culture.cultivation_type = 'direct_sowing'
         self.culture.save(update_fields=['cultivation_type'])
         response = Mock()
@@ -336,13 +335,14 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         post_mock.return_value = response
 
         result = enrich_culture(self.culture, 'complete')
-        self.assertEqual(result['suggested_fields']['seed_rate_unit']['value'], 'g_per_lfm')
-        warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
-        self.assertIn('seed_rate_unit_defaulted_for_direct_sowing', warning_codes)
+        self.assertEqual(result['suggested_fields']['allowed_sowing_methods']['value'], ['direct_sowing'])
+        self.assertEqual(result['suggested_fields']['seed_rate_direct_value']['value'], 30.0)
+        self.assertEqual(result['suggested_fields']['seed_rate_direct_unit']['value'], None)
+        self.assertNotIn('seed_rate_by_cultivation', result['suggested_fields'])
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
-    def test_corrects_pre_cultivation_seed_rate_unit_to_seeds_per_plant(self, post_mock):
+    def test_keeps_transplant_unit_null_when_not_explicitly_stated(self, post_mock):
         self.culture.cultivation_type = 'pre_cultivation'
         self.culture.save(update_fields=['cultivation_type'])
         response = Mock()
@@ -350,10 +350,12 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         response.json.return_value = {
             'output_text': json.dumps({
                 'suggested_fields': {
-                    'seed_rate_unit': {'value': 'g_per_m2', 'unit': None, 'confidence': 0.8},
+                    'allowed_sowing_methods': {'value': ['pre_cultivation'], 'unit': None, 'confidence': 0.8},
+                    'seed_rate_transplant_value': {'value': 3.4, 'unit': None, 'confidence': 0.8},
+                    'seed_rate_transplant_unit': {'value': None, 'unit': None, 'confidence': 0.8},
                 },
                 'evidence': {
-                    'seed_rate_unit': [{'source_url': 'https://example.com/sowing', 'title': 'ReinSaat sowing', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': '3 g/m²', 'supplier_specific': True}],
+                    'seed_rate_transplant_value': [{'source_url': 'https://example.com/sowing', 'title': 'ReinSaat sowing', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': 'Pflanzung 3.4', 'supplier_specific': True}],
                 },
                 'validation': {'warnings': [], 'errors': []},
                 'note_blocks': '',
@@ -362,9 +364,9 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         post_mock.return_value = response
 
         result = enrich_culture(self.culture, 'complete')
-        self.assertEqual(result['suggested_fields']['seed_rate_unit']['value'], 'seeds_per_plant')
+        self.assertNotIn('seed_rate_transplant_unit', result['suggested_fields'])
         warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
-        self.assertIn('seed_rate_unit_corrected_for_pre_cultivation', warning_codes)
+        self.assertIn('seed_rate_unit_missing_for_method_value', warning_codes)
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
@@ -631,7 +633,9 @@ class EnrichmentConfigBehaviorTest(TestCase):
             'output_text': json.dumps({
                 'suggested_fields': {
                     'expected_yield': {'value': 1.4, 'unit': 'kg/m²', 'confidence': 'high'},
-                    'seed_rate_value': {'value': 20, 'unit': None, 'confidence': 'medium'},
+                    'allowed_sowing_methods': {'value': ['direct_sowing'], 'unit': None, 'confidence': 'medium'},
+                    'seed_rate_direct_value': {'value': 20, 'unit': None, 'confidence': 'medium'},
+                    'seed_rate_direct_unit': {'value': 'g_per_lfm', 'unit': None, 'confidence': 'medium'},
                 },
                 'evidence': {
                     'expected_yield': [
@@ -643,7 +647,7 @@ class EnrichmentConfigBehaviorTest(TestCase):
                             'supplier_specific': True,
                         },
                     ],
-                    'seed_rate_value': [
+                    'seed_rate_direct_value': [
                         {
                             'source_url': 'https://reinsaat.at/seed-rate',
                             'title': 'ReinSaat seed rate',
@@ -664,7 +668,7 @@ class EnrichmentConfigBehaviorTest(TestCase):
         result = enrich_culture(self.culture, 'reresearch')
 
         self.assertEqual(result['suggested_fields']['expected_yield']['confidence'], 1.0)
-        self.assertEqual(result['suggested_fields']['seed_rate_value']['confidence'], 0.7)
+        self.assertEqual(result['suggested_fields']['seed_rate_direct_value']['confidence'], 0.7)
 
     @patch('farm.services.enrichment.requests.post')
     def test_supplier_only_phase_filters_non_supplier_evidence_entries(self, post_mock):
@@ -862,7 +866,7 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.assertIn("Supplier-first rules are mandatory", sent_input)
         self.assertIn("Package sizes MUST come exclusively from supplier evidence", sent_input)
         self.assertIn("supplier_specific", sent_input)
-        self.assertIn("For seed_rate_unit, only output one of: g_per_m2, g_per_lfm, seeds_per_plant", sent_input)
+        self.assertIn("For seed_rate_direct_unit and seed_rate_transplant_unit, only output one of: g_per_m2, g_per_lfm, seeds_per_plant, or null", sent_input)
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
@@ -1022,10 +1026,12 @@ class NumericNormalizationTest(TestCase):
         provider.search_provider_name = 'web_search'
         provider.enrich.return_value = {
             'suggested_fields': {
-                'seed_rate_value': {'value': '0.04-0.05', 'unit': '', 'confidence': 0.8},
+                'allowed_sowing_methods': {'value': ['direct_sowing'], 'unit': None, 'confidence': 0.8},
+                'seed_rate_direct_value': {'value': '0.04-0.05', 'unit': '', 'confidence': 0.8},
+                'seed_rate_direct_unit': {'value': 'g/a', 'unit': None, 'confidence': 0.8},
             },
             'evidence': {
-                'seed_rate_value': [
+                'seed_rate_direct_value': [
                     {
                         'source_url': 'https://www.reinsaat.at/salat',
                         'title': 'ReinSaat Salat',
@@ -1042,8 +1048,12 @@ class NumericNormalizationTest(TestCase):
         provider_mock.return_value = provider
 
         result = enrich_culture(culture, 'reresearch')
-        self.assertAlmostEqual(result['suggested_fields']['seed_rate_value']['value'], 0.045, places=6)
-        self.assertIsInstance(result['suggested_fields']['seed_rate_value']['value'], float)
-        self.assertIsNone(result['suggested_fields']['seed_rate_value']['unit'])
+        self.assertAlmostEqual(result['suggested_fields']['seed_rate_direct_value']['value'], 0.00045, places=8)
+        self.assertIsInstance(result['suggested_fields']['seed_rate_direct_value']['value'], float)
+        self.assertEqual(result['suggested_fields']['seed_rate_direct_unit']['value'], 'g_per_m2')
+        by_method = result['suggested_fields']['seed_rate_by_cultivation']['value']
+        self.assertAlmostEqual(by_method['direct_sowing']['value'], 0.00045, places=8)
+        self.assertEqual(by_method['direct_sowing']['unit'], 'g_per_m2')
         warning_codes = [item.get('code') for item in result['validation']['warnings']]
-        self.assertIn('range_string_normalized', warning_codes)
+        self.assertIn('range_collapsed_to_mean', warning_codes)
+        self.assertIn('seed_rate_unit_converted_from_g_per_are', warning_codes)

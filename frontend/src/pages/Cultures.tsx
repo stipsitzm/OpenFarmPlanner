@@ -789,8 +789,12 @@ function Cultures(): React.ReactElement {
     distance_within_row_cm: 'form.distanceWithinRowCm',
     row_spacing_cm: 'form.rowSpacingCm',
     sowing_depth_cm: 'form.sowingDepthCm',
-    seed_rate_value: 'form.seedRateValue',
-    seed_rate_unit: 'form.seedRateUnit',
+    seed_rate_direct_value: 'form.seedRateValue',
+    seed_rate_direct_unit: 'form.seedRateUnit',
+    seed_rate_transplant_value: 'form.seedRateValue',
+    seed_rate_transplant_unit: 'form.seedRateUnit',
+    seed_rate_by_cultivation: 'form.seedRateSectionTitle',
+    allowed_sowing_methods: 'form.cultivationType',
     thousand_kernel_weight_g: 'form.thousandKernelWeightLabel',
     nutrient_demand: 'form.nutrientDemand',
     cultivation_type: 'form.cultivationType',
@@ -1011,8 +1015,48 @@ function Cultures(): React.ReactElement {
         patch[field] = normalizeSuggestedSeedPackages(suggestionValue);
         return;
       }
-      if (field === 'seed_rate_unit') {
+      if (field === 'seed_rate_direct_unit' || field === 'seed_rate_transplant_unit') {
         patch[field] = normalizeSeedRateUnit(suggestionValue);
+        return;
+      }
+      if (field === 'allowed_sowing_methods') {
+        const methods = Array.isArray(suggestionValue)
+          ? suggestionValue.map((item) => normalizeCultivationType(item)).filter(Boolean)
+          : [];
+        patch.cultivation_types = methods;
+        if (methods.length > 0) {
+          patch.cultivation_type = methods[0];
+        }
+        return;
+      }
+      if (field === 'seed_rate_by_cultivation' && suggestionValue && typeof suggestionValue === 'object') {
+        patch.seed_rate_by_cultivation = suggestionValue;
+        return;
+      }
+      if (field === 'seed_rate_direct_value' || field === 'seed_rate_direct_unit' || field === 'seed_rate_transplant_value' || field === 'seed_rate_transplant_unit') {
+        const directValue = field === 'seed_rate_direct_value'
+          ? Number(suggestionValue)
+          : Number(enrichmentResult.suggested_fields.seed_rate_direct_value?.value);
+        const directUnit = field === 'seed_rate_direct_unit'
+          ? normalizeSeedRateUnit(suggestionValue)
+          : normalizeSeedRateUnit(enrichmentResult.suggested_fields.seed_rate_direct_unit?.value);
+        const transplantValue = field === 'seed_rate_transplant_value'
+          ? Number(suggestionValue)
+          : Number(enrichmentResult.suggested_fields.seed_rate_transplant_value?.value);
+        const transplantUnit = field === 'seed_rate_transplant_unit'
+          ? normalizeSeedRateUnit(suggestionValue)
+          : normalizeSeedRateUnit(enrichmentResult.suggested_fields.seed_rate_transplant_unit?.value);
+
+        const byCultivation: Record<string, { value: number; unit: string }> = {};
+        if (Number.isFinite(directValue) && directValue > 0 && directUnit) {
+          byCultivation.direct_sowing = { value: directValue, unit: directUnit };
+        }
+        if (Number.isFinite(transplantValue) && transplantValue > 0 && transplantUnit) {
+          byCultivation.pre_cultivation = { value: transplantValue, unit: transplantUnit };
+        }
+        if (Object.keys(byCultivation).length > 0) {
+          patch.seed_rate_by_cultivation = byCultivation;
+        }
         return;
       }
       if (field === 'harvest_method') {
