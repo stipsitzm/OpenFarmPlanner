@@ -214,7 +214,8 @@ export function CultureForm({
       }
 
       const activeElement = document.activeElement;
-      if (activeElement && !contentElement.contains(activeElement)) {
+      const isNoElementFocused = !activeElement || activeElement === document.body || activeElement === document.documentElement;
+      if (!isNoElementFocused && !contentElement.contains(activeElement)) {
         return;
       }
 

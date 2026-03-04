@@ -151,4 +151,24 @@ describe('CultureForm', () => {
 
     expect(scrollByMock).toHaveBeenCalled();
   });
+
+  it('scrolls dialog content with keyboard when no field is focused', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const scrollByMock = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
+      value: scrollByMock,
+      configurable: true,
+      writable: true,
+    });
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+
+    const nameInput = screen.getByLabelText('name-input');
+    (nameInput as HTMLInputElement).focus();
+    (nameInput as HTMLInputElement).blur();
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+
+    expect(scrollByMock).toHaveBeenCalled();
+  });
 });
