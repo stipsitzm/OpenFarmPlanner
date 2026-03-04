@@ -12,7 +12,7 @@
  * @returns JSX element rendering the culture form
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../i18n';
 import type { Culture } from '../api/types';
 import { extractApiErrorMessage } from '../api/errors';
@@ -122,7 +122,7 @@ export function CultureForm({
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
-
+  const dialogContentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setFormData(buildInitialFormData(culture));
@@ -170,13 +170,12 @@ export function CultureForm({
     }
   };
 
-  const handleDialogContentKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleDialogContentScrollKey = (event: { key: string; altKey: boolean; ctrlKey: boolean; metaKey: boolean; preventDefault: () => void }, contentElement: HTMLDivElement) => {
     if (event.altKey || event.ctrlKey || event.metaKey) {
       return;
     }
 
     const key = event.key;
-    const contentElement = event.currentTarget;
     let delta = 0;
 
     if (key === 'ArrowDown') {
@@ -203,6 +202,29 @@ export function CultureForm({
     event.preventDefault();
   };
 
+  const handleDialogContentKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    handleDialogContentScrollKey(event, event.currentTarget);
+  };
+
+  useEffect(() => {
+    const onWindowKeyDown = (event: KeyboardEvent) => {
+      const contentElement = dialogContentRef.current;
+      if (!contentElement) {
+        return;
+      }
+
+      const activeElement = document.activeElement;
+      if (activeElement && !contentElement.contains(activeElement)) {
+        return;
+      }
+
+      handleDialogContentScrollKey(event, contentElement);
+    };
+
+    window.addEventListener('keydown', onWindowKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onWindowKeyDown, { capture: true });
+  }, []);
+
   return (
     <Dialog
       open
@@ -218,7 +240,7 @@ export function CultureForm({
         <DialogTitle id="culture-form-dialog-title">
           {isEdit ? t('form.editTitle') : t('form.createTitle')}
         </DialogTitle>
-        <DialogContent dividers sx={{ maxHeight: '70vh' }} onKeyDown={handleDialogContentKeyDown}>
+        <DialogContent ref={dialogContentRef} dividers sx={{ maxHeight: '70vh' }} onKeyDownCapture={handleDialogContentKeyDown}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 8 }}>
             <Typography variant="h6">Allgemeine Informationen</Typography>
             <BasicInfoSection formData={formData} errors={errors} onChange={handleChange} t={t} />

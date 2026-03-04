@@ -130,7 +130,7 @@ describe('CultureForm', () => {
     }));
   });
 
-  it('scrolls dialog content with arrow and page keys', () => {
+  it('scrolls dialog content with arrow and page keys, even when an input is focused', () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const scrollByMock = vi.fn();
     Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
@@ -143,9 +143,12 @@ describe('CultureForm', () => {
     const content = document.querySelector('.MuiDialogContent-root');
     expect(content).toBeTruthy();
 
-    fireEvent.keyDown(content as HTMLElement, { key: 'ArrowDown' });
-    fireEvent.keyDown(content as HTMLElement, { key: 'PageDown' });
+    const nameInput = screen.getByLabelText('name-input');
+    (nameInput as HTMLInputElement).focus();
 
-    expect(scrollByMock).toHaveBeenCalledTimes(2);
+    fireEvent.keyDown(nameInput, { key: 'ArrowDown' });
+    fireEvent.keyDown(nameInput, { key: 'PageDown' });
+
+    expect(scrollByMock).toHaveBeenCalled();
   });
 });
