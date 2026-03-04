@@ -136,50 +136,6 @@ def _note_blocks_to_markdown(note_blocks: object) -> str:
     return enrichment_notes.note_blocks_to_markdown(note_blocks, _coerce_text_value)
 
 
-def _is_missing_culture_field(culture: Culture, suggested_field: str) -> bool:
-    """Return True if a suggestion targets an empty value in the current culture."""
-    return enrichment_fields.is_missing_culture_field(culture, suggested_field)
-
-
-def _missing_enrichment_fields(culture: Culture) -> list[str]:
-    """List enrichment fields that are still empty for complete mode."""
-    return enrichment_fields.missing_enrichment_fields(culture)
-
-
-def _compute_plausibility_warnings(culture: Culture, suggested_fields: dict[str, Any]) -> list[dict[str, str]]:
-    """Generate plausibility warnings without mutating suggested values."""
-    return enrichment_fields.compute_plausibility_warnings(culture, suggested_fields)
-
-
-def _normalize_sowing_method_enrichment_fields(
-    culture: Culture,
-    suggested_fields: dict[str, Any],
-    evidence: dict[str, Any],
-    validation: dict[str, Any],
-) -> None:
-    """Normalize sowing-method suggestions and replace legacy single seed-rate fields."""
-    enrichment_sowing.normalize_sowing_method_enrichment_fields(
-        culture,
-        suggested_fields,
-        evidence,
-        validation,
-        _normalize_choice_value,
-        _coerce_text_value,
-        normalize_numeric_field,
-    )
-
-
-
-
-def _apply_method_seed_rates_to_suggestions(suggested_fields: dict[str, Any], validation: dict[str, Any]) -> None:
-    """Build seed_rate_by_cultivation from method-specific enrichment fields."""
-    enrichment_sowing.apply_method_seed_rates_to_suggestions(suggested_fields, validation, _normalize_choice_value)
-
-
-
-
-
-
 def _normalize_supplier_text(value: str) -> str:
     """Normalize supplier text for case-insensitive source matching."""
     return enrichment_sources.normalize_supplier_text(value)
@@ -201,38 +157,9 @@ def _url_matches_supplier_domains(url: str, supplier_domains: set[str]) -> bool:
 
 
 
-def _filter_evidence_to_allowed_domains(
-    evidence: dict[str, Any],
-    supplier_domains: set[str],
-    validation: dict[str, Any],
-) -> None:
-    """Filter evidence entries to supplier domains for seed packages only."""
-    enrichment_sources.filter_evidence_to_allowed_domains(evidence, supplier_domains, validation, _coerce_text_value)
-
-
-def _enforce_supplier_evidence_requirements(
-    suggested_fields: dict[str, Any],
-    evidence: dict[str, Any],
-    validation: dict[str, Any],
-) -> None:
-    """Enforce supplier-evidence requirements for seed packages only."""
-    enrichment_sources.enforce_supplier_evidence_requirements(suggested_fields, evidence, validation)
-
-
-def _add_category_mismatch_warning(culture: Culture, evidence: dict[str, Any], validation: dict[str, Any]) -> None:
-    """Warn when likely supplier product page path does not match crop category."""
-    enrichment_sources.add_category_mismatch_warning(culture, evidence, validation, _coerce_text_value)
-
 def _is_supplier_entry(entry: dict[str, Any], supplier_name: str, supplier_domains: set[str]) -> bool:
     """Return True if evidence entry is explicitly or implicitly supplier-specific."""
     return enrichment_sources.is_supplier_entry(entry, supplier_name, supplier_domains, _coerce_text_value)
-
-def _build_structured_sources(
-    culture: Culture,
-    evidence: dict[str, Any],
-) -> list[dict[str, str]]:
-    """Build structured source metadata from evidence entries."""
-    return enrichment_sources.build_structured_sources(culture, evidence, _coerce_text_value)
 
 def _render_sources_markdown(structured_sources: list[dict[str, str]]) -> str:
     """Render structured sources into a markdown sources section."""
@@ -312,7 +239,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             mode=mode,
             target_fields=target_fields,
             supplier_only=supplier_only,
-            missing_enrichment_fields=_missing_enrichment_fields,
+            missing_enrichment_fields=enrichment_fields.missing_enrichment_fields,
             supplier_domains_for_culture=_supplier_domains_for_culture,
         )
 
@@ -380,7 +307,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
 
         should_fallback = not self._has_supplier_specific_evidence(supplier_name, primary_result.get('evidence'))
         if should_fallback:
-            target_fields = _missing_enrichment_fields(context.culture) if context.mode == 'complete' else []
+            target_fields = enrichment_fields.missing_enrichment_fields(context.culture) if context.mode == 'complete' else []
             fallback_prompt = self._build_prompt(
                 context.culture,
                 context.mode,
@@ -490,10 +417,6 @@ def get_enrichment_provider() -> BaseEnrichmentProvider:
 
 
 
-def _normalize_suggested_fields_payload(payload: object, validation: dict[str, Any]) -> dict[str, Any]:
-    """Normalize suggested_fields payload to mapping form without raising hard errors."""
-    return enrichment_postprocess.normalize_suggested_fields_payload(payload, validation, _coerce_text_value)
-
 def _supplier_specific_entries(supplier_name: str, entries: object) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Split evidence entries into supplier-specific and general groups."""
     return enrichment_output.supplier_specific_entries(
@@ -506,53 +429,6 @@ def _supplier_specific_entries(supplier_name: str, entries: object) -> tuple[lis
         ),
     )
 
-
-def _enforce_supplier_first_output(
-    culture: Culture,
-    suggested_fields: dict[str, Any],
-    evidence: dict[str, Any],
-    validation: dict[str, Any],
-) -> None:
-    """Deterministically enforce supplier-first suggestions before returning the result."""
-    enrichment_output.enforce_supplier_first_output(
-        culture,
-        suggested_fields,
-        evidence,
-        validation,
-        _supplier_specific_entries,
-        _is_supplier_matching_evidence,
-        _coerce_text_value,
-    )
-
-
-def _apply_source_weighted_confidence(
-    culture: Culture,
-    suggested_fields: dict[str, Any],
-    evidence: dict[str, Any],
-) -> None:
-    """Adjust confidence scores according to supplier and source characteristics."""
-    enrichment_output.apply_source_weighted_confidence(
-        culture,
-        suggested_fields,
-        evidence,
-        _supplier_specific_entries,
-        _coerce_text_value,
-    )
-
-
-def _validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidence: dict[str, Any], validation: dict[str, Any]) -> None:
-    """Validate and normalize seed package suggestions."""
-    enrichment_postprocess.validate_seed_package_suggestions(suggested_fields, evidence, validation)
-
-def _normalize_suggested_field_values(suggested_fields: dict[str, Any], validation: dict[str, Any]) -> None:
-    """Normalize value formats for numeric fields while preserving response schema."""
-    enrichment_postprocess.normalize_suggested_field_values(
-        suggested_fields,
-        validation,
-        NUMERIC_SUGGESTED_FIELDS,
-        normalize_numeric_field,
-        _coerce_text_value,
-    )
 
 def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
     """Generate enrichment suggestions for one culture."""
@@ -599,7 +475,11 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
 
     if not isinstance(validation, dict):
         validation = {'warnings': [], 'errors': []}
-    suggested_fields = _normalize_suggested_fields_payload(suggested_fields, validation)
+    suggested_fields = enrichment_postprocess.normalize_suggested_fields_payload(
+        suggested_fields,
+        validation,
+        _coerce_text_value,
+    )
     if not isinstance(evidence, dict):
         evidence = {}
         warnings = validation.setdefault('warnings', [])
@@ -611,11 +491,11 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
             })
 
     supplier_domains = _supplier_domains_for_culture(culture)
-    _filter_evidence_to_allowed_domains(evidence, supplier_domains, validation)
-    _enforce_supplier_evidence_requirements(suggested_fields, evidence, validation)
-    _add_category_mismatch_warning(culture, evidence, validation)
+    enrichment_sources.filter_evidence_to_allowed_domains(evidence, supplier_domains, validation, _coerce_text_value)
+    enrichment_sources.enforce_supplier_evidence_requirements(suggested_fields, evidence, validation)
+    enrichment_sources.add_category_mismatch_warning(culture, evidence, validation, _coerce_text_value)
 
-    structured_sources = _build_structured_sources(culture, evidence)
+    structured_sources = enrichment_sources.build_structured_sources(culture, evidence, _coerce_text_value)
 
     if note_blocks:
         cleaned_note_blocks = _note_blocks_to_markdown(note_blocks).strip()
@@ -632,12 +512,40 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
         _allowed_choice_values,
     )
 
-    _validate_seed_package_suggestions(suggested_fields, evidence, validation)
-    _normalize_suggested_field_values(suggested_fields, validation)
-    _normalize_sowing_method_enrichment_fields(culture, suggested_fields, evidence, validation)
-    _apply_method_seed_rates_to_suggestions(suggested_fields, validation)
-    _enforce_supplier_first_output(culture, suggested_fields, evidence, validation)
-    _apply_source_weighted_confidence(culture, suggested_fields, evidence)
+    enrichment_postprocess.validate_seed_package_suggestions(suggested_fields, evidence, validation)
+    enrichment_postprocess.normalize_suggested_field_values(
+        suggested_fields,
+        validation,
+        NUMERIC_SUGGESTED_FIELDS,
+        normalize_numeric_field,
+        _coerce_text_value,
+    )
+    enrichment_sowing.normalize_sowing_method_enrichment_fields(
+        culture,
+        suggested_fields,
+        evidence,
+        validation,
+        _normalize_choice_value,
+        _coerce_text_value,
+        normalize_numeric_field,
+    )
+    enrichment_sowing.apply_method_seed_rates_to_suggestions(suggested_fields, validation, _normalize_choice_value)
+    enrichment_output.enforce_supplier_first_output(
+        culture,
+        suggested_fields,
+        evidence,
+        validation,
+        _supplier_specific_entries,
+        _is_supplier_matching_evidence,
+        _coerce_text_value,
+    )
+    enrichment_output.apply_source_weighted_confidence(
+        culture,
+        suggested_fields,
+        evidence,
+        _supplier_specific_entries,
+        _coerce_text_value,
+    )
     enrichment_finalize.ensure_supplier_product_error(evidence, validation)
 
     suggested_fields = enrichment_finalize.apply_complete_mode_filter(
@@ -645,8 +553,8 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
         culture=culture,
         suggested_fields=suggested_fields,
         validation=validation,
-        is_missing_culture_field=_is_missing_culture_field,
-        missing_enrichment_fields=_missing_enrichment_fields,
+        is_missing_culture_field=enrichment_fields.is_missing_culture_field,
+        missing_enrichment_fields=enrichment_fields.missing_enrichment_fields,
     )
 
     enrichment_finalize.maybe_default_harvest_method(culture, suggested_fields, validation)
@@ -655,7 +563,7 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
         culture,
         suggested_fields,
         validation,
-        _compute_plausibility_warnings,
+        enrichment_fields.compute_plausibility_warnings,
     )
 
     enrichment_postprocess.cleanup_validation_warnings(validation, suggested_fields)
