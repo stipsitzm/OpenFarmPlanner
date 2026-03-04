@@ -14,8 +14,16 @@ import requests
 from django.conf import settings
 
 from farm.models import Culture, EnrichmentAccountingRun
-from farm.services import enrichment_fields, enrichment_finalize, enrichment_notes, enrichment_openai, enrichment_output, enrichment_postprocess, enrichment_prompt, enrichment_sources, enrichment_sowing
-from farm.services.enrichment_common import (
+from farm.services.enrichment_helpers import finalize as enrichment_finalize
+from farm.services.enrichment_helpers import notes as enrichment_notes
+from farm.services.enrichment_helpers import openai as enrichment_openai
+from farm.services.enrichment_helpers import output as enrichment_output
+from farm.services.enrichment_helpers import postprocess as enrichment_postprocess
+from farm.services.enrichment_helpers import prompt as enrichment_prompt
+from farm.services.enrichment_helpers import sowing as enrichment_sowing
+from farm.services.enrichment_helpers import sources as enrichment_sources
+from farm.services.enrichment_helpers import fields as enrichment_fields
+from farm.services.enrichment_helpers.common import (
     allowed_choice_values as common_allowed_choice_values,
     coerce_setting_to_str as common_coerce_setting_to_str,
     coerce_text_value as common_coerce_text_value,
