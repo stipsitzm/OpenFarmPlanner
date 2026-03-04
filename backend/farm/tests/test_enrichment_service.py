@@ -705,6 +705,11 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.assertNotIn('growth_duration_days', result['suggested_fields'])
         self.assertEqual(len(result['evidence']['expected_yield']), 1)
         self.assertTrue(all(item.get('supplier_specific') is True for item in result['evidence']['expected_yield']))
+        dropped_warnings = [
+            warning for warning in result.get('validation', {}).get('warnings', [])
+            if warning.get('code') == 'supplier_only_non_supplier_suggestion_dropped'
+        ]
+        self.assertTrue(any('growth_duration_days' in str(w.get('message', '')) for w in dropped_warnings))
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
     def test_seed_packages_numeric_values_with_unit_g_are_structured(self, post_mock):

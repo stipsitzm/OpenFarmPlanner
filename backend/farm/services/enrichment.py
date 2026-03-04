@@ -1261,7 +1261,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
                         warnings.append({
                             'field': field_name,
                             'code': 'supplier_only_non_supplier_suggestion_dropped',
-                            'message': 'Dropped suggestion in supplier-only phase because supplier evidence is missing.',
+                            'message': f"Dropped suggestion for {field_name} in supplier-only phase because supplier evidence is missing.",
                         })
             filtered_suggestions = filtered
 
