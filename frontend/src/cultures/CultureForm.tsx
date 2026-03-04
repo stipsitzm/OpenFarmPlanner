@@ -215,7 +215,9 @@ export function CultureForm({
 
       const activeElement = document.activeElement;
       const isNoElementFocused = !activeElement || activeElement === document.body || activeElement === document.documentElement;
-      if (!isNoElementFocused && !contentElement.contains(activeElement)) {
+      const dialogElement = contentElement.closest('[role="dialog"]');
+      const isFocusInsideDialog = Boolean(dialogElement && activeElement && dialogElement.contains(activeElement));
+      if (!isNoElementFocused && !contentElement.contains(activeElement) && !isFocusInsideDialog) {
         return;
       }
 

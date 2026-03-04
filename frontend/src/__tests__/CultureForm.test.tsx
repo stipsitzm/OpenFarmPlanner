@@ -171,4 +171,23 @@ describe('CultureForm', () => {
 
     expect(scrollByMock).toHaveBeenCalled();
   });
+
+  it('scrolls dialog content when focus is on dialog actions', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const scrollByMock = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
+      value: scrollByMock,
+      configurable: true,
+      writable: true,
+    });
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+
+    const saveButton = screen.getByRole('button', { name: 'form.save' });
+    (saveButton as HTMLButtonElement).focus();
+
+    fireEvent.keyDown(window, { key: 'PageDown' });
+
+    expect(scrollByMock).toHaveBeenCalled();
+  });
 });
