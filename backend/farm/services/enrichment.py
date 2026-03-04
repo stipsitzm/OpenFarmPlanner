@@ -14,7 +14,7 @@ import requests
 from django.conf import settings
 
 from farm.models import Culture, EnrichmentAccountingRun
-from farm.services import enrichment_fields, enrichment_notes, enrichment_openai, enrichment_output, enrichment_postprocess, enrichment_prompt, enrichment_sources, enrichment_sowing
+from farm.services import enrichment_fields, enrichment_finalize, enrichment_notes, enrichment_openai, enrichment_output, enrichment_postprocess, enrichment_prompt, enrichment_sources, enrichment_sowing
 from farm.services.enrichment_common import (
     allowed_choice_values as common_allowed_choice_values,
     coerce_setting_to_str as common_coerce_setting_to_str,
@@ -676,102 +676,51 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
             "confidence": 0.8 if provider.provider_name != "fallback" else 0.4,
         }
 
-    for field_name in ("nutrient_demand", "harvest_method"):
-        if field_name not in suggested_fields or not isinstance(suggested_fields[field_name], dict):
-            continue
+    enrichment_finalize.normalize_choice_suggestions(
+        suggested_fields,
+        validation,
+        _normalize_choice_value,
+        _allowed_choice_values,
+    )
 
-        raw_value = suggested_fields[field_name].get("value")
-        normalized_value = _normalize_choice_value(field_name, raw_value)
-        allowed_values = _allowed_choice_values(field_name)
-        if normalized_value in allowed_values:
-            suggested_fields[field_name]["value"] = normalized_value
-            continue
-
-        suggested_fields.pop(field_name, None)
-        warnings = validation.setdefault("warnings", [])
-        if isinstance(warnings, list):
-            warnings.append({
-                "field": field_name,
-                "code": "invalid_choice_dropped",
-                "message": f"Dropped AI suggestion '{normalized_value}' for {field_name}; expected one of {sorted(allowed_values)}.",
-            })
-
-    supplier_name = (culture.supplier.name if culture.supplier else (culture.seed_supplier or '')).strip()
     _validate_seed_package_suggestions(suggested_fields, evidence, validation)
     _normalize_suggested_field_values(suggested_fields, validation)
     _normalize_sowing_method_enrichment_fields(culture, suggested_fields, evidence, validation)
     _apply_method_seed_rates_to_suggestions(suggested_fields, validation)
     _enforce_supplier_first_output(culture, suggested_fields, evidence, validation)
     _apply_source_weighted_confidence(culture, suggested_fields, evidence)
-    if not any(isinstance(entries, list) and entries for entries in evidence.values()):
-        errors = validation.setdefault('errors', [])
-        if isinstance(errors, list):
-            errors.append({'field': 'supplier_product_page', 'code': 'supplier_product_not_found', 'message': 'No supplier product page was found on allowed domains.'})
+    enrichment_finalize.ensure_supplier_product_error(evidence, validation)
 
-    unresolved_fields: list[str] = []
-    if mode == "complete":
-        suggested_fields = {
-            field_name: suggestion
-            for field_name, suggestion in suggested_fields.items()
-            if field_name == 'notes' or _is_missing_culture_field(culture, field_name)
-        }
+    suggested_fields = enrichment_finalize.apply_complete_mode_filter(
+        mode=mode,
+        culture=culture,
+        suggested_fields=suggested_fields,
+        validation=validation,
+        is_missing_culture_field=_is_missing_culture_field,
+        missing_enrichment_fields=_missing_enrichment_fields,
+    )
 
-        unresolved_fields = [
-            field_name
-            for field_name in _missing_enrichment_fields(culture)
-            if field_name not in suggested_fields
-        ]
-        if unresolved_fields:
-            warnings = validation.setdefault("warnings", [])
-            if isinstance(warnings, list):
-                warnings.append({
-                    "field": "complete",
-                    "code": "fields_still_missing_after_research",
-                    "message": (
-                        "Für folgende Felder konnten keine verlässlichen Informationen ermittelt werden: "
-                        f"{', '.join(unresolved_fields)}."
-                    ),
-                })
+    enrichment_finalize.maybe_default_harvest_method(culture, suggested_fields, validation)
 
-    if (
-        'harvest_method' not in suggested_fields
-        and not (culture.harvest_method or '').strip()
-        and ('expected_yield' in suggested_fields or 'harvest_duration_days' in suggested_fields)
-    ):
-        suggested_fields['harvest_method'] = {'value': 'per_sqm', 'unit': None, 'confidence': 0.45}
-        warnings = validation.setdefault("warnings", [])
-        if isinstance(warnings, list):
-            warnings.append({
-                'field': 'harvest_method',
-                'code': 'harvest_method_defaulted',
-                'message': 'Defaulted harvest_method to per_sqm because harvest data was suggested without method.',
-            })
-
-    plausibility_warnings = _compute_plausibility_warnings(culture, suggested_fields)
-    if plausibility_warnings:
-        warnings = validation.setdefault("warnings", [])
-        if isinstance(warnings, list):
-            warnings.extend(plausibility_warnings)
+    enrichment_finalize.extend_plausibility_warnings(
+        culture,
+        suggested_fields,
+        validation,
+        _compute_plausibility_warnings,
+    )
 
     enrichment_postprocess.cleanup_validation_warnings(validation, suggested_fields)
 
-    now = datetime.now(timezone.utc).isoformat()
-    result = {
-        "run_id": f"enr_{culture.id}_{int(datetime.now().timestamp())}",
-        "culture_id": culture.id,
-        "mode": mode,
-        "status": "completed",
-        "started_at": now,
-        "finished_at": now,
-        "model": provider.model_name,
-        "provider": provider.provider_name,
-        "search_provider": provider.search_provider_name,
-        "suggested_fields": suggested_fields,
-        "evidence": evidence,
-        "structured_sources": structured_sources,
-        "validation": validation,
-        "usage": usage,
-        "costEstimate": cost_estimate,
-    }
+    result = enrichment_finalize.build_result_payload(
+        culture=culture,
+        mode=mode,
+        provider=provider,
+        suggested_fields=suggested_fields,
+        evidence=evidence,
+        structured_sources=structured_sources,
+        validation=validation,
+        usage=usage,
+        cost_estimate=cost_estimate,
+    )
     _persist_accounting_run(culture, mode, result)
     return result
