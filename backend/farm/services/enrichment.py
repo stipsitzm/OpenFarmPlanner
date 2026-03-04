@@ -490,6 +490,17 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
                 'message': 'Invalid evidence payload type; treating as empty mapping.',
             })
 
+    if isinstance(suggested_fields, dict) and 'seed_rate_transplant_value' in suggested_fields:
+        suggested_fields.pop('seed_rate_transplant_value', None)
+        evidence.pop('seed_rate_transplant_value', None)
+        warnings = validation.setdefault('warnings', [])
+        if isinstance(warnings, list):
+            warnings.append({
+                'field': 'seed_rate_transplant_value',
+                'code': 'seed_rate_transplant_value_not_researched',
+                'message': 'Dropped AI suggestion for seed_rate_transplant_value because this field is not researched by AI.',
+            })
+
     supplier_domains = _supplier_domains_for_culture(culture)
     enrichment_sources.filter_evidence_to_allowed_domains(evidence, supplier_domains, validation, _coerce_text_value)
     enrichment_sources.enforce_supplier_evidence_requirements(suggested_fields, evidence, validation)

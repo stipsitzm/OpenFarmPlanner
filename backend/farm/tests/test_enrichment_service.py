@@ -341,7 +341,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
-    def test_keeps_transplant_unit_null_when_not_explicitly_stated(self, post_mock):
+    def test_drops_transplant_value_from_ai_output(self, post_mock):
         self.culture.cultivation_type = 'pre_cultivation'
         self.culture.save(update_fields=['cultivation_type'])
         response = Mock()
@@ -363,9 +363,10 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         post_mock.return_value = response
 
         result = enrich_culture(self.culture, 'complete')
+        self.assertNotIn('seed_rate_transplant_value', result['suggested_fields'])
         self.assertNotIn('seed_rate_transplant_unit', result['suggested_fields'])
         warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
-        self.assertIn('seed_rate_unit_missing_for_method_value', warning_codes)
+        self.assertIn('seed_rate_transplant_value_not_researched', warning_codes)
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
@@ -870,7 +871,7 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.assertIn("Package sizes MUST come exclusively from supplier evidence", sent_input)
         self.assertIn("supplier_specific", sent_input)
         self.assertIn("For seed_rate_direct_value, unit must be only g_per_m2 or g_per_lfm", sent_input)
-        self.assertIn("For seed_rate_transplant_value, unit must be seeds_per_plant", sent_input)
+        self.assertNotIn("seed_rate_transplant_value", sent_input)
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
@@ -1190,7 +1191,7 @@ class NumericNormalizationTest(TestCase):
 
         warning_codes = [item.get('code') for item in result['validation']['warnings']]
         self.assertNotIn('seed_rate_unit_missing_for_method_value', warning_codes)
-        self.assertIn('seed_rate_unit_invalid_for_method', warning_codes)
+        self.assertIn('seed_rate_transplant_value_not_researched', warning_codes)
 
 
     @override_settings(AI_ENRICHMENT_ENABLED=True)

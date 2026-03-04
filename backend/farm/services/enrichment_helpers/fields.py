@@ -67,7 +67,6 @@ def missing_enrichment_fields(culture: Culture) -> list[str]:
         'sowing_depth_cm',
         'allowed_sowing_methods',
         'seed_rate_direct_value',
-        'seed_rate_transplant_value',
         'thousand_kernel_weight_g',
         'nutrient_demand',
     ]
