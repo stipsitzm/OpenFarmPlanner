@@ -816,10 +816,10 @@ function Cultures(): React.ReactElement {
     distance_within_row_cm: 'form.distanceWithinRowCm',
     row_spacing_cm: 'form.rowSpacingCm',
     sowing_depth_cm: 'form.sowingDepthCm',
-    seed_rate_direct_value: 'form.seedRateValue',
-    seed_rate_direct_unit: 'form.seedRateUnit',
-    seed_rate_transplant_value: 'form.seedRateValue',
-    seed_rate_transplant_unit: 'form.seedRateUnit',
+    seed_rate_direct_value: 'form.seedRateDirectValue',
+    seed_rate_direct_unit: 'form.seedRateDirectUnit',
+    seed_rate_transplant_value: 'form.seedRatePreCultivationValue',
+    seed_rate_transplant_unit: 'form.seedRatePreCultivationUnit',
     seed_rate_by_cultivation: 'form.seedRateSectionTitle',
     allowed_sowing_methods: 'form.cultivationType',
     thousand_kernel_weight_g: 'form.thousandKernelWeightLabel',
@@ -893,6 +893,22 @@ function Cultures(): React.ReactElement {
       return packages
         .map((pkg) => `${pkg.size_value} ${pkg.size_unit}`)
         .join(', ');
+    }
+
+    if (field === 'seed_rate_by_cultivation' && value && typeof value === 'object') {
+      const byMethod = value as Record<string, { value?: unknown; unit?: unknown }>;
+      const chunks: string[] = [];
+      const direct = byMethod.direct_sowing;
+      if (direct && typeof direct === 'object') {
+        chunks.push(`Direktsaat: ${String(direct.value ?? '')} ${String(direct.unit ?? '')}`.trim());
+      }
+      const pre = byMethod.pre_cultivation;
+      if (pre && typeof pre === 'object') {
+        chunks.push(`Anzucht: ${String(pre.value ?? '')} ${String(pre.unit ?? '')}`.trim());
+      }
+      if (chunks.length) {
+        return chunks.join(' | ');
+      }
     }
 
     if (Array.isArray(value)) {
@@ -1082,7 +1098,21 @@ function Cultures(): React.ReactElement {
         return;
       }
       if (field === 'seed_rate_by_cultivation' && suggestionValue && typeof suggestionValue === 'object') {
-        patch.seed_rate_by_cultivation = suggestionValue;
+        const rawByCultivation = suggestionValue as Record<string, { value?: unknown; unit?: unknown }>;
+        const sanitizedByCultivation: Record<string, { value: number; unit: string }> = {};
+        const directValue = Number(rawByCultivation.direct_sowing?.value);
+        const directUnit = normalizeSeedRateUnit(rawByCultivation.direct_sowing?.unit);
+        if (Number.isFinite(directValue) && directValue > 0 && directUnit && ['g_per_m2', 'g_per_lfm', 'seeds/m'].includes(directUnit)) {
+          sanitizedByCultivation.direct_sowing = { value: directValue, unit: directUnit };
+        }
+        const preValue = Number(rawByCultivation.pre_cultivation?.value);
+        const preUnit = normalizeSeedRateUnit(rawByCultivation.pre_cultivation?.unit);
+        if (Number.isFinite(preValue) && preValue > 0 && preUnit && ['seeds_per_plant', 'g_per_m2'].includes(preUnit)) {
+          sanitizedByCultivation.pre_cultivation = { value: preValue, unit: preUnit };
+        }
+        if (Object.keys(sanitizedByCultivation).length > 0) {
+          patch.seed_rate_by_cultivation = sanitizedByCultivation;
+        }
         return;
       }
       if (field === 'seed_rate_direct_value' || field === 'seed_rate_direct_unit' || field === 'seed_rate_transplant_value' || field === 'seed_rate_transplant_unit') {
@@ -1103,7 +1133,7 @@ function Cultures(): React.ReactElement {
         if (Number.isFinite(directValue) && directValue > 0 && directUnit) {
           byCultivation.direct_sowing = { value: directValue, unit: directUnit };
         }
-        if (Number.isFinite(transplantValue) && transplantValue > 0 && transplantUnit) {
+        if (Number.isFinite(transplantValue) && transplantValue > 0 && transplantUnit && ['seeds_per_plant', 'g_per_m2'].includes(transplantUnit)) {
           byCultivation.pre_cultivation = { value: transplantValue, unit: transplantUnit };
         }
         if (Object.keys(byCultivation).length > 0) {
@@ -1718,5 +1748,4 @@ function Cultures(): React.ReactElement {
     </div>
   );
 }
-
 export default Cultures;

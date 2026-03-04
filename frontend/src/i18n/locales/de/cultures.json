@@ -107,7 +107,11 @@
     "propagationDurationDaysTooLong": "Anzuchtdauer darf nicht länger als die Wachstumsdauer sein",
     "harvestMethodRequired": "Erntemethode ist bei angegebenem Ertrag erforderlich",
     "seedingRequirementTypeRequired": "Saatgutbedarf-Typ ist erforderlich, wenn ein Saatgutbedarf angegeben ist.",
-    "seedingRequirementValueRequired": "Saatgutbedarf ist erforderlich, wenn ein Saatgutbedarf-Typ angegeben ist."
+    "seedingRequirementValueRequired": "Saatgutbedarf ist erforderlich, wenn ein Saatgutbedarf-Typ angegeben ist.",
+    "seedRateDirectValue": "Direktsaat Menge",
+    "seedRateDirectUnit": "Direktsaat Einheit",
+    "seedRatePreCultivationValue": "Anzucht Menge",
+    "seedRatePreCultivationUnit": "Anzucht Einheit"
   },
   "messages": {
     "createSuccess": "Kultur erfolgreich erstellt",

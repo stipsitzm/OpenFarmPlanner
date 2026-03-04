@@ -704,6 +704,23 @@ def _apply_method_seed_rates_to_suggestions(suggested_fields: dict[str, Any], va
                 })
             continue
 
+        if method_key == 'pre_cultivation' and unit_value not in {'seeds_per_plant', 'g_per_m2'}:
+            if isinstance(warnings, list):
+                warnings.append({
+                    'field': unit_field,
+                    'code': 'seed_rate_unit_invalid_for_method',
+                    'message': 'Method pre_cultivation only accepts seeds_per_plant or g_per_m2; entry skipped.',
+                })
+            continue
+        if method_key == 'direct_sowing' and unit_value not in {'g_per_m2', 'g_per_lfm', 'seeds/m'}:
+            if isinstance(warnings, list):
+                warnings.append({
+                    'field': unit_field,
+                    'code': 'seed_rate_unit_invalid_for_method',
+                    'message': 'Method direct_sowing only accepts g_per_m2, g_per_lfm, or seeds/m; entry skipped.',
+                })
+            continue
+
         method_seed_rates[method_key] = {'value': parsed_value, 'unit': unit_value}
 
     if method_seed_rates:
@@ -1435,14 +1452,29 @@ def _combine_text_blocks(*blocks: str) -> str:
     return "\n\n".join(out).strip()
 
 
+def _dedupe_section_content(content: str) -> str:
+    """Remove repeated paragraphs inside one markdown section."""
+    parts = [chunk.strip() for chunk in re.split(r"\n\s*\n", content) if chunk.strip()]
+    seen: set[str] = set()
+    unique: list[str] = []
+    for part in parts:
+        if part in seen:
+            continue
+        seen.add(part)
+        unique.append(part)
+    return "\n\n".join(unique).strip()
+
+
 def build_note_appendix(base_notes: object, note_blocks: object) -> str:
     """Integrate generated notes into a clean, sectioned markdown structure."""
     base = _coerce_text_value(base_notes, 'notes')
     addition = _note_blocks_to_markdown(note_blocks)
+    if not addition and not base:
+        return ''
     if not addition:
-        return base
+        addition = ''
     if not base:
-        return addition
+        base = ''
 
     base_intro, base_known, base_other = _parse_notes_sections(base)
     add_intro, add_known, add_other = _parse_notes_sections(addition)
@@ -1459,17 +1491,22 @@ def build_note_appendix(base_notes: object, note_blocks: object) -> str:
         merged_parts.append(intro)
 
     for title in ordered_known_titles:
-        merged_content = add_known.get(title) or base_known.get(title, '')
+        merged_content = _combine_text_blocks(add_known.get(title, ''), base_known.get(title, ''))
+        merged_content = _dedupe_section_content(merged_content)
         if merged_content:
             merged_parts.append(f"## {title}\n{merged_content}")
 
     other_map: dict[str, str] = {title: content for title, content in base_other}
     for title, content in add_other:
-        other_map[title] = content
+        previous = other_map.get(title, '')
+        other_map[title] = _dedupe_section_content(_combine_text_blocks(content, previous))
     for title, content in other_map.items():
-        merged_parts.append(f"## {title}\n{content}")
+        normalized_content = _dedupe_section_content(content)
+        if normalized_content:
+            merged_parts.append(f"## {title}\n{normalized_content}")
 
     sources_content = add_known.get('Quellen') or base_known.get('Quellen', '')
+    sources_content = _dedupe_section_content(sources_content)
     if sources_content:
         merged_parts.append(f"## Quellen\n{sources_content}")
 
