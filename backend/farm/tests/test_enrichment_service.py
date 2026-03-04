@@ -336,8 +336,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
         result = enrich_culture(self.culture, 'complete')
         self.assertEqual(result['suggested_fields']['allowed_sowing_methods']['value'], ['direct_sowing'])
-        self.assertEqual(result['suggested_fields']['seed_rate_direct_value']['value'], 30.0)
-        self.assertEqual(result['suggested_fields']['seed_rate_direct_unit']['value'], None)
+        self.assertNotIn('seed_rate_direct_value', result['suggested_fields'])
         self.assertNotIn('seed_rate_by_cultivation', result['suggested_fields'])
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
@@ -440,12 +439,11 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
         result = enrich_culture(self.culture, 'complete')
         notes = result['suggested_fields']['notes']['value']
-        self.assertTrue(notes.startswith('Hinweis: bestehend.'))
+        self.assertEqual(notes, note_blocks)
         self.assertIn('## Dauerwerte\n- Neu Dauer.', notes)
         self.assertIn('## Ernte & Verwendung\n- Neu Ernte.', notes)
         self.assertNotIn('https://old.example', notes)
         self.assertIn('## Quellen\n- https://new.example', notes)
-        self.assertIn('Hinweis: Für folgende Felder konnten keine verlässlichen Informationen ermittelt werden:', notes)
 
 
 
@@ -475,7 +473,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         result = enrich_culture(self.culture, 'complete')
         warning_codes = [warning.get('code') for warning in result['validation']['warnings']]
         self.assertIn('fields_still_missing_after_research', warning_codes)
-        self.assertIn('Hinweis: Für folgende Felder konnten keine verlässlichen Informationen ermittelt werden:', result['suggested_fields']['notes']['value'])
+        self.assertEqual(result['suggested_fields']['notes']['value'], note_blocks)
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
@@ -871,7 +869,8 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.assertIn("Supplier-first rules are mandatory", sent_input)
         self.assertIn("Package sizes MUST come exclusively from supplier evidence", sent_input)
         self.assertIn("supplier_specific", sent_input)
-        self.assertIn("For seed_rate_direct_unit and seed_rate_transplant_unit, only output one of: g_per_m2, g_per_lfm, seeds_per_plant, or null", sent_input)
+        self.assertIn("For seed_rate_direct_value, unit must be only g_per_m2 or g_per_lfm", sent_input)
+        self.assertIn("For seed_rate_transplant_value, unit must be seeds_per_plant", sent_input)
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
@@ -1030,11 +1029,11 @@ class NumericNormalizationTest(TestCase):
         provider.model_name = 'gpt-5'
         provider.search_provider_name = 'web_search'
         provider.enrich.return_value = {
-            'suggested_fields': {
-                'allowed_sowing_methods': {'value': ['direct_sowing'], 'unit': None, 'confidence': 0.8},
-                'seed_rate_direct_value': {'value': '0.04-0.05', 'unit': '', 'confidence': 0.8},
-                'seed_rate_direct_unit': {'value': 'g/a', 'unit': None, 'confidence': 0.8},
-            },
+                'suggested_fields': {
+                    'allowed_sowing_methods': {'value': ['direct_sowing'], 'unit': None, 'confidence': 0.8},
+                    'seed_rate_direct_value': {'value': '0.04-0.05', 'unit': '', 'confidence': 0.8},
+                    'seed_rate_direct_unit': {'value': 'g/a', 'unit': None, 'confidence': 0.8},
+                },
             'evidence': {
                 'seed_rate_direct_value': [
                     {
@@ -1055,7 +1054,7 @@ class NumericNormalizationTest(TestCase):
         result = enrich_culture(culture, 'reresearch')
         self.assertAlmostEqual(result['suggested_fields']['seed_rate_direct_value']['value'], 0.00045, places=8)
         self.assertIsInstance(result['suggested_fields']['seed_rate_direct_value']['value'], float)
-        self.assertEqual(result['suggested_fields']['seed_rate_direct_unit']['value'], 'g_per_m2')
+        self.assertEqual(result['suggested_fields']['seed_rate_direct_value']['unit'], 'g_per_m2')
         by_method = result['suggested_fields']['seed_rate_by_cultivation']['value']
         self.assertAlmostEqual(by_method['direct_sowing']['value'], 0.00045, places=8)
         self.assertEqual(by_method['direct_sowing']['unit'], 'g_per_m2')
@@ -1107,7 +1106,7 @@ class NumericNormalizationTest(TestCase):
         suggested = result['suggested_fields']
 
         self.assertEqual(set(suggested['allowed_sowing_methods']['value']), {'direct_sowing', 'pre_cultivation'})
-        self.assertEqual(suggested['seed_rate_direct_unit']['value'], 'g_per_m2')
+        self.assertEqual(suggested['seed_rate_direct_value']['unit'], 'g_per_m2')
         self.assertAlmostEqual(suggested['seed_rate_direct_value']['value'], 0.09, places=8)
         self.assertNotIn('seed_rate_transplant_value', suggested)
         self.assertNotIn('seed_rate_transplant_unit', suggested)
@@ -1182,7 +1181,7 @@ class NumericNormalizationTest(TestCase):
         result = enrich_culture(culture, 'reresearch')
         suggested = result['suggested_fields']
 
-        self.assertEqual(suggested['seed_rate_direct_unit']['value'], 'g_per_m2')
+        self.assertEqual(suggested['seed_rate_direct_value']['unit'], 'g_per_m2')
         self.assertNotIn('seed_rate_transplant_unit', suggested)
         self.assertNotIn('seed_rate_transplant_value', suggested)
         by_method = suggested['seed_rate_by_cultivation']['value']
