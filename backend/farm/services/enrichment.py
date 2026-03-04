@@ -683,6 +683,18 @@ def _apply_method_seed_rates_to_suggestions(suggested_fields: dict[str, Any], va
             if isinstance(candidate, str) and candidate.strip():
                 unit_value = candidate.strip()
 
+        if not unit_value and isinstance(value_payload, dict):
+            candidate = value_payload.get('unit')
+            if isinstance(candidate, str) and candidate.strip():
+                normalized = _normalize_choice_value('seed_rate_unit', candidate.strip())
+                if isinstance(normalized, str) and normalized in {'g_per_m2', 'g_per_lfm', 'seeds_per_plant'}:
+                    unit_value = normalized
+                    suggested_fields[unit_field] = {
+                        'value': normalized,
+                        'unit': None,
+                        'confidence': value_payload.get('confidence', 0.6),
+                    }
+
         if not unit_value:
             if isinstance(warnings, list):
                 warnings.append({
@@ -1222,8 +1234,27 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         filtered_suggestions: Any = suggested_fields
         if isinstance(suggested_fields, dict):
             filtered: dict[str, Any] = {}
+            unit_companion_map = {
+                'seed_rate_direct_unit': 'seed_rate_direct_value',
+                'seed_rate_transplant_unit': 'seed_rate_transplant_value',
+            }
             for field_name, suggestion in suggested_fields.items():
-                if field_name == 'notes' or field_name in filtered_evidence:
+                companion_field = unit_companion_map.get(field_name)
+                has_companion_evidence = False
+                if companion_field and companion_field in filtered_evidence:
+                    explicit_unit_payload = (
+                        isinstance(suggestion, dict)
+                        and isinstance(suggestion.get('value'), str)
+                        and bool(suggestion.get('value').strip())
+                    )
+                    companion_suggestion = suggested_fields.get(companion_field)
+                    explicit_unit_in_companion_value = (
+                        isinstance(companion_suggestion, dict)
+                        and isinstance(companion_suggestion.get('unit'), str)
+                        and bool(companion_suggestion.get('unit').strip())
+                    )
+                    has_companion_evidence = explicit_unit_payload or explicit_unit_in_companion_value
+                if field_name == 'notes' or field_name in filtered_evidence or has_companion_evidence:
                     filtered[field_name] = suggestion
                 else:
                     if isinstance(warnings, list):

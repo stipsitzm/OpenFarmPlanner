@@ -1114,3 +1114,73 @@ class NumericNormalizationTest(TestCase):
         warning_codes = [item.get('code') for item in result['validation']['warnings']]
         self.assertIn('range_collapsed_to_mean', warning_codes)
         self.assertIn('seed_rate_unit_converted_from_g_per_are', warning_codes)
+
+
+    @override_settings(AI_ENRICHMENT_ENABLED=True)
+    @patch('farm.services.enrichment.get_enrichment_provider')
+    def test_preserves_method_units_from_value_payload_unit_field(self, provider_mock):
+        supplier = Supplier.objects.create(
+            name='ReinSaat',
+            homepage_url='https://www.reinsaat.at',
+            allowed_domains=['reinsaat.at'],
+        )
+        culture = Culture.objects.create(name='Salat', variety='Bijella', supplier=supplier)
+
+        provider = Mock()
+        provider.provider_name = 'openai_responses'
+        provider.model_name = 'gpt-5-mini'
+        provider.search_provider_name = 'web_search'
+        provider.enrich.return_value = {
+            'suggested_fields': {
+                'seed_rate_transplant_value': {'value': 0.045, 'unit': 'g_per_m2', 'confidence': 0.9},
+                'seed_rate_transplant_unit': {'value': None, 'unit': None, 'confidence': 0.9},
+                'seed_rate_direct_value': {'value': 0.09, 'unit': 'g_per_m2', 'confidence': 0.9},
+                'seed_rate_direct_unit': {'value': None, 'unit': None, 'confidence': 0.9},
+                'allowed_sowing_methods': {'value': ['Direktsaat', 'Pflanzung'], 'unit': None, 'confidence': 0.9},
+            },
+            'evidence': {
+                'seed_rate_transplant_value': [
+                    {
+                        'source_url': 'https://www.reinsaat.at/shop/DE/lettuce/loose_leaf_lettuce/',
+                        'title': 'Pflücksalate/Bunte Salate - ReinSaat GmbH',
+                        'retrieved_at': '2026-03-04',
+                        'snippet': 'Saatgutbedarf: 4-5 g/a bei Pflanzung, 6-12 g/a bei Direktsaat',
+                        'supplier_specific': True,
+                    },
+                ],
+                'seed_rate_direct_value': [
+                    {
+                        'source_url': 'https://www.reinsaat.at/shop/DE/lettuce/loose_leaf_lettuce/',
+                        'title': 'Pflücksalate/Bunte Salate - ReinSaat GmbH',
+                        'retrieved_at': '2026-03-04',
+                        'snippet': 'Saatgutbedarf: 4-5 g/a bei Pflanzung, 6-12 g/a bei Direktsaat',
+                        'supplier_specific': True,
+                    },
+                ],
+                'allowed_sowing_methods': [
+                    {
+                        'source_url': 'https://www.reinsaat.at/shop/DE/lettuce/loose_leaf_lettuce/',
+                        'title': 'Pflücksalate/Bunte Salate - ReinSaat GmbH',
+                        'retrieved_at': '2026-03-04',
+                        'snippet': 'Aussaat: Direktsaat oder Pflanzung verschieden je nach Sorte',
+                        'supplier_specific': True,
+                    },
+                ],
+            },
+            'validation': {'warnings': [], 'errors': []},
+            'note_blocks': '',
+            'usage': {'input_tokens': 1, 'cached_input_tokens': 0, 'output_tokens': 1},
+        }
+        provider_mock.return_value = provider
+
+        result = enrich_culture(culture, 'reresearch')
+        suggested = result['suggested_fields']
+
+        self.assertEqual(suggested['seed_rate_direct_unit']['value'], 'g_per_m2')
+        self.assertEqual(suggested['seed_rate_transplant_unit']['value'], 'g_per_m2')
+        by_method = suggested['seed_rate_by_cultivation']['value']
+        self.assertEqual(by_method['direct_sowing']['unit'], 'g_per_m2')
+        self.assertEqual(by_method['pre_cultivation']['unit'], 'g_per_m2')
+
+        warning_codes = [item.get('code') for item in result['validation']['warnings']]
+        self.assertNotIn('seed_rate_unit_missing_for_method_value', warning_codes)
