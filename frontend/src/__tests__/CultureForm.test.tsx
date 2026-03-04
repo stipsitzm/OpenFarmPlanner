@@ -129,4 +129,23 @@ describe('CultureForm', () => {
       supplier: { id: 11, name: 'Dreschflegel' },
     }));
   });
+
+  it('scrolls dialog content with arrow and page keys', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const scrollByMock = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
+      value: scrollByMock,
+      configurable: true,
+      writable: true,
+    });
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+    const content = document.querySelector('.MuiDialogContent-root');
+    expect(content).toBeTruthy();
+
+    fireEvent.keyDown(content as HTMLElement, { key: 'ArrowDown' });
+    fireEvent.keyDown(content as HTMLElement, { key: 'PageDown' });
+
+    expect(scrollByMock).toHaveBeenCalledTimes(2);
+  });
 });
