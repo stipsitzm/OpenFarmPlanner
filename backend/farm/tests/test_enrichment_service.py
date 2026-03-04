@@ -1057,3 +1057,60 @@ class NumericNormalizationTest(TestCase):
         warning_codes = [item.get('code') for item in result['validation']['warnings']]
         self.assertIn('range_collapsed_to_mean', warning_codes)
         self.assertIn('seed_rate_unit_converted_from_g_per_are', warning_codes)
+
+
+    @override_settings(AI_ENRICHMENT_ENABLED=True)
+    @patch('farm.services.enrichment.get_enrichment_provider')
+    def test_parses_method_specific_seed_rates_from_legacy_text(self, provider_mock):
+        supplier = Supplier.objects.create(
+            name='ReinSaat',
+            homepage_url='https://www.reinsaat.at',
+            allowed_domains=['reinsaat.at'],
+        )
+        culture = Culture.objects.create(name='Möhre', variety='Nantaise', supplier=supplier)
+
+        provider = Mock()
+        provider.provider_name = 'fallback'
+        provider.model_name = 'gpt-5'
+        provider.search_provider_name = 'web_search'
+        provider.enrich.return_value = {
+            'suggested_fields': {
+                'seed_rate_value': {
+                    'value': 'Saatgutbedarf: 4-5 g/a bei Pflanzung, 6-12 g/a bei Direktsaat',
+                    'unit': None,
+                    'confidence': 0.9,
+                },
+            },
+            'evidence': {
+                'seed_rate_value': [
+                    {
+                        'source_url': 'https://www.reinsaat.at/moehre',
+                        'title': 'ReinSaat Möhre',
+                        'retrieved_at': '2026-01-01T00:00:00Z',
+                        'snippet': 'Saatgutbedarf: 4-5 g/a bei Pflanzung, 6-12 g/a bei Direktsaat',
+                        'supplier_specific': True,
+                    },
+                ],
+            },
+            'validation': {'warnings': [], 'errors': []},
+            'note_blocks': '',
+            'usage': {'input_tokens': 1, 'cached_input_tokens': 0, 'output_tokens': 1},
+        }
+        provider_mock.return_value = provider
+
+        result = enrich_culture(culture, 'reresearch')
+        suggested = result['suggested_fields']
+
+        self.assertEqual(set(suggested['allowed_sowing_methods']['value']), {'direct_sowing', 'pre_cultivation'})
+        self.assertEqual(suggested['seed_rate_direct_unit']['value'], 'g_per_m2')
+        self.assertEqual(suggested['seed_rate_transplant_unit']['value'], 'g_per_m2')
+        self.assertAlmostEqual(suggested['seed_rate_direct_value']['value'], 0.09, places=8)
+        self.assertAlmostEqual(suggested['seed_rate_transplant_value']['value'], 0.045, places=8)
+
+        by_method = suggested['seed_rate_by_cultivation']['value']
+        self.assertEqual(by_method['direct_sowing']['unit'], 'g_per_m2')
+        self.assertEqual(by_method['pre_cultivation']['unit'], 'g_per_m2')
+
+        warning_codes = [item.get('code') for item in result['validation']['warnings']]
+        self.assertIn('range_collapsed_to_mean', warning_codes)
+        self.assertIn('seed_rate_unit_converted_from_g_per_are', warning_codes)

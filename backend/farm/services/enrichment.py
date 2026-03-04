@@ -474,6 +474,15 @@ def _normalize_sowing_method_enrichment_fields(
     """Normalize sowing-method suggestions and replace legacy single seed-rate fields."""
     warnings = validation.setdefault('warnings', [])
 
+    def _method_from_text(text: str) -> list[str]:
+        normalized_text = text.lower()
+        parsed: list[str] = []
+        if re.search(r'\bdirektsaat\b|\bdirect\s*sowing\b', normalized_text):
+            parsed.append('direct_sowing')
+        if re.search(r'\bpflanzung\b|\banzucht\b|\bpre\s*cultivation\b|\btransplant', normalized_text):
+            parsed.append('pre_cultivation')
+        return parsed
+
     def parse_methods(value: object) -> list[str]:
         parsed: list[str] = []
         candidates: list[object]
@@ -485,10 +494,41 @@ def _normalize_sowing_method_enrichment_fields(
             candidates = [value]
 
         for item in candidates:
+            if isinstance(item, str):
+                for method in _method_from_text(item):
+                    if method not in parsed:
+                        parsed.append(method)
             normalized = _normalize_choice_value('cultivation_type', item)
             if normalized in {'pre_cultivation', 'direct_sowing'} and normalized not in parsed:
                 parsed.append(normalized)
         return parsed
+
+    def parse_method_rates_from_text(text: str) -> dict[str, tuple[float | None, str | None]]:
+        parsed_rates: dict[str, tuple[float | None, str | None]] = {}
+        if not text.strip():
+            return parsed_rates
+
+        pattern = re.compile(
+            r'(?P<value>\d+(?:[\.,]\d+)?(?:\s*[\-–]\s*\d+(?:[\.,]\d+)?)?)\s*'
+            r'(?P<unit>g\s*/\s*a|g/a|g\s*/\s*m²|g\s*/\s*m2|g\s*/\s*lfm|korn\s*/\s*pflanze|seeds\s*per\s*plant|seeds_per_plant)?'
+            r'[^\n,;:.]*\b(?P<method>direktsaat|pflanzung|anzucht|pre\s*cultivation|direct\s*sowing|transplant(?:ing)?)\b',
+            flags=re.IGNORECASE,
+        )
+        for match in pattern.finditer(text):
+            method_raw = match.group('method')
+            parsed_methods = _method_from_text(method_raw)
+            if not parsed_methods:
+                normalized = _normalize_choice_value('cultivation_type', method_raw)
+                parsed_methods = [normalized] if normalized in {'pre_cultivation', 'direct_sowing'} else []
+            for method in parsed_methods:
+                numeric = normalize_method_value(f'seed_rate_{method}_value', match.group('value'))
+                normalized_unit, numeric = normalize_method_unit(
+                    f'seed_rate_{method}_unit',
+                    match.group('unit'),
+                    numeric,
+                )
+                parsed_rates[method] = (numeric, normalized_unit)
+        return parsed_rates
 
     def normalize_method_value(field_name: str, raw_value: object) -> float | None:
         if isinstance(raw_value, str) and ('-' in raw_value or '–' in raw_value):
@@ -541,6 +581,14 @@ def _normalize_sowing_method_enrichment_fields(
 
     legacy_seed_rate_value = suggested_fields.get('seed_rate_value')
     legacy_seed_rate_unit = suggested_fields.get('seed_rate_unit')
+
+    parsed_rates_from_text: dict[str, tuple[float | None, str | None]] = {}
+    if isinstance(legacy_seed_rate_value, dict) and isinstance(legacy_seed_rate_value.get('value'), str):
+        parsed_rates_from_text = parse_method_rates_from_text(str(legacy_seed_rate_value.get('value')))
+        for parsed_method in parsed_rates_from_text:
+            if parsed_method not in allowed_methods:
+                allowed_methods.append(parsed_method)
+
     if not allowed_methods and (isinstance(legacy_seed_rate_value, dict) or isinstance(legacy_seed_rate_unit, dict)):
         allowed_methods = ['direct_sowing']
 
@@ -576,6 +624,17 @@ def _normalize_sowing_method_enrichment_fields(
             suggested_fields[unit_field] = unit_payload
             if unit_field not in evidence and isinstance(evidence.get('seed_rate_unit'), list):
                 evidence[unit_field] = evidence.get('seed_rate_unit')
+
+        parsed_method_values = parsed_rates_from_text.get(method_key)
+        if parsed_method_values:
+            value_payload = value_payload if isinstance(value_payload, dict) else {'unit': None, 'confidence': 0.7}
+            value_payload['value'] = parsed_method_values[0]
+            suggested_fields[value_field] = value_payload
+
+            if parsed_method_values[1] is not None:
+                unit_payload = unit_payload if isinstance(unit_payload, dict) else {'unit': None, 'confidence': 0.7}
+                unit_payload['value'] = parsed_method_values[1]
+                suggested_fields[unit_field] = unit_payload
 
         numeric_value: float | None = None
         if isinstance(value_payload, dict):
@@ -1756,15 +1815,17 @@ def _normalize_suggested_field_values(suggested_fields: dict[str, Any], validati
     if isinstance(seed_rate, dict):
         raw_value = seed_rate.get('value')
         if isinstance(raw_value, str):
-            number_match = re.search(r'-?\d+(?:[\.,]\d+)?', raw_value)
-            if number_match:
-                seed_rate['value'] = float(number_match.group(0).replace(',', '.'))
-                if isinstance(warnings, list):
-                    warnings.append({
-                        'field': 'seed_rate_value',
-                        'code': 'seed_rate_value_unit_removed',
-                        'message': 'Removed embedded unit from seed_rate_value; use seed_rate_unit for units.',
-                    })
+            has_method_context = bool(re.search(r'\bdirektsaat\b|\bpflanzung\b|\banzucht\b|\bpre\s*cultivation\b|\bdirect\s*sowing\b|\btransplant', raw_value, flags=re.IGNORECASE))
+            if not has_method_context:
+                number_match = re.search(r'-?\d+(?:[\.,]\d+)?', raw_value)
+                if number_match:
+                    seed_rate['value'] = float(number_match.group(0).replace(',', '.'))
+                    if isinstance(warnings, list):
+                        warnings.append({
+                            'field': 'seed_rate_value',
+                            'code': 'seed_rate_value_unit_removed',
+                            'message': 'Removed embedded unit from seed_rate_value; use seed_rate_unit for units.',
+                        })
 
     expected_yield = suggested_fields.get('expected_yield')
     if isinstance(expected_yield, dict) and isinstance(expected_yield.get('value'), str):
