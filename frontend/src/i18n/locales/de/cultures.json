@@ -167,6 +167,13 @@
       "missing_supplier_evidence": "Für {{field}} fehlt zulässige Lieferanten-Evidenz; der Vorschlag wurde verworfen.",
       "supplier_mismatch_dropped": "Vorschlag für {{field}} wurde verworfen, da die Evidenz nicht zum Lieferanten passt.",
       "supplier_product_not_found": "Es wurde keine passende Produktseite auf der Lieferanten-Domain gefunden."
+    },
+    "loadingElapsed": "Fortschritt: {{percent}}% · Laufzeit: {{seconds}}s",
+    "loadingSteps": {
+      "request": "Anfrage an KI senden",
+      "research": "Webquellen recherchieren und sammeln",
+      "validation": "Hinweise validieren und normalisieren",
+      "results": "Vorschläge aufbereiten"
     }
   },
   "import": {

@@ -33,6 +33,7 @@ import {
   Tooltip,
   Typography,
   CircularProgress,
+  LinearProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -42,6 +43,9 @@ import AgricultureIcon from '@mui/icons-material/Agriculture';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 import {
   buildAllCulturesExport,
   buildAllCulturesFilename,
@@ -55,6 +59,14 @@ import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
 import { normalizeCultivationType, normalizeHarvestMethod, normalizeNutrientDemand, normalizeSeedingRequirementType, normalizeSeedRateUnit } from '../cultures/enumNormalization';
+
+const ENRICHMENT_LOADING_STEPS = [
+  { key: 'request', startSeconds: 0 },
+  { key: 'research', startSeconds: 12 },
+  { key: 'validation', startSeconds: 32 },
+  { key: 'results', startSeconds: 52 },
+] as const;
+const ENRICHMENT_EXPECTED_SECONDS = 75;
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -123,6 +135,8 @@ function Cultures(): React.ReactElement {
   const [enrichmentResult, setEnrichmentResult] = useState<EnrichmentResult | null>(null);
   const [selectedSuggestionFields, setSelectedSuggestionFields] = useState<string[]>([]);
   const [enrichmentLoading, setEnrichmentLoading] = useState(false);
+  const [enrichmentLoadingStartedAt, setEnrichmentLoadingStartedAt] = useState<number | null>(null);
+  const [enrichmentLoadingNow, setEnrichmentLoadingNow] = useState<number>(Date.now());
   const [enrichmentCostBanner, setEnrichmentCostBanner] = useState<string | null>(null);
   const [enrichAllConfirmOpen, setEnrichAllConfirmOpen] = useState(false);
   const enrichmentLoadingRef = useRef(false);
@@ -137,6 +151,19 @@ function Cultures(): React.ReactElement {
 
   useEffect(() => {
     enrichmentLoadingRef.current = enrichmentLoading;
+  }, [enrichmentLoading]);
+
+  useEffect(() => {
+    if (!enrichmentLoading) {
+      setEnrichmentLoadingStartedAt(null);
+      return;
+    }
+
+    const startedAt = Date.now();
+    setEnrichmentLoadingStartedAt(startedAt);
+    setEnrichmentLoadingNow(startedAt);
+    const intervalId = window.setInterval(() => setEnrichmentLoadingNow(Date.now()), 500);
+    return () => window.clearInterval(intervalId);
   }, [enrichmentLoading]);
 
   const updateSelectedCultureId = useCallback((id: number | undefined, source: 'internal' | 'query') => {
@@ -1170,6 +1197,14 @@ function Cultures(): React.ReactElement {
 
 
 
+  const enrichmentElapsedSeconds = enrichmentLoadingStartedAt
+    ? Math.max(0, Math.floor((enrichmentLoadingNow - enrichmentLoadingStartedAt) / 1000))
+    : 0;
+  const enrichmentProgressPercent = Math.min(95, Math.round((enrichmentElapsedSeconds / ENRICHMENT_EXPECTED_SECONDS) * 100));
+  const enrichmentActiveStepIndex = ENRICHMENT_LOADING_STEPS.reduce((lastIndex, step, index) => (
+    enrichmentElapsedSeconds >= step.startSeconds ? index : lastIndex
+  ), 0);
+
   return (
     <div className="page-container">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -1527,10 +1562,31 @@ function Cultures(): React.ReactElement {
       <Dialog open={enrichmentLoading} aria-labelledby="enrichment-loading-title" maxWidth="xs" fullWidth>
         <DialogTitle id="enrichment-loading-title">{t('ai.loadingTitle')}</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
-            <CircularProgress size={24} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1, mb: 1 }}>
+            <CircularProgress size={22} />
             <Typography>{t('ai.loadingText')}</Typography>
           </Box>
+          <LinearProgress variant="determinate" value={enrichmentProgressPercent} sx={{ mb: 1 }} />
+          <Typography variant="caption" color="text.secondary">
+            {t('ai.loadingElapsed', { seconds: enrichmentElapsedSeconds, percent: enrichmentProgressPercent })}
+          </Typography>
+          <List dense sx={{ mt: 1 }}>
+            {ENRICHMENT_LOADING_STEPS.map((step, index) => {
+              const isDone = enrichmentElapsedSeconds >= step.startSeconds && index < enrichmentActiveStepIndex;
+              const isActive = index === enrichmentActiveStepIndex;
+              const Icon = isDone ? CheckCircleOutlineIcon : isActive ? AutorenewIcon : RadioButtonUncheckedIcon;
+              return (
+                <ListItem key={step.key} sx={{ px: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Icon fontSize="small" color={isDone ? 'success' : isActive ? 'primary' : 'disabled'} />
+                    <Typography variant="body2" color={isActive ? 'text.primary' : 'text.secondary'}>
+                      {t(`ai.loadingSteps.${step.key}`)}
+                    </Typography>
+                  </Box>
+                </ListItem>
+              );
+            })}
+          </List>
         </DialogContent>
       </Dialog>
 
