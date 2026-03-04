@@ -1189,3 +1189,52 @@ class NumericNormalizationTest(TestCase):
 
         warning_codes = [item.get('code') for item in result['validation']['warnings']]
         self.assertNotIn('seed_rate_unit_missing_for_method_value', warning_codes)
+
+
+    @override_settings(AI_ENRICHMENT_ENABLED=True)
+    @patch('farm.services.enrichment.get_enrichment_provider')
+    def test_removes_stale_supplier_only_drop_warning_after_field_recovery(self, provider_mock):
+        supplier = Supplier.objects.create(
+            name='ReinSaat',
+            homepage_url='https://www.reinsaat.at',
+            allowed_domains=['reinsaat.at'],
+        )
+        culture = Culture.objects.create(name='Salat', variety='Bijella', supplier=supplier)
+
+        provider = Mock()
+        provider.provider_name = 'openai_responses'
+        provider.model_name = 'gpt-5-mini'
+        provider.search_provider_name = 'web_search'
+        provider.enrich.return_value = {
+            'suggested_fields': {
+                'sowing_depth_cm': {'value': 0.5, 'unit': 'cm', 'confidence': 0.9},
+            },
+            'evidence': {
+                'sowing_depth_cm': [
+                    {
+                        'source_url': 'https://www.reinsaat.at/shop/DE/lettuce/loose_leaf_lettuce/',
+                        'title': 'Pflücksalate/Bunte Salate - ReinSaat GmbH',
+                        'retrieved_at': '2026-03-04',
+                        'snippet': 'Saattiefe: 0,5 cm',
+                        'supplier_specific': True,
+                    },
+                ],
+            },
+            'validation': {
+                'warnings': [
+                    {
+                        'field': 'sowing_depth_cm',
+                        'code': 'supplier_only_non_supplier_suggestion_dropped',
+                        'message': 'Dropped suggestion for sowing_depth_cm in supplier-only phase because supplier evidence is missing.',
+                    },
+                ],
+                'errors': [],
+            },
+            'note_blocks': '',
+            'usage': {'input_tokens': 1, 'cached_input_tokens': 0, 'output_tokens': 1},
+        }
+        provider_mock.return_value = provider
+
+        result = enrich_culture(culture, 'reresearch')
+        warning_codes = [item.get('code') for item in result['validation']['warnings']]
+        self.assertNotIn('supplier_only_non_supplier_suggestion_dropped', warning_codes)

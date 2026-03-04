@@ -2023,6 +2023,28 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
         if isinstance(warnings, list):
             warnings.extend(plausibility_warnings)
 
+    warnings = validation.setdefault('warnings', [])
+    if isinstance(warnings, list):
+        cleaned_warnings: list[dict[str, Any]] = []
+        seen: set[tuple[str, str]] = set()
+        for warning in warnings:
+            if not isinstance(warning, dict):
+                continue
+            code = str(warning.get('code') or '')
+            field = str(warning.get('field') or '')
+
+            # Remove stale supplier-only drop warnings when the field was recovered
+            # later in the pipeline (e.g. fallback merge or method normalization).
+            if code == 'supplier_only_non_supplier_suggestion_dropped' and field in suggested_fields:
+                continue
+
+            dedupe_key = (field, code)
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            cleaned_warnings.append(warning)
+        validation['warnings'] = cleaned_warnings
+
     notes_suggestion = suggested_fields.get('notes')
     rendered_sources = _render_sources_markdown(structured_sources)
     if rendered_sources and isinstance(notes_suggestion, dict):

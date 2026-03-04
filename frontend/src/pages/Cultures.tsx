@@ -877,6 +877,31 @@ function Cultures(): React.ReactElement {
     return String(value ?? '');
   };
 
+  const formatEnrichmentWarning = (warning: { field?: string; code?: string; message?: string }): string => {
+    const fieldLabel = warning.field ? getEnrichmentFieldLabel(warning.field) : t('ai.field');
+
+    const warningKeyByCode: Record<string, string> = {
+      range_collapsed_to_mean: 'ai.warningMessages.range_collapsed_to_mean',
+      missing_supplier_data: 'ai.warningMessages.missing_supplier_data',
+      supplier_only_non_supplier_suggestion_dropped: 'ai.warningMessages.supplier_only_non_supplier_suggestion_dropped',
+      seed_rate_unit_missing_for_method_value: 'ai.warningMessages.seed_rate_unit_missing_for_method_value',
+      seed_rate_unit_converted_from_g_per_are: 'ai.warningMessages.seed_rate_unit_converted_from_g_per_are',
+      missing_supplier_evidence: 'ai.warningMessages.missing_supplier_evidence',
+      supplier_mismatch_dropped: 'ai.warningMessages.supplier_mismatch_dropped',
+      supplier_product_not_found: 'ai.warningMessages.supplier_product_not_found',
+    };
+
+    const translationKey = warning.code ? warningKeyByCode[warning.code] : undefined;
+    if (translationKey) {
+      const translated = t(translationKey, { field: fieldLabel });
+      if (translated !== translationKey) {
+        return translated;
+      }
+    }
+
+    return warning.message || t('ai.runError');
+  };
+
   const openEnrichmentDialog = (result: EnrichmentResult) => {
     setEnrichmentResult(result);
     setSelectedSuggestionFields(Object.keys(result.suggested_fields || {}));
@@ -1521,7 +1546,7 @@ function Cultures(): React.ReactElement {
             <Alert severity="warning" sx={{ mb: 2 }}>
               {(enrichmentResult?.validation?.warnings || []).map((warning) => (
                 <Typography key={`${warning.field}-${warning.code}`} variant="body2">
-                  • {warning.message}
+                  • {formatEnrichmentWarning(warning)}
                 </Typography>
               ))}
             </Alert>
