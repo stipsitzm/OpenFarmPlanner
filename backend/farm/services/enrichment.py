@@ -18,6 +18,7 @@ from django.conf import settings
 
 from farm.enum_normalization import normalize_choice_value as normalize_backend_choice_value
 from farm.models import Culture, EnrichmentAccountingRun
+from farm.services import enrichment_notes
 
 INPUT_COST_PER_MILLION = Decimal('2.00')
 CACHED_INPUT_COST_PER_MILLION = Decimal('0.50')
@@ -238,76 +239,12 @@ def _allowed_choice_values(field_name: str) -> set[str]:
 
 def _extract_json_objects(text: str) -> list[dict[str, Any]]:
     """Extract JSON objects from free text, best-effort."""
-    decoder = json.JSONDecoder()
-    idx = 0
-    items: list[dict[str, Any]] = []
-    while idx < len(text):
-        start = text.find('{', idx)
-        if start == -1:
-            break
-        try:
-            obj, end = decoder.raw_decode(text[start:])
-        except json.JSONDecodeError:
-            idx = start + 1
-            continue
-        if isinstance(obj, dict):
-            items.append(obj)
-        idx = start + end
-    return items
+    return enrichment_notes.extract_json_objects(text)
 
 
 def _note_blocks_to_markdown(note_blocks: object) -> str:
     """Convert provider note blocks to clean markdown (avoid raw JSON artifacts)."""
-    def render_blocks(blocks: list[dict[str, Any]]) -> str:
-        parts: list[str] = []
-        seen: set[tuple[str, str]] = set()
-        for block in blocks:
-            title = _coerce_text_value(block.get('title', ''), 'note_blocks.title').strip()
-            content = _coerce_text_value(block.get('content', ''), 'note_blocks.content').strip()
-            key = (title, content)
-            if key in seen:
-                continue
-            seen.add(key)
-            if title:
-                heading = title if title.startswith('#') else f"## {title}"
-                parts.append(heading)
-            if content:
-                parts.append(content)
-        return "\n\n".join(part for part in parts if part).strip()
-
-    def parse_blocks_from_text(text: str) -> list[dict[str, Any]]:
-        stripped = text.strip()
-        if not stripped:
-            return []
-        parsed = _extract_json_objects(stripped)
-        if parsed:
-            return parsed
-
-        fenced = re.search(r"```(?:json)?\s*(.*?)\s*```", stripped, re.DOTALL)
-        if fenced:
-            return _extract_json_objects(fenced.group(1).strip())
-        return []
-
-    if note_blocks is None:
-        return ''
-    if isinstance(note_blocks, str):
-        blocks = parse_blocks_from_text(note_blocks)
-        if not note_blocks.strip():
-            return ''
-        markdown = render_blocks(blocks)
-        return markdown or note_blocks.strip()
-    if isinstance(note_blocks, dict):
-        return render_blocks([note_blocks])
-    if isinstance(note_blocks, list):
-        dict_blocks: list[dict[str, Any]] = [item for item in note_blocks if isinstance(item, dict)]
-        for item in note_blocks:
-            if isinstance(item, str):
-                dict_blocks.extend(parse_blocks_from_text(item))
-        markdown = render_blocks(dict_blocks)
-        if markdown:
-            return markdown
-        return _coerce_text_value(note_blocks, 'note_blocks')
-    return _coerce_text_value(note_blocks, 'note_blocks')
+    return enrichment_notes.note_blocks_to_markdown(note_blocks, _coerce_text_value)
 
 
 def _is_missing_culture_field(culture: Culture, suggested_field: str) -> bool:
@@ -1391,119 +1328,22 @@ class FallbackHeuristicProvider(BaseEnrichmentProvider):
 
 def _parse_notes_sections(markdown_text: str) -> tuple[str, dict[str, str], list[tuple[str, str]]]:
     """Parse markdown into intro text, known sections and other sections."""
-    known_titles = {
-        'dauerwerte': 'Dauerwerte',
-        'aussaat & abstände (zusammengefasst)': 'Aussaat & Abstände (zusammengefasst)',
-        'ernte & verwendung': 'Ernte & Verwendung',
-        'quellen': 'Quellen',
-    }
-
-    intro_lines: list[str] = []
-    known_sections: dict[str, list[str]] = {title: [] for title in known_titles.values()}
-    other_sections: list[tuple[str, list[str]]] = []
-
-    current_title: str | None = None
-    current_lines = intro_lines
-
-    for line in markdown_text.splitlines():
-        heading = re.match(r"^##+\s+(.*?)\s*$", line.strip())
-        if heading:
-            raw_title = heading.group(1).strip()
-            normalized_title = raw_title.lower()
-            canonical_title = known_titles.get(normalized_title)
-            if canonical_title:
-                current_title = canonical_title
-                current_lines = known_sections[canonical_title]
-            else:
-                current_title = raw_title
-                existing = next((item for item in other_sections if item[0] == raw_title), None)
-                if existing is None:
-                    bucket: list[str] = []
-                    other_sections.append((raw_title, bucket))
-                    current_lines = bucket
-                else:
-                    current_lines = existing[1]
-            continue
-        current_lines.append(line)
-
-    intro = "\n".join(intro_lines).strip()
-    known = {title: "\n".join(lines).strip() for title, lines in known_sections.items() if "\n".join(lines).strip()}
-    others = [(title, "\n".join(lines).strip()) for title, lines in other_sections if "\n".join(lines).strip()]
-    return intro, known, others
+    return enrichment_notes.parse_notes_sections(markdown_text)
 
 
 def _combine_text_blocks(*blocks: str) -> str:
     """Combine markdown blocks while removing exact duplicates."""
-    seen: set[str] = set()
-    out: list[str] = []
-    for block in blocks:
-        cleaned = block.strip()
-        if not cleaned or cleaned in seen:
-            continue
-        seen.add(cleaned)
-        out.append(cleaned)
-    return "\n\n".join(out).strip()
+    return enrichment_notes.combine_text_blocks(*blocks)
 
 
 def _dedupe_section_content(content: str) -> str:
     """Remove repeated paragraphs inside one markdown section."""
-    parts = [chunk.strip() for chunk in re.split(r"\n\s*\n", content) if chunk.strip()]
-    seen: set[str] = set()
-    unique: list[str] = []
-    for part in parts:
-        if part in seen:
-            continue
-        seen.add(part)
-        unique.append(part)
-    return "\n\n".join(unique).strip()
+    return enrichment_notes.dedupe_section_content(content)
 
 
 def build_note_appendix(base_notes: object, note_blocks: object) -> str:
     """Integrate generated notes into a clean, sectioned markdown structure."""
-    base = _coerce_text_value(base_notes, 'notes')
-    addition = _note_blocks_to_markdown(note_blocks)
-    if not addition and not base:
-        return ''
-    if not addition:
-        addition = ''
-    if not base:
-        base = ''
-
-    base_intro, base_known, base_other = _parse_notes_sections(base)
-    add_intro, add_known, add_other = _parse_notes_sections(addition)
-
-    ordered_known_titles = [
-        'Dauerwerte',
-        'Aussaat & Abstände (zusammengefasst)',
-        'Ernte & Verwendung',
-    ]
-
-    merged_parts: list[str] = []
-    intro = _combine_text_blocks(base_intro, add_intro)
-    if intro:
-        merged_parts.append(intro)
-
-    for title in ordered_known_titles:
-        merged_content = _combine_text_blocks(add_known.get(title, ''), base_known.get(title, ''))
-        merged_content = _dedupe_section_content(merged_content)
-        if merged_content:
-            merged_parts.append(f"## {title}\n{merged_content}")
-
-    other_map: dict[str, str] = {title: content for title, content in base_other}
-    for title, content in add_other:
-        previous = other_map.get(title, '')
-        other_map[title] = _dedupe_section_content(_combine_text_blocks(content, previous))
-    for title, content in other_map.items():
-        normalized_content = _dedupe_section_content(content)
-        if normalized_content:
-            merged_parts.append(f"## {title}\n{normalized_content}")
-
-    sources_content = add_known.get('Quellen') or base_known.get('Quellen', '')
-    sources_content = _dedupe_section_content(sources_content)
-    if sources_content:
-        merged_parts.append(f"## Quellen\n{sources_content}")
-
-    return "\n\n".join(part.strip() for part in merged_parts if part.strip()).strip()
+    return enrichment_notes.build_note_appendix(base_notes, note_blocks, _coerce_text_value)
 
 
 def get_enrichment_provider() -> BaseEnrichmentProvider:
