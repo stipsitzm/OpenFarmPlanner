@@ -790,10 +790,16 @@ def _filter_evidence_to_allowed_domains(
     supplier_domains: set[str],
     validation: dict[str, Any],
 ) -> None:
-    """Filter evidence entries to supplier allowed domains and register warnings."""
+    """Filter evidence entries to supplier domains for seed packages only.
+
+    Non-package fields may use broader sources; seed package sizes remain strict
+    supplier-domain-only.
+    """
     warnings = validation.setdefault('warnings', [])
     for field_name, entries in list(evidence.items()):
         if not isinstance(entries, list):
+            continue
+        if field_name != 'seed_packages':
             continue
         kept: list[dict[str, Any]] = []
         for entry in entries:
@@ -816,7 +822,7 @@ def _enforce_supplier_evidence_requirements(
     evidence: dict[str, Any],
     validation: dict[str, Any],
 ) -> None:
-    """Drop suggestions that have no supplier-domain evidence after filtering."""
+    """Enforce supplier-evidence requirements for seed packages only."""
     warnings = validation.setdefault('warnings', [])
     for field_name, suggestion in list(suggested_fields.items()):
         if field_name == 'notes':
@@ -828,10 +834,6 @@ def _enforce_supplier_evidence_requirements(
             if isinstance(warnings, list):
                 warnings.append({'field': 'seed_packages', 'code': 'missing_supplier_evidence', 'message': 'Seed package suggestions require supplier-domain evidence.'})
             continue
-        if field_name in {'growth_duration_days', 'harvest_duration_days', 'propagation_duration_days', 'seed_rate_value', 'seed_rate_unit', 'distance_within_row_cm', 'row_spacing_cm', 'sowing_depth_cm', 'thousand_kernel_weight_g'} and not has_evidence:
-            suggested_fields.pop(field_name, None)
-            if isinstance(warnings, list):
-                warnings.append({'field': field_name, 'code': 'missing_supplier_evidence', 'message': 'Dropped suggestion because supplier-domain evidence is missing.'})
 
 
 def _add_category_mismatch_warning(culture: Culture, evidence: dict[str, Any], validation: dict[str, Any]) -> None:
