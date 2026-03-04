@@ -458,8 +458,8 @@ class CultureSerializer(serializers.ModelSerializer):
                         if parsed_value <= 0:
                             errors['seed_rate_by_cultivation'] = 'Seed rate values must be positive.'
                             break
-                        if method == 'pre_cultivation' and unit not in {'seeds_per_plant', 'g_per_m2'}:
-                            errors['seed_rate_by_cultivation'] = 'Pre-cultivation seed rate unit must be seeds_per_plant or g_per_m2.'
+                        if method == 'pre_cultivation' and unit != 'seeds_per_plant':
+                            errors['seed_rate_by_cultivation'] = 'Pre-cultivation seed rate unit must be seeds_per_plant.'
                             break
                         if method == 'direct_sowing' and unit not in {'g_per_m2', 'g_per_lfm', 'seeds/m'}:
                             errors['seed_rate_by_cultivation'] = 'Direct sowing seed rate unit must be g_per_m2, g_per_lfm, or seeds/m.'

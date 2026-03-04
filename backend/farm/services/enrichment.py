@@ -702,15 +702,20 @@ def _apply_method_seed_rates_to_suggestions(suggested_fields: dict[str, Any], va
                     'code': 'seed_rate_unit_missing_for_method_value',
                     'message': f'Method {method_key} has value but missing explicit unit; leaving method-specific entry unset.',
                 })
+            if method_key == 'pre_cultivation':
+                suggested_fields.pop(value_field, None)
+                suggested_fields.pop(unit_field, None)
             continue
 
-        if method_key == 'pre_cultivation' and unit_value not in {'seeds_per_plant', 'g_per_m2'}:
+        if method_key == 'pre_cultivation' and unit_value != 'seeds_per_plant':
             if isinstance(warnings, list):
                 warnings.append({
                     'field': unit_field,
                     'code': 'seed_rate_unit_invalid_for_method',
-                    'message': 'Method pre_cultivation only accepts seeds_per_plant or g_per_m2; entry skipped.',
+                    'message': 'Method pre_cultivation only accepts seeds_per_plant; entry skipped.',
                 })
+            suggested_fields.pop(value_field, None)
+            suggested_fields.pop(unit_field, None)
             continue
         if method_key == 'direct_sowing' and unit_value not in {'g_per_m2', 'g_per_lfm', 'seeds/m'}:
             if isinstance(warnings, list):

@@ -1107,7 +1107,7 @@ function Cultures(): React.ReactElement {
         }
         const preValue = Number(rawByCultivation.pre_cultivation?.value);
         const preUnit = normalizeSeedRateUnit(rawByCultivation.pre_cultivation?.unit);
-        if (Number.isFinite(preValue) && preValue > 0 && preUnit && ['seeds_per_plant', 'g_per_m2'].includes(preUnit)) {
+        if (Number.isFinite(preValue) && preValue > 0 && preUnit === 'seeds_per_plant') {
           sanitizedByCultivation.pre_cultivation = { value: preValue, unit: preUnit };
         }
         if (Object.keys(sanitizedByCultivation).length > 0) {
@@ -1133,7 +1133,7 @@ function Cultures(): React.ReactElement {
         if (Number.isFinite(directValue) && directValue > 0 && directUnit) {
           byCultivation.direct_sowing = { value: directValue, unit: directUnit };
         }
-        if (Number.isFinite(transplantValue) && transplantValue > 0 && transplantUnit && ['seeds_per_plant', 'g_per_m2'].includes(transplantUnit)) {
+        if (Number.isFinite(transplantValue) && transplantValue > 0 && transplantUnit === 'seeds_per_plant') {
           byCultivation.pre_cultivation = { value: transplantValue, unit: transplantUnit };
         }
         if (Object.keys(byCultivation).length > 0) {
