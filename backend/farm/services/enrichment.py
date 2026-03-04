@@ -1209,7 +1209,11 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         return any(_is_supplier_matching_evidence(supplier_name, entries) for entries in evidence.values())
 
     def _apply_supplier_only_filter(self, payload: dict[str, Any], culture: Culture) -> dict[str, Any]:
-        """Filter provider payload to strict supplier evidence and dependent suggestions."""
+        """Filter provider payload to strict supplier evidence for seed packages only.
+
+        Non-package agronomic fields can be recovered from broader evidence in the
+        same run; strict supplier-only gating remains for package sizes.
+        """
         supplier_name = culture.supplier.name if culture.supplier else (culture.seed_supplier or '')
         supplier_domains = _supplier_domains_for_culture(culture)
         evidence = payload.get('evidence') if isinstance(payload.get('evidence'), dict) else {}
@@ -1241,6 +1245,16 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
                 'seed_rate_transplant_unit': 'seed_rate_transplant_value',
             }
             for field_name, suggestion in suggested_fields.items():
+                if field_name != 'seed_packages':
+                    if (
+                        field_name in unit_companion_map
+                        and isinstance(suggestion, dict)
+                        and suggestion.get('value') in (None, '')
+                    ):
+                        continue
+                    filtered[field_name] = suggestion
+                    continue
+
                 companion_field = unit_companion_map.get(field_name)
                 has_companion_evidence = False
                 if companion_field and companion_field in filtered_evidence:
