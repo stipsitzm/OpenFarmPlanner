@@ -54,7 +54,7 @@ describe('HarvestSection and SeedingSection', () => {
     expect(screen.getByText('invalid')).toBeInTheDocument();
   });
 
-  it('locks unit to seeds_per_plant when only pre_cultivation is selected', () => {
+  it('shows Anzucht label with unit and hides unit select when only pre_cultivation is selected', () => {
     const onChange = vi.fn();
 
     render(
@@ -66,8 +66,8 @@ describe('HarvestSection and SeedingSection', () => {
       />
     );
 
-    const unitCombobox = screen.getAllByRole('combobox')[0] as HTMLInputElement;
-    expect(unitCombobox).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('Anzucht Menge (Korn / Pflanze)')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Einheit')).not.toBeInTheDocument();
   });
 
   it('shows method-specific fields when both cultivation methods are selected', () => {
