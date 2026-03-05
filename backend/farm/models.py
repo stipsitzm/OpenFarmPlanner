@@ -238,7 +238,7 @@ class Bed(TimestampedModel):
     
     name = models.CharField(max_length=200)
     field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds')
-    area_sqm = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    area_sqm = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
     notes = models.TextField(blank=True)
 
     def get_total_area(self) -> float | None:

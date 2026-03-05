@@ -89,7 +89,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
         await bedAPI.update(row.bedId, {
           name: row.name,
           field: row.field!,
-          area_sqm: parsedArea,
+          area_sqm: normalizeBedAreaValue(parsedArea),
           notes: value,
         });
         
@@ -205,6 +205,14 @@ function FieldsBedsHierarchy(): React.ReactElement {
     return Number.isFinite(product) ? product : undefined;
   };
 
+
+  const normalizeBedAreaValue = (value: number | undefined): number | undefined => {
+    if (value === undefined || !Number.isFinite(value)) {
+      return undefined;
+    }
+    return Math.round(value * 10) / 10;
+  };
+
   const parseAreaValue = (value: number | string | undefined): number | undefined => {
     if (typeof value === 'number') {
       return Number.isFinite(value) ? value : undefined;
@@ -251,7 +259,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
       const field = fields.find(f => f.id === newRow.field);
       if (field) {
         const fieldArea = parseAreaValue(field.area_sqm) ?? NaN;
-        const bedArea = parseAreaValue(newRow.area_sqm) ?? NaN;
+        const bedArea = normalizeBedAreaValue(parseAreaValue(newRow.area_sqm)) ?? NaN;
         const sum = getBedAreaSum(field.id!, newRow.bedId, bedArea);
         // ...existing code...
         if (sum > fieldArea) {
@@ -265,7 +273,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
         id: newRow.bedId!,
         name: newRow.name,
         field: newRow.field!,
-        area_sqm: parseAreaValue(newRow.area_sqm),
+        area_sqm: normalizeBedAreaValue(parseAreaValue(newRow.area_sqm)),
         notes: newRow.notes,
       });
       return { ...newRow, id: savedBed.id!, bedId: savedBed.id!, isNew: false };
