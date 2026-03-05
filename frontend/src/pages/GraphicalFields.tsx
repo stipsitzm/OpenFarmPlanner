@@ -34,16 +34,18 @@ const VIEWPORT_PADDING = 120;
 const FIELD_INNER_OFFSET_X = 10;
 const FIELD_INNER_OFFSET_Y = 34;
 const SNAP_THRESHOLD = 8;
+const FIELD_SNAP_THRESHOLD = 14;
 const EXPANDED_STORAGE_KEY = 'graphicalFieldsExpandedLocations';
 
 interface GraphicalFieldsProps {
   showTitle?: boolean;
 }
 
-function snapToNeighborBeds(
-  currentBedId: number,
-  position: { x: number; y: number },
-  size: { width: number; height: number },
+  threshold: number = SNAP_THRESHOLD,
+  let bestXDelta = threshold + 1;
+  let bestYDelta = threshold + 1;
+          if (absDelta <= threshold && absDelta < bestXDelta) {
+          if (absDelta <= threshold && absDelta < bestYDelta) {
   neighbors: BedViewModel[],
 ): SnapResult {
   let snappedX = position.x;
@@ -365,6 +367,8 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                               location: location.id!,
                               x: next.x,
                               y: next.y,
+                              FIELD_SNAP_THRESHOLD,
+                              FIELD_SNAP_THRESHOLD,
                               version: 1,
                             };
 
