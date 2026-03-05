@@ -95,7 +95,7 @@ export const plantingPlanAPI = {
 
 export const layoutAPI = {
   listByLocation: (locationId: number) => http.get<LocationLayoutsResponse>(`/locations/${locationId}/layouts/`),
-  saveByLocation: (locationId: number, payload: { bed_layouts?: BedLayoutEntry[]; field_layouts?: FieldLayoutEntry[] }) =>
+  saveByLocation: (locationId: number, payload: { bed_layouts: BedLayoutEntry[]; field_layouts: FieldLayoutEntry[] }) =>
     http.put<LocationLayoutsResponse>(`/locations/${locationId}/layouts/`, payload),
 };
 

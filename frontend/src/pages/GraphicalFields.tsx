@@ -118,7 +118,7 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
 
     saveTimers.current[timerKey] = window.setTimeout(async () => {
       try {
-        await layoutAPI.saveByLocation(locationId, { bed_layouts: [payload] });
+        await layoutAPI.saveByLocation(locationId, { bed_layouts: [payload], field_layouts: [] });
       } catch (saveError) {
         console.error('Failed to save bed layout', saveError);
       }
@@ -133,7 +133,7 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
 
     saveTimers.current[timerKey] = window.setTimeout(async () => {
       try {
-        await layoutAPI.saveByLocation(locationId, { field_layouts: [payload] });
+        await layoutAPI.saveByLocation(locationId, { bed_layouts: [], field_layouts: [payload] });
       } catch (saveError) {
         console.error('Failed to save field layout', saveError);
       }
