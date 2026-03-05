@@ -20,9 +20,9 @@ export default function FieldsBedsPage(): React.ReactElement {
   const commands = useMemo<CommandSpec[]>(() => [
     {
       id: 'areas.toggleGraphicalView',
-      title: 'Ansicht umschalten (Alt+Shift+G)',
+      title: 'Ansicht umschalten (Alt+G)',
       keywords: ['ansicht', 'grafisch', 'tabelle', 'anbauflächen'],
-      shortcutHint: 'Alt+Shift+G',
+      shortcutHint: 'Alt+G',
       contextTags: ['areas'],
       isAvailable: () => true,
       run: () => {
@@ -39,7 +39,7 @@ export default function FieldsBedsPage(): React.ReactElement {
       if (event.repeat) {
         return;
       }
-      if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) {
+      if (!event.altKey || event.shiftKey || event.ctrlKey || event.metaKey) {
         return;
       }
       if (event.key.toLowerCase() !== 'g') {
