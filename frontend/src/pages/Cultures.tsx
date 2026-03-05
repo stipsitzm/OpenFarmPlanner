@@ -59,6 +59,21 @@ import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
 import { normalizeCultivationType, normalizeHarvestMethod, normalizeNutrientDemand, normalizeSeedingRequirementType, normalizeSeedRateUnit } from '../cultures/enumNormalization';
+import {
+  ALLOWED_SEED_RATE_UNITS,
+  ENRICHMENT_FIELD_LABEL_MAP,
+  ENRICHMENT_WARNING_KEY_BY_CODE,
+  SELECTED_CULTURE_STORAGE_KEY,
+  buildImportSuccessMessage,
+  getStoredCultureId,
+  mapImportErrors,
+  parseCultureId,
+  toStartCase,
+  type EnrichmentWarning,
+  type ImportFailedEntry,
+  type ImportPreviewResult,
+  type SnackbarState,
+} from './culturesPageUtils';
 
 const ENRICHMENT_LOADING_STEPS = [
   { key: 'request', startSeconds: 0 },
@@ -67,117 +82,6 @@ const ENRICHMENT_LOADING_STEPS = [
   { key: 'results', startSeconds: 52 },
 ] as const;
 const ENRICHMENT_EXPECTED_SECONDS = 75;
-const SELECTED_CULTURE_STORAGE_KEY = 'selectedCultureId';
-
-type ImportPreviewResult = {
-  index: number;
-  status: 'create' | 'update_candidate';
-  matched_culture_id?: number;
-  diff?: Array<{ field: string; current: unknown; new: unknown }>;
-  import_data: Record<string, unknown>;
-  error?: string;
-};
-
-type ImportFailedEntry = {
-  index: number;
-  name?: string;
-  variety?: string;
-  error: string | Record<string, unknown>;
-};
-
-type SnackbarState = {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error' | 'info';
-};
-
-const ENRICHMENT_FIELD_LABEL_MAP: Record<string, string> = {
-  growth_duration_days: 'form.growthDurationDays',
-  harvest_duration_days: 'form.harvestDurationDays',
-  propagation_duration_days: 'form.propagationDurationDays',
-  harvest_method: 'form.harvestMethod',
-  expected_yield: 'form.expectedYield',
-  seed_packages: 'form.seedPackagesLabel',
-  distance_within_row_cm: 'form.distanceWithinRowCm',
-  row_spacing_cm: 'form.rowSpacingCm',
-  sowing_depth_cm: 'form.sowingDepthCm',
-  seed_rate_direct_value: 'form.seedRateDirectValue',
-  seed_rate_direct_unit: 'form.seedRateDirectUnit',
-  seed_rate_transplant_value: 'form.seedRatePreCultivationValue',
-  seed_rate_transplant_unit: 'form.seedRatePreCultivationUnit',
-  seed_rate_by_cultivation: 'form.seedRateSectionTitle',
-  allowed_sowing_methods: 'form.cultivationType',
-  thousand_kernel_weight_g: 'form.thousandKernelWeightLabel',
-  nutrient_demand: 'form.nutrientDemand',
-  cultivation_type: 'form.cultivationType',
-  notes: 'form.notes',
-  seeding_requirement: 'form.seedRateSectionTitle',
-  seeding_requirement_type: 'form.seedRateSectionTitle',
-};
-
-const ENRICHMENT_WARNING_KEY_BY_CODE: Record<string, string> = {
-  range_collapsed_to_mean: 'ai.warningMessages.range_collapsed_to_mean',
-  missing_supplier_data: 'ai.warningMessages.missing_supplier_data',
-  supplier_only_non_supplier_suggestion_dropped: 'ai.warningMessages.supplier_only_non_supplier_suggestion_dropped',
-  seed_rate_unit_missing_for_method_value: 'ai.warningMessages.seed_rate_unit_missing_for_method_value',
-  seed_rate_unit_converted_from_g_per_are: 'ai.warningMessages.seed_rate_unit_converted_from_g_per_are',
-  missing_supplier_evidence: 'ai.warningMessages.missing_supplier_evidence',
-  supplier_mismatch_dropped: 'ai.warningMessages.supplier_mismatch_dropped',
-  supplier_product_not_found: 'ai.warningMessages.supplier_product_not_found',
-};
-
-const ALLOWED_SEED_RATE_UNITS = ['g_per_m2', 'g_per_lfm', 'seeds/m'];
-
-type EnrichmentWarning = { field?: string; code?: string; message?: string };
-
-const toStartCase = (value: string): string => value
-  .replace(/_/g, ' ')
-  .replace(/\b\w/g, (char) => char.toUpperCase());
-const parseCultureId = (value: string | null): number | undefined => {
-  if (!value) {
-    return undefined;
-  }
-
-  const parsedId = Number.parseInt(value, 10);
-  return Number.isFinite(parsedId) ? parsedId : undefined;
-};
-
-const getStoredCultureId = (): number | undefined => parseCultureId(localStorage.getItem(SELECTED_CULTURE_STORAGE_KEY));
-
-const buildImportSuccessMessage = (
-  createdCount: number,
-  updatedCount: number,
-  skippedCount: number,
-  t: ReturnType<typeof useTranslation>['t'],
-): string => {
-  const segments: string[] = [];
-
-  if (createdCount > 0) {
-    segments.push(t('import.created', { count: createdCount }));
-  }
-  if (updatedCount > 0) {
-    segments.push(t('import.updated', { count: updatedCount }));
-  }
-  if (skippedCount > 0) {
-    segments.push(t('import.skipped', { count: skippedCount }));
-  }
-
-  return segments.join(', ');
-};
-
-const mapImportErrors = (
-  errors: Array<{ index: number; error: unknown }>,
-  importPayload: Record<string, unknown>[],
-): ImportFailedEntry[] => errors.map((err) => {
-  const originalData = importPayload[err.index];
-  return {
-    index: err.index,
-    name: originalData?.name as string | undefined,
-    variety: originalData?.variety as string | undefined,
-    error: typeof err.error === 'string' || typeof err.error === 'object' ? err.error as string | Record<string, unknown> : String(err.error),
-  };
-});
-
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
   const navigate = useNavigate();
