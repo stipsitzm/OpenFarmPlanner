@@ -70,7 +70,6 @@ describe('API Client', () => {
       name: 'Neuer Lieferant',
       homepage_url: undefined,
       allowed_domains: [],
-      is_active: true,
     });
     expect(putMock).toHaveBeenCalledWith('/suppliers/1/', supplierData);
     expect(deleteMock).toHaveBeenCalledWith('/suppliers/1/');

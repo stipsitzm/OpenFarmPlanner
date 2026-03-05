@@ -17,5 +17,8 @@
   "editAction": "Bearbeiten",
   "deleteAction": "Löschen",
   "deleteConfirm": "Lieferant \"{{name}}\" wirklich löschen?",
-  "deleteError": "Lieferant konnte nicht gelöscht werden."
+  "deleteError": "Lieferant konnte nicht gelöscht werden.",
+  "invalidDomain": "Ungültige Domain: {{domain}}. Domains müssen gültige Hostnamen ohne Schema oder Pfad sein (z.B. example.com).",
+  "domainValidationError": "Einige Domains sind ungültig. Bitte korrigieren Sie die Eingabe.",
+  "invalidUrl": "Bitte geben Sie eine gültige URL ein (z.B. https://example.com)."
 }

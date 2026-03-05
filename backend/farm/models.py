@@ -54,7 +54,6 @@ class Supplier(TimestampedModel):
     homepage_url = models.URLField(help_text="Supplier homepage URL")
     slug = models.SlugField(max_length=200, unique=True, blank=True)
     allowed_domains = models.JSONField(default=list, blank=True)
-    is_active = models.BooleanField(default=True)
     name_normalized = models.CharField(
         max_length=200,
         unique=True,

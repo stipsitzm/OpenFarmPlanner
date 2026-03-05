@@ -79,7 +79,6 @@ class ApiEndpointsTest(DRFAPITestCase):
             {
                 'name': 'ZZZ Supplier Updated',
                 'homepage_url': 'https://zzz-updated.example',
-                'is_active': True,
             },
             format='json',
         )
@@ -95,13 +94,52 @@ class ApiEndpointsTest(DRFAPITestCase):
                 'name': self.supplier.name,
                 'homepage_url': 'https://lieferando.example',
                 'allowed_domains': ['lieferando.example', 'www.lieferando.example', 'sdfasdad'],
-                'is_active': True,
             },
             format='json',
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('allowed_domains', response.data)
+
+    def test_supplier_create_with_invalid_domain_returns_400(self):
+        """Test creating supplier with invalid allowed_domains returns 400."""
+        data = {
+            'name': 'Invalid Domain Supplier',
+            'homepage_url': 'https://example.com',
+            'allowed_domains': ['example.com', 'invalid domain', 'https://not-allowed.com']
+        }
+        response = self.client.post('/openfarmplanner/api/suppliers/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('allowed_domains', response.data)
+
+    def test_supplier_create_with_invalid_url_returns_400(self):
+        """Test creating supplier with invalid homepage_url returns 400."""
+        invalid_urls = ['invalid-url', 'htp://broken.com', 'just-text', '']
+        for invalid_url in invalid_urls:
+            data = {
+                'name': f'Test Supplier {invalid_url}',
+                'homepage_url': invalid_url,
+            }
+            response = self.client.post('/openfarmplanner/api/suppliers/', data, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, f'Should reject invalid URL: {invalid_url}')
+            self.assertIn('homepage_url', response.data, f'Should have homepage_url error for: {invalid_url}')
+
+    def test_supplier_create_with_domain_only_normalizes_to_https(self):
+        """Test creating supplier with domain-only URL prepends https://."""
+        test_cases = [
+            ('example.com', 'https://example.com'),
+            ('www.example.com', 'https://www.example.com'),
+            ('subdomain.example.co.uk', 'https://subdomain.example.co.uk'),
+        ]
+        
+        for input_url, expected_url in test_cases:
+            data = {
+                'name': f'Test Supplier for {input_url}',
+                'homepage_url': input_url,
+            }
+            response = self.client.post('/openfarmplanner/api/suppliers/', data, format='json')
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED, f'Should accept domain-only URL: {input_url}')
+            self.assertEqual(response.data['homepage_url'], expected_url, f'Should normalize {input_url} to {expected_url}')
 
     def test_culture_with_supplier(self):
         """Test creating culture with supplier"""

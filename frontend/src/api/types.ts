@@ -13,7 +13,6 @@ export interface Supplier {
   homepage_url?: string;
   slug?: string;
   allowed_domains: string[];
-  is_active?: boolean;
   created_at?: string;
   updated_at?: string;
   created?: boolean;
