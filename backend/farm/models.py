@@ -754,8 +754,16 @@ class SeedPackage(TimestampedModel):
 
 class PlantingPlan(TimestampedModel):
     """A planting schedule linking a culture to a bed with dates."""
+    CULTIVATION_TYPE_CHOICES = Culture.CULTIVATION_TYPE_CHOICES
+
     culture = models.ForeignKey(Culture, on_delete=models.CASCADE, related_name='planting_plans')
     bed = models.ForeignKey(Bed, on_delete=models.CASCADE, related_name='planting_plans')
+    cultivation_type = models.CharField(
+        max_length=30,
+        choices=CULTIVATION_TYPE_CHOICES,
+        blank=True,
+        help_text="Cultivation type used for this plan",
+    )
     planting_date = models.DateField()
     harvest_date = models.DateField(
         blank=True,
@@ -822,6 +830,12 @@ class PlantingPlan(TimestampedModel):
             # New instance - always calculate.
             should_recalculate = True
         
+        if not self.cultivation_type and self.culture:
+            if self.culture.cultivation_types and len(self.culture.cultivation_types) > 0:
+                self.cultivation_type = self.culture.cultivation_types[0]
+            elif self.culture.cultivation_type:
+                self.cultivation_type = self.culture.cultivation_type
+
         # Calculate harvest dates if needed.
         if should_recalculate and self.planting_date and self.culture:
             # Calculate harvest start date using growth_duration_days only.

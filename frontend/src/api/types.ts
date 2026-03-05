@@ -127,6 +127,7 @@ export interface Bed {
 export interface PlantingPlan {
   id?: number;
   culture: number;
+  cultivation_type?: CultivationType | '';
   culture_name?: string;
   bed: number;
   bed_name?: string;

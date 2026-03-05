@@ -37,6 +37,12 @@ interface PlantingPlanRow extends PlantingPlan, EditableRow {
   note_attachment_count?: number;
 }
 
+
+const CULTIVATION_TYPE_OPTIONS = [
+  { value: 'direct_sowing', labelKey: 'plantingPlans:cultivationTypes.directSowing' },
+  { value: 'pre_cultivation', labelKey: 'plantingPlans:cultivationTypes.preCultivation' },
+] as const;
+
 const estimateColumnWidth = (values: string[], min: number, max: number): number => {
   const longest = values.reduce((length, value) => Math.max(length, value.length), 0);
   const estimated = longest * 8 + 52;
@@ -95,6 +101,11 @@ function PlantingPlans(): React.ReactElement {
     [beds]
   );
 
+  const cultivationTypeOptions = useMemo(
+    () => CULTIVATION_TYPE_OPTIONS.map((option) => ({ value: option.value, label: t(option.labelKey) })),
+    [t]
+  );
+
   const dynamicWidths = useMemo(() => {
     const cultureWidth = estimateColumnWidth(
       [t('plantingPlans:columns.culture'), ...cultureOptions.map((option) => option.label)],
@@ -110,6 +121,7 @@ function PlantingPlans(): React.ReactElement {
     return {
       culture: cultureWidth,
       bed: bedWidth,
+      cultivationType: estimateColumnWidth([t('plantingPlans:columns.cultivationType'), ...cultivationTypeOptions.map((option) => option.label)], 140, 190),
       plantingDate: estimateColumnWidth([t('plantingPlans:columns.plantingDate'), '2026-12-31'], 140, 180),
       harvestDate: estimateColumnWidth([t('plantingPlans:columns.harvestStartDate'), '2026-12-31'], 145, 190),
       harvestEndDate: estimateColumnWidth([t('plantingPlans:columns.harvestEndDate'), '2026-12-31'], 145, 190),
@@ -121,7 +133,7 @@ function PlantingPlans(): React.ReactElement {
       plants: estimateColumnWidth([t('plantingPlans:columns.plantsCount'), '≈ 9999'], 120, 150),
       notes: 260,
     };
-  }, [bedOptions, beds, cultureOptions, t]);
+  }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, t]);
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
@@ -233,13 +245,49 @@ function PlantingPlans(): React.ReactElement {
   useRegisterCommands('plans-page', commands);
 
   const columns: GridColDef[] = useMemo(() => [
-    createSingleSelectColumn<PlantingPlanRow>({
-      field: 'culture',
-      headerName: t('plantingPlans:columns.culture'),
+    {
+      ...createSingleSelectColumn<PlantingPlanRow>({
+        field: 'culture',
+        headerName: t('plantingPlans:columns.culture'),
+        flex: 0,
+        minWidth: dynamicWidths.culture,
+        options: cultureOptions,
+      }),
+      valueSetter: (value, row) => {
+        const nextRow = row as PlantingPlanRow;
+        const numericValue = typeof value === 'number' ? value : Number(value);
+        const selectedCulture = cultures.find((culture) => culture.id === numericValue);
+        const availableTypes = selectedCulture?.cultivation_types?.length
+          ? selectedCulture.cultivation_types
+          : (selectedCulture?.cultivation_type ? [selectedCulture.cultivation_type] : []);
+
+        const nextCultivationType = availableTypes.includes(nextRow.cultivation_type ?? '')
+          ? nextRow.cultivation_type
+          : availableTypes[0] ?? nextRow.cultivation_type ?? 'direct_sowing';
+
+        return {
+          ...nextRow,
+          culture: numericValue,
+          cultivation_type: nextCultivationType,
+        } as PlantingPlanRow;
+      },
+    },
+    {
+      field: 'cultivation_type',
+      headerName: t('plantingPlans:columns.cultivationType'),
       flex: 0,
-      minWidth: dynamicWidths.culture,
-      options: cultureOptions,
-    }),
+      minWidth: dynamicWidths.cultivationType,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: cultivationTypeOptions,
+      valueFormatter: (value) => {
+        const stringValue = typeof value === 'string' ? value : '';
+        const option = cultivationTypeOptions.find((item) => item.value === stringValue);
+        return option?.label ?? '';
+      },
+      valueSetter: (value, row) => ({ ...row, cultivation_type: value || 'direct_sowing' }),
+      preProcessEditCellProps: (params) => ({ ...params.props, error: !params.props.value }),
+    },
     {
       ...createSingleSelectColumn<PlantingPlanRow>({
         field: 'bed',
@@ -422,7 +470,7 @@ function PlantingPlans(): React.ReactElement {
       width: dynamicWidths.notes,
       // Notes field will be overridden by NotesCell in EditableDataGrid
     },
-  ], [bedOptions, beds, cultureOptions, cultures, dynamicWidths, t]);
+  ], [bedOptions, beds, cultivationTypeOptions, cultureOptions, cultures, dynamicWidths, t]);
 
   return (
     <div className="page-container" style={{ maxWidth: 'none', margin: 0, paddingLeft: 16, paddingRight: 16 }}>
@@ -448,6 +496,7 @@ function PlantingPlans(): React.ReactElement {
         createNewRow={() => ({
           id: -Date.now(),
           culture: 0,
+          cultivation_type: 'direct_sowing',
           bed: 0,
           planting_date: '',
           quantity: undefined,
@@ -461,6 +510,7 @@ function PlantingPlans(): React.ReactElement {
           initialSelection.cultureId || initialSelection.bedId
             ? {
                 ...(initialSelection.cultureId ? { culture: initialSelection.cultureId } : {}),
+                cultivation_type: 'direct_sowing',
                 ...(initialSelection.bedId ? { bed: initialSelection.bedId } : {}),
               }
             : undefined
@@ -470,6 +520,7 @@ function PlantingPlans(): React.ReactElement {
             ...plan,
             id: plan.id!,
             culture: plan.culture,
+            cultivation_type: plan.cultivation_type || 'direct_sowing',
             culture_name: plan.culture_name || '',
             bed: plan.bed,
             bed_name: plan.bed_name || '',
@@ -519,6 +570,7 @@ function PlantingPlans(): React.ReactElement {
             planting_date: plantingDate,
             quantity: row.quantity,
             notes: row.notes || '',
+            cultivation_type: row.cultivation_type || 'direct_sowing',
           };
           
           // Determine which field to send based on last edit
@@ -557,6 +609,9 @@ function PlantingPlans(): React.ReactElement {
           }
           if (!row.bed || row.bed === 0) {
             missingFields.push(t('plantingPlans:columns.bed'));
+          }
+          if (!row.cultivation_type) {
+            missingFields.push(t('plantingPlans:columns.cultivationType'));
           }
           
           if (missingFields.length > 0) {
