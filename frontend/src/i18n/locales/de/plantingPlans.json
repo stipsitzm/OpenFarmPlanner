@@ -9,7 +9,8 @@
     "harvestEndDate": "Ernteende",
     "areaM2": "Fläche (m²)",
     "plantsCount": "Pflanzen (≈)",
-    "notes": "Notizen"
+    "notes": "Notizen",
+    "cultivationType": "Anbauart"
   },
   "labels": {
     "coupled": "gekoppelt"
@@ -30,5 +31,9 @@
     "requiredFields": "Folgende Pflichtfelder müssen ausgefüllt werden: {{fields}}"
   },
   "confirmDelete": "Möchten Sie diesen Anbauplan wirklich löschen?",
-  "addButton": "Neuen Anbauplan hinzufügen"
+  "addButton": "Neuen Anbauplan hinzufügen",
+  "cultivationTypes": {
+    "directSowing": "Direktsaat",
+    "preCultivation": "Pflanzung"
+  }
 }

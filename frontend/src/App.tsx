@@ -8,10 +8,11 @@
  * @returns The main App component with routing
  */
 
-import { createBrowserRouter, RouterProvider, Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, NavLink, redirect, useLocation, useNavigate } from 'react-router-dom';
 import {
   Alert,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -29,7 +30,6 @@ import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 import { useRegisterCommands } from './commands/CommandProvider';
 import type { CommandSpec } from './commands/types';
 import { useMemo, useState } from 'react';
-import Home from './pages/Home';
 import Locations from './pages/Locations';
 import FieldsBedsHierarchy from './pages/FieldsBedsHierarchy';
 import Cultures from './pages/Cultures';
@@ -55,7 +55,7 @@ function RootLayout(): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
-  const routes = ['/', '/locations', '/fields-beds', '/cultures', '/suppliers', '/planting-plans', '/gantt-chart', '/seed-demand'];
+  const routes = ['/locations', '/fields-beds', '/cultures', '/anbauplaene', '/gantt-chart', '/seed-demand', '/suppliers'];
 
   const handleGlobalMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setGlobalMenuAnchor(event.currentTarget);
@@ -160,9 +160,6 @@ function RootLayout(): React.ReactElement {
     <div className="app">
       <nav className="nav">
         <div className="nav-links">
-          <NavLink to="/" end className={({ isActive }) => isActive ? "nav-link home active" : "nav-link home"}>
-            {t('home')}
-          </NavLink>
           <NavLink to="/locations" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('locations')}
           </NavLink>
@@ -172,10 +169,10 @@ function RootLayout(): React.ReactElement {
           <NavLink to="/cultures" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('cultures')}
           </NavLink>
-          <NavLink to="/suppliers" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            {t('suppliers')}
-          </NavLink>
-          <NavLink to="/planting-plans" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
+          <NavLink
+            to="/anbauplaene"
+            className={({ isActive }) => (isActive || location.pathname === '/planting-plans') ? 'nav-link active' : 'nav-link'}
+          >
             {t('plantingPlans')}
           </NavLink>
           <NavLink to="/gantt-chart" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
@@ -183,6 +180,9 @@ function RootLayout(): React.ReactElement {
           </NavLink>
           <NavLink to="/seed-demand" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('seedDemand')}
+          </NavLink>
+          <NavLink to="/suppliers" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
+            {t('suppliers')}
           </NavLink>
         </div>
         <div className="nav-actions">
@@ -218,19 +218,25 @@ function RootLayout(): React.ReactElement {
         <DialogTitle>Versionsverlauf</DialogTitle>
         <DialogContent>
           <List>
-            {historyItems.map((item) => (
-              <ListItem
-                key={item.history_id}
-                secondaryAction={
-                  <Button onClick={() => void handleRestoreProjectVersion(item.history_id)}>Restore this version</Button>
-                }
-              >
-                <ListItemText
-                  primary={new Date(item.history_date).toLocaleString()}
-                  secondary={`${item.summary}${item.culture_id ? ` (Kultur #${item.culture_id})` : ''}`}
-                />
-              </ListItem>
-            ))}
+            {historyItems.map((item, index) => {
+              const isCurrentVersion = index === 0;
+
+              return (
+                <ListItem
+                  key={item.history_id}
+                  secondaryAction={
+                    isCurrentVersion
+                      ? <Chip label="Aktuelle Version" size="small" color="success" variant="outlined" />
+                      : <Button onClick={() => void handleRestoreProjectVersion(item.history_id)}>Wiederherstellen</Button>
+                  }
+                >
+                  <ListItemText
+                    primary={new Date(item.history_date).toLocaleString()}
+                    secondary={`${item.summary}${item.culture_id ? ` (Kultur #${item.culture_id})` : ''}`}
+                  />
+                </ListItem>
+              );
+            })}
           </List>
         </DialogContent>
         <DialogActions>
@@ -286,7 +292,7 @@ function createAppRouter(basename: string) {
       children: [
         {
           index: true,
-          element: <Home />,
+          loader: () => redirect('/anbauplaene'),
         },
         {
           path: 'locations',
@@ -299,6 +305,10 @@ function createAppRouter(basename: string) {
         {
           path: 'cultures',
           element: <Cultures />,
+        },
+        {
+          path: 'anbauplaene',
+          element: <PlantingPlans />,
         },
         {
           path: 'suppliers',

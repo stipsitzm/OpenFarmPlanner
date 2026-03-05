@@ -223,7 +223,7 @@ export function createHierarchyColumns(
       field: 'area_sqm',
       headerName: t('hierarchy:columns.area'),
       width: widths.area,
-      type: 'number',
+      type: 'string',
       editable: true,
     },
     {
@@ -237,12 +237,17 @@ export function createHierarchyColumns(
         const excerpt = hasValue ? getPlainExcerpt(value, 120) : '';
 
         return (
-          <NotesCell
-            hasValue={hasValue}
-            excerpt={excerpt}
-            rawValue={value}
-            onOpen={() => onOpenNotes(params.id, 'notes')}
-          />
+          <Box
+            sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center' }}
+            onClick={() => onOpenNotes(params.id, 'notes')}
+          >
+            <NotesCell
+              hasValue={hasValue}
+              excerpt={excerpt}
+              rawValue={value}
+              onOpen={() => onOpenNotes(params.id, 'notes')}
+            />
+          </Box>
         );
       },
     },

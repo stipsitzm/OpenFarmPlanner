@@ -3,6 +3,7 @@
  */
 
 import type { GridColDef } from '@mui/x-data-grid';
+import { Box, Tooltip } from '@mui/material';
 import { SearchableSelectEditCell } from './SearchableSelectEditCell';
 import type { SearchableSelectOption } from './SearchableSelectEditCell';
 
@@ -12,6 +13,8 @@ export interface SearchableSelectColumnConfig<Row extends { [key: string]: unkno
   flex: number;
   minWidth: number;
   options: SearchableSelectOption[];
+  maxWidth?: number;
+  truncateCellText?: boolean;
 }
 
 /**
@@ -26,13 +29,14 @@ export interface SearchableSelectColumnConfig<Row extends { [key: string]: unkno
 export const createSearchableSelectColumn = <Row extends { [key: string]: unknown }>(
   config: SearchableSelectColumnConfig<Row>
 ): GridColDef => {
-  const { field, headerName, flex, minWidth, options } = config;
+  const { field, headerName, flex, minWidth, options, maxWidth, truncateCellText = false } = config;
 
   return {
     field: String(field),
     headerName,
     flex,
     minWidth,
+    maxWidth,
     editable: true,
     type: 'singleSelect',
     valueOptions: options,
@@ -46,6 +50,29 @@ export const createSearchableSelectColumn = <Row extends { [key: string]: unknow
       }
       const option = options.find((item) => item.value === numericValue);
       return option ? option.label : '';
+    },
+    renderCell: (params) => {
+      if (!truncateCellText) {
+        return params.formattedValue as string;
+      }
+
+      const text = String(params.formattedValue ?? '');
+      return (
+        <Tooltip title={text} disableHoverListener={!text}>
+          <Box
+            component="span"
+            sx={{
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              width: '100%',
+            }}
+          >
+            {text}
+          </Box>
+        </Tooltip>
+      );
     },
     renderEditCell: (params) => (
       <SearchableSelectEditCell
@@ -76,13 +103,14 @@ export const createSearchableSelectColumn = <Row extends { [key: string]: unknow
 export const createSingleSelectColumn = <Row extends { [key: string]: unknown }>(
   config: SearchableSelectColumnConfig<Row>
 ): GridColDef => {
-  const { field, headerName, flex, minWidth, options } = config;
+  const { field, headerName, flex, minWidth, options, maxWidth, truncateCellText = false } = config;
 
   return {
     field: String(field),
     headerName,
     flex,
     minWidth,
+    maxWidth,
     editable: true,
     type: 'singleSelect',
     valueOptions: options,
@@ -96,6 +124,29 @@ export const createSingleSelectColumn = <Row extends { [key: string]: unknown }>
       }
       const option = options.find((item) => item.value === numericValue);
       return option ? option.label : '';
+    },
+    renderCell: (params) => {
+      if (!truncateCellText) {
+        return params.formattedValue as string;
+      }
+
+      const text = String(params.formattedValue ?? '');
+      return (
+        <Tooltip title={text} disableHoverListener={!text}>
+          <Box
+            component="span"
+            sx={{
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              width: '100%',
+            }}
+          >
+            {text}
+          </Box>
+        </Tooltip>
+      );
     },
     valueSetter: (value, row) => {
       const numericValue = typeof value === 'number' ? value : Number(value);

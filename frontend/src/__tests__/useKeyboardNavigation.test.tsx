@@ -6,7 +6,7 @@ const { navigateMock, useNavigateMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   useNavigateMock: vi.fn(),
 }));
-let currentPathname = '/';
+let currentPathname = '/anbauplaene';
 useNavigateMock.mockImplementation(() => navigateMock);
 
 vi.mock('react-router-dom', () => ({
@@ -22,11 +22,11 @@ function TestComponent() {
 describe('useKeyboardNavigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    currentPathname = '/';
+    currentPathname = '/anbauplaene';
     document.body.innerHTML = '';
   });
 
-  it('navigates to next route on Ctrl+Shift+ArrowRight', () => {
+  it('navigates to next route on Ctrl+Shift+ArrowRight from Anbaupläne', () => {
     render(<TestComponent />);
 
     const event = new KeyboardEvent('keydown', {
@@ -38,11 +38,11 @@ describe('useKeyboardNavigation', () => {
 
     window.dispatchEvent(event);
 
-    expect(navigateMock).toHaveBeenCalledWith('/locations');
+    expect(navigateMock).toHaveBeenCalledWith('/gantt-chart');
   });
 
-  it('wraps to last route on Ctrl+Shift+ArrowLeft from home', () => {
-    currentPathname = '/';
+  it('wraps to last route on Ctrl+Shift+ArrowLeft from Anbaupläne', () => {
+    currentPathname = '/anbauplaene';
     render(<TestComponent />);
 
     window.dispatchEvent(
@@ -54,7 +54,7 @@ describe('useKeyboardNavigation', () => {
       })
     );
 
-    expect(navigateMock).toHaveBeenCalledWith('/seed-demand');
+    expect(navigateMock).toHaveBeenCalledWith('/cultures');
   });
 
 
@@ -75,8 +75,8 @@ describe('useKeyboardNavigation', () => {
   });
 
 
-  it('wraps to first route on Ctrl+Shift+ArrowRight from seed-demand', () => {
-    currentPathname = '/seed-demand';
+  it('wraps to first route on Ctrl+Shift+ArrowRight from suppliers', () => {
+    currentPathname = '/suppliers';
     render(<TestComponent />);
 
     window.dispatchEvent(
@@ -88,10 +88,10 @@ describe('useKeyboardNavigation', () => {
       })
     );
 
-    expect(navigateMock).toHaveBeenCalledWith('/');
+    expect(navigateMock).toHaveBeenCalledWith('/locations');
   });
 
-  it('falls back to home when current route is unknown', () => {
+  it('falls back to Anbaupläne when current route is unknown', () => {
     currentPathname = '/unknown-path';
     render(<TestComponent />);
 
@@ -104,7 +104,24 @@ describe('useKeyboardNavigation', () => {
       })
     );
 
-    expect(navigateMock).toHaveBeenCalledWith('/');
+    expect(navigateMock).toHaveBeenCalledWith('/anbauplaene');
+  });
+
+
+  it('treats /planting-plans as Anbaupläne for shortcut navigation', () => {
+    currentPathname = '/planting-plans';
+    render(<TestComponent />);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+      })
+    );
+
+    expect(navigateMock).toHaveBeenCalledWith('/gantt-chart');
   });
 
   it('ignores shortcut when typing in input/textarea/contenteditable', () => {

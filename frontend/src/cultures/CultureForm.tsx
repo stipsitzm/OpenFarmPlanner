@@ -85,6 +85,7 @@ const buildInitialFormData = (culture?: Culture): Partial<Culture> => {
     ...culture,
     supplier: {
       name: culture.seed_supplier,
+      allowed_domains: [],
     },
   };
 };

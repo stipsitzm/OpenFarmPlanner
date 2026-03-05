@@ -14,13 +14,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 // Define the ordered list of routes to cycle through
 const ROUTES = [
-  '/',
   '/locations',
   '/fields-beds',
   '/cultures',
-  '/planting-plans',
+  '/anbauplaene',
   '/gantt-chart',
   '/seed-demand',
+  '/suppliers',
 ];
 
 export function useKeyboardNavigation(): void {
@@ -53,15 +53,16 @@ export function useKeyboardNavigation(): void {
       // Prevent default behavior
       event.preventDefault();
 
-      // Normalize pathname by removing trailing slash
-      const normalizedPath = location.pathname.replace(/\/$/, '') || '/';
+      // Normalize pathname by removing trailing slash and mapping legacy aliases
+      const rawPath = location.pathname.replace(/\/$/, '') || '/';
+      const normalizedPath = rawPath === '/' || rawPath === '/planting-plans' ? '/anbauplaene' : rawPath;
       
       // Find current route index
       const currentIndex = ROUTES.indexOf(normalizedPath);
       
-      // If current route is not in the list, default to home
+      // If current route is not in the list, default to Anbaupläne
       if (currentIndex === -1) {
-        navigate(ROUTES[0]);
+        navigate('/anbauplaene');
         return;
       }
 

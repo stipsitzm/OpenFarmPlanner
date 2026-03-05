@@ -106,7 +106,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               <TextField
                 sx={fieldSx}
                 type="number"
-                label={hasPreCultivation && !hasDirectSowing ? 'Anzucht Menge (Korn / Pflanze)' : 'Menge'}
+                label={hasPreCultivation && !hasDirectSowing ? 'Pflanzung Menge (Korn / Pflanze)' : 'Menge'}
                 value={formData.seed_rate_value ?? ''}
                 onChange={e => onChange('seed_rate_value', e.target.value ? parseFloat(e.target.value) : null)}
                 onBlur={() => onChange('seed_rate_value', formData.seed_rate_value)}
@@ -150,15 +150,15 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
             <TextField
               sx={fieldSx}
               type="number"
-              label="Anzucht Menge"
+              label="Pflanzung Menge"
               value={formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? ''}
               onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { value: e.target.value ? parseFloat(e.target.value) : null, unit: normalizedPreCultivationUnit })}
             />
             <FormControl sx={fieldSx}>
-              <InputLabel>Anzucht Einheit</InputLabel>
+              <InputLabel>Pflanzung Einheit</InputLabel>
               <Select
                 value={normalizedPreCultivationUnit}
-                label="Anzucht Einheit"
+                label="Pflanzung Einheit"
                 onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { unit: e.target.value as SeedRateUnit, value: formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? null })}
                 fullWidth
               >
@@ -175,7 +175,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
             <TextField
               sx={{ ...fieldSx, width: '100%' }}
               type="number"
-              label="Anzucht Menge (Korn / Pflanze, manuell)"
+              label="Pflanzung Menge (Korn / Pflanze, manuell)"
               value={formData.seed_rate_value ?? ''}
               onChange={e => onChange('seed_rate_value', e.target.value ? parseFloat(e.target.value) : null)}
             />
@@ -183,15 +183,15 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               <TextField
                 sx={fieldSx}
                 type="number"
-                label="Anzucht Menge"
+                label="Pflanzung Menge"
                 value={formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? ''}
                 onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { value: e.target.value ? parseFloat(e.target.value) : null, unit: normalizedPreCultivationUnit })}
               />
               <FormControl sx={fieldSx}>
-                <InputLabel>Anzucht Einheit</InputLabel>
+                <InputLabel>Pflanzung Einheit</InputLabel>
                 <Select
                   value={normalizedPreCultivationUnit}
-                  label="Anzucht Einheit"
+                  label="Pflanzung Einheit"
                   onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { unit: e.target.value as SeedRateUnit, value: formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? null })}
                   fullWidth
                 >

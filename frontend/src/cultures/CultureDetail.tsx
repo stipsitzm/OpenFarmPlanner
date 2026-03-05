@@ -183,7 +183,14 @@ export function CultureDetail({
                       Lieferanten-URL
                     </Typography>
                     <Typography variant="body1">
-                      {selectedCulture.supplier.homepage_url}
+                      <Link
+                        href={selectedCulture.supplier.homepage_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        underline="hover"
+                      >
+                        {selectedCulture.supplier.homepage_url}
+                      </Link>
                     </Typography>
                   </Box>
                 )}
@@ -211,7 +218,7 @@ export function CultureDetail({
                         <Chip
                           key={item}
                           size="small"
-                          label={item === 'pre_cultivation' ? 'Anzucht' : 'Direktsaat'}
+                          label={item === 'pre_cultivation' ? 'Pflanzung' : 'Direktsaat'}
                         />
                       ))}
                     </Box>
@@ -338,7 +345,7 @@ export function CultureDetail({
                       <TableBody>
                         {Object.entries(selectedCulture.seed_rate_by_cultivation).map(([method, payload]) => (
                           <TableRow key={method}>
-                            <TableCell>{method === 'pre_cultivation' ? 'Anzucht' : 'Direktsaat'}</TableCell>
+                            <TableCell>{method === 'pre_cultivation' ? 'Pflanzung' : 'Direktsaat'}</TableCell>
                             <TableCell>{payload?.value}</TableCell>
                             <TableCell>
                               {payload?.unit === 'g_per_m2'

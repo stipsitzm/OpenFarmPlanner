@@ -49,6 +49,7 @@ def normalize_choice_value(field_name: str, value: object) -> object:
             'pre_cultivation': 'pre_cultivation',
             'pre cultivation': 'pre_cultivation',
             'anzucht': 'pre_cultivation',
+            'pflanzung': 'pre_cultivation',
             'transplant': 'pre_cultivation',
             'transplanting': 'pre_cultivation',
             'bush bean': 'direct_sowing',

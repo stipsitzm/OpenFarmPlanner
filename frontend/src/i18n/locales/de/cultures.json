@@ -47,7 +47,7 @@
     "nutrientDemandHigh": "Hoch",
     "cultivationType": "Anbauart",
     "cultivationTypeDirectSowing": "Direktsaat",
-    "cultivationTypePreCultivation": "Anzucht",
+    "cultivationTypePreCultivation": "Pflanzung",
     "germinationRate": "Keimrate (%)",
     "germinationRatePlaceholder": "0-100",
     "germinationRateError": "Keimrate muss zwischen 0 und 100 liegen",
@@ -110,8 +110,8 @@
     "seedingRequirementValueRequired": "Saatgutbedarf ist erforderlich, wenn ein Saatgutbedarf-Typ angegeben ist.",
     "seedRateDirectValue": "Direktsaat Menge",
     "seedRateDirectUnit": "Direktsaat Einheit",
-    "seedRatePreCultivationValue": "Anzucht Menge",
-    "seedRatePreCultivationUnit": "Anzucht Einheit"
+    "seedRatePreCultivationValue": "Pflanzung Menge",
+    "seedRatePreCultivationUnit": "Pflanzung Einheit"
   },
   "messages": {
     "createSuccess": "Kultur erfolgreich erstellt",

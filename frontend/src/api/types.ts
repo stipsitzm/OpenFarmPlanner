@@ -13,7 +13,6 @@ export interface Supplier {
   homepage_url?: string;
   slug?: string;
   allowed_domains: string[];
-  is_active?: boolean;
   created_at?: string;
   updated_at?: string;
   created?: boolean;
@@ -127,6 +126,7 @@ export interface Bed {
 export interface PlantingPlan {
   id?: number;
   culture: number;
+  cultivation_type?: CultivationType | '';
   culture_name?: string;
   bed: number;
   bed_name?: string;
@@ -225,6 +225,8 @@ export interface EnrichmentCostEstimate {
     output: number;
     web_search_calls: number;
     web_search_call_count: number;
+    subtotal?: number;
+    tax?: number;
   };
 }
 

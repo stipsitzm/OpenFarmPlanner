@@ -75,7 +75,7 @@ class SupplierSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Supplier
-        fields = ['id', 'name', 'homepage_url', 'slug', 'allowed_domains', 'is_active', 'created_at', 'updated_at', 'created']
+        fields = ['id', 'name', 'homepage_url', 'slug', 'allowed_domains', 'created_at', 'updated_at', 'created']
         read_only_fields = ['created_at', 'updated_at', 'slug']
 
 
@@ -104,6 +104,8 @@ class FieldSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     f'Area must not exceed {Field.MAX_AREA_SQM} sqm (100 hectares).'
                 )
+            if value.as_tuple().exponent < -1:
+                raise serializers.ValidationError('Area must have at most one decimal place for fields.')
         return value
 
 
@@ -132,6 +134,8 @@ class BedSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     f'Area must not exceed {Bed.MAX_AREA_SQM} sqm (1 hectare).'
                 )
+            if value.as_tuple().exponent < -1:
+                raise serializers.ValidationError('Area must have at most one decimal place for beds.')
         return value
 
 

@@ -319,12 +319,19 @@ class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         """
         queryset = super().get_queryset()
         query = self.request.query_params.get('q', None)
-        
+
         if query:
             # Case-insensitive search in name
             queryset = queryset.filter(name__icontains=query)
-        
-        return queryset.order_by('name')[:20]  # Limit to 20 results
+
+        queryset = queryset.order_by('name')
+
+        # Limit only list responses for autocomplete-like usage.
+        # Detail/update/delete must be able to resolve any existing supplier by PK.
+        if getattr(self, 'action', None) == 'list':
+            return queryset[:20]
+
+        return queryset
     
     def create(self, request, *args, **kwargs):
         """Create or get existing supplier by name.
@@ -338,7 +345,6 @@ class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         name = request.data.get('name', '').strip()
         homepage_url = request.data.get('homepage_url', '').strip()
         allowed_domains = request.data.get('allowed_domains', [])
-        is_active = bool(request.data.get('is_active', True))
 
         if not name:
             return Response(
@@ -350,19 +356,45 @@ class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
                 {'homepage_url': 'This field is required.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+        # Normalize homepage_url (prepend https:// if no protocol)
+        if homepage_url and not homepage_url.startswith(('http://', 'https://')):
+            homepage_url = f'https://{homepage_url}'
+        
+        # Validate homepage_url format
+        from django.core.validators import URLValidator
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        url_validator = URLValidator()
+        try:
+            url_validator(homepage_url)
+        except DjangoValidationError:
+            return Response(
+                {'homepage_url': 'Enter a valid URL.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate allowed_domains
+        if allowed_domains and isinstance(allowed_domains, list):
+            normalized_domains = Supplier.normalize_allowed_domains(allowed_domains)
+            invalid = [domain for domain in normalized_domains if not Supplier._is_valid_domain(Supplier._normalize_domain(domain))]
+            if invalid:
+                return Response(
+                    {'allowed_domains': f'Invalid domain(s): {", ".join(invalid)}. Domains must be valid hostnames without scheme or path.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         # Get or create supplier by normalized name
         from .utils import normalize_supplier_name
         normalized = normalize_supplier_name(name) or ''
 
+        supplier_defaults = {
+            'name': name,
+            'homepage_url': homepage_url,
+            'allowed_domains': Supplier.normalize_allowed_domains(allowed_domains) if isinstance(allowed_domains, list) else [],
+        }
         supplier, created = Supplier.objects.get_or_create(
             name_normalized=normalized,
-            defaults={
-                'name': name,
-                'homepage_url': homepage_url,
-                'allowed_domains': allowed_domains if isinstance(allowed_domains, list) else [],
-                'is_active': is_active,
-            }
+            defaults=supplier_defaults
         )
         if not created:
             update_fields: list[str] = []
@@ -370,11 +402,8 @@ class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
                 supplier.homepage_url = homepage_url
                 update_fields.append('homepage_url')
             if isinstance(allowed_domains, list):
-                supplier.allowed_domains = allowed_domains
+                supplier.allowed_domains = Supplier.normalize_allowed_domains(allowed_domains)
                 update_fields.append('allowed_domains')
-            if supplier.is_active != is_active:
-                supplier.is_active = is_active
-                update_fields.append('is_active')
             if update_fields:
                 supplier.save()
         

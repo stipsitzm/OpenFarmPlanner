@@ -64,6 +64,83 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertGreaterEqual(Supplier.objects.count(), 1)
         self.assertEqual(response.data['id'], self.supplier.id)
 
+    def test_supplier_update_not_limited_by_list_slice(self):
+        """Supplier updates must work even if list endpoint shows only first 20 rows."""
+        for idx in range(30):
+            Supplier.objects.create(
+                name=f"A Supplier {idx:02d}",
+                homepage_url=f"https://a-supplier-{idx:02d}.example",
+            )
+
+        target = Supplier.objects.create(name='ZZZ Supplier', homepage_url='https://zzz.example')
+
+        response = self.client.put(
+            f'/openfarmplanner/api/suppliers/{target.id}/',
+            {
+                'name': 'ZZZ Supplier Updated',
+                'homepage_url': 'https://zzz-updated.example',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'ZZZ Supplier Updated')
+
+    def test_supplier_update_with_invalid_allowed_domain_returns_400(self):
+        """Invalid allowed_domains input should be validated, not crash with 500."""
+        response = self.client.put(
+            f'/openfarmplanner/api/suppliers/{self.supplier.id}/',
+            {
+                'name': self.supplier.name,
+                'homepage_url': 'https://lieferando.example',
+                'allowed_domains': ['lieferando.example', 'www.lieferando.example', 'sdfasdad'],
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('allowed_domains', response.data)
+
+    def test_supplier_create_with_invalid_domain_returns_400(self):
+        """Test creating supplier with invalid allowed_domains returns 400."""
+        data = {
+            'name': 'Invalid Domain Supplier',
+            'homepage_url': 'https://example.com',
+            'allowed_domains': ['example.com', 'invalid domain', 'https://not-allowed.com']
+        }
+        response = self.client.post('/openfarmplanner/api/suppliers/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('allowed_domains', response.data)
+
+    def test_supplier_create_with_invalid_url_returns_400(self):
+        """Test creating supplier with invalid homepage_url returns 400."""
+        invalid_urls = ['invalid-url', 'htp://broken.com', 'just-text', '']
+        for invalid_url in invalid_urls:
+            data = {
+                'name': f'Test Supplier {invalid_url}',
+                'homepage_url': invalid_url,
+            }
+            response = self.client.post('/openfarmplanner/api/suppliers/', data, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, f'Should reject invalid URL: {invalid_url}')
+            self.assertIn('homepage_url', response.data, f'Should have homepage_url error for: {invalid_url}')
+
+    def test_supplier_create_with_domain_only_normalizes_to_https(self):
+        """Test creating supplier with domain-only URL prepends https://."""
+        test_cases = [
+            ('example.com', 'https://example.com'),
+            ('www.example.com', 'https://www.example.com'),
+            ('subdomain.example.co.uk', 'https://subdomain.example.co.uk'),
+        ]
+        
+        for input_url, expected_url in test_cases:
+            data = {
+                'name': f'Test Supplier for {input_url}',
+                'homepage_url': input_url,
+            }
+            response = self.client.post('/openfarmplanner/api/suppliers/', data, format='json')
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED, f'Should accept domain-only URL: {input_url}')
+            self.assertEqual(response.data['homepage_url'], expected_url, f'Should normalize {input_url} to {expected_url}')
+
     def test_culture_with_supplier(self):
         """Test creating culture with supplier"""
         data = {

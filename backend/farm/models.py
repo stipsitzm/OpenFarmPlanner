@@ -1,4 +1,5 @@
 import json
+import re
 import uuid
 from datetime import timedelta
 from decimal import Decimal
@@ -53,7 +54,6 @@ class Supplier(TimestampedModel):
     homepage_url = models.URLField(help_text="Supplier homepage URL")
     slug = models.SlugField(max_length=200, unique=True, blank=True)
     allowed_domains = models.JSONField(default=list, blank=True)
-    is_active = models.BooleanField(default=True)
     name_normalized = models.CharField(
         max_length=200,
         unique=True,
@@ -206,7 +206,7 @@ class Field(TimestampedModel):
     
     name = models.CharField(max_length=200)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='fields')
-    area_sqm = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    area_sqm = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
     notes = models.TextField(blank=True)
 
     def clean(self) -> None:
@@ -238,7 +238,7 @@ class Bed(TimestampedModel):
     
     name = models.CharField(max_length=200)
     field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds')
-    area_sqm = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    area_sqm = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
     notes = models.TextField(blank=True)
 
     def get_total_area(self) -> float | None:
@@ -754,8 +754,16 @@ class SeedPackage(TimestampedModel):
 
 class PlantingPlan(TimestampedModel):
     """A planting schedule linking a culture to a bed with dates."""
+    CULTIVATION_TYPE_CHOICES = Culture.CULTIVATION_TYPE_CHOICES
+
     culture = models.ForeignKey(Culture, on_delete=models.CASCADE, related_name='planting_plans')
     bed = models.ForeignKey(Bed, on_delete=models.CASCADE, related_name='planting_plans')
+    cultivation_type = models.CharField(
+        max_length=30,
+        choices=CULTIVATION_TYPE_CHOICES,
+        blank=True,
+        help_text="Cultivation type used for this plan",
+    )
     planting_date = models.DateField()
     harvest_date = models.DateField(
         blank=True,
@@ -822,6 +830,12 @@ class PlantingPlan(TimestampedModel):
             # New instance - always calculate.
             should_recalculate = True
         
+        if not self.cultivation_type and self.culture:
+            if self.culture.cultivation_types and len(self.culture.cultivation_types) > 0:
+                self.cultivation_type = self.culture.cultivation_types[0]
+            elif self.culture.cultivation_type:
+                self.cultivation_type = self.culture.cultivation_type
+
         # Calculate harvest dates if needed.
         if should_recalculate and self.planting_date and self.culture:
             # Calculate harvest start date using growth_duration_days only.
