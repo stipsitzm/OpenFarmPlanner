@@ -16,9 +16,9 @@ describe('i18n Configuration', () => {
   });
 
   it('should load navigation translations', () => {
-    const home = i18n.t('navigation:home');
-    expect(home).toBe('Start');
-    
+    const plantingPlans = i18n.t('navigation:plantingPlans');
+    expect(plantingPlans).toBe('Anbaupläne');
+
     const locations = i18n.t('navigation:locations');
     expect(locations).toBe('Standorte');
   });
