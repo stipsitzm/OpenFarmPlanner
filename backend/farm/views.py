@@ -319,12 +319,19 @@ class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         """
         queryset = super().get_queryset()
         query = self.request.query_params.get('q', None)
-        
+
         if query:
             # Case-insensitive search in name
             queryset = queryset.filter(name__icontains=query)
-        
-        return queryset.order_by('name')[:20]  # Limit to 20 results
+
+        queryset = queryset.order_by('name')
+
+        # Limit only list responses for autocomplete-like usage.
+        # Detail/update/delete must be able to resolve any existing supplier by PK.
+        if getattr(self, 'action', None) == 'list':
+            return queryset[:20]
+
+        return queryset
     
     def create(self, request, *args, **kwargs):
         """Create or get existing supplier by name.

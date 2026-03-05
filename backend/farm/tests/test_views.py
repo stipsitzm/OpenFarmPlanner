@@ -64,6 +64,29 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertGreaterEqual(Supplier.objects.count(), 1)
         self.assertEqual(response.data['id'], self.supplier.id)
 
+    def test_supplier_update_not_limited_by_list_slice(self):
+        """Supplier updates must work even if list endpoint shows only first 20 rows."""
+        for idx in range(30):
+            Supplier.objects.create(
+                name=f"A Supplier {idx:02d}",
+                homepage_url=f"https://a-supplier-{idx:02d}.example",
+            )
+
+        target = Supplier.objects.create(name='ZZZ Supplier', homepage_url='https://zzz.example')
+
+        response = self.client.put(
+            f'/openfarmplanner/api/suppliers/{target.id}/',
+            {
+                'name': 'ZZZ Supplier Updated',
+                'homepage_url': 'https://zzz-updated.example',
+                'is_active': True,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'ZZZ Supplier Updated')
+
     def test_culture_with_supplier(self):
         """Test creating culture with supplier"""
         data = {
