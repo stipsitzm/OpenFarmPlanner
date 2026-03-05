@@ -87,6 +87,22 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], 'ZZZ Supplier Updated')
 
+    def test_supplier_update_with_invalid_allowed_domain_returns_400(self):
+        """Invalid allowed_domains input should be validated, not crash with 500."""
+        response = self.client.put(
+            f'/openfarmplanner/api/suppliers/{self.supplier.id}/',
+            {
+                'name': self.supplier.name,
+                'homepage_url': 'https://lieferando.example',
+                'allowed_domains': ['lieferando.example', 'www.lieferando.example', 'sdfasdad'],
+                'is_active': True,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('allowed_domains', response.data)
+
     def test_culture_with_supplier(self):
         """Test creating culture with supplier"""
         data = {
