@@ -276,6 +276,7 @@ class Culture(TimestampedModel):
     ]
     CULTIVATION_TYPE_VALUES = {item[0] for item in CULTIVATION_TYPE_CHOICES}
     DIRECT_SOWING_SEED_RATE_UNITS = {'g_per_m2', 'g_per_lfm', 'seeds/m'}
+    PRE_CULTIVATION_AUTO_SEED_RATE_UNITS = {'g_per_m2', 'g_per_lfm', 'seeds/m'}
     
     HARVEST_METHOD_CHOICES = [
         ('per_plant', 'Per Plant'),
@@ -500,8 +501,8 @@ class Culture(TimestampedModel):
                     unit = payload.get('unit')
                     if not isinstance(value, (int, float)) or float(value) <= 0:
                         errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation values must be positive numbers.'
-                    if method == 'pre_cultivation' and unit != 'seeds_per_plant':
-                        errors['seed_rate_by_cultivation'] = 'Pre-cultivation unit must be seeds_per_plant.'
+                    if method == 'pre_cultivation' and unit not in self.PRE_CULTIVATION_AUTO_SEED_RATE_UNITS:
+                        errors['seed_rate_by_cultivation'] = 'Pre-cultivation unit must be g_per_m2, g_per_lfm, or seeds/m.'
                     if method == 'direct_sowing' and unit not in self.DIRECT_SOWING_SEED_RATE_UNITS:
                         errors['seed_rate_by_cultivation'] = 'Direct-sowing unit must be g_per_m2, g_per_lfm, or seeds/m.'
 

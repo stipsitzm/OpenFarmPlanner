@@ -82,8 +82,9 @@ describe('HarvestSection and SeedingSection', () => {
       />
     );
 
-    expect(screen.getByLabelText('Anzucht Menge (Korn / Pflanze)')).toBeInTheDocument();
-    expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Anzucht Menge (Korn / Pflanze, manuell)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Anzucht/Pflanzung Menge')).toBeInTheDocument();
+    expect(screen.getAllByRole('combobox').length).toBeGreaterThan(1);
     expect(screen.getByLabelText('Direktsaat Menge')).toBeInTheDocument();
   });
 });

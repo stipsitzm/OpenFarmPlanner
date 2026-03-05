@@ -107,7 +107,7 @@ def normalize_sowing_method_enrichment_fields(
             return 'g_per_m2', converted_value
 
         normalized_unit = normalize_choice_value('seed_rate_unit', unit_text)
-        if normalized_unit in {'g_per_m2', 'g_per_lfm', 'seeds_per_plant'}:
+        if normalized_unit in {'g_per_m2', 'g_per_lfm', 'seeds/m', 'seeds_per_plant'}:
             return str(normalized_unit), value
         return None, value
 
@@ -225,12 +225,12 @@ def normalize_sowing_method_enrichment_fields(
                 suggested_fields.pop(value_field, None)
                 continue
 
-            if method_key == 'pre_cultivation' and normalized_unit != 'seeds_per_plant':
+            if method_key == 'pre_cultivation' and normalized_unit not in {'g_per_m2', 'g_per_lfm', 'seeds/m'}:
                 if isinstance(warnings, list):
                     warnings.append({
                         'field': value_field,
                         'code': 'seed_rate_unit_invalid_for_method',
-                        'message': 'Method pre_cultivation only accepts seeds_per_plant; entry skipped.',
+                        'message': 'Method pre_cultivation only accepts g_per_m2, g_per_lfm, or seeds/m; entry skipped.',
                     })
                 suggested_fields.pop(value_field, None)
                 continue
@@ -287,12 +287,12 @@ def apply_method_seed_rates_to_suggestions(
             suggested_fields.pop(value_field, None)
             continue
 
-        if method_key == 'pre_cultivation' and unit_value != 'seeds_per_plant':
+        if method_key == 'pre_cultivation' and unit_value not in {'g_per_m2', 'g_per_lfm', 'seeds/m'}:
             if isinstance(warnings, list):
                 warnings.append({
                     'field': value_field,
                     'code': 'seed_rate_unit_invalid_for_method',
-                    'message': 'Method pre_cultivation only accepts seeds_per_plant; entry skipped.',
+                    'message': 'Method pre_cultivation only accepts g_per_m2, g_per_lfm, or seeds/m; entry skipped.',
                 })
             suggested_fields.pop(value_field, None)
             continue

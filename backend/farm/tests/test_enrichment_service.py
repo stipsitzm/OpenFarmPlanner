@@ -1166,17 +1166,18 @@ class NumericNormalizationTest(TestCase):
         self.assertEqual(set(suggested['allowed_sowing_methods']['value']), {'direct_sowing', 'pre_cultivation'})
         self.assertEqual(suggested['seed_rate_direct_value']['unit'], 'g_per_m2')
         self.assertAlmostEqual(suggested['seed_rate_direct_value']['value'], 0.09, places=8)
-        self.assertNotIn('seed_rate_transplant_value', suggested)
+        self.assertEqual(suggested['seed_rate_transplant_value']['unit'], 'g_per_m2')
+        self.assertAlmostEqual(suggested['seed_rate_transplant_value']['value'], 0.045, places=8)
         self.assertNotIn('seed_rate_transplant_unit', suggested)
 
         by_method = suggested['seed_rate_by_cultivation']['value']
         self.assertEqual(by_method['direct_sowing']['unit'], 'g_per_m2')
-        self.assertNotIn('pre_cultivation', by_method)
+        self.assertEqual(by_method['pre_cultivation']['unit'], 'g_per_m2')
+        self.assertAlmostEqual(by_method['pre_cultivation']['value'], 0.045, places=8)
 
         warning_codes = [item.get('code') for item in result['validation']['warnings']]
         self.assertIn('range_collapsed_to_mean', warning_codes)
         self.assertIn('seed_rate_unit_converted_from_g_per_are', warning_codes)
-        self.assertIn('seed_rate_unit_invalid_for_method', warning_codes)
 
 
     @override_settings(AI_ENRICHMENT_ENABLED=True)
@@ -1240,15 +1241,15 @@ class NumericNormalizationTest(TestCase):
         suggested = result['suggested_fields']
 
         self.assertEqual(suggested['seed_rate_direct_value']['unit'], 'g_per_m2')
+        self.assertEqual(suggested['seed_rate_transplant_value']['unit'], 'g_per_m2')
         self.assertNotIn('seed_rate_transplant_unit', suggested)
-        self.assertNotIn('seed_rate_transplant_value', suggested)
         by_method = suggested['seed_rate_by_cultivation']['value']
         self.assertEqual(by_method['direct_sowing']['unit'], 'g_per_m2')
-        self.assertNotIn('pre_cultivation', by_method)
+        self.assertEqual(by_method['pre_cultivation']['unit'], 'g_per_m2')
 
         warning_codes = [item.get('code') for item in result['validation']['warnings']]
         self.assertNotIn('seed_rate_unit_missing_for_method_value', warning_codes)
-        self.assertIn('seed_rate_unit_invalid_for_method', warning_codes)
+        self.assertNotIn('seed_rate_unit_invalid_for_method', warning_codes)
 
 
     @override_settings(AI_ENRICHMENT_ENABLED=True)

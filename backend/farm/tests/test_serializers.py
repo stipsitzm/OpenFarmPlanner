@@ -105,7 +105,7 @@ class SerializerBranchCoverageTest(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('seed_rate_by_cultivation', serializer.errors)
 
-    def test_rejects_pre_cultivation_g_per_m2_seed_rate(self):
+    def test_allows_pre_cultivation_g_per_m2_seed_rate(self):
         serializer = CultureSerializer(
             data={
                 'name': 'Kohl',
@@ -118,8 +118,7 @@ class SerializerBranchCoverageTest(TestCase):
             }
         )
 
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('seed_rate_by_cultivation', serializer.errors)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_notes_without_quellen_section_are_allowed(self):
         serializer = CultureSerializer(

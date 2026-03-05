@@ -901,7 +901,8 @@ function Cultures(): React.ReactElement {
     return entries.reduce<Record<string, { value: number; unit: string }>>((acc, [method, rate]) => {
       const parsedValue = Number(rate?.value);
       const unit = normalizeSeedRateUnit(rate?.unit);
-      if (!Number.isFinite(parsedValue) || parsedValue <= 0 || !unit) {
+      const allowedUnits = ['g_per_m2', 'g_per_lfm', 'seeds/m'];
+      if (!Number.isFinite(parsedValue) || parsedValue <= 0 || !unit || !allowedUnits.includes(unit)) {
         return acc;
       }
       acc[method] = { value: parsedValue, unit };
@@ -1132,7 +1133,7 @@ function Cultures(): React.ReactElement {
         }
         const preValue = Number(rawByCultivation.pre_cultivation?.value);
         const preUnit = normalizeSeedRateUnit(rawByCultivation.pre_cultivation?.unit);
-        if (Number.isFinite(preValue) && preValue > 0 && preUnit === 'seeds_per_plant') {
+        if (Number.isFinite(preValue) && preValue > 0 && preUnit && ['g_per_m2', 'g_per_lfm', 'seeds/m'].includes(preUnit)) {
           sanitizedByCultivation.pre_cultivation = { value: preValue, unit: preUnit };
         }
         if (Object.keys(sanitizedByCultivation).length > 0) {
@@ -1158,7 +1159,7 @@ function Cultures(): React.ReactElement {
         if (Number.isFinite(directValue) && directValue > 0 && directUnit) {
           byCultivation.direct_sowing = { value: directValue, unit: directUnit };
         }
-        if (Number.isFinite(transplantValue) && transplantValue > 0 && transplantUnit === 'seeds_per_plant') {
+        if (Number.isFinite(transplantValue) && transplantValue > 0 && transplantUnit && ['g_per_m2', 'g_per_lfm', 'seeds/m'].includes(transplantUnit)) {
           byCultivation.pre_cultivation = { value: transplantValue, unit: transplantUnit };
         }
         if (Object.keys(byCultivation).length > 0) {
