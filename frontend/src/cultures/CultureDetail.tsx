@@ -183,7 +183,14 @@ export function CultureDetail({
                       Lieferanten-URL
                     </Typography>
                     <Typography variant="body1">
-                      {selectedCulture.supplier.homepage_url}
+                      <Link
+                        href={selectedCulture.supplier.homepage_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        underline="hover"
+                      >
+                        {selectedCulture.supplier.homepage_url}
+                      </Link>
                     </Typography>
                   </Box>
                 )}

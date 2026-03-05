@@ -119,6 +119,32 @@ describe('CultureDetail Component', () => {
     expect(screen.getByText('Frisch und süß.')).toBeInTheDocument();
   });
 
+  it('renders supplier homepage as clickable link', () => {
+    const mockOnSelect = vi.fn();
+    const culturesWithSupplier: Culture[] = [
+      {
+        id: 12,
+        name: 'Salat',
+        supplier: {
+          id: 9,
+          name: 'ReinSaat',
+          homepage_url: 'https://www.reinsaat.at',
+          allowed_domains: ['reinsaat.at'],
+        },
+      },
+    ];
+
+    render(
+      <CultureDetail
+        cultures={culturesWithSupplier}
+        selectedCultureId={12}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getByRole('link', { name: 'https://www.reinsaat.at' })).toHaveAttribute('href', 'https://www.reinsaat.at');
+  });
+
   it('shows cultivation chips and per-method seed-rate table', () => {
     const mockOnSelect = vi.fn();
     const cultures: Culture[] = [
