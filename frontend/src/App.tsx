@@ -31,13 +31,12 @@ import { useRegisterCommands } from './commands/CommandProvider';
 import type { CommandSpec } from './commands/types';
 import { useMemo, useState } from 'react';
 import Locations from './pages/Locations';
-import FieldsBedsHierarchy from './pages/FieldsBedsHierarchy';
+import FieldsBedsPage from './pages/FieldsBedsPage';
 import Cultures from './pages/Cultures';
 import PlantingPlans from './pages/PlantingPlans';
 import GanttChart from './pages/GanttChart';
 import SeedDemandPage from './pages/SeedDemand';
 import Suppliers from './pages/Suppliers';
-import GraphicalFields from './pages/GraphicalFields';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { cultureAPI } from './api/api';
 import type { CultureHistoryEntry } from './api/types';
@@ -56,7 +55,7 @@ function RootLayout(): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
-  const routes = ['/locations', '/fields-beds', '/graphical-fields', '/cultures', '/anbauplaene', '/gantt-chart', '/seed-demand', '/suppliers'];
+  const routes = ['/locations', '/fields-beds', '/cultures', '/anbauplaene', '/gantt-chart', '/seed-demand', '/suppliers'];
 
   const handleGlobalMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setGlobalMenuAnchor(event.currentTarget);
@@ -166,9 +165,6 @@ function RootLayout(): React.ReactElement {
           </NavLink>
           <NavLink to="/fields-beds" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('fieldsAndBeds')}
-          </NavLink>
-          <NavLink to="/graphical-fields" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            {t('graphicalFields')}
           </NavLink>
           <NavLink to="/cultures" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
             {t('cultures')}
@@ -304,15 +300,11 @@ function createAppRouter(basename: string) {
         },
         {
           path: 'fields-beds',
-          element: <FieldsBedsHierarchy />,
+          element: <FieldsBedsPage />,
         },
         {
           path: 'cultures',
           element: <Cultures />,
-        },
-        {
-          path: 'graphical-fields',
-          element: <GraphicalFields />,
         },
         {
           path: 'anbauplaene',

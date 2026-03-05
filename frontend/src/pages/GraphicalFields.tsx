@@ -19,10 +19,28 @@ interface BedViewModel {
 const VIEWPORT_PADDING = 120;
 const FIELD_INNER_OFFSET_X = 10;
 const FIELD_INNER_OFFSET_Y = 34;
+const EXPANDED_STORAGE_KEY = 'graphicalFieldsExpandedLocations';
 
-export default function GraphicalFields(): React.ReactElement {
+interface GraphicalFieldsProps {
+  showTitle?: boolean;
+}
+
+export default function GraphicalFields({ showTitle = true }: GraphicalFieldsProps): React.ReactElement {
   const { loading, error, locations, fields, beds } = useHierarchyData();
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const [expanded, setExpanded] = useState<Record<number, boolean>>(() => {
+    try {
+      const raw = window.localStorage.getItem(EXPANDED_STORAGE_KEY);
+      if (!raw) return {};
+      const parsed: number[] = JSON.parse(raw);
+      return parsed.reduce<Record<number, boolean>>((acc, id) => {
+        acc[id] = true;
+        return acc;
+      }, {});
+    } catch (storageError) {
+      console.error('Failed to parse expanded locations state', storageError);
+      return {};
+    }
+  });
   const [layoutsByBed, setLayoutsByBed] = useState<Record<number, BedLayoutEntry>>({});
   const [stageWidth, setStageWidth] = useState<number>(() => Math.min(2200, Math.max(1200, window.innerWidth - VIEWPORT_PADDING)));
   const saveTimers = useRef<Record<number, number>>({});
@@ -35,6 +53,13 @@ export default function GraphicalFields(): React.ReactElement {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    const expandedIds = Object.entries(expanded)
+      .filter(([, isExpanded]) => isExpanded)
+      .map(([locationId]) => Number(locationId));
+    window.localStorage.setItem(EXPANDED_STORAGE_KEY, JSON.stringify(expandedIds));
+  }, [expanded]);
 
   useEffect(() => {
     let active = true;
@@ -103,7 +128,7 @@ export default function GraphicalFields(): React.ReactElement {
 
   return (
     <Box p={3}>
-      <Typography variant="h4" gutterBottom>Grafische Ansicht</Typography>
+      {showTitle && <Typography variant="h4" gutterBottom>Grafische Ansicht</Typography>}
       {error && <Alert severity="error">{error}</Alert>}
       {locations.map((location) => {
         if (!location.id) return null;

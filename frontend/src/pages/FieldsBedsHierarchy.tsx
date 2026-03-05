@@ -31,7 +31,11 @@ import { useCommandContextTag, useRegisterCommands } from '../commands/CommandPr
 import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 
-function FieldsBedsHierarchy(): React.ReactElement {
+interface FieldsBedsHierarchyProps {
+  showTitle?: boolean;
+}
+
+function FieldsBedsHierarchy({ showTitle = true }: FieldsBedsHierarchyProps): React.ReactElement {
   const { t } = useTranslation('hierarchy');
   const navigate = useNavigate();
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -543,7 +547,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <h1>{t('title')}</h1>
+      {showTitle && <h1>{t('title')}</h1>}
       
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
