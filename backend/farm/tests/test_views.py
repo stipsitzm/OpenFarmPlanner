@@ -5,7 +5,7 @@ from datetime import date
 from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
 
-from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier, NoteAttachment, SeedPackage
+from farm.models import Bed, BedLayout, Culture, Field, FieldLayout, Location, PlantingPlan, Supplier, NoteAttachment, SeedPackage
 
 class ApiEndpointsTest(DRFAPITestCase):
     def setUp(self):
@@ -141,6 +141,83 @@ class ApiEndpointsTest(DRFAPITestCase):
             self.assertEqual(response.status_code, status.HTTP_201_CREATED, f'Should accept domain-only URL: {input_url}')
             self.assertEqual(response.data['homepage_url'], expected_url, f'Should normalize {input_url} to {expected_url}')
 
+
+
+    def test_field_update_with_length_and_width_overwrites_area(self):
+        response = self.client.put(
+            f'/openfarmplanner/api/fields/{self.field.id}/',
+            {
+                'name': self.field.name,
+                'location': self.location.id,
+                'area_sqm': 200.0,
+                'length_m': 30.0,
+                'width_m': 4.0,
+                'notes': '',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.field.refresh_from_db()
+        self.assertEqual(float(self.field.area_sqm), 120.0)
+        self.assertEqual(self.field.length_m, 30.0)
+        self.assertEqual(self.field.width_m, 4.0)
+
+    def test_field_update_with_single_dimension_keeps_area(self):
+        response = self.client.put(
+            f'/openfarmplanner/api/fields/{self.field.id}/',
+            {
+                'name': self.field.name,
+                'location': self.location.id,
+                'area_sqm': 200.0,
+                'length_m': 25.0,
+                'width_m': None,
+                'notes': '',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.field.refresh_from_db()
+        self.assertEqual(float(self.field.area_sqm), 200.0)
+        self.assertEqual(self.field.length_m, 25.0)
+        self.assertIsNone(self.field.width_m)
+
+    def test_bed_update_with_length_and_width_overwrites_area(self):
+        response = self.client.put(
+            f'/openfarmplanner/api/beds/{self.bed.id}/',
+            {
+                'name': self.bed.name,
+                'field': self.field.id,
+                'area_sqm': 20.0,
+                'length_m': 5.0,
+                'width_m': 3.0,
+                'notes': '',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.bed.refresh_from_db()
+        self.assertEqual(float(self.bed.area_sqm), 15.0)
+        self.assertEqual(self.bed.length_m, 5.0)
+        self.assertEqual(self.bed.width_m, 3.0)
+
+    def test_bed_update_with_single_dimension_keeps_area(self):
+        response = self.client.put(
+            f'/openfarmplanner/api/beds/{self.bed.id}/',
+            {
+                'name': self.bed.name,
+                'field': self.field.id,
+                'area_sqm': 20.0,
+                'length_m': 7.0,
+                'width_m': None,
+                'notes': '',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.bed.refresh_from_db()
+        self.assertEqual(float(self.bed.area_sqm), 20.0)
+        self.assertEqual(self.bed.length_m, 7.0)
+        self.assertIsNone(self.bed.width_m)
     def test_culture_with_supplier(self):
         """Test creating culture with supplier"""
         data = {
@@ -1143,3 +1220,61 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+
+    def test_layouts_get_and_put(self):
+        location = Location.objects.create(name='Layout test location')
+        field = Field.objects.create(name='Layout test field', location=location)
+        bed = Bed.objects.create(name='Layout test bed', field=field, area_sqm=5)
+
+        payload = {
+            'bed_layouts': [
+                {'bed': bed.id, 'location': location.id, 'x': 33.5, 'y': 44.5, 'version': 1},
+            ],
+            'field_layouts': [
+                {'field': field.id, 'location': location.id, 'x': 66.0, 'y': 88.0, 'version': 1},
+            ],
+        }
+        put_response = self.client.put(
+            f'/openfarmplanner/api/locations/{location.id}/layouts/',
+            payload,
+            format='json',
+        )
+        self.assertEqual(put_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(put_response.data['bed_layouts'][0]['bed'], bed.id)
+        self.assertEqual(put_response.data['field_layouts'][0]['field'], field.id)
+
+        get_response = self.client.get(f'/openfarmplanner/api/locations/{location.id}/layouts/')
+        self.assertEqual(get_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(get_response.data['bed_layouts']), 1)
+        self.assertEqual(get_response.data['bed_layouts'][0]['x'], 33.5)
+        self.assertEqual(len(get_response.data['field_layouts']), 1)
+        self.assertEqual(get_response.data['field_layouts'][0]['x'], 66.0)
+
+    def test_layouts_reject_bed_from_other_location(self):
+        location = Location.objects.create(name='Layout test source location')
+        other_location = Location.objects.create(name='Secondary location')
+        other_field = Field.objects.create(name='Secondary field', location=other_location)
+        other_bed = Bed.objects.create(name='Secondary bed', field=other_field, area_sqm=5)
+
+        response = self.client.put(
+            f'/openfarmplanner/api/locations/{location.id}/layouts/',
+            {'bed_layouts': [{'bed': other_bed.id, 'location': location.id, 'x': 1, 'y': 1}], 'field_layouts': []},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('does not belong to location', response.data['detail'])
+        self.assertFalse(BedLayout.objects.filter(bed=other_bed).exists())
+
+    def test_layouts_reject_field_from_other_location(self):
+        location = Location.objects.create(name='Layout test source location')
+        other_location = Location.objects.create(name='Secondary location')
+        other_field = Field.objects.create(name='Secondary field', location=other_location)
+
+        response = self.client.put(
+            f'/openfarmplanner/api/locations/{location.id}/layouts/',
+            {'bed_layouts': [], 'field_layouts': [{'field': other_field.id, 'location': location.id, 'x': 1, 'y': 1}]},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('does not belong to location', response.data['detail'])
+        self.assertFalse(FieldLayout.objects.filter(field=other_field).exists())

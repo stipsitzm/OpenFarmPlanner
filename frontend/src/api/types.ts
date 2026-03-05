@@ -107,6 +107,8 @@ export interface Field {
   location: number;
   location_name?: string;
   area_sqm?: number;
+  length_m?: number | null;
+  width_m?: number | null;
   notes?: string;
   created_at?: string;
   updated_at?: string;
@@ -118,11 +120,45 @@ export interface Bed {
   field: number;
   field_name?: string;
   area_sqm?: number;
+  length_m?: number | null;
+  width_m?: number | null;
   notes?: string;
   created_at?: string;
   updated_at?: string;
 }
 
+
+
+export interface BedLayoutEntry {
+  id?: number;
+  bed: number;
+  location: number;
+  field_id?: number;
+  x: number;
+  y: number;
+  version?: number;
+  scale?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+
+export interface FieldLayoutEntry {
+  id?: number;
+  field: number;
+  location: number;
+  x: number;
+  y: number;
+  version?: number;
+  scale?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface LocationLayoutsResponse {
+  bed_layouts: BedLayoutEntry[];
+  field_layouts: FieldLayoutEntry[];
+}
 export interface PlantingPlan {
   id?: number;
   culture: number;
