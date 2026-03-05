@@ -12,6 +12,7 @@ import { createBrowserRouter, RouterProvider, Outlet, NavLink, redirect, useLoca
 import {
   Alert,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -217,19 +218,25 @@ function RootLayout(): React.ReactElement {
         <DialogTitle>Versionsverlauf</DialogTitle>
         <DialogContent>
           <List>
-            {historyItems.map((item) => (
-              <ListItem
-                key={item.history_id}
-                secondaryAction={
-                  <Button onClick={() => void handleRestoreProjectVersion(item.history_id)}>Restore this version</Button>
-                }
-              >
-                <ListItemText
-                  primary={new Date(item.history_date).toLocaleString()}
-                  secondary={`${item.summary}${item.culture_id ? ` (Kultur #${item.culture_id})` : ''}`}
-                />
-              </ListItem>
-            ))}
+            {historyItems.map((item, index) => {
+              const isCurrentVersion = index === 0;
+
+              return (
+                <ListItem
+                  key={item.history_id}
+                  secondaryAction={
+                    isCurrentVersion
+                      ? <Chip label="Aktuelle Version" size="small" color="success" variant="outlined" />
+                      : <Button onClick={() => void handleRestoreProjectVersion(item.history_id)}>Wiederherstellen</Button>
+                  }
+                >
+                  <ListItemText
+                    primary={new Date(item.history_date).toLocaleString()}
+                    secondary={`${item.summary}${item.culture_id ? ` (Kultur #${item.culture_id})` : ''}`}
+                  />
+                </ListItem>
+              );
+            })}
           </List>
         </DialogContent>
         <DialogActions>
