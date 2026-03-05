@@ -77,6 +77,7 @@ import {
   getEnrichmentFieldLabel,
   sanitizeSeedRateByCultivationForMethods,
 } from './culturesEnrichmentUtils';
+import { partitionImportEntries, readFileAsText } from './culturesImportUtils';
 
 const ENRICHMENT_LOADING_STEPS = [
   { key: 'request', startSeconds: 0 },
@@ -472,73 +473,58 @@ function Cultures(): React.ReactElement {
 
   const handleImportFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
+
     if (!file) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const jsonString = reader.result as string;
-        const { entries, originalCount } = parseCultureImportJson(jsonString);
+    try {
+      const jsonString = await readFileAsText(file);
+      const { entries, originalCount } = parseCultureImportJson(jsonString);
 
-        if (originalCount === 0) {
-          setImportStatus('error');
-          setImportError(t('import.errors.notArray'));
-          setImportDialogOpen(true);
-          return;
-        }
-
-        const invalidEntries: string[] = [];
-        const validEntries: Record<string, unknown>[] = [];
-
-        entries.forEach((entry, index) => {
-          const nameValue = (entry as { name?: unknown }).name;
-          if (typeof nameValue === 'string' && nameValue.trim().length > 0) {
-            validEntries.push(entry as Record<string, unknown>);
-          } else {
-            invalidEntries.push(`${t('import.invalidEntry')} ${index + 1}`);
-          }
-        });
-
-        if (validEntries.length === 0) {
-          setImportStatus('error');
-          setImportError(t('import.errors.noValidEntries'));
-          setImportPreviewCount(originalCount);
-          setImportValidCount(0);
-          setImportInvalidEntries(invalidEntries);
-          setImportDialogOpen(true);
-          return;
-        }
-
-        // Call preview endpoint
-        setImportStatus('uploading');
-        try {
-          const response = await cultureAPI.importPreview(validEntries);
-          
-          setImportPreviewCount(originalCount);
-          setImportValidCount(validEntries.length);
-          setImportInvalidEntries(invalidEntries);
-          setImportPayload(validEntries);
-          setImportPreviewResults(response.data.results);
-          setImportStatus('ready');
-          setImportDialogOpen(true);
-        } catch (error) {
-          console.error('Error calling preview endpoint:', error);
-          setImportStatus('error');
-          setImportError(t('import.errors.network'));
-          setImportDialogOpen(true);
-        }
-      } catch (error) {
-        console.error('Error parsing JSON file:', error);
+      if (originalCount === 0) {
         setImportStatus('error');
-        setImportError(t('import.errors.parse'));
+        setImportError(t('import.errors.notArray'));
+        setImportDialogOpen(true);
+        return;
+      }
+
+      const { validEntries, invalidEntries } = partitionImportEntries(entries, t);
+
+      if (validEntries.length === 0) {
+        setImportStatus('error');
+        setImportError(t('import.errors.noValidEntries'));
+        setImportPreviewCount(originalCount);
+        setImportValidCount(0);
+        setImportInvalidEntries(invalidEntries);
+        setImportDialogOpen(true);
+        return;
+      }
+
+      setImportStatus('uploading');
+      try {
+        const response = await cultureAPI.importPreview(validEntries);
+
+        setImportPreviewCount(originalCount);
+        setImportValidCount(validEntries.length);
+        setImportInvalidEntries(invalidEntries);
+        setImportPayload(validEntries);
+        setImportPreviewResults(response.data.results);
+        setImportStatus('ready');
+        setImportDialogOpen(true);
+      } catch (error) {
+        console.error('Error calling preview endpoint:', error);
+        setImportStatus('error');
+        setImportError(t('import.errors.network'));
         setImportDialogOpen(true);
       }
-    };
-
-    reader.readAsText(file);
-    event.target.value = '';
+    } catch (error) {
+      console.error('Error parsing JSON file:', error);
+      setImportStatus('error');
+      setImportError(t('import.errors.parse'));
+      setImportDialogOpen(true);
+    }
   };
 
   const handleImportStart = async () => {
