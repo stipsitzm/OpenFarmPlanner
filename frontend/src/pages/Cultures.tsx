@@ -91,6 +91,48 @@ type SnackbarState = {
   severity: 'success' | 'error' | 'info';
 };
 
+const ENRICHMENT_FIELD_LABEL_MAP: Record<string, string> = {
+  growth_duration_days: 'form.growthDurationDays',
+  harvest_duration_days: 'form.harvestDurationDays',
+  propagation_duration_days: 'form.propagationDurationDays',
+  harvest_method: 'form.harvestMethod',
+  expected_yield: 'form.expectedYield',
+  seed_packages: 'form.seedPackagesLabel',
+  distance_within_row_cm: 'form.distanceWithinRowCm',
+  row_spacing_cm: 'form.rowSpacingCm',
+  sowing_depth_cm: 'form.sowingDepthCm',
+  seed_rate_direct_value: 'form.seedRateDirectValue',
+  seed_rate_direct_unit: 'form.seedRateDirectUnit',
+  seed_rate_transplant_value: 'form.seedRatePreCultivationValue',
+  seed_rate_transplant_unit: 'form.seedRatePreCultivationUnit',
+  seed_rate_by_cultivation: 'form.seedRateSectionTitle',
+  allowed_sowing_methods: 'form.cultivationType',
+  thousand_kernel_weight_g: 'form.thousandKernelWeightLabel',
+  nutrient_demand: 'form.nutrientDemand',
+  cultivation_type: 'form.cultivationType',
+  notes: 'form.notes',
+  seeding_requirement: 'form.seedRateSectionTitle',
+  seeding_requirement_type: 'form.seedRateSectionTitle',
+};
+
+const ENRICHMENT_WARNING_KEY_BY_CODE: Record<string, string> = {
+  range_collapsed_to_mean: 'ai.warningMessages.range_collapsed_to_mean',
+  missing_supplier_data: 'ai.warningMessages.missing_supplier_data',
+  supplier_only_non_supplier_suggestion_dropped: 'ai.warningMessages.supplier_only_non_supplier_suggestion_dropped',
+  seed_rate_unit_missing_for_method_value: 'ai.warningMessages.seed_rate_unit_missing_for_method_value',
+  seed_rate_unit_converted_from_g_per_are: 'ai.warningMessages.seed_rate_unit_converted_from_g_per_are',
+  missing_supplier_evidence: 'ai.warningMessages.missing_supplier_evidence',
+  supplier_mismatch_dropped: 'ai.warningMessages.supplier_mismatch_dropped',
+  supplier_product_not_found: 'ai.warningMessages.supplier_product_not_found',
+};
+
+const ALLOWED_SEED_RATE_UNITS = ['g_per_m2', 'g_per_lfm', 'seeds/m'];
+
+type EnrichmentWarning = { field?: string; code?: string; message?: string };
+
+const toStartCase = (value: string): string => value
+  .replace(/_/g, ' ')
+  .replace(/\b\w/g, (char) => char.toUpperCase());
 const parseCultureId = (value: string | null): number | undefined => {
   if (!value) {
     return undefined;
@@ -826,36 +868,8 @@ function Cultures(): React.ReactElement {
     return formatCostMessage(result.costEstimate, result.usage);
   };
 
-  const enrichmentFieldLabelMap: Record<string, string> = {
-    growth_duration_days: 'form.growthDurationDays',
-    harvest_duration_days: 'form.harvestDurationDays',
-    propagation_duration_days: 'form.propagationDurationDays',
-    harvest_method: 'form.harvestMethod',
-    expected_yield: 'form.expectedYield',
-    seed_packages: 'form.seedPackagesLabel',
-    distance_within_row_cm: 'form.distanceWithinRowCm',
-    row_spacing_cm: 'form.rowSpacingCm',
-    sowing_depth_cm: 'form.sowingDepthCm',
-    seed_rate_direct_value: 'form.seedRateDirectValue',
-    seed_rate_direct_unit: 'form.seedRateDirectUnit',
-    seed_rate_transplant_value: 'form.seedRatePreCultivationValue',
-    seed_rate_transplant_unit: 'form.seedRatePreCultivationUnit',
-    seed_rate_by_cultivation: 'form.seedRateSectionTitle',
-    allowed_sowing_methods: 'form.cultivationType',
-    thousand_kernel_weight_g: 'form.thousandKernelWeightLabel',
-    nutrient_demand: 'form.nutrientDemand',
-    cultivation_type: 'form.cultivationType',
-    notes: 'form.notes',
-    seeding_requirement: 'form.seedRateSectionTitle',
-    seeding_requirement_type: 'form.seedRateSectionTitle',
-  };
-
-  const toStartCase = (value: string): string => value
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-
   const getEnrichmentFieldLabel = (field: string): string => {
-    const translationKey = enrichmentFieldLabelMap[field];
+    const translationKey = ENRICHMENT_FIELD_LABEL_MAP[field];
     if (!translationKey) {
       return toStartCase(field);
     }
@@ -923,8 +937,7 @@ function Cultures(): React.ReactElement {
     return entries.reduce<Record<string, { value: number; unit: string }>>((acc, [method, rate]) => {
       const parsedValue = Number(rate?.value);
       const unit = normalizeSeedRateUnit(rate?.unit);
-      const allowedUnits = ['g_per_m2', 'g_per_lfm', 'seeds/m'];
-      if (!Number.isFinite(parsedValue) || parsedValue <= 0 || !unit || !allowedUnits.includes(unit)) {
+      if (!Number.isFinite(parsedValue) || parsedValue <= 0 || !unit || !ALLOWED_SEED_RATE_UNITS.includes(unit)) {
         return acc;
       }
       acc[method] = { value: parsedValue, unit };
@@ -968,21 +981,10 @@ function Cultures(): React.ReactElement {
     return String(value ?? '');
   };
 
-  const formatEnrichmentWarning = (warning: { field?: string; code?: string; message?: string }): string => {
+  const formatEnrichmentWarning = (warning: EnrichmentWarning): string => {
     const fieldLabel = warning.field ? getEnrichmentFieldLabel(warning.field) : t('ai.field');
 
-    const warningKeyByCode: Record<string, string> = {
-      range_collapsed_to_mean: 'ai.warningMessages.range_collapsed_to_mean',
-      missing_supplier_data: 'ai.warningMessages.missing_supplier_data',
-      supplier_only_non_supplier_suggestion_dropped: 'ai.warningMessages.supplier_only_non_supplier_suggestion_dropped',
-      seed_rate_unit_missing_for_method_value: 'ai.warningMessages.seed_rate_unit_missing_for_method_value',
-      seed_rate_unit_converted_from_g_per_are: 'ai.warningMessages.seed_rate_unit_converted_from_g_per_are',
-      missing_supplier_evidence: 'ai.warningMessages.missing_supplier_evidence',
-      supplier_mismatch_dropped: 'ai.warningMessages.supplier_mismatch_dropped',
-      supplier_product_not_found: 'ai.warningMessages.supplier_product_not_found',
-    };
-
-    const translationKey = warning.code ? warningKeyByCode[warning.code] : undefined;
+    const translationKey = warning.code ? ENRICHMENT_WARNING_KEY_BY_CODE[warning.code] : undefined;
     if (translationKey) {
       const translated = t(translationKey, { field: fieldLabel });
       if (translated !== translationKey) {
