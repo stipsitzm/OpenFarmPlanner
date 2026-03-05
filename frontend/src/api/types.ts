@@ -137,6 +137,24 @@ export interface BedLayoutEntry {
   created_at?: string;
   updated_at?: string;
 }
+
+
+export interface FieldLayoutEntry {
+  id?: number;
+  field: number;
+  location: number;
+  x: number;
+  y: number;
+  version?: number;
+  scale?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface LocationLayoutsResponse {
+  bed_layouts: BedLayoutEntry[];
+  field_layouts: FieldLayoutEntry[];
+}
 export interface PlantingPlan {
   id?: number;
   culture: number;

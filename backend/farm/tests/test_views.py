@@ -5,7 +5,7 @@ from datetime import date
 from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
 
-from farm.models import Bed, BedLayout, Culture, Field, Location, PlantingPlan, Supplier, NoteAttachment, SeedPackage
+from farm.models import Bed, BedLayout, Culture, Field, FieldLayout, Location, PlantingPlan, Supplier, NoteAttachment, SeedPackage
 
 class ApiEndpointsTest(DRFAPITestCase):
     def setUp(self):
@@ -1150,9 +1150,12 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
         bed = Bed.objects.create(name='Layout test bed', field=field, area_sqm=5)
 
         payload = {
-            'layouts': [
+            'bed_layouts': [
                 {'bed': bed.id, 'location': location.id, 'x': 33.5, 'y': 44.5, 'version': 1},
-            ]
+            ],
+            'field_layouts': [
+                {'field': field.id, 'location': location.id, 'x': 66.0, 'y': 88.0, 'version': 1},
+            ],
         }
         put_response = self.client.put(
             f'/openfarmplanner/api/locations/{location.id}/layouts/',
@@ -1160,12 +1163,15 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
             format='json',
         )
         self.assertEqual(put_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(put_response.data['results'][0]['bed'], bed.id)
+        self.assertEqual(put_response.data['bed_layouts'][0]['bed'], bed.id)
+        self.assertEqual(put_response.data['field_layouts'][0]['field'], field.id)
 
         get_response = self.client.get(f'/openfarmplanner/api/locations/{location.id}/layouts/')
         self.assertEqual(get_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(get_response.data['results']), 1)
-        self.assertEqual(get_response.data['results'][0]['x'], 33.5)
+        self.assertEqual(len(get_response.data['bed_layouts']), 1)
+        self.assertEqual(get_response.data['bed_layouts'][0]['x'], 33.5)
+        self.assertEqual(len(get_response.data['field_layouts']), 1)
+        self.assertEqual(get_response.data['field_layouts'][0]['x'], 66.0)
 
     def test_layouts_reject_bed_from_other_location(self):
         location = Location.objects.create(name='Layout test source location')
@@ -1175,9 +1181,23 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
 
         response = self.client.put(
             f'/openfarmplanner/api/locations/{location.id}/layouts/',
-            {'layouts': [{'bed': other_bed.id, 'location': location.id, 'x': 1, 'y': 1}]},
+            {'bed_layouts': [{'bed': other_bed.id, 'location': location.id, 'x': 1, 'y': 1}], 'field_layouts': []},
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('does not belong to location', response.data['detail'])
         self.assertFalse(BedLayout.objects.filter(bed=other_bed).exists())
+
+    def test_layouts_reject_field_from_other_location(self):
+        location = Location.objects.create(name='Layout test source location')
+        other_location = Location.objects.create(name='Secondary location')
+        other_field = Field.objects.create(name='Secondary field', location=other_location)
+
+        response = self.client.put(
+            f'/openfarmplanner/api/locations/{location.id}/layouts/',
+            {'bed_layouts': [], 'field_layouts': [{'field': other_field.id, 'location': location.id, 'x': 1, 'y': 1}]},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('does not belong to location', response.data['detail'])
+        self.assertFalse(FieldLayout.objects.filter(field=other_field).exists())

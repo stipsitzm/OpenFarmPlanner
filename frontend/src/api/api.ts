@@ -16,6 +16,8 @@ import type {
   EnrichmentResult,
   EnrichmentBatchResult,
   BedLayoutEntry,
+  FieldLayoutEntry,
+  LocationLayoutsResponse,
 } from './types';
 
 export const cultureAPI = {
@@ -92,9 +94,9 @@ export const plantingPlanAPI = {
 
 
 export const layoutAPI = {
-  listByLocation: (locationId: number) => http.get<{ results: BedLayoutEntry[] }>(`/locations/${locationId}/layouts/`),
-  saveByLocation: (locationId: number, layouts: BedLayoutEntry[]) =>
-    http.put<{ results: BedLayoutEntry[] }>(`/locations/${locationId}/layouts/`, { layouts }),
+  listByLocation: (locationId: number) => http.get<LocationLayoutsResponse>(`/locations/${locationId}/layouts/`),
+  saveByLocation: (locationId: number, payload: { bed_layouts?: BedLayoutEntry[]; field_layouts?: FieldLayoutEntry[] }) =>
+    http.put<LocationLayoutsResponse>(`/locations/${locationId}/layouts/`, payload),
 };
 
 
@@ -163,6 +165,8 @@ export type {
   EnrichmentResult,
   EnrichmentBatchResult,
   BedLayoutEntry,
+  FieldLayoutEntry,
+  LocationLayoutsResponse,
 };
 
 export default {

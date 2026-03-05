@@ -3,7 +3,7 @@ import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, CircularProg
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Group, Layer, Rect, Stage, Text } from 'react-konva';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
-import { layoutAPI, type BedLayoutEntry } from '../api/api';
+import { layoutAPI, type BedLayoutEntry, type FieldLayoutEntry } from '../api/api';
 import { areaToRectSize, clampInsideParent, initialAutoLayout, type RectSize } from './graphicalLayoutUtils';
 
 interface BedViewModel {
@@ -42,8 +42,9 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
     }
   });
   const [layoutsByBed, setLayoutsByBed] = useState<Record<number, BedLayoutEntry>>({});
+  const [layoutsByField, setLayoutsByField] = useState<Record<number, FieldLayoutEntry>>({});
   const [stageWidth, setStageWidth] = useState<number>(() => Math.min(2200, Math.max(1200, window.innerWidth - VIEWPORT_PADDING)));
-  const saveTimers = useRef<Record<number, number>>({});
+  const saveTimers = useRef<Record<string, number>>({});
 
   useEffect(() => {
     const handleResize = () => {
@@ -74,8 +75,18 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
         setLayoutsByBed((prev) => {
           const next = { ...prev };
           results.forEach((response) => {
-            response.data.results.forEach((layout) => {
+            response.data.bed_layouts.forEach((layout) => {
               next[layout.bed] = layout;
+            });
+          });
+          return next;
+        });
+
+        setLayoutsByField((prev) => {
+          const next = { ...prev };
+          results.forEach((response) => {
+            response.data.field_layouts.forEach((layout) => {
+              next[layout.field] = layout;
             });
           });
           return next;
@@ -99,16 +110,32 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
     };
   }, []);
 
-  const saveLayout = (locationId: number, payload: BedLayoutEntry) => {
-    if (saveTimers.current[payload.bed]) {
-      window.clearTimeout(saveTimers.current[payload.bed]);
+  const saveBedLayout = (locationId: number, payload: BedLayoutEntry) => {
+    const timerKey = `bed-${payload.bed}`;
+    if (saveTimers.current[timerKey]) {
+      window.clearTimeout(saveTimers.current[timerKey]);
     }
 
-    saveTimers.current[payload.bed] = window.setTimeout(async () => {
+    saveTimers.current[timerKey] = window.setTimeout(async () => {
       try {
-        await layoutAPI.saveByLocation(locationId, [payload]);
+        await layoutAPI.saveByLocation(locationId, { bed_layouts: [payload] });
       } catch (saveError) {
         console.error('Failed to save bed layout', saveError);
+      }
+    }, 250);
+  };
+
+  const saveFieldLayout = (locationId: number, payload: FieldLayoutEntry) => {
+    const timerKey = `field-${payload.field}`;
+    if (saveTimers.current[timerKey]) {
+      window.clearTimeout(saveTimers.current[timerKey]);
+    }
+
+    saveTimers.current[timerKey] = window.setTimeout(async () => {
+      try {
+        await layoutAPI.saveByLocation(locationId, { field_layouts: [payload] });
+      } catch (saveError) {
+        console.error('Failed to save field layout', saveError);
       }
     }, 250);
   };
@@ -137,7 +164,7 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
         const padding = 20;
         let fieldY = padding;
 
-        const fieldRects = locationFields.map((field) => {
+        const defaultFieldRects = locationFields.map((field) => {
           const fieldArea = Number(field.area_sqm ?? 1);
           const size = areaToRectSize(fieldArea, {
             baseWidth: 560,
@@ -151,10 +178,10 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
 
           return {
             field,
-            x: padding,
-            y,
             width: size.width,
             height: size.height,
+            defaultX: padding,
+            defaultY: y,
           };
         });
 
@@ -172,8 +199,18 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
             <AccordionDetails>
               <Stage width={stageWidth} height={stageHeight}>
                 <Layer>
-                  {fieldRects.map((fieldRect) => {
-                    const fieldId = fieldRect.field.id!;
+                  {defaultFieldRects.map((baseRect) => {
+                    const fieldId = baseRect.field.id!;
+                    const savedFieldLayout = layoutsByField[fieldId];
+                    const fieldClamped = clampInsideParent(
+                      {
+                        x: savedFieldLayout?.x ?? baseRect.defaultX,
+                        y: savedFieldLayout?.y ?? baseRect.defaultY,
+                      },
+                      { width: baseRect.width, height: baseRect.height },
+                      { width: stageWidth, height: stageHeight },
+                    );
+
                     const fieldBeds = beds.filter((bed) => bed.field === fieldId && bed.id !== undefined);
                     const bedSizeMap = new Map<number, RectSize>();
                     fieldBeds.forEach((bed) => {
@@ -183,13 +220,40 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                     const missingBeds = fieldBeds
                       .map((bed) => bed.id!)
                       .filter((bedId) => !layoutsByBed[bedId]);
-                    const fieldInnerSize = { width: fieldRect.width - 20, height: fieldRect.height - 50 };
+                    const fieldInnerSize = { width: baseRect.width - 20, height: baseRect.height - 50 };
                     const autoLayout = initialAutoLayout(missingBeds, bedSizeMap, fieldInnerSize);
 
                     return (
                       <Group key={fieldId}>
-                        <Rect x={fieldRect.x} y={fieldRect.y} width={fieldRect.width} height={fieldRect.height} stroke="#2f855a" strokeWidth={2} cornerRadius={4} />
-                        <Text x={fieldRect.x + 8} y={fieldRect.y + 8} text={`${fieldRect.field.name} (${fieldRect.field.area_sqm ?? '-'} m²)`} fontStyle="bold" />
+                        <Rect
+                          x={fieldClamped.x}
+                          y={fieldClamped.y}
+                          width={baseRect.width}
+                          height={baseRect.height}
+                          stroke="#2f855a"
+                          strokeWidth={2}
+                          cornerRadius={4}
+                          draggable
+                          onDragEnd={(event) => {
+                            const next = clampInsideParent(
+                              { x: event.target.x(), y: event.target.y() },
+                              { width: baseRect.width, height: baseRect.height },
+                              { width: stageWidth, height: stageHeight },
+                            );
+
+                            const nextLayout: FieldLayoutEntry = {
+                              field: fieldId,
+                              location: location.id!,
+                              x: next.x,
+                              y: next.y,
+                              version: 1,
+                            };
+
+                            setLayoutsByField((prev) => ({ ...prev, [fieldId]: nextLayout }));
+                            saveFieldLayout(location.id!, nextLayout);
+                          }}
+                        />
+                        <Text x={fieldClamped.x + 8} y={fieldClamped.y + 8} text={`${baseRect.field.name} (${baseRect.field.area_sqm ?? '-'} m²)`} fontStyle="bold" />
                         {fieldBeds.map((bed) => {
                           const bedId = bed.id!;
                           const size = bedSizeMap.get(bedId)!;
@@ -210,8 +274,8 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                           return (
                             <Group key={bedVm.id}>
                               <Rect
-                                x={fieldRect.x + FIELD_INNER_OFFSET_X + bedVm.x}
-                                y={fieldRect.y + FIELD_INNER_OFFSET_Y + bedVm.y}
+                                x={fieldClamped.x + FIELD_INNER_OFFSET_X + bedVm.x}
+                                y={fieldClamped.y + FIELD_INNER_OFFSET_Y + bedVm.y}
                                 width={bedVm.width}
                                 height={bedVm.height}
                                 fill="#bee3f8"
@@ -221,8 +285,8 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                                 onDragEnd={(event) => {
                                   const next = clampInsideParent(
                                     {
-                                      x: event.target.x() - (fieldRect.x + FIELD_INNER_OFFSET_X),
-                                      y: event.target.y() - (fieldRect.y + FIELD_INNER_OFFSET_Y),
+                                      x: event.target.x() - (fieldClamped.x + FIELD_INNER_OFFSET_X),
+                                      y: event.target.y() - (fieldClamped.y + FIELD_INNER_OFFSET_Y),
                                     },
                                     { width: bedVm.width, height: bedVm.height },
                                     fieldInnerSize,
@@ -237,12 +301,12 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                                   };
 
                                   setLayoutsByBed((prev) => ({ ...prev, [bedVm.id]: nextLayout }));
-                                  saveLayout(location.id!, nextLayout);
+                                  saveBedLayout(location.id!, nextLayout);
                                 }}
                               />
                               <Text
-                                x={fieldRect.x + FIELD_INNER_OFFSET_X + 4 + bedVm.x}
-                                y={fieldRect.y + FIELD_INNER_OFFSET_Y + 4 + bedVm.y}
+                                x={fieldClamped.x + FIELD_INNER_OFFSET_X + 4 + bedVm.x}
+                                y={fieldClamped.y + FIELD_INNER_OFFSET_Y + 4 + bedVm.y}
                                 text={`${bedVm.name} (${bedVm.area || '-'} m²)`}
                                 fontSize={12}
                                 width={Math.max(40, bedVm.width - 8)}
