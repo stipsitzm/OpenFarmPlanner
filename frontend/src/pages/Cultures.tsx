@@ -53,7 +53,6 @@ import {
   buildSingleCultureFilename,
   downloadJsonFile,
 } from '../cultures/exportUtils';
-import { parseCultureImportJson } from '../cultures/importUtils';
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
@@ -77,7 +76,7 @@ import {
   getEnrichmentFieldLabel,
   sanitizeSeedRateByCultivationForMethods,
 } from './culturesEnrichmentUtils';
-import { partitionImportEntries, readFileAsText } from './culturesImportUtils';
+import { analyzeCultureImportJson, readFileAsText } from './culturesImportUtils';
 
 const ENRICHMENT_LOADING_STEPS = [
   { key: 'request', startSeconds: 0 },
@@ -481,35 +480,26 @@ function Cultures(): React.ReactElement {
 
     try {
       const jsonString = await readFileAsText(file);
-      const { entries, originalCount } = parseCultureImportJson(jsonString);
+      const importAnalysis = analyzeCultureImportJson(jsonString, t);
 
-      if (originalCount === 0) {
+      if (importAnalysis.status === 'error') {
         setImportStatus('error');
-        setImportError(t('import.errors.notArray'));
-        setImportDialogOpen(true);
-        return;
-      }
-
-      const { validEntries, invalidEntries } = partitionImportEntries(entries, t);
-
-      if (validEntries.length === 0) {
-        setImportStatus('error');
-        setImportError(t('import.errors.noValidEntries'));
-        setImportPreviewCount(originalCount);
+        setImportError(t(importAnalysis.errorKey));
+        setImportPreviewCount(importAnalysis.originalCount);
         setImportValidCount(0);
-        setImportInvalidEntries(invalidEntries);
+        setImportInvalidEntries(importAnalysis.invalidEntries);
         setImportDialogOpen(true);
         return;
       }
 
       setImportStatus('uploading');
       try {
-        const response = await cultureAPI.importPreview(validEntries);
+        const response = await cultureAPI.importPreview(importAnalysis.validEntries);
 
-        setImportPreviewCount(originalCount);
-        setImportValidCount(validEntries.length);
-        setImportInvalidEntries(invalidEntries);
-        setImportPayload(validEntries);
+        setImportPreviewCount(importAnalysis.originalCount);
+        setImportValidCount(importAnalysis.validEntries.length);
+        setImportInvalidEntries(importAnalysis.invalidEntries);
+        setImportPayload(importAnalysis.validEntries);
         setImportPreviewResults(response.data.results);
         setImportStatus('ready');
         setImportDialogOpen(true);
@@ -520,7 +510,7 @@ function Cultures(): React.ReactElement {
         setImportDialogOpen(true);
       }
     } catch (error) {
-      console.error('Error parsing JSON file:', error);
+      console.error('Error reading JSON file:', error);
       setImportStatus('error');
       setImportError(t('import.errors.parse'));
       setImportDialogOpen(true);

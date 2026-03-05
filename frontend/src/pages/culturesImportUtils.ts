@@ -1,9 +1,25 @@
+import { parseCultureImportJson } from '../cultures/importUtils';
+
 type Translator = (key: string, options?: Record<string, unknown>) => string;
 
 export type ImportEntryPartition = {
   validEntries: Record<string, unknown>[];
   invalidEntries: string[];
 };
+
+export type ImportAnalysisResult =
+  | {
+      status: 'ready';
+      originalCount: number;
+      validEntries: Record<string, unknown>[];
+      invalidEntries: string[];
+    }
+  | {
+      status: 'error';
+      errorKey: 'import.errors.notArray' | 'import.errors.noValidEntries' | 'import.errors.parse';
+      originalCount: number;
+      invalidEntries: string[];
+    };
 
 export const partitionImportEntries = (
   entries: unknown[],
@@ -22,6 +38,49 @@ export const partitionImportEntries = (
   });
 
   return { validEntries, invalidEntries };
+};
+
+export const analyzeCultureImportJson = (
+  jsonString: string,
+  t: Translator,
+): ImportAnalysisResult => {
+  try {
+    const { entries, originalCount } = parseCultureImportJson(jsonString);
+
+    if (originalCount === 0) {
+      return {
+        status: 'error',
+        errorKey: 'import.errors.notArray',
+        originalCount,
+        invalidEntries: [],
+      };
+    }
+
+    const { validEntries, invalidEntries } = partitionImportEntries(entries, t);
+
+    if (validEntries.length === 0) {
+      return {
+        status: 'error',
+        errorKey: 'import.errors.noValidEntries',
+        originalCount,
+        invalidEntries,
+      };
+    }
+
+    return {
+      status: 'ready',
+      originalCount,
+      validEntries,
+      invalidEntries,
+    };
+  } catch {
+    return {
+      status: 'error',
+      errorKey: 'import.errors.parse',
+      originalCount: 0,
+      invalidEntries: [],
+    };
+  }
 };
 
 export const readFileAsText = (file: File): Promise<string> => (
