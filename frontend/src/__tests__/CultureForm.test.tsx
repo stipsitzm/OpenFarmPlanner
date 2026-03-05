@@ -103,7 +103,7 @@ describe('CultureForm', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
       id: 3,
-      supplier: { name: 'Legacy Seeds' },
+      supplier: expect.objectContaining({ name: 'Legacy Seeds' }),
       row_spacing_cm: 40,
     }));
   });

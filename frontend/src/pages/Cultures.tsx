@@ -12,7 +12,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture, type EnrichmentResult } from '../api/api';
-import type { CultivationType, EnrichmentBatchResult, EnrichmentCostEstimate, EnrichmentUsage } from '../api/types';
+import type { CultivationType } from '../api/types';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
 import {
@@ -53,12 +53,31 @@ import {
   buildSingleCultureFilename,
   downloadJsonFile,
 } from '../cultures/exportUtils';
-import { parseCultureImportJson } from '../cultures/importUtils';
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
 import { normalizeCultivationType, normalizeHarvestMethod, normalizeNutrientDemand, normalizeSeedingRequirementType, normalizeSeedRateUnit } from '../cultures/enumNormalization';
+import {
+  SELECTED_CULTURE_STORAGE_KEY,
+  buildImportSuccessMessage,
+  getStoredCultureId,
+  mapImportErrors,
+  parseCultureId,
+  type ImportFailedEntry,
+  type ImportPreviewResult,
+  type SnackbarState,
+} from './culturesPageUtils';
+import {
+  formatBatchCostMessage,
+  formatCostMessage,
+  formatEnrichmentWarning,
+  formatSuggestionValue,
+  getDialogCostInfo,
+  getEnrichmentFieldLabel,
+  sanitizeSeedRateByCultivationForMethods,
+} from './culturesEnrichmentUtils';
+import { analyzeCultureImportJson, readFileAsText } from './culturesImportUtils';
 
 const ENRICHMENT_LOADING_STEPS = [
   { key: 'request', startSeconds: 0 },
@@ -67,23 +86,12 @@ const ENRICHMENT_LOADING_STEPS = [
   { key: 'results', startSeconds: 52 },
 ] as const;
 const ENRICHMENT_EXPECTED_SECONDS = 75;
-
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCultureParam = searchParams.get('cultureId');
-  const parseCultureId = (value: string | null): number | undefined => {
-    if (!value) {
-      return undefined;
-    }
-
-    const parsedId = Number.parseInt(value, 10);
-    return Number.isFinite(parsedId) ? parsedId : undefined;
-  };
   const selectedCultureIdFromQuery = parseCultureId(selectedCultureParam);
-
-  const getStoredCultureId = (): number | undefined => parseCultureId(localStorage.getItem('selectedCultureId'));
 
   const [cultures, setCultures] = useState<Culture[]>([]);
   const selectionSyncSourceRef = useRef<'internal' | 'query' | null>(null);
@@ -102,28 +110,12 @@ function Cultures(): React.ReactElement {
   const [importValidCount, setImportValidCount] = useState(0);
   const [importInvalidEntries, setImportInvalidEntries] = useState<string[]>([]);
   const [importPayload, setImportPayload] = useState<Record<string, unknown>[]>([]);
-  const [importPreviewResults, setImportPreviewResults] = useState<Array<{
-    index: number;
-    status: 'create' | 'update_candidate';
-    matched_culture_id?: number;
-    diff?: Array<{ field: string; current: unknown; new: unknown }>;
-    import_data: Record<string, unknown>;
-    error?: string;
-  }>>([]);
+  const [importPreviewResults, setImportPreviewResults] = useState<ImportPreviewResult[]>([]);
   const [importStatus, setImportStatus] = useState<'idle' | 'ready' | 'uploading' | 'success' | 'error'>('idle');
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
-  const [importFailedEntries, setImportFailedEntries] = useState<Array<{
-    index: number;
-    name?: string;
-    variety?: string;
-    error: string | Record<string, unknown>;
-  }>>([]);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'info';
-  }>({ open: false, message: '', severity: 'success' });
+  const [importFailedEntries, setImportFailedEntries] = useState<ImportFailedEntry[]>([]);
+  const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
   const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -205,7 +197,7 @@ function Cultures(): React.ReactElement {
 
   useEffect(() => {
     if (selectedCultureId === undefined) {
-      localStorage.removeItem('selectedCultureId');
+      localStorage.removeItem(SELECTED_CULTURE_STORAGE_KEY);
 
       if (selectionSyncSourceRef.current === 'query') {
         selectionSyncSourceRef.current = null;
@@ -226,7 +218,7 @@ function Cultures(): React.ReactElement {
       return;
     }
 
-    localStorage.setItem('selectedCultureId', String(selectedCultureId));
+    localStorage.setItem(SELECTED_CULTURE_STORAGE_KEY, String(selectedCultureId));
 
     if (selectionSyncSourceRef.current === 'query') {
       selectionSyncSourceRef.current = null;
@@ -481,73 +473,49 @@ function Cultures(): React.ReactElement {
 
   const handleImportFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
+
     if (!file) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const jsonString = reader.result as string;
-        const { entries, originalCount } = parseCultureImportJson(jsonString);
+    try {
+      const jsonString = await readFileAsText(file);
+      const importAnalysis = analyzeCultureImportJson(jsonString, t);
 
-        if (originalCount === 0) {
-          setImportStatus('error');
-          setImportError(t('import.errors.notArray'));
-          setImportDialogOpen(true);
-          return;
-        }
-
-        const invalidEntries: string[] = [];
-        const validEntries: Record<string, unknown>[] = [];
-
-        entries.forEach((entry, index) => {
-          const nameValue = (entry as { name?: unknown }).name;
-          if (typeof nameValue === 'string' && nameValue.trim().length > 0) {
-            validEntries.push(entry as Record<string, unknown>);
-          } else {
-            invalidEntries.push(`${t('import.invalidEntry')} ${index + 1}`);
-          }
-        });
-
-        if (validEntries.length === 0) {
-          setImportStatus('error');
-          setImportError(t('import.errors.noValidEntries'));
-          setImportPreviewCount(originalCount);
-          setImportValidCount(0);
-          setImportInvalidEntries(invalidEntries);
-          setImportDialogOpen(true);
-          return;
-        }
-
-        // Call preview endpoint
-        setImportStatus('uploading');
-        try {
-          const response = await cultureAPI.importPreview(validEntries);
-          
-          setImportPreviewCount(originalCount);
-          setImportValidCount(validEntries.length);
-          setImportInvalidEntries(invalidEntries);
-          setImportPayload(validEntries);
-          setImportPreviewResults(response.data.results);
-          setImportStatus('ready');
-          setImportDialogOpen(true);
-        } catch (error) {
-          console.error('Error calling preview endpoint:', error);
-          setImportStatus('error');
-          setImportError(t('import.errors.network'));
-          setImportDialogOpen(true);
-        }
-      } catch (error) {
-        console.error('Error parsing JSON file:', error);
+      if (importAnalysis.status === 'error') {
         setImportStatus('error');
-        setImportError(t('import.errors.parse'));
+        setImportError(t(importAnalysis.errorKey));
+        setImportPreviewCount(importAnalysis.originalCount);
+        setImportValidCount(0);
+        setImportInvalidEntries(importAnalysis.invalidEntries);
+        setImportDialogOpen(true);
+        return;
+      }
+
+      setImportStatus('uploading');
+      try {
+        const response = await cultureAPI.importPreview(importAnalysis.validEntries);
+
+        setImportPreviewCount(importAnalysis.originalCount);
+        setImportValidCount(importAnalysis.validEntries.length);
+        setImportInvalidEntries(importAnalysis.invalidEntries);
+        setImportPayload(importAnalysis.validEntries);
+        setImportPreviewResults(response.data.results);
+        setImportStatus('ready');
+        setImportDialogOpen(true);
+      } catch (error) {
+        console.error('Error calling preview endpoint:', error);
+        setImportStatus('error');
+        setImportError(t('import.errors.network'));
         setImportDialogOpen(true);
       }
-    };
-
-    reader.readAsText(file);
-    event.target.value = '';
+    } catch (error) {
+      console.error('Error reading JSON file:', error);
+      setImportStatus('error');
+      setImportError(t('import.errors.parse'));
+      setImportDialogOpen(true);
+    }
   };
 
   const handleImportStart = async () => {
@@ -569,18 +537,7 @@ function Cultures(): React.ReactElement {
       const { created_count, updated_count, skipped_count, errors } = response.data;
       
       if (errors.length > 0) {
-        // Map errors to include culture names from the original payload
-        const detailedErrors = errors.map((err: { index: number; error: unknown }) => {
-          const originalData = importPayload[err.index];
-          return {
-            index: err.index,
-            name: originalData?.name as string | undefined,
-            variety: originalData?.variety as string | undefined,
-            error: typeof err.error === 'string' || typeof err.error === 'object' ? err.error as string | Record<string, unknown> : String(err.error),
-          };
-        });
-        
-        setImportFailedEntries(detailedErrors);
+        setImportFailedEntries(mapImportErrors(errors, importPayload));
         setImportError(t('import.errors.someFailures', {
           failed: errors.length,
         }));
@@ -588,18 +545,7 @@ function Cultures(): React.ReactElement {
         return;
       }
 
-      let successMessage = '';
-      if (created_count > 0) {
-        successMessage += t('import.created', { count: created_count });
-      }
-      if (updated_count > 0) {
-        if (successMessage) successMessage += ', ';
-        successMessage += t('import.updated', { count: updated_count });
-      }
-      if (skipped_count > 0) {
-        if (successMessage) successMessage += ', ';
-        successMessage += t('import.skipped', { count: skipped_count });
-      }
+      const successMessage = buildImportSuccessMessage(created_count, updated_count, skipped_count, t);
 
       setImportStatus('success');
       setImportSuccess(successMessage || t('import.success'));
@@ -616,6 +562,7 @@ function Cultures(): React.ReactElement {
   };
 
   const selectedCulture = cultures.find(c => c.id === selectedCultureId);
+  const dialogCostInfo = getDialogCostInfo(enrichmentResult);
 
   useCommandContextTag('cultures');
 
@@ -770,208 +717,6 @@ function Cultures(): React.ReactElement {
     setAiMenuAnchor(null);
   };
 
-
-  const formatUsd = (value: number): string => {
-    const decimals = value < 1 ? 3 : 2;
-    return `$${value.toFixed(decimals)}`;
-  };
-
-  const withVat20 = (netValue: number): number => netValue * 1.2;
-
-  const estimateGrossCost = (costEstimate: EnrichmentCostEstimate): number => {
-    const breakdown = costEstimate.breakdown;
-    const subtotal = typeof breakdown.subtotal === 'number'
-      ? breakdown.subtotal
-      : (breakdown.input + breakdown.cached_input + breakdown.output + breakdown.web_search_calls);
-
-    if (typeof breakdown.tax === 'number') {
-      return subtotal + breakdown.tax;
-    }
-
-    return withVat20(subtotal);
-  };
-
-  const formatCostMessage = (costEstimate: EnrichmentCostEstimate, usage: EnrichmentUsage): string => (
-    `KI-Kosten (Schätzung, inkl. 20% MwSt.): ${formatUsd(estimateGrossCost(costEstimate))}  • Tokens: ${usage.inputTokens.toLocaleString('de-DE')} in / ${usage.outputTokens.toLocaleString('de-DE')} out  • Web-Suche: ${costEstimate.breakdown.web_search_call_count} Calls`
-  );
-
-  const formatBatchCostMessage = (result: EnrichmentBatchResult): string => (
-    `Batch KI-Kosten (Schätzung, inkl. 20% MwSt.): ${formatUsd(estimateGrossCost(result.costEstimate))} (${result.succeeded} Kulturen)`
-  );
-
-  const getDialogCostInfo = (result: EnrichmentResult | null): string | null => {
-    if (!result?.costEstimate || !result?.usage) {
-      return null;
-    }
-    return formatCostMessage(result.costEstimate, result.usage);
-  };
-
-  const enrichmentFieldLabelMap: Record<string, string> = {
-    growth_duration_days: 'form.growthDurationDays',
-    harvest_duration_days: 'form.harvestDurationDays',
-    propagation_duration_days: 'form.propagationDurationDays',
-    harvest_method: 'form.harvestMethod',
-    expected_yield: 'form.expectedYield',
-    seed_packages: 'form.seedPackagesLabel',
-    distance_within_row_cm: 'form.distanceWithinRowCm',
-    row_spacing_cm: 'form.rowSpacingCm',
-    sowing_depth_cm: 'form.sowingDepthCm',
-    seed_rate_direct_value: 'form.seedRateDirectValue',
-    seed_rate_direct_unit: 'form.seedRateDirectUnit',
-    seed_rate_transplant_value: 'form.seedRatePreCultivationValue',
-    seed_rate_transplant_unit: 'form.seedRatePreCultivationUnit',
-    seed_rate_by_cultivation: 'form.seedRateSectionTitle',
-    allowed_sowing_methods: 'form.cultivationType',
-    thousand_kernel_weight_g: 'form.thousandKernelWeightLabel',
-    nutrient_demand: 'form.nutrientDemand',
-    cultivation_type: 'form.cultivationType',
-    notes: 'form.notes',
-    seeding_requirement: 'form.seedRateSectionTitle',
-    seeding_requirement_type: 'form.seedRateSectionTitle',
-  };
-
-  const toStartCase = (value: string): string => value
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-
-  const getEnrichmentFieldLabel = (field: string): string => {
-    const translationKey = enrichmentFieldLabelMap[field];
-    if (!translationKey) {
-      return toStartCase(field);
-    }
-    const translated = t(translationKey);
-    return translated === translationKey ? toStartCase(field) : translated;
-  };
-
-  const normalizeSuggestedSeedPackages = (value: unknown): Array<{
-    size_value: number;
-    size_unit: 'g';
-    evidence_text?: string;
-  }> => {
-    if (!Array.isArray(value)) {
-      return [];
-    }
-
-    const seen = new Set<string>();
-    return value
-      .map((item) => {
-        if (!item || typeof item !== 'object') {
-          return null;
-        }
-
-        const raw = item as Record<string, unknown>;
-        const sizeValue = Number(raw.size_value);
-        const sizeUnit: 'g' | null = raw.size_unit === 'g'
-          ? raw.size_unit
-          : null;
-
-        if (!Number.isFinite(sizeValue) || sizeValue <= 0 || !sizeUnit) {
-          return null;
-        }
-
-        const key = `${sizeUnit}:${sizeValue}`;
-        if (seen.has(key)) {
-          return null;
-        }
-        seen.add(key);
-
-        return {
-          size_value: sizeValue,
-          size_unit: sizeUnit,
-          evidence_text: typeof raw.evidence_text === 'string' ? raw.evidence_text : undefined,
-        };
-      })
-      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
-  };
-
-  const sanitizeSeedRateByCultivationForMethods = (
-    value: unknown,
-    methods: CultivationType[],
-  ): Record<string, { value: number; unit: string }> | null => {
-    if (!value || typeof value !== 'object') {
-      return null;
-    }
-
-    const allowedMethods = new Set(methods);
-    const entries = Object.entries(value as Record<string, { value?: unknown; unit?: unknown }>)
-      .filter((entry): entry is [CultivationType, { value?: unknown; unit?: unknown }] => entry[0] === 'pre_cultivation' || entry[0] === 'direct_sowing')
-      .filter(([method]) => allowedMethods.has(method));
-    if (!entries.length) {
-      return null;
-    }
-
-    return entries.reduce<Record<string, { value: number; unit: string }>>((acc, [method, rate]) => {
-      const parsedValue = Number(rate?.value);
-      const unit = normalizeSeedRateUnit(rate?.unit);
-      const allowedUnits = ['g_per_m2', 'g_per_lfm', 'seeds/m'];
-      if (!Number.isFinite(parsedValue) || parsedValue <= 0 || !unit || !allowedUnits.includes(unit)) {
-        return acc;
-      }
-      acc[method] = { value: parsedValue, unit };
-      return acc;
-    }, {});
-  };
-
-  const formatSuggestionValue = (field: string, value: unknown): string => {
-    if (field === 'seed_packages') {
-      const packages = normalizeSuggestedSeedPackages(value);
-      if (!packages.length) {
-        return t('ai.noSuggestions');
-      }
-      return packages
-        .map((pkg) => `${pkg.size_value} ${pkg.size_unit}`)
-        .join(', ');
-    }
-
-    if (field === 'seed_rate_by_cultivation' && value && typeof value === 'object') {
-      const byMethod = value as Record<string, { value?: unknown; unit?: unknown }>;
-      const chunks: string[] = [];
-      const direct = byMethod.direct_sowing;
-      if (direct && typeof direct === 'object') {
-        chunks.push(`Direktsaat: ${String(direct.value ?? '')} ${String(direct.unit ?? '')}`.trim());
-      }
-      const pre = byMethod.pre_cultivation;
-      if (pre && typeof pre === 'object') {
-        chunks.push(`Pflanzung: ${String(pre.value ?? '')} ${String(pre.unit ?? '')}`.trim());
-      }
-      if (chunks.length) {
-        return chunks.join(' | ');
-      }
-    }
-
-    if (Array.isArray(value)) {
-      return value.map((entry) => String(entry)).join(', ');
-    }
-    if (value && typeof value === 'object') {
-      return JSON.stringify(value);
-    }
-    return String(value ?? '');
-  };
-
-  const formatEnrichmentWarning = (warning: { field?: string; code?: string; message?: string }): string => {
-    const fieldLabel = warning.field ? getEnrichmentFieldLabel(warning.field) : t('ai.field');
-
-    const warningKeyByCode: Record<string, string> = {
-      range_collapsed_to_mean: 'ai.warningMessages.range_collapsed_to_mean',
-      missing_supplier_data: 'ai.warningMessages.missing_supplier_data',
-      supplier_only_non_supplier_suggestion_dropped: 'ai.warningMessages.supplier_only_non_supplier_suggestion_dropped',
-      seed_rate_unit_missing_for_method_value: 'ai.warningMessages.seed_rate_unit_missing_for_method_value',
-      seed_rate_unit_converted_from_g_per_are: 'ai.warningMessages.seed_rate_unit_converted_from_g_per_are',
-      missing_supplier_evidence: 'ai.warningMessages.missing_supplier_evidence',
-      supplier_mismatch_dropped: 'ai.warningMessages.supplier_mismatch_dropped',
-      supplier_product_not_found: 'ai.warningMessages.supplier_product_not_found',
-    };
-
-    const translationKey = warning.code ? warningKeyByCode[warning.code] : undefined;
-    if (translationKey) {
-      const translated = t(translationKey, { field: fieldLabel });
-      if (translated !== translationKey) {
-        return translated;
-      }
-    }
-
-    return warning.message || t('ai.runError');
-  };
 
   const openEnrichmentDialog = (result: EnrichmentResult) => {
     setEnrichmentResult(result);
@@ -1669,16 +1414,16 @@ function Cultures(): React.ReactElement {
       <Dialog open={enrichmentDialogOpen} onClose={() => setEnrichmentDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>{t('ai.suggestionsTitle')}</DialogTitle>
         <DialogContent>
-          {getDialogCostInfo(enrichmentResult) && (
+          {dialogCostInfo && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              {getDialogCostInfo(enrichmentResult)}
+              {dialogCostInfo}
             </Alert>
           )}
           {(enrichmentResult?.validation?.warnings || []).length > 0 && (
             <Alert severity="warning" sx={{ mb: 2 }}>
               {(enrichmentResult?.validation?.warnings || []).map((warning) => (
                 <Typography key={`${warning.field}-${warning.code}`} variant="body2">
-                  • {formatEnrichmentWarning(warning)}
+                  • {formatEnrichmentWarning(warning, t)}
                 </Typography>
               ))}
             </Alert>
@@ -1696,7 +1441,7 @@ function Cultures(): React.ReactElement {
                       onChange={() => toggleSuggestionField(field)}
                     />
                     <ListItemText
-                      primary={`${getEnrichmentFieldLabel(field)}: ${formatSuggestionValue(field, suggestion.value)}`}
+                      primary={`${getEnrichmentFieldLabel(field, t)}: ${formatSuggestionValue(field, suggestion.value, t)}`}
                       secondary={`${t('ai.confidence')}: ${(suggestion.confidence * 100).toFixed(0)}%`}
                     />
                   </Box>
