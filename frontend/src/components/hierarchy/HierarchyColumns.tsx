@@ -3,7 +3,7 @@
  */
 
 import type { ReactElement, MouseEvent } from 'react';
-import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
+import type { GridColDef, GridRenderCellParams, GridValueGetterParams } from '@mui/x-data-grid';
 import type { TFunction } from 'i18next';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -18,12 +18,14 @@ import { getPlainExcerpt } from '../data-grid/markdown';
 export interface HierarchyColumnWidths {
   name: number;
   area: number;
+  dimensions: number;
   notes: number;
 }
 
 export const DEFAULT_HIERARCHY_COLUMN_WIDTHS: HierarchyColumnWidths = {
   name: 280,
   area: 120,
+  dimensions: 130,
   notes: 320,
 };
 
@@ -64,9 +66,6 @@ function ActionIconButton({
   );
 }
 
-/**
- * Render row-specific action icons directly inside the hierarchy name cell.
- */
 function renderInlineActions(
   row: HierarchyRow,
   callbacks: NameCellCallbacks,
@@ -124,16 +123,12 @@ function renderInlineActions(
   return null;
 }
 
-/**
- * Render name cell with expansion controls and inline hierarchy actions.
- */
 function renderNameCell(
   params: GridRenderCellParams<HierarchyRow>,
   callbacks: NameCellCallbacks,
   t: TFunction
 ) {
   const row = params.row;
-  // Beds should be indented more than fields
   const baseIndent = row.level * 24;
   const indent = row.type === 'bed' ? baseIndent + 34 : baseIndent;
 
@@ -179,9 +174,20 @@ function renderNameCell(
   );
 }
 
-/**
- * Create column definitions for hierarchy grid
- */
+const calculateBedAreaValue = (row: HierarchyRow): number | string | undefined => {
+  if (row.type !== 'bed') {
+    return row.area_sqm;
+  }
+
+  const length = typeof row.length_m === 'number' ? row.length_m : null;
+  const width = typeof row.width_m === 'number' ? row.width_m : null;
+  if (length !== null && width !== null) {
+    return Math.round(length * width * 10) / 10;
+  }
+
+  return row.area_sqm;
+};
+
 export function createHierarchyColumns(
   onToggleExpand: (rowId: string | number) => void,
   onAddBed: (fieldId: number) => void,
@@ -220,11 +226,28 @@ export function createHierarchyColumns(
       },
     },
     {
+      field: 'length_m',
+      headerName: 'Länge (m)',
+      width: widths.dimensions,
+      type: 'string',
+      editable: true,
+      valueGetter: (params: GridValueGetterParams<HierarchyRow>) => params.row.type === 'bed' ? params.row.length_m : undefined,
+    },
+    {
+      field: 'width_m',
+      headerName: 'Breite (m)',
+      width: widths.dimensions,
+      type: 'string',
+      editable: true,
+      valueGetter: (params: GridValueGetterParams<HierarchyRow>) => params.row.type === 'bed' ? params.row.width_m : undefined,
+    },
+    {
       field: 'area_sqm',
       headerName: t('hierarchy:columns.area'),
       width: widths.area,
       type: 'string',
       editable: true,
+      valueGetter: (params: GridValueGetterParams<HierarchyRow>) => calculateBedAreaValue(params.row),
     },
     {
       field: 'notes',

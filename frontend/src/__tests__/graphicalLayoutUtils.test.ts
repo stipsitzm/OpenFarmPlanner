@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaToRectSize, clampInsideParent, initialAutoLayout } from '../pages/graphicalLayoutUtils';
+import { areaToRectSize, clampInsideParent, getBedRectSize, initialAutoLayout } from '../pages/graphicalLayoutUtils';
 
 describe('graphicalLayoutUtils', () => {
   it('returns deterministic area size', () => {
@@ -8,6 +8,15 @@ describe('graphicalLayoutUtils', () => {
     expect(first).toEqual(second);
     expect(first.width).toBeGreaterThan(0);
     expect(first.height).toBeGreaterThan(0);
+  });
+
+  it('uses dimensions first and falls back to area for bed rect sizes', () => {
+    const dimensionsSize = getBedRectSize({ length_m: 5, width_m: 2, area_sqm: 7 }, 12);
+    expect(dimensionsSize).toEqual({ width: 60, height: 24 });
+
+    const fallbackSize = getBedRectSize({ area_sqm: 20, length_m: null, width_m: null }, 12);
+    expect(fallbackSize.width).toBeGreaterThan(0);
+    expect(fallbackSize.height).toBeGreaterThan(0);
   });
 
   it('clamps child position inside parent bounds', () => {

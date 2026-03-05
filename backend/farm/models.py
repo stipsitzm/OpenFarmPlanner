@@ -239,7 +239,30 @@ class Bed(TimestampedModel):
     name = models.CharField(max_length=200)
     field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds')
     area_sqm = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
+    length_m = models.FloatField(null=True, blank=True)
+    width_m = models.FloatField(null=True, blank=True)
     notes = models.TextField(blank=True)
+
+    def clean(self) -> None:
+        """Validate area and optional bed dimensions."""
+        super().clean()
+        if self.area_sqm is not None:
+            if self.area_sqm < self.MIN_AREA_SQM:
+                raise ValidationError({'area_sqm': f'Area must be at least {self.MIN_AREA_SQM} sqm.'})
+            if self.area_sqm > self.MAX_AREA_SQM:
+                raise ValidationError({'area_sqm': f'Area must not exceed {self.MAX_AREA_SQM} sqm (1 hectare).'})
+
+        if self.length_m is not None and self.length_m < 0:
+            raise ValidationError({'length_m': 'Length must be greater than or equal to 0.'})
+        if self.width_m is not None and self.width_m < 0:
+            raise ValidationError({'width_m': 'Width must be greater than or equal to 0.'})
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Persist bed and derive area from dimensions when both values are set."""
+        if self.length_m is not None and self.width_m is not None:
+            computed_area = Decimal(str(self.length_m * self.width_m)).quantize(Decimal('0.1'))
+            self.area_sqm = computed_area
+        super().save(*args, **kwargs)
 
     def get_total_area(self) -> float | None:
         """Return the bed area in square meters, or None if not set."""

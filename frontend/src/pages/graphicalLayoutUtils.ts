@@ -1,3 +1,5 @@
+import type { Bed } from '../api/types';
+
 export interface RectSize {
   width: number;
   height: number;
@@ -33,6 +35,17 @@ export function areaToRectSize(areaSqm: number | undefined, options: AreaToRectO
     width: Math.round(width),
     height: Math.round(height),
   };
+}
+
+export function getBedRectSize(bed: Pick<Bed, 'area_sqm' | 'length_m' | 'width_m'>, pxPerMeter: number): RectSize {
+  if (typeof bed.length_m === 'number' && typeof bed.width_m === 'number') {
+    return {
+      width: Math.max(20, Math.round(bed.length_m * pxPerMeter)),
+      height: Math.max(20, Math.round(bed.width_m * pxPerMeter)),
+    };
+  }
+
+  return areaToRectSize(Number(bed.area_sqm ?? 1));
 }
 
 export function clampInsideParent(position: Position, childSize: RectSize, parentSize: RectSize): Position {

@@ -141,6 +141,44 @@ class ApiEndpointsTest(DRFAPITestCase):
             self.assertEqual(response.status_code, status.HTTP_201_CREATED, f'Should accept domain-only URL: {input_url}')
             self.assertEqual(response.data['homepage_url'], expected_url, f'Should normalize {input_url} to {expected_url}')
 
+
+    def test_bed_update_with_length_and_width_overwrites_area(self):
+        response = self.client.put(
+            f'/openfarmplanner/api/beds/{self.bed.id}/',
+            {
+                'name': self.bed.name,
+                'field': self.field.id,
+                'area_sqm': 20.0,
+                'length_m': 5.0,
+                'width_m': 3.0,
+                'notes': '',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.bed.refresh_from_db()
+        self.assertEqual(float(self.bed.area_sqm), 15.0)
+        self.assertEqual(self.bed.length_m, 5.0)
+        self.assertEqual(self.bed.width_m, 3.0)
+
+    def test_bed_update_with_single_dimension_keeps_area(self):
+        response = self.client.put(
+            f'/openfarmplanner/api/beds/{self.bed.id}/',
+            {
+                'name': self.bed.name,
+                'field': self.field.id,
+                'area_sqm': 20.0,
+                'length_m': 7.0,
+                'width_m': None,
+                'notes': '',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.bed.refresh_from_db()
+        self.assertEqual(float(self.bed.area_sqm), 20.0)
+        self.assertEqual(self.bed.length_m, 7.0)
+        self.assertIsNone(self.bed.width_m)
     def test_culture_with_supplier(self):
         """Test creating culture with supplier"""
         data = {

@@ -4,7 +4,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Group, Layer, Rect, Stage, Text } from 'react-konva';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 import { layoutAPI, type BedLayoutEntry, type FieldLayoutEntry } from '../api/api';
-import { areaToRectSize, clampInsideParent, initialAutoLayout, type RectSize } from './graphicalLayoutUtils';
+import { areaToRectSize, clampInsideParent, getBedRectSize, initialAutoLayout, type RectSize } from './graphicalLayoutUtils';
 
 interface BedViewModel {
   id: number;
@@ -213,8 +213,9 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
 
                     const fieldBeds = beds.filter((bed) => bed.field === fieldId && bed.id !== undefined);
                     const bedSizeMap = new Map<number, RectSize>();
+                    const pxPerMeter = Math.max(10, Math.min(36, (baseRect.width - 20) / 40));
                     fieldBeds.forEach((bed) => {
-                      bedSizeMap.set(bed.id!, areaToRectSize(Number(bed.area_sqm ?? 1)));
+                      bedSizeMap.set(bed.id!, getBedRectSize(bed, pxPerMeter));
                     });
 
                     const missingBeds = fieldBeds

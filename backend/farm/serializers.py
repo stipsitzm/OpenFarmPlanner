@@ -125,7 +125,7 @@ class BedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bed
         fields = '__all__'
-    
+
     def validate_area_sqm(self, value):
         if value is not None:
             if value < Bed.MIN_AREA_SQM:
@@ -138,6 +138,16 @@ class BedSerializer(serializers.ModelSerializer):
                 )
             if value.as_tuple().exponent < -1:
                 raise serializers.ValidationError('Area must have at most one decimal place for beds.')
+        return value
+
+    def validate_length_m(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError('Length must be greater than or equal to 0.')
+        return value
+
+    def validate_width_m(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError('Width must be greater than or equal to 0.')
         return value
 
 

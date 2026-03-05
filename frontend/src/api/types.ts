@@ -118,6 +118,8 @@ export interface Bed {
   field: number;
   field_name?: string;
   area_sqm?: number;
+  length_m?: number | null;
+  width_m?: number | null;
   notes?: string;
   created_at?: string;
   updated_at?: string;

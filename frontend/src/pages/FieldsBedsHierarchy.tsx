@@ -94,6 +94,8 @@ function FieldsBedsHierarchy({ showTitle = true }: FieldsBedsHierarchyProps): Re
           name: row.name,
           field: row.field!,
           area_sqm: normalizeAreaValue(parsedArea),
+          length_m: parseDimensionValue(row.length_m),
+          width_m: parseDimensionValue(row.width_m),
           notes: value,
         });
         
@@ -227,6 +229,22 @@ function FieldsBedsHierarchy({ showTitle = true }: FieldsBedsHierarchyProps): Re
     return undefined;
   };
 
+
+
+  const parseDimensionValue = (value: number | string | null | undefined): number | null | undefined => {
+    if (value === null) return null;
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : undefined;
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed === '') return null;
+      const parsed = Number.parseFloat(trimmed.replace(',', '.'));
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+  };
+
   const getBedAreaSum = (fieldId: number, excludeBedId?: number, overrideArea?: number) => {
     const filteredBeds = beds.filter(b => b.field === fieldId && b.id !== excludeBedId);
     const bedAreas = filteredBeds.map(b => {
@@ -238,15 +256,62 @@ function FieldsBedsHierarchy({ showTitle = true }: FieldsBedsHierarchyProps): Re
   };
 
   const processRowUpdate = async (newRow: HierarchyRow): Promise<HierarchyRow> => {
-    // Name muss immer gesetzt sein
     if (!newRow.name || newRow.name.trim() === '') {
       setError(t('validation.nameRequired'));
       throw new Error(t('validation.nameRequired'));
     }
 
-    // Flächenwert muss > 0 sein
+    if (newRow.type === 'bed') {
+      const parsedLength = parseDimensionValue(newRow.length_m);
+      const parsedWidth = parseDimensionValue(newRow.width_m);
+
+      if (parsedLength !== undefined && parsedLength !== null && parsedLength < 0) {
+        setError('Länge muss größer oder gleich 0 sein.');
+        throw new Error('Länge muss größer oder gleich 0 sein.');
+      }
+      if (parsedWidth !== undefined && parsedWidth !== null && parsedWidth < 0) {
+        setError('Breite muss größer oder gleich 0 sein.');
+        throw new Error('Breite muss größer oder gleich 0 sein.');
+      }
+
+      const computedBedArea = (parsedLength !== null && parsedLength !== undefined && parsedWidth !== null && parsedWidth !== undefined)
+        ? normalizeAreaValue(parsedLength * parsedWidth)
+        : normalizeAreaValue(parseAreaValue(newRow.area_sqm));
+
+      const field = fields.find(f => f.id === newRow.field);
+      if (field && typeof computedBedArea === 'number') {
+        const fieldArea = parseAreaValue(field.area_sqm) ?? NaN;
+        const sum = getBedAreaSum(field.id!, newRow.bedId, computedBedArea);
+        if (sum > fieldArea) {
+          const sumStr = sum.toFixed(2);
+          const maxStr = fieldArea.toFixed(2);
+          setError(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
+          throw new Error(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
+        }
+      }
+
+      const savedBed = await saveBed({
+        id: newRow.bedId!,
+        name: newRow.name,
+        field: newRow.field!,
+        area_sqm: computedBedArea,
+        length_m: parsedLength,
+        width_m: parsedWidth,
+        notes: newRow.notes,
+      });
+      return {
+        ...newRow,
+        id: savedBed.id!,
+        bedId: savedBed.id!,
+        area_sqm: savedBed.area_sqm,
+        length_m: savedBed.length_m,
+        width_m: savedBed.width_m,
+        isNew: false,
+      };
+    }
+
     const areaValue = parseAreaValue(newRow.area_sqm) ?? NaN;
-    if (areaValue <= 0 || isNaN(areaValue)) {
+    if (areaValue <= 0 || Number.isNaN(areaValue)) {
       setError(t('validation.areaMustBePositive'));
       throw new Error(t('validation.areaMustBePositive'));
     }
@@ -256,36 +321,9 @@ function FieldsBedsHierarchy({ showTitle = true }: FieldsBedsHierarchyProps): Re
       throw new Error(t('validation.areaTooLarge'));
     }
 
-    // ...existing code...
-
-    // Validierung: Summe der Beetflächen darf Feldfläche nicht überschreiten
-    if (newRow.type === 'bed') {
-      const field = fields.find(f => f.id === newRow.field);
-      if (field) {
-        const fieldArea = parseAreaValue(field.area_sqm) ?? NaN;
-        const bedArea = normalizeAreaValue(parseAreaValue(newRow.area_sqm)) ?? NaN;
-        const sum = getBedAreaSum(field.id!, newRow.bedId, bedArea);
-        // ...existing code...
-        if (sum > fieldArea) {
-          const sumStr = sum.toFixed(2);
-          const maxStr = fieldArea.toFixed(2);
-          setError(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
-          throw new Error(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
-        }
-      }
-      const savedBed = await saveBed({
-        id: newRow.bedId!,
-        name: newRow.name,
-        field: newRow.field!,
-        area_sqm: normalizeAreaValue(parseAreaValue(newRow.area_sqm)),
-        notes: newRow.notes,
-      });
-      return { ...newRow, id: savedBed.id!, bedId: savedBed.id!, isNew: false };
-    } else if (newRow.type === 'field') {
-      // Validierung: Summe der Beetflächen darf neue Feldfläche nicht überschreiten
+    if (newRow.type === 'field') {
       const fieldArea = normalizeAreaValue(parseAreaValue(newRow.area_sqm)) ?? NaN;
       const sum = getBedAreaSum(newRow.fieldId!);
-      // ...existing code...
       if (sum > fieldArea) {
         const sumStr = sum.toFixed(2);
         const maxStr = fieldArea.toFixed(2);
@@ -293,20 +331,16 @@ function FieldsBedsHierarchy({ showTitle = true }: FieldsBedsHierarchyProps): Re
         throw new Error(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
       }
       try {
-        // Update Field via API
         const updated = await fieldAPI.update(newRow.fieldId!, {
           name: newRow.name,
           location: newRow.locationId!,
           area_sqm: normalizeAreaValue(parseAreaValue(newRow.area_sqm)),
           notes: newRow.notes,
         });
-        // ...existing code...
-        // Aktualisiere lokalen State direkt (optional, für sofortiges Feedback)
         const updatedArea = normalizeAreaValue(parseAreaValue(updated.data.area_sqm));
 
         setFields((prevFields) => prevFields.map(f => {
           if (f.id === newRow.fieldId) {
-            // Merge API-Daten, id bleibt Zahl, area_sqm als Zahl
             return {
               ...f,
               ...updated.data,
@@ -317,7 +351,6 @@ function FieldsBedsHierarchy({ showTitle = true }: FieldsBedsHierarchyProps): Re
           }
           return f;
         }));
-        // Frische Felder nach Update neu laden
         await fetchData();
         return { ...newRow, name: updated.data.name, area_sqm: updated.data.area_sqm, notes: updated.data.notes };
       } catch (err) {
@@ -333,7 +366,6 @@ function FieldsBedsHierarchy({ showTitle = true }: FieldsBedsHierarchyProps): Re
     }
     return newRow;
   };
-
 
 
   /**
@@ -568,7 +600,15 @@ function FieldsBedsHierarchy({ showTitle = true }: FieldsBedsHierarchyProps): Re
           sortModel={sortModel}
           onSortModelChange={setSortModel}
           isRowSelectable={() => true}
-          isCellEditable={(params) => params.row.type === 'bed' || params.row.type === 'field'}
+          isCellEditable={(params) => {
+            if (params.row.type === 'field') {
+              return params.field === 'name' || params.field === 'area_sqm';
+            }
+            if (params.row.type === 'bed') {
+              return params.field === 'name' || params.field === 'length_m' || params.field === 'width_m';
+            }
+            return false;
+          }}
           sx={{
             ...dataGridSx,
             width: 'fit-content',
