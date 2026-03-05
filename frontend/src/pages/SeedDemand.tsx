@@ -17,6 +17,16 @@ import {
 import { seedDemandAPI, type SeedDemand } from '../api/api';
 import { useCommandContextTag } from '../commands/CommandProvider';
 
+const formatPackageSelection = (row: SeedDemand): string => {
+  if (!row.package_suggestion || row.package_suggestion.selection.length === 0) {
+    return 'Keine Packungsgrößen verfügbar';
+  }
+
+  return row.package_suggestion.selection
+    .map((item) => `${item.size_value} ${item.size_unit}${item.count > 1 ? ` × ${item.count}` : ''}`)
+    .join(' + ');
+};
+
 export default function SeedDemandPage(): React.ReactElement {
   useCommandContextTag('seedDemand');
   const [rows, setRows] = useState<SeedDemand[]>([]);
@@ -70,7 +80,7 @@ export default function SeedDemandPage(): React.ReactElement {
                   </TableCell>
                   <TableCell>{row.supplier || '-'}</TableCell>
                   <TableCell align="right">{row.total_grams === null ? '-' : row.total_grams.toFixed(2)}</TableCell>
-                  <TableCell>{row.package_suggestion ? `Vorschlag: ${row.package_suggestion.selection.map((item) => `${item.size_value} ${item.size_unit} × ${item.count}`).join(' + ')} = ${row.package_suggestion.total_amount} ${row.package_suggestion.selection[0]?.size_unit ?? 'g'} (over: ${row.package_suggestion.overage})` : 'No pack sizes available for this culture'}</TableCell>
+                  <TableCell>{formatPackageSelection(row)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -64,5 +64,41 @@ describe('SeedDemandPage', () => {
       'href',
       '/cultures?cultureId=1'
     );
+
+    expect(screen.getByText('25 g × 8')).toBeInTheDocument();
+    expect(screen.queryByText(/Vorschlag:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/over:/i)).not.toBeInTheDocument();
+  });
+
+  it('shows compact fallback text when no package suggestion is available', async () => {
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 2,
+            culture_name: 'Salat',
+            supplier: 'Reinsaat',
+            total_grams: 0.25,
+            package_suggestion: null,
+            warning: null,
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Keine Packungsgrößen verfügbar')).toBeInTheDocument();
+    });
   });
 });
