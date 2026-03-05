@@ -12,7 +12,7 @@
  * @returns JSX element rendering the culture form
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../i18n';
 import type { Culture } from '../api/types';
 import { extractApiErrorMessage } from '../api/errors';
@@ -51,6 +51,7 @@ const EMPTY_CULTURE: Partial<Culture> = {
   crop_family: '',
   nutrient_demand: '',
   cultivation_type: 'pre_cultivation',
+  cultivation_types: ['pre_cultivation'],
   notes: '',
   growth_duration_days: undefined,
   harvest_duration_days: undefined,
@@ -67,6 +68,7 @@ const EMPTY_CULTURE: Partial<Culture> = {
   seeding_requirement_type: '',
   seed_rate_value: null,
   seed_rate_unit: null,
+  seed_rate_by_cultivation: null,
   seed_packages: [],
 };
 
@@ -120,7 +122,7 @@ export function CultureForm({
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
-
+  const dialogContentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setFormData(buildInitialFormData(culture));
@@ -168,6 +170,64 @@ export function CultureForm({
     }
   };
 
+  const handleDialogContentScrollKey = (event: { key: string; altKey: boolean; ctrlKey: boolean; metaKey: boolean; preventDefault: () => void }, contentElement: HTMLDivElement) => {
+    if (event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
+
+    const key = event.key;
+    let delta = 0;
+
+    if (key === 'ArrowDown') {
+      delta = 40;
+    } else if (key === 'ArrowUp') {
+      delta = -40;
+    } else if (key === 'PageDown') {
+      delta = Math.max(200, Math.floor(contentElement.clientHeight * 0.9));
+    } else if (key === 'PageUp') {
+      delta = -Math.max(200, Math.floor(contentElement.clientHeight * 0.9));
+    } else if (key === 'Home') {
+      contentElement.scrollTo({ top: 0, behavior: 'auto' });
+      event.preventDefault();
+      return;
+    } else if (key === 'End') {
+      contentElement.scrollTo({ top: contentElement.scrollHeight, behavior: 'auto' });
+      event.preventDefault();
+      return;
+    } else {
+      return;
+    }
+
+    contentElement.scrollBy({ top: delta, behavior: 'auto' });
+    event.preventDefault();
+  };
+
+  const handleDialogContentKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    handleDialogContentScrollKey(event, event.currentTarget);
+  };
+
+  useEffect(() => {
+    const onWindowKeyDown = (event: KeyboardEvent) => {
+      const contentElement = dialogContentRef.current;
+      if (!contentElement) {
+        return;
+      }
+
+      const activeElement = document.activeElement;
+      const isNoElementFocused = !activeElement || activeElement === document.body || activeElement === document.documentElement;
+      const dialogElement = contentElement.closest('[role="dialog"]');
+      const isFocusInsideDialog = Boolean(dialogElement && activeElement && dialogElement.contains(activeElement));
+      if (!isNoElementFocused && !contentElement.contains(activeElement) && !isFocusInsideDialog) {
+        return;
+      }
+
+      handleDialogContentScrollKey(event, contentElement);
+    };
+
+    window.addEventListener('keydown', onWindowKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onWindowKeyDown, { capture: true });
+  }, []);
+
   return (
     <Dialog
       open
@@ -183,7 +243,7 @@ export function CultureForm({
         <DialogTitle id="culture-form-dialog-title">
           {isEdit ? t('form.editTitle') : t('form.createTitle')}
         </DialogTitle>
-        <DialogContent dividers sx={{ maxHeight: '70vh' }}>
+        <DialogContent ref={dialogContentRef} dividers sx={{ maxHeight: '70vh' }} onKeyDownCapture={handleDialogContentKeyDown}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 8 }}>
             <Typography variant="h6">Allgemeine Informationen</Typography>
             <BasicInfoSection formData={formData} errors={errors} onChange={handleChange} t={t} />

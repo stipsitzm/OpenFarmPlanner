@@ -65,8 +65,8 @@ export const supplierAPI = {
     return http.get<PaginatedResponse<Supplier>>('/suppliers/', { params });
   },
   get: (id: number) => http.get<Supplier>(`/suppliers/${id}/`),
-  create: (name: string) => http.post<Supplier>('/suppliers/', { name }),
-  update: (id: number, data: Supplier) => http.put<Supplier>(`/suppliers/${id}/`, data),
+  create: (name: string, homepage_url: string, allowed_domains: string[] = [], is_active = true) => http.post<Supplier>('/suppliers/', { name, homepage_url, allowed_domains, is_active }),
+  update: (id: number, data: Partial<Supplier>) => http.put<Supplier>(`/suppliers/${id}/`, data),
   delete: (id: number) => http.delete(`/suppliers/${id}/`),
 };
 

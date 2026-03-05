@@ -49,8 +49,12 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
 
     if (typeof value === 'string') {
       // User typed a new supplier name - create it
+      const homepageUrl = window.prompt('Homepage URL des Lieferanten (z. B. https://www.reinsaat.at)') || '';
+      if (!homepageUrl.trim()) {
+        return;
+      }
       try {
-        const response = await supplierAPI.create(value);
+        const response = await supplierAPI.create(value, homepageUrl.trim(), []);
         onChange('supplier', response.data);
       } catch (error) {
         console.error('Error creating supplier:', error);
@@ -109,6 +113,13 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
               error={Boolean(errors.supplier)}
             />
           )}
+        />
+        <TextField
+          sx={fieldSx}
+          label={t('form.supplierHomepage', { defaultValue: 'Lieferanten-Homepage' })}
+          value={formData.supplier?.homepage_url || ''}
+          InputProps={{ readOnly: true }}
+          helperText={(formData.supplier?.allowed_domains || []).length > 0 ? `Domains: ${(formData.supplier?.allowed_domains || []).join(', ')}` : ''}
         />
         <TextField
           sx={fieldSx}

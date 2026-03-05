@@ -1,0 +1,18 @@
+{
+  "title": "Lieferanten",
+  "create": "Lieferant anlegen",
+  "edit": "Lieferant bearbeiten",
+  "name": "Name",
+  "homepage": "Homepage",
+  "allowedDomains": "Erlaubte Domains",
+  "active": "Aktiv",
+  "actions": "Aktionen",
+  "save": "Speichern",
+  "cancel": "Abbrechen",
+  "addDomain": "Domain hinzufügen",
+  "add": "Hinzufügen",
+  "saveError": "Lieferant konnte nicht gespeichert werden.",
+  "yes": "Ja",
+  "no": "Nein",
+  "editAction": "Bearbeiten"
+}

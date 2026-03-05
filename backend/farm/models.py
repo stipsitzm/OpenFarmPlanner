@@ -3,6 +3,7 @@ import uuid
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
+from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
@@ -47,34 +48,139 @@ class TimestampedModel(models.Model):
 
 class Supplier(TimestampedModel):
     """A seed supplier or manufacturer."""
-    
-    name = models.CharField(max_length=200, help_text="Supplier name")
+
+    name = models.CharField(max_length=200, unique=True, help_text="Supplier name")
+    homepage_url = models.URLField(help_text="Supplier homepage URL")
+    slug = models.SlugField(max_length=200, unique=True, blank=True)
+    allowed_domains = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
     name_normalized = models.CharField(
         max_length=200,
         unique=True,
         editable=False,
         help_text="Normalized name for deduplication"
     )
-    
+
+    @staticmethod
+    def _normalize_domain(hostname: str) -> str:
+        """Normalize one domain value and strip common URL parts."""
+        raw = (hostname or '').strip().lower()
+        if not raw:
+            return ''
+        if '://' in raw:
+            raw = urlparse(raw).hostname or ''
+        raw = raw.split('/')[0].split(':')[0].strip().lower().rstrip('.')
+        if raw.startswith('www.'):
+            raw = raw[4:]
+        return raw
+
+    @classmethod
+    def normalize_allowed_domains(cls, domains: list[str] | tuple[str, ...] | None) -> list[str]:
+        """Normalize user-provided allowed domains and deduplicate while preserving order."""
+        normalized: list[str] = []
+        for domain in (domains or []):
+            item = cls._normalize_domain(str(domain))
+            if item and item not in normalized:
+                normalized.append(item)
+            if item and f'www.{item}' not in normalized:
+                normalized.append(f'www.{item}')
+        return normalized
+
+    @staticmethod
+    def _is_valid_domain(domain: str) -> bool:
+        """Return True if the string looks like a bare hostname."""
+        if not domain or len(domain) > 253:
+            return False
+        if '/' in domain or ':' in domain or ' ' in domain:
+            return False
+        return bool(re.fullmatch(r'(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}', domain))
+
+    def _derive_slug_base(self) -> str:
+        try:
+            host = self._normalize_domain(urlparse(self.homepage_url).hostname or '')
+        except Exception:  # noqa: BLE001
+            host = ''
+        if host:
+            return host.split('.')[0]
+
+        from django.utils.text import slugify
+        return slugify(self.name) or 'supplier'
+
+    def _assign_unique_slug(self) -> None:
+        from django.utils.text import slugify
+
+        if self.slug:
+            base_slug = slugify(self.slug)
+        else:
+            base_slug = slugify(self._derive_slug_base())
+        base_slug = base_slug or 'supplier'
+
+        candidate = base_slug
+        suffix = 2
+        qs = Supplier.objects.exclude(pk=self.pk)
+        while qs.filter(slug=candidate).exists():
+            candidate = f"{base_slug}-{suffix}"
+            suffix += 1
+        self.slug = candidate
+
+    def _derive_default_allowed_domains(self) -> list[str]:
+        """Build default allowed domains from homepage host and explicit www variant."""
+        try:
+            hostname = urlparse(self.homepage_url).hostname or ''
+        except Exception:  # noqa: BLE001
+            hostname = ''
+        normalized = self._normalize_domain(hostname)
+        if not normalized:
+            return []
+        return [normalized, f'www.{normalized}']
+
+    def clean(self) -> None:
+        """Validate and normalize mutable supplier fields."""
+        super().clean()
+        domains = self.normalize_allowed_domains(self.allowed_domains if isinstance(self.allowed_domains, list) else [])
+        if not domains:
+            domains = self._derive_default_allowed_domains()
+        invalid = [domain for domain in domains if not self._is_valid_domain(self._normalize_domain(domain))]
+        if invalid:
+            raise ValidationError({'allowed_domains': 'Allowed domains must be valid hostnames without scheme or path.'})
+        self.allowed_domains = domains
+
     def save(self, *args: Any, **kwargs: Any) -> None:
-        """Save supplier and auto-generate normalized name."""
+        """Save supplier and auto-generate normalized helper fields."""
         from .utils import normalize_supplier_name
-        
-        # Always update name_normalized based on current name
-        self.name_normalized = normalize_supplier_name(self.name) or ''
-        
-        # Trim and collapse whitespace in the user-facing name
+
         if self.name:
             self.name = ' '.join(self.name.split())
-        
+        self.name_normalized = normalize_supplier_name(self.name) or ''
+        self.allowed_domains = self.normalize_allowed_domains(self.allowed_domains if isinstance(self.allowed_domains, list) else [])
+        if not self.allowed_domains:
+            self.allowed_domains = self._derive_default_allowed_domains()
+        if not self.slug:
+            self._assign_unique_slug()
+
         super().save(*args, **kwargs)
-    
+
     def __str__(self) -> str:
         """Return the supplier name."""
         return self.name
-    
+
     class Meta:
         ordering = ['name']
+
+
+
+def is_supplier_domain(url: str, supplier: Supplier | None) -> bool:
+    """Return True when URL host matches supplier allowed domains."""
+    if not supplier or not url:
+        return False
+    try:
+        host = Supplier._normalize_domain(urlparse(url).hostname or '')
+    except Exception:  # noqa: BLE001
+        return False
+    if not host:
+        return False
+    domains = [Supplier._normalize_domain(domain) for domain in (supplier.allowed_domains or []) if domain]
+    return any(host == domain or host.endswith(f'.{domain}') for domain in domains)
 
 
 class Location(TimestampedModel):
@@ -168,6 +274,8 @@ class Culture(TimestampedModel):
         ('pre_cultivation', 'Pre-cultivation'),  # Anzucht
         ('direct_sowing', 'Direct Sowing'),  # Direktsaat
     ]
+    CULTIVATION_TYPE_VALUES = {item[0] for item in CULTIVATION_TYPE_CHOICES}
+    DIRECT_SOWING_SEED_RATE_UNITS = {'g_per_m2', 'g_per_lfm', 'seeds/m'}
     
     HARVEST_METHOD_CHOICES = [
         ('per_plant', 'Per Plant'),
@@ -201,6 +309,7 @@ class Culture(TimestampedModel):
         related_name='cultures',
         help_text="Seed supplier (preferred over seed_supplier text field)"
     )
+    supplier_product_url = models.URLField(null=True, blank=True, help_text='Supplier product page URL for enrichment')
     
     # Normalized fields for matching and deduplication.
     name_normalized = models.CharField(
@@ -230,11 +339,12 @@ class Culture(TimestampedModel):
         blank=True,
         help_text="Nutrient demand level"
     )
+    cultivation_types = models.JSONField(default=list, blank=True)
     cultivation_type = models.CharField(
         max_length=30,
         choices=CULTIVATION_TYPE_CHOICES,
         blank=True,
-        help_text="Type of cultivation"
+        help_text="Deprecated single cultivation type (kept for compatibility)"
     )
     
     # Timing fields (in days).
@@ -302,6 +412,7 @@ class Culture(TimestampedModel):
         blank=True,
         help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds_per_plant')"
     )
+    seed_rate_by_cultivation = models.JSONField(null=True, blank=True)
     sowing_calculation_safety_percent = models.FloatField(
         null=True,
         blank=True,
@@ -337,6 +448,23 @@ class Culture(TimestampedModel):
         """Validate numeric ranges for positive values."""
         super().clean()
         errors = {}
+
+        if not isinstance(self.cultivation_types, list):
+            errors['cultivation_types'] = 'Cultivation types must be a list.'
+        else:
+            normalized_types = [str(item).strip() for item in self.cultivation_types if str(item).strip()]
+            if not normalized_types and self.cultivation_type:
+                normalized_types = [self.cultivation_type]
+            if not normalized_types:
+                normalized_types = ['pre_cultivation']
+            if len(set(normalized_types)) != len(normalized_types):
+                errors['cultivation_types'] = 'Cultivation types must be unique.'
+            invalid_types = [item for item in normalized_types if item not in self.CULTIVATION_TYPE_VALUES]
+            if invalid_types:
+                errors['cultivation_types'] = 'Cultivation types contain unsupported values.'
+            self.cultivation_types = normalized_types
+            if normalized_types and self.cultivation_type not in normalized_types:
+                self.cultivation_type = normalized_types[0]
         
         # Validate positive numeric fields.
         if self.growth_duration_days is not None and self.growth_duration_days < 0:
@@ -351,15 +479,32 @@ class Culture(TimestampedModel):
         if self.expected_yield is not None and self.expected_yield < 0:
             errors['expected_yield'] = 'Expected yield must be non-negative.'
 
-        if self.harvest_duration_days is not None and not self.harvest_method:
-            errors['harvest_method'] = 'Harvest method is required when harvest duration is set.'
-
         if self.seeding_requirement is None and self.seeding_requirement_type:
             errors['seeding_requirement'] = 'Seeding requirement value is required when seeding requirement type is set.'
 
         if self.seeding_requirement is not None and not self.seeding_requirement_type:
             errors['seeding_requirement_type'] = 'Seeding requirement type is required when seeding requirement is set.'
-        
+
+        if self.seed_rate_by_cultivation is not None:
+            if not isinstance(self.seed_rate_by_cultivation, dict):
+                errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation must be an object.'
+            else:
+                key_set = set(self.seed_rate_by_cultivation.keys())
+                if not key_set.issubset(set(self.cultivation_types or [])):
+                    errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation keys must be a subset of cultivation_types.'
+                for method, payload in self.seed_rate_by_cultivation.items():
+                    if not isinstance(payload, dict):
+                        errors['seed_rate_by_cultivation'] = 'Each cultivation seed rate entry must be an object.'
+                        continue
+                    value = payload.get('value')
+                    unit = payload.get('unit')
+                    if not isinstance(value, (int, float)) or float(value) <= 0:
+                        errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation values must be positive numbers.'
+                    if method == 'pre_cultivation' and unit != 'seeds_per_plant':
+                        errors['seed_rate_by_cultivation'] = 'Pre-cultivation unit must be seeds_per_plant.'
+                    if method == 'direct_sowing' and unit not in self.DIRECT_SOWING_SEED_RATE_UNITS:
+                        errors['seed_rate_by_cultivation'] = 'Direct-sowing unit must be g_per_m2, g_per_lfm, or seeds/m.'
+
         if self.distance_within_row_m is not None and self.distance_within_row_m < 0:
             errors['distance_within_row_m'] = 'Distance within row must be non-negative.'
         
@@ -576,18 +721,13 @@ class SeedPackage(TimestampedModel):
     """Sold package option for a culture."""
 
     UNIT_GRAMS = 'g'
-    UNIT_SEEDS = 'seeds'
     UNIT_CHOICES = [
         (UNIT_GRAMS, 'Grams'),
-        (UNIT_SEEDS, 'Seeds'),
     ]
 
     culture = models.ForeignKey('Culture', on_delete=models.CASCADE, related_name='seed_packages')
-    size_value = models.DecimalField(max_digits=10, decimal_places=3)
-    size_unit = models.CharField(max_length=10, choices=UNIT_CHOICES)
-    available = models.BooleanField(default=True)
-    article_number = models.CharField(max_length=120, blank=True)
-    source_url = models.URLField(blank=True)
+    size_value = models.DecimalField(max_digits=10, decimal_places=1)
+    size_unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default=UNIT_GRAMS)
     evidence_text = models.CharField(max_length=200, blank=True)
     last_seen_at = models.DateTimeField(null=True, blank=True)
 
@@ -604,6 +744,8 @@ class SeedPackage(TimestampedModel):
         super().clean()
         if self.size_value is not None and self.size_value <= 0:
             raise ValidationError({'size_value': 'Package size must be greater than zero.'})
+        if self.size_unit != self.UNIT_GRAMS:
+            raise ValidationError({'size_unit': 'Only grams (g) are supported for package size.'})
 
     def __str__(self) -> str:
         return f"{self.culture.name} {self.size_value} {self.size_unit}"

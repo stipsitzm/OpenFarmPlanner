@@ -150,4 +150,24 @@ describe('validateCulture', () => {
     expect(result.errors).toEqual({});
   });
 
+
+  it('accepts existing seed package sizes provided as strings (including comma decimals)', () => {
+    const result = validateCulture(
+      {
+        name: 'Möhre',
+        variety: 'Rodelika',
+        supplier: { id: 1, name: 'Test' } as any,
+        seed_packages: [
+          { size_value: '0.2', size_unit: 'g' } as any,
+          { size_value: '4,6', size_unit: 'g' } as any,
+        ],
+      },
+      t
+    );
+
+    expect(result.errors['seed_packages.0.size_value']).toBeUndefined();
+    expect(result.errors['seed_packages.1.size_value']).toBeUndefined();
+  });
+
+
 });

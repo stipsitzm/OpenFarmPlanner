@@ -40,7 +40,7 @@ def test_seed_demand_applies_safety_margin(api_client: APIClient, bed: Bed):
     )
     _create_plan(culture, bed, 5)
     _create_plan(culture, bed, 5)
-    SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g', available=True)
+    SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g')
 
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     assert response.status_code == 200
@@ -62,7 +62,7 @@ def test_seed_demand_rounds_packages_up(api_client: APIClient, bed: Bed):
         seed_rate_unit='g_per_m2',
     )
     _create_plan(culture, bed, 10)
-    SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g', available=True)
+    SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g')
 
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     assert response.status_code == 200
@@ -122,7 +122,7 @@ def test_seed_demand_returns_warning_when_gram_conversion_missing(api_client: AP
         row_spacing_m=0.3,
     )
     _create_plan(culture, bed, 10)
-    SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g', available=True)
+    SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g')
 
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     assert response.status_code == 200

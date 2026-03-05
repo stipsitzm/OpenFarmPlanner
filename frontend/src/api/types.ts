@@ -2,10 +2,7 @@ export interface SeedPackage {
   id?: number;
   culture?: number;
   size_value: number;
-  size_unit: 'g' | 'seeds';
-  available: boolean;
-  article_number?: string;
-  source_url?: string;
+  size_unit: 'g';
   evidence_text?: string;
   last_seen_at?: string | null;
 }
@@ -13,12 +10,24 @@ export interface SeedPackage {
 export interface Supplier {
   id?: number;
   name: string;
+  homepage_url?: string;
+  slug?: string;
+  allowed_domains: string[];
+  is_active?: boolean;
   created_at?: string;
   updated_at?: string;
   created?: boolean;
 }
 
-export type SeedRateUnit = 'g_per_m2' | 'seeds/m' | 'seeds_per_plant';
+export type SeedRateUnit = 'g_per_m2' | 'g_per_lfm' | 'seeds/m' | 'seeds_per_plant';
+export type CultivationType = 'pre_cultivation' | 'direct_sowing';
+
+export interface SeedRateByCultivationEntry {
+  value: number;
+  unit: SeedRateUnit;
+}
+
+export type SeedRateByCultivation = Partial<Record<CultivationType, SeedRateByCultivationEntry>>;
 
 export interface Culture {
   thousand_kernel_weight_g?: number;
@@ -28,18 +37,21 @@ export interface Culture {
   seed_packages?: SeedPackage[];
   seed_rate_value?: number | null;
   seed_rate_unit?: SeedRateUnit | null;
+  seed_rate_by_cultivation?: SeedRateByCultivation | null;
   id?: number;
   name: string;
   variety?: string;
   seed_supplier?: string;
   supplier?: Supplier | null;
+  supplier_product_url?: string | null;
   image_file?: MediaFileRef | null;
   image_file_id?: number | null;
   notes?: string;
   
   crop_family?: string;
   nutrient_demand?: 'low' | 'medium' | 'high' | '';
-  cultivation_type?: 'pre_cultivation' | 'direct_sowing' | '';
+  cultivation_type?: CultivationType | '';
+  cultivation_types?: CultivationType[];
   
   growth_duration_days?: number;
   harvest_duration_days?: number;
@@ -71,9 +83,9 @@ export interface SeedDemand {
   variety?: string | null;
   supplier?: string | null;
   total_grams: number | null;
-  seed_packages?: Array<{ size_value: number; size_unit: 'g' | 'seeds'; available: boolean }>;
+  seed_packages?: Array<{ size_value: number; size_unit: 'g' }>;
   package_suggestion?: {
-    selection: Array<{ size_value: number; size_unit: 'g' | 'seeds'; count: number }>;
+    selection: Array<{ size_value: number; size_unit: 'g'; count: number }>;
     total_amount: number;
     overage: number;
     pack_count: number;

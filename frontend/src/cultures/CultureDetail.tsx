@@ -22,6 +22,11 @@ import {
   Chip,
   Divider,
   Link,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import type { Culture } from '../api/api';
 import { SearchableSelect } from '../components/inputs/SearchableSelect';
@@ -172,6 +177,16 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
+                {selectedCulture.supplier?.homepage_url && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Lieferanten-URL
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedCulture.supplier.homepage_url}
+                    </Typography>
+                  </Box>
+                )}
                 {selectedCulture.nutrient_demand && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
@@ -186,14 +201,20 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
-                {selectedCulture.cultivation_type && (
+                {(selectedCulture.cultivation_types && selectedCulture.cultivation_types.length > 0) && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
                       Anbauart
                     </Typography>
-                    <Typography variant="body1">
-                      {selectedCulture.cultivation_type === 'pre_cultivation' ? 'Anzucht' : 'Direktsaat'}
-                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {selectedCulture.cultivation_types.map((item) => (
+                        <Chip
+                          key={item}
+                          size="small"
+                          label={item === 'pre_cultivation' ? 'Anzucht' : 'Direktsaat'}
+                        />
+                      ))}
+                    </Box>
                   </Box>
                 )}
               </Box>
@@ -303,7 +324,39 @@ export function CultureDetail({
                   gap: 2,
                 }}
               >
-                {(selectedCulture.seed_rate_value !== null && selectedCulture.seed_rate_value !== undefined) && (
+                {selectedCulture.seed_rate_by_cultivation && Object.keys(selectedCulture.seed_rate_by_cultivation).length > 0 ? (
+                  <Box sx={{ gridColumn: '1 / -1' }}>
+                    <Typography variant="body2" color="text.secondary">Saatgutmenge nach Anbauart</Typography>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Methode</TableCell>
+                          <TableCell>Menge</TableCell>
+                          <TableCell>Einheit</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {Object.entries(selectedCulture.seed_rate_by_cultivation).map(([method, payload]) => (
+                          <TableRow key={method}>
+                            <TableCell>{method === 'pre_cultivation' ? 'Anzucht' : 'Direktsaat'}</TableCell>
+                            <TableCell>{payload?.value}</TableCell>
+                            <TableCell>
+                              {payload?.unit === 'g_per_m2'
+                                ? 'g / m²'
+                                : payload?.unit === 'g_per_lfm'
+                                  ? 'g / lfm'
+                                  : payload?.unit === 'seeds/m'
+                                    ? 'Korn / lfm'
+                                    : payload?.unit === 'seeds_per_plant'
+                                      ? 'Korn / Pflanze'
+                                      : payload?.unit}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Box>
+                ) : ((selectedCulture.seed_rate_value !== null && selectedCulture.seed_rate_value !== undefined) && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
                       Saatgutmenge
@@ -319,7 +372,7 @@ export function CultureDetail({
                             : ''}
                     </Typography>
                   </Box>
-                )}
+                ))}
                 {selectedCulture.sowing_calculation_safety_percent !== undefined && selectedCulture.sowing_calculation_safety_percent !== null && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">

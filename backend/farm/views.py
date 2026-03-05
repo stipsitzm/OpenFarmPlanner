@@ -11,6 +11,7 @@ from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import json
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
@@ -70,6 +71,19 @@ def _coerce_request_string(value, default='') -> str:
             return first.strip()
         return str(first).strip()
     return default
+
+
+
+
+def _supplier_enrichment_requirement_error(code: str, message: str) -> Response:
+    """Return standardized supplier enrichment requirement errors."""
+    return Response(
+        {
+            'code': code,
+            'message': message,
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 def _week_start_for_iso_year(iso_year: int) -> date:
@@ -322,21 +336,47 @@ class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         :return: Response with supplier data and created flag
         """
         name = request.data.get('name', '').strip()
-        
+        homepage_url = request.data.get('homepage_url', '').strip()
+        allowed_domains = request.data.get('allowed_domains', [])
+        is_active = bool(request.data.get('is_active', True))
+
         if not name:
             return Response(
                 {'name': 'This field is required.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+        if not homepage_url:
+            return Response(
+                {'homepage_url': 'This field is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         # Get or create supplier by normalized name
         from .utils import normalize_supplier_name
         normalized = normalize_supplier_name(name) or ''
-        
+
         supplier, created = Supplier.objects.get_or_create(
             name_normalized=normalized,
-            defaults={'name': name}
+            defaults={
+                'name': name,
+                'homepage_url': homepage_url,
+                'allowed_domains': allowed_domains if isinstance(allowed_domains, list) else [],
+                'is_active': is_active,
+            }
         )
+        if not created:
+            update_fields: list[str] = []
+            if homepage_url and supplier.homepage_url != homepage_url:
+                supplier.homepage_url = homepage_url
+                update_fields.append('homepage_url')
+            if isinstance(allowed_domains, list):
+                supplier.allowed_domains = allowed_domains
+                update_fields.append('allowed_domains')
+            if supplier.is_active != is_active:
+                supplier.is_active = is_active
+                update_fields.append('is_active')
+            if update_fields:
+                supplier.save()
         
         serializer = self.get_serializer(supplier)
         data = serializer.data
@@ -783,10 +823,19 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     def enrich(self, request, pk=None):
         """Create AI suggestions for one culture."""
         culture = self.get_object()
+        if not culture.supplier_id:
+            return _supplier_enrichment_requirement_error('supplier_missing', 'Supplier is required for AI enrichment.')
+        if not (culture.supplier and culture.supplier.allowed_domains):
+            return _supplier_enrichment_requirement_error('allowed_domains_missing', 'Supplier allowed domains are required for AI enrichment.')
         mode = _coerce_request_string(request.data.get('mode'), 'complete')
         try:
             payload = enrich_culture(culture, mode)
         except EnrichmentError as error:
+            detail = str(error)
+            if detail.startswith('supplier_missing:') or 'supplier_missing' in detail:
+                return _supplier_enrichment_requirement_error('supplier_missing', 'Supplier is required for AI enrichment.')
+            if detail.startswith('allowed_domains_missing:') or 'allowed_domains_missing' in detail:
+                return _supplier_enrichment_requirement_error('allowed_domains_missing', 'Supplier allowed domains are required for AI enrichment.')
             return Response({'detail': str(error)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as error:
             logger.exception('Unexpected enrichment error for culture %s', culture.id)
@@ -811,6 +860,12 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         run_id = f"enr_batch_{int(timezone.now().timestamp())}"
         items = []
         for culture in cultures:
+            if not culture.supplier_id:
+                items.append({'culture_id': culture.id, 'status': 'failed', 'error': 'supplier_missing'})
+                continue
+            if not (culture.supplier and culture.supplier.allowed_domains):
+                items.append({'culture_id': culture.id, 'status': 'failed', 'error': 'allowed_domains_missing'})
+                continue
             try:
                 item = enrich_culture(culture, 'complete')
                 items.append({'culture_id': culture.id, 'status': 'completed', 'result': item})
@@ -849,6 +904,18 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
             total_web_search_cost += float(breakdown.get('web_search_calls') or 0)
             total_web_search_call_count += int(breakdown.get('web_search_call_count') or 0)
 
+        cost_model_name = next(
+            (
+                str((item.get('result') or {}).get('costEstimate', {}).get('model') or '')
+                for item in items
+                if isinstance(item, dict)
+                and isinstance(item.get('result'), dict)
+                and isinstance((item.get('result') or {}).get('costEstimate'), dict)
+                and (item.get('result') or {}).get('costEstimate', {}).get('model')
+            ),
+            getattr(settings, 'AI_ENRICHMENT_MODEL', 'gpt-5'),
+        )
+
         return Response({
             'run_id': run_id,
             'status': 'completed',
@@ -865,7 +932,7 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
             'costEstimate': {
                 'currency': 'USD',
                 'total': total_cost,
-                'model': 'gpt-4.1',
+                'model': cost_model_name,
                 'breakdown': {
                     'input': total_input_cost,
                     'cached_input': total_cached_input_cost,
@@ -1240,6 +1307,17 @@ class SeedDemandListView(generics.ListAPIView):
                         ),
                     ),
                     When(
+                        Q(seed_rate_unit='g_per_lfm')
+                        & Q(seed_rate_value__isnull=False)
+                        & Q(row_spacing_m__gt=0)
+                        & Q(total_area_sqm__gt=0),
+                        then=ExpressionWrapper(
+                            (F('total_area_sqm') / F('row_spacing_m'))
+                            * F('seed_rate_value'),
+                            output_field=FloatField(),
+                        ),
+                    ),
+                    When(
                         Q(seed_rate_unit__in=['seeds_per_plant', 'pcs_per_plant'])
                         & Q(seed_rate_value__isnull=False)
                         & Q(thousand_kernel_weight_g__isnull=False)
@@ -1272,6 +1350,8 @@ class SeedDemandListView(generics.ListAPIView):
                     When(Q(seed_rate_unit='seeds/m') & Q(thousand_kernel_weight_g__isnull=True), then=Value('Missing thousand-kernel weight for conversion to grams.')),
                     When(Q(seed_rate_unit='seeds/m') & (Q(row_spacing_m__isnull=True) | Q(row_spacing_m__lte=0)), then=Value('Missing row spacing for conversion from seeds/m to grams.')),
                     When(Q(seed_rate_unit='seeds/m') & Q(total_area_sqm__lte=0), then=Value('Missing area usage for conversion from seeds/m to grams.')),
+                    When(Q(seed_rate_unit='g_per_lfm') & (Q(row_spacing_m__isnull=True) | Q(row_spacing_m__lte=0)), then=Value('Missing row spacing for conversion from g/lfm to grams.')),
+                    When(Q(seed_rate_unit='g_per_lfm') & Q(total_area_sqm__lte=0), then=Value('Missing area usage for conversion from g/lfm to grams.')),
                     When(Q(seed_rate_unit__in=['seeds_per_plant', 'pcs_per_plant']) & Q(thousand_kernel_weight_g__isnull=True), then=Value('Missing thousand-kernel weight for conversion to grams.')),
                     When(Q(seed_rate_unit__in=['seeds_per_plant', 'pcs_per_plant']) & Q(total_quantity__lte=0), then=Value('Missing plant quantity for conversion from seeds per plant to grams.')),
                     default=Value(None, output_field=CharField()),
@@ -1284,7 +1364,7 @@ class SeedDemandListView(generics.ListAPIView):
         rows = list(self.get_queryset())
         culture_ids = [row['culture_id'] for row in rows]
         package_map: dict[int, list[SeedPackage]] = defaultdict(list)
-        for package in SeedPackage.objects.filter(culture_id__in=culture_ids, available=True).order_by('size_unit', 'size_value'):
+        for package in SeedPackage.objects.filter(culture_id__in=culture_ids).order_by('size_unit', 'size_value'):
             package_map[package.culture_id].append(package)
 
         for row in rows:
@@ -1294,13 +1374,13 @@ class SeedDemandListView(generics.ListAPIView):
                 {
                     'size_value': float(pkg.size_value),
                     'size_unit': pkg.size_unit,
-                    'available': pkg.available,
                 }
                 for pkg in packages
             ]
 
             if total_grams is None:
                 row['package_suggestion'] = None
+                row['packages_needed'] = None
                 continue
 
             suggestion = compute_seed_package_suggestion(
@@ -1310,6 +1390,7 @@ class SeedDemandListView(generics.ListAPIView):
             )
             if suggestion.pack_count == 0:
                 row['package_suggestion'] = None
+                row['packages_needed'] = None
                 continue
 
             row['package_suggestion'] = {
@@ -1325,7 +1406,7 @@ class SeedDemandListView(generics.ListAPIView):
                 'overage': float(suggestion.overage),
                 'pack_count': suggestion.pack_count,
             }
+            row['packages_needed'] = suggestion.pack_count
 
         serializer = self.get_serializer(rows, many=True)
         return Response({'count': len(rows), 'next': None, 'previous': None, 'results': serializer.data})
-

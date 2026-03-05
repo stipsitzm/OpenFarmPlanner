@@ -107,7 +107,11 @@
     "propagationDurationDaysTooLong": "Anzuchtdauer darf nicht länger als die Wachstumsdauer sein",
     "harvestMethodRequired": "Erntemethode ist bei angegebenem Ertrag erforderlich",
     "seedingRequirementTypeRequired": "Saatgutbedarf-Typ ist erforderlich, wenn ein Saatgutbedarf angegeben ist.",
-    "seedingRequirementValueRequired": "Saatgutbedarf ist erforderlich, wenn ein Saatgutbedarf-Typ angegeben ist."
+    "seedingRequirementValueRequired": "Saatgutbedarf ist erforderlich, wenn ein Saatgutbedarf-Typ angegeben ist.",
+    "seedRateDirectValue": "Direktsaat Menge",
+    "seedRateDirectUnit": "Direktsaat Einheit",
+    "seedRatePreCultivationValue": "Anzucht Menge",
+    "seedRatePreCultivationUnit": "Anzucht Einheit"
   },
   "messages": {
     "createSuccess": "Kultur erfolgreich erstellt",
@@ -157,7 +161,24 @@
     "quotaExceeded": "OpenAI-Kontingent aufgebraucht. Bitte Abrechnung/Plan prüfen und erneut versuchen.",
     "providerRateLimited": "OpenAI hat die Anfrage wegen Limitierung abgelehnt. Bitte später erneut versuchen.",
     "providerUnavailable": "OpenAI ist derzeit nicht erreichbar. Bitte später erneut versuchen.",
-    "webResearchUnavailable": "Web-Recherche ist nicht konfiguriert. Bitte Backend-Konfiguration prüfen."
+    "webResearchUnavailable": "Web-Recherche ist nicht konfiguriert. Bitte Backend-Konfiguration prüfen.",
+    "warningMessages": {
+      "range_collapsed_to_mean": "Wertebereich für {{field}} wurde zu einem arithmetischen Mittelwert zusammengefasst.",
+      "missing_supplier_data": "Keine belastbaren Lieferantendaten für {{field}} gefunden; Feld bleibt unverändert.",
+      "supplier_only_non_supplier_suggestion_dropped": "Vorschlag für {{field}} wurde verworfen, da im Lieferanten-Filter kein passender Lieferantenbeleg vorlag.",
+      "seed_rate_unit_missing_for_method_value": "Für {{field}} fehlt eine eindeutige Einheit; der Vorschlag wurde nicht übernommen.",
+      "seed_rate_unit_converted_from_g_per_are": "Einheit für {{field}} wurde von g/a nach g/m² umgerechnet.",
+      "missing_supplier_evidence": "Für {{field}} fehlt zulässige Lieferanten-Evidenz; der Vorschlag wurde verworfen.",
+      "supplier_mismatch_dropped": "Vorschlag für {{field}} wurde verworfen, da die Evidenz nicht zum Lieferanten passt.",
+      "supplier_product_not_found": "Es wurde keine passende Produktseite auf der Lieferanten-Domain gefunden."
+    },
+    "loadingElapsed": "Fortschritt: {{percent}}% · Laufzeit: {{seconds}}s",
+    "loadingSteps": {
+      "request": "Anfrage an KI senden",
+      "research": "Webquellen recherchieren und sammeln",
+      "validation": "Hinweise validieren und normalisieren",
+      "results": "Vorschläge aufbereiten"
+    }
   },
   "import": {
     "menuLabel": "Weitere Aktionen",
