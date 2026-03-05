@@ -180,6 +180,35 @@ describe('hierarchy components and behaviors', () => {
     expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
   });
 
+
+  it('returns bed dimensions and derived area via value getters', () => {
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+    );
+
+    const lengthColumn = columns.find((column) => column.field === 'length_m');
+    const widthColumn = columns.find((column) => column.field === 'width_m');
+    const areaColumn = columns.find((column) => column.field === 'area_sqm');
+
+    const bedRow = { id: 100, type: 'bed', level: 2, length_m: 4, width_m: 2.5, area_sqm: 9 };
+    const fieldRow = { id: 'field-1', type: 'field', level: 1, area_sqm: 30 };
+
+    expect(lengthColumn?.valueGetter?.(undefined, bedRow as never, {} as never, {} as never)).toBe(4);
+    expect(widthColumn?.valueGetter?.(undefined, bedRow as never, {} as never, {} as never)).toBe(2.5);
+    expect(areaColumn?.valueGetter?.(undefined, bedRow as never, {} as never, {} as never)).toBe(10);
+
+    expect(lengthColumn?.valueGetter?.(undefined, fieldRow as never, {} as never, {} as never)).toBeUndefined();
+    expect(widthColumn?.valueGetter?.(undefined, fieldRow as never, {} as never, {} as never)).toBeUndefined();
+    expect(areaColumn?.valueGetter?.(undefined, fieldRow as never, {} as never, {} as never)).toBe(30);
+  });
+
   it('updates footer messaging and add action based on location count', async () => {
     const user = userEvent.setup();
     const onAddField = vi.fn();

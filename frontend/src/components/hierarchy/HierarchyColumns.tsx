@@ -3,7 +3,7 @@
  */
 
 import type { ReactElement, MouseEvent } from 'react';
-import type { GridColDef, GridRenderCellParams, GridValueGetterParams } from '@mui/x-data-grid';
+import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import type { TFunction } from 'i18next';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -231,7 +231,7 @@ export function createHierarchyColumns(
       width: widths.dimensions,
       type: 'string',
       editable: true,
-      valueGetter: (params: GridValueGetterParams<HierarchyRow>) => params.row.type === 'bed' ? params.row.length_m : undefined,
+      valueGetter: (_value, row: HierarchyRow) => row.type === 'bed' ? row.length_m : undefined,
     },
     {
       field: 'width_m',
@@ -239,7 +239,7 @@ export function createHierarchyColumns(
       width: widths.dimensions,
       type: 'string',
       editable: true,
-      valueGetter: (params: GridValueGetterParams<HierarchyRow>) => params.row.type === 'bed' ? params.row.width_m : undefined,
+      valueGetter: (_value, row: HierarchyRow) => row.type === 'bed' ? row.width_m : undefined,
     },
     {
       field: 'area_sqm',
@@ -247,7 +247,7 @@ export function createHierarchyColumns(
       width: widths.area,
       type: 'string',
       editable: true,
-      valueGetter: (params: GridValueGetterParams<HierarchyRow>) => calculateBedAreaValue(params.row),
+      valueGetter: (_value, row: HierarchyRow) => calculateBedAreaValue(row),
     },
     {
       field: 'notes',

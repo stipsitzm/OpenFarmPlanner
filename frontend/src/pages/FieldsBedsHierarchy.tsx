@@ -583,7 +583,7 @@ function FieldsBedsHierarchy({ showTitle = true }: FieldsBedsHierarchyProps): Re
       
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
-      <Box ref={tableWrapperRef} sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }} onClick={() => setTreeActive(true)}>
+      <Box ref={tableWrapperRef} sx={{ width: '100%', overflowX: 'auto' }} onClick={() => setTreeActive(true)}>
         <DataGrid
           rows={rows}
           columns={columns}
@@ -611,9 +611,7 @@ function FieldsBedsHierarchy({ showTitle = true }: FieldsBedsHierarchyProps): Re
           }}
           sx={{
             ...dataGridSx,
-            width: 'fit-content',
-            minWidth: 'unset',
-            maxWidth: '100%',
+            width: '100%',
           }}
           rowSelectionModel={{ type: "include", ids: new Set(selectedRowId ? [selectedRowId] : []) }}
           onRowSelectionModelChange={(nextModel) => setSelectedRowId(Array.from(nextModel.ids)[0] ?? null)}
