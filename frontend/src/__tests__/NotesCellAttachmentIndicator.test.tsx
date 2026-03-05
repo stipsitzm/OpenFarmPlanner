@@ -8,6 +8,27 @@ describe('NotesCell attachment indicator', () => {
     expect(screen.queryByLabelText(/Foto in Notizen|Fotos in Notizen/)).not.toBeInTheDocument();
   });
 
+
+  it('opens notes drawer when clicking anywhere in the notes cell', () => {
+    const onOpen = vi.fn();
+    render(<NotesCell hasValue excerpt="Meine Notiz" rawValue="Meine Notiz" onOpen={onOpen} attachmentCount={0} />);
+
+    fireEvent.click(screen.getByText('Meine Notiz'));
+
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens notes drawer via keyboard on container', () => {
+    const onOpen = vi.fn();
+    render(<NotesCell hasValue excerpt="Meine Notiz" rawValue="Meine Notiz" onOpen={onOpen} attachmentCount={0} />);
+
+    const cellButton = screen.getByText('Meine Notiz').closest('[role="button"]');
+    expect(cellButton).not.toBeNull();
+    fireEvent.keyDown(cellButton!, { key: 'Enter' });
+
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
   it('renders attachment icon when count > 0 and click does not bubble', () => {
     const onOpenAttachments = vi.fn();
     const parentClick = vi.fn();

@@ -90,6 +90,16 @@ export function NotesCell({
       }}
     >
       <Box
+        role="button"
+        tabIndex={0}
+        aria-label={notesAria}
+        onClick={onOpen}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onOpen();
+          }
+        }}
         sx={{
           width: '100%',
           display: 'flex',
@@ -98,11 +108,15 @@ export function NotesCell({
           py: 0.25,
           position: 'relative',
           minHeight: 32,
+          cursor: 'pointer',
         }}
       >
         <IconButton
           size="small"
-          onClick={onOpen}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
           aria-label={notesAria}
           sx={{ p: 0.5 }}
         >
