@@ -41,8 +41,8 @@ interface GraphicalFieldsProps {
   showTitle?: boolean;
 }
 
-  threshold: number = SNAP_THRESHOLD,
-  let bestXDelta = threshold + 1;
+const snapToNeighbors = (
+): SnapResult => {
   let bestYDelta = threshold + 1;
           if (absDelta <= threshold && absDelta < bestXDelta) {
           if (absDelta <= threshold && absDelta < bestYDelta) {
@@ -125,7 +125,7 @@ interface GraphicalFieldsProps {
       ...(latestHorizontalGuide ? [latestHorizontalGuide] : []),
     ],
   };
-}
+};
 
 export default function GraphicalFields({ showTitle = true }: GraphicalFieldsProps): React.ReactElement {
   const { loading, error, locations, fields, beds } = useHierarchyData();
