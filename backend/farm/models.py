@@ -274,6 +274,8 @@ class Culture(TimestampedModel):
         ('pre_cultivation', 'Pre-cultivation'),  # Anzucht
         ('direct_sowing', 'Direct Sowing'),  # Direktsaat
     ]
+    CULTIVATION_TYPE_VALUES = {item[0] for item in CULTIVATION_TYPE_CHOICES}
+    DIRECT_SOWING_SEED_RATE_UNITS = {'g_per_m2', 'g_per_lfm', 'seeds/m'}
     
     HARVEST_METHOD_CHOICES = [
         ('per_plant', 'Per Plant'),
@@ -337,11 +339,12 @@ class Culture(TimestampedModel):
         blank=True,
         help_text="Nutrient demand level"
     )
+    cultivation_types = models.JSONField(default=list, blank=True)
     cultivation_type = models.CharField(
         max_length=30,
         choices=CULTIVATION_TYPE_CHOICES,
         blank=True,
-        help_text="Type of cultivation"
+        help_text="Deprecated single cultivation type (kept for compatibility)"
     )
     
     # Timing fields (in days).
@@ -409,6 +412,7 @@ class Culture(TimestampedModel):
         blank=True,
         help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds_per_plant')"
     )
+    seed_rate_by_cultivation = models.JSONField(null=True, blank=True)
     sowing_calculation_safety_percent = models.FloatField(
         null=True,
         blank=True,
@@ -444,6 +448,23 @@ class Culture(TimestampedModel):
         """Validate numeric ranges for positive values."""
         super().clean()
         errors = {}
+
+        if not isinstance(self.cultivation_types, list):
+            errors['cultivation_types'] = 'Cultivation types must be a list.'
+        else:
+            normalized_types = [str(item).strip() for item in self.cultivation_types if str(item).strip()]
+            if not normalized_types and self.cultivation_type:
+                normalized_types = [self.cultivation_type]
+            if not normalized_types:
+                normalized_types = ['pre_cultivation']
+            if len(set(normalized_types)) != len(normalized_types):
+                errors['cultivation_types'] = 'Cultivation types must be unique.'
+            invalid_types = [item for item in normalized_types if item not in self.CULTIVATION_TYPE_VALUES]
+            if invalid_types:
+                errors['cultivation_types'] = 'Cultivation types contain unsupported values.'
+            self.cultivation_types = normalized_types
+            if normalized_types and self.cultivation_type not in normalized_types:
+                self.cultivation_type = normalized_types[0]
         
         # Validate positive numeric fields.
         if self.growth_duration_days is not None and self.growth_duration_days < 0:
@@ -463,7 +484,27 @@ class Culture(TimestampedModel):
 
         if self.seeding_requirement is not None and not self.seeding_requirement_type:
             errors['seeding_requirement_type'] = 'Seeding requirement type is required when seeding requirement is set.'
-        
+
+        if self.seed_rate_by_cultivation is not None:
+            if not isinstance(self.seed_rate_by_cultivation, dict):
+                errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation must be an object.'
+            else:
+                key_set = set(self.seed_rate_by_cultivation.keys())
+                if not key_set.issubset(set(self.cultivation_types or [])):
+                    errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation keys must be a subset of cultivation_types.'
+                for method, payload in self.seed_rate_by_cultivation.items():
+                    if not isinstance(payload, dict):
+                        errors['seed_rate_by_cultivation'] = 'Each cultivation seed rate entry must be an object.'
+                        continue
+                    value = payload.get('value')
+                    unit = payload.get('unit')
+                    if not isinstance(value, (int, float)) or float(value) <= 0:
+                        errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation values must be positive numbers.'
+                    if method == 'pre_cultivation' and unit != 'seeds_per_plant':
+                        errors['seed_rate_by_cultivation'] = 'Pre-cultivation unit must be seeds_per_plant.'
+                    if method == 'direct_sowing' and unit not in self.DIRECT_SOWING_SEED_RATE_UNITS:
+                        errors['seed_rate_by_cultivation'] = 'Direct-sowing unit must be g_per_m2, g_per_lfm, or seeds/m.'
+
         if self.distance_within_row_m is not None and self.distance_within_row_m < 0:
             errors['distance_within_row_m'] = 'Distance within row must be non-negative.'
         

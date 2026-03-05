@@ -10,7 +10,7 @@ describe('TimingSection', () => {
 
     render(
       <TimingSection
-        formData={{ cultivation_type: 'pre_cultivation' }}
+        formData={{ cultivation_type: 'pre_cultivation', cultivation_types: ['pre_cultivation'] }}
         errors={{}}
         onChange={onChange}
         t={t}
@@ -31,7 +31,7 @@ describe('TimingSection', () => {
 
     const { rerender } = render(
       <TimingSection
-        formData={{ cultivation_type: 'pre_cultivation', growth_duration_days: 20, harvest_duration_days: 7, propagation_duration_days: 30 }}
+        formData={{ cultivation_type: 'pre_cultivation', cultivation_types: ['pre_cultivation'], growth_duration_days: 20, harvest_duration_days: 7, propagation_duration_days: 30 }}
         errors={{}}
         onChange={onChange}
         t={t}
@@ -50,7 +50,7 @@ describe('TimingSection', () => {
 
     rerender(
       <TimingSection
-        formData={{ cultivation_type: 'direct_sowing' }}
+        formData={{ cultivation_type: 'direct_sowing', cultivation_types: ['direct_sowing'] }}
         errors={{ propagation_duration_days: 'Fehler' }}
         onChange={onChange}
         t={t}
@@ -68,7 +68,7 @@ describe('TimingSection', () => {
 
     render(
       <TimingSection
-        formData={{ cultivation_type: 'pre_cultivation' }}
+        formData={{ cultivation_type: 'pre_cultivation', cultivation_types: ['pre_cultivation'] }}
         errors={{}}
         onChange={onChange}
         t={t}
@@ -78,8 +78,9 @@ describe('TimingSection', () => {
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Anbauart' }));
     fireEvent.click(screen.getByRole('option', { name: 'Direktsaat' }));
 
-    expect(onChange).toHaveBeenCalledWith('cultivation_type', 'direct_sowing');
-    expect(onChange).toHaveBeenCalledWith('propagation_duration_days', 0);
+    expect(onChange).toHaveBeenCalledWith('cultivation_types', ['pre_cultivation', 'direct_sowing']);
+    expect(onChange).toHaveBeenCalledWith('cultivation_type', 'pre_cultivation');
+    expect(onChange).not.toHaveBeenCalledWith('propagation_duration_days', 0);
   });
 
 });

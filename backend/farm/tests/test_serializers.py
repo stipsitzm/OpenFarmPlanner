@@ -65,6 +65,72 @@ class SerializerBranchCoverageTest(TestCase):
 
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
+    def test_rejects_invalid_cultivation_types(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Kohl',
+                'variety': 'X',
+                'cultivation_types': ['invalid'],
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('cultivation_types', serializer.errors)
+
+    def test_validates_seed_rate_by_cultivation_units(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Kohl',
+                'variety': 'X',
+                'cultivation_types': ['pre_cultivation', 'direct_sowing'],
+                'seed_rate_by_cultivation': {
+                    'pre_cultivation': {'value': 2, 'unit': 'g_per_lfm'},
+                    'direct_sowing': {'value': 3, 'unit': 'seeds/m'},
+                },
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('seed_rate_by_cultivation', serializer.errors)
+
+    def test_validates_seed_rate_by_cultivation_keys_subset(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Kohl',
+                'variety': 'X',
+                'cultivation_types': ['pre_cultivation'],
+                'seed_rate_by_cultivation': {
+                    'direct_sowing': {'value': 3, 'unit': 'seeds/m'},
+                },
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('seed_rate_by_cultivation', serializer.errors)
+
+    def test_rejects_pre_cultivation_g_per_m2_seed_rate(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Kohl',
+                'variety': 'X',
+                'cultivation_types': ['pre_cultivation', 'direct_sowing'],
+                'seed_rate_by_cultivation': {
+                    'pre_cultivation': {'value': 0.045, 'unit': 'g_per_m2'},
+                    'direct_sowing': {'value': 0.09, 'unit': 'g_per_m2'},
+                },
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('seed_rate_by_cultivation', serializer.errors)
+
+    def test_notes_without_quellen_section_are_allowed(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Kohl',
+                'variety': 'X',
+                'notes': '## Hinweise\n- abc',
+            }
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
 
 
     def test_planting_plan_serializer_rejects_invalid_area_input(self):

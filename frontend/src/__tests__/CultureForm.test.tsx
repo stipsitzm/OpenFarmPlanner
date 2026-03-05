@@ -129,4 +129,65 @@ describe('CultureForm', () => {
       supplier: { id: 11, name: 'Dreschflegel' },
     }));
   });
+
+  it('scrolls dialog content with arrow and page keys, even when an input is focused', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const scrollByMock = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
+      value: scrollByMock,
+      configurable: true,
+      writable: true,
+    });
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+    const content = document.querySelector('.MuiDialogContent-root');
+    expect(content).toBeTruthy();
+
+    const nameInput = screen.getByLabelText('name-input');
+    (nameInput as HTMLInputElement).focus();
+
+    fireEvent.keyDown(nameInput, { key: 'ArrowDown' });
+    fireEvent.keyDown(nameInput, { key: 'PageDown' });
+
+    expect(scrollByMock).toHaveBeenCalled();
+  });
+
+  it('scrolls dialog content with keyboard when no field is focused', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const scrollByMock = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
+      value: scrollByMock,
+      configurable: true,
+      writable: true,
+    });
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+
+    const nameInput = screen.getByLabelText('name-input');
+    (nameInput as HTMLInputElement).focus();
+    (nameInput as HTMLInputElement).blur();
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+
+    expect(scrollByMock).toHaveBeenCalled();
+  });
+
+  it('scrolls dialog content when focus is on dialog actions', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const scrollByMock = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
+      value: scrollByMock,
+      configurable: true,
+      writable: true,
+    });
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+
+    const saveButton = screen.getByRole('button', { name: 'form.save' });
+    (saveButton as HTMLButtonElement).focus();
+
+    fireEvent.keyDown(window, { key: 'PageDown' });
+
+    expect(scrollByMock).toHaveBeenCalled();
+  });
 });
