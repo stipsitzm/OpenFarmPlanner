@@ -8,6 +8,8 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
+  Link,
   Stack,
   Switch,
   Table,
@@ -15,9 +17,11 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  TableContainer,
   TextField,
   Typography,
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import type { Supplier } from '../api/types';
@@ -53,7 +57,11 @@ export default function Suppliers(): React.ReactElement {
   };
 
   useEffect(() => {
-    void loadSuppliers();
+    const timeoutId = window.setTimeout(() => {
+      void loadSuppliers();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   const openCreate = (): void => {
@@ -96,13 +104,29 @@ export default function Suppliers(): React.ReactElement {
     }
   };
 
+  const deleteSupplier = async (supplier: Supplier): Promise<void> => {
+    if (!supplier.id) return;
+    const shouldDelete = window.confirm(t('deleteConfirm', { name: supplier.name }));
+    if (!shouldDelete) return;
+
+    try {
+      setError('');
+      await supplierAPI.delete(supplier.id);
+      await loadSuppliers();
+    } catch (deleteError) {
+      console.error('Error deleting supplier', deleteError);
+      setError(t('deleteError'));
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5">{t('title')}</Typography>
         <Button variant="contained" onClick={openCreate}>{t('create')}</Button>
       </Box>
-      <Table size="small">
+      <TableContainer sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
+      <Table size="small" sx={{ width: 'auto' }}>
         <TableHead>
           <TableRow>
             <TableCell>{t('name')}</TableCell>
@@ -116,18 +140,35 @@ export default function Suppliers(): React.ReactElement {
           {suppliers.map((supplier) => (
             <TableRow key={supplier.id} hover>
               <TableCell>{supplier.name}</TableCell>
-              <TableCell>{supplier.homepage_url}</TableCell>
+              <TableCell>
+                {supplier.homepage_url ? (
+                  <Link href={supplier.homepage_url} target="_blank" rel="noopener noreferrer" underline="hover">
+                    {supplier.homepage_url}
+                  </Link>
+                ) : null}
+              </TableCell>
               <TableCell>
                 <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                   {(supplier.allowed_domains || []).map((domain) => <Chip key={domain} size="small" label={domain} />)}
                 </Stack>
               </TableCell>
               <TableCell>{supplier.is_active === false ? t('no') : t('yes')}</TableCell>
-              <TableCell align="right"><Button size="small" onClick={() => openEdit(supplier)}>{t('editAction')}</Button></TableCell>
+              <TableCell align="right">
+                <Button size="small" onClick={() => openEdit(supplier)}>{t('editAction')}</Button>
+                <IconButton
+                  size="small"
+                  color="error"
+                  aria-label={t('deleteAction')}
+                  onClick={() => void deleteSupplier(supplier)}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+      </TableContainer>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{draft.id ? t('edit') : t('create')}</DialogTitle>

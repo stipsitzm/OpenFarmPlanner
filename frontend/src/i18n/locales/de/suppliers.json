@@ -3,7 +3,7 @@
   "create": "Lieferant anlegen",
   "edit": "Lieferant bearbeiten",
   "name": "Name",
-  "homepage": "Homepage",
+  "homepage": "Webseite",
   "allowedDomains": "Erlaubte Domains",
   "active": "Aktiv",
   "actions": "Aktionen",
@@ -14,5 +14,8 @@
   "saveError": "Lieferant konnte nicht gespeichert werden.",
   "yes": "Ja",
   "no": "Nein",
-  "editAction": "Bearbeiten"
+  "editAction": "Bearbeiten",
+  "deleteAction": "Löschen",
+  "deleteConfirm": "Lieferant \"{{name}}\" wirklich löschen?",
+  "deleteError": "Lieferant konnte nicht gelöscht werden."
 }
