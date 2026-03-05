@@ -70,6 +70,7 @@ import {
 } from './culturesPageUtils';
 import {
   formatBatchCostMessage,
+  formatCostMessage,
   formatEnrichmentWarning,
   formatSuggestionValue,
   getDialogCostInfo,

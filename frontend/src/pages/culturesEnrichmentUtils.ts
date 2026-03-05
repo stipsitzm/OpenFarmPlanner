@@ -31,7 +31,7 @@ const estimateGrossCost = (costEstimate: EnrichmentCostEstimate): number => {
   return withVat20(subtotal);
 };
 
-const formatCostMessage = (costEstimate: EnrichmentCostEstimate, usage: EnrichmentUsage): string => (
+export const formatCostMessage = (costEstimate: EnrichmentCostEstimate, usage: EnrichmentUsage): string => (
   `KI-Kosten (Schätzung, inkl. 20% MwSt.): ${formatUsd(estimateGrossCost(costEstimate))}  • Tokens: ${usage.inputTokens.toLocaleString('de-DE')} in / ${usage.outputTokens.toLocaleString('de-DE')} out  • Web-Suche: ${costEstimate.breakdown.web_search_call_count} Calls`
 );
 
