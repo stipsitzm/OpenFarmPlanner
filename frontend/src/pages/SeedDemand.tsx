@@ -67,7 +67,7 @@ export default function SeedDemandPage(): React.ReactElement {
                 <TableCell>Kultur</TableCell>
                 <TableCell>Lieferant</TableCell>
                 <TableCell align="right">Gesamt (g)</TableCell>
-                <TableCell>Vorschlag</TableCell>
+                <TableCell>Packungsgrößen</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
