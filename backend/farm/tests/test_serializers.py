@@ -132,6 +132,19 @@ class SerializerBranchCoverageTest(TestCase):
 
 
 
+
+    def test_plants_per_m2_handles_invalid_numeric_values(self):
+        culture = Culture.objects.create(
+            name='Spinat',
+            growth_duration_days=25,
+            harvest_duration_days=10,
+            distance_within_row_m=0.25,
+            row_spacing_m=float('nan'),
+        )
+
+        serializer = CultureSerializer(culture)
+        self.assertIsNone(serializer.data['plants_per_m2'])
+
     def test_planting_plan_serializer_rejects_invalid_area_input(self):
         serializer = PlantingPlanSerializer()
 

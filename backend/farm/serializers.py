@@ -288,10 +288,7 @@ class CultureSerializer(serializers.ModelSerializer):
     )
     seed_packages = SeedPackageSerializer(many=True, required=False)
 
-    plants_per_m2 = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        read_only=True,
+    plants_per_m2 = serializers.SerializerMethodField(
         help_text='Calculated plants per square meter based on spacing (read-only)'
     )
     
@@ -302,6 +299,17 @@ class CultureSerializer(serializers.ModelSerializer):
             'id': obj.image_file_id,
             'storage_path': obj.image_file.storage_path,
         }
+
+    def get_plants_per_m2(self, obj):
+        try:
+            value = obj.plants_per_m2
+        except (TypeError, ValueError, ArithmeticError, InvalidOperation):
+            return None
+        if value is None:
+            return None
+        if not value.is_finite():
+            return None
+        return value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     class Meta:
         model = Culture
