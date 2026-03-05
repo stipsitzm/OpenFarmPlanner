@@ -263,7 +263,7 @@ function PlantingPlans(): React.ReactElement {
 
         const nextCultivationType = availableTypes.includes(nextRow.cultivation_type ?? '')
           ? nextRow.cultivation_type
-          : availableTypes[0] ?? nextRow.cultivation_type ?? 'direct_sowing';
+          : availableTypes[0] ?? nextRow.cultivation_type ?? 'pre_cultivation';
 
         return {
           ...nextRow,
@@ -285,7 +285,7 @@ function PlantingPlans(): React.ReactElement {
         const option = cultivationTypeOptions.find((item) => item.value === stringValue);
         return option?.label ?? '';
       },
-      valueSetter: (value, row) => ({ ...row, cultivation_type: value || 'direct_sowing' }),
+      valueSetter: (value, row) => ({ ...row, cultivation_type: value || 'pre_cultivation' }),
       preProcessEditCellProps: (params) => ({ ...params.props, error: !params.props.value }),
     },
     {
@@ -496,7 +496,7 @@ function PlantingPlans(): React.ReactElement {
         createNewRow={() => ({
           id: -Date.now(),
           culture: 0,
-          cultivation_type: 'direct_sowing',
+          cultivation_type: 'pre_cultivation',
           bed: 0,
           planting_date: '',
           quantity: undefined,
@@ -510,7 +510,7 @@ function PlantingPlans(): React.ReactElement {
           initialSelection.cultureId || initialSelection.bedId
             ? {
                 ...(initialSelection.cultureId ? { culture: initialSelection.cultureId } : {}),
-                cultivation_type: 'direct_sowing',
+                cultivation_type: 'pre_cultivation',
                 ...(initialSelection.bedId ? { bed: initialSelection.bedId } : {}),
               }
             : undefined
@@ -520,7 +520,7 @@ function PlantingPlans(): React.ReactElement {
             ...plan,
             id: plan.id!,
             culture: plan.culture,
-            cultivation_type: plan.cultivation_type || 'direct_sowing',
+            cultivation_type: plan.cultivation_type || 'pre_cultivation',
             culture_name: plan.culture_name || '',
             bed: plan.bed,
             bed_name: plan.bed_name || '',
@@ -570,7 +570,7 @@ function PlantingPlans(): React.ReactElement {
             planting_date: plantingDate,
             quantity: row.quantity,
             notes: row.notes || '',
-            cultivation_type: row.cultivation_type || 'direct_sowing',
+            cultivation_type: row.cultivation_type || 'pre_cultivation',
           };
           
           // Determine which field to send based on last edit
