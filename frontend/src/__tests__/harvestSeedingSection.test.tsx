@@ -54,7 +54,7 @@ describe('HarvestSection and SeedingSection', () => {
     expect(screen.getByText('invalid')).toBeInTheDocument();
   });
 
-  it('shows Anzucht label with unit and hides unit select when only pre_cultivation is selected', () => {
+  it('shows Pflanzung label with unit and hides unit select when only pre_cultivation is selected', () => {
     const onChange = vi.fn();
 
     render(
@@ -66,9 +66,9 @@ describe('HarvestSection and SeedingSection', () => {
       />
     );
 
-    expect(screen.getByLabelText('Anzucht Menge (Korn / Pflanze)')).toBeInTheDocument();
-    expect(screen.getAllByText('Anzucht Einheit').length).toBeGreaterThan(0);
-    expect(screen.getByLabelText('Anzucht Menge')).toBeInTheDocument();
+    expect(screen.getByLabelText('Pflanzung Menge (Korn / Pflanze)')).toBeInTheDocument();
+    expect(screen.getAllByText('Pflanzung Einheit').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Pflanzung Menge')).toBeInTheDocument();
   });
 
   it('shows method-specific fields when both cultivation methods are selected', () => {
@@ -83,8 +83,8 @@ describe('HarvestSection and SeedingSection', () => {
       />
     );
 
-    expect(screen.getByLabelText('Anzucht Menge (Korn / Pflanze, manuell)')).toBeInTheDocument();
-    expect(screen.getAllByLabelText('Anzucht Menge').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Pflanzung Menge (Korn / Pflanze, manuell)')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Pflanzung Menge').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('combobox').length).toBeGreaterThan(1);
     expect(screen.getByLabelText('Direktsaat Menge')).toBeInTheDocument();
   });

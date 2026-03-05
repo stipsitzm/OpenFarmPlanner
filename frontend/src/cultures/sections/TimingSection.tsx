@@ -42,13 +42,13 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
               renderValue={(selected) => {
                 const values = selected as CultivationType[];
                 return values
-                  .map((item) => item === 'pre_cultivation' ? 'Anzucht' : 'Direktsaat')
+                  .map((item) => item === 'pre_cultivation' ? 'Pflanzung' : 'Direktsaat')
                   .join(', ');
               }}
             >
               <MenuItem value="pre_cultivation">
                 <Checkbox checked={selectedCultivationTypes.includes('pre_cultivation')} />
-                <ListItemText primary="Anzucht" />
+                <ListItemText primary="Pflanzung" />
               </MenuItem>
               <MenuItem value="direct_sowing">
                 <Checkbox checked={selectedCultivationTypes.includes('direct_sowing')} />

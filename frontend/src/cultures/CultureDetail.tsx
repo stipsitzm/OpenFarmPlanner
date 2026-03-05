@@ -338,7 +338,7 @@ export function CultureDetail({
                       <TableBody>
                         {Object.entries(selectedCulture.seed_rate_by_cultivation).map(([method, payload]) => (
                           <TableRow key={method}>
-                            <TableCell>{method === 'pre_cultivation' ? 'Anzucht' : 'Direktsaat'}</TableCell>
+                            <TableCell>{method === 'pre_cultivation' ? 'Pflanzung' : 'Direktsaat'}</TableCell>
                             <TableCell>{payload?.value}</TableCell>
                             <TableCell>
                               {payload?.unit === 'g_per_m2'

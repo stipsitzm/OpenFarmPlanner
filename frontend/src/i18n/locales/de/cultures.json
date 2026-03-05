@@ -110,8 +110,8 @@
     "seedingRequirementValueRequired": "Saatgutbedarf ist erforderlich, wenn ein Saatgutbedarf-Typ angegeben ist.",
     "seedRateDirectValue": "Direktsaat Menge",
     "seedRateDirectUnit": "Direktsaat Einheit",
-    "seedRatePreCultivationValue": "Anzucht Menge",
-    "seedRatePreCultivationUnit": "Anzucht Einheit"
+    "seedRatePreCultivationValue": "Pflanzung Menge",
+    "seedRatePreCultivationUnit": "Pflanzung Einheit"
   },
   "messages": {
     "createSuccess": "Kultur erfolgreich erstellt",
