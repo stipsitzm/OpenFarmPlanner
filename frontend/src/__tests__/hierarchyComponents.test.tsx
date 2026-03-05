@@ -67,14 +67,19 @@ describe('hierarchy components and behaviors', () => {
     expect(areaColumn?.width).toBe(120);
     expect(notesColumn?.width).toBe(320);
 
-    notesColumn?.renderCell?.({
-      id: 'field-10',
-      value: 'Notiz **fett**',
-      row: { id: 'field-10', type: 'field', level: 1 },
-    } as never)?.props.onOpen();
+    const { rerender } = render(
+      <>
+        {notesColumn?.renderCell?.({
+          id: 'field-10',
+          value: 'Notiz **fett**',
+          row: { id: 'field-10', type: 'field', level: 1 },
+        } as never)}
+      </>
+    );
+    await user.click(screen.getByText('Notiz fett'));
     expect(openNotes).toHaveBeenCalledWith('field-10', 'notes');
 
-    const { rerender } = render(
+    rerender(
       <>
         {nameColumn?.renderCell?.({
           id: 'location-2',
