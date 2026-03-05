@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import contextlib
 import hashlib
 import json
@@ -35,9 +36,71 @@ class TraceState:
     prompt_sha256: str | None = None
     provider_request: dict[str, Any] | None = None
     provider_response: dict[str, Any] | None = None
+    decision_trace: list[dict[str, Any]] = field(default_factory=list)
 
     def mark(self, name: str, **extra: Any) -> None:
         self.steps.append({"name": name, "ts": datetime.now(timezone.utc).isoformat(), **extra})
+
+
+def _safe_copy(value: Any) -> Any:
+    return copy.deepcopy(value)
+
+
+def _field_keys(payload: Any, key: str) -> set[str]:
+    if not isinstance(payload, dict):
+        return set()
+    obj = payload.get(key)
+    if not isinstance(obj, dict):
+        return set()
+    return {k for k in obj.keys() if isinstance(k, str)}
+
+
+def _warning_set(payload: Any) -> set[str]:
+    if not isinstance(payload, dict):
+        return set()
+    validation = payload.get("validation")
+    if not isinstance(validation, dict):
+        return set()
+    warnings = validation.get("warnings")
+    if not isinstance(warnings, list):
+        return set()
+    entries: set[str] = set()
+    for warning in warnings:
+        if isinstance(warning, dict):
+            entries.add(json.dumps(warning, sort_keys=True, ensure_ascii=False))
+    return entries
+
+
+def _supplier_filter_decisions(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    before_suggestions = _field_keys(before, "suggested_fields")
+    after_suggestions = _field_keys(after, "suggested_fields")
+    before_evidence = _field_keys(before, "evidence")
+    after_evidence = _field_keys(after, "evidence")
+
+    new_warnings = sorted(_warning_set(after) - _warning_set(before))
+    return {
+        "suggestions_accepted": sorted(after_suggestions),
+        "suggestions_rejected": sorted(before_suggestions - after_suggestions),
+        "evidence_accepted": sorted(after_evidence),
+        "evidence_rejected": sorted(before_evidence - after_evidence),
+        "new_warnings": [json.loads(entry) for entry in new_warnings],
+    }
+
+
+def _merge_decisions(primary: dict[str, Any], fallback: dict[str, Any], merged: dict[str, Any]) -> dict[str, Any]:
+    primary_fields = _field_keys(primary, "suggested_fields")
+    fallback_fields = _field_keys(fallback, "suggested_fields")
+    merged_fields = _field_keys(merged, "suggested_fields")
+
+    from_primary = sorted((merged_fields & primary_fields))
+    fallback_only = sorted((merged_fields - primary_fields) & fallback_fields)
+    dropped_after_merge = sorted((primary_fields | fallback_fields) - merged_fields)
+    return {
+        "merged_fields": sorted(merged_fields),
+        "from_primary": from_primary,
+        "from_fallback_only": fallback_only,
+        "dropped_after_merge": dropped_after_merge,
+    }
 
 
 @contextlib.contextmanager
@@ -47,6 +110,8 @@ def enrichment_trace_hooks(trace: TraceState):
 
     original_build_prompt = enrichment_module.OpenAIResponsesProvider._build_prompt
     original_post = enrichment_module.requests.post
+    original_apply_supplier_only_filter = enrichment_module.OpenAIResponsesProvider._apply_supplier_only_filter
+    original_merge_phase_payloads = enrichment_module.OpenAIResponsesProvider._merge_phase_payloads
 
     def traced_build_prompt(self, culture, mode, *args, **kwargs):
         started = time.perf_counter()
@@ -100,13 +165,53 @@ def enrichment_trace_hooks(trace: TraceState):
         )
         return response
 
+    def traced_apply_supplier_only_filter(self, payload, culture, *args, **kwargs):
+        before = _safe_copy(payload) if isinstance(payload, dict) else {}
+        filtered = original_apply_supplier_only_filter(self, payload, culture, *args, **kwargs)
+        after = _safe_copy(filtered) if isinstance(filtered, dict) else {}
+        decisions = _supplier_filter_decisions(before, after)
+        trace.decision_trace.append(
+            {
+                "phase": "supplier_only_filter",
+                "culture": {"id": culture.id, "name": culture.name},
+                **decisions,
+            }
+        )
+        trace.mark(
+            "supplier_only_filter_applied",
+            suggestions_accepted_count=len(decisions["suggestions_accepted"]),
+            suggestions_rejected_count=len(decisions["suggestions_rejected"]),
+            evidence_accepted_count=len(decisions["evidence_accepted"]),
+            evidence_rejected_count=len(decisions["evidence_rejected"]),
+        )
+        return filtered
+
+    def traced_merge_phase_payloads(self, primary, fallback, *args, **kwargs):
+        primary_copy = _safe_copy(primary) if isinstance(primary, dict) else {}
+        fallback_copy = _safe_copy(fallback) if isinstance(fallback, dict) else {}
+        merged = original_merge_phase_payloads(self, primary, fallback, *args, **kwargs)
+        merged_copy = _safe_copy(merged) if isinstance(merged, dict) else {}
+        decisions = _merge_decisions(primary_copy, fallback_copy, merged_copy)
+        trace.decision_trace.append({"phase": "fallback_merge", **decisions})
+        trace.mark(
+            "fallback_merge_completed",
+            merged_fields_count=len(decisions["merged_fields"]),
+            fallback_only_count=len(decisions["from_fallback_only"]),
+            dropped_after_merge_count=len(decisions["dropped_after_merge"]),
+        )
+        return merged
+
     enrichment_module.OpenAIResponsesProvider._build_prompt = traced_build_prompt
     enrichment_module.requests.post = traced_post
+    enrichment_module.OpenAIResponsesProvider._apply_supplier_only_filter = traced_apply_supplier_only_filter
+    enrichment_module.OpenAIResponsesProvider._merge_phase_payloads = traced_merge_phase_payloads
     try:
         yield
     finally:
         enrichment_module.OpenAIResponsesProvider._build_prompt = original_build_prompt
         enrichment_module.requests.post = original_post
+        enrichment_module.OpenAIResponsesProvider._apply_supplier_only_filter = original_apply_supplier_only_filter
+        enrichment_module.OpenAIResponsesProvider._merge_phase_payloads = original_merge_phase_payloads
 
 
 def setup_django() -> None:
@@ -267,6 +372,7 @@ def main() -> int:
             "provider_response": trace.provider_response,
             "parsed_structured_output": result,
             "validation": (result or {}).get("validation") if isinstance(result, dict) else None,
+            "decision_trace": trace.decision_trace,
             "steps": trace.steps,
             "error": error_info,
         }
@@ -310,11 +416,25 @@ def main() -> int:
                 "output_file": str(model_file),
                 "error": error_info["message"] if error_info else None,
                 "trace_mismatch": payload["trace_validation"]["has_mismatch"],
+                "decision_events": len(trace.decision_trace),
             }
         )
 
         status = "OK" if success else "FAIL"
         print(f"[{status}] model_override={model} requested={payload.get('model_requested')} effective={payload.get('model_effective')} duration={duration_s:.2f}s file={model_file}")
+        for event in trace.decision_trace:
+            if event.get("phase") == "supplier_only_filter":
+                print(
+                    "  ├─ supplier_filter: "
+                    f"accepted={event.get('suggestions_accepted', [])} "
+                    f"rejected={event.get('suggestions_rejected', [])}"
+                )
+            elif event.get("phase") == "fallback_merge":
+                print(
+                    "  └─ fallback_merge: "
+                    f"fallback_only={event.get('from_fallback_only', [])} "
+                    f"dropped={event.get('dropped_after_merge', [])}"
+                )
 
     ended_at = datetime.now(timezone.utc)
     aggregate = {

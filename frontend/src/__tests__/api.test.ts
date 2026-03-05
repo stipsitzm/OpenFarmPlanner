@@ -66,7 +66,12 @@ describe('API Client', () => {
     expect(getMock).toHaveBeenCalledWith('/suppliers/', { params: {} });
     expect(getMock).toHaveBeenCalledWith('/suppliers/', { params: { q: 'bio' } });
     expect(getMock).toHaveBeenCalledWith('/suppliers/1/');
-    expect(postMock).toHaveBeenCalledWith('/suppliers/', { name: 'Neuer Lieferant' });
+    expect(postMock).toHaveBeenCalledWith('/suppliers/', {
+      name: 'Neuer Lieferant',
+      homepage_url: undefined,
+      allowed_domains: [],
+      is_active: true,
+    });
     expect(putMock).toHaveBeenCalledWith('/suppliers/1/', supplierData);
     expect(deleteMock).toHaveBeenCalledWith('/suppliers/1/');
   });

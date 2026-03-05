@@ -24,6 +24,14 @@ vi.mock('../api/api', async () => {
   };
 });
 
+
+const deferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+};
 vi.mock('../cultures/CultureDetail', () => ({
   CultureDetail: ({ onCultureSelect }: { onCultureSelect: (culture: Culture | null) => void }): ReactElement => (
     <button
@@ -131,6 +139,53 @@ describe('Cultures enrichment cost banner', () => {
 
     fireEvent.keyDown(window, { altKey: true, key: 'a' });
     expect(await screen.findByText('Alle Kulturen vervollständigen?')).toBeInTheDocument();
+  });
+
+  it('shows multi-step loading dialog while enrichment is running', async () => {
+    const pending = deferred<{ data: unknown }>();
+    enrichMock.mockReturnValueOnce(pending.promise);
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <Cultures />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'select-culture' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Kultur vervollständigen (KI) (Alt+U)' }));
+
+    expect(await screen.findByText('Anfrage an KI senden')).toBeInTheDocument();
+    expect(screen.getByText('Webquellen recherchieren und sammeln')).toBeInTheDocument();
+
+    pending.resolve({
+      data: {
+        run_id: 'enr_1_2',
+        culture_id: 1,
+        mode: 'complete',
+        status: 'completed',
+        started_at: '2026-01-01T00:00:00Z',
+        finished_at: '2026-01-01T00:00:02Z',
+        model: 'gpt-5',
+        provider: 'openai_responses',
+        search_provider: 'web_search',
+        suggested_fields: {},
+        evidence: {},
+        validation: { warnings: [], errors: [] },
+        usage: { inputTokens: 10, cachedInputTokens: 0, outputTokens: 5 },
+        costEstimate: {
+          currency: 'USD',
+          total: 0.001,
+          model: 'gpt-5',
+          breakdown: { input: 0.0002, cached_input: 0, output: 0.0003, web_search_calls: 0.0005, web_search_call_count: 1 },
+        },
+      },
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Anfrage an KI senden')).not.toBeInTheDocument();
+    });
   });
 
   it('disables AI action when supplier has no allowed domains', async () => {

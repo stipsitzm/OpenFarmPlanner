@@ -45,16 +45,45 @@ describe('HarvestSection and SeedingSection', () => {
 
     const unitCombobox = screen.getAllByRole('combobox')[0];
     fireEvent.mouseDown(unitCombobox);
-    fireEvent.click(screen.getByRole('option', { name: 'Korn / lfm' }));
-    expect(onChange).toHaveBeenCalledWith('seed_rate_unit', 'seeds/m');
-
-    fireEvent.mouseDown(unitCombobox);
-    fireEvent.click(screen.getByRole('option', { name: 'Korn / Pflanze' }));
-    expect(onChange).toHaveBeenCalledWith('seed_rate_unit', 'seeds_per_plant');
+    fireEvent.click(screen.getByRole('option', { name: 'g / lfm' }));
+    expect(onChange).toHaveBeenCalledWith('seed_rate_unit', 'g_per_lfm');
 
     fireEvent.blur(unitCombobox);
     expect(onChange).toHaveBeenCalledWith('seed_rate_unit', 'g_per_m2');
 
     expect(screen.getByText('invalid')).toBeInTheDocument();
+  });
+
+  it('shows Anzucht label with unit and hides unit select when only pre_cultivation is selected', () => {
+    const onChange = vi.fn();
+
+    render(
+      <SeedingSection
+        formData={{ cultivation_types: ['pre_cultivation'], seed_rate_unit: 'seeds_per_plant', seed_rate_value: 2 }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+
+    expect(screen.getByLabelText('Anzucht Menge (Korn / Pflanze)')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Einheit')).not.toBeInTheDocument();
+  });
+
+  it('shows method-specific fields when both cultivation methods are selected', () => {
+    const onChange = vi.fn();
+
+    render(
+      <SeedingSection
+        formData={{ cultivation_types: ['pre_cultivation', 'direct_sowing'], seed_rate_by_cultivation: null }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+
+    expect(screen.getByLabelText('Anzucht Menge (Korn / Pflanze)')).toBeInTheDocument();
+    expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Direktsaat Menge')).toBeInTheDocument();
   });
 });

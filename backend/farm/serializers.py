@@ -260,6 +260,12 @@ class CultureSerializer(serializers.ModelSerializer):
         allow_null=True,
         help_text="Unit for seed rate (e.g. 'g/m²', 'seeds/m', 'seeds_per_plant')"
     )
+    cultivation_types = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        allow_empty=False,
+    )
+    seed_rate_by_cultivation = serializers.JSONField(required=False, allow_null=True)
     sowing_calculation_safety_percent = serializers.FloatField(
         required=False,
         allow_null=True,
@@ -371,7 +377,7 @@ class CultureSerializer(serializers.ModelSerializer):
         if normalized_value:
             value = normalized_value
 
-        allowed_values = {'g_per_m2', 'seeds/m', 'seeds_per_plant'}
+        allowed_values = {'g_per_m2', 'g_per_lfm', 'seeds/m', 'seeds_per_plant'}
         if value not in allowed_values:
             raise serializers.ValidationError('Unsupported seed rate unit.')
         return value
@@ -400,6 +406,75 @@ class CultureSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         """Validate cross-field rules and supplier get-or-create."""
         errors = {}
+
+        cultivation_types = attrs.get(
+            'cultivation_types',
+            getattr(self.instance, 'cultivation_types', None) if self.instance else None,
+        )
+        legacy_cultivation_type = attrs.get(
+            'cultivation_type',
+            getattr(self.instance, 'cultivation_type', '') if self.instance else '',
+        )
+        if cultivation_types is None:
+            cultivation_types = [legacy_cultivation_type] if legacy_cultivation_type else []
+        if not isinstance(cultivation_types, list):
+            errors['cultivation_types'] = 'Cultivation types must be a list.'
+        else:
+            normalized_types = [str(item).strip() for item in cultivation_types if str(item).strip()]
+            allowed_types = {'pre_cultivation', 'direct_sowing'}
+            if not normalized_types:
+                normalized_types = ['pre_cultivation']
+            if len(set(normalized_types)) != len(normalized_types):
+                errors['cultivation_types'] = 'Cultivation types must be unique.'
+            elif any(item not in allowed_types for item in normalized_types):
+                errors['cultivation_types'] = 'Cultivation types contain unsupported values.'
+            else:
+                attrs['cultivation_types'] = normalized_types
+                attrs['cultivation_type'] = normalized_types[0]
+
+        seed_rate_by_cultivation = attrs.get(
+            'seed_rate_by_cultivation',
+            getattr(self.instance, 'seed_rate_by_cultivation', None) if self.instance else None,
+        )
+        if seed_rate_by_cultivation is not None:
+            if not isinstance(seed_rate_by_cultivation, dict):
+                errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation must be an object.'
+            else:
+                target_types = set(attrs.get('cultivation_types') or cultivation_types or [])
+                if not set(seed_rate_by_cultivation.keys()).issubset(target_types):
+                    errors['seed_rate_by_cultivation'] = 'Seed rate keys must be subset of cultivation_types.'
+                else:
+                    for method, payload in seed_rate_by_cultivation.items():
+                        if not isinstance(payload, dict):
+                            errors['seed_rate_by_cultivation'] = 'Seed rate entries must be objects.'
+                            break
+                        value = payload.get('value')
+                        unit = payload.get('unit')
+                        try:
+                            parsed_value = float(value)
+                        except (TypeError, ValueError):
+                            errors['seed_rate_by_cultivation'] = 'Seed rate values must be numeric.'
+                            break
+                        if parsed_value <= 0:
+                            errors['seed_rate_by_cultivation'] = 'Seed rate values must be positive.'
+                            break
+                        if method == 'pre_cultivation' and unit != 'seeds_per_plant':
+                            errors['seed_rate_by_cultivation'] = 'Pre-cultivation seed rate unit must be seeds_per_plant.'
+                            break
+                        if method == 'direct_sowing' and unit not in {'g_per_m2', 'g_per_lfm', 'seeds/m'}:
+                            errors['seed_rate_by_cultivation'] = 'Direct sowing seed rate unit must be g_per_m2, g_per_lfm, or seeds/m.'
+                            break
+
+                if 'seed_rate_by_cultivation' not in errors:
+                    if 'pre_cultivation' in seed_rate_by_cultivation:
+                        primary = seed_rate_by_cultivation['pre_cultivation']
+                    elif 'direct_sowing' in seed_rate_by_cultivation:
+                        primary = seed_rate_by_cultivation['direct_sowing']
+                    else:
+                        primary = None
+                    if isinstance(primary, dict):
+                        attrs['seed_rate_value'] = float(primary.get('value'))
+                        attrs['seed_rate_unit'] = primary.get('unit')
 
         # Handle supplier_name via get-or-create to keep imports ergonomic.
         supplier_name = attrs.pop('supplier_name', None)
