@@ -81,7 +81,7 @@ def build_prompt(
         "seed_rate_direct_value and seed_rate_transplant_value must always be single floats in their selected units. "
         "If supplier provides both Direktsaat and Pflanzung values, output both methods and include both in allowed_sowing_methods. "
         "For seed_rate_direct_value, unit must be only g_per_m2 or g_per_lfm. "
-        "For seed_rate_transplant_value, unit must be g_per_m2 or g_per_lfm (for Anzucht/Pflanzung amount). If only seeds_per_plant is available, omit seed_rate_transplant_value because seeds_per_plant stays a manual form field. Never output null placeholders. "
+        "For seed_rate_transplant_value, unit must be g_per_m2 or g_per_lfm (for Pflanzung amount). If only seeds_per_plant is available, omit seed_rate_transplant_value because seeds_per_plant stays a manual form field. Never output null placeholders. "
         "If unit is g/a (gram per are), convert to g_per_m2 by dividing value by 100 before output. "
         "Units must be null when not applicable; never output empty unit strings. "
         "note_blocks must be pure German markdown text only (no JSON objects, no code fences). Use a flexible structure with useful cultivation notes. If sources are included, the final section must be '## Quellen'. "

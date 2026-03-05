@@ -40,3 +40,23 @@ class NormalizationUtilsTest(TestCase):
         self.assertEqual(normalize_supplier_name("Partners GbR"), "partners")
         self.assertEqual(normalize_supplier_name("Seeds Co. KG"), "seeds")
 
+
+
+class EnumNormalizationTest(TestCase):
+    """Tests for enum normalization helpers."""
+
+    def test_cultivation_type_maps_pflanzung_to_pre_cultivation(self):
+        from farm.enum_normalization import normalize_choice_value
+
+        self.assertEqual(
+            normalize_choice_value('cultivation_type', 'Pflanzung'),
+            'pre_cultivation',
+        )
+
+    def test_cultivation_type_maps_direktsaat(self):
+        from farm.enum_normalization import normalize_choice_value
+
+        self.assertEqual(
+            normalize_choice_value('cultivation_type', 'Direktsaat'),
+            'direct_sowing',
+        )
