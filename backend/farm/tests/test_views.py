@@ -252,8 +252,9 @@ class ApiEndpointsTest(DRFAPITestCase):
     def test_enrich_requires_allowed_domains(self):
         self.culture.supplier = self.supplier
         self.culture.save(update_fields=['supplier'])
+        self.supplier.homepage_url = ''
         self.supplier.allowed_domains = []
-        self.supplier.save()
+        self.supplier.save(update_fields=['homepage_url', 'allowed_domains'])
         response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/', {'mode': 'complete'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data.get('code'), 'allowed_domains_missing')

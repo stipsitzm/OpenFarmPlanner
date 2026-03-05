@@ -66,6 +66,7 @@ const t = mockI18n.t as any;
 describe('BasicInfoSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(window, 'prompt').mockReturnValue('https://www.neuer-lieferant.de');
   });
 
   it('updates basic text fields', () => {
@@ -180,7 +181,11 @@ describe('BasicInfoSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'create-supplier' }));
     await waitFor(() => {
-      expect(supplierCreateMock).toHaveBeenCalledWith('Neuer Lieferant');
+      expect(supplierCreateMock).toHaveBeenCalledWith(
+        'Neuer Lieferant',
+        'https://www.neuer-lieferant.de',
+        []
+      );
       expect(onChange).toHaveBeenCalledWith('supplier', { id: 9, name: 'Neuer Lieferant' });
     });
   });

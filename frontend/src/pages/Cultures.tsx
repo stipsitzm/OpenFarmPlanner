@@ -33,6 +33,7 @@ import {
   Tooltip,
   Typography,
   CircularProgress,
+  LinearProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -42,6 +43,9 @@ import AgricultureIcon from '@mui/icons-material/Agriculture';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 import {
   buildAllCulturesExport,
   buildAllCulturesFilename,
@@ -55,6 +59,14 @@ import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
 import { normalizeCultivationType, normalizeHarvestMethod, normalizeNutrientDemand, normalizeSeedingRequirementType, normalizeSeedRateUnit } from '../cultures/enumNormalization';
+
+const ENRICHMENT_LOADING_STEPS = [
+  { key: 'request', startSeconds: 0 },
+  { key: 'research', startSeconds: 12 },
+  { key: 'validation', startSeconds: 32 },
+  { key: 'results', startSeconds: 52 },
+] as const;
+const ENRICHMENT_EXPECTED_SECONDS = 75;
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -123,6 +135,8 @@ function Cultures(): React.ReactElement {
   const [enrichmentResult, setEnrichmentResult] = useState<EnrichmentResult | null>(null);
   const [selectedSuggestionFields, setSelectedSuggestionFields] = useState<string[]>([]);
   const [enrichmentLoading, setEnrichmentLoading] = useState(false);
+  const [enrichmentLoadingStartedAt, setEnrichmentLoadingStartedAt] = useState<number | null>(null);
+  const [enrichmentLoadingNow, setEnrichmentLoadingNow] = useState<number>(Date.now());
   const [enrichmentCostBanner, setEnrichmentCostBanner] = useState<string | null>(null);
   const [enrichAllConfirmOpen, setEnrichAllConfirmOpen] = useState(false);
   const enrichmentLoadingRef = useRef(false);
@@ -137,6 +151,19 @@ function Cultures(): React.ReactElement {
 
   useEffect(() => {
     enrichmentLoadingRef.current = enrichmentLoading;
+  }, [enrichmentLoading]);
+
+  useEffect(() => {
+    if (!enrichmentLoading) {
+      setEnrichmentLoadingStartedAt(null);
+      return;
+    }
+
+    const startedAt = Date.now();
+    setEnrichmentLoadingStartedAt(startedAt);
+    setEnrichmentLoadingNow(startedAt);
+    const intervalId = window.setInterval(() => setEnrichmentLoadingNow(Date.now()), 500);
+    return () => window.clearInterval(intervalId);
   }, [enrichmentLoading]);
 
   const updateSelectedCultureId = useCallback((id: number | undefined, source: 'internal' | 'query') => {
@@ -318,6 +345,10 @@ function Cultures(): React.ReactElement {
         harvest_method: normalizeHarvestMethod(culture.harvest_method),
         nutrient_demand: normalizeNutrientDemand(culture.nutrient_demand),
         cultivation_type: normalizeCultivationType(culture.cultivation_type),
+        cultivation_types: (culture.cultivation_types && culture.cultivation_types.length > 0)
+          ? culture.cultivation_types
+          : (culture.cultivation_type ? [normalizeCultivationType(culture.cultivation_type)] : ['pre_cultivation']),
+        seed_rate_by_cultivation: culture.seed_rate_by_cultivation ?? null,
         seeding_requirement_type: normalizeSeedingRequirementType(culture.seeding_requirement_type),
         supplier_id: culture.supplier?.id || null,
         supplier_name: culture.supplier && !culture.supplier.id ? culture.supplier.name : undefined,
@@ -785,8 +816,12 @@ function Cultures(): React.ReactElement {
     distance_within_row_cm: 'form.distanceWithinRowCm',
     row_spacing_cm: 'form.rowSpacingCm',
     sowing_depth_cm: 'form.sowingDepthCm',
-    seed_rate_value: 'form.seedRateValue',
-    seed_rate_unit: 'form.seedRateUnit',
+    seed_rate_direct_value: 'form.seedRateDirectValue',
+    seed_rate_direct_unit: 'form.seedRateDirectUnit',
+    seed_rate_transplant_value: 'form.seedRatePreCultivationValue',
+    seed_rate_transplant_unit: 'form.seedRatePreCultivationUnit',
+    seed_rate_by_cultivation: 'form.seedRateSectionTitle',
+    allowed_sowing_methods: 'form.cultivationType',
     thousand_kernel_weight_g: 'form.thousandKernelWeightLabel',
     nutrient_demand: 'form.nutrientDemand',
     cultivation_type: 'form.cultivationType',
@@ -860,6 +895,22 @@ function Cultures(): React.ReactElement {
         .join(', ');
     }
 
+    if (field === 'seed_rate_by_cultivation' && value && typeof value === 'object') {
+      const byMethod = value as Record<string, { value?: unknown; unit?: unknown }>;
+      const chunks: string[] = [];
+      const direct = byMethod.direct_sowing;
+      if (direct && typeof direct === 'object') {
+        chunks.push(`Direktsaat: ${String(direct.value ?? '')} ${String(direct.unit ?? '')}`.trim());
+      }
+      const pre = byMethod.pre_cultivation;
+      if (pre && typeof pre === 'object') {
+        chunks.push(`Anzucht: ${String(pre.value ?? '')} ${String(pre.unit ?? '')}`.trim());
+      }
+      if (chunks.length) {
+        return chunks.join(' | ');
+      }
+    }
+
     if (Array.isArray(value)) {
       return value.map((entry) => String(entry)).join(', ');
     }
@@ -867,6 +918,31 @@ function Cultures(): React.ReactElement {
       return JSON.stringify(value);
     }
     return String(value ?? '');
+  };
+
+  const formatEnrichmentWarning = (warning: { field?: string; code?: string; message?: string }): string => {
+    const fieldLabel = warning.field ? getEnrichmentFieldLabel(warning.field) : t('ai.field');
+
+    const warningKeyByCode: Record<string, string> = {
+      range_collapsed_to_mean: 'ai.warningMessages.range_collapsed_to_mean',
+      missing_supplier_data: 'ai.warningMessages.missing_supplier_data',
+      supplier_only_non_supplier_suggestion_dropped: 'ai.warningMessages.supplier_only_non_supplier_suggestion_dropped',
+      seed_rate_unit_missing_for_method_value: 'ai.warningMessages.seed_rate_unit_missing_for_method_value',
+      seed_rate_unit_converted_from_g_per_are: 'ai.warningMessages.seed_rate_unit_converted_from_g_per_are',
+      missing_supplier_evidence: 'ai.warningMessages.missing_supplier_evidence',
+      supplier_mismatch_dropped: 'ai.warningMessages.supplier_mismatch_dropped',
+      supplier_product_not_found: 'ai.warningMessages.supplier_product_not_found',
+    };
+
+    const translationKey = warning.code ? warningKeyByCode[warning.code] : undefined;
+    if (translationKey) {
+      const translated = t(translationKey, { field: fieldLabel });
+      if (translated !== translationKey) {
+        return translated;
+      }
+    }
+
+    return warning.message || t('ai.runError');
   };
 
   const openEnrichmentDialog = (result: EnrichmentResult) => {
@@ -1007,8 +1083,62 @@ function Cultures(): React.ReactElement {
         patch[field] = normalizeSuggestedSeedPackages(suggestionValue);
         return;
       }
-      if (field === 'seed_rate_unit') {
+      if (field === 'seed_rate_direct_unit' || field === 'seed_rate_transplant_unit') {
         patch[field] = normalizeSeedRateUnit(suggestionValue);
+        return;
+      }
+      if (field === 'allowed_sowing_methods') {
+        const methods = Array.isArray(suggestionValue)
+          ? suggestionValue.map((item) => normalizeCultivationType(item)).filter(Boolean)
+          : [];
+        patch.cultivation_types = methods;
+        if (methods.length > 0) {
+          patch.cultivation_type = methods[0];
+        }
+        return;
+      }
+      if (field === 'seed_rate_by_cultivation' && suggestionValue && typeof suggestionValue === 'object') {
+        const rawByCultivation = suggestionValue as Record<string, { value?: unknown; unit?: unknown }>;
+        const sanitizedByCultivation: Record<string, { value: number; unit: string }> = {};
+        const directValue = Number(rawByCultivation.direct_sowing?.value);
+        const directUnit = normalizeSeedRateUnit(rawByCultivation.direct_sowing?.unit);
+        if (Number.isFinite(directValue) && directValue > 0 && directUnit && ['g_per_m2', 'g_per_lfm', 'seeds/m'].includes(directUnit)) {
+          sanitizedByCultivation.direct_sowing = { value: directValue, unit: directUnit };
+        }
+        const preValue = Number(rawByCultivation.pre_cultivation?.value);
+        const preUnit = normalizeSeedRateUnit(rawByCultivation.pre_cultivation?.unit);
+        if (Number.isFinite(preValue) && preValue > 0 && preUnit === 'seeds_per_plant') {
+          sanitizedByCultivation.pre_cultivation = { value: preValue, unit: preUnit };
+        }
+        if (Object.keys(sanitizedByCultivation).length > 0) {
+          patch.seed_rate_by_cultivation = sanitizedByCultivation;
+        }
+        return;
+      }
+      if (field === 'seed_rate_direct_value' || field === 'seed_rate_direct_unit' || field === 'seed_rate_transplant_value' || field === 'seed_rate_transplant_unit') {
+        const directValue = field === 'seed_rate_direct_value'
+          ? Number(suggestionValue)
+          : Number(enrichmentResult.suggested_fields.seed_rate_direct_value?.value);
+        const directUnit = field === 'seed_rate_direct_unit'
+          ? normalizeSeedRateUnit(suggestionValue)
+          : normalizeSeedRateUnit(enrichmentResult.suggested_fields.seed_rate_direct_unit?.value);
+        const transplantValue = field === 'seed_rate_transplant_value'
+          ? Number(suggestionValue)
+          : Number(enrichmentResult.suggested_fields.seed_rate_transplant_value?.value);
+        const transplantUnit = field === 'seed_rate_transplant_unit'
+          ? normalizeSeedRateUnit(suggestionValue)
+          : normalizeSeedRateUnit(enrichmentResult.suggested_fields.seed_rate_transplant_unit?.value);
+
+        const byCultivation: Record<string, { value: number; unit: string }> = {};
+        if (Number.isFinite(directValue) && directValue > 0 && directUnit) {
+          byCultivation.direct_sowing = { value: directValue, unit: directUnit };
+        }
+        if (Number.isFinite(transplantValue) && transplantValue > 0 && transplantUnit === 'seeds_per_plant') {
+          byCultivation.pre_cultivation = { value: transplantValue, unit: transplantUnit };
+        }
+        if (Object.keys(byCultivation).length > 0) {
+          patch.seed_rate_by_cultivation = byCultivation;
+        }
         return;
       }
       if (field === 'harvest_method') {
@@ -1021,6 +1151,7 @@ function Cultures(): React.ReactElement {
       }
       if (field === 'cultivation_type') {
         patch[field] = normalizeCultivationType(suggestionValue);
+        patch.cultivation_types = [normalizeCultivationType(suggestionValue)].filter(Boolean);
         return;
       }
       patch[field] = suggestionValue;
@@ -1033,6 +1164,10 @@ function Cultures(): React.ReactElement {
         harvest_method: normalizeHarvestMethod(targetCulture.harvest_method),
         nutrient_demand: normalizeNutrientDemand(targetCulture.nutrient_demand),
         cultivation_type: normalizeCultivationType(targetCulture.cultivation_type),
+        cultivation_types: (targetCulture.cultivation_types && targetCulture.cultivation_types.length > 0)
+          ? targetCulture.cultivation_types
+          : (targetCulture.cultivation_type ? [normalizeCultivationType(targetCulture.cultivation_type)] : ['pre_cultivation']),
+        seed_rate_by_cultivation: targetCulture.seed_rate_by_cultivation ?? null,
         seeding_requirement_type: normalizeSeedingRequirementType(targetCulture.seeding_requirement_type),
         ...patch,
       } as Culture);
@@ -1091,6 +1226,14 @@ function Cultures(): React.ReactElement {
   }, [handleEnrichAll, handleEnrichCurrent, selectedCultureNeedsCompletion]);
 
 
+
+  const enrichmentElapsedSeconds = enrichmentLoadingStartedAt
+    ? Math.max(0, Math.floor((enrichmentLoadingNow - enrichmentLoadingStartedAt) / 1000))
+    : 0;
+  const enrichmentProgressPercent = Math.min(95, Math.round((enrichmentElapsedSeconds / ENRICHMENT_EXPECTED_SECONDS) * 100));
+  const enrichmentActiveStepIndex = ENRICHMENT_LOADING_STEPS.reduce((lastIndex, step, index) => (
+    enrichmentElapsedSeconds >= step.startSeconds ? index : lastIndex
+  ), 0);
 
   return (
     <div className="page-container">
@@ -1449,10 +1592,31 @@ function Cultures(): React.ReactElement {
       <Dialog open={enrichmentLoading} aria-labelledby="enrichment-loading-title" maxWidth="xs" fullWidth>
         <DialogTitle id="enrichment-loading-title">{t('ai.loadingTitle')}</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
-            <CircularProgress size={24} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1, mb: 1 }}>
+            <CircularProgress size={22} />
             <Typography>{t('ai.loadingText')}</Typography>
           </Box>
+          <LinearProgress variant="determinate" value={enrichmentProgressPercent} sx={{ mb: 1 }} />
+          <Typography variant="caption" color="text.secondary">
+            {t('ai.loadingElapsed', { seconds: enrichmentElapsedSeconds, percent: enrichmentProgressPercent })}
+          </Typography>
+          <List dense sx={{ mt: 1 }}>
+            {ENRICHMENT_LOADING_STEPS.map((step, index) => {
+              const isDone = enrichmentElapsedSeconds >= step.startSeconds && index < enrichmentActiveStepIndex;
+              const isActive = index === enrichmentActiveStepIndex;
+              const Icon = isDone ? CheckCircleOutlineIcon : isActive ? AutorenewIcon : RadioButtonUncheckedIcon;
+              return (
+                <ListItem key={step.key} sx={{ px: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Icon fontSize="small" color={isDone ? 'success' : isActive ? 'primary' : 'disabled'} />
+                    <Typography variant="body2" color={isActive ? 'text.primary' : 'text.secondary'}>
+                      {t(`ai.loadingSteps.${step.key}`)}
+                    </Typography>
+                  </Box>
+                </ListItem>
+              );
+            })}
+          </List>
         </DialogContent>
       </Dialog>
 
@@ -1468,7 +1632,7 @@ function Cultures(): React.ReactElement {
             <Alert severity="warning" sx={{ mb: 2 }}>
               {(enrichmentResult?.validation?.warnings || []).map((warning) => (
                 <Typography key={`${warning.field}-${warning.code}`} variant="body2">
-                  • {warning.message}
+                  • {formatEnrichmentWarning(warning)}
                 </Typography>
               ))}
             </Alert>
@@ -1584,5 +1748,4 @@ function Cultures(): React.ReactElement {
     </div>
   );
 }
-
 export default Cultures;
