@@ -884,6 +884,32 @@ function Cultures(): React.ReactElement {
       .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
   };
 
+  const sanitizeSeedRateByCultivationForMethods = (
+    value: unknown,
+    methods: string[],
+  ): Record<string, { value: number; unit: string }> | null => {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const allowedMethods = new Set(methods);
+    const entries = Object.entries(value as Record<string, { value?: unknown; unit?: unknown }>).filter(([method]) => allowedMethods.has(method));
+    if (!entries.length) {
+      return null;
+    }
+
+    return entries.reduce<Record<string, { value: number; unit: string }>>((acc, [method, rate]) => {
+      const parsedValue = Number(rate?.value);
+      const unit = normalizeSeedRateUnit(rate?.unit);
+      const allowedUnits = ['g_per_m2', 'g_per_lfm', 'seeds/m'];
+      if (!Number.isFinite(parsedValue) || parsedValue <= 0 || !unit || !allowedUnits.includes(unit)) {
+        return acc;
+      }
+      acc[method] = { value: parsedValue, unit };
+      return acc;
+    }, {});
+  };
+
   const formatSuggestionValue = (field: string, value: unknown): string => {
     if (field === 'seed_packages') {
       const packages = normalizeSuggestedSeedPackages(value);
@@ -1107,7 +1133,7 @@ function Cultures(): React.ReactElement {
         }
         const preValue = Number(rawByCultivation.pre_cultivation?.value);
         const preUnit = normalizeSeedRateUnit(rawByCultivation.pre_cultivation?.unit);
-        if (Number.isFinite(preValue) && preValue > 0 && preUnit === 'seeds_per_plant') {
+        if (Number.isFinite(preValue) && preValue > 0 && preUnit && ['g_per_m2', 'g_per_lfm', 'seeds/m'].includes(preUnit)) {
           sanitizedByCultivation.pre_cultivation = { value: preValue, unit: preUnit };
         }
         if (Object.keys(sanitizedByCultivation).length > 0) {
@@ -1133,7 +1159,7 @@ function Cultures(): React.ReactElement {
         if (Number.isFinite(directValue) && directValue > 0 && directUnit) {
           byCultivation.direct_sowing = { value: directValue, unit: directUnit };
         }
-        if (Number.isFinite(transplantValue) && transplantValue > 0 && transplantUnit === 'seeds_per_plant') {
+        if (Number.isFinite(transplantValue) && transplantValue > 0 && transplantUnit && ['g_per_m2', 'g_per_lfm', 'seeds/m'].includes(transplantUnit)) {
           byCultivation.pre_cultivation = { value: transplantValue, unit: transplantUnit };
         }
         if (Object.keys(byCultivation).length > 0) {
@@ -1156,6 +1182,24 @@ function Cultures(): React.ReactElement {
       }
       patch[field] = suggestionValue;
     });
+
+    const nextCultivationTypesRaw = Array.isArray(patch.cultivation_types)
+      ? patch.cultivation_types
+      : (targetCulture.cultivation_types && targetCulture.cultivation_types.length > 0
+        ? targetCulture.cultivation_types
+        : (targetCulture.cultivation_type ? [normalizeCultivationType(targetCulture.cultivation_type)] : ['pre_cultivation']));
+    const nextCultivationTypes = nextCultivationTypesRaw
+      .map((method) => normalizeCultivationType(method))
+      .filter((method): method is string => Boolean(method));
+
+    if (patch.seed_rate_by_cultivation) {
+      const sanitizedByMethod = sanitizeSeedRateByCultivationForMethods(patch.seed_rate_by_cultivation, nextCultivationTypes);
+      if (sanitizedByMethod && Object.keys(sanitizedByMethod).length > 0) {
+        patch.seed_rate_by_cultivation = sanitizedByMethod;
+      } else {
+        delete patch.seed_rate_by_cultivation;
+      }
+    }
 
     try {
       await cultureAPI.update(targetCulture.id!, {

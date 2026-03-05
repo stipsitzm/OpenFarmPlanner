@@ -33,6 +33,11 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
     ? directSowingUnit
     : 'g_per_lfm';
 
+  const preCultivationUnit = formData.seed_rate_by_cultivation?.pre_cultivation?.unit;
+  const normalizedPreCultivationUnit: SeedRateUnit = preCultivationUnit === 'g_per_m2' || preCultivationUnit === 'g_per_lfm'
+    ? preCultivationUnit
+    : 'g_per_lfm';
+
   const handleSeedRateUnitChange = (value: string) => {
     if (!value) {
       onChange('seed_rate_unit', null);
@@ -80,16 +85,11 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
     } else {
       current[method] = {
         value: nextMethodValue.value,
-        unit: nextMethodValue.unit || (method === 'pre_cultivation' ? 'seeds_per_plant' : 'seeds/m'),
+        unit: nextMethodValue.unit || 'g_per_lfm',
       };
     }
     onChange('seed_rate_by_cultivation', Object.keys(current).length ? current : null);
 
-    const fallback = current.pre_cultivation || current.direct_sowing;
-    if (fallback) {
-      onChange('seed_rate_value', fallback.value);
-      onChange('seed_rate_unit', fallback.unit);
-    }
   };
 
   const deletePackage = (index: number) => {
@@ -145,15 +145,61 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
           </>
         )}
 
+        {hasPreCultivation && !hasBothMethods && (
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <TextField
+              sx={fieldSx}
+              type="number"
+              label="Anzucht Menge"
+              value={formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? ''}
+              onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { value: e.target.value ? parseFloat(e.target.value) : null, unit: normalizedPreCultivationUnit })}
+            />
+            <FormControl sx={fieldSx}>
+              <InputLabel>Anzucht Einheit</InputLabel>
+              <Select
+                value={normalizedPreCultivationUnit}
+                label="Anzucht Einheit"
+                onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { unit: e.target.value as SeedRateUnit, value: formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? null })}
+                fullWidth
+              >
+                <MenuItem value="g_per_m2">g / m²</MenuItem>
+                <MenuItem value="g_per_lfm">g / lfm</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        )}
+
+
         {hasBothMethods && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%' }}>
             <TextField
               sx={{ ...fieldSx, width: '100%' }}
               type="number"
-              label="Anzucht Menge (Korn / Pflanze)"
-              value={formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? ''}
-              onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { value: e.target.value ? parseFloat(e.target.value) : null, unit: 'seeds_per_plant' })}
+              label="Anzucht Menge (Korn / Pflanze, manuell)"
+              value={formData.seed_rate_value ?? ''}
+              onChange={e => onChange('seed_rate_value', e.target.value ? parseFloat(e.target.value) : null)}
             />
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <TextField
+                sx={fieldSx}
+                type="number"
+                label="Anzucht Menge"
+                value={formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? ''}
+                onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { value: e.target.value ? parseFloat(e.target.value) : null, unit: normalizedPreCultivationUnit })}
+              />
+              <FormControl sx={fieldSx}>
+                <InputLabel>Anzucht Einheit</InputLabel>
+                <Select
+                  value={normalizedPreCultivationUnit}
+                  label="Anzucht Einheit"
+                  onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { unit: e.target.value as SeedRateUnit, value: formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? null })}
+                  fullWidth
+                >
+                  <MenuItem value="g_per_m2">g / m²</MenuItem>
+                  <MenuItem value="g_per_lfm">g / lfm</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
               <TextField
                 sx={fieldSx}
