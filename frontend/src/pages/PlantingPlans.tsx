@@ -44,6 +44,9 @@ const CULTIVATION_TYPE_OPTIONS = [
   { value: 'pre_cultivation', labelKey: 'plantingPlans:cultivationTypes.preCultivation' },
 ] as const;
 
+const CULTURE_COLUMN_MAX_WIDTH = 280;
+const BED_COLUMN_MAX_WIDTH = 320;
+
 const estimateColumnWidth = (values: string[], min: number, max: number): number => {
   const longest = values.reduce((length, value) => Math.max(length, value.length), 0);
   const estimated = longest * 8 + 52;
@@ -111,12 +114,12 @@ function PlantingPlans(): React.ReactElement {
     const cultureWidth = estimateColumnWidth(
       [t('plantingPlans:columns.culture'), ...cultureOptions.map((option) => option.label)],
       200,
-      420,
+      CULTURE_COLUMN_MAX_WIDTH,
     );
     const bedWidth = estimateColumnWidth(
       [t('plantingPlans:columns.bed'), ...bedOptions.map((option) => option.label)],
       260,
-      560,
+      BED_COLUMN_MAX_WIDTH,
     );
 
     return {
@@ -252,6 +255,8 @@ function PlantingPlans(): React.ReactElement {
         headerName: t('plantingPlans:columns.culture'),
         flex: 0,
         minWidth: dynamicWidths.culture,
+        maxWidth: CULTURE_COLUMN_MAX_WIDTH,
+        truncateCellText: true,
         options: cultureOptions,
       }),
       valueSetter: (value, row) => {
@@ -300,6 +305,8 @@ function PlantingPlans(): React.ReactElement {
         headerName: t('plantingPlans:columns.bed'),
         flex: 0,
         minWidth: dynamicWidths.bed,
+        maxWidth: BED_COLUMN_MAX_WIDTH,
+        truncateCellText: true,
         options: bedOptions,
       }),
       valueSetter: (value, row) => {
