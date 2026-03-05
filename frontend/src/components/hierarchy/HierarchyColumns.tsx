@@ -223,7 +223,7 @@ export function createHierarchyColumns(
       field: 'area_sqm',
       headerName: t('hierarchy:columns.area'),
       width: widths.area,
-      type: 'number',
+      type: 'string',
       editable: true,
     },
     {

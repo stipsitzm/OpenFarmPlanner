@@ -174,13 +174,43 @@ function FieldsBedsHierarchy(): React.ReactElement {
     navigate(`/planting-plans?bedId=${bedId}`);
   }, [navigate]);
 
+
+  const parseAreaExpression = (input: string): number | undefined => {
+    const normalizedInput = input.trim().replace(/,/g, '.');
+    if (!normalizedInput) {
+      return undefined;
+    }
+
+    const factors = normalizedInput
+      .split(/[*x×]/i)
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0);
+
+    if (factors.length === 0) {
+      return undefined;
+    }
+
+    let product = 1;
+    for (const factor of factors) {
+      if (!/^\d+(\.\d+)?$/.test(factor)) {
+        return undefined;
+      }
+      const numeric = Number.parseFloat(factor);
+      if (!Number.isFinite(numeric)) {
+        return undefined;
+      }
+      product *= numeric;
+    }
+
+    return Number.isFinite(product) ? product : undefined;
+  };
+
   const parseAreaValue = (value: number | string | undefined): number | undefined => {
     if (typeof value === 'number') {
       return Number.isFinite(value) ? value : undefined;
     }
     if (typeof value === 'string' && value.trim() !== '') {
-      const parsed = Number.parseFloat(value);
-      return Number.isFinite(parsed) ? parsed : undefined;
+      return parseAreaExpression(value);
     }
     return undefined;
   };
@@ -188,9 +218,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
   const getBedAreaSum = (fieldId: number, excludeBedId?: number, overrideArea?: number) => {
     const filteredBeds = beds.filter(b => b.field === fieldId && b.id !== excludeBedId);
     const bedAreas = filteredBeds.map(b => {
-      if (typeof b.area_sqm === 'number') return b.area_sqm;
-      if (typeof b.area_sqm === 'string') return Number.parseFloat(b.area_sqm);
-      return NaN;
+      return parseAreaValue(b.area_sqm) ?? NaN;
     });
     const sum = bedAreas.reduce((sum, area) => sum + (Number.isFinite(area) ? area : 0), 0)
       + (typeof overrideArea === 'number' ? overrideArea : 0);
@@ -205,11 +233,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
     }
 
     // Flächenwert muss > 0 sein
-    const areaValue = typeof newRow.area_sqm === 'number'
-      ? newRow.area_sqm
-      : typeof newRow.area_sqm === 'string'
-        ? Number.parseFloat(newRow.area_sqm)
-        : NaN;
+    const areaValue = parseAreaValue(newRow.area_sqm) ?? NaN;
     if (areaValue <= 0 || isNaN(areaValue)) {
       setError(t('validation.areaMustBePositive'));
       throw new Error(t('validation.areaMustBePositive'));
@@ -226,16 +250,8 @@ function FieldsBedsHierarchy(): React.ReactElement {
     if (newRow.type === 'bed') {
       const field = fields.find(f => f.id === newRow.field);
       if (field) {
-        const fieldArea = typeof field.area_sqm === 'number'
-          ? field.area_sqm
-          : typeof field.area_sqm === 'string'
-            ? Number.parseFloat(field.area_sqm)
-            : NaN;
-        const bedArea = typeof newRow.area_sqm === 'number'
-          ? newRow.area_sqm
-          : typeof newRow.area_sqm === 'string'
-            ? Number.parseFloat(newRow.area_sqm)
-            : NaN;
+        const fieldArea = parseAreaValue(field.area_sqm) ?? NaN;
+        const bedArea = parseAreaValue(newRow.area_sqm) ?? NaN;
         const sum = getBedAreaSum(field.id!, newRow.bedId, bedArea);
         // ...existing code...
         if (sum > fieldArea) {
@@ -255,11 +271,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
       return { ...newRow, id: savedBed.id!, bedId: savedBed.id!, isNew: false };
     } else if (newRow.type === 'field') {
       // Validierung: Summe der Beetflächen darf neue Feldfläche nicht überschreiten
-      const fieldArea = typeof newRow.area_sqm === 'number'
-        ? newRow.area_sqm
-        : typeof newRow.area_sqm === 'string'
-          ? Number.parseFloat(newRow.area_sqm)
-          : NaN;
+      const fieldArea = parseAreaValue(newRow.area_sqm) ?? NaN;
       const sum = getBedAreaSum(newRow.fieldId!);
       // ...existing code...
       if (sum > fieldArea) {
@@ -278,11 +290,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
         });
         // ...existing code...
         // Aktualisiere lokalen State direkt (optional, für sofortiges Feedback)
-        const updatedArea = typeof updated.data.area_sqm === 'number'
-          ? updated.data.area_sqm
-          : updated.data.area_sqm
-            ? Number.parseFloat(updated.data.area_sqm)
-            : undefined;
+        const updatedArea = parseAreaValue(updated.data.area_sqm);
 
         setFields((prevFields) => prevFields.map(f => {
           if (f.id === newRow.fieldId) {
