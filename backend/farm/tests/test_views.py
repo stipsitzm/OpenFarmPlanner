@@ -1145,32 +1145,37 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_layouts_get_and_put(self):
+        location = Location.objects.create(name='Layout test location')
+        field = Field.objects.create(name='Layout test field', location=location)
+        bed = Bed.objects.create(name='Layout test bed', field=field, area_sqm=5)
+
         payload = {
             'layouts': [
-                {'bed': self.bed.id, 'location': self.location.id, 'x': 33.5, 'y': 44.5, 'version': 1},
+                {'bed': bed.id, 'location': location.id, 'x': 33.5, 'y': 44.5, 'version': 1},
             ]
         }
         put_response = self.client.put(
-            f'/openfarmplanner/api/locations/{self.location.id}/layouts/',
+            f'/openfarmplanner/api/locations/{location.id}/layouts/',
             payload,
             format='json',
         )
         self.assertEqual(put_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(put_response.data['results'][0]['bed'], self.bed.id)
+        self.assertEqual(put_response.data['results'][0]['bed'], bed.id)
 
-        get_response = self.client.get(f'/openfarmplanner/api/locations/{self.location.id}/layouts/')
+        get_response = self.client.get(f'/openfarmplanner/api/locations/{location.id}/layouts/')
         self.assertEqual(get_response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(get_response.data['results']), 1)
         self.assertEqual(get_response.data['results'][0]['x'], 33.5)
 
     def test_layouts_reject_bed_from_other_location(self):
+        location = Location.objects.create(name='Layout test source location')
         other_location = Location.objects.create(name='Secondary location')
         other_field = Field.objects.create(name='Secondary field', location=other_location)
         other_bed = Bed.objects.create(name='Secondary bed', field=other_field, area_sqm=5)
 
         response = self.client.put(
-            f'/openfarmplanner/api/locations/{self.location.id}/layouts/',
-            {'layouts': [{'bed': other_bed.id, 'location': self.location.id, 'x': 1, 'y': 1}]},
+            f'/openfarmplanner/api/locations/{location.id}/layouts/',
+            {'layouts': [{'bed': other_bed.id, 'location': location.id, 'x': 1, 'y': 1}]},
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

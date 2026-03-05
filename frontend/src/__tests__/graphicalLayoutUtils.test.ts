@@ -3,8 +3,8 @@ import { areaToRectSize, clampInsideParent, initialAutoLayout } from '../pages/g
 
 describe('graphicalLayoutUtils', () => {
   it('returns deterministic area size', () => {
-    const first = areaToRectSize(12.5, 120);
-    const second = areaToRectSize(12.5, 120);
+    const first = areaToRectSize(12.5, { baseWidth: 120 });
+    const second = areaToRectSize(12.5, { baseWidth: 120 });
     expect(first).toEqual(second);
     expect(first.width).toBeGreaterThan(0);
     expect(first.height).toBeGreaterThan(0);

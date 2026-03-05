@@ -8,14 +8,27 @@ export interface Position {
   y: number;
 }
 
-const AREA_SCALE_FACTOR = 2.2;
-const MIN_BED_WIDTH = 90;
-const MAX_BED_WIDTH = 180;
+interface AreaToRectOptions {
+  baseWidth?: number;
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  scaleFactor?: number;
+}
 
-export function areaToRectSize(areaSqm: number | undefined, baseWidth = 120): RectSize {
+const DEFAULT_OPTIONS: Required<AreaToRectOptions> = {
+  baseWidth: 120,
+  minWidth: 90,
+  maxWidth: 180,
+  minHeight: 36,
+  scaleFactor: 2.2,
+};
+
+export function areaToRectSize(areaSqm: number | undefined, options: AreaToRectOptions = {}): RectSize {
+  const config = { ...DEFAULT_OPTIONS, ...options };
   const safeArea = Math.max(0.1, areaSqm ?? 1);
-  const width = Math.max(MIN_BED_WIDTH, Math.min(MAX_BED_WIDTH, baseWidth + Math.sqrt(safeArea) * 5));
-  const height = Math.max(36, (safeArea * AREA_SCALE_FACTOR) / width);
+  const width = Math.max(config.minWidth, Math.min(config.maxWidth, config.baseWidth + Math.sqrt(safeArea) * 5));
+  const height = Math.max(config.minHeight, (safeArea * config.scaleFactor) / width);
   return {
     width: Math.round(width),
     height: Math.round(height),
