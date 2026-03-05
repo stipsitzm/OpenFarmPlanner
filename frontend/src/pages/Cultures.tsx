@@ -12,7 +12,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture, type EnrichmentResult } from '../api/api';
-import type { EnrichmentBatchResult, EnrichmentCostEstimate, EnrichmentUsage } from '../api/types';
+import type { CultivationType, EnrichmentBatchResult, EnrichmentCostEstimate, EnrichmentUsage } from '../api/types';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
 import {
@@ -886,14 +886,16 @@ function Cultures(): React.ReactElement {
 
   const sanitizeSeedRateByCultivationForMethods = (
     value: unknown,
-    methods: string[],
+    methods: CultivationType[],
   ): Record<string, { value: number; unit: string }> | null => {
     if (!value || typeof value !== 'object') {
       return null;
     }
 
     const allowedMethods = new Set(methods);
-    const entries = Object.entries(value as Record<string, { value?: unknown; unit?: unknown }>).filter(([method]) => allowedMethods.has(method));
+    const entries = Object.entries(value as Record<string, { value?: unknown; unit?: unknown }>)
+      .filter((entry): entry is [CultivationType, { value?: unknown; unit?: unknown }] => entry[0] === 'pre_cultivation' || entry[0] === 'direct_sowing')
+      .filter(([method]) => allowedMethods.has(method));
     if (!entries.length) {
       return null;
     }
@@ -1190,7 +1192,7 @@ function Cultures(): React.ReactElement {
         : (targetCulture.cultivation_type ? [normalizeCultivationType(targetCulture.cultivation_type)] : ['pre_cultivation']));
     const nextCultivationTypes = nextCultivationTypesRaw
       .map((method) => normalizeCultivationType(method))
-      .filter((method): method is string => Boolean(method));
+      .filter((method): method is CultivationType => method === 'pre_cultivation' || method === 'direct_sowing');
 
     if (patch.seed_rate_by_cultivation) {
       const sanitizedByMethod = sanitizeSeedRateByCultivationForMethods(patch.seed_rate_by_cultivation, nextCultivationTypes);

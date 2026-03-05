@@ -74,7 +74,7 @@ export default function Suppliers(): React.ReactElement {
     setDraft({
       id: supplier.id,
       name: supplier.name,
-      homepage_url: supplier.homepage_url,
+      homepage_url: supplier.homepage_url ?? '',
       allowed_domains: supplier.allowed_domains || [],
       is_active: supplier.is_active ?? true,
     });

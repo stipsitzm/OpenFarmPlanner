@@ -226,6 +226,8 @@ export interface EnrichmentCostEstimate {
     output: number;
     web_search_calls: number;
     web_search_call_count: number;
+    subtotal?: number;
+    tax?: number;
   };
 }
 

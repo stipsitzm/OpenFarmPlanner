@@ -14,6 +14,7 @@ import { Alert, Box, Button, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from '../i18n';
 import { plantingPlanAPI, cultureAPI, bedAPI, type PlantingPlan, type Culture, type Bed } from '../api/api';
+import type { CultivationType } from '../api/types';
 import { AreaM2EditCell } from '../components/data-grid/AreaM2EditCell';
 import {
   EditableDataGrid,
@@ -257,13 +258,18 @@ function PlantingPlans(): React.ReactElement {
         const nextRow = row as PlantingPlanRow;
         const numericValue = typeof value === 'number' ? value : Number(value);
         const selectedCulture = cultures.find((culture) => culture.id === numericValue);
-        const availableTypes = selectedCulture?.cultivation_types?.length
+        const availableTypes = (selectedCulture?.cultivation_types?.length
           ? selectedCulture.cultivation_types
-          : (selectedCulture?.cultivation_type ? [selectedCulture.cultivation_type] : []);
+          : (selectedCulture?.cultivation_type ? [selectedCulture.cultivation_type] : []))
+          .filter((value): value is CultivationType => value === 'pre_cultivation' || value === 'direct_sowing');
 
-        const nextCultivationType = availableTypes.includes(nextRow.cultivation_type ?? '')
+        const currentType = nextRow.cultivation_type === 'pre_cultivation' || nextRow.cultivation_type === 'direct_sowing'
           ? nextRow.cultivation_type
-          : availableTypes[0] ?? nextRow.cultivation_type ?? 'pre_cultivation';
+          : undefined;
+
+        const nextCultivationType: CultivationType = availableTypes.includes(currentType ?? 'pre_cultivation')
+          ? (currentType ?? 'pre_cultivation')
+          : (availableTypes[0] ?? 'pre_cultivation');
 
         return {
           ...nextRow,
@@ -282,7 +288,7 @@ function PlantingPlans(): React.ReactElement {
       valueOptions: cultivationTypeOptions,
       valueFormatter: (value) => {
         const stringValue = typeof value === 'string' ? value : '';
-        const option = cultivationTypeOptions.find((item) => item.value === stringValue);
+        const option = cultivationTypeOptions.find((item) => item.value === (stringValue as CultivationType));
         return option?.label ?? '';
       },
       valueSetter: (value, row) => ({ ...row, cultivation_type: value || 'pre_cultivation' }),
