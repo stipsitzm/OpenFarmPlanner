@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, CircularProgress, Typography } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Group, Layer, Rect, Stage, Text } from 'react-konva';
+import type { KonvaEventObject } from 'konva/lib/Node';
+import type { DragEvent } from 'konva/lib/DragAndDrop';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 import { layoutAPI, type BedLayoutEntry, type FieldLayoutEntry } from '../api/api';
 import { areaToRectSize, clampInsideParent, getBedRectSize, initialAutoLayout, type RectSize } from './graphicalLayoutUtils';
@@ -16,13 +18,112 @@ interface BedViewModel {
   height: number;
 }
 
+interface GuideLine {
+  orientation: 'vertical' | 'horizontal';
+  value: number;
+  start: number;
+  end: number;
+}
+
+interface SnapResult {
+  x: number;
+  y: number;
+  guides: GuideLine[];
+}
+
 const VIEWPORT_PADDING = 120;
 const FIELD_INNER_OFFSET_X = 10;
 const FIELD_INNER_OFFSET_Y = 34;
+const SNAP_THRESHOLD = 8;
 const EXPANDED_STORAGE_KEY = 'graphicalFieldsExpandedLocations';
 
 interface GraphicalFieldsProps {
   showTitle?: boolean;
+}
+
+function snapToNeighborBeds(
+  currentBedId: number,
+  position: { x: number; y: number },
+  size: { width: number; height: number },
+  neighbors: BedViewModel[],
+): SnapResult {
+  let snappedX = position.x;
+  let snappedY = position.y;
+  let bestXDelta = SNAP_THRESHOLD + 1;
+  let bestYDelta = SNAP_THRESHOLD + 1;
+  const guides: GuideLine[] = [];
+
+  const currentXPoints = [
+    { key: 'left', value: position.x },
+    { key: 'centerX', value: position.x + (size.width / 2) },
+    { key: 'right', value: position.x + size.width },
+  ];
+  const currentYPoints = [
+    { key: 'top', value: position.y },
+    { key: 'centerY', value: position.y + (size.height / 2) },
+    { key: 'bottom', value: position.y + size.height },
+  ];
+
+  neighbors
+    .filter((neighbor) => neighbor.id !== currentBedId)
+    .forEach((neighbor) => {
+      const neighborXPoints = [
+        { key: 'left', value: neighbor.x },
+        { key: 'centerX', value: neighbor.x + (neighbor.width / 2) },
+        { key: 'right', value: neighbor.x + neighbor.width },
+      ];
+      const neighborYPoints = [
+        { key: 'top', value: neighbor.y },
+        { key: 'centerY', value: neighbor.y + (neighbor.height / 2) },
+        { key: 'bottom', value: neighbor.y + neighbor.height },
+      ];
+
+      currentXPoints.forEach((currentPoint) => {
+        neighborXPoints.forEach((neighborPoint) => {
+          const delta = neighborPoint.value - currentPoint.value;
+          const absDelta = Math.abs(delta);
+          if (absDelta <= SNAP_THRESHOLD && absDelta < bestXDelta) {
+            bestXDelta = absDelta;
+            snappedX = position.x + delta;
+            guides.push({
+              orientation: 'vertical',
+              value: neighborPoint.value,
+              start: Math.min(position.y, neighbor.y),
+              end: Math.max(position.y + size.height, neighbor.y + neighbor.height),
+            });
+          }
+        });
+      });
+
+      currentYPoints.forEach((currentPoint) => {
+        neighborYPoints.forEach((neighborPoint) => {
+          const delta = neighborPoint.value - currentPoint.value;
+          const absDelta = Math.abs(delta);
+          if (absDelta <= SNAP_THRESHOLD && absDelta < bestYDelta) {
+            bestYDelta = absDelta;
+            snappedY = position.y + delta;
+            guides.push({
+              orientation: 'horizontal',
+              value: neighborPoint.value,
+              start: Math.min(position.x, neighbor.x),
+              end: Math.max(position.x + size.width, neighbor.x + neighbor.width),
+            });
+          }
+        });
+      });
+    });
+
+  const latestVerticalGuide = [...guides].reverse().find((guide) => guide.orientation === 'vertical');
+  const latestHorizontalGuide = [...guides].reverse().find((guide) => guide.orientation === 'horizontal');
+
+  return {
+    x: snappedX,
+    y: snappedY,
+    guides: [
+      ...(latestVerticalGuide ? [latestVerticalGuide] : []),
+      ...(latestHorizontalGuide ? [latestHorizontalGuide] : []),
+    ],
+  };
 }
 
 export default function GraphicalFields({ showTitle = true }: GraphicalFieldsProps): React.ReactElement {
@@ -44,6 +145,7 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
   const [layoutsByBed, setLayoutsByBed] = useState<Record<number, BedLayoutEntry>>({});
   const [layoutsByField, setLayoutsByField] = useState<Record<number, FieldLayoutEntry>>({});
   const [stageWidth, setStageWidth] = useState<number>(() => Math.min(2200, Math.max(1200, window.innerWidth - VIEWPORT_PADDING)));
+  const [activeGuides, setActiveGuides] = useState<GuideLine[]>([]);
   const saveTimers = useRef<Record<string, number>>({});
 
   useEffect(() => {
@@ -224,6 +326,23 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                     const fieldInnerSize = { width: baseRect.width - 20, height: baseRect.height - 50 };
                     const autoLayout = initialAutoLayout(missingBeds, bedSizeMap, fieldInnerSize);
 
+                    const bedViewModels: BedViewModel[] = fieldBeds.map((bed) => {
+                      const bedId = bed.id!;
+                      const size = bedSizeMap.get(bedId)!;
+                      const saved = layoutsByBed[bedId];
+                      const fallback = autoLayout.get(bedId) ?? { x: 10, y: 40 };
+                      const clamped = clampInsideParent({ x: saved?.x ?? fallback.x, y: saved?.y ?? fallback.y }, size, fieldInnerSize);
+                      return {
+                        id: bedId,
+                        name: bed.name,
+                        area: Number(bed.area_sqm ?? 0),
+                        x: clamped.x,
+                        y: clamped.y,
+                        width: size.width,
+                        height: size.height,
+                      };
+                    });
+
                     return (
                       <Group key={fieldId}>
                         <Rect
@@ -235,7 +354,7 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                           strokeWidth={2}
                           cornerRadius={4}
                           draggable
-                          onDragEnd={(event) => {
+                          onDragEnd={(event: KonvaEventObject<DragEvent>) => {
                             const next = clampInsideParent(
                               { x: event.target.x(), y: event.target.y() },
                               { width: baseRect.width, height: baseRect.height },
@@ -255,70 +374,119 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                           }}
                         />
                         <Text x={fieldClamped.x + 8} y={fieldClamped.y + 8} text={`${baseRect.field.name} (${baseRect.field.area_sqm ?? '-'} m²)`} fontStyle="bold" />
-                        {fieldBeds.map((bed) => {
-                          const bedId = bed.id!;
-                          const size = bedSizeMap.get(bedId)!;
-                          const saved = layoutsByBed[bedId];
-                          const fallback = autoLayout.get(bedId) ?? { x: 10, y: 40 };
-                          const clamped = clampInsideParent({ x: saved?.x ?? fallback.x, y: saved?.y ?? fallback.y }, size, fieldInnerSize);
+                        {bedViewModels.map((bedVm) => (
+                          <Group key={bedVm.id}>
+                            <Rect
+                              x={fieldClamped.x + FIELD_INNER_OFFSET_X + bedVm.x}
+                              y={fieldClamped.y + FIELD_INNER_OFFSET_Y + bedVm.y}
+                              width={bedVm.width}
+                              height={bedVm.height}
+                              fill="#bee3f8"
+                              stroke="#2b6cb0"
+                              strokeWidth={1}
+                              draggable
+                              onDragMove={(event: KonvaEventObject<DragEvent>) => {
+                                const raw = {
+                                  x: event.target.x() - (fieldClamped.x + FIELD_INNER_OFFSET_X),
+                                  y: event.target.y() - (fieldClamped.y + FIELD_INNER_OFFSET_Y),
+                                };
+                                const clampedRaw = clampInsideParent(raw, { width: bedVm.width, height: bedVm.height }, fieldInnerSize);
+                                const snapped = snapToNeighborBeds(
+                                  bedVm.id,
+                                  clampedRaw,
+                                  { width: bedVm.width, height: bedVm.height },
+                                  bedViewModels,
+                                );
+                                const finalClamped = clampInsideParent(
+                                  { x: snapped.x, y: snapped.y },
+                                  { width: bedVm.width, height: bedVm.height },
+                                  fieldInnerSize,
+                                );
 
-                          const bedVm: BedViewModel = {
-                            id: bedId,
-                            name: bed.name,
-                            area: Number(bed.area_sqm ?? 0),
-                            x: clamped.x,
-                            y: clamped.y,
-                            width: size.width,
-                            height: size.height,
-                          };
+                                event.target.position({
+                                  x: fieldClamped.x + FIELD_INNER_OFFSET_X + finalClamped.x,
+                                  y: fieldClamped.y + FIELD_INNER_OFFSET_Y + finalClamped.y,
+                                });
 
-                          return (
-                            <Group key={bedVm.id}>
-                              <Rect
-                                x={fieldClamped.x + FIELD_INNER_OFFSET_X + bedVm.x}
-                                y={fieldClamped.y + FIELD_INNER_OFFSET_Y + bedVm.y}
-                                width={bedVm.width}
-                                height={bedVm.height}
-                                fill="#bee3f8"
-                                stroke="#2b6cb0"
-                                strokeWidth={1}
-                                draggable
-                                onDragEnd={(event) => {
-                                  const next = clampInsideParent(
-                                    {
-                                      x: event.target.x() - (fieldClamped.x + FIELD_INNER_OFFSET_X),
-                                      y: event.target.y() - (fieldClamped.y + FIELD_INNER_OFFSET_Y),
-                                    },
-                                    { width: bedVm.width, height: bedVm.height },
-                                    fieldInnerSize,
-                                  );
+                                setActiveGuides(
+                                  snapped.guides.map((guide) => ({
+                                    ...guide,
+                                    value: guide.orientation === 'vertical'
+                                      ? fieldClamped.x + FIELD_INNER_OFFSET_X + guide.value
+                                      : fieldClamped.y + FIELD_INNER_OFFSET_Y + guide.value,
+                                    start: guide.orientation === 'vertical'
+                                      ? fieldClamped.y + FIELD_INNER_OFFSET_Y + guide.start
+                                      : fieldClamped.x + FIELD_INNER_OFFSET_X + guide.start,
+                                    end: guide.orientation === 'vertical'
+                                      ? fieldClamped.y + FIELD_INNER_OFFSET_Y + guide.end
+                                      : fieldClamped.x + FIELD_INNER_OFFSET_X + guide.end,
+                                  })),
+                                );
+                              }}
+                              onDragEnd={(event: KonvaEventObject<DragEvent>) => {
+                                const next = clampInsideParent(
+                                  {
+                                    x: event.target.x() - (fieldClamped.x + FIELD_INNER_OFFSET_X),
+                                    y: event.target.y() - (fieldClamped.y + FIELD_INNER_OFFSET_Y),
+                                  },
+                                  { width: bedVm.width, height: bedVm.height },
+                                  fieldInnerSize,
+                                );
+                                const snapped = snapToNeighborBeds(
+                                  bedVm.id,
+                                  next,
+                                  { width: bedVm.width, height: bedVm.height },
+                                  bedViewModels,
+                                );
+                                const finalClamped = clampInsideParent(
+                                  { x: snapped.x, y: snapped.y },
+                                  { width: bedVm.width, height: bedVm.height },
+                                  fieldInnerSize,
+                                );
 
-                                  const nextLayout: BedLayoutEntry = {
-                                    bed: bedVm.id,
-                                    location: location.id!,
-                                    x: next.x,
-                                    y: next.y,
-                                    version: 1,
-                                  };
+                                event.target.position({
+                                  x: fieldClamped.x + FIELD_INNER_OFFSET_X + finalClamped.x,
+                                  y: fieldClamped.y + FIELD_INNER_OFFSET_Y + finalClamped.y,
+                                });
 
-                                  setLayoutsByBed((prev) => ({ ...prev, [bedVm.id]: nextLayout }));
-                                  saveBedLayout(location.id!, nextLayout);
-                                }}
-                              />
-                              <Text
-                                x={fieldClamped.x + FIELD_INNER_OFFSET_X + 4 + bedVm.x}
-                                y={fieldClamped.y + FIELD_INNER_OFFSET_Y + 4 + bedVm.y}
-                                text={`${bedVm.name} (${bedVm.area || '-'} m²)`}
-                                fontSize={12}
-                                width={Math.max(40, bedVm.width - 8)}
-                                wrap="word"
-                              />
-                            </Group>
-                          );
-                        })}
+                                const nextLayout: BedLayoutEntry = {
+                                  bed: bedVm.id,
+                                  location: location.id!,
+                                  x: finalClamped.x,
+                                  y: finalClamped.y,
+                                  version: 1,
+                                };
+
+                                setActiveGuides([]);
+                                setLayoutsByBed((prev) => ({ ...prev, [bedVm.id]: nextLayout }));
+                                saveBedLayout(location.id!, nextLayout);
+                              }}
+                            />
+                            <Text
+                              x={fieldClamped.x + FIELD_INNER_OFFSET_X + 4 + bedVm.x}
+                              y={fieldClamped.y + FIELD_INNER_OFFSET_Y + 4 + bedVm.y}
+                              text={`${bedVm.name} (${bedVm.area || '-'} m²)`}
+                              fontSize={12}
+                              width={Math.max(40, bedVm.width - 8)}
+                              wrap="word"
+                            />
+                          </Group>
+                        ))}
                       </Group>
                     );
                   })}
+
+                  {activeGuides.map((guide, index) => (
+                    <Rect
+                      key={`${guide.orientation}-${guide.value}-${index}`}
+                      x={guide.orientation === 'vertical' ? guide.value - 0.75 : guide.start}
+                      y={guide.orientation === 'vertical' ? guide.start : guide.value - 0.75}
+                      width={guide.orientation === 'vertical' ? 1.5 : Math.max(1, guide.end - guide.start)}
+                      height={guide.orientation === 'vertical' ? Math.max(1, guide.end - guide.start) : 1.5}
+                      fill="#e53e3e"
+                      opacity={0.8}
+                    />
+                  ))}
                 </Layer>
               </Stage>
             </AccordionDetails>
