@@ -89,7 +89,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
         await bedAPI.update(row.bedId, {
           name: row.name,
           field: row.field!,
-          area_sqm: normalizeBedAreaValue(parsedArea),
+          area_sqm: normalizeAreaValue(parsedArea),
           notes: value,
         });
         
@@ -102,7 +102,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
         await fieldAPI.update(row.fieldId, {
           name: row.name,
           location: row.locationId!,
-          area_sqm: parsedArea,
+          area_sqm: normalizeAreaValue(parsedArea),
           notes: value,
         });
         
@@ -206,7 +206,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
   };
 
 
-  const normalizeBedAreaValue = (value: number | undefined): number | undefined => {
+  const normalizeAreaValue = (value: number | undefined): number | undefined => {
     if (value === undefined || !Number.isFinite(value)) {
       return undefined;
     }
@@ -259,7 +259,7 @@ function FieldsBedsHierarchy(): React.ReactElement {
       const field = fields.find(f => f.id === newRow.field);
       if (field) {
         const fieldArea = parseAreaValue(field.area_sqm) ?? NaN;
-        const bedArea = normalizeBedAreaValue(parseAreaValue(newRow.area_sqm)) ?? NaN;
+        const bedArea = normalizeAreaValue(parseAreaValue(newRow.area_sqm)) ?? NaN;
         const sum = getBedAreaSum(field.id!, newRow.bedId, bedArea);
         // ...existing code...
         if (sum > fieldArea) {
@@ -273,13 +273,13 @@ function FieldsBedsHierarchy(): React.ReactElement {
         id: newRow.bedId!,
         name: newRow.name,
         field: newRow.field!,
-        area_sqm: normalizeBedAreaValue(parseAreaValue(newRow.area_sqm)),
+        area_sqm: normalizeAreaValue(parseAreaValue(newRow.area_sqm)),
         notes: newRow.notes,
       });
       return { ...newRow, id: savedBed.id!, bedId: savedBed.id!, isNew: false };
     } else if (newRow.type === 'field') {
       // Validierung: Summe der Beetflächen darf neue Feldfläche nicht überschreiten
-      const fieldArea = parseAreaValue(newRow.area_sqm) ?? NaN;
+      const fieldArea = normalizeAreaValue(parseAreaValue(newRow.area_sqm)) ?? NaN;
       const sum = getBedAreaSum(newRow.fieldId!);
       // ...existing code...
       if (sum > fieldArea) {
@@ -293,12 +293,12 @@ function FieldsBedsHierarchy(): React.ReactElement {
         const updated = await fieldAPI.update(newRow.fieldId!, {
           name: newRow.name,
           location: newRow.locationId!,
-          area_sqm: parseAreaValue(newRow.area_sqm),
+          area_sqm: normalizeAreaValue(parseAreaValue(newRow.area_sqm)),
           notes: newRow.notes,
         });
         // ...existing code...
         // Aktualisiere lokalen State direkt (optional, für sofortiges Feedback)
-        const updatedArea = parseAreaValue(updated.data.area_sqm);
+        const updatedArea = normalizeAreaValue(parseAreaValue(updated.data.area_sqm));
 
         setFields((prevFields) => prevFields.map(f => {
           if (f.id === newRow.fieldId) {

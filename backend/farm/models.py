@@ -206,7 +206,7 @@ class Field(TimestampedModel):
     
     name = models.CharField(max_length=200)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='fields')
-    area_sqm = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    area_sqm = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
     notes = models.TextField(blank=True)
 
     def clean(self) -> None:

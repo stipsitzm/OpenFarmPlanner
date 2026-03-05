@@ -5,7 +5,7 @@ from django.test import TestCase
 from rest_framework import serializers
 
 from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier
-from farm.serializers import BedSerializer, CentimetersField, CultureSerializer, PlantingPlanSerializer
+from farm.serializers import BedSerializer, CentimetersField, CultureSerializer, FieldSerializer, PlantingPlanSerializer
 from farm.utils.normalization import normalize_supplier_name, normalize_text
 
 
@@ -190,6 +190,30 @@ class SerializerBranchCoverageTest(TestCase):
             data={
                 'name': 'Beet B',
                 'field': self.field.id,
+                'area_sqm': '12.3',
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+
+    def test_field_serializer_rejects_more_than_one_decimal_place(self):
+        serializer = FieldSerializer(
+            data={
+                'name': 'Schlag B',
+                'location': self.location.id,
+                'area_sqm': '12.34',
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('area_sqm', serializer.errors)
+
+    def test_field_serializer_allows_one_decimal_place(self):
+        serializer = FieldSerializer(
+            data={
+                'name': 'Schlag B',
+                'location': self.location.id,
                 'area_sqm': '12.3',
             }
         )

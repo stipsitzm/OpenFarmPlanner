@@ -104,6 +104,8 @@ class FieldSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     f'Area must not exceed {Field.MAX_AREA_SQM} sqm (100 hectares).'
                 )
+            if value.as_tuple().exponent < -1:
+                raise serializers.ValidationError('Area must have at most one decimal place for fields.')
         return value
 
 
