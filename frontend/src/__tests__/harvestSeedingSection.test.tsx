@@ -67,7 +67,8 @@ describe('HarvestSection and SeedingSection', () => {
     );
 
     expect(screen.getByLabelText('Anzucht Menge (Korn / Pflanze)')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Einheit')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Anzucht Einheit').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Anzucht Menge')).toBeInTheDocument();
   });
 
   it('shows method-specific fields when both cultivation methods are selected', () => {
@@ -82,8 +83,9 @@ describe('HarvestSection and SeedingSection', () => {
       />
     );
 
-    expect(screen.getByLabelText('Anzucht Menge (Korn / Pflanze)')).toBeInTheDocument();
-    expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Anzucht Menge (Korn / Pflanze, manuell)')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Anzucht Menge').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('combobox').length).toBeGreaterThan(1);
     expect(screen.getByLabelText('Direktsaat Menge')).toBeInTheDocument();
   });
 });
