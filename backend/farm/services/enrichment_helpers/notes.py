@@ -85,10 +85,9 @@ def note_blocks_to_markdown(note_blocks: object, coerce_text: Callable[[object, 
 def parse_notes_sections(markdown_text: str) -> tuple[str, dict[str, str], list[tuple[str, str]]]:
     """Parse markdown into intro text, known sections and other sections."""
     known_titles = {
-        'dauerwerte': 'Dauerwerte',
-        'aussaat & abstände (zusammengefasst)': 'Aussaat & Abstände (zusammengefasst)',
-        'ernte & verwendung': 'Ernte & Verwendung',
         'quellen': 'Quellen',
+        'quelle': 'Quellen',
+        'quell': 'Quellen',
     }
 
     intro_lines: list[str] = []
@@ -162,28 +161,36 @@ def build_note_appendix(base_notes: object, note_blocks: object, coerce_text: Ca
     base_intro, base_known, base_other = parse_notes_sections(base)
     add_intro, add_known, add_other = parse_notes_sections(addition)
 
-    ordered_known_titles = [
-        'Dauerwerte',
-        'Aussaat & Abstände (zusammengefasst)',
-        'Ernte & Verwendung',
-    ]
-
     merged_parts: list[str] = []
     intro = combine_text_blocks(base_intro, add_intro)
     if intro:
         merged_parts.append(intro)
 
-    for title in ordered_known_titles:
-        merged_content = combine_text_blocks(add_known.get(title, ''), base_known.get(title, ''))
-        merged_content = dedupe_section_content(merged_content)
-        if merged_content:
-            merged_parts.append(f"## {title}\n{merged_content}")
+    other_map: dict[str, str] = {}
+    ordered_titles: list[str] = []
 
-    other_map: dict[str, str] = {title: content for title, content in base_other}
     for title, content in add_other:
-        previous = other_map.get(title, '')
-        other_map[title] = dedupe_section_content(combine_text_blocks(content, previous))
-    for title, content in other_map.items():
+        cleaned_content = dedupe_section_content(content)
+        if not cleaned_content:
+            continue
+        if title not in other_map:
+            ordered_titles.append(title)
+            other_map[title] = cleaned_content
+            continue
+        other_map[title] = dedupe_section_content(combine_text_blocks(cleaned_content, other_map[title]))
+
+    for title, content in base_other:
+        cleaned_content = dedupe_section_content(content)
+        if not cleaned_content:
+            continue
+        if title not in other_map:
+            ordered_titles.append(title)
+            other_map[title] = cleaned_content
+            continue
+        other_map[title] = dedupe_section_content(combine_text_blocks(other_map[title], cleaned_content))
+
+    for title in ordered_titles:
+        content = other_map.get(title, '')
         normalized_content = dedupe_section_content(content)
         if normalized_content:
             merged_parts.append(f"## {title}\n{normalized_content}")
