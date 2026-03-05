@@ -360,7 +360,7 @@ class ApiEndpointsTest(DRFAPITestCase):
         data = {
             'name': 'Valid Bed',
             'field': self.field.id,
-            'area_sqm': 50.25
+            'area_sqm': 50.2
         }
         response = self.client.post('/openfarmplanner/api/beds/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
