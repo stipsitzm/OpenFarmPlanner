@@ -141,7 +141,7 @@ describe('CultureDetail Component', () => {
       />
     );
 
-    expect(screen.getAllByText('Anzucht').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Pflanzung').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Direktsaat').length).toBeGreaterThan(0);
     expect(screen.getByText('Saatgutmenge nach Anbauart')).toBeInTheDocument();
     expect(screen.getByText('Korn / Pflanze')).toBeInTheDocument();

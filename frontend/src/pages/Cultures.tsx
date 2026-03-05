@@ -930,7 +930,7 @@ function Cultures(): React.ReactElement {
       }
       const pre = byMethod.pre_cultivation;
       if (pre && typeof pre === 'object') {
-        chunks.push(`Anzucht: ${String(pre.value ?? '')} ${String(pre.unit ?? '')}`.trim());
+        chunks.push(`Pflanzung: ${String(pre.value ?? '')} ${String(pre.unit ?? '')}`.trim());
       }
       if (chunks.length) {
         return chunks.join(' | ');

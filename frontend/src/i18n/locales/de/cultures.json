@@ -47,7 +47,7 @@
     "nutrientDemandHigh": "Hoch",
     "cultivationType": "Anbauart",
     "cultivationTypeDirectSowing": "Direktsaat",
-    "cultivationTypePreCultivation": "Anzucht",
+    "cultivationTypePreCultivation": "Pflanzung",
     "germinationRate": "Keimrate (%)",
     "germinationRatePlaceholder": "0-100",
     "germinationRateError": "Keimrate muss zwischen 0 und 100 liegen",

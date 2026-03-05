@@ -211,7 +211,7 @@ export function CultureDetail({
                         <Chip
                           key={item}
                           size="small"
-                          label={item === 'pre_cultivation' ? 'Anzucht' : 'Direktsaat'}
+                          label={item === 'pre_cultivation' ? 'Pflanzung' : 'Direktsaat'}
                         />
                       ))}
                     </Box>
