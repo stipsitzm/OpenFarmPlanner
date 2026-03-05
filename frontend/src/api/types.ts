@@ -123,6 +123,20 @@ export interface Bed {
   updated_at?: string;
 }
 
+
+
+export interface BedLayoutEntry {
+  id?: number;
+  bed: number;
+  location: number;
+  field_id?: number;
+  x: number;
+  y: number;
+  version?: number;
+  scale?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
 export interface PlantingPlan {
   id?: number;
   culture: number;

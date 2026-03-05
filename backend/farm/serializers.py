@@ -9,6 +9,7 @@ from .enum_normalization import normalize_seed_rate_unit
 
 from .models import (
     Bed,
+    BedLayout,
     Culture,
     Field,
     Location,
@@ -137,6 +138,34 @@ class BedSerializer(serializers.ModelSerializer):
             if value.as_tuple().exponent < -1:
                 raise serializers.ValidationError('Area must have at most one decimal place for beds.')
         return value
+
+
+class BedLayoutSerializer(serializers.ModelSerializer):
+    field_id = serializers.IntegerField(source='bed.field_id', read_only=True)
+
+    class Meta:
+        model = BedLayout
+        fields = [
+            'id',
+            'bed',
+            'location',
+            'field_id',
+            'x',
+            'y',
+            'version',
+            'scale',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'field_id', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        bed = attrs.get('bed') or getattr(self.instance, 'bed', None)
+        location = attrs.get('location') or getattr(self.instance, 'location', None)
+        if bed and location and bed.field.location_id != location.id:
+            raise serializers.ValidationError('Layout location must match the bed location.')
+        return attrs
 
 
 class SeedPackageSerializer(serializers.ModelSerializer):

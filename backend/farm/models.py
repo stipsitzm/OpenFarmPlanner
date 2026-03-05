@@ -255,6 +255,30 @@ class Bed(TimestampedModel):
         ordering = ['field', 'name']
 
 
+class BedLayout(TimestampedModel):
+    """Persisted bed layout coordinates for the graphical field view."""
+
+    bed = models.OneToOneField(Bed, on_delete=models.CASCADE, related_name='layout')
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='bed_layouts')
+    x = models.FloatField(default=0.0)
+    y = models.FloatField(default=0.0)
+    version = models.PositiveIntegerField(default=1)
+    scale = models.FloatField(null=True, blank=True)
+
+    def clean(self) -> None:
+        """Validate that location matches the bed's location."""
+        super().clean()
+        if self.bed_id and self.location_id and self.bed.field.location_id != self.location_id:
+            raise ValidationError({'location': 'Layout location must match the bed location.'})
+
+    def __str__(self) -> str:
+        """Return a compact textual representation."""
+        return f"BedLayout bed={self.bed_id} location={self.location_id}"
+
+    class Meta:
+        ordering = ['location', 'bed']
+
+
 class ActiveCultureManager(models.Manager):
     """Default manager that hides soft-deleted cultures."""
 

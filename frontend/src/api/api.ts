@@ -15,6 +15,7 @@ import type {
   RemainingAreaResponse,
   EnrichmentResult,
   EnrichmentBatchResult,
+  BedLayoutEntry,
 } from './types';
 
 export const cultureAPI = {
@@ -90,6 +91,13 @@ export const plantingPlanAPI = {
 
 
 
+export const layoutAPI = {
+  listByLocation: (locationId: number) => http.get<{ results: BedLayoutEntry[] }>(`/locations/${locationId}/layouts/`),
+  saveByLocation: (locationId: number, layouts: BedLayoutEntry[]) =>
+    http.put<{ results: BedLayoutEntry[] }>(`/locations/${locationId}/layouts/`, { layouts }),
+};
+
+
 export const mediaFileAPI = {
   upload: (file: File) => {
     const formData = new FormData();
@@ -154,6 +162,7 @@ export type {
   RemainingAreaResponse,
   EnrichmentResult,
   EnrichmentBatchResult,
+  BedLayoutEntry,
 };
 
 export default {
@@ -167,4 +176,5 @@ export default {
   yieldCalendar: yieldCalendarAPI,
   noteAttachments: noteAttachmentAPI,
   mediaFiles: mediaFileAPI,
+  layouts: layoutAPI,
 };

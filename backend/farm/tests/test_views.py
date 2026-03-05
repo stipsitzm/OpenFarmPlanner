@@ -5,7 +5,7 @@ from datetime import date
 from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
 
-from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier, NoteAttachment, SeedPackage
+from farm.models import Bed, BedLayout, Culture, Field, Location, PlantingPlan, Supplier, NoteAttachment, SeedPackage
 
 class ApiEndpointsTest(DRFAPITestCase):
     def setUp(self):
@@ -1143,3 +1143,36 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+
+    def test_layouts_get_and_put(self):
+        payload = {
+            'layouts': [
+                {'bed': self.bed.id, 'location': self.location.id, 'x': 33.5, 'y': 44.5, 'version': 1},
+            ]
+        }
+        put_response = self.client.put(
+            f'/openfarmplanner/api/locations/{self.location.id}/layouts/',
+            payload,
+            format='json',
+        )
+        self.assertEqual(put_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(put_response.data['results'][0]['bed'], self.bed.id)
+
+        get_response = self.client.get(f'/openfarmplanner/api/locations/{self.location.id}/layouts/')
+        self.assertEqual(get_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(get_response.data['results']), 1)
+        self.assertEqual(get_response.data['results'][0]['x'], 33.5)
+
+    def test_layouts_reject_bed_from_other_location(self):
+        other_location = Location.objects.create(name='Secondary location')
+        other_field = Field.objects.create(name='Secondary field', location=other_location)
+        other_bed = Bed.objects.create(name='Secondary bed', field=other_field, area_sqm=5)
+
+        response = self.client.put(
+            f'/openfarmplanner/api/locations/{self.location.id}/layouts/',
+            {'layouts': [{'bed': other_bed.id, 'location': self.location.id, 'x': 1, 'y': 1}]},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('does not belong to location', response.data['detail'])
+        self.assertFalse(BedLayout.objects.filter(bed=other_bed).exists())

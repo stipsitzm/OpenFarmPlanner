@@ -25,11 +25,12 @@ from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, culture_media_upload_path, CultureRevision, ProjectRevision
+from .models import Location, Field, Bed, BedLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, culture_media_upload_path, CultureRevision, ProjectRevision
 from .serializers import (
     LocationSerializer,
     FieldSerializer,
     BedSerializer,
+    BedLayoutSerializer,
     CultureSerializer,
     PlantingPlanSerializer,
     TaskSerializer,
@@ -103,6 +104,7 @@ def _serialize_project_state() -> dict[str, list[dict]]:
         'locations': list(Location.objects.order_by('id').values()),
         'fields': list(Field.objects.order_by('id').values()),
         'beds': list(Bed.objects.order_by('id').values()),
+        'bed_layouts': list(BedLayout.objects.order_by('id').values()),
         'suppliers': list(Supplier.objects.order_by('id').values()),
         'media_files': list(MediaFile.objects.order_by('id').values()),
         'cultures': list(Culture.all_objects.order_by('id').values()),
@@ -123,6 +125,7 @@ def _restore_project_state(snapshot: dict[str, list[dict]]) -> None:
         NoteAttachment.objects.all().delete()
         PlantingPlan.objects.all().delete()
         Culture.all_objects.all().delete()
+        BedLayout.objects.all().delete()
         Bed.objects.all().delete()
         Field.objects.all().delete()
         Location.objects.all().delete()
@@ -133,6 +136,7 @@ def _restore_project_state(snapshot: dict[str, list[dict]]) -> None:
             (Location, 'locations'),
             (Field, 'fields'),
             (Bed, 'beds'),
+            (BedLayout, 'bed_layouts'),
             (Supplier, 'suppliers'),
             (MediaFile, 'media_files'),
             (Culture, 'cultures'),
@@ -145,6 +149,53 @@ def _restore_project_state(snapshot: dict[str, list[dict]]) -> None:
                 continue
             model.objects.bulk_create([model(**row) for row in rows])
 
+
+
+class BedLayoutByLocationView(APIView):
+    """GET/PUT bed layout entries for a given location."""
+
+    def get(self, request, location_id: int):
+        location = get_object_or_404(Location, pk=location_id)
+        layouts = BedLayout.objects.filter(location=location).select_related('bed__field')
+        serializer = BedLayoutSerializer(layouts, many=True)
+        return Response({'results': serializer.data})
+
+    def put(self, request, location_id: int):
+        location = get_object_or_404(Location, pk=location_id)
+        payload = request.data.get('layouts', request.data)
+        if not isinstance(payload, list):
+            return Response({'detail': 'Expected a list under "layouts".'}, status=status.HTTP_400_BAD_REQUEST)
+
+        bed_ids = [item.get('bed') for item in payload if isinstance(item, dict) and item.get('bed') is not None]
+        beds = {bed.id: bed for bed in Bed.objects.select_related('field__location').filter(id__in=bed_ids)}
+
+        saved_layouts: list[BedLayout] = []
+        with transaction.atomic():
+            for item in payload:
+                if not isinstance(item, dict):
+                    return Response({'detail': 'Each layout entry must be an object.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                bed_id = item.get('bed')
+                bed = beds.get(bed_id)
+                if bed is None:
+                    return Response({'detail': f'Bed {bed_id} does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
+                if bed.field.location_id != location.id:
+                    return Response({'detail': f'Bed {bed_id} does not belong to location {location.id}.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                layout, _ = BedLayout.objects.update_or_create(
+                    bed=bed,
+                    defaults={
+                        'location': location,
+                        'x': float(item.get('x', 0.0)),
+                        'y': float(item.get('y', 0.0)),
+                        'scale': item.get('scale'),
+                        'version': int(item.get('version', 1)),
+                    },
+                )
+                saved_layouts.append(layout)
+
+        serializer = BedLayoutSerializer(saved_layouts, many=True)
+        return Response({'results': serializer.data}, status=status.HTTP_200_OK)
 
 
 class YieldCalendarListView(generics.GenericAPIView):
