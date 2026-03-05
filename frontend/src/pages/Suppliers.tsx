@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 import {
   Alert,
   Box,
@@ -114,6 +115,10 @@ export default function Suppliers(): React.ReactElement {
       await supplierAPI.delete(supplier.id);
       await loadSuppliers();
     } catch (deleteError) {
+      if (axios.isAxiosError(deleteError) && deleteError.response?.status === 404) {
+        await loadSuppliers();
+        return;
+      }
       console.error('Error deleting supplier', deleteError);
       setError(t('deleteError'));
     }
