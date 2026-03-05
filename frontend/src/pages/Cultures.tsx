@@ -67,23 +67,81 @@ const ENRICHMENT_LOADING_STEPS = [
   { key: 'results', startSeconds: 52 },
 ] as const;
 const ENRICHMENT_EXPECTED_SECONDS = 75;
+const SELECTED_CULTURE_STORAGE_KEY = 'selectedCultureId';
+
+type ImportPreviewResult = {
+  index: number;
+  status: 'create' | 'update_candidate';
+  matched_culture_id?: number;
+  diff?: Array<{ field: string; current: unknown; new: unknown }>;
+  import_data: Record<string, unknown>;
+  error?: string;
+};
+
+type ImportFailedEntry = {
+  index: number;
+  name?: string;
+  variety?: string;
+  error: string | Record<string, unknown>;
+};
+
+type SnackbarState = {
+  open: boolean;
+  message: string;
+  severity: 'success' | 'error' | 'info';
+};
+
+const parseCultureId = (value: string | null): number | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsedId = Number.parseInt(value, 10);
+  return Number.isFinite(parsedId) ? parsedId : undefined;
+};
+
+const getStoredCultureId = (): number | undefined => parseCultureId(localStorage.getItem(SELECTED_CULTURE_STORAGE_KEY));
+
+const buildImportSuccessMessage = (
+  createdCount: number,
+  updatedCount: number,
+  skippedCount: number,
+  t: ReturnType<typeof useTranslation>['t'],
+): string => {
+  const segments: string[] = [];
+
+  if (createdCount > 0) {
+    segments.push(t('import.created', { count: createdCount }));
+  }
+  if (updatedCount > 0) {
+    segments.push(t('import.updated', { count: updatedCount }));
+  }
+  if (skippedCount > 0) {
+    segments.push(t('import.skipped', { count: skippedCount }));
+  }
+
+  return segments.join(', ');
+};
+
+const mapImportErrors = (
+  errors: Array<{ index: number; error: unknown }>,
+  importPayload: Record<string, unknown>[],
+): ImportFailedEntry[] => errors.map((err) => {
+  const originalData = importPayload[err.index];
+  return {
+    index: err.index,
+    name: originalData?.name as string | undefined,
+    variety: originalData?.variety as string | undefined,
+    error: typeof err.error === 'string' || typeof err.error === 'object' ? err.error as string | Record<string, unknown> : String(err.error),
+  };
+});
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCultureParam = searchParams.get('cultureId');
-  const parseCultureId = (value: string | null): number | undefined => {
-    if (!value) {
-      return undefined;
-    }
-
-    const parsedId = Number.parseInt(value, 10);
-    return Number.isFinite(parsedId) ? parsedId : undefined;
-  };
   const selectedCultureIdFromQuery = parseCultureId(selectedCultureParam);
-
-  const getStoredCultureId = (): number | undefined => parseCultureId(localStorage.getItem('selectedCultureId'));
 
   const [cultures, setCultures] = useState<Culture[]>([]);
   const selectionSyncSourceRef = useRef<'internal' | 'query' | null>(null);
@@ -102,28 +160,12 @@ function Cultures(): React.ReactElement {
   const [importValidCount, setImportValidCount] = useState(0);
   const [importInvalidEntries, setImportInvalidEntries] = useState<string[]>([]);
   const [importPayload, setImportPayload] = useState<Record<string, unknown>[]>([]);
-  const [importPreviewResults, setImportPreviewResults] = useState<Array<{
-    index: number;
-    status: 'create' | 'update_candidate';
-    matched_culture_id?: number;
-    diff?: Array<{ field: string; current: unknown; new: unknown }>;
-    import_data: Record<string, unknown>;
-    error?: string;
-  }>>([]);
+  const [importPreviewResults, setImportPreviewResults] = useState<ImportPreviewResult[]>([]);
   const [importStatus, setImportStatus] = useState<'idle' | 'ready' | 'uploading' | 'success' | 'error'>('idle');
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
-  const [importFailedEntries, setImportFailedEntries] = useState<Array<{
-    index: number;
-    name?: string;
-    variety?: string;
-    error: string | Record<string, unknown>;
-  }>>([]);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'info';
-  }>({ open: false, message: '', severity: 'success' });
+  const [importFailedEntries, setImportFailedEntries] = useState<ImportFailedEntry[]>([]);
+  const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
   const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -205,7 +247,7 @@ function Cultures(): React.ReactElement {
 
   useEffect(() => {
     if (selectedCultureId === undefined) {
-      localStorage.removeItem('selectedCultureId');
+      localStorage.removeItem(SELECTED_CULTURE_STORAGE_KEY);
 
       if (selectionSyncSourceRef.current === 'query') {
         selectionSyncSourceRef.current = null;
@@ -226,7 +268,7 @@ function Cultures(): React.ReactElement {
       return;
     }
 
-    localStorage.setItem('selectedCultureId', String(selectedCultureId));
+    localStorage.setItem(SELECTED_CULTURE_STORAGE_KEY, String(selectedCultureId));
 
     if (selectionSyncSourceRef.current === 'query') {
       selectionSyncSourceRef.current = null;
@@ -569,18 +611,7 @@ function Cultures(): React.ReactElement {
       const { created_count, updated_count, skipped_count, errors } = response.data;
       
       if (errors.length > 0) {
-        // Map errors to include culture names from the original payload
-        const detailedErrors = errors.map((err: { index: number; error: unknown }) => {
-          const originalData = importPayload[err.index];
-          return {
-            index: err.index,
-            name: originalData?.name as string | undefined,
-            variety: originalData?.variety as string | undefined,
-            error: typeof err.error === 'string' || typeof err.error === 'object' ? err.error as string | Record<string, unknown> : String(err.error),
-          };
-        });
-        
-        setImportFailedEntries(detailedErrors);
+        setImportFailedEntries(mapImportErrors(errors, importPayload));
         setImportError(t('import.errors.someFailures', {
           failed: errors.length,
         }));
@@ -588,18 +619,7 @@ function Cultures(): React.ReactElement {
         return;
       }
 
-      let successMessage = '';
-      if (created_count > 0) {
-        successMessage += t('import.created', { count: created_count });
-      }
-      if (updated_count > 0) {
-        if (successMessage) successMessage += ', ';
-        successMessage += t('import.updated', { count: updated_count });
-      }
-      if (skipped_count > 0) {
-        if (successMessage) successMessage += ', ';
-        successMessage += t('import.skipped', { count: skipped_count });
-      }
+      const successMessage = buildImportSuccessMessage(created_count, updated_count, skipped_count, t);
 
       setImportStatus('success');
       setImportSuccess(successMessage || t('import.success'));
