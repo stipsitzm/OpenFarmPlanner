@@ -132,7 +132,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         sent_input = post_mock.call_args.kwargs['json']['input']
         self.assertIn("ONLY research and suggest these missing fields", sent_input)
         self.assertNotIn('growth_duration_days', sent_input.split("ONLY research and suggest these missing fields:", 1)[1].split('.', 1)[0])
-        self.assertIn("The final section must always be '## Quellen'", sent_input)
+        self.assertIn("If sources are included, the final section must be '## Quellen'", sent_input)
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
@@ -474,7 +474,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
         result = enrich_culture(self.culture, 'complete')
         notes = result['suggested_fields']['notes']['value']
-        self.assertIn('## Dauerwerte', notes)
+        self.assertIn('## Hinweise', notes)
         self.assertIn("Bereichsangabe '90-110' wurde auf den Mittelwert 100.0 umgerechnet", notes)
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')

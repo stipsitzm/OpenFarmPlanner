@@ -84,7 +84,7 @@ def build_prompt(
         "For seed_rate_transplant_value, unit must be seeds_per_plant and ONLY when supplier explicitly states seeds-per-plant. Otherwise OMIT seed_rate_transplant_value entirely. Never output null placeholders. "
         "If unit is g/a (gram per are), convert to g_per_m2 by dividing value by 100 before output. "
         "Units must be null when not applicable; never output empty unit strings. "
-        "note_blocks must be pure German markdown text only (no JSON objects, no code fences) and include sections: 'Dauerwerte', 'Aussaat & Abstände (zusammengefasst)', 'Ernte & Verwendung', 'Quellen'. The final section must always be '## Quellen'. "
+        "note_blocks must be pure German markdown text only (no JSON objects, no code fences). Use a flexible structure with useful cultivation notes. If sources are included, the final section must be '## Quellen'. "
         "Use concise, factual, technical bullet points only. Avoid conversational or human-like wording. Include noteworthy cultivation context and special handling notes when relevant (e.g., range-to-mean normalization, Freilandanbau windows, characteristics, robustness, taste). "
         f"{supplier_strategy}"
         f"{requested_fields_text}"

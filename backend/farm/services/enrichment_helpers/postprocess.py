@@ -273,7 +273,7 @@ def normalize_suggested_field_values(
                             'message': 'Removed embedded unit from seed_rate_value; use seed_rate_unit for units.',
                         })
     if range_note_lines:
-        note_block = "## Dauerwerte\n" + "\n".join(range_note_lines)
+        note_block = "## Hinweise\n" + "\n".join(range_note_lines)
         notes = suggested_fields.get('notes')
         if isinstance(notes, dict):
             existing = coerce_text_value(notes.get('value', ''), 'notes')

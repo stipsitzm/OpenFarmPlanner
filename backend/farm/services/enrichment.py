@@ -351,12 +351,8 @@ class FallbackHeuristicProvider(BaseEnrichmentProvider):
             suggestions["nutrient_demand"] = {"value": "medium", "unit": None, "confidence": 0.3}
 
         note_block = (
-            "## Dauerwerte\n"
-            "- Keine verlässlichen Webquellen automatisch gefunden.\n\n"
-            "## Aussaat & Abstände (zusammengefasst)\n"
-            "- Bitte manuell prüfen.\n\n"
-            "## Ernte & Verwendung\n"
-            "- Bitte manuell prüfen.\n\n"
+            "- Keine verlässlichen Webquellen automatisch gefunden.\n"
+            "- Bitte zentrale Kulturdaten manuell prüfen (Aussaat, Ernte, Besonderheiten).\n\n"
             "## Quellen\n"
             "- Keine Quellen verfügbar (Fallback-Modus)."
         )
