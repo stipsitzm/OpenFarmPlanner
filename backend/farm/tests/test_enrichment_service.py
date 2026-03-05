@@ -928,7 +928,7 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.assertIn("Package sizes MUST come exclusively from supplier evidence", sent_input)
         self.assertIn("supplier_specific", sent_input)
         self.assertIn("For seed_rate_direct_value, unit must be only g_per_m2 or g_per_lfm", sent_input)
-        self.assertIn("For seed_rate_transplant_value, unit must be seeds_per_plant", sent_input)
+        self.assertIn("For seed_rate_transplant_value, unit must be g_per_m2 or g_per_lfm", sent_input)
 
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
