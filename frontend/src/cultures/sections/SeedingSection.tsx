@@ -145,6 +145,31 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
           </>
         )}
 
+        {hasPreCultivation && !hasBothMethods && (
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <TextField
+              sx={fieldSx}
+              type="number"
+              label="Anzucht Menge"
+              value={formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? ''}
+              onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { value: e.target.value ? parseFloat(e.target.value) : null, unit: normalizedPreCultivationUnit })}
+            />
+            <FormControl sx={fieldSx}>
+              <InputLabel>Anzucht Einheit</InputLabel>
+              <Select
+                value={normalizedPreCultivationUnit}
+                label="Anzucht Einheit"
+                onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { unit: e.target.value as SeedRateUnit, value: formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? null })}
+                fullWidth
+              >
+                <MenuItem value="g_per_m2">g / m²</MenuItem>
+                <MenuItem value="g_per_lfm">g / lfm</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        )}
+
+
         {hasBothMethods && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%' }}>
             <TextField
@@ -158,15 +183,15 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               <TextField
                 sx={fieldSx}
                 type="number"
-                label="Anzucht/Pflanzung Menge"
+                label="Anzucht Menge"
                 value={formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? ''}
                 onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { value: e.target.value ? parseFloat(e.target.value) : null, unit: normalizedPreCultivationUnit })}
               />
               <FormControl sx={fieldSx}>
-                <InputLabel>Anzucht/Pflanzung Einheit</InputLabel>
+                <InputLabel>Anzucht Einheit</InputLabel>
                 <Select
                   value={normalizedPreCultivationUnit}
-                  label="Anzucht/Pflanzung Einheit"
+                  label="Anzucht Einheit"
                   onChange={(e) => updateSeedRateByCultivation('pre_cultivation', { unit: e.target.value as SeedRateUnit, value: formData.seed_rate_by_cultivation?.pre_cultivation?.value ?? null })}
                   fullWidth
                 >
