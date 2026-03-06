@@ -629,7 +629,7 @@ function FieldsBedsHierarchy({ showTitle = true }: FieldsBedsHierarchyProps): Re
           isRowSelectable={() => true}
           isCellEditable={(params) => {
             if (params.row.type === 'field') {
-              return params.field === 'name' || params.field === 'area_sqm' || params.field === 'length_m' || params.field === 'width_m';
+              return params.field === 'name' || params.field === 'length_m' || params.field === 'width_m';
             }
             if (params.row.type === 'bed') {
               return params.field === 'name' || params.field === 'length_m' || params.field === 'width_m';

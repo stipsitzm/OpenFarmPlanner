@@ -448,7 +448,7 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                             saveFieldLayout(location.id!, nextLayout);
                           }}
                         />
-                        <Text x={fieldClamped.x + 8} y={fieldClamped.y + 8} text={`${baseRect.field.name} (${baseRect.field.area_sqm ?? '-'} m²)`} fontStyle="bold" />
+                        <Text x={fieldClamped.x + 8} y={fieldClamped.y + 8} text={`${baseRect.field.name} (${baseRect.field.area_sqm ?? '-'} m²)`} fontStyle="bold" listening={false} />
                         {bedViewModels.map((bedVm) => (
                           <Group key={bedVm.id}>
                             <Rect
@@ -544,6 +544,7 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                               fontSize={12}
                               width={Math.max(40, bedVm.width - 8)}
                               wrap="word"
+                              listening={false}
                             />
                           </Group>
                         ))}
