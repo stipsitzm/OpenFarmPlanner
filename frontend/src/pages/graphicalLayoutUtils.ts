@@ -64,6 +64,26 @@ export function getBedRectSize(bed: Pick<Bed, 'area_sqm' | 'length_m' | 'width_m
   return areaToRectSize(Number(bed.area_sqm ?? 1));
 }
 
+export function getBedScaleFromField(
+  field: Pick<Field, 'length_m' | 'width_m'>,
+  fieldInnerSize: RectSize,
+): number {
+  const lengthM = typeof field.length_m === 'number' && field.length_m > 0 ? field.length_m : null;
+  const widthM = typeof field.width_m === 'number' && field.width_m > 0 ? field.width_m : null;
+
+  if (lengthM !== null && widthM !== null) {
+    return Math.max(
+      4,
+      Math.min(
+        fieldInnerSize.width / lengthM,
+        fieldInnerSize.height / widthM,
+      ),
+    );
+  }
+
+  return Math.max(10, Math.min(36, fieldInnerSize.width / 40));
+}
+
 export function clampInsideParent(position: Position, childSize: RectSize, parentSize: RectSize): Position {
   const maxX = Math.max(0, parentSize.width - childSize.width);
   const maxY = Math.max(0, parentSize.height - childSize.height);

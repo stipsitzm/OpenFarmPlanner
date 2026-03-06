@@ -5,7 +5,7 @@ import { Group, Layer, Rect, Stage, Text } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 import { layoutAPI, type BedLayoutEntry, type FieldLayoutEntry } from '../api/api';
-import { clampInsideParent, getBedRectSize, getFieldRectSize, initialAutoLayout, type RectSize } from './graphicalLayoutUtils';
+import { clampInsideParent, getBedRectSize, getBedScaleFromField, getFieldRectSize, initialAutoLayout, type RectSize } from './graphicalLayoutUtils';
 
 interface Point {
   x: number;
@@ -286,7 +286,6 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
         let fieldY = padding;
 
         const defaultFieldRects = locationFields.map((field) => {
-          const fieldArea = Number(field.area_sqm ?? 1);
           const fieldPxPerMeter = Math.max(12, Math.min(30, (stageWidth - 2 * padding) / 40));
           const size = getFieldRectSize(field, fieldPxPerMeter, {
             baseWidth: 560,
@@ -352,7 +351,9 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
 
                     const fieldBeds = beds.filter((bed) => bed.field === fieldId && bed.id !== undefined);
                     const bedSizeMap = new Map<number, RectSize>();
-                    const pxPerMeter = Math.max(10, Math.min(36, (baseRect.width - 20) / 40));
+                    const fieldInnerSize = { width: baseRect.width - 20, height: baseRect.height - 50 };
+                    const pxPerMeter = getBedScaleFromField(baseRect.field, fieldInnerSize);
+
                     fieldBeds.forEach((bed) => {
                       bedSizeMap.set(bed.id!, getBedRectSize(bed, pxPerMeter));
                     });
@@ -360,7 +361,6 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                     const missingBeds = fieldBeds
                       .map((bed) => bed.id!)
                       .filter((bedId) => !layoutsByBed[bedId]);
-                    const fieldInnerSize = { width: baseRect.width - 20, height: baseRect.height - 50 };
                     const autoLayout = initialAutoLayout(missingBeds, bedSizeMap, fieldInnerSize);
 
                     const bedViewModels: BedViewModel[] = fieldBeds.map((bed) => {
