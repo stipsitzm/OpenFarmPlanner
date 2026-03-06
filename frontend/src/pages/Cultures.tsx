@@ -485,37 +485,6 @@ function Cultures(): React.ReactElement {
 
   const enrichmentDisabledReason = 'Für KI-Recherche muss ein Lieferant mit erlaubten Domains konfiguriert sein.';
 
-  const commandSpecs = useMemo(() => createCulturesCommandSpecs({
-    cultures,
-    enrichmentLoading,
-    goToRelativeCulture,
-    handleCreatePlantingPlan,
-    handleDelete,
-    handleEdit,
-    handleEnrichCurrent,
-    handleExportAllCultures,
-    handleExportCurrentCulture,
-    handleImportFileTrigger,
-    selectedCulture,
-    selectedCultureId,
-    setEnrichAllConfirmOpen,
-  }), [
-    cultures,
-    enrichmentLoading,
-    goToRelativeCulture,
-    handleCreatePlantingPlan,
-    handleDelete,
-    handleEdit,
-    handleEnrichCurrent,
-    handleExportAllCultures,
-    handleExportCurrentCulture,
-    handleImportFileTrigger,
-    selectedCulture,
-    selectedCultureId,
-  ]);
-
-  useRegisterCommands('cultures-page', commandSpecs);
-
   const handleAiMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAiMenuAnchor(event.currentTarget);
   };
@@ -614,6 +583,39 @@ function Cultures(): React.ReactElement {
       setEnrichmentLoading(false);
     }
   };
+
+  const commandSpecs = useMemo(() => createCulturesCommandSpecs({
+    canRunEnrichmentForCulture,
+    cultures,
+    enrichmentLoading,
+    goToRelativeCulture,
+    handleCreatePlantingPlan,
+    handleDelete,
+    handleEdit,
+    handleEnrichCurrent,
+    handleExportAllCultures,
+    handleExportCurrentCulture,
+    handleImportFileTrigger,
+    selectedCulture,
+    selectedCultureId,
+    setEnrichAllConfirmOpen,
+  }), [
+    cultures,
+    enrichmentLoading,
+    goToRelativeCulture,
+    handleCreatePlantingPlan,
+    handleDelete,
+    handleEdit,
+    handleEnrichCurrent,
+    handleExportAllCultures,
+    handleExportCurrentCulture,
+    handleImportFileTrigger,
+    selectedCulture,
+    selectedCultureId,
+  ]);
+
+  useRegisterCommands('cultures-page', commandSpecs);
+
 
   const toggleSuggestionField = (field: string) => {
     setSelectedSuggestionFields((prev) => prev.includes(field) ? prev.filter((item) => item !== field) : [...prev, field]);
