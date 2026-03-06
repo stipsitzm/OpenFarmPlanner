@@ -11,6 +11,8 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import SwapVertIcon from '@mui/icons-material/SwapVert';
 import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
 import { getPlainExcerpt } from '../data-grid/markdown';
@@ -18,12 +20,14 @@ import { getPlainExcerpt } from '../data-grid/markdown';
 export interface HierarchyColumnWidths {
   name: number;
   area: number;
+  dimensions: number;
   notes: number;
 }
 
 export const DEFAULT_HIERARCHY_COLUMN_WIDTHS: HierarchyColumnWidths = {
   name: 280,
   area: 120,
+  dimensions: 130,
   notes: 320,
 };
 
@@ -64,9 +68,6 @@ function ActionIconButton({
   );
 }
 
-/**
- * Render row-specific action icons directly inside the hierarchy name cell.
- */
 function renderInlineActions(
   row: HierarchyRow,
   callbacks: NameCellCallbacks,
@@ -124,16 +125,12 @@ function renderInlineActions(
   return null;
 }
 
-/**
- * Render name cell with expansion controls and inline hierarchy actions.
- */
 function renderNameCell(
   params: GridRenderCellParams<HierarchyRow>,
   callbacks: NameCellCallbacks,
   t: TFunction
 ) {
   const row = params.row;
-  // Beds should be indented more than fields
   const baseIndent = row.level * 24;
   const indent = row.type === 'bed' ? baseIndent + 34 : baseIndent;
 
@@ -179,9 +176,20 @@ function renderNameCell(
   );
 }
 
-/**
- * Create column definitions for hierarchy grid
- */
+const calculateAreaValue = (row: HierarchyRow): number | string | undefined => {
+  if (row.type === 'location') {
+    return undefined;
+  }
+
+  const length = typeof row.length_m === 'number' ? row.length_m : null;
+  const width = typeof row.width_m === 'number' ? row.width_m : null;
+  if (length !== null && width !== null) {
+    return Math.round(length * width * 10) / 10;
+  }
+
+  return row.area_sqm;
+};
+
 export function createHierarchyColumns(
   onToggleExpand: (rowId: string | number) => void,
   onAddBed: (fieldId: number) => void,
@@ -220,11 +228,40 @@ export function createHierarchyColumns(
       },
     },
     {
+      field: 'length_m',
+      headerName: 'Länge (m)',
+      renderHeader: () => (
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+          <SwapVertIcon fontSize="small" />
+          <span>Länge (m)</span>
+        </Box>
+      ),
+      width: widths.dimensions,
+      type: 'string',
+      editable: true,
+      valueGetter: (_value, row: HierarchyRow) => row.type === 'location' ? undefined : row.length_m,
+    },
+    {
+      field: 'width_m',
+      headerName: 'Breite (m)',
+      renderHeader: () => (
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+          <SwapHorizIcon fontSize="small" />
+          <span>Breite (m)</span>
+        </Box>
+      ),
+      width: widths.dimensions,
+      type: 'string',
+      editable: true,
+      valueGetter: (_value, row: HierarchyRow) => row.type === 'location' ? undefined : row.width_m,
+    },
+    {
       field: 'area_sqm',
       headerName: t('hierarchy:columns.area'),
       width: widths.area,
       type: 'string',
       editable: true,
+      valueGetter: (_value, row: HierarchyRow) => calculateAreaValue(row),
     },
     {
       field: 'notes',

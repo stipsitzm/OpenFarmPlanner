@@ -25,11 +25,13 @@ from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from .models import Location, Field, Bed, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, culture_media_upload_path, CultureRevision, ProjectRevision
+from .models import Location, Field, Bed, BedLayout, FieldLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, culture_media_upload_path, CultureRevision, ProjectRevision
 from .serializers import (
     LocationSerializer,
     FieldSerializer,
     BedSerializer,
+    BedLayoutSerializer,
+    FieldLayoutSerializer,
     CultureSerializer,
     PlantingPlanSerializer,
     TaskSerializer,
@@ -103,6 +105,8 @@ def _serialize_project_state() -> dict[str, list[dict]]:
         'locations': list(Location.objects.order_by('id').values()),
         'fields': list(Field.objects.order_by('id').values()),
         'beds': list(Bed.objects.order_by('id').values()),
+        'bed_layouts': list(BedLayout.objects.order_by('id').values()),
+        'field_layouts': list(FieldLayout.objects.order_by('id').values()),
         'suppliers': list(Supplier.objects.order_by('id').values()),
         'media_files': list(MediaFile.objects.order_by('id').values()),
         'cultures': list(Culture.all_objects.order_by('id').values()),
@@ -123,6 +127,8 @@ def _restore_project_state(snapshot: dict[str, list[dict]]) -> None:
         NoteAttachment.objects.all().delete()
         PlantingPlan.objects.all().delete()
         Culture.all_objects.all().delete()
+        BedLayout.objects.all().delete()
+        FieldLayout.objects.all().delete()
         Bed.objects.all().delete()
         Field.objects.all().delete()
         Location.objects.all().delete()
@@ -133,6 +139,8 @@ def _restore_project_state(snapshot: dict[str, list[dict]]) -> None:
             (Location, 'locations'),
             (Field, 'fields'),
             (Bed, 'beds'),
+            (BedLayout, 'bed_layouts'),
+            (FieldLayout, 'field_layouts'),
             (Supplier, 'suppliers'),
             (MediaFile, 'media_files'),
             (Culture, 'cultures'),
@@ -145,6 +153,101 @@ def _restore_project_state(snapshot: dict[str, list[dict]]) -> None:
                 continue
             model.objects.bulk_create([model(**row) for row in rows])
 
+
+
+class BedLayoutByLocationView(APIView):
+    """GET/PUT bed and field layout entries for a given location."""
+
+    def get(self, request, location_id: int):
+        location = get_object_or_404(Location, pk=location_id)
+        bed_layouts = BedLayout.objects.filter(location=location).select_related('bed__field')
+        field_layouts = FieldLayout.objects.filter(location=location).select_related('field')
+        return Response(
+            {
+                'bed_layouts': BedLayoutSerializer(bed_layouts, many=True).data,
+                'field_layouts': FieldLayoutSerializer(field_layouts, many=True).data,
+            }
+        )
+
+    def put(self, request, location_id: int):
+        location = get_object_or_404(Location, pk=location_id)
+        bed_payload = request.data.get('bed_layouts')
+        field_payload = request.data.get('field_layouts')
+
+        # Backward compatibility with Phase-1 payload format.
+        if bed_payload is None and field_payload is None:
+            bed_payload = request.data.get('layouts', request.data)
+            field_payload = []
+
+        if not isinstance(bed_payload, list) or not isinstance(field_payload, list):
+            return Response(
+                {'detail': 'Expected lists under "bed_layouts" and "field_layouts".'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        bed_ids = [item.get('bed') for item in bed_payload if isinstance(item, dict) and item.get('bed') is not None]
+        beds = {bed.id: bed for bed in Bed.objects.select_related('field__location').filter(id__in=bed_ids)}
+
+        field_ids = [item.get('field') for item in field_payload if isinstance(item, dict) and item.get('field') is not None]
+        fields = {field.id: field for field in Field.objects.select_related('location').filter(id__in=field_ids)}
+
+        saved_bed_layouts: list[BedLayout] = []
+        saved_field_layouts: list[FieldLayout] = []
+
+        with transaction.atomic():
+            for item in bed_payload:
+                if not isinstance(item, dict):
+                    return Response({'detail': 'Each bed layout entry must be an object.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                bed_id = item.get('bed')
+                bed = beds.get(bed_id)
+                if bed is None:
+                    return Response({'detail': f'Bed {bed_id} does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
+                if bed.field.location_id != location.id:
+                    return Response({'detail': f'Bed {bed_id} does not belong to location {location.id}.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                layout, _ = BedLayout.objects.update_or_create(
+                    bed=bed,
+                    defaults={
+                        'location': location,
+                        'x': float(item.get('x', 0.0)),
+                        'y': float(item.get('y', 0.0)),
+                        'scale': item.get('scale'),
+                        'version': int(item.get('version', 1)),
+                    },
+                )
+                saved_bed_layouts.append(layout)
+
+            for item in field_payload:
+                if not isinstance(item, dict):
+                    return Response({'detail': 'Each field layout entry must be an object.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                field_id = item.get('field')
+                field = fields.get(field_id)
+                if field is None:
+                    return Response({'detail': f'Field {field_id} does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
+                if field.location_id != location.id:
+                    return Response({'detail': f'Field {field_id} does not belong to location {location.id}.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                layout, _ = FieldLayout.objects.update_or_create(
+                    field=field,
+                    defaults={
+                        'location': location,
+                        'x': float(item.get('x', 0.0)),
+                        'y': float(item.get('y', 0.0)),
+                        'scale': item.get('scale'),
+                        'version': int(item.get('version', 1)),
+                    },
+                )
+                saved_field_layouts.append(layout)
+
+        return Response(
+            {
+                'bed_layouts': BedLayoutSerializer(saved_bed_layouts, many=True).data,
+                'field_layouts': FieldLayoutSerializer(saved_field_layouts, many=True).data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class YieldCalendarListView(generics.GenericAPIView):
