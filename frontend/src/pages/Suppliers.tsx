@@ -22,7 +22,6 @@ import {
   Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import AddIcon from '@mui/icons-material/Add';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import type { Supplier } from '../api/types';
@@ -185,54 +184,56 @@ export default function Suppliers(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <h1>{t('title')}</h1>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-          {t('create')}
-        </Button>
+      <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <h1>{t('title')}</h1>
+          <Button variant="contained" onClick={openCreate}>
+            + {t('create')}
+          </Button>
+        </Box>
+        <TableContainer sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
+          <Table size="small" sx={{ width: 'auto' }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>{t('name')}</TableCell>
+                <TableCell>{t('homepage')}</TableCell>
+                <TableCell>{t('allowedDomains')}</TableCell>
+                <TableCell align="right">{t('actions')}</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {suppliers.map((supplier) => (
+                <TableRow key={supplier.id} hover>
+                  <TableCell>{supplier.name}</TableCell>
+                  <TableCell>
+                    {supplier.homepage_url ? (
+                      <Link href={supplier.homepage_url} target="_blank" rel="noopener noreferrer" underline="hover">
+                        {supplier.homepage_url}
+                      </Link>
+                    ) : null}
+                  </TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                      {(supplier.allowed_domains || []).map((domain) => <Chip key={domain} size="small" label={domain} />)}
+                    </Stack>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Button size="small" onClick={() => openEdit(supplier)}>{t('editAction')}</Button>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      aria-label={t('deleteAction')}
+                      onClick={() => void deleteSupplier(supplier)}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Box>
-      <TableContainer sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
-      <Table size="small" sx={{ width: 'auto' }}>
-        <TableHead>
-          <TableRow>
-            <TableCell>{t('name')}</TableCell>
-            <TableCell>{t('homepage')}</TableCell>
-            <TableCell>{t('allowedDomains')}</TableCell>
-            <TableCell align="right">{t('actions')}</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {suppliers.map((supplier) => (
-            <TableRow key={supplier.id} hover>
-              <TableCell>{supplier.name}</TableCell>
-              <TableCell>
-                {supplier.homepage_url ? (
-                  <Link href={supplier.homepage_url} target="_blank" rel="noopener noreferrer" underline="hover">
-                    {supplier.homepage_url}
-                  </Link>
-                ) : null}
-              </TableCell>
-              <TableCell>
-                <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                  {(supplier.allowed_domains || []).map((domain) => <Chip key={domain} size="small" label={domain} />)}
-                </Stack>
-              </TableCell>
-              <TableCell align="right">
-                <Button size="small" onClick={() => openEdit(supplier)}>{t('editAction')}</Button>
-                <IconButton
-                  size="small"
-                  color="error"
-                  aria-label={t('deleteAction')}
-                  onClick={() => void deleteSupplier(supplier)}
-                >
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      </TableContainer>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{draft.id ? t('edit') : t('create')}</DialogTitle>

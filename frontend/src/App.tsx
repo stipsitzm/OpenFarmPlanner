@@ -24,7 +24,10 @@ import {
   Menu,
   MenuItem,
   Snackbar,
+  Drawer,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useTranslation } from './i18n';
 import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 import { useRegisterCommands } from './commands/CommandProvider';
@@ -38,6 +41,7 @@ import GanttChart from './pages/GanttChart';
 import SeedDemandPage from './pages/SeedDemand';
 import Suppliers from './pages/Suppliers';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import MenuIcon from '@mui/icons-material/Menu';
 import { cultureAPI } from './api/api';
 import type { CultureHistoryEntry } from './api/types';
 import './App.css';
@@ -54,8 +58,20 @@ function RootLayout(): React.ReactElement {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const routes = ['/locations', '/fields-beds', '/cultures', '/anbauplaene', '/gantt-chart', '/seed-demand', '/suppliers'];
+  const navItems = [
+    { to: '/locations', label: t('locations') },
+    { to: '/fields-beds', label: t('fieldsAndBeds') },
+    { to: '/cultures', label: t('cultures') },
+    { to: '/anbauplaene', label: t('plantingPlans'), activePath: '/planting-plans' },
+    { to: '/gantt-chart', label: t('ganttChart') },
+    { to: '/seed-demand', label: t('seedDemand') },
+    { to: '/suppliers', label: t('suppliers') },
+  ];
 
   const handleGlobalMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setGlobalMenuAnchor(event.currentTarget);
@@ -63,6 +79,10 @@ function RootLayout(): React.ReactElement {
 
   const handleGlobalMenuClose = () => {
     setGlobalMenuAnchor(null);
+  };
+
+  const closeMobileNav = () => {
+    setMobileNavOpen(false);
   };
 
   const [projectHistoryOpen, setProjectHistoryOpen] = useState(false);
@@ -159,32 +179,31 @@ function RootLayout(): React.ReactElement {
   return (
     <div className="app">
       <nav className="nav">
-        <div className="nav-links">
-          <NavLink to="/locations" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            {t('locations')}
-          </NavLink>
-          <NavLink to="/fields-beds" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            {t('fieldsAndBeds')}
-          </NavLink>
-          <NavLink to="/cultures" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            {t('cultures')}
-          </NavLink>
-          <NavLink
-            to="/anbauplaene"
-            className={({ isActive }) => (isActive || location.pathname === '/planting-plans') ? 'nav-link active' : 'nav-link'}
-          >
-            {t('plantingPlans')}
-          </NavLink>
-          <NavLink to="/gantt-chart" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            {t('ganttChart')}
-          </NavLink>
-          <NavLink to="/seed-demand" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            {t('seedDemand')}
-          </NavLink>
-          <NavLink to="/suppliers" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            {t('suppliers')}
-          </NavLink>
-        </div>
+        {isMobile ? (
+          <div className="mobile-nav-row">
+            <IconButton
+              aria-label="Menü öffnen"
+              onClick={() => setMobileNavOpen(true)}
+              size="small"
+              sx={{ color: 'white' }}
+            >
+              <MenuIcon fontSize="small" />
+            </IconButton>
+            <span className="mobile-nav-title">OpenFarmPlanner</span>
+          </div>
+        ) : (
+          <div className="nav-links">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => (isActive || location.pathname === item.activePath) ? 'nav-link active' : 'nav-link'}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+        )}
         <div className="nav-actions">
           <IconButton
             aria-label="Mehr"
@@ -211,6 +230,35 @@ function RootLayout(): React.ReactElement {
           </Menu>
         </div>
       </nav>
+
+      <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav}>
+        <List sx={{ width: 280 }}>
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.to || location.pathname === item.activePath;
+            return (
+              <ListItem key={item.to} disablePadding>
+                <Button
+                  fullWidth
+                  onClick={() => {
+                    navigate(item.to);
+                    closeMobileNav();
+                  }}
+                  sx={{
+                    justifyContent: 'flex-start',
+                    borderRadius: 0,
+                    px: 2,
+                    py: 1.5,
+                    color: isActive ? 'primary.main' : 'text.primary',
+                    fontWeight: isActive ? 700 : 500,
+                  }}
+                >
+                  {item.label}
+                </Button>
+              </ListItem>
+            );
+          })}
+        </List>
+      </Drawer>
 
       <Outlet />
 

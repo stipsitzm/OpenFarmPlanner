@@ -31,6 +31,17 @@
   align-items: center;
 }
 
+.mobile-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-nav-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
 .nav-link {
   color: white;
   text-decoration: none;
@@ -49,6 +60,16 @@
 
 .nav-link.home {
   font-weight: bold;
+}
+
+@media (max-width: 900px) {
+  .nav {
+    padding: 10px 12px;
+  }
+
+  .nav-actions {
+    margin-left: 0;
+  }
 }
 
 /* Page Container */
@@ -237,4 +258,3 @@
   line-height: 1.8;
   color: #616161;
 }
-

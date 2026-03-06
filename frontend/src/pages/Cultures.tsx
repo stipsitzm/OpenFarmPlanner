@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, type Culture, type EnrichmentResult } from '../api/api';
 import type { CultivationType } from '../api/types';
@@ -54,16 +54,12 @@ import {
   downloadJsonFile,
 } from '../cultures/exportUtils';
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
-import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
-import { normalizeCultivationType, normalizeHarvestMethod, normalizeNutrientDemand, normalizeSeedingRequirementType, normalizeSeedRateUnit } from '../cultures/enumNormalization';
+import { normalizeCultivationType } from '../cultures/enumNormalization';
 import {
-  SELECTED_CULTURE_STORAGE_KEY,
   buildImportSuccessMessage,
-  getStoredCultureId,
   mapImportErrors,
-  parseCultureId,
   type ImportFailedEntry,
   type ImportPreviewResult,
   type SnackbarState,
@@ -78,6 +74,10 @@ import {
   sanitizeSeedRateByCultivationForMethods,
 } from './culturesEnrichmentUtils';
 import { analyzeCultureImportJson, readFileAsText } from './culturesImportUtils';
+import { createCulturesCommandSpecs } from './culturesCommandSpecs';
+import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
+import { buildCultureSavePayload } from './culturesSaveUtils';
+import { useSelectedCultureSync } from './useSelectedCultureSync';
 
 const ENRICHMENT_LOADING_STEPS = [
   { key: 'request', startSeconds: 0 },
@@ -89,19 +89,9 @@ const ENRICHMENT_EXPECTED_SECONDS = 75;
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const selectedCultureParam = searchParams.get('cultureId');
-  const selectedCultureIdFromQuery = parseCultureId(selectedCultureParam);
+  const { selectedCultureId, updateSelectedCultureId } = useSelectedCultureSync();
 
   const [cultures, setCultures] = useState<Culture[]>([]);
-  const selectionSyncSourceRef = useRef<'internal' | 'query' | null>(null);
-  const [selectedCultureId, setSelectedCultureId] = useState<number | undefined>(() => {
-    if (Number.isFinite(selectedCultureIdFromQuery)) {
-      return selectedCultureIdFromQuery;
-    }
-
-    return getStoredCultureId();
-  });
   const [showForm, setShowForm] = useState(false);
   const [editingCulture, setEditingCulture] = useState<Culture | undefined>(undefined);
   const [importMenuAnchor, setImportMenuAnchor] = useState<null | HTMLElement>(null);
@@ -158,11 +148,6 @@ function Cultures(): React.ReactElement {
     return () => window.clearInterval(intervalId);
   }, [enrichmentLoading]);
 
-  const updateSelectedCultureId = useCallback((id: number | undefined, source: 'internal' | 'query') => {
-    selectionSyncSourceRef.current = source;
-    setSelectedCultureId((currentId) => (currentId === id ? currentId : id));
-  }, []);
-
   const fetchCultures = useCallback(async () => {
     try {
       const response = await cultureAPI.list();
@@ -179,64 +164,6 @@ function Cultures(): React.ReactElement {
     fetchCultures();
   }, [fetchCultures]);
 
-  useEffect(() => {
-    if (selectionSyncSourceRef.current === 'internal') {
-      return;
-    }
-
-    if (selectedCultureParam === null) {
-      return;
-    }
-
-    const nextCultureId = selectedCultureIdFromQuery;
-
-    if (nextCultureId !== selectedCultureId) {
-      updateSelectedCultureId(nextCultureId, 'query');
-    }
-  }, [selectedCultureIdFromQuery, selectedCultureId, updateSelectedCultureId]);
-
-  useEffect(() => {
-    if (selectedCultureId === undefined) {
-      localStorage.removeItem(SELECTED_CULTURE_STORAGE_KEY);
-
-      if (selectionSyncSourceRef.current === 'query') {
-        selectionSyncSourceRef.current = null;
-        return;
-      }
-
-      if (!selectedCultureParam) {
-        selectionSyncSourceRef.current = null;
-        return;
-      }
-
-      setSearchParams((params) => {
-        const nextParams = new URLSearchParams(params);
-        nextParams.delete('cultureId');
-        return nextParams;
-      }, { replace: true });
-      selectionSyncSourceRef.current = null;
-      return;
-    }
-
-    localStorage.setItem(SELECTED_CULTURE_STORAGE_KEY, String(selectedCultureId));
-
-    if (selectionSyncSourceRef.current === 'query') {
-      selectionSyncSourceRef.current = null;
-      return;
-    }
-
-    if (selectedCultureParam === String(selectedCultureId)) {
-      selectionSyncSourceRef.current = null;
-      return;
-    }
-
-    setSearchParams((params) => {
-      const nextParams = new URLSearchParams(params);
-      nextParams.set('cultureId', String(selectedCultureId));
-      return nextParams;
-    }, { replace: true });
-    selectionSyncSourceRef.current = null;
-  }, [selectedCultureId, selectedCultureParam, setSearchParams]);
 
   useEffect(() => {
     if (cultures.length === 0) {
@@ -320,44 +247,15 @@ function Cultures(): React.ReactElement {
 
   const handleSave = async (culture: Culture) => {
     try {
-      // Transform culture data for API: replace supplier object with supplier_id
-      const normalizedSeedPackages = Array.isArray(culture.seed_packages)
-        ? culture.seed_packages.map((pkg) => ({
-            size_value: Math.round((Number(pkg.size_value) || 0) * 10) / 10,
-            size_unit: 'g' as const,
-            evidence_text: pkg.evidence_text ?? '',
-            last_seen_at: pkg.last_seen_at ?? null,
-          }))
-        : culture.seed_packages;
-
-      const dataToSend = {
-        ...culture,
-        seed_packages: normalizedSeedPackages,
-        seed_rate_unit: normalizeSeedRateUnit(culture.seed_rate_unit),
-        harvest_method: normalizeHarvestMethod(culture.harvest_method),
-        nutrient_demand: normalizeNutrientDemand(culture.nutrient_demand),
-        cultivation_type: normalizeCultivationType(culture.cultivation_type),
-        cultivation_types: (culture.cultivation_types && culture.cultivation_types.length > 0)
-          ? culture.cultivation_types
-          : (culture.cultivation_type ? [normalizeCultivationType(culture.cultivation_type)] : ['pre_cultivation']),
-        seed_rate_by_cultivation: culture.seed_rate_by_cultivation ?? null,
-        seeding_requirement_type: normalizeSeedingRequirementType(culture.seeding_requirement_type),
-        supplier_id: culture.supplier?.id || null,
-        supplier_name: culture.supplier && !culture.supplier.id ? culture.supplier.name : undefined,
-        supplier: undefined, // Remove supplier object from payload
-      };
-
-      delete (dataToSend as Partial<Culture> & Record<string, unknown>).distance_within_row_m;
-      delete (dataToSend as Partial<Culture> & Record<string, unknown>).row_spacing_m;
-      delete (dataToSend as Partial<Culture> & Record<string, unknown>).sowing_depth_m;
+      const savePayload = buildCultureSavePayload(culture);
 
       let savedCulture: Culture;
       if (editingCulture) {
-        const response = await cultureAPI.update(editingCulture.id!, dataToSend as Culture);
+        const response = await cultureAPI.update(editingCulture.id!, savePayload as Culture);
         savedCulture = response.data;
         showSnackbar(t('messages.updateSuccess'), 'success');
       } else {
-        const response = await cultureAPI.create(dataToSend as Culture);
+        const response = await cultureAPI.create(savePayload as Culture);
         savedCulture = response.data;
         showSnackbar(t('messages.createSuccess'), 'success');
         // Auto-select the newly created culture
@@ -585,129 +483,7 @@ function Cultures(): React.ReactElement {
     updateSelectedCultureId(cultures[nextIndex]?.id, 'internal');
   }, [cultures, selectedCultureId, updateSelectedCultureId]);
 
-  const canRunEnrichmentForCulture = useCallback((culture?: Culture | null): boolean => {
-    return Boolean(culture?.supplier && (culture.supplier.allowed_domains || []).length > 0);
-  }, []);
-
   const enrichmentDisabledReason = 'Für KI-Recherche muss ein Lieferant mit erlaubten Domains konfiguriert sein.';
-
-  const commandSpecs = useMemo<CommandSpec[]>(() => {
-    return [
-      {
-        id: 'culture.edit',
-        title: 'Kultur bearbeiten (Alt+E)',
-        keywords: ['kultur', 'bearbeiten', 'edit'],
-        shortcutHint: 'Alt+E',
-        keys: { alt: true, key: 'e' },
-        contextTags: ['cultures'],
-        isAvailable: () => Boolean(selectedCulture),
-        run: () => { if (selectedCulture) { handleEdit(selectedCulture); } },
-      },
-      {
-        id: 'culture.delete',
-        title: 'Kultur löschen (Alt+Shift+D)',
-        keywords: ['kultur', 'löschen', 'delete'],
-        shortcutHint: 'Alt+Shift+D',
-        keys: { alt: true, shift: true, key: 'd' },
-        contextTags: ['cultures'],
-        isAvailable: () => Boolean(selectedCulture),
-        run: () => { if (selectedCulture) { handleDelete(selectedCulture); } },
-      },
-      {
-        id: 'culture.exportCurrent',
-        title: 'JSON exportieren (Alt+J)',
-        keywords: ['json', 'export', 'kultur'],
-        shortcutHint: 'Alt+J',
-        keys: { alt: true, key: 'j' },
-        contextTags: ['cultures'],
-        isAvailable: () => Boolean(selectedCulture),
-        run: handleExportCurrentCulture,
-      },
-      {
-        id: 'culture.exportAll',
-        title: 'Alle Kulturen exportieren (Alt+Shift+J)',
-        keywords: ['json', 'export', 'alle', 'kulturen'],
-        shortcutHint: 'Alt+Shift+J',
-        keys: { alt: true, shift: true, key: 'j' },
-        contextTags: ['cultures'],
-        isAvailable: () => true,
-        run: handleExportAllCultures,
-      },
-      {
-        id: 'culture.import',
-        title: 'JSON importieren (Alt+I)',
-        keywords: ['json', 'import'],
-        shortcutHint: 'Alt+I',
-        keys: { alt: true, key: 'i' },
-        contextTags: ['cultures'],
-        isAvailable: () => true,
-        run: handleImportFileTrigger,
-      },
-      {
-        id: 'culture.createPlan',
-        title: 'Anbauplan erstellen (Alt+P)',
-        keywords: ['anbauplan', 'planting', 'plan'],
-        shortcutHint: 'Alt+P',
-        keys: { alt: true, key: 'p' },
-        contextTags: ['cultures'],
-        isAvailable: () => Boolean(selectedCultureId),
-        run: handleCreatePlantingPlan,
-      },
-
-      {
-        id: 'culture.aiCompleteCurrent',
-        title: 'Kultur per KI vervollständigen (Alt+U)',
-        keywords: ['ki', 'ai', 'vervollständigen', 'complete', 'kultur'],
-        shortcutHint: 'Alt+U',
-        keys: { alt: true, key: 'u' },
-        contextTags: ['cultures'],
-        isAvailable: () => Boolean(selectedCulture) && canRunEnrichmentForCulture(selectedCulture) && !enrichmentLoading,
-        run: () => { void handleEnrichCurrent('complete'); },
-      },
-      {
-        id: 'culture.aiReresearchCurrent',
-        title: 'Kultur per KI neu recherchieren (Alt+R)',
-        keywords: ['ki', 'ai', 'recherche', 'reresearch', 'kultur'],
-        shortcutHint: 'Alt+R',
-        keys: { alt: true, key: 'r' },
-        contextTags: ['cultures'],
-        isAvailable: () => Boolean(selectedCulture) && canRunEnrichmentForCulture(selectedCulture) && !enrichmentLoading,
-        run: () => { void handleEnrichCurrent('reresearch'); },
-      },
-      {
-        id: 'culture.aiCompleteAll',
-        title: 'Alle Kulturen per KI vervollständigen (Alt+A)',
-        keywords: ['ki', 'ai', 'alle', 'kulturen', 'vervollständigen'],
-        shortcutHint: 'Alt+A',
-        keys: { alt: true, key: 'a' },
-        contextTags: ['cultures'],
-        isAvailable: () => cultures.some((culture) => canRunEnrichmentForCulture(culture)) && !enrichmentLoading,
-        run: () => setEnrichAllConfirmOpen(true),
-      },
-      {
-        id: 'culture.previous',
-        title: 'Vorherige Kultur (Alt+Shift+←)',
-        keywords: ['vorherige', 'kultur', 'left'],
-        shortcutHint: 'Alt+Shift+←',
-        keys: { alt: true, shift: true, key: 'ArrowLeft' },
-        contextTags: ['cultures'],
-        isAvailable: () => cultures.length > 1 && Boolean(selectedCultureId),
-        run: () => goToRelativeCulture('previous'),
-      },
-      {
-        id: 'culture.next',
-        title: 'Nächste Kultur (Alt+Shift+→)',
-        keywords: ['nächste', 'kultur', 'right'],
-        shortcutHint: 'Alt+Shift+→',
-        keys: { alt: true, shift: true, key: 'ArrowRight' },
-        contextTags: ['cultures'],
-        isAvailable: () => cultures.length > 1 && Boolean(selectedCultureId),
-        run: () => goToRelativeCulture('next'),
-      },
-    ];
-  }, [canRunEnrichmentForCulture, cultures, cultures.length, enrichmentLoading, goToRelativeCulture, handleCreatePlantingPlan, handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, selectedCulture, selectedCultureId]);
-
-  useRegisterCommands('cultures-page', commandSpecs);
 
   const handleAiMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAiMenuAnchor(event.currentTarget);
@@ -724,44 +500,16 @@ function Cultures(): React.ReactElement {
     setEnrichmentDialogOpen(true);
   };
 
-
-  const cultureHasMissingEnrichmentFields = useCallback((culture: Culture): boolean => {
-    const isMissing = (value: unknown): boolean => {
-      if (value === null || value === undefined) return true;
-      if (Array.isArray(value)) return value.length === 0;
-      if (typeof value === 'string') return value.trim().length === 0;
-      return false;
-    };
-
-    return [
-      culture.growth_duration_days,
-      culture.harvest_duration_days,
-      culture.propagation_duration_days,
-      culture.harvest_method,
-      culture.expected_yield,
-      culture.seed_packages,
-      culture.distance_within_row_cm,
-      culture.row_spacing_cm,
-      culture.sowing_depth_cm,
-      culture.seed_rate_value,
-      culture.seed_rate_unit,
-      culture.thousand_kernel_weight_g,
-      culture.nutrient_demand,
-      culture.cultivation_type,
-      culture.notes,
-    ].some(isMissing);
-  }, []);
-
   const enrichableCultureIds = useMemo(
     () => cultures.filter((culture) => culture.id && canRunEnrichmentForCulture(culture) && cultureHasMissingEnrichmentFields(culture)).map((culture) => culture.id as number),
-    [cultures, cultureHasMissingEnrichmentFields, canRunEnrichmentForCulture],
+    [cultures],
   );
 
 
 
   const selectedCultureNeedsCompletion = useMemo(
     () => (selectedCulture ? cultureHasMissingEnrichmentFields(selectedCulture) : false),
-    [selectedCulture, cultureHasMissingEnrichmentFields],
+    [selectedCulture],
   );
 
   const handleCancelEnrichment = useCallback(() => {
@@ -835,6 +583,39 @@ function Cultures(): React.ReactElement {
       setEnrichmentLoading(false);
     }
   };
+
+  const commandSpecs = useMemo(() => createCulturesCommandSpecs({
+    canRunEnrichmentForCulture,
+    cultures,
+    enrichmentLoading,
+    goToRelativeCulture,
+    handleCreatePlantingPlan,
+    handleDelete,
+    handleEdit,
+    handleEnrichCurrent,
+    handleExportAllCultures,
+    handleExportCurrentCulture,
+    handleImportFileTrigger,
+    selectedCulture,
+    selectedCultureId,
+    setEnrichAllConfirmOpen,
+  }), [
+    cultures,
+    enrichmentLoading,
+    goToRelativeCulture,
+    handleCreatePlantingPlan,
+    handleDelete,
+    handleEdit,
+    handleEnrichCurrent,
+    handleExportAllCultures,
+    handleExportCurrentCulture,
+    handleImportFileTrigger,
+    selectedCulture,
+    selectedCultureId,
+  ]);
+
+  useRegisterCommands('cultures-page', commandSpecs);
+
 
   const toggleSuggestionField = (field: string) => {
     setSelectedSuggestionFields((prev) => prev.includes(field) ? prev.filter((item) => item !== field) : [...prev, field]);

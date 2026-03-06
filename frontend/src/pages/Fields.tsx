@@ -1,34 +1,35 @@
 /**
  * Fields (Schläge) page component.
- * 
+ *
  * Manages farm fields with list and create functionality.
  * Fields belong to locations and contain beds.
  * UI text is in German, code comments remain in English.
- * 
+ *
  * @returns The Fields page component
  */
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { fieldAPI, locationAPI, type Field, type Location } from '../api/api';
+
+const EMPTY_FIELD_FORM_DATA: Field = {
+  name: '',
+  location: 0,
+  area_sqm: undefined,
+  notes: '',
+};
+
+function parseOptionalNumber(value: string): number | undefined {
+  return value ? Number.parseFloat(value) : undefined;
+}
 
 function Fields(): React.ReactElement {
   const [fields, setFields] = useState<Field[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [formData, setFormData] = useState<Field>({
-    name: '',
-    location: 0,
-    area_sqm: undefined,
-    notes: '',
-  });
+  const [formData, setFormData] = useState<Field>(EMPTY_FIELD_FORM_DATA);
 
-  useEffect(() => {
-    fetchFields();
-    fetchLocations();
-  }, []);
-
-  const fetchFields = async (): Promise<void> => {
+  const fetchFields = useCallback(async (): Promise<void> => {
     try {
       const response = await fieldAPI.list();
       setFields(response.data.results);
@@ -37,24 +38,33 @@ function Fields(): React.ReactElement {
       setError('Fehler beim Laden der Schläge');
       console.error('Error fetching fields:', err);
     }
-  };
+  }, []);
 
-  const fetchLocations = async (): Promise<void> => {
+  const fetchLocations = useCallback(async (): Promise<void> => {
     try {
       const response = await locationAPI.list();
       setLocations(response.data.results);
     } catch (err) {
       console.error('Error fetching locations:', err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchFields();
+      void fetchLocations();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchFields, fetchLocations]);
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     try {
       await fieldAPI.create(formData);
-      setFormData({ name: '', location: 0, area_sqm: undefined, notes: '' });
+      setFormData(EMPTY_FIELD_FORM_DATA);
       setShowForm(false);
-      fetchFields();
+      await fetchFields();
       setError('');
     } catch (err) {
       setError('Fehler beim Erstellen des Schlags');
@@ -63,11 +73,13 @@ function Fields(): React.ReactElement {
   };
 
   const handleDelete = async (id: number): Promise<void> => {
-    if (!window.confirm('Möchten Sie diesen Schlag wirklich löschen?')) return;
-    
+    if (!window.confirm('Möchten Sie diesen Schlag wirklich löschen?')) {
+      return;
+    }
+
     try {
       await fieldAPI.delete(id);
-      fetchFields();
+      await fetchFields();
       setError('');
     } catch (err) {
       setError('Fehler beim Löschen des Schlags');
@@ -78,9 +90,9 @@ function Fields(): React.ReactElement {
   return (
     <div className="page-container">
       <h1>Schläge</h1>
-      
+
       {error && <div className="error-message">{error}</div>}
-      
+
       <button onClick={() => setShowForm(!showForm)} className="toggle-form-btn">
         {showForm ? 'Abbrechen' : 'Neuen Schlag hinzufügen'}
       </button>
@@ -104,7 +116,7 @@ function Fields(): React.ReactElement {
             <select
               id="location"
               value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: parseInt(e.target.value) })}
+              onChange={(e) => setFormData({ ...formData, location: Number.parseInt(e.target.value, 10) })}
               required
               className="form-input"
             >
@@ -124,9 +136,9 @@ function Fields(): React.ReactElement {
               type="number"
               step="0.01"
               value={formData.area_sqm || ''}
-              onChange={(e) => setFormData({ 
-                ...formData, 
-                area_sqm: e.target.value ? parseFloat(e.target.value) : undefined 
+              onChange={(e) => setFormData({
+                ...formData,
+                area_sqm: parseOptionalNumber(e.target.value),
               })}
               className="form-input"
             />
