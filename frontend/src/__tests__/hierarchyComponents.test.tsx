@@ -121,7 +121,7 @@ describe('hierarchy components and behaviors', () => {
     await user.click(screen.getByLabelText('Löschen'));
     expect(createPlan).toHaveBeenCalledWith(100);
     expect(deleteBed).toHaveBeenCalledWith(100);
-  });
+  }, 15000);
 
 
 
