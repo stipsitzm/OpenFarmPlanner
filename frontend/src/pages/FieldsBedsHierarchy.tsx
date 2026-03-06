@@ -31,7 +31,11 @@ import { useCommandContextTag, useRegisterCommands } from '../commands/CommandPr
 import type { CommandSpec } from '../commands/types';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 
-function FieldsBedsHierarchy(): React.ReactElement {
+interface FieldsBedsHierarchyProps {
+  showTitle?: boolean;
+}
+
+function FieldsBedsHierarchy({ showTitle = true }: FieldsBedsHierarchyProps): React.ReactElement {
   const { t } = useTranslation('hierarchy');
   const navigate = useNavigate();
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -90,6 +94,8 @@ function FieldsBedsHierarchy(): React.ReactElement {
           name: row.name,
           field: row.field!,
           area_sqm: normalizeAreaValue(parsedArea),
+          length_m: parseDimensionValue(row.length_m),
+          width_m: parseDimensionValue(row.width_m),
           notes: value,
         });
         
@@ -103,6 +109,8 @@ function FieldsBedsHierarchy(): React.ReactElement {
           name: row.name,
           location: row.locationId!,
           area_sqm: normalizeAreaValue(parsedArea),
+          length_m: parseDimensionValue(row.length_m),
+          width_m: parseDimensionValue(row.width_m),
           notes: value,
         });
         
@@ -223,6 +231,22 @@ function FieldsBedsHierarchy(): React.ReactElement {
     return undefined;
   };
 
+
+
+  const parseDimensionValue = (value: number | string | null | undefined): number | null | undefined => {
+    if (value === null) return null;
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : undefined;
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed === '') return null;
+      const parsed = Number.parseFloat(trimmed.replace(',', '.'));
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+  };
+
   const getBedAreaSum = (fieldId: number, excludeBedId?: number, overrideArea?: number) => {
     const filteredBeds = beds.filter(b => b.field === fieldId && b.id !== excludeBedId);
     const bedAreas = filteredBeds.map(b => {
@@ -234,34 +258,32 @@ function FieldsBedsHierarchy(): React.ReactElement {
   };
 
   const processRowUpdate = async (newRow: HierarchyRow): Promise<HierarchyRow> => {
-    // Name muss immer gesetzt sein
     if (!newRow.name || newRow.name.trim() === '') {
       setError(t('validation.nameRequired'));
       throw new Error(t('validation.nameRequired'));
     }
 
-    // Flächenwert muss > 0 sein
-    const areaValue = parseAreaValue(newRow.area_sqm) ?? NaN;
-    if (areaValue <= 0 || isNaN(areaValue)) {
-      setError(t('validation.areaMustBePositive'));
-      throw new Error(t('validation.areaMustBePositive'));
-    }
-
-    if (areaValue > 1000000) {
-      setError(t('validation.areaTooLarge'));
-      throw new Error(t('validation.areaTooLarge'));
-    }
-
-    // ...existing code...
-
-    // Validierung: Summe der Beetflächen darf Feldfläche nicht überschreiten
     if (newRow.type === 'bed') {
+      const parsedLength = parseDimensionValue(newRow.length_m);
+      const parsedWidth = parseDimensionValue(newRow.width_m);
+
+      if (parsedLength !== undefined && parsedLength !== null && parsedLength < 0) {
+        setError('Länge muss größer oder gleich 0 sein.');
+        throw new Error('Länge muss größer oder gleich 0 sein.');
+      }
+      if (parsedWidth !== undefined && parsedWidth !== null && parsedWidth < 0) {
+        setError('Breite muss größer oder gleich 0 sein.');
+        throw new Error('Breite muss größer oder gleich 0 sein.');
+      }
+
+      const computedBedArea = (parsedLength !== null && parsedLength !== undefined && parsedWidth !== null && parsedWidth !== undefined)
+        ? normalizeAreaValue(parsedLength * parsedWidth)
+        : normalizeAreaValue(parseAreaValue(newRow.area_sqm));
+
       const field = fields.find(f => f.id === newRow.field);
-      if (field) {
+      if (field && typeof computedBedArea === 'number') {
         const fieldArea = parseAreaValue(field.area_sqm) ?? NaN;
-        const bedArea = normalizeAreaValue(parseAreaValue(newRow.area_sqm)) ?? NaN;
-        const sum = getBedAreaSum(field.id!, newRow.bedId, bedArea);
-        // ...existing code...
+        const sum = getBedAreaSum(field.id!, newRow.bedId, computedBedArea);
         if (sum > fieldArea) {
           const sumStr = sum.toFixed(2);
           const maxStr = fieldArea.toFixed(2);
@@ -269,19 +291,55 @@ function FieldsBedsHierarchy(): React.ReactElement {
           throw new Error(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
         }
       }
+
       const savedBed = await saveBed({
         id: newRow.bedId!,
         name: newRow.name,
         field: newRow.field!,
-        area_sqm: normalizeAreaValue(parseAreaValue(newRow.area_sqm)),
+        area_sqm: computedBedArea,
+        length_m: parsedLength,
+        width_m: parsedWidth,
         notes: newRow.notes,
       });
-      return { ...newRow, id: savedBed.id!, bedId: savedBed.id!, isNew: false };
-    } else if (newRow.type === 'field') {
-      // Validierung: Summe der Beetflächen darf neue Feldfläche nicht überschreiten
-      const fieldArea = normalizeAreaValue(parseAreaValue(newRow.area_sqm)) ?? NaN;
+      return {
+        ...newRow,
+        id: savedBed.id!,
+        bedId: savedBed.id!,
+        area_sqm: savedBed.area_sqm,
+        length_m: savedBed.length_m,
+        width_m: savedBed.width_m,
+        isNew: false,
+      };
+    }
+
+    if (newRow.type === 'field') {
+      const parsedLength = parseDimensionValue(newRow.length_m);
+      const parsedWidth = parseDimensionValue(newRow.width_m);
+
+      if (parsedLength !== undefined && parsedLength !== null && parsedLength < 0) {
+        setError('Länge muss größer oder gleich 0 sein.');
+        throw new Error('Länge muss größer oder gleich 0 sein.');
+      }
+      if (parsedWidth !== undefined && parsedWidth !== null && parsedWidth < 0) {
+        setError('Breite muss größer oder gleich 0 sein.');
+        throw new Error('Breite muss größer oder gleich 0 sein.');
+      }
+
+      const fieldArea = (parsedLength !== null && parsedLength !== undefined && parsedWidth !== null && parsedWidth !== undefined)
+        ? normalizeAreaValue(parsedLength * parsedWidth)
+        : normalizeAreaValue(parseAreaValue(newRow.area_sqm));
+
+      if (typeof fieldArea !== 'number' || fieldArea <= 0 || Number.isNaN(fieldArea)) {
+        setError(t('validation.areaMustBePositive'));
+        throw new Error(t('validation.areaMustBePositive'));
+      }
+
+      if (fieldArea > 1000000) {
+        setError(t('validation.areaTooLarge'));
+        throw new Error(t('validation.areaTooLarge'));
+      }
+
       const sum = getBedAreaSum(newRow.fieldId!);
-      // ...existing code...
       if (sum > fieldArea) {
         const sumStr = sum.toFixed(2);
         const maxStr = fieldArea.toFixed(2);
@@ -289,33 +347,39 @@ function FieldsBedsHierarchy(): React.ReactElement {
         throw new Error(t('validation.bedAreaExceedsField', { sum: sumStr, max: maxStr }));
       }
       try {
-        // Update Field via API
         const updated = await fieldAPI.update(newRow.fieldId!, {
           name: newRow.name,
           location: newRow.locationId!,
-          area_sqm: normalizeAreaValue(parseAreaValue(newRow.area_sqm)),
+          area_sqm: fieldArea,
+          length_m: parsedLength,
+          width_m: parsedWidth,
           notes: newRow.notes,
         });
-        // ...existing code...
-        // Aktualisiere lokalen State direkt (optional, für sofortiges Feedback)
         const updatedArea = normalizeAreaValue(parseAreaValue(updated.data.area_sqm));
 
         setFields((prevFields) => prevFields.map(f => {
           if (f.id === newRow.fieldId) {
-            // Merge API-Daten, id bleibt Zahl, area_sqm als Zahl
             return {
               ...f,
               ...updated.data,
               id: updated.data.id,
               fieldId: updated.data.id,
               area_sqm: updatedArea,
+              length_m: updated.data.length_m,
+              width_m: updated.data.width_m,
             };
           }
           return f;
         }));
-        // Frische Felder nach Update neu laden
         await fetchData();
-        return { ...newRow, name: updated.data.name, area_sqm: updated.data.area_sqm, notes: updated.data.notes };
+        return {
+          ...newRow,
+          name: updated.data.name,
+          area_sqm: updated.data.area_sqm,
+          length_m: updated.data.length_m,
+          width_m: updated.data.width_m,
+          notes: updated.data.notes,
+        };
       } catch (err) {
         const extractedError = extractApiErrorMessage(err, t, t('errors.save'));
         const errorMessage = extractedError.includes('max_digits')
@@ -329,7 +393,6 @@ function FieldsBedsHierarchy(): React.ReactElement {
     }
     return newRow;
   };
-
 
 
   /**
@@ -543,11 +606,11 @@ function FieldsBedsHierarchy(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <h1>{t('title')}</h1>
+      {showTitle && <h1>{t('title')}</h1>}
       
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
-      <Box ref={tableWrapperRef} sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }} onClick={() => setTreeActive(true)}>
+      <Box ref={tableWrapperRef} sx={{ width: '100%', overflowX: 'auto' }} onClick={() => setTreeActive(true)}>
         <DataGrid
           rows={rows}
           columns={columns}
@@ -564,12 +627,18 @@ function FieldsBedsHierarchy(): React.ReactElement {
           sortModel={sortModel}
           onSortModelChange={setSortModel}
           isRowSelectable={() => true}
-          isCellEditable={(params) => params.row.type === 'bed' || params.row.type === 'field'}
+          isCellEditable={(params) => {
+            if (params.row.type === 'field') {
+              return params.field === 'name' || params.field === 'length_m' || params.field === 'width_m';
+            }
+            if (params.row.type === 'bed') {
+              return params.field === 'name' || params.field === 'length_m' || params.field === 'width_m';
+            }
+            return false;
+          }}
           sx={{
             ...dataGridSx,
-            width: 'fit-content',
-            minWidth: 'unset',
-            maxWidth: '100%',
+            width: '100%',
           }}
           rowSelectionModel={{ type: "include", ids: new Set(selectedRowId ? [selectedRowId] : []) }}
           onRowSelectionModelChange={(nextModel) => setSelectedRowId(Array.from(nextModel.ids)[0] ?? null)}

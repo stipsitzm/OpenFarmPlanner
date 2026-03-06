@@ -6,5 +6,6 @@
   "suppliers": "Lieferanten",
   "plantingPlans": "Anbaupläne",
   "ganttChart": "Anbaukalender",
-  "seedDemand": "Saatgutbedarf"
+  "seedDemand": "Saatgutbedarf",
+  "graphicalFields": "Grafische Ansicht"
 }

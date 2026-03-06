@@ -9,6 +9,8 @@ from .enum_normalization import normalize_seed_rate_unit
 
 from .models import (
     Bed,
+    BedLayout,
+    FieldLayout,
     Culture,
     Field,
     Location,
@@ -108,6 +110,16 @@ class FieldSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError('Area must have at most one decimal place for fields.')
         return value
 
+    def validate_length_m(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError('Length must be greater than or equal to 0.')
+        return value
+
+    def validate_width_m(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError('Width must be greater than or equal to 0.')
+        return value
+
 
 class BedSerializer(serializers.ModelSerializer):
     field_name = serializers.CharField(source='field.name', read_only=True)
@@ -123,7 +135,7 @@ class BedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bed
         fields = '__all__'
-    
+
     def validate_area_sqm(self, value):
         if value is not None:
             if value < Bed.MIN_AREA_SQM:
@@ -137,6 +149,69 @@ class BedSerializer(serializers.ModelSerializer):
             if value.as_tuple().exponent < -1:
                 raise serializers.ValidationError('Area must have at most one decimal place for beds.')
         return value
+
+    def validate_length_m(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError('Length must be greater than or equal to 0.')
+        return value
+
+    def validate_width_m(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError('Width must be greater than or equal to 0.')
+        return value
+
+
+class FieldLayoutSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FieldLayout
+        fields = [
+            'id',
+            'field',
+            'location',
+            'x',
+            'y',
+            'version',
+            'scale',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        field = attrs.get('field') or getattr(self.instance, 'field', None)
+        location = attrs.get('location') or getattr(self.instance, 'location', None)
+        if field and location and field.location_id != location.id:
+            raise serializers.ValidationError('Layout location must match the field location.')
+        return attrs
+
+
+class BedLayoutSerializer(serializers.ModelSerializer):
+    field_id = serializers.IntegerField(source='bed.field_id', read_only=True)
+
+    class Meta:
+        model = BedLayout
+        fields = [
+            'id',
+            'bed',
+            'location',
+            'field_id',
+            'x',
+            'y',
+            'version',
+            'scale',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'field_id', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        bed = attrs.get('bed') or getattr(self.instance, 'bed', None)
+        location = attrs.get('location') or getattr(self.instance, 'location', None)
+        if bed and location and bed.field.location_id != location.id:
+            raise serializers.ValidationError('Layout location must match the bed location.')
+        return attrs
 
 
 class SeedPackageSerializer(serializers.ModelSerializer):
