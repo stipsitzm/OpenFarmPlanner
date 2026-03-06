@@ -27,6 +27,14 @@ interface BedViewModel {
   height: number;
 }
 
+interface SnapTarget {
+  id: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface GuideLine {
   orientation: 'vertical' | 'horizontal';
   value: number;
@@ -44,6 +52,7 @@ const VIEWPORT_PADDING = 120;
 const FIELD_INNER_OFFSET_X = 10;
 const FIELD_INNER_OFFSET_Y = 34;
 const SNAP_THRESHOLD = 8;
+const FIELD_SNAP_THRESHOLD = 14;
 const EXPANDED_STORAGE_KEY = 'graphicalFieldsExpandedLocations';
 
 interface GraphicalFieldsProps {
@@ -54,7 +63,7 @@ const snapToNeighborBeds = (
   currentBedId: number,
   position: Point,
   size: SnapSize,
-  neighbors: BedViewModel[],
+  neighbors: SnapTarget[],
   threshold: number = SNAP_THRESHOLD,
 ): SnapResult => {
   let snappedX = position.x;
@@ -215,8 +224,9 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
   }, [locations]);
 
   useEffect(() => {
+    const currentTimers = saveTimers.current;
     return () => {
-      Object.values(saveTimers.current).forEach((timer) => {
+      Object.values(currentTimers).forEach((timer) => {
         window.clearTimeout(timer);
       });
     };
@@ -322,6 +332,25 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                       { width: baseRect.width, height: baseRect.height },
                       { width: stageWidth, height: stageHeight },
                     );
+                    const fieldViewModels = defaultFieldRects.map((fieldRect) => {
+                      const candidateLayout = layoutsByField[fieldRect.field.id!];
+                      const candidatePosition = clampInsideParent(
+                        {
+                          x: candidateLayout?.x ?? fieldRect.defaultX,
+                          y: candidateLayout?.y ?? fieldRect.defaultY,
+                        },
+                        { width: fieldRect.width, height: fieldRect.height },
+                        { width: stageWidth, height: stageHeight },
+                      );
+
+                      return {
+                        id: fieldRect.field.id!,
+                        x: candidatePosition.x,
+                        y: candidatePosition.y,
+                        width: fieldRect.width,
+                        height: fieldRect.height,
+                      };
+                    });
 
                     const fieldBeds = beds.filter((bed) => bed.field === fieldId && bed.id !== undefined);
                     const bedSizeMap = new Map<number, RectSize>();
@@ -364,21 +393,58 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                           strokeWidth={2}
                           cornerRadius={4}
                           draggable
+                          onDragMove={(event: KonvaEventObject<Event>) => {
+                            const next = clampInsideParent(
+                              { x: event.target.x(), y: event.target.y() },
+                              { width: baseRect.width, height: baseRect.height },
+                              { width: stageWidth, height: stageHeight },
+                            );
+                            const snapped = snapToNeighborBeds(
+                              fieldId,
+                              next,
+                              { width: baseRect.width, height: baseRect.height },
+                              fieldViewModels,
+                              FIELD_SNAP_THRESHOLD,
+                            );
+                            const finalClamped = clampInsideParent(
+                              { x: snapped.x, y: snapped.y },
+                              { width: baseRect.width, height: baseRect.height },
+                              { width: stageWidth, height: stageHeight },
+                            );
+
+                            event.target.position(finalClamped);
+                            setActiveGuides(snapped.guides);
+                          }}
                           onDragEnd={(event: KonvaEventObject<Event>) => {
                             const next = clampInsideParent(
                               { x: event.target.x(), y: event.target.y() },
                               { width: baseRect.width, height: baseRect.height },
                               { width: stageWidth, height: stageHeight },
                             );
+                            const snapped = snapToNeighborBeds(
+                              fieldId,
+                              next,
+                              { width: baseRect.width, height: baseRect.height },
+                              fieldViewModels,
+                              FIELD_SNAP_THRESHOLD,
+                            );
+                            const finalClamped = clampInsideParent(
+                              { x: snapped.x, y: snapped.y },
+                              { width: baseRect.width, height: baseRect.height },
+                              { width: stageWidth, height: stageHeight },
+                            );
+
+                            event.target.position(finalClamped);
 
                             const nextLayout: FieldLayoutEntry = {
                               field: fieldId,
                               location: location.id!,
-                              x: next.x,
-                              y: next.y,
+                              x: finalClamped.x,
+                              y: finalClamped.y,
                               version: 1,
                             };
 
+                            setActiveGuides([]);
                             setLayoutsByField((prev) => ({ ...prev, [fieldId]: nextLayout }));
                             saveFieldLayout(location.id!, nextLayout);
                           }}
