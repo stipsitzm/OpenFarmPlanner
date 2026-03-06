@@ -85,6 +85,8 @@ describe('useBedOperations', () => {
       name: 'New bed',
       field: 2,
       area_sqm: 12,
+      length_m: null,
+      width_m: null,
       notes: 'Saved',
     });
     expect(response).toEqual(savedBed);
@@ -107,6 +109,8 @@ describe('useBedOperations', () => {
       name: '',
       field: 1,
       area_sqm: undefined,
+      length_m: null,
+      width_m: null,
       notes: '',
     });
   });
@@ -131,6 +135,8 @@ describe('useBedOperations', () => {
       name: 'B-updated',
       field: 1,
       area_sqm: 7,
+      length_m: null,
+      width_m: null,
       notes: 'ok',
     });
     expect(response).toEqual(updatedBed);

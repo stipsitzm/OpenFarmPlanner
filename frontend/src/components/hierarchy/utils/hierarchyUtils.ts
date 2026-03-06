@@ -127,6 +127,8 @@ export function buildHierarchyRows(
           fieldId: field.id,
           expanded: isFieldExpanded,
           area_sqm: field.area_sqm,
+          length_m: field.length_m,
+          width_m: field.width_m,
           notes: field.notes,
         });
 
@@ -147,6 +149,8 @@ export function buildHierarchyRows(
             field: bed.field,
             field_name: field.name,
             area_sqm: bed.area_sqm,
+            length_m: bed.length_m,
+            width_m: bed.width_m,
             notes: bed.notes,
             locationId: location.id,
             fieldId: field.id,
@@ -170,6 +174,8 @@ export function buildHierarchyRows(
         fieldId: field.id,
         expanded: isFieldExpanded,
         area_sqm: field.area_sqm,
+        length_m: field.length_m,
+        width_m: field.width_m,
         notes: field.notes,
       });
 
@@ -190,6 +196,8 @@ export function buildHierarchyRows(
           field: bed.field,
           field_name: field.name,
           area_sqm: bed.area_sqm,
+          length_m: bed.length_m,
+          width_m: bed.width_m,
           notes: bed.notes,
           fieldId: field.id,
           bedId: bed.id,

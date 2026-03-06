@@ -37,6 +37,8 @@ export function useBedOperations(
         name: bedData.name || '',
         field: bedData.field,
         area_sqm: bedData.area_sqm,
+        length_m: bedData.length_m ?? null,
+        width_m: bedData.width_m ?? null,
         notes: bedData.notes || '',
       };
 

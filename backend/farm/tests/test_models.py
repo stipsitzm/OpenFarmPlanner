@@ -149,8 +149,8 @@ class BedModelTest(TestCase):
             field=self.field,
             area_sqm=20000  # Greater than MAX_AREA_SQM (10,000)
         )
-        bed.full_clean()
-        self.assertEqual(bed.area_sqm, 20000)
+        with self.assertRaises(ValidationError):
+            bed.full_clean()
     
     def test_bed_area_validation_valid_range(self):
         # Test minimum valid value

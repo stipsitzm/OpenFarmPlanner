@@ -207,10 +207,12 @@ class Field(TimestampedModel):
     name = models.CharField(max_length=200)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='fields')
     area_sqm = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
+    length_m = models.FloatField(null=True, blank=True)
+    width_m = models.FloatField(null=True, blank=True)
     notes = models.TextField(blank=True)
 
     def clean(self) -> None:
-        """Validate that area_sqm is within realistic bounds if provided."""
+        """Validate area and optional field dimensions."""
         super().clean()
         if self.area_sqm is not None:
             if self.area_sqm < self.MIN_AREA_SQM:
@@ -221,6 +223,18 @@ class Field(TimestampedModel):
                 raise ValidationError({
                     'area_sqm': f'Area must not exceed {self.MAX_AREA_SQM} sqm (100 hectares).'
                 })
+
+        if self.length_m is not None and self.length_m < 0:
+            raise ValidationError({'length_m': 'Length must be greater than or equal to 0.'})
+        if self.width_m is not None and self.width_m < 0:
+            raise ValidationError({'width_m': 'Width must be greater than or equal to 0.'})
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Persist field and derive area from dimensions when both values are set."""
+        if self.length_m is not None and self.width_m is not None:
+            computed_area = Decimal(str(self.length_m * self.width_m)).quantize(Decimal('0.1'))
+            self.area_sqm = computed_area
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         """Return a string combining location and field name."""
@@ -239,7 +253,30 @@ class Bed(TimestampedModel):
     name = models.CharField(max_length=200)
     field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds')
     area_sqm = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
+    length_m = models.FloatField(null=True, blank=True)
+    width_m = models.FloatField(null=True, blank=True)
     notes = models.TextField(blank=True)
+
+    def clean(self) -> None:
+        """Validate area and optional bed dimensions."""
+        super().clean()
+        if self.area_sqm is not None:
+            if self.area_sqm < self.MIN_AREA_SQM:
+                raise ValidationError({'area_sqm': f'Area must be at least {self.MIN_AREA_SQM} sqm.'})
+            if self.area_sqm > self.MAX_AREA_SQM:
+                raise ValidationError({'area_sqm': f'Area must not exceed {self.MAX_AREA_SQM} sqm (1 hectare).'})
+
+        if self.length_m is not None and self.length_m < 0:
+            raise ValidationError({'length_m': 'Length must be greater than or equal to 0.'})
+        if self.width_m is not None and self.width_m < 0:
+            raise ValidationError({'width_m': 'Width must be greater than or equal to 0.'})
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Persist bed and derive area from dimensions when both values are set."""
+        if self.length_m is not None and self.width_m is not None:
+            computed_area = Decimal(str(self.length_m * self.width_m)).quantize(Decimal('0.1'))
+            self.area_sqm = computed_area
+        super().save(*args, **kwargs)
 
     def get_total_area(self) -> float | None:
         """Return the bed area in square meters, or None if not set."""
@@ -253,6 +290,54 @@ class Bed(TimestampedModel):
 
     class Meta:
         ordering = ['field', 'name']
+
+
+class BedLayout(TimestampedModel):
+    """Persisted bed layout coordinates for the graphical field view."""
+
+    bed = models.OneToOneField(Bed, on_delete=models.CASCADE, related_name='layout')
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='bed_layouts')
+    x = models.FloatField(default=0.0)
+    y = models.FloatField(default=0.0)
+    version = models.PositiveIntegerField(default=1)
+    scale = models.FloatField(null=True, blank=True)
+
+    def clean(self) -> None:
+        """Validate that location matches the bed's location."""
+        super().clean()
+        if self.bed_id and self.location_id and self.bed.field.location_id != self.location_id:
+            raise ValidationError({'location': 'Layout location must match the bed location.'})
+
+    def __str__(self) -> str:
+        """Return a compact textual representation."""
+        return f"BedLayout bed={self.bed_id} location={self.location_id}"
+
+    class Meta:
+        ordering = ['location', 'bed']
+
+
+class FieldLayout(TimestampedModel):
+    """Persisted field layout coordinates for the graphical field view."""
+
+    field = models.OneToOneField(Field, on_delete=models.CASCADE, related_name='layout')
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='field_layouts')
+    x = models.FloatField(default=0.0)
+    y = models.FloatField(default=0.0)
+    version = models.PositiveIntegerField(default=1)
+    scale = models.FloatField(null=True, blank=True)
+
+    def clean(self) -> None:
+        """Validate that location matches the field's location."""
+        super().clean()
+        if self.field_id and self.location_id and self.field.location_id != self.location_id:
+            raise ValidationError({'location': 'Layout location must match the field location.'})
+
+    def __str__(self) -> str:
+        """Return a compact textual representation."""
+        return f"FieldLayout field={self.field_id} location={self.location_id}"
+
+    class Meta:
+        ordering = ['location', 'field']
 
 
 class ActiveCultureManager(models.Manager):
