@@ -31,7 +31,7 @@ import { useRegisterCommands } from './commands/CommandProvider';
 import type { CommandSpec } from './commands/types';
 import { useMemo, useState } from 'react';
 import Locations from './pages/Locations';
-import FieldsBedsHierarchy from './pages/FieldsBedsHierarchy';
+import FieldsBedsPage from './pages/FieldsBedsPage';
 import Cultures from './pages/Cultures';
 import PlantingPlans from './pages/PlantingPlans';
 import GanttChart from './pages/GanttChart';
@@ -300,7 +300,7 @@ function createAppRouter(basename: string) {
         },
         {
           path: 'fields-beds',
-          element: <FieldsBedsHierarchy />,
+          element: <FieldsBedsPage />,
         },
         {
           path: 'cultures',

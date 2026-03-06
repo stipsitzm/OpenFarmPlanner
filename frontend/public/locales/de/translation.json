@@ -6,7 +6,8 @@
     "start": "Start",
     "locations": "Standorte",
     "cultures": "Kulturen",
-    "plantingPlans": "Anbaupläne"
+    "plantingPlans": "Anbaupläne",
+    "graphicalFields": "Grafische Ansicht"
   },
   "fields": {
     "plots": "Anbauflächen"

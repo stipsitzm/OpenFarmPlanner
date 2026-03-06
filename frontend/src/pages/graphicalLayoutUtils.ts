@@ -1,0 +1,98 @@
+import type { Bed, Field } from '../api/types';
+
+export interface RectSize {
+  width: number;
+  height: number;
+}
+
+export interface Position {
+  x: number;
+  y: number;
+}
+
+interface AreaToRectOptions {
+  baseWidth?: number;
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  scaleFactor?: number;
+}
+
+const DEFAULT_OPTIONS: Required<AreaToRectOptions> = {
+  baseWidth: 120,
+  minWidth: 90,
+  maxWidth: 180,
+  minHeight: 36,
+  scaleFactor: 2.2,
+};
+
+export function areaToRectSize(areaSqm: number | undefined, options: AreaToRectOptions = {}): RectSize {
+  const config = { ...DEFAULT_OPTIONS, ...options };
+  const safeArea = Math.max(0.1, areaSqm ?? 1);
+  const width = Math.max(config.minWidth, Math.min(config.maxWidth, config.baseWidth + Math.sqrt(safeArea) * 5));
+  const height = Math.max(config.minHeight, (safeArea * config.scaleFactor) / width);
+  return {
+    width: Math.round(width),
+    height: Math.round(height),
+  };
+}
+
+
+export function getFieldRectSize(
+  field: Pick<Field, 'area_sqm' | 'length_m' | 'width_m'>,
+  pxPerMeter: number,
+  options: AreaToRectOptions = {}
+): RectSize {
+  if (typeof field.length_m === 'number' && typeof field.width_m === 'number') {
+    return {
+      width: Math.max(120, Math.round(field.length_m * pxPerMeter)),
+      height: Math.max(120, Math.round(field.width_m * pxPerMeter)),
+    };
+  }
+
+  return areaToRectSize(Number(field.area_sqm ?? 1), options);
+}
+
+export function getBedRectSize(bed: Pick<Bed, 'area_sqm' | 'length_m' | 'width_m'>, pxPerMeter: number): RectSize {
+  if (typeof bed.length_m === 'number' && typeof bed.width_m === 'number') {
+    return {
+      width: Math.max(20, Math.round(bed.length_m * pxPerMeter)),
+      height: Math.max(20, Math.round(bed.width_m * pxPerMeter)),
+    };
+  }
+
+  return areaToRectSize(Number(bed.area_sqm ?? 1));
+}
+
+export function clampInsideParent(position: Position, childSize: RectSize, parentSize: RectSize): Position {
+  const maxX = Math.max(0, parentSize.width - childSize.width);
+  const maxY = Math.max(0, parentSize.height - childSize.height);
+  return {
+    x: Math.min(Math.max(0, position.x), maxX),
+    y: Math.min(Math.max(0, position.y), maxY),
+  };
+}
+
+export function initialAutoLayout(ids: number[], childSizes: Map<number, RectSize>, parentSize: RectSize, gap = 12): Map<number, Position> {
+  const output = new Map<number, Position>();
+  let cursorX = gap;
+  let cursorY = gap;
+  let rowHeight = 0;
+
+  for (const id of ids) {
+    const size = childSizes.get(id);
+    if (!size) continue;
+
+    if (cursorX + size.width > parentSize.width - gap) {
+      cursorX = gap;
+      cursorY += rowHeight + gap;
+      rowHeight = 0;
+    }
+
+    output.set(id, clampInsideParent({ x: cursorX, y: cursorY }, size, parentSize));
+    cursorX += size.width + gap;
+    rowHeight = Math.max(rowHeight, size.height);
+  }
+
+  return output;
+}

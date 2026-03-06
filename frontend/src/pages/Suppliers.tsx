@@ -22,6 +22,7 @@ import {
   Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import AddIcon from '@mui/icons-material/Add';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import type { Supplier } from '../api/types';
@@ -183,10 +184,12 @@ export default function Suppliers(): React.ReactElement {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <div className="page-container">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">{t('title')}</Typography>
-        <Button variant="contained" onClick={openCreate}>{t('create')}</Button>
+        <h1>{t('title')}</h1>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+          {t('create')}
+        </Button>
       </Box>
       <TableContainer sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
       <Table size="small" sx={{ width: 'auto' }}>
@@ -277,6 +280,6 @@ export default function Suppliers(): React.ReactElement {
           <Button onClick={() => void saveSupplier()} disabled={!canSave} variant="contained">{t('save')}</Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }

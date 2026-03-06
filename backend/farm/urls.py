@@ -19,6 +19,7 @@ from .views import (
     ProjectHistoryRestoreView,
     CultureUndeleteView,
     SeedPackageViewSet,
+    BedLayoutByLocationView,
 )
 
 router = DefaultRouter()
@@ -42,5 +43,6 @@ urlpatterns = [
     path('attachments/<int:attachment_id>/', NoteAttachmentDeleteView.as_view(), name='note-attachment-delete'),
     path('seed-demand/', SeedDemandListView.as_view(), name='seed-demand-list'),
     path('yield-calendar/', YieldCalendarListView.as_view(), name='yield-calendar-list'),
+    path('locations/<int:location_id>/layouts/', BedLayoutByLocationView.as_view(), name='location-layouts'),
     path('', include(router.urls)),
 ]
