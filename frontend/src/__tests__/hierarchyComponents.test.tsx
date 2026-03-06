@@ -181,6 +181,35 @@ describe('hierarchy components and behaviors', () => {
   });
 
 
+
+  it('renders directional icons in dimension headers', () => {
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+    );
+
+    const lengthColumn = columns.find((column) => column.field === 'length_m');
+    const widthColumn = columns.find((column) => column.field === 'width_m');
+
+    render(
+      <>
+        {lengthColumn?.renderHeader?.({} as never)}
+        {widthColumn?.renderHeader?.({} as never)}
+      </>
+    );
+
+    expect(screen.getByText('Länge (m)')).toBeInTheDocument();
+    expect(screen.getByText('Breite (m)')).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-testid="SwapVertIcon"]').length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('[data-testid="SwapHorizIcon"]').length).toBeGreaterThan(0);
+  });
+
   it('returns bed dimensions and derived area via value getters', () => {
     const columns = createHierarchyColumns(
       vi.fn(),

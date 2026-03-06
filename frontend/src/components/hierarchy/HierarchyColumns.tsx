@@ -11,6 +11,8 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import SwapVertIcon from '@mui/icons-material/SwapVert';
 import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
 import { getPlainExcerpt } from '../data-grid/markdown';
@@ -228,6 +230,12 @@ export function createHierarchyColumns(
     {
       field: 'length_m',
       headerName: 'Länge (m)',
+      renderHeader: () => (
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+          <SwapVertIcon fontSize="small" />
+          <span>Länge (m)</span>
+        </Box>
+      ),
       width: widths.dimensions,
       type: 'string',
       editable: true,
@@ -236,6 +244,12 @@ export function createHierarchyColumns(
     {
       field: 'width_m',
       headerName: 'Breite (m)',
+      renderHeader: () => (
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+          <SwapHorizIcon fontSize="small" />
+          <span>Breite (m)</span>
+        </Box>
+      ),
       width: widths.dimensions,
       type: 'string',
       editable: true,
