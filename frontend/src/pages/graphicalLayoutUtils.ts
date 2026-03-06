@@ -45,8 +45,8 @@ export function getFieldRectSize(
 ): RectSize {
   if (typeof field.length_m === 'number' && typeof field.width_m === 'number') {
     return {
-      width: Math.max(120, Math.round(field.length_m * pxPerMeter)),
-      height: Math.max(120, Math.round(field.width_m * pxPerMeter)),
+      width: Math.max(120, Math.round(field.width_m * pxPerMeter)),
+      height: Math.max(120, Math.round(field.length_m * pxPerMeter)),
     };
   }
 
@@ -56,8 +56,8 @@ export function getFieldRectSize(
 export function getBedRectSize(bed: Pick<Bed, 'area_sqm' | 'length_m' | 'width_m'>, pxPerMeter: number): RectSize {
   if (typeof bed.length_m === 'number' && typeof bed.width_m === 'number') {
     return {
-      width: Math.max(20, Math.round(bed.length_m * pxPerMeter)),
-      height: Math.max(20, Math.round(bed.width_m * pxPerMeter)),
+      width: Math.max(20, Math.round(bed.width_m * pxPerMeter)),
+      height: Math.max(20, Math.round(bed.length_m * pxPerMeter)),
     };
   }
 
@@ -75,8 +75,8 @@ export function getBedScaleFromField(
     return Math.max(
       4,
       Math.min(
-        fieldInnerSize.width / lengthM,
-        fieldInnerSize.height / widthM,
+        fieldInnerSize.width / widthM,
+        fieldInnerSize.height / lengthM,
       ),
     );
   }
