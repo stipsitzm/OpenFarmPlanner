@@ -17,9 +17,9 @@ interface SnapSize {
   height: number;
 }
 
-  position: Point,
-  size: SnapSize,
-  threshold: number = SNAP_THRESHOLD
+interface BedViewModel {
+  id: number;
+  name: string;
   area: number;
   x: number;
   y: number;
@@ -44,24 +44,23 @@ const VIEWPORT_PADDING = 120;
 const FIELD_INNER_OFFSET_X = 10;
 const FIELD_INNER_OFFSET_Y = 34;
 const SNAP_THRESHOLD = 8;
-const FIELD_SNAP_THRESHOLD = 14;
 const EXPANDED_STORAGE_KEY = 'graphicalFieldsExpandedLocations';
 
 interface GraphicalFieldsProps {
   showTitle?: boolean;
 }
 
-const snapToNeighbors = (
-): SnapResult => {
-  let bestYDelta = threshold + 1;
-          if (absDelta <= threshold && absDelta < bestXDelta) {
-          if (absDelta <= threshold && absDelta < bestYDelta) {
+const snapToNeighborBeds = (
+  currentBedId: number,
+  position: Point,
+  size: SnapSize,
   neighbors: BedViewModel[],
-): SnapResult {
+  threshold: number = SNAP_THRESHOLD,
+): SnapResult => {
   let snappedX = position.x;
   let snappedY = position.y;
-  let bestXDelta = SNAP_THRESHOLD + 1;
-  let bestYDelta = SNAP_THRESHOLD + 1;
+  let bestXDelta = threshold + 1;
+  let bestYDelta = threshold + 1;
   const guides: GuideLine[] = [];
 
   const currentXPoints = [
@@ -93,7 +92,7 @@ const snapToNeighbors = (
         neighborXPoints.forEach((neighborPoint) => {
           const delta = neighborPoint.value - currentPoint.value;
           const absDelta = Math.abs(delta);
-          if (absDelta <= SNAP_THRESHOLD && absDelta < bestXDelta) {
+          if (absDelta <= threshold && absDelta < bestXDelta) {
             bestXDelta = absDelta;
             snappedX = position.x + delta;
             guides.push({
@@ -110,7 +109,7 @@ const snapToNeighbors = (
         neighborYPoints.forEach((neighborPoint) => {
           const delta = neighborPoint.value - currentPoint.value;
           const absDelta = Math.abs(delta);
-          if (absDelta <= SNAP_THRESHOLD && absDelta < bestYDelta) {
+          if (absDelta <= threshold && absDelta < bestYDelta) {
             bestYDelta = absDelta;
             snappedY = position.y + delta;
             guides.push({
@@ -377,8 +376,6 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                               location: location.id!,
                               x: next.x,
                               y: next.y,
-                              FIELD_SNAP_THRESHOLD,
-                              FIELD_SNAP_THRESHOLD,
                               version: 1,
                             };
 
