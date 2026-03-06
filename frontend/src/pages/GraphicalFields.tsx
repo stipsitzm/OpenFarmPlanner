@@ -7,9 +7,19 @@ import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData
 import { layoutAPI, type BedLayoutEntry, type FieldLayoutEntry } from '../api/api';
 import { areaToRectSize, clampInsideParent, getBedRectSize, initialAutoLayout, type RectSize } from './graphicalLayoutUtils';
 
-interface BedViewModel {
-  id: number;
-  name: string;
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface SnapSize {
+  width: number;
+  height: number;
+}
+
+  position: Point,
+  size: SnapSize,
+  threshold: number = SNAP_THRESHOLD
   area: number;
   x: number;
   y: number;
