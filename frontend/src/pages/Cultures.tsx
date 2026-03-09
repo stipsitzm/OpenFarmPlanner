@@ -16,6 +16,14 @@ import type { CultivationType } from '../api/types';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
 import {
+  normalizeCultivationType,
+  normalizeHarvestMethod,
+  normalizeNutrientDemand,
+  normalizeSeedingRequirementType,
+  normalizeSeedRateUnit,
+  normalizeSuggestedSeedPackages,
+} from '../cultures/enumNormalization';
+import {
   Alert,
   Box,
   Button,
@@ -56,7 +64,6 @@ import {
 import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
-import { normalizeCultivationType } from '../cultures/enumNormalization';
 import {
   buildImportSuccessMessage,
   mapImportErrors,

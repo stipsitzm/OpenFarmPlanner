@@ -8,6 +8,7 @@ from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from farm.image_processing import MAX_IMAGE_SIDE
 from farm.models import Location, Field, Bed, Culture, PlantingPlan, NoteAttachment
 
 try:
@@ -44,7 +45,7 @@ class NoteAttachmentProcessingApiTest(APITestCase):
 
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)
                 attachment = NoteAttachment.objects.get(pk=response.data['id'])
-                self.assertLessEqual(max(attachment.width or 0, attachment.height or 0), 1280)
+                self.assertLessEqual(max(attachment.width or 0, attachment.height or 0), MAX_IMAGE_SIDE)
                 self.assertTrue(attachment.image.name.startswith(f'notes/{self.plan.id}/'))
 
     def test_upload_invalid_file_returns_400(self):

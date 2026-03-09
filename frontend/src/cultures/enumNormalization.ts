@@ -91,3 +91,13 @@ export function normalizeSeedingRequirementType(value: unknown): Culture['seedin
   };
   return map[normalized] ?? '';
 }
+
+export function normalizeSuggestedSeedPackages(value: unknown): Culture['seed_packages'] {
+  if (!value || !Array.isArray(value)) return undefined;
+  return value.map((pkg) => ({
+    size_value: Math.round((Number(pkg.size_value) || 0) * 10) / 10,
+    size_unit: 'g' as const,
+    evidence_text: pkg.evidence_text ?? '',
+    last_seen_at: pkg.last_seen_at ?? null,
+  }));
+}

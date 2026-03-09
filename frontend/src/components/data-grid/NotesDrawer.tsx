@@ -40,7 +40,7 @@ export interface NotesDrawerProps {
   focusRequestId?: number;
 }
 
-const MAX_SIDE = 1280;
+const MAX_SIDE = 2560;
 const MIN_CROP_SIZE = 24;
 
 type CropRect = { x: number; y: number; width: number; height: number };
@@ -73,12 +73,12 @@ async function renderProcessedFile(file: File, cropRect?: CropRect): Promise<Fil
 
   ctx.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, targetWidth, targetHeight);
 
-  const webp = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.85));
+  const webp = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.92));
   if (webp) {
     return new File([webp], `${file.name.replace(/\.[^.]+$/, '')}.webp`, { type: 'image/webp' });
   }
 
-  const jpeg = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+  const jpeg = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
   if (!jpeg) throw new Error('Failed to encode image');
   return new File([jpeg], `${file.name.replace(/\.[^.]+$/, '')}.jpg`, { type: 'image/jpeg' });
 }

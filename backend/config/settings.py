@@ -18,6 +18,9 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Project root is one level above backend
+PROJECT_ROOT = BASE_DIR.parent
+
 # Load environment variables from BASE_DIR/.env explicitly to avoid CWD issues in production
 load_dotenv(BASE_DIR / ".env")
 
@@ -172,8 +175,10 @@ STATIC_URL = 'static/'
 
 
 # Media files (user uploads)
+# Media files are stored at project root level (next to backend and frontend folders)
+# to keep them separate from the application code
 MEDIA_URL = os.getenv('MEDIA_URL', '/media/')
-MEDIA_ROOT = Path(os.getenv('MEDIA_ROOT', BASE_DIR / 'media'))
+MEDIA_ROOT = Path(os.getenv('MEDIA_ROOT', PROJECT_ROOT / 'media'))
 
 
 # Default primary key field type

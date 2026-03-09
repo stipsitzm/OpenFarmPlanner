@@ -7,7 +7,7 @@ from io import BytesIO
 from django.core.files.base import ContentFile
 
 MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024
-MAX_IMAGE_SIDE = 1280
+MAX_IMAGE_SIDE = 2560
 
 
 class ImageProcessingError(ValueError):
@@ -55,10 +55,10 @@ def process_note_image(uploaded_file) -> tuple[ContentFile, dict[str, int | str]
         mime_type = 'image/webp'
         filename = 'processed.webp'
         try:
-            image.save(buffer, format='WEBP', quality=82, method=6)
+            image.save(buffer, format='WEBP', quality=90, method=6)
         except Exception:
             buffer = BytesIO()
-            image.save(buffer, format='JPEG', quality=85, optimize=True)
+            image.save(buffer, format='JPEG', quality=90, optimize=True)
             mime_type = 'image/jpeg'
             filename = 'processed.jpg'
 

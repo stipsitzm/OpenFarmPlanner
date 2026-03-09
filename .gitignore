@@ -36,7 +36,9 @@ mutation-report/
 
 # User uploaded media
 backend/media/
-media/
+media/*
+!media/.gitignore
+!media/README.md
 
 # Quality reports
 reports/

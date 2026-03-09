@@ -31,8 +31,8 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
     nutrient_demand: normalizeNutrientDemand(culture.nutrient_demand),
     cultivation_type: normalizeCultivationType(culture.cultivation_type),
     cultivation_types: (culture.cultivation_types && culture.cultivation_types.length > 0)
-      ? culture.cultivation_types
-      : (culture.cultivation_type ? [normalizeCultivationType(culture.cultivation_type)] : ['pre_cultivation']),
+      ? culture.cultivation_types.filter((ct): ct is 'pre_cultivation' | 'direct_sowing' => ct === 'pre_cultivation' || ct === 'direct_sowing')
+      : (culture.cultivation_type ? [normalizeCultivationType(culture.cultivation_type)].filter((ct): ct is 'pre_cultivation' | 'direct_sowing' => ct === 'pre_cultivation' || ct === 'direct_sowing') : ['pre_cultivation']),
     seed_rate_by_cultivation: culture.seed_rate_by_cultivation ?? null,
     seeding_requirement_type: normalizeSeedingRequirementType(culture.seeding_requirement_type),
     supplier_id: culture.supplier?.id || null,
@@ -40,9 +40,9 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
     supplier: undefined,
   };
 
-  delete (payload as Partial<Culture> & Record<string, unknown>).distance_within_row_m;
-  delete (payload as Partial<Culture> & Record<string, unknown>).row_spacing_m;
-  delete (payload as Partial<Culture> & Record<string, unknown>).sowing_depth_m;
+  delete (payload as unknown as Record<string, unknown>).distance_within_row_m;
+  delete (payload as unknown as Record<string, unknown>).row_spacing_m;
+  delete (payload as unknown as Record<string, unknown>).sowing_depth_m;
 
   return payload;
 }
