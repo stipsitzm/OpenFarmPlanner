@@ -9,6 +9,26 @@ from typing import Any, Callable
 import requests
 
 
+def _extract_raw_tool_sources_from_evidence(evidence: object) -> list[dict[str, str]]:
+    """Extract unique source URLs from evidence entries for tracing."""
+    if not isinstance(evidence, dict):
+        return []
+    seen: set[str] = set()
+    sources: list[dict[str, str]] = []
+    for field_name, entries in evidence.items():
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            source_url = str(entry.get('source_url') or '').strip()
+            if not source_url or source_url in seen:
+                continue
+            seen.add(source_url)
+            sources.append({'source_url': source_url, 'field': str(field_name)})
+    return sources
+
+
 def extract_text_payload(payload: dict[str, Any]) -> str:
     """Extract model text from Responses API payload across schema variants."""
     output_text = payload.get("output_text")
@@ -74,10 +94,18 @@ def request_enrichment_payload(
     request_timeout: tuple[float, float],
     prompt: str,
     model_name: str,
+    allowed_domains: list[str] | None,
     extract_usage: Callable[[dict[str, Any]], dict[str, int]],
     count_web_search_calls: Callable[[dict[str, Any]], int],
 ) -> tuple[dict[str, Any], dict[str, int], int]:
     """Execute one Responses API call and return parsed payload with usage metadata."""
+    web_search_tool: dict[str, Any] = {
+        "type": "web_search",
+        "user_location": {"type": "approximate", "country": "AT"},
+    }
+    if allowed_domains:
+        web_search_tool["filters"] = {"allowed_domains": allowed_domains}
+
     try:
         response = requests.post(
             responses_url,
@@ -88,10 +116,7 @@ def request_enrichment_payload(
             },
             json={
                 "model": model_name,
-                "tools": [{
-                    "type": "web_search_preview",
-                    "user_location": {"type": "approximate", "country": "AT"},
-                }],
+                "tools": [web_search_tool],
                 "input": prompt,
             },
         )
@@ -108,6 +133,11 @@ def request_enrichment_payload(
 
     text = extract_text_payload(payload)
     parsed = parse_json_block(text)
+    if isinstance(parsed, dict):
+        trace = parsed.get('source_trace') if isinstance(parsed.get('source_trace'), dict) else {}
+        if 'raw_tool_sources' not in trace:
+            trace['raw_tool_sources'] = _extract_raw_tool_sources_from_evidence(parsed.get('evidence'))
+        parsed['source_trace'] = trace
     usage = extract_usage(payload)
     web_search_call_count = count_web_search_calls(payload)
     return parsed, usage, web_search_call_count
@@ -153,6 +183,21 @@ def merge_phase_payloads(base: dict[str, Any], fallback: dict[str, Any]) -> dict
 
     if not merged.get('note_blocks') and fallback.get('note_blocks'):
         merged['note_blocks'] = fallback.get('note_blocks')
+
+    merged['source_trace'] = {
+        'phase_1': base.get('source_trace') if isinstance(base.get('source_trace'), dict) else {
+            'raw_tool_sources': _extract_raw_tool_sources_from_evidence(base.get('evidence')),
+            'accepted_sources': _extract_raw_tool_sources_from_evidence(base.get('evidence')),
+            'rejected_sources': [],
+            'rejection_reason': [],
+        },
+        'phase_2': fallback.get('source_trace') if isinstance(fallback.get('source_trace'), dict) else {
+            'raw_tool_sources': _extract_raw_tool_sources_from_evidence(fallback.get('evidence')),
+            'accepted_sources': _extract_raw_tool_sources_from_evidence(fallback.get('evidence')),
+            'rejected_sources': [],
+            'rejection_reason': [],
+        },
+    }
     return merged
 
 
@@ -211,9 +256,23 @@ def apply_supplier_only_filter(
                         'message': f"Dropped suggestion for {field_name} in supplier-only phase because supplier evidence is missing.",
                     })
 
+    raw_sources = _extract_raw_tool_sources_from_evidence(evidence)
+    accepted_sources = _extract_raw_tool_sources_from_evidence(filtered_evidence)
+    rejected_urls = {item['source_url'] for item in raw_sources} - {item['source_url'] for item in accepted_sources}
+    rejected_sources = [
+        {'source_url': url, 'field': '*', 'rejection_reason': 'not_in_allowlist'}
+        for url in sorted(rejected_urls)
+    ]
+
     return {
         **payload,
         'suggested_fields': filtered_suggested,
         'evidence': filtered_evidence,
         'validation': validation,
+        'source_trace': {
+            'raw_tool_sources': raw_sources,
+            'accepted_sources': accepted_sources,
+            'rejected_sources': rejected_sources,
+            'rejection_reason': sorted({item['rejection_reason'] for item in rejected_sources}),
+        },
     }

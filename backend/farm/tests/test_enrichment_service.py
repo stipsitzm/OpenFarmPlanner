@@ -66,6 +66,85 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
 
 
+
+    @patch('farm.services.enrichment.requests.post')
+    def test_two_phase_web_search_tool_configuration(self, post_mock):
+        provider = OpenAIResponsesProvider(api_key='test-key')
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'growth_duration_days': {'value': 60, 'unit': 'days', 'confidence': 0.8},
+                },
+                'evidence': {
+                    'growth_duration_days': [
+                        {'source_url': 'https://reinsaat.at/product', 'title': 'ReinSaat', 'retrieved_at': '', 'snippet': 'supplier', 'supplier_specific': True},
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        post_mock.side_effect = [response, response]
+
+        provider.enrich(Mock(culture=self.culture, mode='complete'))
+
+        first_tools = post_mock.call_args_list[0].kwargs['json']['tools'][0]
+        second_tools = post_mock.call_args_list[1].kwargs['json']['tools'][0]
+        self.assertEqual(first_tools['type'], 'web_search')
+        self.assertEqual(first_tools.get('filters', {}).get('allowed_domains'), ['example.com', 'reinsaat.at', 'reinsaat.example'])
+        self.assertEqual(second_tools['type'], 'web_search')
+        self.assertNotIn('filters', second_tools)
+
+    @patch('farm.services.enrichment.requests.post')
+    def test_external_phase_filters_supplier_sources_and_drops_external_fields_without_valid_sources(self, post_mock):
+        provider = OpenAIResponsesProvider(api_key='test-key')
+
+        primary = Mock()
+        primary.status_code = 200
+        primary.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'growth_duration_days': {'value': 60, 'unit': 'days', 'confidence': 0.8},
+                },
+                'evidence': {
+                    'growth_duration_days': [
+                        {'source_url': 'https://reinsaat.at/product', 'title': 'ReinSaat', 'retrieved_at': '', 'snippet': 'supplier', 'supplier_specific': True},
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        external = Mock()
+        external.status_code = 200
+        external.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'growth_duration_days': {'value': 99, 'unit': 'days', 'confidence': 0.3},
+                },
+                'evidence': {
+                    'growth_duration_days': [
+                        {'source_url': 'https://reinsaat.at/another', 'title': 'ReinSaat 2', 'retrieved_at': '', 'snippet': 'supplier', 'supplier_specific': True},
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        post_mock.side_effect = [primary, external]
+
+        result = provider.enrich(Mock(culture=self.culture, mode='complete'))
+
+        self.assertEqual(result['suggested_fields']['growth_duration_days']['value'], 60)
+        warning_codes = [item.get('code') for item in result.get('validation', {}).get('warnings', [])]
+        self.assertIn('no_valid_external_sources', warning_codes)
+        phase_2_trace = result.get('source_trace', {}).get('phase_2', {})
+        self.assertIn('supplier_domain_in_external_phase', phase_2_trace.get('rejection_reason', []))
+        self.assertIn('no_valid_external_sources', phase_2_trace.get('rejection_reason', []))
+
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
     def test_note_blocks_object_is_coerced_into_notes(self, post_mock):

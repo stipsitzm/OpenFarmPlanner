@@ -30,7 +30,7 @@ def build_prompt(
         "sowing_depth_cm": round(culture.sowing_depth_m * 100, 2) if culture.sowing_depth_m else None,
         "seed_rate_value": culture.seed_rate_value,
         "seed_rate_unit": culture.seed_rate_unit,
-        "supplier_allowed_domains": list(supplier_domains_for_culture(culture)),
+        "supplier_allowed_domains": list(supplier_domains_for_culture(culture)) if supplier_only else [],
     }
     if target_fields is None:
         target_fields = missing_enrichment_fields(culture) if mode == 'complete' else []
@@ -49,26 +49,33 @@ def build_prompt(
     fallback_query = (culture.variety or culture.name).strip()
     supplier_domains = sorted(supplier_domains_for_culture(culture))
     primary_domain = supplier_domains[0] if supplier_domains else ''
-    supplier_strategy = (
-        "Supplier-first rules are mandatory. "
-        "All evidence URLs must be inside supplier.allowed_domains. Ignore all other domains. "
-        "First, find the supplier product page for this crop and variety on supplier domains, then extract facts from that page and relevant supplier category pages. "
-        "If no product page can be found on supplier domains, keep suggested_fields mostly empty and add validation error code supplier_product_not_found. "
-    )
-    if 'seed_packages' in target_fields:
-        supplier_strategy += (
-            "Package sizes MUST come exclusively from supplier evidence; otherwise return seed_packages as empty list. "
+    if supplier_only:
+        supplier_strategy = (
+            "Supplier-first rules are mandatory. "
+            "All evidence URLs must be inside supplier.allowed_domains. Ignore all other domains. "
+            "First, find the supplier product page for this crop and variety on supplier domains, then extract facts from that page and relevant supplier category pages. "
+            "If no product page can be found on supplier domains, keep suggested_fields mostly empty and add validation error code supplier_product_not_found. "
         )
-    supplier_strategy += (
-        f"Search strategy: Query 1 'site:{primary_domain} {culture.variety or ''} {culture.name}'; "
-        f"Query 2 'site:{primary_domain} {culture.variety or ''} {supplier or ''}'; "
-    )
-    if 'seed_packages' in target_fields or 'thousand_kernel_weight_g' in target_fields:
-        supplier_strategy += f"Query 3 'site:{primary_domain} {culture.variety or ''} Packungsgrößen OR Portionsinhalt OR TKG'; "
-    supplier_strategy += f"Optional Query 4 'site:{primary_domain} {fallback_query} category'. "
-    supplier_strategy += "Tag every evidence entry with supplier_specific true/false. "
-    if supplier_only and supplier_domains:
-        supplier_strategy += f"Allowed supplier domains whitelist: {', '.join(supplier_domains)}. "
+        if 'seed_packages' in target_fields:
+            supplier_strategy += (
+                "Package sizes MUST come exclusively from supplier evidence; otherwise return seed_packages as empty list. "
+            )
+        supplier_strategy += (
+            f"Search strategy: Query 1 'site:{primary_domain} {culture.variety or ''} {culture.name}'; "
+            f"Query 2 'site:{primary_domain} {culture.variety or ''} {supplier or ''}'; "
+        )
+        if 'seed_packages' in target_fields or 'thousand_kernel_weight_g' in target_fields:
+            supplier_strategy += f"Query 3 'site:{primary_domain} {culture.variety or ''} Packungsgrößen OR Portionsinhalt OR TKG'; "
+        supplier_strategy += f"Optional Query 4 'site:{primary_domain} {fallback_query} category'. "
+        supplier_strategy += "Tag every evidence entry with supplier_specific true/false. "
+        if supplier_domains:
+            supplier_strategy += f"Allowed supplier domains whitelist: {', '.join(supplier_domains)}. "
+    else:
+        supplier_strategy = (
+            "External research phase: use only non-supplier independent sources. "
+            "Do not use supplier domains, supplier product pages or supplier mirrors. "
+            "Tag every evidence entry with supplier_specific false. "
+        )
 
     field_list_parts = []
     field_instructions = []
@@ -166,5 +173,5 @@ def build_prompt(
         f"{''.join(field_instructions)}"
         f"{supplier_strategy}"
         f"{requested_fields_text}"
-        f"Culture identity: {identity}. Supplier: {supplier or 'unknown'}. Mode: {mode}. Existing values: {json.dumps(existing, ensure_ascii=False)}"
+        f"Culture identity: {identity}. Mode: {mode}. Existing values: {json.dumps(existing, ensure_ascii=False)}"
     )

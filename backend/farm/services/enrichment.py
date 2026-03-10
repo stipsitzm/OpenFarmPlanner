@@ -257,7 +257,13 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         except ValueError as exc:
             raise EnrichmentError(str(exc)) from exc
 
-    def _request_enrichment_payload(self, prompt: str, model_name: str) -> tuple[dict[str, Any], dict[str, int], int]:
+    def _request_enrichment_payload(
+        self,
+        prompt: str,
+        model_name: str,
+        *,
+        allowed_domains: list[str] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, int], int]:
         """Execute one Responses API call and return parsed payload with usage metadata."""
         try:
             return enrichment_openai.request_enrichment_payload(
@@ -266,11 +272,81 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
                 request_timeout=self._request_timeout(),
                 prompt=prompt,
                 model_name=model_name,
+                allowed_domains=allowed_domains,
                 extract_usage=_extract_usage,
                 count_web_search_calls=_count_web_search_calls,
             )
         except ValueError as exc:
             raise EnrichmentError(str(exc)) from exc
+
+
+    def _filter_external_phase_payload(self, payload: dict[str, Any], culture: Culture) -> dict[str, Any]:
+        """Filter external phase payload to strictly non-supplier evidence."""
+        supplier_domains = _supplier_domains_for_culture(culture)
+        evidence = payload.get('evidence') if isinstance(payload.get('evidence'), dict) else {}
+        raw_suggested_fields = payload.get('suggested_fields')
+        suggested_fields = raw_suggested_fields if isinstance(raw_suggested_fields, dict) else {}
+        validation = payload.get('validation') if isinstance(payload.get('validation'), dict) else {'warnings': [], 'errors': []}
+
+        warnings = validation.setdefault('warnings', [])
+        trace = payload.get('source_trace') if isinstance(payload.get('source_trace'), dict) else {}
+        raw_sources = trace.get('raw_tool_sources') if isinstance(trace.get('raw_tool_sources'), list) else []
+        if not raw_sources:
+            raw_sources = [
+                {'source_url': _coerce_text_value(item.get('source_url', ''), 'evidence.source_url'), 'field': field_name}
+                for field_name, entries in evidence.items()
+                if isinstance(entries, list)
+                for item in entries
+                if isinstance(item, dict) and _coerce_text_value(item.get('source_url', ''), 'evidence.source_url')
+            ]
+        accepted_sources = []
+        rejected_sources = []
+
+        filtered_evidence: dict[str, list[dict[str, Any]]] = {}
+        for field_name, entries in evidence.items():
+            if not isinstance(entries, list):
+                continue
+            kept: list[dict[str, Any]] = []
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                source_url = _coerce_text_value(entry.get('source_url', ''), 'evidence.source_url')
+                if _url_matches_supplier_domains(source_url, supplier_domains):
+                    rejected_sources.append({'source_url': source_url, 'field': field_name, 'rejection_reason': 'supplier_domain_in_external_phase'})
+                    continue
+                entry_copy = dict(entry)
+                entry_copy['supplier_specific'] = False
+                kept.append(entry_copy)
+                accepted_sources.append({'source_url': source_url, 'field': field_name})
+            if kept:
+                filtered_evidence[field_name] = kept
+
+        if not accepted_sources:
+            rejected_sources.append({'source_url': '', 'field': '*', 'rejection_reason': 'no_valid_external_sources'})
+            for field_name in list(suggested_fields.keys()):
+                if field_name != 'notes':
+                    suggested_fields.pop(field_name, None)
+            if isinstance(warnings, list):
+                warnings.append({
+                    'field': 'external_phase',
+                    'code': 'no_valid_external_sources',
+                    'message': 'External phase had no valid non-supplier sources after server-side filtering.',
+                })
+
+        phase_trace = {
+            'raw_tool_sources': raw_sources,
+            'accepted_sources': accepted_sources,
+            'rejected_sources': rejected_sources,
+            'rejection_reason': sorted({item.get('rejection_reason') for item in rejected_sources if item.get('rejection_reason')}),
+        }
+
+        return {
+            **payload,
+            'suggested_fields': suggested_fields,
+            'evidence': filtered_evidence,
+            'validation': validation,
+            'source_trace': phase_trace,
+        }
 
     def _merge_phase_payloads(self, base: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
         """Merge two provider payloads without changing the output contract."""
@@ -297,8 +373,14 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         model_name = self.model_name
         supplier_name = context.culture.supplier.name if context.culture.supplier else (context.culture.seed_supplier or '')
 
+        supplier_domains = sorted(_supplier_domains_for_culture(context.culture))
+
         phase_one_prompt = self._build_prompt(context.culture, context.mode, supplier_only=True)
-        primary_result, primary_usage, primary_search_calls = self._request_enrichment_payload(phase_one_prompt, model_name)
+        primary_result, primary_usage, primary_search_calls = self._request_enrichment_payload(
+            phase_one_prompt,
+            model_name,
+            allowed_domains=supplier_domains,
+        )
         primary_result = self._apply_supplier_only_filter(primary_result, context.culture)
 
         combined_result = primary_result
@@ -318,7 +400,12 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
                 target_fields=target_fields_for_fallback,
                 supplier_only=False,
             )
-            fallback_result, fallback_usage, fallback_search_calls = self._request_enrichment_payload(fallback_prompt, model_name)
+            fallback_result, fallback_usage, fallback_search_calls = self._request_enrichment_payload(
+                fallback_prompt,
+                model_name,
+                allowed_domains=None,
+            )
+            fallback_result = self._filter_external_phase_payload(fallback_result, context.culture)
             combined_result = self._merge_phase_payloads(primary_result, fallback_result)
             total_usage = {
                 'input_tokens': primary_usage['input_tokens'] + fallback_usage['input_tokens'],
@@ -581,5 +668,9 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
         usage=usage,
         cost_estimate=cost_estimate,
     )
+    source_trace = raw.get('source_trace') if isinstance(raw.get('source_trace'), dict) else None
+    if source_trace:
+        result['trace'] = {'source_filtering': source_trace}
+
     _persist_accounting_run(culture, mode, result)
     return result
