@@ -293,6 +293,10 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             _is_supplier_entry,
         )
 
+    def _is_external_enrichment_enabled(self) -> bool:
+        """Return whether enrichment phase 2 (external/fallback merge) is enabled."""
+        return bool(getattr(settings, 'ENABLE_EXTERNAL_ENRICHMENT', False))
+
     def enrich(self, context: EnrichmentContext) -> dict[str, Any]:
         model_name = self.model_name
         supplier_name = context.culture.supplier.name if context.culture.supplier else (context.culture.seed_supplier or '')
@@ -305,27 +309,28 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         total_usage = dict(primary_usage)
         total_search_calls = primary_search_calls
 
-        missing_fields = enrichment_fields.missing_enrichment_fields(context.culture)
-        has_missing_fields = len(missing_fields) > 0
-        has_supplier_evidence = self._has_supplier_specific_evidence(supplier_name, primary_result.get('evidence'))
-        
-        should_fallback = (not has_supplier_evidence) or (has_supplier_evidence and has_missing_fields)
-        if should_fallback:
-            target_fields_for_fallback = missing_fields if (has_supplier_evidence and context.mode == 'complete') else []
-            fallback_prompt = self._build_prompt(
-                context.culture,
-                context.mode,
-                target_fields=target_fields_for_fallback,
-                supplier_only=False,
-            )
-            fallback_result, fallback_usage, fallback_search_calls = self._request_enrichment_payload(fallback_prompt, model_name)
-            combined_result = self._merge_phase_payloads(primary_result, fallback_result)
-            total_usage = {
-                'input_tokens': primary_usage['input_tokens'] + fallback_usage['input_tokens'],
-                'cached_input_tokens': primary_usage['cached_input_tokens'] + fallback_usage['cached_input_tokens'],
-                'output_tokens': primary_usage['output_tokens'] + fallback_usage['output_tokens'],
-            }
-            total_search_calls += fallback_search_calls
+        if self._is_external_enrichment_enabled():
+            missing_fields = enrichment_fields.missing_enrichment_fields(context.culture)
+            has_missing_fields = len(missing_fields) > 0
+            has_supplier_evidence = self._has_supplier_specific_evidence(supplier_name, primary_result.get('evidence'))
+
+            should_fallback = (not has_supplier_evidence) or (has_supplier_evidence and has_missing_fields)
+            if should_fallback:
+                target_fields_for_fallback = missing_fields if (has_supplier_evidence and context.mode == 'complete') else []
+                fallback_prompt = self._build_prompt(
+                    context.culture,
+                    context.mode,
+                    target_fields=target_fields_for_fallback,
+                    supplier_only=False,
+                )
+                fallback_result, fallback_usage, fallback_search_calls = self._request_enrichment_payload(fallback_prompt, model_name)
+                combined_result = self._merge_phase_payloads(primary_result, fallback_result)
+                total_usage = {
+                    'input_tokens': primary_usage['input_tokens'] + fallback_usage['input_tokens'],
+                    'cached_input_tokens': primary_usage['cached_input_tokens'] + fallback_usage['cached_input_tokens'],
+                    'output_tokens': primary_usage['output_tokens'] + fallback_usage['output_tokens'],
+                }
+                total_search_calls += fallback_search_calls
 
         combined_result["usage"] = total_usage
         combined_result["cost_estimate"] = _build_cost_estimate(

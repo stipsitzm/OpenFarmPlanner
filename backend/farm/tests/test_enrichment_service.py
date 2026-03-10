@@ -134,6 +134,80 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.assertNotIn('growth_duration_days', sent_input.split("ONLY research and suggest these missing fields:", 1)[1].split('.', 1)[0])
         self.assertIn("If sources are included, the final section must be '## Quellen'", sent_input)
 
+    @override_settings(ENABLE_EXTERNAL_ENRICHMENT=False)
+    @patch('farm.services.enrichment.requests.post')
+    def test_external_phase_disabled_skips_second_request_and_merge(self, post_mock):
+        provider = OpenAIResponsesProvider(api_key='test-key')
+        self.culture.seed_supplier = 'ReinSaat'
+        self.culture.save(update_fields=['seed_supplier'])
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {'growth_duration_days': {'value': 60, 'unit': 'days', 'confidence': 0.6}},
+                'evidence': {
+                    'growth_duration_days': [
+                        {'source_url': 'https://other.example/growth', 'title': 'Other', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': 'general only', 'supplier_specific': False},
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        post_mock.return_value = response
+
+        result = provider.enrich(Mock(culture=self.culture, mode='complete'))
+
+        self.assertEqual(post_mock.call_count, 1)
+        self.assertEqual(result['usage']['input_tokens'], 0)
+        self.assertEqual(result['cost_estimate']['breakdown']['web_search_call_count'], 0)
+
+    @override_settings(ENABLE_EXTERNAL_ENRICHMENT=True)
+    @patch('farm.services.enrichment.requests.post')
+    def test_external_phase_enabled_runs_second_request_when_needed(self, post_mock):
+        provider = OpenAIResponsesProvider(api_key='test-key')
+        self.culture.seed_supplier = 'ReinSaat'
+        self.culture.save(update_fields=['seed_supplier'])
+
+        first = Mock()
+        first.status_code = 200
+        first.json.return_value = {
+            'usage': {'input_tokens': 11, 'output_tokens': 5, 'input_tokens_details': {'cached_tokens': 2}},
+            'output_text': json.dumps({
+                'suggested_fields': {'growth_duration_days': {'value': 60, 'unit': 'days', 'confidence': 0.6}},
+                'evidence': {
+                    'growth_duration_days': [
+                        {'source_url': 'https://other.example/growth', 'title': 'Other', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': 'general only', 'supplier_specific': False},
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        second = Mock()
+        second.status_code = 200
+        second.json.return_value = {
+            'usage': {'input_tokens': 13, 'output_tokens': 7, 'input_tokens_details': {'cached_tokens': 3}},
+            'output_text': json.dumps({
+                'suggested_fields': {'harvest_duration_days': {'value': 55, 'unit': 'days', 'confidence': 0.7}},
+                'evidence': {
+                    'harvest_duration_days': [
+                        {'source_url': 'https://external.example/harvest', 'title': 'External', 'retrieved_at': '2026-01-01T00:00:00Z', 'snippet': 'external', 'supplier_specific': False},
+                    ],
+                },
+                'validation': {'warnings': [{'field': 'harvest_duration_days', 'code': 'external_note', 'message': 'from external'}], 'errors': []},
+                'note_blocks': 'fallback notes',
+            }),
+        }
+        post_mock.side_effect = [first, second]
+
+        result = provider.enrich(Mock(culture=self.culture, mode='complete'))
+
+        self.assertEqual(post_mock.call_count, 2)
+        self.assertEqual(result['usage']['input_tokens'], 24)
+        self.assertEqual(result['usage']['cached_input_tokens'], 5)
+        self.assertEqual(result['usage']['output_tokens'], 12)
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
@@ -805,7 +879,11 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.assertEqual([item['size_value'] for item in values], [0.4, 1.0, 2.5])
         self.assertTrue(all(item['size_unit'] == 'g' for item in values))
 
-    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @override_settings(
+        AI_ENRICHMENT_PROVIDER='openai_responses',
+        OPENAI_API_KEY='test-key',
+        ENABLE_EXTERNAL_ENRICHMENT=True,
+    )
     @patch('farm.services.enrichment.requests.post')
     def test_seed_packages_without_supplier_specific_evidence_are_rejected(self, post_mock):
         response = Mock()
