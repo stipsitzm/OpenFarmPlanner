@@ -378,6 +378,7 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             culture,
             _supplier_domains_for_culture,
             _is_supplier_entry,
+            enrichment_sources.is_plausible_supplier_source_url,
         )
 
     def enrich(self, context: EnrichmentContext) -> dict[str, Any]:
@@ -665,6 +666,11 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
         normalize_numeric_field,
         _coerce_text_value,
     )
+    enrichment_postprocess.drop_uncertain_numeric_suggestions(
+        suggested_fields,
+        evidence,
+        validation,
+    )
     enrichment_sowing.normalize_sowing_method_enrichment_fields(
         culture,
         suggested_fields,
@@ -727,6 +733,9 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
     source_trace = raw.get('source_trace') if isinstance(raw.get('source_trace'), dict) else None
     if source_trace:
         result['trace'] = {'source_filtering': source_trace}
+        field_origins = source_trace.get('field_origins') if isinstance(source_trace.get('field_origins'), dict) else None
+        if field_origins:
+            result['field_source_phase'] = field_origins
 
     _persist_accounting_run(culture, mode, result)
     return result

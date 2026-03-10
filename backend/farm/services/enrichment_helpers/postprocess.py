@@ -93,6 +93,76 @@ def normalize_suggested_fields_payload(
     return {}
 
 
+
+
+def drop_uncertain_numeric_suggestions(
+    suggested_fields: dict[str, Any],
+    evidence: dict[str, Any],
+    validation: dict[str, Any],
+) -> None:
+    """Drop numeric suggestions when evidence/warnings indicate undocumented or inconsistent values."""
+    target_fields = {'expected_yield', 'seed_rate_direct_value', 'seed_rate_transplant_value'}
+    warning_codes = {
+        'seed_rate_not_documented',
+        'no_consistent_source',
+    }
+    warning_prefixes = ('missing_',)
+    uncertain_phrases = (
+        'nicht dokumentiert',
+        'nicht verfügbar',
+        'keine angabe',
+        'no data',
+        'not documented',
+        'estimated',
+        'estimate',
+        'grob',
+        'schätz',
+        'approximate',
+    )
+
+    warnings = validation.setdefault('warnings', [])
+
+    def has_uncertain_warning(field_name: str) -> bool:
+        for warning in warnings if isinstance(warnings, list) else []:
+            if not isinstance(warning, dict):
+                continue
+            code = str(warning.get('code') or '').strip().lower()
+            field = str(warning.get('field') or '').strip()
+            if field not in {'', field_name}:
+                continue
+            if code in warning_codes or any(code.startswith(prefix) for prefix in warning_prefixes):
+                return True
+        return False
+
+    def has_uncertain_evidence(field_name: str) -> bool:
+        entries = evidence.get(field_name)
+        if not isinstance(entries, list):
+            return False
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            combined = f"{entry.get('title') or ''} {entry.get('snippet') or ''}".lower()
+            if any(phrase in combined for phrase in uncertain_phrases):
+                return True
+        return False
+
+    for field_name in list(target_fields):
+        suggestion = suggested_fields.get(field_name)
+        if not isinstance(suggestion, dict):
+            continue
+        value = suggestion.get('value')
+        if not isinstance(value, (int, float)):
+            continue
+        if has_uncertain_warning(field_name) or has_uncertain_evidence(field_name):
+            suggested_fields.pop(field_name, None)
+            if isinstance(warnings, list):
+                warnings.append({
+                    'field': field_name,
+                    'code': 'numeric_value_dropped_due_uncertain_source',
+                    'message': 'Dropped numeric structured value because sources indicate missing/inconsistent/estimated data.',
+                })
+
+
 def validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidence: dict[str, Any], validation: dict[str, Any]) -> None:
     """Normalize and validate seed package entries while preserving output schema."""
     payload = suggested_fields.get('seed_packages')

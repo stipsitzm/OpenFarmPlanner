@@ -141,6 +141,35 @@ def add_category_mismatch_warning(
             warnings.append({'field': 'supplier_product_page', 'code': 'supplier_page_category_mismatch', 'message': 'Selected supplier page path appears category-mismatched.'})
 
 
+
+
+def is_plausible_supplier_source_url(url: str, culture_name: str) -> bool:
+    """Return False for obviously category-mismatched supplier paths."""
+    if not url:
+        return False
+    lower_url = url.lower()
+    crop = (culture_name or '').strip().lower()
+    if not crop:
+        return True
+
+    alias_map = {
+        'salat': ['salat', 'lettuce', 'loose_leaf_lettuce'],
+        'möhre': ['möhre', 'moehre', 'karotte', 'carrot'],
+        'karotte': ['möhre', 'moehre', 'karotte', 'carrot'],
+        'mais': ['mais', 'corn'],
+        'tomate': ['tomate', 'tomaten', 'tomato'],
+    }
+    aliases = alias_map.get(crop, [crop])
+    if any(alias in lower_url for alias in aliases):
+        return True
+
+    conflicting_tokens = {'mais', 'corn', 'tomate', 'tomato', 'karotte', 'carrot', 'möhre', 'moehre'}
+    if any(token in lower_url for token in conflicting_tokens if token not in aliases):
+        return False
+
+    return True
+
+
 def is_supplier_entry(
     entry: dict[str, Any],
     supplier_name: str,

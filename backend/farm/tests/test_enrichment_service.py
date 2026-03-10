@@ -1150,6 +1150,97 @@ class EnrichmentDomainEnforcementTest(TestCase):
         self.assertIn('missing_supplier_evidence', warning_codes)
 
 
+    @override_settings(AI_ENRICHMENT_ENABLED=True)
+    @patch('farm.services.enrichment.get_enrichment_provider')
+    def test_drops_numeric_fields_when_evidence_states_not_documented(self, provider_mock):
+        provider = Mock()
+        provider.provider_name = 'fallback'
+        provider.model_name = 'gpt-5'
+        provider.search_provider_name = 'web_search'
+        provider.enrich.return_value = {
+            'suggested_fields': {
+                'expected_yield': {'value': 1.8, 'unit': 'kg/m²', 'confidence': 0.7},
+                'seed_rate_direct_value': {'value': 0.09, 'unit': 'g_per_m2', 'confidence': 0.7},
+            },
+            'evidence': {
+                'expected_yield': [
+                    {
+                        'source_url': 'https://example.org/yield',
+                        'title': 'General guide',
+                        'retrieved_at': '2026-01-01T00:00:00Z',
+                        'snippet': 'Ertrag ist nicht dokumentiert, nur grob schätzbar.',
+                        'supplier_specific': False,
+                    },
+                ],
+                'seed_rate_direct_value': [
+                    {
+                        'source_url': 'https://example.org/rate',
+                        'title': 'General guide',
+                        'retrieved_at': '2026-01-01T00:00:00Z',
+                        'snippet': 'Saatgutbedarf not documented.',
+                        'supplier_specific': False,
+                    },
+                ],
+            },
+            'validation': {'warnings': [{'field': 'seed_rate_direct_value', 'code': 'seed_rate_not_documented', 'message': 'not documented'}], 'errors': []},
+            'note_blocks': '',
+            'usage': {'input_tokens': 1, 'cached_input_tokens': 0, 'output_tokens': 1},
+        }
+        provider_mock.return_value = provider
+
+        result = enrich_culture(self.culture, 'reresearch')
+        self.assertNotIn('expected_yield', result['suggested_fields'])
+        self.assertNotIn('seed_rate_direct_value', result['suggested_fields'])
+        warning_codes = [item.get('code') for item in result['validation']['warnings']]
+        self.assertIn('numeric_value_dropped_due_uncertain_source', warning_codes)
+
+    @patch('farm.services.enrichment.requests.post')
+    def test_allowed_sowing_methods_merges_supplier_and_external_values(self, post_mock):
+        provider = OpenAIResponsesProvider(api_key='test-key')
+
+        primary = Mock()
+        primary.status_code = 200
+        primary.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'allowed_sowing_methods': {'value': ['pre_cultivation'], 'unit': None, 'confidence': 0.8},
+                },
+                'evidence': {
+                    'allowed_sowing_methods': [
+                        {'source_url': 'https://reinsaat.at/category', 'title': 'cat', 'retrieved_at': '', 'snippet': 'Pflanzung', 'supplier_specific': True},
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': 'supplier-notes',
+            }),
+        }
+        external = Mock()
+        external.status_code = 200
+        external.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'allowed_sowing_methods': {'value': ['direct_sowing', 'transplanting'], 'unit': None, 'confidence': 0.7},
+                },
+                'evidence': {
+                    'allowed_sowing_methods': [
+                        {'source_url': 'https://example.org/crop', 'title': 'ext', 'retrieved_at': '', 'snippet': 'direct sowing or transplanting', 'supplier_specific': False},
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': 'external-notes',
+            }),
+        }
+        post_mock.side_effect = [primary, external]
+
+        result = provider.enrich(Mock(culture=self.culture, mode='complete'))
+        methods = result['suggested_fields']['allowed_sowing_methods']['value']
+        self.assertEqual(methods, ['pre_cultivation', 'direct_sowing', 'transplanting'])
+        self.assertEqual(result.get('source_trace', {}).get('field_origins', {}).get('allowed_sowing_methods'), 'mixed')
+        self.assertIn('Supplier-Phase Hinweise', result.get('note_blocks', ''))
+        self.assertIn('External-Phase Hinweise', result.get('note_blocks', ''))
+
+
+
 class NumericNormalizationTest(TestCase):
     def test_normalize_numeric_field_ascii_range(self):
         self.assertAlmostEqual(normalize_numeric_field('0.04-0.05'), 0.045, places=6)

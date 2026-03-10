@@ -47,6 +47,23 @@ def _extract_raw_tool_sources_from_provider_payload(payload: dict[str, Any]) -> 
     return urls
 
 
+
+
+def _merge_allowed_sowing_methods(base_value: Any, fallback_value: Any) -> list[str]:
+    """Merge allowed_sowing_methods lists while preserving supplier-first order."""
+    merged: list[str] = []
+    for candidate in [base_value, fallback_value]:
+        if not isinstance(candidate, list):
+            continue
+        for item in candidate:
+            if not isinstance(item, str):
+                continue
+            value = item.strip()
+            if value and value not in merged:
+                merged.append(value)
+    return merged
+
+
 def extract_text_payload(payload: dict[str, Any]) -> str:
     """Extract model text from Responses API payload across schema variants."""
     output_text = payload.get("output_text")
@@ -174,7 +191,18 @@ def merge_phase_payloads(base: dict[str, Any], fallback: dict[str, Any]) -> dict
     base_suggested_fields = base.get('suggested_fields')
     fallback_suggested_fields = fallback.get('suggested_fields')
     if isinstance(base_suggested_fields, dict) and isinstance(fallback_suggested_fields, dict):
-        merged['suggested_fields'] = {**fallback_suggested_fields, **base_suggested_fields}
+        merged_suggested = {**fallback_suggested_fields, **base_suggested_fields}
+        base_methods = base_suggested_fields.get('allowed_sowing_methods') if isinstance(base_suggested_fields.get('allowed_sowing_methods'), dict) else None
+        fallback_methods = fallback_suggested_fields.get('allowed_sowing_methods') if isinstance(fallback_suggested_fields.get('allowed_sowing_methods'), dict) else None
+        if base_methods and fallback_methods:
+            merged_values = _merge_allowed_sowing_methods(base_methods.get('value'), fallback_methods.get('value'))
+            if merged_values:
+                merged_suggested['allowed_sowing_methods'] = {
+                    **base_methods,
+                    'value': merged_values,
+                    'confidence': max(float(base_methods.get('confidence') or 0), float(fallback_methods.get('confidence') or 0)),
+                }
+        merged['suggested_fields'] = merged_suggested
     elif base_suggested_fields not in (None, {}):
         merged['suggested_fields'] = base_suggested_fields
     else:
@@ -205,15 +233,53 @@ def merge_phase_payloads(base: dict[str, Any], fallback: dict[str, Any]) -> dict
 
     base_validation = base.get('validation') if isinstance(base.get('validation'), dict) else {}
     fallback_validation = fallback.get('validation') if isinstance(fallback.get('validation'), dict) else {}
+    merged_warnings = (base_validation.get('warnings') or []) + (fallback_validation.get('warnings') or [])
+    if isinstance(base_suggested_fields, dict) and 'seed_packages' in base_suggested_fields:
+        filtered_warnings: list[Any] = []
+        for warning in merged_warnings:
+            if not isinstance(warning, dict):
+                filtered_warnings.append(warning)
+                continue
+            code = str(warning.get('code') or '')
+            field = str(warning.get('field') or '')
+            if field == 'seed_packages' and code in {'missing_supplier_evidence', 'seed_packages_require_supplier_evidence'}:
+                continue
+            filtered_warnings.append(warning)
+        merged_warnings = filtered_warnings
+
     merged['validation'] = {
-        'warnings': (base_validation.get('warnings') or []) + (fallback_validation.get('warnings') or []),
+        'warnings': merged_warnings,
         'errors': (base_validation.get('errors') or []) + (fallback_validation.get('errors') or []),
     }
 
-    if not merged.get('note_blocks') and fallback.get('note_blocks'):
-        merged['note_blocks'] = fallback.get('note_blocks')
+    base_notes = str(base.get('note_blocks') or '').strip()
+    fallback_notes = str(fallback.get('note_blocks') or '').strip()
+    if base_notes and fallback_notes:
+        merged['note_blocks'] = (
+            '## Supplier-Phase Hinweise\n' + base_notes + '\n\n'
+            '## External-Phase Hinweise\n' + fallback_notes
+        )
+    elif base_notes:
+        merged['note_blocks'] = base_notes
+    elif fallback_notes:
+        merged['note_blocks'] = fallback_notes
+
+    merged_field_origins: dict[str, str] = {}
+    merged_suggested_fields = merged.get('suggested_fields') if isinstance(merged.get('suggested_fields'), dict) else {}
+    base_keys = set(base_suggested_fields.keys()) if isinstance(base_suggested_fields, dict) else set()
+    fallback_keys = set(fallback_suggested_fields.keys()) if isinstance(fallback_suggested_fields, dict) else set()
+    for key in merged_suggested_fields.keys():
+        in_base = key in base_keys
+        in_fallback = key in fallback_keys
+        if in_base and in_fallback:
+            merged_field_origins[key] = 'mixed' if key == 'allowed_sowing_methods' else 'supplier_phase'
+        elif in_base:
+            merged_field_origins[key] = 'supplier_phase'
+        elif in_fallback:
+            merged_field_origins[key] = 'external_phase'
 
     merged['source_trace'] = {
+        'field_origins': merged_field_origins,
         'phase_1': base.get('source_trace') if isinstance(base.get('source_trace'), dict) else {
             'raw_tool_sources': _extract_raw_tool_sources_from_evidence(base.get('evidence')),
             'accepted_sources': _extract_raw_tool_sources_from_evidence(base.get('evidence')),
@@ -246,6 +312,7 @@ def apply_supplier_only_filter(
     culture: Any,
     supplier_domains_for_culture: Callable[[Any], set[str]],
     is_supplier_entry: Callable[[dict[str, Any], str, set[str]], bool],
+    is_plausible_supplier_source_url: Callable[[str, str], bool],
 ) -> dict[str, Any]:
     """Filter provider payload to strict supplier evidence for seed packages only."""
     supplier_name = culture.supplier.name if culture.supplier else (culture.seed_supplier or '')
@@ -265,6 +332,9 @@ def apply_supplier_only_filter(
             if not isinstance(entry, dict):
                 continue
             if is_supplier_entry(entry, supplier_name, supplier_domains):
+                source_url = str(entry.get('source_url') or '').strip()
+                if source_url and not is_plausible_supplier_source_url(source_url, str(culture.name or '')):
+                    continue
                 entry = dict(entry)
                 entry['supplier_specific'] = True
                 kept.append(entry)
