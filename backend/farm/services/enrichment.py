@@ -302,6 +302,11 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         accepted_sources = []
         rejected_sources = []
 
+        for source in raw_sources:
+            source_url = _coerce_text_value(source.get('source_url', ''), 'trace.raw_tool_sources.source_url') if isinstance(source, dict) else ''
+            if source_url and _url_matches_supplier_domains(source_url, supplier_domains):
+                rejected_sources.append({'source_url': source_url, 'field': 'tool_output', 'rejection_reason': 'supplier_domain_in_external_phase'})
+
         filtered_evidence: dict[str, list[dict[str, Any]]] = {}
         for field_name, entries in evidence.items():
             if not isinstance(entries, list):
@@ -321,7 +326,9 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             if kept:
                 filtered_evidence[field_name] = kept
 
-        if not accepted_sources:
+        has_valid_external_sources = len(accepted_sources) > 0
+
+        if not has_valid_external_sources:
             rejected_sources.append({'source_url': '', 'field': '*', 'rejection_reason': 'no_valid_external_sources'})
             for field_name in list(suggested_fields.keys()):
                 if field_name != 'notes':
@@ -346,6 +353,10 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             'evidence': filtered_evidence,
             'validation': validation,
             'source_trace': phase_trace,
+            'metadata': {
+                **(payload.get('metadata') if isinstance(payload.get('metadata'), dict) else {}),
+                'has_valid_external_sources': has_valid_external_sources,
+            },
         }
 
     def _merge_phase_payloads(self, base: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
@@ -375,6 +386,11 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
 
         supplier_domains = sorted(_supplier_domains_for_culture(context.culture))
 
+        phase_one_queries = enrichment_prompt.build_search_queries(
+            culture=context.culture,
+            supplier_only=True,
+            supplier_domains=supplier_domains,
+        )
         phase_one_prompt = self._build_prompt(context.culture, context.mode, supplier_only=True)
         primary_result, primary_usage, primary_search_calls = self._request_enrichment_payload(
             phase_one_prompt,
@@ -382,6 +398,14 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
             allowed_domains=supplier_domains,
         )
         primary_result = self._apply_supplier_only_filter(primary_result, context.culture)
+        primary_trace = primary_result.get('source_trace') if isinstance(primary_result.get('source_trace'), dict) else {}
+        primary_trace.update({
+            'source_policy': 'supplier_only',
+            'prompt_text': phase_one_prompt,
+            'prompt_markers': ['SOURCE_POLICY=SUPPLIER_ONLY'],
+            'generated_search_queries': phase_one_queries,
+        })
+        primary_result['source_trace'] = primary_trace
 
         combined_result = primary_result
         total_usage = dict(primary_usage)
@@ -394,6 +418,11 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         should_fallback = (not has_supplier_evidence) or (has_supplier_evidence and has_missing_fields)
         if should_fallback:
             target_fields_for_fallback = missing_fields if (has_supplier_evidence and context.mode == 'complete') else []
+            phase_two_queries = enrichment_prompt.build_search_queries(
+                culture=context.culture,
+                supplier_only=False,
+                supplier_domains=[],
+            )
             fallback_prompt = self._build_prompt(
                 context.culture,
                 context.mode,
@@ -406,7 +435,32 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
                 allowed_domains=None,
             )
             fallback_result = self._filter_external_phase_payload(fallback_result, context.culture)
-            combined_result = self._merge_phase_payloads(primary_result, fallback_result)
+            fallback_trace = fallback_result.get('source_trace') if isinstance(fallback_result.get('source_trace'), dict) else {}
+            fallback_trace.update({
+                'source_policy': 'external_only_non_supplier',
+                'prompt_text': fallback_prompt,
+                'prompt_markers': ['SOURCE_POLICY=EXTERNAL_ONLY_NON_SUPPLIER'],
+                'generated_search_queries': phase_two_queries,
+            })
+            fallback_result['source_trace'] = fallback_trace
+
+            has_valid_external_sources = bool(
+                isinstance(fallback_result.get('metadata'), dict)
+                and fallback_result['metadata'].get('has_valid_external_sources')
+            )
+            if has_valid_external_sources:
+                combined_result = self._merge_phase_payloads(primary_result, fallback_result)
+            else:
+                combined_result = dict(primary_result)
+                primary_validation = combined_result.get('validation') if isinstance(combined_result.get('validation'), dict) else {'warnings': [], 'errors': []}
+                fallback_validation = fallback_result.get('validation') if isinstance(fallback_result.get('validation'), dict) else {'warnings': [], 'errors': []}
+                primary_validation['warnings'] = (primary_validation.get('warnings') or []) + (fallback_validation.get('warnings') or [])
+                primary_validation['errors'] = (primary_validation.get('errors') or []) + (fallback_validation.get('errors') or [])
+                combined_result['validation'] = primary_validation
+                combined_result['source_trace'] = {
+                    'phase_1': primary_result.get('source_trace', {}),
+                    'phase_2': fallback_result.get('source_trace', {}),
+                }
             total_usage = {
                 'input_tokens': primary_usage['input_tokens'] + fallback_usage['input_tokens'],
                 'cached_input_tokens': primary_usage['cached_input_tokens'] + fallback_usage['cached_input_tokens'],
@@ -576,6 +630,8 @@ def enrich_culture(culture: Culture, mode: str) -> dict[str, Any]:
                 'code': 'invalid_evidence_payload',
                 'message': 'Invalid evidence payload type; treating as empty mapping.',
             })
+
+    enrichment_postprocess.validate_suggested_fields_schema(suggested_fields, evidence, validation)
 
     supplier_domains = _supplier_domains_for_culture(culture)
     enrichment_sources.filter_evidence_to_allowed_domains(evidence, supplier_domains, validation, _coerce_text_value)

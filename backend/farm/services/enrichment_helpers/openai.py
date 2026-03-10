@@ -29,6 +29,24 @@ def _extract_raw_tool_sources_from_evidence(evidence: object) -> list[dict[str, 
     return sources
 
 
+
+
+def _extract_raw_tool_sources_from_provider_payload(payload: dict[str, Any]) -> list[dict[str, str]]:
+    """Best-effort extraction of URLs from raw provider payload for audit filtering."""
+    seen: set[str] = set()
+    urls: list[dict[str, str]] = []
+    for item in payload.get('output', []) or []:
+        if not isinstance(item, dict):
+            continue
+        blob = json.dumps(item, ensure_ascii=False, sort_keys=True)
+        for url in re.findall(r"https?://[^\s\"'\\]\)>,]+", blob):
+            if url in seen:
+                continue
+            seen.add(url)
+            urls.append({'source_url': url, 'field': 'tool_output'})
+    return urls
+
+
 def extract_text_payload(payload: dict[str, Any]) -> str:
     """Extract model text from Responses API payload across schema variants."""
     output_text = payload.get("output_text")
@@ -135,8 +153,14 @@ def request_enrichment_payload(
     parsed = parse_json_block(text)
     if isinstance(parsed, dict):
         trace = parsed.get('source_trace') if isinstance(parsed.get('source_trace'), dict) else {}
-        if 'raw_tool_sources' not in trace:
-            trace['raw_tool_sources'] = _extract_raw_tool_sources_from_evidence(parsed.get('evidence'))
+        raw_sources = _extract_raw_tool_sources_from_provider_payload(payload)
+        raw_sources.extend(_extract_raw_tool_sources_from_evidence(parsed.get('evidence')))
+        dedup: dict[str, dict[str, str]] = {}
+        for source in raw_sources:
+            source_url = str(source.get('source_url') or '').strip()
+            if source_url:
+                dedup[source_url] = {'source_url': source_url, 'field': str(source.get('field') or '*')}
+        trace['raw_tool_sources'] = list(dedup.values())
         parsed['source_trace'] = trace
     usage = extract_usage(payload)
     web_search_call_count = count_web_search_calls(payload)
@@ -158,8 +182,13 @@ def merge_phase_payloads(base: dict[str, Any], fallback: dict[str, Any]) -> dict
 
     base_evidence = base.get('evidence') if isinstance(base.get('evidence'), dict) else {}
     fallback_evidence = fallback.get('evidence') if isinstance(fallback.get('evidence'), dict) else {}
+    base_field_keys = set(base_suggested_fields.keys()) if isinstance(base_suggested_fields, dict) else set()
     merged_evidence: dict[str, Any] = {}
     for field in set(base_evidence) | set(fallback_evidence):
+        if field in base_field_keys:
+            merged_evidence[field] = base_evidence.get(field) if isinstance(base_evidence.get(field), list) else []
+            continue
+
         combined_entries: list[Any] = []
         seen_keys: set[str] = set()
         for entries in [base_evidence.get(field), fallback_evidence.get(field)]:

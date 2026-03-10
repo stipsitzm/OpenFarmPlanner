@@ -98,6 +98,11 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.assertEqual(second_tools['type'], 'web_search')
         self.assertNotIn('filters', second_tools)
 
+        phase_two_prompt = post_mock.call_args_list[1].kwargs['json']['input']
+        self.assertNotIn('site:example.com', phase_two_prompt)
+        self.assertNotIn('site:reinsaat.at', phase_two_prompt)
+        self.assertIn('SOURCE_POLICY=EXTERNAL_ONLY_NON_SUPPLIER', phase_two_prompt)
+
     @patch('farm.services.enrichment.requests.post')
     def test_external_phase_filters_supplier_sources_and_drops_external_fields_without_valid_sources(self, post_mock):
         provider = OpenAIResponsesProvider(api_key='test-key')
@@ -144,6 +149,8 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         phase_2_trace = result.get('source_trace', {}).get('phase_2', {})
         self.assertIn('supplier_domain_in_external_phase', phase_2_trace.get('rejection_reason', []))
         self.assertIn('no_valid_external_sources', phase_2_trace.get('rejection_reason', []))
+        self.assertTrue(isinstance(phase_2_trace.get('prompt_text'), str) and phase_2_trace.get('prompt_text'))
+        self.assertTrue(isinstance(phase_2_trace.get('generated_search_queries'), list) and phase_2_trace.get('generated_search_queries'))
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
@@ -208,7 +215,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
         provider.enrich(Mock(culture=self.culture, mode='complete'))
 
-        sent_input = post_mock.call_args.kwargs['json']['input']
+        sent_input = post_mock.call_args_list[0].kwargs['json']['input']
         self.assertIn("ONLY research and suggest these missing fields", sent_input)
         self.assertNotIn('growth_duration_days', sent_input.split("ONLY research and suggest these missing fields:", 1)[1].split('.', 1)[0])
         self.assertIn("If sources are included, the final section must be '## Quellen'", sent_input)
@@ -761,7 +768,7 @@ class EnrichmentConfigBehaviorTest(TestCase):
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
-    def test_confidence_text_values_are_mapped_to_numeric(self, post_mock):
+    def test_invalid_confidence_schema_is_rejected(self, post_mock):
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
@@ -802,8 +809,10 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.culture.save(update_fields=['seed_supplier'])
         result = enrich_culture(self.culture, 'reresearch')
 
-        self.assertEqual(result['suggested_fields']['expected_yield']['confidence'], 1.0)
-        self.assertEqual(result['suggested_fields']['seed_rate_direct_value']['confidence'], 0.7)
+        self.assertNotIn('expected_yield', result['suggested_fields'])
+        self.assertNotIn('allowed_sowing_methods', result['suggested_fields'])
+        error_codes = [item.get('code') for item in result['validation']['errors']]
+        self.assertIn('invalid_confidence_schema', error_codes)
 
     @patch('farm.services.enrichment.requests.post')
     def test_supplier_only_phase_filters_non_supplier_evidence_entries(self, post_mock):
@@ -880,9 +889,9 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.culture.save(update_fields=['seed_supplier'])
         result = enrich_culture(self.culture, 'reresearch')
 
-        values = result['suggested_fields']['seed_packages']['value']
-        self.assertEqual([item['size_value'] for item in values], [0.4, 1.0, 2.5])
-        self.assertTrue(all(item['size_unit'] == 'g' for item in values))
+        self.assertNotIn('seed_packages', result['suggested_fields'])
+        error_codes = [item.get('code') for item in result['validation']['errors']]
+        self.assertIn('invalid_confidence_schema', error_codes)
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
@@ -1002,7 +1011,7 @@ class EnrichmentConfigBehaviorTest(TestCase):
 
         provider.enrich(Mock(culture=self.culture, mode='complete'))
 
-        sent_input = post_mock.call_args.kwargs['json']['input']
+        sent_input = post_mock.call_args_list[0].kwargs['json']['input']
         self.assertIn("Supplier-first rules are mandatory", sent_input)
         self.assertIn("Package sizes MUST come exclusively from supplier evidence", sent_input)
         self.assertIn("supplier_specific", sent_input)
