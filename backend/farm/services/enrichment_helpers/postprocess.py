@@ -6,6 +6,53 @@ import re
 from typing import Any, Callable
 
 
+
+
+def validate_suggested_fields_schema(
+    suggested_fields: dict[str, Any],
+    evidence: dict[str, Any],
+    validation: dict[str, Any],
+) -> None:
+    """Enforce strict schema for suggested_fields entries (especially numeric confidence)."""
+    warnings = validation.setdefault('warnings', [])
+    errors = validation.setdefault('errors', [])
+
+    for field_name in list(suggested_fields.keys()):
+        suggestion = suggested_fields.get(field_name)
+        if field_name == 'notes':
+            continue
+        if not isinstance(suggestion, dict):
+            suggested_fields.pop(field_name, None)
+            evidence.pop(field_name, None)
+            if isinstance(errors, list):
+                errors.append({
+                    'field': field_name,
+                    'code': 'invalid_suggested_field_schema',
+                    'message': 'Dropped suggestion because field payload is not an object.',
+                })
+            continue
+
+        confidence = suggestion.get('confidence')
+        if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
+            suggested_fields.pop(field_name, None)
+            evidence.pop(field_name, None)
+            if isinstance(errors, list):
+                errors.append({
+                    'field': field_name,
+                    'code': 'invalid_confidence_schema',
+                    'message': 'Dropped suggestion because confidence must be a JSON number in [0,1].',
+                })
+            continue
+
+        if isinstance(warnings, list) and (float(confidence) < 0.0 or float(confidence) > 1.0):
+            warnings.append({
+                'field': field_name,
+                'code': 'confidence_clamped',
+                'message': f'Clamped confidence for {field_name} into [0,1].',
+            })
+        suggestion['confidence'] = max(0.0, min(1.0, float(confidence)))
+
+
 def normalize_suggested_fields_payload(
     payload: object,
     validation: dict[str, Any],
@@ -44,6 +91,76 @@ def normalize_suggested_fields_payload(
             'message': 'Invalid suggested_fields payload type; treating as empty mapping.',
         })
     return {}
+
+
+
+
+def drop_uncertain_numeric_suggestions(
+    suggested_fields: dict[str, Any],
+    evidence: dict[str, Any],
+    validation: dict[str, Any],
+) -> None:
+    """Drop numeric suggestions when evidence/warnings indicate undocumented or inconsistent values."""
+    target_fields = {'expected_yield', 'seed_rate_direct_value', 'seed_rate_transplant_value'}
+    warning_codes = {
+        'seed_rate_not_documented',
+        'no_consistent_source',
+    }
+    warning_prefixes = ('missing_',)
+    uncertain_phrases = (
+        'nicht dokumentiert',
+        'nicht verfügbar',
+        'keine angabe',
+        'no data',
+        'not documented',
+        'estimated',
+        'estimate',
+        'grob',
+        'schätz',
+        'approximate',
+    )
+
+    warnings = validation.setdefault('warnings', [])
+
+    def has_uncertain_warning(field_name: str) -> bool:
+        for warning in warnings if isinstance(warnings, list) else []:
+            if not isinstance(warning, dict):
+                continue
+            code = str(warning.get('code') or '').strip().lower()
+            field = str(warning.get('field') or '').strip()
+            if field not in {'', field_name}:
+                continue
+            if code in warning_codes or any(code.startswith(prefix) for prefix in warning_prefixes):
+                return True
+        return False
+
+    def has_uncertain_evidence(field_name: str) -> bool:
+        entries = evidence.get(field_name)
+        if not isinstance(entries, list):
+            return False
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            combined = f"{entry.get('title') or ''} {entry.get('snippet') or ''}".lower()
+            if any(phrase in combined for phrase in uncertain_phrases):
+                return True
+        return False
+
+    for field_name in list(target_fields):
+        suggestion = suggested_fields.get(field_name)
+        if not isinstance(suggestion, dict):
+            continue
+        value = suggestion.get('value')
+        if not isinstance(value, (int, float)):
+            continue
+        if has_uncertain_warning(field_name) or has_uncertain_evidence(field_name):
+            suggested_fields.pop(field_name, None)
+            if isinstance(warnings, list):
+                warnings.append({
+                    'field': field_name,
+                    'code': 'numeric_value_dropped_due_uncertain_source',
+                    'message': 'Dropped numeric structured value because sources indicate missing/inconsistent/estimated data.',
+                })
 
 
 def validate_seed_package_suggestions(suggested_fields: dict[str, Any], evidence: dict[str, Any], validation: dict[str, Any]) -> None:
@@ -195,22 +312,6 @@ def normalize_suggested_field_values(
     """Normalize value formats for numeric fields while preserving response schema."""
     warnings = validation.setdefault('warnings', [])
     range_note_lines: list[str] = []
-
-    confidence_aliases = {'low': 0.3, 'medium': 0.6, 'high': 0.9}
-    for suggestion in suggested_fields.values():
-        if not isinstance(suggestion, dict):
-            continue
-        raw_confidence = suggestion.get('confidence', 0.0)
-        if isinstance(raw_confidence, str):
-            mapped = confidence_aliases.get(raw_confidence.strip().lower())
-            if mapped is not None:
-                suggestion['confidence'] = mapped
-                continue
-        try:
-            confidence = float(raw_confidence)
-        except (TypeError, ValueError):
-            confidence = 0.0
-        suggestion['confidence'] = max(0.0, min(1.0, confidence))
 
     for field_name, suggestion in suggested_fields.items():
         if not isinstance(suggestion, dict) or field_name not in numeric_fields:

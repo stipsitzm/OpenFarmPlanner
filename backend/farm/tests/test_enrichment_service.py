@@ -66,6 +66,92 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
 
 
+
+    @patch('farm.services.enrichment.requests.post')
+    def test_two_phase_web_search_tool_configuration(self, post_mock):
+        provider = OpenAIResponsesProvider(api_key='test-key')
+
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'growth_duration_days': {'value': 60, 'unit': 'days', 'confidence': 0.8},
+                },
+                'evidence': {
+                    'growth_duration_days': [
+                        {'source_url': 'https://reinsaat.at/product', 'title': 'ReinSaat', 'retrieved_at': '', 'snippet': 'supplier', 'supplier_specific': True},
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        post_mock.side_effect = [response, response]
+
+        provider.enrich(Mock(culture=self.culture, mode='complete'))
+
+        first_tools = post_mock.call_args_list[0].kwargs['json']['tools'][0]
+        second_tools = post_mock.call_args_list[1].kwargs['json']['tools'][0]
+        self.assertEqual(first_tools['type'], 'web_search')
+        self.assertEqual(first_tools.get('filters', {}).get('allowed_domains'), ['example.com', 'reinsaat.at', 'reinsaat.example'])
+        self.assertEqual(second_tools['type'], 'web_search')
+        self.assertNotIn('filters', second_tools)
+
+        phase_two_prompt = post_mock.call_args_list[1].kwargs['json']['input']
+        self.assertNotIn('site:example.com', phase_two_prompt)
+        self.assertNotIn('site:reinsaat.at', phase_two_prompt)
+        self.assertIn('SOURCE_POLICY=EXTERNAL_ONLY_NON_SUPPLIER', phase_two_prompt)
+
+    @patch('farm.services.enrichment.requests.post')
+    def test_external_phase_filters_supplier_sources_and_drops_external_fields_without_valid_sources(self, post_mock):
+        provider = OpenAIResponsesProvider(api_key='test-key')
+
+        primary = Mock()
+        primary.status_code = 200
+        primary.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'growth_duration_days': {'value': 60, 'unit': 'days', 'confidence': 0.8},
+                },
+                'evidence': {
+                    'growth_duration_days': [
+                        {'source_url': 'https://reinsaat.at/product', 'title': 'ReinSaat', 'retrieved_at': '', 'snippet': 'supplier', 'supplier_specific': True},
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        external = Mock()
+        external.status_code = 200
+        external.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'growth_duration_days': {'value': 99, 'unit': 'days', 'confidence': 0.3},
+                },
+                'evidence': {
+                    'growth_duration_days': [
+                        {'source_url': 'https://reinsaat.at/another', 'title': 'ReinSaat 2', 'retrieved_at': '', 'snippet': 'supplier', 'supplier_specific': True},
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': '',
+            }),
+        }
+        post_mock.side_effect = [primary, external]
+
+        result = provider.enrich(Mock(culture=self.culture, mode='complete'))
+
+        self.assertEqual(result['suggested_fields']['growth_duration_days']['value'], 60)
+        warning_codes = [item.get('code') for item in result.get('validation', {}).get('warnings', [])]
+        self.assertIn('no_valid_external_sources', warning_codes)
+        phase_2_trace = result.get('source_trace', {}).get('phase_2', {})
+        self.assertIn('supplier_domain_in_external_phase', phase_2_trace.get('rejection_reason', []))
+        self.assertIn('no_valid_external_sources', phase_2_trace.get('rejection_reason', []))
+        self.assertTrue(isinstance(phase_2_trace.get('prompt_text'), str) and phase_2_trace.get('prompt_text'))
+        self.assertTrue(isinstance(phase_2_trace.get('generated_search_queries'), list) and phase_2_trace.get('generated_search_queries'))
+
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
     def test_note_blocks_object_is_coerced_into_notes(self, post_mock):
@@ -129,7 +215,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
         provider.enrich(Mock(culture=self.culture, mode='complete'))
 
-        sent_input = post_mock.call_args.kwargs['json']['input']
+        sent_input = post_mock.call_args_list[0].kwargs['json']['input']
         self.assertIn("ONLY research and suggest these missing fields", sent_input)
         self.assertNotIn('growth_duration_days', sent_input.split("ONLY research and suggest these missing fields:", 1)[1].split('.', 1)[0])
         self.assertIn("If sources are included, the final section must be '## Quellen'", sent_input)
@@ -682,7 +768,7 @@ class EnrichmentConfigBehaviorTest(TestCase):
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
-    def test_confidence_text_values_are_mapped_to_numeric(self, post_mock):
+    def test_invalid_confidence_schema_is_rejected(self, post_mock):
         response = Mock()
         response.status_code = 200
         response.json.return_value = {
@@ -723,8 +809,10 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.culture.save(update_fields=['seed_supplier'])
         result = enrich_culture(self.culture, 'reresearch')
 
-        self.assertEqual(result['suggested_fields']['expected_yield']['confidence'], 1.0)
-        self.assertEqual(result['suggested_fields']['seed_rate_direct_value']['confidence'], 0.7)
+        self.assertNotIn('expected_yield', result['suggested_fields'])
+        self.assertNotIn('allowed_sowing_methods', result['suggested_fields'])
+        error_codes = [item.get('code') for item in result['validation']['errors']]
+        self.assertIn('invalid_confidence_schema', error_codes)
 
     @patch('farm.services.enrichment.requests.post')
     def test_supplier_only_phase_filters_non_supplier_evidence_entries(self, post_mock):
@@ -801,9 +889,9 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.culture.save(update_fields=['seed_supplier'])
         result = enrich_culture(self.culture, 'reresearch')
 
-        values = result['suggested_fields']['seed_packages']['value']
-        self.assertEqual([item['size_value'] for item in values], [0.4, 1.0, 2.5])
-        self.assertTrue(all(item['size_unit'] == 'g' for item in values))
+        self.assertNotIn('seed_packages', result['suggested_fields'])
+        error_codes = [item.get('code') for item in result['validation']['errors']]
+        self.assertIn('invalid_confidence_schema', error_codes)
 
     @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
     @patch('farm.services.enrichment.requests.post')
@@ -923,7 +1011,7 @@ class EnrichmentConfigBehaviorTest(TestCase):
 
         provider.enrich(Mock(culture=self.culture, mode='complete'))
 
-        sent_input = post_mock.call_args.kwargs['json']['input']
+        sent_input = post_mock.call_args_list[0].kwargs['json']['input']
         self.assertIn("Supplier-first rules are mandatory", sent_input)
         self.assertIn("Package sizes MUST come exclusively from supplier evidence", sent_input)
         self.assertIn("supplier_specific", sent_input)
@@ -1060,6 +1148,97 @@ class EnrichmentDomainEnforcementTest(TestCase):
         self.assertEqual(result['suggested_fields']['seed_packages']['value'], [])
         warning_codes = [item.get('code') for item in result['validation']['warnings']]
         self.assertIn('missing_supplier_evidence', warning_codes)
+
+
+    @override_settings(AI_ENRICHMENT_ENABLED=True)
+    @patch('farm.services.enrichment.get_enrichment_provider')
+    def test_drops_numeric_fields_when_evidence_states_not_documented(self, provider_mock):
+        provider = Mock()
+        provider.provider_name = 'fallback'
+        provider.model_name = 'gpt-5'
+        provider.search_provider_name = 'web_search'
+        provider.enrich.return_value = {
+            'suggested_fields': {
+                'expected_yield': {'value': 1.8, 'unit': 'kg/m²', 'confidence': 0.7},
+                'seed_rate_direct_value': {'value': 0.09, 'unit': 'g_per_m2', 'confidence': 0.7},
+            },
+            'evidence': {
+                'expected_yield': [
+                    {
+                        'source_url': 'https://example.org/yield',
+                        'title': 'General guide',
+                        'retrieved_at': '2026-01-01T00:00:00Z',
+                        'snippet': 'Ertrag ist nicht dokumentiert, nur grob schätzbar.',
+                        'supplier_specific': False,
+                    },
+                ],
+                'seed_rate_direct_value': [
+                    {
+                        'source_url': 'https://example.org/rate',
+                        'title': 'General guide',
+                        'retrieved_at': '2026-01-01T00:00:00Z',
+                        'snippet': 'Saatgutbedarf not documented.',
+                        'supplier_specific': False,
+                    },
+                ],
+            },
+            'validation': {'warnings': [{'field': 'seed_rate_direct_value', 'code': 'seed_rate_not_documented', 'message': 'not documented'}], 'errors': []},
+            'note_blocks': '',
+            'usage': {'input_tokens': 1, 'cached_input_tokens': 0, 'output_tokens': 1},
+        }
+        provider_mock.return_value = provider
+
+        result = enrich_culture(self.culture, 'reresearch')
+        self.assertNotIn('expected_yield', result['suggested_fields'])
+        self.assertNotIn('seed_rate_direct_value', result['suggested_fields'])
+        warning_codes = [item.get('code') for item in result['validation']['warnings']]
+        self.assertIn('numeric_value_dropped_due_uncertain_source', warning_codes)
+
+    @patch('farm.services.enrichment.requests.post')
+    def test_allowed_sowing_methods_merges_supplier_and_external_values(self, post_mock):
+        provider = OpenAIResponsesProvider(api_key='test-key')
+
+        primary = Mock()
+        primary.status_code = 200
+        primary.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'allowed_sowing_methods': {'value': ['pre_cultivation'], 'unit': None, 'confidence': 0.8},
+                },
+                'evidence': {
+                    'allowed_sowing_methods': [
+                        {'source_url': 'https://reinsaat.at/category', 'title': 'cat', 'retrieved_at': '', 'snippet': 'Pflanzung', 'supplier_specific': True},
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': 'supplier-notes',
+            }),
+        }
+        external = Mock()
+        external.status_code = 200
+        external.json.return_value = {
+            'output_text': json.dumps({
+                'suggested_fields': {
+                    'allowed_sowing_methods': {'value': ['direct_sowing', 'transplanting'], 'unit': None, 'confidence': 0.7},
+                },
+                'evidence': {
+                    'allowed_sowing_methods': [
+                        {'source_url': 'https://example.org/crop', 'title': 'ext', 'retrieved_at': '', 'snippet': 'direct sowing or transplanting', 'supplier_specific': False},
+                    ],
+                },
+                'validation': {'warnings': [], 'errors': []},
+                'note_blocks': 'external-notes',
+            }),
+        }
+        post_mock.side_effect = [primary, external]
+
+        result = provider.enrich(Mock(culture=self.culture, mode='complete'))
+        methods = result['suggested_fields']['allowed_sowing_methods']['value']
+        self.assertEqual(methods, ['pre_cultivation', 'direct_sowing', 'transplanting'])
+        self.assertEqual(result.get('source_trace', {}).get('field_origins', {}).get('allowed_sowing_methods'), 'mixed')
+        self.assertIn('Supplier-Phase Hinweise', result.get('note_blocks', ''))
+        self.assertIn('External-Phase Hinweise', result.get('note_blocks', ''))
+
 
 
 class NumericNormalizationTest(TestCase):

@@ -6,6 +6,27 @@ import json
 from typing import Any, Callable
 
 
+def build_search_queries(*, culture: Any, supplier_only: bool, supplier_domains: list[str]) -> list[str]:
+    """Build deterministic phase-specific search query templates."""
+    identity = f"{culture.name} {culture.variety or ''}".strip()
+    if supplier_only:
+        primary_domain = supplier_domains[0] if supplier_domains else ''
+        supplier = culture.supplier.name if culture.supplier else (culture.seed_supplier or '')
+        if not primary_domain:
+            return [identity]
+        return [
+            f"site:{primary_domain} {culture.variety or ''} {culture.name}".strip(),
+            f"site:{primary_domain} {culture.variety or ''} {supplier or ''}".strip(),
+            f"site:{primary_domain} {identity} Packungsgrößen Portionsinhalt TKG".strip(),
+        ]
+
+    return [
+        f"{identity} Anbau Aussaat Pflanzabstand".strip(),
+        f"{identity} Keimdauer Kulturdauer Erntezeit".strip(),
+        f"{culture.name} allgemeine Kulturhinweise Saattiefe Reihenabstand".strip(),
+    ]
+
+
 def build_prompt(
     *,
     culture: Any,
@@ -18,6 +39,7 @@ def build_prompt(
     """Build the deterministic prompt for enrichment extraction."""
     identity = f"{culture.name} {culture.variety or ''}".strip()
     supplier = culture.supplier.name if culture.supplier else (culture.seed_supplier or "")
+    supplier_domains = sorted(supplier_domains_for_culture(culture))
     existing = {
         "growth_duration_days": culture.growth_duration_days,
         "harvest_duration_days": culture.harvest_duration_days,
@@ -30,7 +52,7 @@ def build_prompt(
         "sowing_depth_cm": round(culture.sowing_depth_m * 100, 2) if culture.sowing_depth_m else None,
         "seed_rate_value": culture.seed_rate_value,
         "seed_rate_unit": culture.seed_rate_unit,
-        "supplier_allowed_domains": list(supplier_domains_for_culture(culture)),
+        "supplier_allowed_domains": supplier_domains if supplier_only else [],
     }
     if target_fields is None:
         target_fields = missing_enrichment_fields(culture) if mode == 'complete' else []
@@ -46,57 +68,58 @@ def build_prompt(
         )
     )
 
-    fallback_query = (culture.variety or culture.name).strip()
-    supplier_domains = sorted(supplier_domains_for_culture(culture))
-    primary_domain = supplier_domains[0] if supplier_domains else ''
-    supplier_strategy = (
-        "Supplier-first rules are mandatory. "
-        "All evidence URLs must be inside supplier.allowed_domains. Ignore all other domains. "
-        "First, find the supplier product page for this crop and variety on supplier domains, then extract facts from that page and relevant supplier category pages. "
-        "If no product page can be found on supplier domains, keep suggested_fields mostly empty and add validation error code supplier_product_not_found. "
-    )
-    if 'seed_packages' in target_fields:
-        supplier_strategy += (
-            "Package sizes MUST come exclusively from supplier evidence; otherwise return seed_packages as empty list. "
+    search_queries = build_search_queries(culture=culture, supplier_only=supplier_only, supplier_domains=supplier_domains)
+    query_plan = " ".join([f"Query {idx + 1}: '{query}'." for idx, query in enumerate(search_queries)])
+
+    if supplier_only:
+        supplier_strategy = (
+            "SOURCE_POLICY=SUPPLIER_ONLY. "
+            "Supplier-first rules are mandatory. "
+            "All evidence URLs must be inside supplier.allowed_domains. Ignore all other domains. "
+            "First, find the supplier product page for this crop and variety on supplier domains, then extract facts from that page and relevant supplier category pages. "
+            "If no product page can be found on supplier domains, keep suggested_fields mostly empty and add validation error code supplier_product_not_found. "
+            "Package sizes MUST come exclusively from supplier evidence. "
+            f"Allowed supplier domains whitelist: {', '.join(supplier_domains)}. "
+            f"Search plan: {query_plan} "
+            "Tag every evidence entry with supplier_specific true/false. "
         )
-    supplier_strategy += (
-        f"Search strategy: Query 1 'site:{primary_domain} {culture.variety or ''} {culture.name}'; "
-        f"Query 2 'site:{primary_domain} {culture.variety or ''} {supplier or ''}'; "
-    )
-    if 'seed_packages' in target_fields or 'thousand_kernel_weight_g' in target_fields:
-        supplier_strategy += f"Query 3 'site:{primary_domain} {culture.variety or ''} Packungsgrößen OR Portionsinhalt OR TKG'; "
-    supplier_strategy += f"Optional Query 4 'site:{primary_domain} {fallback_query} category'. "
-    supplier_strategy += "Tag every evidence entry with supplier_specific true/false. "
-    if supplier_only and supplier_domains:
-        supplier_strategy += f"Allowed supplier domains whitelist: {', '.join(supplier_domains)}. "
+    else:
+        supplier_strategy = (
+            "SOURCE_POLICY=EXTERNAL_ONLY_NON_SUPPLIER. "
+            "External research phase: use only independent non-supplier sources. "
+            "Do not search supplier domains, do not use supplier product pages and do not cite supplier mirrors. "
+            "Use short and robust web-search workflow: run at most 2 searches and open at most 2 pages. "
+            f"Search plan: {query_plan} "
+            "Tag every evidence entry with supplier_specific false. "
+        )
 
     field_list_parts = []
     field_instructions = []
-    
+
     numeric_fields = [
         'growth_duration_days', 'harvest_duration_days', 'propagation_duration_days',
         'distance_within_row_cm', 'row_spacing_cm', 'sowing_depth_cm',
         'seed_rate_direct_value', 'seed_rate_transplant_value',
         'thousand_kernel_weight_g', 'expected_yield'
     ]
-    
-    for field in ['growth_duration_days', 'harvest_duration_days', 'propagation_duration_days', 
+
+    for field in ['growth_duration_days', 'harvest_duration_days', 'propagation_duration_days',
                   'harvest_method', 'expected_yield', 'seed_packages', 'distance_within_row_cm',
                   'row_spacing_cm', 'sowing_depth_cm', 'seed_rate_direct_value',
                   'seed_rate_transplant_value', 'allowed_sowing_methods',
                   'thousand_kernel_weight_g', 'nutrient_demand']:
         if mode == 'reresearch' or field in target_fields:
             field_list_parts.append(field)
-    
+
     field_list = f"Suggested fields may include {', '.join(field_list_parts)}. " if field_list_parts else ""
-    
+
     if 'seed_packages' in target_fields or mode == 'reresearch':
         field_instructions.append(
             "Package size means sold packet options (e.g., 2 g, 5 g, 10 g, 25 g). "
             "Do NOT infer from per-seed mass, TKG, sowing rate or grams per meter. "
             "If unavailable, return seed_packages as empty list and never guess. "
         )
-    
+
     if 'nutrient_demand' in target_fields or 'harvest_method' in target_fields or mode == 'reresearch':
         parts = ["Each suggested field must contain value, unit, confidence."]
         if 'nutrient_demand' in target_fields or mode == 'reresearch':
@@ -108,12 +131,13 @@ def build_prompt(
         field_instructions.append(" ".join(parts) + " ")
     else:
         field_instructions.append("Each suggested field must contain value, unit, confidence. ")
-    
+
     field_instructions.append(
+        "SCHEMA RULE: confidence MUST be a JSON number in [0,1] for every suggested_fields entry; never use strings like high/medium/low. "
         "evidence must be mapping field->list of {source_url,title,retrieved_at,snippet,supplier_specific}. "
         "validation: warnings/errors arrays with field/code/message. "
     )
-    
+
     relevant_numeric_fields = [f for f in numeric_fields if f in target_fields or mode == 'reresearch']
     if relevant_numeric_fields:
         field_instructions.append(
@@ -126,13 +150,13 @@ def build_prompt(
             "that includes the original raw range text and the chosen numeric value. "
             "When a range exists, also mention the raw supplier range in note_blocks under the relevant section. "
         )
-    
+
     if 'seed_rate_direct_value' in target_fields or 'seed_rate_transplant_value' in target_fields or 'allowed_sowing_methods' in target_fields or mode == 'reresearch':
         seed_rate_instr = []
         if 'seed_rate_direct_value' in target_fields or 'seed_rate_transplant_value' in target_fields or mode == 'reresearch':
             seed_rate_instr.append("seed_rate_direct_value and seed_rate_transplant_value must always be single floats in their selected units.")
         if 'allowed_sowing_methods' in target_fields or mode == 'reresearch':
-            seed_rate_instr.append("If supplier provides both Direktsaat and Pflanzung values, output both methods and include both in allowed_sowing_methods.")
+            seed_rate_instr.append("If sources provide both Direktsaat and Pflanzung values, output both methods and include both in allowed_sowing_methods.")
         if 'seed_rate_direct_value' in target_fields or mode == 'reresearch':
             seed_rate_instr.append("For seed_rate_direct_value, unit must be only g_per_m2 or g_per_lfm.")
         if 'seed_rate_transplant_value' in target_fields or mode == 'reresearch':
@@ -143,13 +167,13 @@ def build_prompt(
             )
         if seed_rate_instr:
             field_instructions.append(" ".join(seed_rate_instr) + " ")
-    
+
     field_instructions.append(
         "UNIT CONVERSION: Always convert area-based measurements to g_per_m2 or g_per_lfm before output. "
         "Examples: g/a (gram per are) → divide by 100 to get g_per_m2; "
         "Units must be null when not applicable; never output empty unit strings. "
     )
-    
+
     field_instructions.append(
         "note_blocks must be pure German markdown text only (no JSON objects, no code fences). "
         "Use a flexible structure with useful cultivation notes. If sources are included, the final section must be '## Quellen'. "
@@ -166,5 +190,5 @@ def build_prompt(
         f"{''.join(field_instructions)}"
         f"{supplier_strategy}"
         f"{requested_fields_text}"
-        f"Culture identity: {identity}. Supplier: {supplier or 'unknown'}. Mode: {mode}. Existing values: {json.dumps(existing, ensure_ascii=False)}"
+        f"Culture identity: {identity}. Mode: {mode}. Existing values: {json.dumps(existing, ensure_ascii=False)}"
     )
