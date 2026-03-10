@@ -8,14 +8,16 @@
   background-color: #e3f2fd;
 }
 .app {
-  min-width: 100%;
-  width: max-content;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 /* Navigation Styles */
 .nav {
-  min-width: 100%;
-  width: max-content;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 10px 20px;
   background-color: #333;
   color: white;
@@ -62,7 +64,7 @@
 }
 
 .nav-link.active {
-  background-color: #1976D2;
+  background-color: #1976d2;
 }
 
 .nav-link.home {
@@ -81,8 +83,10 @@
 
 /* Page Container */
 .page-container {
-  padding: 20px;
+  width: 100%;
   max-width: 1200px;
+  box-sizing: border-box;
+  padding: 20px;
   margin: 0 auto;
 }
 
@@ -100,7 +104,7 @@
 .toggle-form-btn {
   margin-bottom: 20px;
   padding: 10px 15px;
-  background-color: #2E7D32;
+  background-color: #2e7d32;
   color: white;
   border: none;
   border-radius: 4px;
@@ -110,12 +114,12 @@
 
 .btn-primary:hover,
 .toggle-form-btn:hover {
-  background-color: #1B5E20;
+  background-color: #1b5e20;
 }
 
 .submit-btn {
   padding: 10px 20px;
-  background-color: #1976D2;
+  background-color: #1976d2;
   color: white;
   border: none;
   border-radius: 4px;
@@ -125,7 +129,7 @@
 }
 
 .submit-btn:hover {
-  background-color: #1565C0;
+  background-color: #1565c0;
 }
 
 .btn-delete,
@@ -174,7 +178,7 @@
 
 .form-input:focus {
   outline: none;
-  border-color: #1976D2;
+  border-color: #1976d2;
   box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
 }
 
@@ -184,7 +188,7 @@
   border-collapse: collapse;
   margin-top: 20px;
   background-color: white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .data-table thead tr {
@@ -232,8 +236,8 @@
   display: block;
   padding: 15px;
   font-size: 16px;
-  color: #1976D2;
-  background-color: #E3F2FD;
+  color: #1976d2;
+  background-color: #e3f2fd;
   border-radius: 4px;
   text-decoration: none;
   transition: background-color 0.2s;
@@ -246,7 +250,7 @@
 }
 
 .quick-link:hover {
-  background-color: #BBDEFB;
+  background-color: #bbdefb;
 }
 
 .features-box {
