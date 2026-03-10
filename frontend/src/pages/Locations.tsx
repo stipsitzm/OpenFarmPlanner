@@ -93,19 +93,20 @@ function Locations(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <h1>{t('locations:title')}</h1>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => commandApiRef.current?.addRow()}
-          aria-label={`${t('locations:addButton')} (Alt+N)`}
-        >
-          {t('locations:addButton')}
-        </Button>
-      </Box>
-      
-      <EditableDataGrid<LocationRow>
+      <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <h1>{t('locations:title')}</h1>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => commandApiRef.current?.addRow()}
+            aria-label={`${t('locations:addButton')} (Alt+N)`}
+          >
+            {t('locations:addButton')}
+          </Button>
+        </Box>
+
+        <EditableDataGrid<LocationRow>
         columns={columns}
         api={locationAPI as unknown as DataGridAPI<LocationRow>}
         createNewRow={() => ({
@@ -150,7 +151,8 @@ function Locations(): React.ReactElement {
             },
           ],
         }}
-      />
+        />
+      </Box>
     </div>
   );
 }

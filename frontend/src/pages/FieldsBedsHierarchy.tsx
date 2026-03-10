@@ -19,8 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../i18n";
 import { DataGrid, GridRowModes } from "@mui/x-data-grid";
 import type { GridRowsProp, GridRowModesModel } from "@mui/x-data-grid";
-import { Box, Alert, Button } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
+import { Box, Alert } from "@mui/material";
 import { dataGridSx } from "../components/data-grid/styles";
 import {
   handleRowEditStop,
@@ -751,25 +750,7 @@ function FieldsBedsHierarchy({
   return (
     <div className="page-container">
       <Box sx={{ width: "fit-content", maxWidth: "100%" }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 2,
-          }}
-        >
-          {showTitle ? <h1>{t("title")}</h1> : <Box />}
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleCreateBySelection}
-            disabled={!selectedRow}
-            aria-label="Neu erstellen (Alt+N)"
-          >
-            Neu erstellen
-          </Button>
-        </Box>
+        {showTitle && <h1>{t("title")}</h1>}
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
