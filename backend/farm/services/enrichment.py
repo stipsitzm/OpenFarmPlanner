@@ -305,16 +305,17 @@ class OpenAIResponsesProvider(BaseEnrichmentProvider):
         total_usage = dict(primary_usage)
         total_search_calls = primary_search_calls
 
-        missing_fields = enrichment_fields.missing_enrichment_fields(context.culture) if context.mode == 'complete' else []
+        missing_fields = enrichment_fields.missing_enrichment_fields(context.culture)
         has_missing_fields = len(missing_fields) > 0
         has_supplier_evidence = self._has_supplier_specific_evidence(supplier_name, primary_result.get('evidence'))
         
         should_fallback = (not has_supplier_evidence) or (has_supplier_evidence and has_missing_fields)
         if should_fallback:
+            target_fields_for_fallback = missing_fields if (has_supplier_evidence and context.mode == 'complete') else []
             fallback_prompt = self._build_prompt(
                 context.culture,
                 context.mode,
-                target_fields=missing_fields if has_supplier_evidence else [],
+                target_fields=target_fields_for_fallback,
                 supplier_only=False,
             )
             fallback_result, fallback_usage, fallback_search_calls = self._request_enrichment_payload(fallback_prompt, model_name)

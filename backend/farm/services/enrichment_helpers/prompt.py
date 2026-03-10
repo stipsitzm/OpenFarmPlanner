@@ -138,12 +138,15 @@ def build_prompt(
         if 'seed_rate_transplant_value' in target_fields or mode == 'reresearch':
             seed_rate_instr.append(
                 "For seed_rate_transplant_value, unit must be g_per_m2 or g_per_lfm (for Pflanzung amount). "
+                "If only seeds_per_plant is available, omit seed_rate_transplant_value because seeds_per_plant "
+                "stays a manual form field. Never output null placeholders."
             )
         if seed_rate_instr:
             field_instructions.append(" ".join(seed_rate_instr) + " ")
     
     field_instructions.append(
-        "If unit is g/a (gram per are), convert to g_per_m2 by dividing value by 100 before output. "
+        "UNIT CONVERSION: Always convert area-based measurements to g_per_m2 or g_per_lfm before output. "
+        "Examples: g/a (gram per are) → divide by 100 to get g_per_m2; "
         "Units must be null when not applicable; never output empty unit strings. "
     )
     
