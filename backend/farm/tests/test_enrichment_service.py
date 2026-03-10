@@ -879,7 +879,11 @@ class EnrichmentConfigBehaviorTest(TestCase):
         self.assertEqual([item['size_value'] for item in values], [0.4, 1.0, 2.5])
         self.assertTrue(all(item['size_unit'] == 'g' for item in values))
 
-    @override_settings(AI_ENRICHMENT_PROVIDER='openai_responses', OPENAI_API_KEY='test-key')
+    @override_settings(
+        AI_ENRICHMENT_PROVIDER='openai_responses',
+        OPENAI_API_KEY='test-key',
+        ENABLE_EXTERNAL_ENRICHMENT=True,
+    )
     @patch('farm.services.enrichment.requests.post')
     def test_seed_packages_without_supplier_specific_evidence_are_rejected(self, post_mock):
         response = Mock()
