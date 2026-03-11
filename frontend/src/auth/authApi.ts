@@ -27,6 +27,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(await response.text());
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 }
 
@@ -49,6 +53,7 @@ export async function login(username: string, password: string): Promise<AuthUse
 }
 
 export async function logout(): Promise<void> {
+  await ensureCsrfCookie();
   const csrfToken = getCookie('csrftoken') ?? '';
   await request<{ detail: string }>('/auth/logout/', {
     method: 'POST',
