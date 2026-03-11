@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, login, logout
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import permissions, status
 from rest_framework.request import Request
@@ -8,10 +9,10 @@ from rest_framework.views import APIView
 from .serializers import UserSerializer
 
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class CsrfTokenView(APIView):
     permission_classes = [permissions.AllowAny]
 
-    @ensure_csrf_cookie
     def get(self, request: Request) -> Response:
         return Response({'detail': 'CSRF cookie set'})
 
