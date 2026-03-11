@@ -508,8 +508,8 @@ function GanttChartPage(): React.ReactElement {
             <Box sx={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: 1, alignItems: 'start' }}>
               <Box>
                 <Box sx={{ display: 'flex', flexDirection: 'column-reverse', justifyContent: 'space-between', height: 260, pr: 1 }}>
-                  {yAxisTicks.map((tick) => (
-                    <Typography key={tick} variant="caption" sx={{ textAlign: 'right', color: 'text.secondary' }}>
+                  {yAxisTicks.map((tick, index) => (
+                    <Typography key={`${tick}-${index}`} variant="caption" sx={{ textAlign: 'right', color: 'text.secondary' }}>
                       {tick.toFixed(1)} kg
                     </Typography>
                   ))}
