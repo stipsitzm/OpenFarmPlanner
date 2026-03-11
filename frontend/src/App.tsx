@@ -49,6 +49,7 @@ import { useAuth } from './auth/AuthContext';
 import ProtectedRoute from './auth/ProtectedRoute';
 import HomePage from './pages/public/HomePage';
 import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
 
 
 /**
@@ -353,6 +354,10 @@ function createAppRouter(basename: string) {
     {
       path: '/login',
       element: <LoginPage />,
+    },
+    {
+      path: '/register',
+      element: <RegisterPage />,
     },
     {
       path: '/app',

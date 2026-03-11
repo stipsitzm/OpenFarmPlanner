@@ -1,15 +1,16 @@
 import { Alert, Box, Button, Container, Stack, TextField, Typography } from '@mui/material';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link as RouterLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 
-export default function LoginPage(): React.ReactElement {
-  const { user, login } = useAuth();
+export default function RegisterPage(): React.ReactElement {
+  const { user, register } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -20,14 +21,18 @@ export default function LoginPage(): React.ReactElement {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
-    setSubmitting(true);
 
+    if (password !== passwordConfirm) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      await login(username, password);
-      const destination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/app';
-      navigate(destination, { replace: true });
+      await register(username, password, passwordConfirm, email);
+      navigate('/app', { replace: true });
     } catch {
-      setError('Login failed. Please check your credentials.');
+      setError('Registration failed. Please check your input.');
     } finally {
       setSubmitting(false);
     }
@@ -35,14 +40,16 @@ export default function LoginPage(): React.ReactElement {
 
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>Login</Typography>
+      <Typography variant="h4" sx={{ mb: 3 }}>Register</Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2}>
           {error ? <Alert severity="error">{error}</Alert> : null}
           <TextField label="Username" value={username} onChange={(event) => setUsername(event.target.value)} required />
+          <TextField label="Email (optional)" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
           <TextField label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
-          <Button type="submit" variant="contained" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign in'}</Button>
-          <Button component={RouterLink} to="/register">No account yet? Register</Button>
+          <TextField label="Confirm password" type="password" value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} required />
+          <Button type="submit" variant="contained" disabled={submitting}>{submitting ? 'Creating account…' : 'Create account'}</Button>
+          <Button component={RouterLink} to="/login">Already have an account? Sign in</Button>
         </Stack>
       </Box>
     </Container>

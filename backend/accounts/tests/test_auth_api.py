@@ -12,6 +12,28 @@ class AuthApiTest(APITestCase):
         response = self.client.get('/openfarmplanner/api/auth/me/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_register_logs_user_in(self) -> None:
+        csrf_response = self.client.get('/openfarmplanner/api/auth/csrf/')
+        self.assertEqual(csrf_response.status_code, status.HTTP_200_OK)
+
+        response = self.client.post(
+            '/openfarmplanner/api/auth/register/',
+            {
+                'username': 'newuser',
+                'password': 'new-safe-password-123',
+                'password_confirm': 'new-safe-password-123',
+                'email': 'newuser@example.com',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['username'], 'newuser')
+
+        me_response = self.client.get('/openfarmplanner/api/auth/me/')
+        self.assertEqual(me_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(me_response.data['username'], 'newuser')
+
     def test_login_logout_and_me(self) -> None:
         csrf_response = self.client.get('/openfarmplanner/api/auth/csrf/')
         self.assertEqual(csrf_response.status_code, status.HTTP_200_OK)

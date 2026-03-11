@@ -56,3 +56,19 @@ export async function logout(): Promise<void> {
     body: JSON.stringify({}),
   });
 }
+
+
+export async function register(username: string, password: string, passwordConfirm: string, email = ''): Promise<AuthUser> {
+  await ensureCsrfCookie();
+  const csrfToken = getCookie('csrftoken') ?? '';
+  return request<AuthUser>('/auth/register/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken },
+    body: JSON.stringify({
+      username,
+      password,
+      password_confirm: passwordConfirm,
+      email,
+    }),
+  });
+}
