@@ -6,6 +6,13 @@ import Cultures from '../pages/Cultures';
 import { CommandProvider } from '../commands/CommandProvider';
 import type { Culture } from '../api/types';
 
+
+vi.mock('../config/features', () => ({
+  FEATURES: {
+    AI_ENRICHMENT: true,
+  },
+}));
+
 const { listMock, enrichMock, selectedCultureMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   enrichMock: vi.fn(),

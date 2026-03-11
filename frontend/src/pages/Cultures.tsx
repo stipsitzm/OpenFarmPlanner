@@ -85,6 +85,7 @@ import { createCulturesCommandSpecs } from './culturesCommandSpecs';
 import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
 import { useSelectedCultureSync } from './useSelectedCultureSync';
+import { FEATURES } from '../config/features';
 
 const ENRICHMENT_LOADING_STEPS = [
   { key: 'request', startSeconds: 0 },
@@ -120,6 +121,7 @@ function Cultures(): React.ReactElement {
   const [historyScope, setHistoryScope] = useState<'culture' | 'global' | 'project'>('culture');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [aiMenuAnchor, setAiMenuAnchor] = useState<null | HTMLElement>(null);
+  const aiEnrichmentEnabled = FEATURES.AI_ENRICHMENT;
   const [enrichmentDialogOpen, setEnrichmentDialogOpen] = useState(false);
   const [enrichmentResult, setEnrichmentResult] = useState<EnrichmentResult | null>(null);
   const [selectedSuggestionFields, setSelectedSuggestionFields] = useState<string[]>([]);
@@ -594,6 +596,7 @@ function Cultures(): React.ReactElement {
   const commandSpecs = useMemo(() => createCulturesCommandSpecs({
     canRunEnrichmentForCulture,
     cultures,
+    enableAiEnrichment: aiEnrichmentEnabled,
     enrichmentLoading,
     goToRelativeCulture,
     handleCreatePlantingPlan,
@@ -607,6 +610,7 @@ function Cultures(): React.ReactElement {
     selectedCultureId,
     setEnrichAllConfirmOpen,
   }), [
+    aiEnrichmentEnabled,
     cultures,
     enrichmentLoading,
     goToRelativeCulture,
@@ -776,6 +780,10 @@ function Cultures(): React.ReactElement {
   }, [handleCancelEnrichment]);
 
   useEffect(() => {
+    if (!aiEnrichmentEnabled) {
+      return;
+    }
+
     const onAiShortcut = (event: KeyboardEvent) => {
       if (!event.altKey || event.ctrlKey || event.metaKey) {
         return;
@@ -802,7 +810,7 @@ function Cultures(): React.ReactElement {
 
     window.addEventListener('keydown', onAiShortcut);
     return () => window.removeEventListener('keydown', onAiShortcut);
-  }, [handleEnrichAll, handleEnrichCurrent, selectedCultureNeedsCompletion]);
+  }, [aiEnrichmentEnabled, handleEnrichAll, handleEnrichCurrent, selectedCultureNeedsCompletion]);
 
 
 
@@ -912,7 +920,9 @@ function Cultures(): React.ReactElement {
               </Button>
             </span>
           </Tooltip>
-          <Tooltip title={!canRunEnrichmentForCulture(selectedCulture) ? enrichmentDisabledReason : ''}><span><ButtonGroup variant="contained" aria-label={t('ai.menuLabel')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
+          {aiEnrichmentEnabled && (
+            <>
+              <Tooltip title={!canRunEnrichmentForCulture(selectedCulture) ? enrichmentDisabledReason : ''}><span><ButtonGroup variant="contained" aria-label={t('ai.menuLabel')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
             <Tooltip title={!selectedCultureNeedsCompletion && selectedCulture ? t('ai.completeDisabledReason') : ''}>
               <span>
                 <Button
@@ -950,7 +960,9 @@ function Cultures(): React.ReactElement {
               <PlaylistAddCheckIcon sx={{ mr: 1 }} fontSize="small" />
               {t('buttons.aiCompleteAll')}
             </MenuItem>
-          </Menu>
+              </Menu>
+            </>
+          )}
           <Tooltip title="Kultur bearbeiten (Alt+E)">
             <span>
               <Button
@@ -1155,7 +1167,7 @@ function Cultures(): React.ReactElement {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={enrichAllConfirmOpen} onClose={() => setEnrichAllConfirmOpen(false)} maxWidth="xs" fullWidth>
+      {aiEnrichmentEnabled && (<Dialog open={enrichAllConfirmOpen} onClose={() => setEnrichAllConfirmOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>{t('ai.confirmAllTitle')}</DialogTitle>
         <DialogContent>
           <Typography>
@@ -1166,9 +1178,9 @@ function Cultures(): React.ReactElement {
           <Button onClick={() => setEnrichAllConfirmOpen(false)}>{t('buttons.aiClose')}</Button>
           <Button variant="contained" onClick={() => void handleEnrichAll()}>{t('buttons.aiCompleteAll')}</Button>
         </DialogActions>
-      </Dialog>
+      </Dialog>)}
 
-      <Dialog open={enrichmentLoading} aria-labelledby="enrichment-loading-title" maxWidth="xs" fullWidth>
+      {aiEnrichmentEnabled && (<Dialog open={enrichmentLoading} aria-labelledby="enrichment-loading-title" maxWidth="xs" fullWidth>
         <DialogTitle id="enrichment-loading-title">{t('ai.loadingTitle')}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1, mb: 1 }}>
@@ -1197,9 +1209,9 @@ function Cultures(): React.ReactElement {
             })}
           </List>
         </DialogContent>
-      </Dialog>
+      </Dialog>)}
 
-      <Dialog open={enrichmentDialogOpen} onClose={() => setEnrichmentDialogOpen(false)} maxWidth="md" fullWidth>
+      {aiEnrichmentEnabled && (<Dialog open={enrichmentDialogOpen} onClose={() => setEnrichmentDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>{t('ai.suggestionsTitle')}</DialogTitle>
         <DialogContent>
           {dialogCostInfo && (
@@ -1254,7 +1266,7 @@ function Cultures(): React.ReactElement {
             {t('buttons.aiApplySelected')}
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog>)}
 
       {/* Snackbar for notifications */}
 
@@ -1294,15 +1306,19 @@ function Cultures(): React.ReactElement {
             <ListItem>
               <ListItemText primary="Dialog schließen" secondary="Esc" />
             </ListItem>
-            <ListItem>
-              <ListItemText primary="KI: Kultur vervollständigen" secondary="Alt+U" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="KI: Kultur neu recherchieren" secondary="Alt+R" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="KI: Alle Kulturen vervollständigen" secondary="Alt+A" />
-            </ListItem>
+            {aiEnrichmentEnabled && (
+              <>
+                <ListItem>
+                  <ListItemText primary="KI: Kultur vervollständigen" secondary="Alt+U" />
+                </ListItem>
+                <ListItem>
+                  <ListItemText primary="KI: Kultur neu recherchieren" secondary="Alt+R" />
+                </ListItem>
+                <ListItem>
+                  <ListItemText primary="KI: Alle Kulturen vervollständigen" secondary="Alt+A" />
+                </ListItem>
+              </>
+            )}
           </List>
         </DialogContent>
         <DialogActions>
