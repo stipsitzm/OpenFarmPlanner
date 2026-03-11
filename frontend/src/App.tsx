@@ -137,6 +137,17 @@ function RootLayout(): React.ReactElement {
     setShortcutsOpen(true);
   };
 
+  const handleLogout = async (): Promise<void> => {
+    try {
+      await logout();
+      handleGlobalMenuClose();
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Error logging out:', error);
+      showSnackbar('Logout failed. Please try again.', 'error');
+    }
+  };
+
   const globalCommands = useMemo<CommandSpec[]>(() => [
     {
       id: 'global.nextPage',
@@ -233,11 +244,7 @@ function RootLayout(): React.ReactElement {
             <MenuItem onClick={handleOpenShortcuts}>
               Tastenkürzel
             </MenuItem>
-            <MenuItem onClick={() => {
-              void logout();
-              handleGlobalMenuClose();
-              void navigate('/login');
-            }}>
+            <MenuItem onClick={() => void handleLogout()}>
               Logout {user?.username ? `(${user.username})` : ''}
             </MenuItem>
           </Menu>
