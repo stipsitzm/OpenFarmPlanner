@@ -7,14 +7,17 @@ import { ThemeProvider } from '@mui/material/styles'
 import { CssBaseline } from '@mui/material'
 import theme from './theme'
 import { CommandProvider } from './commands/CommandProvider'
+import { AuthProvider } from './auth/AuthContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <CommandProvider>
-        <App />
-      </CommandProvider>
+      <AuthProvider>
+        <CommandProvider>
+          <App />
+        </CommandProvider>
+      </AuthProvider>
     </ThemeProvider>
   </StrictMode>,
 )

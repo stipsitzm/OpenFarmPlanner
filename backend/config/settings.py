@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'farm',
+    'accounts',
 ]
 
 # Debug Toolbar nur in Entwicklung aktivieren
@@ -193,19 +194,28 @@ _cors_origins_str = os.getenv(
     'http://localhost:5173,http://localhost:3000'
 )
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins_str.split(',')]
+CORS_ALLOW_CREDENTIALS = True
 
 # Parse CSRF_TRUSTED_ORIGINS from environment or use empty list for local development
-_csrf_origins_str = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+_csrf_origins_str = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173,http://localhost:3000')
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins_str.split(',') if origin.strip()]
 
 # REST Framework settings
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 100,
 }
+
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
+SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
+SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
 
 
 
