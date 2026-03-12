@@ -51,7 +51,7 @@ This will automatically:
 pdm run migrate
 ```
 
-4. (Optional) Create a superuser for admin access:
+4. (Optional) Create a superuser for admin access (email is the login identifier):
 ```bash
 pdm run createsuperuser
 ```
@@ -216,7 +216,51 @@ For production, configure these environment variables:
 - `SECRET_KEY` - Django secret key
 - `DEBUG` - Set to `False` in production
 - `ALLOWED_HOSTS` - Comma-separated list of allowed hosts
-- `DATABASE_URL` - Database connection string (if using PostgreSQL)
+- `EMAIL_HOST_PASSWORD` - SMTP password for `noreply@zwiebelzopf.at`
+- `FRONTEND_URL` - Frontend origin used in activation and reset emails
+
+### SMTP configuration for Uberspace (production)
+
+Use these settings in your environment:
+
+```env
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=mail.uberspace.de
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=noreply@zwiebelzopf.at
+EMAIL_HOST_PASSWORD=<your-secret-password>
+DEFAULT_FROM_EMAIL=OpenFarmPlanner <noreply@zwiebelzopf.at>
+FRONTEND_URL=https://your-frontend-domain.tld
+```
+
+For local development you can keep email output in the terminal:
+
+```env
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+```
+
+### Authentication endpoints
+
+Auth endpoints are available under `/openfarmplanner/api/auth/`:
+
+- `GET csrf/`
+- `POST register/`
+- `POST activate/`
+- `POST login/`
+- `POST logout/`
+- `GET me/`
+- `POST resend-activation/`
+- `POST password-reset/`
+- `POST password-reset-confirm/`
+
+### DNS recommendations for deliverability
+
+For reliable email delivery configure:
+
+- SPF record that authorizes your Uberspace mail servers.
+- DKIM signing in Uberspace and publish the provided DKIM TXT record.
+- Optional DMARC policy once SPF/DKIM alignment is verified.
 
 ## License
 

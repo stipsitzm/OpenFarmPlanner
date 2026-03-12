@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'farm',
+    'accounts',
 ]
 
 # Debug Toolbar nur in Entwicklung aktivieren
@@ -185,27 +186,47 @@ MEDIA_ROOT = Path(os.getenv('MEDIA_ROOT', PROJECT_ROOT / 'media'))
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+AUTH_USER_MODEL = 'accounts.User'
 
-# CORS settings
-# Parse from environment variable or use localhost defaults for development
-_cors_origins_str = os.getenv(
-    'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173,http://localhost:3000'
+# Frontend base URL used for links in account emails.
+FRONTEND_URL = _env_str('FRONTEND_URL', 'http://localhost:5173/openfarmplanner')
+
+# Email configuration (Uberspace SMTP in production, console backend in local development by default).
+EMAIL_BACKEND = _env_str(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend',
 )
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins_str.split(',')]
+EMAIL_HOST = _env_str('EMAIL_HOST', 'mail.uberspace.de')
+EMAIL_PORT = int(_env_str('EMAIL_PORT', '587') or '587')
+EMAIL_USE_TLS = _env_str('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+EMAIL_HOST_USER = _env_str('EMAIL_HOST_USER', 'noreply@zwiebelzopf.at')
+EMAIL_HOST_PASSWORD = _env_str('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = _env_str('DEFAULT_FROM_EMAIL', 'OpenFarmPlanner <noreply@zwiebelzopf.at>')
 
-# Parse CSRF_TRUSTED_ORIGINS from environment or use empty list for local development
+# CORS and CSRF origins are intentionally configured independently via environment variables.
+_cors_origins_str = os.getenv('CORS_ALLOWED_ORIGINS', '')
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins_str.split(',') if origin.strip()]
+CORS_ALLOW_CREDENTIALS = True
+
 _csrf_origins_str = os.getenv('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins_str.split(',') if origin.strip()]
 
 # REST Framework settings
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 100,
 }
+
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
+SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
+SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
 
 
 
