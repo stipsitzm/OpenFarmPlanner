@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,6 +33,20 @@ def _env_str(name: str, default: str = "") -> str:
     if isinstance(value, str):
         return value.strip()
     return str(value).strip()
+
+
+def _env_csv_values(name: str) -> list[str]:
+    """Read comma-separated values from process env and backend .env, then merge unique entries."""
+    env_raw = _env_str(name, "")
+    file_raw = str(dotenv_values(BASE_DIR / ".env").get(name, "")).strip()
+    merged_raw = ",".join(part for part in [file_raw, env_raw] if part)
+
+    unique_values: list[str] = []
+    for value in merged_raw.split(','):
+        cleaned = value.strip()
+        if cleaned and cleaned not in unique_values:
+            unique_values.append(cleaned)
+    return unique_values
 
 
 # Quick-start development settings - unsuitable for production
@@ -188,12 +202,14 @@ MEDIA_ROOT = Path(os.getenv('MEDIA_ROOT', PROJECT_ROOT / 'media'))
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS and CSRF origins are intentionally configured independently via environment variables.
-_cors_origins_str = os.getenv('CORS_ALLOWED_ORIGINS', '')
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins_str.split(',') if origin.strip()]
+CORS_ALLOWED_ORIGINS = _env_csv_values('CORS_ALLOWED_ORIGINS')
 CORS_ALLOW_CREDENTIALS = True
 
-_csrf_origins_str = os.getenv('CSRF_TRUSTED_ORIGINS', '')
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins_str.split(',') if origin.strip()]
+CSRF_TRUSTED_ORIGINS = _env_csv_values('CSRF_TRUSTED_ORIGINS')
+
+# Reuse CORS origins for CSRF checks when CSRF origins are not set explicitly.
+if not CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 
 # REST Framework settings
 REST_FRAMEWORK = {
