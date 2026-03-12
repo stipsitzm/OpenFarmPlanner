@@ -45,6 +45,11 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { cultureAPI } from './api/api';
 import type { CultureHistoryEntry } from './api/types';
 import './App.css';
+import { useAuth } from './auth/AuthContext';
+import ProtectedRoute from './auth/ProtectedRoute';
+import HomePage from './pages/public/HomePage';
+import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
 
 
 /**
@@ -60,17 +65,18 @@ function RootLayout(): React.ReactElement {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user, logout } = useAuth();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const routes = ['/locations', '/fields-beds', '/cultures', '/anbauplaene', '/gantt-chart', '/seed-demand', '/suppliers'];
+  const routes = ['/app/locations', '/app/fields-beds', '/app/cultures', '/app/anbauplaene', '/app/gantt-chart', '/app/seed-demand', '/app/suppliers'];
   const navItems = [
-    { to: '/locations', label: t('locations') },
-    { to: '/fields-beds', label: t('fieldsAndBeds') },
-    { to: '/cultures', label: t('cultures') },
-    { to: '/anbauplaene', label: t('plantingPlans'), activePath: '/planting-plans' },
-    { to: '/gantt-chart', label: t('ganttChart') },
-    { to: '/seed-demand', label: t('seedDemand') },
-    { to: '/suppliers', label: t('suppliers') },
+    { to: '/app/locations', label: t('locations') },
+    { to: '/app/fields-beds', label: t('fieldsAndBeds') },
+    { to: '/app/cultures', label: t('cultures') },
+    { to: '/app/anbauplaene', label: t('plantingPlans'), activePath: '/app/planting-plans' },
+    { to: '/app/gantt-chart', label: t('ganttChart') },
+    { to: '/app/seed-demand', label: t('seedDemand') },
+    { to: '/app/suppliers', label: t('suppliers') },
   ];
 
   const handleGlobalMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -129,6 +135,17 @@ function RootLayout(): React.ReactElement {
   const handleOpenShortcuts = () => {
     handleGlobalMenuClose();
     setShortcutsOpen(true);
+  };
+
+  const handleLogout = async (): Promise<void> => {
+    try {
+      await logout();
+      handleGlobalMenuClose();
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Error logging out:', error);
+      showSnackbar('Logout failed. Please try again.', 'error');
+    }
   };
 
   const globalCommands = useMemo<CommandSpec[]>(() => [
@@ -226,6 +243,9 @@ function RootLayout(): React.ReactElement {
             </MenuItem>
             <MenuItem onClick={handleOpenShortcuts}>
               Tastenkürzel
+            </MenuItem>
+            <MenuItem onClick={() => void handleLogout()}>
+              Logout {user?.username ? `(${user.username})` : ''}
             </MenuItem>
           </Menu>
         </div>
@@ -336,43 +356,37 @@ function createAppRouter(basename: string) {
   return createBrowserRouter([
     {
       path: '/',
-      element: <RootLayout />,
+      element: <HomePage />,
+    },
+    {
+      path: '/login',
+      element: <LoginPage />,
+    },
+    {
+      path: '/register',
+      element: <RegisterPage />,
+    },
+    {
+      path: '/app',
+      element: <ProtectedRoute />,
       children: [
         {
-          index: true,
-          loader: () => redirect('/anbauplaene'),
-        },
-        {
-          path: 'locations',
-          element: <Locations />,
-        },
-        {
-          path: 'fields-beds',
-          element: <FieldsBedsPage />,
-        },
-        {
-          path: 'cultures',
-          element: <Cultures />,
-        },
-        {
-          path: 'anbauplaene',
-          element: <PlantingPlans />,
-        },
-        {
-          path: 'suppliers',
-          element: <Suppliers />,
-        },
-        {
-          path: 'planting-plans',
-          element: <PlantingPlans />,
-        },
-        {
-          path: 'gantt-chart',
-          element: <GanttChart />,
-        },
-        {
-          path: 'seed-demand',
-          element: <SeedDemandPage />,
+          path: '',
+          element: <RootLayout />,
+          children: [
+            {
+              index: true,
+              loader: () => redirect('/app/anbauplaene'),
+            },
+            { path: 'locations', element: <Locations /> },
+            { path: 'fields-beds', element: <FieldsBedsPage /> },
+            { path: 'cultures', element: <Cultures /> },
+            { path: 'anbauplaene', element: <PlantingPlans /> },
+            { path: 'suppliers', element: <Suppliers /> },
+            { path: 'planting-plans', element: <PlantingPlans /> },
+            { path: 'gantt-chart', element: <GanttChart /> },
+            { path: 'seed-demand', element: <SeedDemandPage /> },
+          ],
         },
       ],
     },
