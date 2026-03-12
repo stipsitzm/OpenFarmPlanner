@@ -10,12 +10,14 @@ const authState: {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   register: (username: string, password: string, passwordConfirm: string, email?: string) => Promise<void>;
 } = {
   user: null,
   isLoading: false,
   login: vi.fn(async () => {}),
   logout: vi.fn(async () => {}),
+  deleteAccount: vi.fn(async () => {}),
   register: vi.fn(async () => {}),
 };
 

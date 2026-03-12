@@ -91,6 +91,15 @@ export async function logout(): Promise<void> {
   });
 }
 
+export async function deleteAccount(): Promise<void> {
+  await ensureCsrfCookie();
+  const csrfToken = getCookie('csrftoken') ?? '';
+  await request<void>('/auth/account/', {
+    method: 'DELETE',
+    headers: { 'X-CSRFToken': csrfToken },
+  });
+}
+
 
 export async function register(username: string, password: string, passwordConfirm: string, email = ''): Promise<AuthUser> {
   await ensureCsrfCookie();

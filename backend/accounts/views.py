@@ -59,3 +59,13 @@ class MeView(APIView):
         if not request.user.is_authenticated:
             return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(UserSerializer(request.user).data)
+
+
+class DeleteAccountView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request: Request) -> Response:
+        user = request.user
+        logout(request)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

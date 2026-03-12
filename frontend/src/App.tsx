@@ -16,6 +16,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   IconButton,
   List,
@@ -65,7 +66,7 @@ function RootLayout(): React.ReactElement {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const routes = ['/app/locations', '/app/fields-beds', '/app/cultures', '/app/anbauplaene', '/app/gantt-chart', '/app/seed-demand', '/app/suppliers'];
@@ -93,6 +94,8 @@ function RootLayout(): React.ReactElement {
 
   const [projectHistoryOpen, setProjectHistoryOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [deleteAccountSubmitting, setDeleteAccountSubmitting] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
@@ -145,6 +148,25 @@ function RootLayout(): React.ReactElement {
     } catch (error) {
       console.error('Error logging out:', error);
       showSnackbar('Logout failed. Please try again.', 'error');
+    }
+  };
+
+  const handleOpenDeleteAccount = () => {
+    handleGlobalMenuClose();
+    setDeleteAccountOpen(true);
+  };
+
+  const handleDeleteAccount = async (): Promise<void> => {
+    setDeleteAccountSubmitting(true);
+    try {
+      await deleteAccount();
+      setDeleteAccountOpen(false);
+      navigate('/register', { replace: true });
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      showSnackbar('Account deletion failed. Please try again.', 'error');
+    } finally {
+      setDeleteAccountSubmitting(false);
     }
   };
 
@@ -244,6 +266,9 @@ function RootLayout(): React.ReactElement {
             <MenuItem onClick={handleOpenShortcuts}>
               Tastenkürzel
             </MenuItem>
+            <MenuItem onClick={handleOpenDeleteAccount} sx={{ color: 'error.main' }}>
+              Account löschen
+            </MenuItem>
             <MenuItem onClick={() => void handleLogout()}>
               Logout {user?.username ? `(${user.username})` : ''}
             </MenuItem>
@@ -332,6 +357,26 @@ function RootLayout(): React.ReactElement {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShortcutsOpen(false)}>Schließen</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={deleteAccountOpen} onClose={() => setDeleteAccountOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Account löschen?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Dein Benutzerkonto wird dauerhaft gelöscht. Dieser Schritt kann nicht rückgängig gemacht werden.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteAccountOpen(false)} disabled={deleteAccountSubmitting}>Abbrechen</Button>
+          <Button
+            onClick={() => void handleDeleteAccount()}
+            color="error"
+            variant="contained"
+            disabled={deleteAccountSubmitting}
+          >
+            {deleteAccountSubmitting ? 'Lösche…' : 'Account endgültig löschen'}
+          </Button>
         </DialogActions>
       </Dialog>
 

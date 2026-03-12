@@ -55,3 +55,22 @@ class AuthApiTest(APITestCase):
 
         me_after_logout = self.client.get('/openfarmplanner/api/auth/me/')
         self.assertEqual(me_after_logout.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_account_removes_user_and_session(self) -> None:
+        csrf_response = self.client.get('/openfarmplanner/api/auth/csrf/')
+        self.assertEqual(csrf_response.status_code, status.HTTP_200_OK)
+
+        login_response = self.client.post(
+            '/openfarmplanner/api/auth/login/',
+            {'username': self.user.username, 'password': self.password},
+            format='json',
+        )
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+
+        delete_response = self.client.delete('/openfarmplanner/api/auth/account/', {}, format='json')
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertFalse(User.objects.filter(username=self.user.username).exists())
+
+        me_after_delete = self.client.get('/openfarmplanner/api/auth/me/')
+        self.assertEqual(me_after_delete.status_code, status.HTTP_401_UNAUTHORIZED)

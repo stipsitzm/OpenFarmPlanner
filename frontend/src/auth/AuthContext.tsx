@@ -1,5 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { getMe, login as loginRequest, logout as logoutRequest, register as registerRequest } from './authApi';
+import {
+  deleteAccount as deleteAccountRequest,
+  getMe,
+  login as loginRequest,
+  logout as logoutRequest,
+  register as registerRequest,
+} from './authApi';
 import type { AuthUser } from './types';
 
 interface AuthContextValue {
@@ -7,6 +13,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   register: (username: string, password: string, passwordConfirm: string, email?: string) => Promise<void>;
 }
 
@@ -38,6 +45,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     },
     logout: async () => {
       await logoutRequest();
+      setUser(null);
+    },
+    deleteAccount: async () => {
+      await deleteAccountRequest();
       setUser(null);
     },
     register: async (username: string, password: string, passwordConfirm: string, email = '') => {
