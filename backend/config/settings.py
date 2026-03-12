@@ -196,9 +196,14 @@ _cors_origins_str = os.getenv(
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins_str.split(',')]
 CORS_ALLOW_CREDENTIALS = True
 
-# Parse CSRF_TRUSTED_ORIGINS from environment or use empty list for local development
-_csrf_origins_str = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173,http://localhost:3000')
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins_str.split(',') if origin.strip()]
+# Parse CSRF_TRUSTED_ORIGINS from environment.
+# Always include CORS_ALLOWED_ORIGINS to keep local session auth/logout working.
+_csrf_origins_str = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+CSRF_TRUSTED_ORIGINS = [
+    origin for origin in dict.fromkeys(
+        [origin.strip() for origin in _csrf_origins_str.split(',') if origin.strip()] + CORS_ALLOWED_ORIGINS
+    )
+]
 
 # REST Framework settings
 REST_FRAMEWORK = {
