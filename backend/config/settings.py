@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import dotenv_values, load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -62,12 +63,10 @@ SECRET_KEY = os.getenv(
 # In production, explicitly set DEBUG=False via environment variable
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-# Parse ALLOWED_HOSTS from environment variable or use sensible development defaults
-_allowed_hosts_str = os.getenv(
-    'ALLOWED_HOSTS',
-    'localhost,127.0.0.1'
-)
-ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts_str.split(',')]
+# Read ALLOWED_HOSTS from environment sources and require it in non-debug mode.
+ALLOWED_HOSTS = _env_csv_values('ALLOWED_HOSTS')
+if not DEBUG and not ALLOWED_HOSTS:
+    raise ImproperlyConfigured('ALLOWED_HOSTS must be set when DEBUG=False.')
 
 
 # Application definition
