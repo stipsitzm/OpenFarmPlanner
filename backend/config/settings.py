@@ -13,7 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import dotenv_values, load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,6 +36,20 @@ def _env_str(name: str, default: str = "") -> str:
     return str(value).strip()
 
 
+def _env_csv_values(name: str) -> list[str]:
+    """Read comma-separated values from process env and backend .env, then merge unique entries."""
+    env_raw = _env_str(name, "")
+    file_raw = str(dotenv_values(BASE_DIR / ".env").get(name, "")).strip()
+    merged_raw = ",".join(part for part in [file_raw, env_raw] if part)
+
+    unique_values: list[str] = []
+    for value in merged_raw.split(','):
+        cleaned = value.strip()
+        if cleaned and cleaned not in unique_values:
+            unique_values.append(cleaned)
+    return unique_values
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -48,12 +63,10 @@ SECRET_KEY = os.getenv(
 # In production, explicitly set DEBUG=False via environment variable
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-# Parse ALLOWED_HOSTS from environment variable or use sensible development defaults
-_allowed_hosts_str = os.getenv(
-    'ALLOWED_HOSTS',
-    'localhost,127.0.0.1'
-)
-ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts_str.split(',')]
+# Read ALLOWED_HOSTS from environment sources and require it in non-debug mode.
+ALLOWED_HOSTS = _env_csv_values('ALLOWED_HOSTS')
+if not DEBUG and not ALLOWED_HOSTS:
+    raise ImproperlyConfigured('ALLOWED_HOSTS must be set when DEBUG=False.')
 
 
 # Application definition
@@ -68,6 +81,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'farm',
+    'accounts',
 ]
 
 # Debug Toolbar nur in Entwicklung aktivieren
@@ -186,26 +200,32 @@ MEDIA_ROOT = Path(os.getenv('MEDIA_ROOT', PROJECT_ROOT / 'media'))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS settings
-# Parse from environment variable or use localhost defaults for development
-_cors_origins_str = os.getenv(
-    'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173,http://localhost:3000'
-)
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins_str.split(',')]
+# CORS and CSRF origins are intentionally configured independently via environment variables.
+CORS_ALLOWED_ORIGINS = _env_csv_values('CORS_ALLOWED_ORIGINS')
+CORS_ALLOW_CREDENTIALS = True
 
-# Parse CSRF_TRUSTED_ORIGINS from environment or use empty list for local development
-_csrf_origins_str = os.getenv('CSRF_TRUSTED_ORIGINS', '')
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins_str.split(',') if origin.strip()]
+CSRF_TRUSTED_ORIGINS = _env_csv_values('CSRF_TRUSTED_ORIGINS')
+
+# Reuse CORS origins for CSRF checks when CSRF origins are not set explicitly.
+if not CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 
 # REST Framework settings
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 100,
 }
+
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
+SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
+SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
 
 
 
