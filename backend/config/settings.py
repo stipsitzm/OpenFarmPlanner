@@ -187,23 +187,13 @@ MEDIA_ROOT = Path(os.getenv('MEDIA_ROOT', PROJECT_ROOT / 'media'))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS settings
-# Parse from environment variable or use localhost defaults for development
-_cors_origins_str = os.getenv(
-    'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173,http://localhost:3000'
-)
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins_str.split(',')]
+# CORS and CSRF origins are intentionally configured independently via environment variables.
+_cors_origins_str = os.getenv('CORS_ALLOWED_ORIGINS', '')
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins_str.split(',') if origin.strip()]
 CORS_ALLOW_CREDENTIALS = True
 
-# Parse CSRF_TRUSTED_ORIGINS from environment.
-# Always include CORS_ALLOWED_ORIGINS to keep local session auth/logout working.
 _csrf_origins_str = os.getenv('CSRF_TRUSTED_ORIGINS', '')
-CSRF_TRUSTED_ORIGINS = [
-    origin for origin in dict.fromkeys(
-        [origin.strip() for origin in _csrf_origins_str.split(',') if origin.strip()] + CORS_ALLOWED_ORIGINS
-    )
-]
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins_str.split(',') if origin.strip()]
 
 # REST Framework settings
 REST_FRAMEWORK = {
