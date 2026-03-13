@@ -21,6 +21,7 @@ from django.urls import include, path
 
 urlpatterns = [
     path('openfarmplanner/admin/', admin.site.urls),
+    path('openfarmplanner/api/auth/', include('accounts.urls')),
     path('openfarmplanner/api/', include('farm.urls')),
 ]
 
