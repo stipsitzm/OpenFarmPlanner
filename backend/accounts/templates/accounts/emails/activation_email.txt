@@ -1,0 +1,7 @@
+Hello,
+
+please activate your OpenFarmPlanner account by clicking the link below:
+
+{{ activation_link }}
+
+If you did not create this account, you can ignore this email.

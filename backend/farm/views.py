@@ -1115,11 +1115,13 @@ class PlantingPlanViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     serializer_class = PlantingPlanSerializer
 
     def perform_create(self, serializer):
-        instance = serializer.save()
+        current_user = self.request.user if self.request.user.is_authenticated else None
+        instance = serializer.save(created_by=current_user, updated_by=current_user)
         self.create_project_revision(f"PlantingPlan created #{instance.pk}")
 
     def perform_update(self, serializer):
-        instance = serializer.save()
+        current_user = self.request.user if self.request.user.is_authenticated else None
+        instance = serializer.save(updated_by=current_user)
         self.create_project_revision(f"PlantingPlan updated #{instance.pk}")
 
     def perform_destroy(self, instance):
@@ -1364,6 +1366,8 @@ class NoteAttachmentListCreateView(APIView):
         attachment = NoteAttachment(
             planting_plan=plan,
             caption=caption,
+            created_by=request.user if request.user.is_authenticated else None,
+            updated_by=request.user if request.user.is_authenticated else None,
             width=metadata['width'],
             height=metadata['height'],
             size_bytes=metadata['size_bytes'],
