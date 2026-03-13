@@ -3,9 +3,11 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, Navigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { useTranslation } from '../../i18n';
 
 export default function RegisterPage(): React.ReactElement {
   const { user, register, resendActivation } = useAuth();
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +24,7 @@ export default function RegisterPage(): React.ReactElement {
     setSuccess(null);
 
     if (password !== passwordConfirm) {
-      setError('Passwords do not match.');
+      setError(t('register.passwordMismatch'));
       return;
     }
 
@@ -31,7 +33,7 @@ export default function RegisterPage(): React.ReactElement {
       const message = await register(email.trim().toLowerCase(), password, passwordConfirm, displayName.trim());
       setSuccess(message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed.');
+      setError(err instanceof Error ? err.message : t('register.failed'));
     } finally {
       setSubmitting(false);
     }
@@ -44,18 +46,18 @@ export default function RegisterPage(): React.ReactElement {
 
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>Register</Typography>
+      <Typography variant="h4" sx={{ mb: 3 }}>{t('register.title')}</Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2}>
           {error ? <Alert severity="error">{error}</Alert> : null}
           {success ? <Alert severity="success">{success}</Alert> : null}
-          <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <TextField label="Display name (optional)" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-          <TextField label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <TextField label="Confirm password" type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} required />
-          <Button type="submit" variant="contained" disabled={submitting}>{submitting ? 'Creating account…' : 'Create account'}</Button>
-          <Button onClick={() => void handleResend()} disabled={!email}>Resend activation email</Button>
-          <Button component={RouterLink} to="/login">Already have an account? Sign in</Button>
+          <TextField label={t('register.email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <TextField label={t('register.displayName')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          <TextField label={t('register.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <TextField label={t('register.passwordConfirm')} type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} required />
+          <Button type="submit" variant="contained" disabled={submitting}>{submitting ? t('register.submitting') : t('register.submit')}</Button>
+          <Button onClick={() => void handleResend()} disabled={!email}>{t('register.resendActivation')}</Button>
+          <Button component={RouterLink} to="/login">{t('register.hasAccount')}</Button>
         </Stack>
       </Box>
     </Container>

@@ -3,9 +3,11 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { useTranslation } from '../../i18n';
 
 export default function ForgotPasswordPage(): React.ReactElement {
   const { requestPasswordReset } = useAuth();
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -16,20 +18,20 @@ export default function ForgotPasswordPage(): React.ReactElement {
     try {
       setMessage(await requestPasswordReset(email.trim().toLowerCase()));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Request failed.');
+      setError(err instanceof Error ? err.message : t('forgotPassword.failed'));
     }
   };
 
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>Forgot password</Typography>
+      <Typography variant="h4" sx={{ mb: 3 }}>{t('forgotPassword.title')}</Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2}>
           {message ? <Alert severity="success">{message}</Alert> : null}
           {error ? <Alert severity="error">{error}</Alert> : null}
-          <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <Button type="submit" variant="contained">Send reset email</Button>
-          <Button component={RouterLink} to="/login">Back to login</Button>
+          <TextField label={t('forgotPassword.email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <Button type="submit" variant="contained">{t('forgotPassword.submit')}</Button>
+          <Button component={RouterLink} to="/login">{t('forgotPassword.backToLogin')}</Button>
         </Stack>
       </Box>
     </Container>

@@ -3,9 +3,11 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { useTranslation } from '../../i18n';
 
 export default function LoginPage(): React.ReactElement {
   const { user, login } = useAuth();
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');
@@ -25,7 +27,7 @@ export default function LoginPage(): React.ReactElement {
       const destination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/app';
       navigate(destination, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed.');
+      setError(err instanceof Error ? err.message : t('login.failed'));
     } finally {
       setSubmitting(false);
     }
@@ -33,15 +35,15 @@ export default function LoginPage(): React.ReactElement {
 
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>Login</Typography>
+      <Typography variant="h4" sx={{ mb: 3 }}>{t('login.title')}</Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2}>
           {error ? <Alert severity="error">{error}</Alert> : null}
-          <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <TextField label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <Button type="submit" variant="contained" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign in'}</Button>
-          <Button component={RouterLink} to="/register">No account yet? Register</Button>
-          <Button component={RouterLink} to="/forgot-password">Forgot password?</Button>
+          <TextField label={t('login.email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <TextField label={t('login.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <Button type="submit" variant="contained" disabled={submitting}>{submitting ? t('login.submitting') : t('login.submit')}</Button>
+          <Button component={RouterLink} to="/register">{t('login.noAccount')}</Button>
+          <Button component={RouterLink} to="/forgot-password">{t('login.forgotPassword')}</Button>
         </Stack>
       </Box>
     </Container>

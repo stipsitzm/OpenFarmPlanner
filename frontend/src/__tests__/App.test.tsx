@@ -32,7 +32,7 @@ describe('App', () => {
     render(<CommandProvider><App /></CommandProvider>);
 
     expect(await screen.findByText('OpenFarmPlanner')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open App' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'App öffnen' })).toBeInTheDocument();
   });
 
   it('renders navigation for authenticated users in /app', async () => {
@@ -55,6 +55,6 @@ describe('App', () => {
   it('redirects unauthenticated users from /app to login', async () => {
     window.history.pushState({}, '', '/app');
     render(<CommandProvider><App /></CommandProvider>);
-    expect(await screen.findByRole('heading', { name: 'Login' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Anmelden' })).toBeInTheDocument();
   });
 });

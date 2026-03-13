@@ -2,10 +2,12 @@ import { Alert, Button, Container, Stack, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { useTranslation } from '../../i18n';
 
 export default function ActivatePage(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const { activate } = useAuth();
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState<string>('');
@@ -16,7 +18,7 @@ export default function ActivatePage(): React.ReactElement {
 
     if (!uid || !token) {
       setStatus('error');
-      setMessage('Activation link is incomplete.');
+      setMessage(t('activate.incompleteLink'));
       return;
     }
 
@@ -25,23 +27,23 @@ export default function ActivatePage(): React.ReactElement {
       try {
         await activate(uid, token);
         setStatus('success');
-        setMessage('Account activated successfully. Redirecting to app...');
+        setMessage(t('activate.success'));
         setTimeout(() => navigate('/app', { replace: true }), 1200);
       } catch (err) {
         setStatus('error');
-        setMessage(err instanceof Error ? err.message : 'Activation failed.');
+        setMessage(err instanceof Error ? err.message : t('activate.failed'));
       }
     })();
-  }, [activate, navigate, searchParams]);
+  }, [activate, navigate, searchParams, t]);
 
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>Activate account</Typography>
+      <Typography variant="h4" sx={{ mb: 3 }}>{t('activate.title')}</Typography>
       <Stack spacing={2}>
-        {status === 'loading' ? <Alert severity="info">Activating account…</Alert> : null}
+        {status === 'loading' ? <Alert severity="info">{t('activate.loading')}</Alert> : null}
         {status === 'success' ? <Alert severity="success">{message}</Alert> : null}
         {status === 'error' ? <Alert severity="error">{message}</Alert> : null}
-        <Button component={RouterLink} to="/login">Go to login</Button>
+        <Button component={RouterLink} to="/login">{t('activate.toLogin')}</Button>
       </Stack>
     </Container>
   );
