@@ -48,6 +48,9 @@ SECRET_KEY = os.getenv(
 # In production, explicitly set DEBUG=False via environment variable
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
+# Environment selector used for security-sensitive development overrides.
+DJANGO_ENV = _env_str('DJANGO_ENV', 'production').lower()
+
 # Parse ALLOWED_HOSTS from environment variable or use sensible development defaults
 _allowed_hosts_str = os.getenv(
     'ALLOWED_HOSTS',
@@ -140,21 +143,23 @@ else:
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
+if DJANGO_ENV == 'development':
+    AUTH_PASSWORD_VALIDATORS = []
+else:
+    AUTH_PASSWORD_VALIDATORS = [
+        {
+            'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        },
+    ]
 
 
 # Internationalization
