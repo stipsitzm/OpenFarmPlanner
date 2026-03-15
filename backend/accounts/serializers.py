@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import uuid
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.validators import UnicodeUsernameValidator
@@ -11,6 +12,9 @@ from rest_framework import serializers
 
 User = get_user_model()
 _username_validator = UnicodeUsernameValidator()
+_password_field_kwargs = {'write_only': True}
+if getattr(settings, 'DJANGO_ENV', 'production') != 'development':
+    _password_field_kwargs['min_length'] = 8
 
 
 def normalize_email_lower(email: str) -> str:
@@ -59,8 +63,8 @@ class UserSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
     display_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    password = serializers.CharField(write_only=True, min_length=8)
-    password_confirm = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(**_password_field_kwargs)
+    password_confirm = serializers.CharField(**_password_field_kwargs)
 
     def validate_email(self, value: str) -> str:
         normalized = normalize_email_lower(value)
@@ -106,8 +110,8 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 class PasswordResetConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField()
     token = serializers.CharField()
-    password = serializers.CharField(write_only=True, min_length=8)
-    password_confirm = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(**_password_field_kwargs)
+    password_confirm = serializers.CharField(**_password_field_kwargs)
 
     def validate(self, attrs: dict[str, str]) -> dict[str, str]:
         if attrs['password'] != attrs['password_confirm']:
