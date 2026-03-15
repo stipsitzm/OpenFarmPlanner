@@ -6,9 +6,11 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
+from django.utils import translation
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.utils.translation import gettext as _
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import permissions, status
 from rest_framework.request import Request
@@ -45,11 +47,12 @@ def _send_activation_email(user: User) -> None:
     uid = urlsafe_base64_encode(str(user.pk).encode('utf-8'))
     token = default_token_generator.make_token(user)
     activation_link = _build_frontend_link(f'/activate?uid={uid}&token={token}')
-    subject = 'Activate your OpenFarmPlanner account'
-    body = render_to_string('accounts/emails/activation_email.txt', {
-        'activation_link': activation_link,
-        'user': user,
-    })
+    with translation.override('de'):
+        subject = _('Activate your OpenFarmPlanner account')
+        body = render_to_string('accounts/emails/activation_email.txt', {
+            'activation_link': activation_link,
+            'user': user,
+        })
     send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email])
 
 
@@ -57,11 +60,12 @@ def _send_password_reset_email(user: User) -> None:
     uid = urlsafe_base64_encode(str(user.pk).encode('utf-8'))
     token = default_token_generator.make_token(user)
     reset_link = _build_frontend_link(f'/reset-password?uid={uid}&token={token}')
-    subject = 'Reset your OpenFarmPlanner password'
-    body = render_to_string('accounts/emails/password_reset_email.txt', {
-        'reset_link': reset_link,
-        'user': user,
-    })
+    with translation.override('de'):
+        subject = _('Reset your OpenFarmPlanner password')
+        body = render_to_string('accounts/emails/password_reset_email.txt', {
+            'reset_link': reset_link,
+            'user': user,
+        })
     send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email])
 
 
