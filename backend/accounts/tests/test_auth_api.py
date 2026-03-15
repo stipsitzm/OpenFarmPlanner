@@ -39,6 +39,10 @@ class AuthApiTest(APITestCase):
         self.assertFalse(created.is_active)
         self.assertEqual(created.first_name, 'New User')
         self.assertEqual(len(mail.outbox), 1)
+        activation_email_body = mail.outbox[0].body
+        self.assertIn('/activate?uid=', activation_email_body)
+        self.assertIn('&token=', activation_email_body)
+        self.assertNotIn('&amp;token=', activation_email_body)
 
         duplicate = self.client.post(
             '/openfarmplanner/api/auth/register/',

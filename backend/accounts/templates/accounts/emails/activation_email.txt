@@ -1,4 +1,4 @@
-{% load i18n %}{% autoescape off %}{% blocktrans with link=activation_link %}Hello,
+{% load i18n %}{% autoescape off %}{% blocktrans with link=activation_link|safe %}Hello,
 
 please activate your OpenFarmPlanner account by clicking the link below:
 
