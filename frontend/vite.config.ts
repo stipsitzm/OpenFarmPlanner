@@ -13,7 +13,19 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      '/openfarmplanner/admin': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
       '/openfarmplanner/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/static': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/media': {
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
