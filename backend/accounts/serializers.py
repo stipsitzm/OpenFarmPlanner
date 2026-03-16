@@ -7,7 +7,9 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.utils import translation
 from django.utils.text import slugify
+from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 User = get_user_model()
@@ -15,6 +17,11 @@ _username_validator = UnicodeUsernameValidator()
 _password_field_kwargs = {'write_only': True}
 if getattr(settings, 'DJANGO_ENV', 'production') != 'development':
     _password_field_kwargs['min_length'] = 8
+
+
+def _de(message: str) -> str:
+    with translation.override('de'):
+        return _(message)
 
 
 def normalize_email_lower(email: str) -> str:
@@ -69,12 +76,12 @@ class RegisterSerializer(serializers.Serializer):
     def validate_email(self, value: str) -> str:
         normalized = normalize_email_lower(value)
         if User.objects.filter(email__iexact=normalized).exists():
-            raise serializers.ValidationError('An account with this email already exists.')
+            raise serializers.ValidationError(_de(_('An account with this email already exists.')))
         return normalized
 
     def validate(self, attrs: dict[str, str]) -> dict[str, str]:
         if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError({'password_confirm': 'Passwords do not match.'})
+            raise serializers.ValidationError({'password_confirm': _de(_('Passwords do not match.'))})
         validate_password(attrs['password'])
         return attrs
 
@@ -115,6 +122,6 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
     def validate(self, attrs: dict[str, str]) -> dict[str, str]:
         if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError({'password_confirm': 'Passwords do not match.'})
+            raise serializers.ValidationError({'password_confirm': _de(_('Passwords do not match.'))})
         validate_password(attrs['password'])
         return attrs

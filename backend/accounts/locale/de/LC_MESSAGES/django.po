@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenFarmPlanner\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-15 15:08+0000\n"
+"POT-Creation-Date: 2026-03-16 13:54+0000\n"
 "PO-Revision-Date: 2026-03-15 15:08+0000\n"
 "Language-Team: German\n"
 "Language: de\n"
@@ -12,6 +12,15 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: accounts/serializers.py:79
+msgid "An account with this email already exists."
+msgstr "Ein Konto mit dieser E-Mail-Adresse existiert bereits."
+
+#: accounts/serializers.py:84 accounts/serializers.py:125
+msgid "Passwords do not match."
+msgstr "Die Passwoerter stimmen nicht ueberein."
+
 #: accounts/templates/accounts/emails/activation_email.txt:1
 #, python-format
 msgid ""
@@ -44,16 +53,67 @@ msgid ""
 msgstr ""
 "Hallo,\n"
 "\n"
-"verwende den folgenden Link, um dein OpenFarmPlanner-Passwort zurückzusetzen:\n"
+"verwende den folgenden Link, um dein OpenFarmPlanner-Passwort "
+"zurückzusetzen:\n"
 "\n"
 "%(link)s\n"
 "\n"
-"Falls du diese Zurücksetzung nicht angefragt hast, kannst du diese E-Mail ignorieren."
+"Falls du diese Zurücksetzung nicht angefragt hast, kannst du diese E-Mail "
+"ignorieren."
 
-#: accounts/views.py:51
+#: accounts/views.py:39
+msgid "If the account exists, an email has been sent."
+msgstr "Falls das Konto existiert, wurde eine E-Mail gesendet."
+
+#: accounts/views.py:58
 msgid "Activate your OpenFarmPlanner account"
 msgstr "OpenFarmPlanner-Konto aktivieren"
 
-#: accounts/views.py:64
+#: accounts/views.py:71
 msgid "Reset your OpenFarmPlanner password"
 msgstr "OpenFarmPlanner-Passwort zurücksetzen"
+
+#: accounts/views.py:91
+msgid "CSRF cookie set"
+msgstr "CSRF-Cookie gesetzt"
+
+#: accounts/views.py:102
+msgid ""
+"Registration successful. Please check your email to activate your account."
+msgstr "Registrierung erfolgreich. Bitte pruefe deine E-Mails, um dein Konto zu aktivieren."
+
+#: accounts/views.py:113
+msgid "Invalid activation link."
+msgstr "Ungueltiger Aktivierungslink."
+
+#: accounts/views.py:118
+msgid "Invalid or expired activation token."
+msgstr "Ungueltiges oder abgelaufenes Aktivierungs-Token."
+
+#: accounts/views.py:138
+msgid "Invalid credentials."
+msgstr "Ungueltige Zugangsdaten."
+
+#: accounts/views.py:141
+msgid "Account is not activated yet."
+msgstr "Das Konto ist noch nicht aktiviert."
+
+#: accounts/views.py:150
+msgid "Logged out."
+msgstr "Abgemeldet."
+
+#: accounts/views.py:158
+msgid "Authentication credentials were not provided."
+msgstr "Authentifizierungsdaten wurden nicht bereitgestellt."
+
+#: accounts/views.py:200 accounts/views.py:204
+msgid "Invalid reset link."
+msgstr "Ungueltiger Zuruecksetzungslink."
+
+#: accounts/views.py:208
+msgid "Invalid or expired reset token."
+msgstr "Ungueltiges oder abgelaufenes Zuruecksetzungs-Token."
+
+#: accounts/views.py:212
+msgid "Password has been reset successfully."
+msgstr "Das Passwort wurde erfolgreich zurueckgesetzt."

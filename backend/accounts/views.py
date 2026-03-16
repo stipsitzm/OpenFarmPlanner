@@ -29,7 +29,14 @@ from .serializers import (
 )
 
 User = get_user_model()
-GENERIC_EMAIL_SENT_MESSAGE = 'If the account exists, an email has been sent.'
+
+
+def _de(message: str) -> str:
+    with translation.override('de'):
+        return _(message)
+
+
+GENERIC_EMAIL_SENT_MESSAGE = _de(_('If the account exists, an email has been sent.'))
 
 
 def _normalize_email(email: str) -> str:
@@ -81,7 +88,7 @@ class CsrfTokenView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request: Request) -> Response:
-        return Response({'detail': 'CSRF cookie set'})
+        return Response({'detail': _de(_('CSRF cookie set'))})
 
 
 class RegisterView(APIView):
@@ -92,7 +99,7 @@ class RegisterView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         _send_activation_email(user)
-        return Response({'detail': 'Registration successful. Please check your email to activate your account.'}, status=status.HTTP_201_CREATED)
+        return Response({'detail': _de(_('Registration successful. Please check your email to activate your account.'))}, status=status.HTTP_201_CREATED)
 
 
 class ActivateView(APIView):
@@ -103,12 +110,12 @@ class ActivateView(APIView):
         serializer.is_valid(raise_exception=True)
         uid = _decode_uid(serializer.validated_data['uid'])
         if uid is None:
-            return Response({'detail': 'Invalid activation link.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': _de(_('Invalid activation link.'))}, status=status.HTTP_400_BAD_REQUEST)
 
         user = get_object_or_404(User, pk=uid)
         token = serializer.validated_data['token']
         if not default_token_generator.check_token(user, token):
-            return Response({'detail': 'Invalid or expired activation token.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': _de(_('Invalid or expired activation token.'))}, status=status.HTTP_400_BAD_REQUEST)
 
         user.is_active = True
         user.save(update_fields=['is_active'])
@@ -128,10 +135,10 @@ class LoginView(APIView):
 
         user = User.objects.filter(email__iexact=email).first()
         if user is None or not user.check_password(password):
-            return Response({'detail': 'Invalid credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'detail': _de(_('Invalid credentials.'))}, status=status.HTTP_401_UNAUTHORIZED)
 
         if not user.is_active:
-            return Response({'detail': 'Account is not activated yet.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'detail': _de(_('Account is not activated yet.'))}, status=status.HTTP_403_FORBIDDEN)
 
         login(request, user)
         return Response(UserSerializer(user).data)
@@ -140,7 +147,7 @@ class LoginView(APIView):
 class LogoutView(APIView):
     def post(self, request: Request) -> Response:
         logout(request)
-        return Response({'detail': 'Logged out.'})
+        return Response({'detail': _de(_('Logged out.'))})
 
 
 class MeView(APIView):
@@ -148,7 +155,7 @@ class MeView(APIView):
 
     def get(self, request: Request) -> Response:
         if not request.user.is_authenticated:
-            return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'detail': _de(_('Authentication credentials were not provided.'))}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(UserSerializer(request.user).data)
 
 
@@ -190,16 +197,16 @@ class PasswordResetConfirmView(APIView):
         serializer.is_valid(raise_exception=True)
         uid = _decode_uid(serializer.validated_data['uid'])
         if uid is None:
-            return Response({'detail': 'Invalid reset link.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': _de(_('Invalid reset link.'))}, status=status.HTTP_400_BAD_REQUEST)
 
         user = User.objects.filter(pk=uid, is_active=True).first()
         if user is None:
-            return Response({'detail': 'Invalid reset link.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': _de(_('Invalid reset link.'))}, status=status.HTTP_400_BAD_REQUEST)
 
         token = serializer.validated_data['token']
         if not default_token_generator.check_token(user, token):
-            return Response({'detail': 'Invalid or expired reset token.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': _de(_('Invalid or expired reset token.'))}, status=status.HTTP_400_BAD_REQUEST)
 
         user.set_password(serializer.validated_data['password'])
         user.save(update_fields=['password'])
-        return Response({'detail': 'Password has been reset successfully.'})
+        return Response({'detail': _de(_('Password has been reset successfully.'))})
