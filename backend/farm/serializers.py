@@ -24,6 +24,13 @@ from .models import (
 )
 
 
+class AuditUserSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    email = serializers.EmailField()
+    display_name = serializers.CharField(allow_blank=True)
+    display_label = serializers.CharField()
+
+
 class CentimetersField(serializers.FloatField):
     """Expose meter-based model fields as centimeters in the API."""
     
@@ -627,6 +634,8 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
     bed_name = serializers.CharField(source='bed.name', read_only=True)
     plants_count = serializers.SerializerMethodField(read_only=True)
     note_attachment_count = serializers.IntegerField(read_only=True)
+    created_by_user = AuditUserSerializer(source='created_by', read_only=True)
+    updated_by_user = AuditUserSerializer(source='updated_by', read_only=True)
     
     # Write-only fields for area input
     area_input_value = serializers.DecimalField(
@@ -654,7 +663,7 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = PlantingPlan
         fields = '__all__'
-        read_only_fields = ['harvest_date', 'harvest_end_date']
+        read_only_fields = ['harvest_date', 'harvest_end_date', 'created_by', 'updated_by']
     
     def get_plants_count(self, obj):
         """Compute plant count from area and culture spacing."""
@@ -817,6 +826,8 @@ class NoteAttachmentSerializer(serializers.ModelSerializer):
     """Serializer for note image attachments."""
 
     image_url = serializers.SerializerMethodField()
+    created_by_user = AuditUserSerializer(source='created_by', read_only=True)
+    updated_by_user = AuditUserSerializer(source='updated_by', read_only=True)
 
     def get_image_file(self, obj):
         if not obj.image_file_id:
@@ -835,6 +846,11 @@ class NoteAttachmentSerializer(serializers.ModelSerializer):
             "image_url",
             "caption",
             "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by",
+            "created_by_user",
+            "updated_by_user",
             "width",
             "height",
             "size_bytes",
@@ -844,6 +860,9 @@ class NoteAttachmentSerializer(serializers.ModelSerializer):
             "id",
             "planting_plan",
             "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by",
             "width",
             "height",
             "size_bytes",

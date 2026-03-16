@@ -38,7 +38,7 @@ describe('useKeyboardNavigation', () => {
 
     window.dispatchEvent(event);
 
-    expect(navigateMock).toHaveBeenCalledWith('/gantt-chart');
+    expect(navigateMock).toHaveBeenCalledWith('/app/gantt-chart');
   });
 
   it('wraps to last route on Ctrl+Shift+ArrowLeft from Anbaupläne', () => {
@@ -54,7 +54,7 @@ describe('useKeyboardNavigation', () => {
       })
     );
 
-    expect(navigateMock).toHaveBeenCalledWith('/cultures');
+    expect(navigateMock).toHaveBeenCalledWith('/app/cultures');
   });
 
 
@@ -71,7 +71,7 @@ describe('useKeyboardNavigation', () => {
       })
     );
 
-    expect(navigateMock).toHaveBeenCalledWith('/seed-demand');
+    expect(navigateMock).toHaveBeenCalledWith('/app/seed-demand');
   });
 
 
@@ -88,7 +88,7 @@ describe('useKeyboardNavigation', () => {
       })
     );
 
-    expect(navigateMock).toHaveBeenCalledWith('/locations');
+    expect(navigateMock).toHaveBeenCalledWith('/app/locations');
   });
 
   it('falls back to Anbaupläne when current route is unknown', () => {
@@ -104,7 +104,7 @@ describe('useKeyboardNavigation', () => {
       })
     );
 
-    expect(navigateMock).toHaveBeenCalledWith('/anbauplaene');
+    expect(navigateMock).toHaveBeenCalledWith('/app/anbauplaene');
   });
 
 
@@ -121,7 +121,7 @@ describe('useKeyboardNavigation', () => {
       })
     );
 
-    expect(navigateMock).toHaveBeenCalledWith('/gantt-chart');
+    expect(navigateMock).toHaveBeenCalledWith('/app/gantt-chart');
   });
 
   it('ignores shortcut when typing in input/textarea/contenteditable', () => {

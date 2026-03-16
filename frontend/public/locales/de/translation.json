@@ -35,6 +35,10 @@
       "address": "Adresse",
       "notes": "Notizen",
       "description": "Beschreibung"
+    },
+    "notes": {
+      "editEmpty": "Notiz hinzufügen",
+      "editWithContent": "Notiz bearbeiten"
     }
   },
   "home": {

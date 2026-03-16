@@ -14,20 +14,11 @@ const PROD_API_PATH = '/openfarmplanner/api';
  */
 export function computeBaseURL(isProd: boolean, viteApiBaseUrl?: string): string {
   if (isProd) {
-    // Production always uses PROD_API_PATH to ensure correct server configuration
     return PROD_API_PATH;
   }
-  // Development allows override via VITE_API_BASE_URL
   return viteApiBaseUrl || PROD_API_PATH;
 }
 
-/**
- * Validates that the baseURL does not contain localhost in production.
- *
- * @param isProd - Whether the build is production.
- * @param baseURL - The base URL to validate.
- * @throws Error if production and baseURL contains localhost.
- */
 export function validateBaseURL(isProd: boolean, baseURL: string): void {
   if (isProd && baseURL.includes('localhost')) {
     throw new Error(
@@ -36,18 +27,25 @@ export function validateBaseURL(isProd: boolean, baseURL: string): void {
   }
 }
 
+function getCookie(name: string): string | null {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop()?.split(';').shift() ?? null;
+  }
+  return null;
+}
+
 const baseURL = computeBaseURL(import.meta.env.PROD, import.meta.env.VITE_API_BASE_URL);
 validateBaseURL(import.meta.env.PROD, baseURL);
 
 const httpClient = axios.create({
   baseURL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
-export default httpClient;
-
 
 httpClient.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
@@ -55,5 +53,17 @@ httpClient.interceptors.request.use((config) => {
       delete config.headers['Content-Type'];
     }
   }
+
+  const method = (config.method ?? 'get').toLowerCase();
+  if (['post', 'put', 'patch', 'delete'].includes(method)) {
+    const csrfToken = getCookie('csrftoken');
+    if (csrfToken) {
+      config.headers = config.headers ?? {};
+      config.headers['X-CSRFToken'] = csrfToken;
+    }
+  }
+
   return config;
 });
+
+export default httpClient;

@@ -26,6 +26,8 @@
     "description": "Beschreibung"
   },
   "notes": {
-    "empty": "Keine Notizen"
+    "empty": "Keine Notizen",
+    "editEmpty": "Notiz hinzufügen",
+    "editWithContent": "Notiz bearbeiten"
   }
 }

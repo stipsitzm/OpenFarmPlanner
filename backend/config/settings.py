@@ -48,6 +48,9 @@ SECRET_KEY = os.getenv(
 # In production, explicitly set DEBUG=False via environment variable
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
+# Environment selector used for security-sensitive development overrides.
+DJANGO_ENV = _env_str('DJANGO_ENV', 'production').lower()
+
 # Parse ALLOWED_HOSTS from environment variable or use sensible development defaults
 _allowed_hosts_str = os.getenv(
     'ALLOWED_HOSTS',
@@ -68,6 +71,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'farm',
+    'accounts',
 ]
 
 # Debug Toolbar nur in Entwicklung aktivieren
@@ -139,21 +143,23 @@ else:
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
+if DJANGO_ENV == 'development':
+    AUTH_PASSWORD_VALIDATORS = []
+else:
+    AUTH_PASSWORD_VALIDATORS = [
+        {
+            'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        },
+    ]
 
 
 # Internationalization
@@ -186,26 +192,45 @@ MEDIA_ROOT = Path(os.getenv('MEDIA_ROOT', PROJECT_ROOT / 'media'))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS settings
-# Parse from environment variable or use localhost defaults for development
-_cors_origins_str = os.getenv(
-    'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173,http://localhost:3000'
-)
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins_str.split(',')]
+# Frontend base URL used for links in account emails.
+FRONTEND_URL = _env_str('FRONTEND_URL', 'http://localhost:5173/openfarmplanner')
 
-# Parse CSRF_TRUSTED_ORIGINS from environment or use empty list for local development
+# Email configuration (Uberspace SMTP in production, console backend in local development by default).
+EMAIL_BACKEND = _env_str(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend',
+)
+EMAIL_HOST = _env_str('EMAIL_HOST', 'mail.uberspace.de')
+EMAIL_PORT = int(_env_str('EMAIL_PORT', '587') or '587')
+EMAIL_USE_TLS = _env_str('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+EMAIL_HOST_USER = _env_str('EMAIL_HOST_USER', 'noreply@zwiebelzopf.at')
+EMAIL_HOST_PASSWORD = _env_str('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = _env_str('DEFAULT_FROM_EMAIL', 'OpenFarmPlanner <noreply@zwiebelzopf.at>')
+
+# CORS and CSRF origins are intentionally configured independently via environment variables.
+_cors_origins_str = os.getenv('CORS_ALLOWED_ORIGINS', '')
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins_str.split(',') if origin.strip()]
+CORS_ALLOW_CREDENTIALS = True
+
 _csrf_origins_str = os.getenv('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins_str.split(',') if origin.strip()]
 
 # REST Framework settings
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 100,
 }
+
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
+SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
+SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
 
 
 

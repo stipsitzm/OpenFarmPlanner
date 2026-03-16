@@ -1,0 +1,7 @@
+{% load i18n %}{% autoescape off %}{% blocktrans with link=activation_link|safe %}Hello,
+
+please activate your OpenFarmPlanner account by clicking the link below:
+
+{{ link }}
+
+If you did not create this account, you can ignore this email.{% endblocktrans %}{% endautoescape %}

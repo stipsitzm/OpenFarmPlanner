@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -869,6 +870,20 @@ class PlantingPlan(TimestampedModel):
         help_text="Area in square meters used by this planting plan"
     )
     notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='created_planting_plans',
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='updated_planting_plans',
+    )
 
     def clean(self) -> None:
         """Validate total area usage against the bed area when available."""
@@ -988,6 +1003,21 @@ class NoteAttachment(models.Model):
     image = models.FileField(upload_to=note_attachment_upload_path)
     caption = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='created_note_attachments',
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='updated_note_attachments',
+    )
     width = models.PositiveIntegerField(null=True, blank=True)
     height = models.PositiveIntegerField(null=True, blank=True)
     size_bytes = models.PositiveIntegerField(null=True, blank=True)
