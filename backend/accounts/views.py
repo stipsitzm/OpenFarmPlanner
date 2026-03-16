@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.tokens import default_token_generator
@@ -11,6 +13,7 @@ from django.utils.decorators import method_decorator
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.translation import gettext as _
+from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import permissions, status
 from rest_framework.request import Request
@@ -27,8 +30,10 @@ from .serializers import (
     UserSerializer,
     normalize_email_lower,
 )
+from .models import PendingActivation
 
 User = get_user_model()
+ACTIVATION_EXPIRY_DAYS = 7
 
 
 def _de(message: str) -> str:
@@ -41,6 +46,38 @@ GENERIC_EMAIL_SENT_MESSAGE = _de(_('If the account exists, an email has been sen
 
 def _normalize_email(email: str) -> str:
     return normalize_email_lower(email)
+
+
+def _activation_deadline() -> timezone.datetime:
+    """
+    Return the activation deadline for newly registered inactive users.
+
+    :return: Datetime representing now plus the configured activation window.
+    """
+    return timezone.now() + timedelta(days=ACTIVATION_EXPIRY_DAYS)
+
+
+def _set_activation_expiry(user: User) -> None:
+    """
+    Create or refresh the activation expiry record for a user.
+
+    :param user: User awaiting activation.
+    :return: None.
+    """
+    PendingActivation.objects.update_or_create(
+        user=user,
+        defaults={'activation_expires_at': _activation_deadline()},
+    )
+
+
+def _clear_activation_expiry(user: User) -> None:
+    """
+    Remove activation expiry metadata after successful activation.
+
+    :param user: Activated user.
+    :return: None.
+    """
+    PendingActivation.objects.filter(user=user).delete()
 
 
 def _build_frontend_link(path_with_query: str) -> str:
@@ -98,6 +135,7 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        _set_activation_expiry(user)
         _send_activation_email(user)
         return Response({'detail': _de(_('Registration successful. Please check your email to activate your account.'))}, status=status.HTTP_201_CREATED)
 
@@ -113,12 +151,18 @@ class ActivateView(APIView):
             return Response({'detail': _de(_('Invalid activation link.'))}, status=status.HTTP_400_BAD_REQUEST)
 
         user = get_object_or_404(User, pk=uid)
+        pending = PendingActivation.objects.filter(user=user).first()
+        if pending is not None and pending.activation_expires_at < timezone.now():
+            user.delete()
+            return Response({'detail': _de(_('Invalid or expired activation token.'))}, status=status.HTTP_400_BAD_REQUEST)
+
         token = serializer.validated_data['token']
         if not default_token_generator.check_token(user, token):
             return Response({'detail': _de(_('Invalid or expired activation token.'))}, status=status.HTTP_400_BAD_REQUEST)
 
         user.is_active = True
         user.save(update_fields=['is_active'])
+        _clear_activation_expiry(user)
         login(request, user)
         return Response(UserSerializer(user).data)
 
@@ -169,6 +213,7 @@ class ResendActivationView(APIView):
 
         user = User.objects.filter(email__iexact=email).first()
         if user is not None and not user.is_active:
+            _set_activation_expiry(user)
             _send_activation_email(user)
 
         return Response({'detail': GENERIC_EMAIL_SENT_MESSAGE})

@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+from datetime import timedelta
+from io import StringIO
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
+from django.core.management import call_command
 from django.test import override_settings
+from django.utils import timezone
 from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.test import APITestCase
+
+from accounts.models import PendingActivation
 
 User = get_user_model()
 
@@ -39,6 +46,9 @@ class AuthApiTest(APITestCase):
         self.assertFalse(created.is_active)
         self.assertEqual(created.first_name, 'New User')
         self.assertEqual(len(mail.outbox), 1)
+        pending = PendingActivation.objects.get(user=created)
+        expected = timezone.now() + timedelta(days=7)
+        self.assertLess(abs((pending.activation_expires_at - expected).total_seconds()), 15)
         activation_email_body = mail.outbox[0].body
         self.assertIn('/activate?uid=', activation_email_body)
         self.assertIn('&token=', activation_email_body)
@@ -56,12 +66,22 @@ class AuthApiTest(APITestCase):
         self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_activation_success_and_invalid_token(self) -> None:
-        user = User.objects.create_user(
-            username='pendinguser',
-            email='pending@example.com',
-            password=self.password,
-            is_active=False,
+        register_response = self.client.post(
+            '/openfarmplanner/api/auth/register/',
+            {
+                'email': 'pending@example.com',
+                'display_name': 'Pending User',
+                'password': self.password,
+                'password_confirm': self.password,
+            },
+            format='json',
         )
+        self.assertEqual(register_response.status_code, status.HTTP_201_CREATED)
+
+        user = User.objects.get(email='pending@example.com')
+        pending = PendingActivation.objects.get(user=user)
+        self.assertIsNotNone(pending.activation_expires_at)
+
         uid = urlsafe_base64_encode(str(user.pk).encode('utf-8'))
         token = default_token_generator.make_token(user)
 
@@ -72,6 +92,7 @@ class AuthApiTest(APITestCase):
         self.assertEqual(valid.status_code, status.HTTP_200_OK)
         user.refresh_from_db()
         self.assertTrue(user.is_active)
+        self.assertFalse(PendingActivation.objects.filter(user=user).exists())
 
     def test_login_success_and_block_before_activation(self) -> None:
         blocked_user = User.objects.create_user(
@@ -141,8 +162,70 @@ class AuthApiTest(APITestCase):
             password=self.password,
             is_active=False,
         )
+        old_expiry = timezone.now() + timedelta(days=1)
+        PendingActivation.objects.update_or_create(
+            user=inactive,
+            defaults={'activation_expires_at': old_expiry},
+        )
 
         first = self.client.post('/openfarmplanner/api/auth/resend-activation/', {'email': inactive.email}, format='json')
         second = self.client.post('/openfarmplanner/api/auth/resend-activation/', {'email': 'unknown@example.com'}, format='json')
         self.assertEqual(first.status_code, status.HTTP_200_OK)
         self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(first.data['detail'], second.data['detail'])
+
+        refreshed_expiry = PendingActivation.objects.get(user=inactive).activation_expires_at
+        self.assertGreater(refreshed_expiry, old_expiry)
+
+    def test_cleanup_command_keeps_non_expired_inactive_user(self) -> None:
+        inactive = User.objects.create_user(
+            username='inactive_keep',
+            email='inactive_keep@example.com',
+            password=self.password,
+            is_active=False,
+        )
+        PendingActivation.objects.update_or_create(
+            user=inactive,
+            defaults={'activation_expires_at': timezone.now() + timedelta(days=2)},
+        )
+
+        output = StringIO()
+        call_command('delete_expired_inactive_users', stdout=output)
+
+        self.assertTrue(User.objects.filter(pk=inactive.pk).exists())
+        self.assertIn('Found 0 expired inactive users.', output.getvalue())
+
+    def test_cleanup_command_deletes_expired_inactive_user(self) -> None:
+        inactive = User.objects.create_user(
+            username='inactive_delete',
+            email='inactive_delete@example.com',
+            password=self.password,
+            is_active=False,
+        )
+        PendingActivation.objects.update_or_create(
+            user=inactive,
+            defaults={'activation_expires_at': timezone.now() - timedelta(days=1)},
+        )
+
+        output = StringIO()
+        call_command('delete_expired_inactive_users', stdout=output)
+
+        self.assertFalse(User.objects.filter(pk=inactive.pk).exists())
+        self.assertIn('Found 1 expired inactive users.', output.getvalue())
+        self.assertIn('Deleted 1 expired inactive users.', output.getvalue())
+
+    def test_cleanup_command_never_deletes_active_user(self) -> None:
+        active = User.objects.create_user(
+            username='active_keep',
+            email='active_keep@example.com',
+            password=self.password,
+            is_active=True,
+        )
+        PendingActivation.objects.update_or_create(
+            user=active,
+            defaults={'activation_expires_at': timezone.now() - timedelta(days=3)},
+        )
+
+        call_command('delete_expired_inactive_users')
+
+        self.assertTrue(User.objects.filter(pk=active.pk).exists())
