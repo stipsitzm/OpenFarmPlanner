@@ -52,7 +52,7 @@ describe('App', () => {
       account_pending_deletion: false,
       scheduled_deletion_at: null,
     };
-    window.history.pushState({}, '', '/app');
+    window.history.pushState({}, '', '/app/anbauplaene');
 
     render(<CommandProvider><App /></CommandProvider>);
 

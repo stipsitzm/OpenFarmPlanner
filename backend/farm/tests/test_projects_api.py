@@ -35,3 +35,25 @@ class ProjectsApiTests(APITestCase):
 
         settings_obj = UserProjectSettings.objects.get(user=self.user)
         self.assertEqual(settings_obj.last_project_id, self.project2.id)
+
+
+    def test_admin_can_invite_member(self) -> None:
+        response = self.client.post(
+            f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
+            {'email': 'invitee@example.com', 'role': 'member'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_member_cannot_invite(self) -> None:
+        ProjectMembership.objects.update_or_create(
+            user=self.user,
+            project=self.project,
+            defaults={'role': 'member'},
+        )
+        response = self.client.post(
+            f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
+            {'email': 'invitee@example.com', 'role': 'member'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

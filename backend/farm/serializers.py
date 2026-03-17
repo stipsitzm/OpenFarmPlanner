@@ -914,4 +914,4 @@ class ProjectInvitationSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectInvitation
         fields = ['id', 'project', 'email', 'role', 'token', 'invited_by', 'accepted_at', 'expires_at', 'revoked_at', 'message', 'created_at']
-        read_only_fields = ['id', 'token', 'accepted_at', 'revoked_at', 'created_at', 'project', 'invited_by']
+        read_only_fields = ['id', 'token', 'accepted_at', 'expires_at', 'revoked_at', 'created_at', 'project', 'invited_by']

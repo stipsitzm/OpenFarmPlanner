@@ -148,6 +148,11 @@ export const locationAPI = {
   delete: (id: number) => http.delete(`/locations/${id}/`),
 };
 
+export const projectAPI = {
+  invite: (projectId: number, data: { email: string; role: 'admin' | 'member' }) =>
+    http.post(`/projects/${projectId}/invitations/`, data),
+};
+
 export type {
   Culture,
   Location,
@@ -181,4 +186,5 @@ export default {
   noteAttachments: noteAttachmentAPI,
   mediaFiles: mediaFileAPI,
   layouts: layoutAPI,
+  projects: projectAPI,
 };
