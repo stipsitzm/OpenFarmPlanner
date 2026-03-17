@@ -15,8 +15,9 @@ vi.mock('../auth/AuthContext', () => ({
 }));
 
 describe('ProjectSelectionPage', () => {
-  it('shows invite action for admin memberships', () => {
+  it('renders projects and open action', () => {
     render(<MemoryRouter><ProjectSelectionPage /></MemoryRouter>);
-    expect(screen.getByText('Nutzer einladen')).toBeInTheDocument();
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.getAllByText('Öffnen').length).toBeGreaterThan(0);
   });
 });

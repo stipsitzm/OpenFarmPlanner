@@ -1703,8 +1703,17 @@ class ProjectInvitationView(APIView):
             'role': invitation.role,
             'invite_link': invite_link,
         })
-        send_mail('Project invitation', body, settings.DEFAULT_FROM_EMAIL, [invitation.email])
-        return Response(ProjectInvitationSerializer(invitation).data, status=status.HTTP_201_CREATED)
+        mail_sent = False
+        try:
+            sent_count = send_mail('Project invitation', body, settings.DEFAULT_FROM_EMAIL, [invitation.email], fail_silently=False)
+            mail_sent = sent_count > 0
+        except Exception:  # noqa: BLE001
+            mail_sent = False
+
+        payload = ProjectInvitationSerializer(invitation).data
+        payload['mail_sent'] = mail_sent
+        payload['invite_link'] = invite_link
+        return Response(payload, status=status.HTTP_201_CREATED)
 
 
 class AcceptProjectInvitationView(APIView):

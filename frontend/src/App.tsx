@@ -55,6 +55,7 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import ProjectSelectionPage from './pages/ProjectSelectionPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
+import ProjectSettingsPage from './pages/ProjectSettingsPage';
 
 
 /**
@@ -249,6 +250,9 @@ function RootLayout(): React.ReactElement {
             <MenuItem onClick={() => { handleGlobalMenuClose(); navigate('/app/project-selection'); }}>
               Projekt wechseln
             </MenuItem>
+            <MenuItem onClick={() => { handleGlobalMenuClose(); navigate('/app/project-settings'); }}>
+              Projekteinstellungen
+            </MenuItem>
             <MenuItem onClick={() => { handleGlobalMenuClose(); navigate('/app/account-settings'); }}>
               {t('accountSettings')}
             </MenuItem>
@@ -411,6 +415,7 @@ function createAppRouter(basename: string) {
             { path: 'seed-demand', element: <SeedDemandPage /> },
             { path: 'project-selection', element: <ProjectSelectionPage /> },
             { path: 'account-settings', element: <AccountSettingsPage /> },
+            { path: 'project-settings', element: <ProjectSettingsPage /> },
           ],
         },
       ],
