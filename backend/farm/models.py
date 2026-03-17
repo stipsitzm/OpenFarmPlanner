@@ -131,12 +131,13 @@ class ProjectInvitation(models.Model):
 class Supplier(TimestampedModel):
     """A seed supplier or manufacturer."""
 
-    name = models.CharField(max_length=200, help_text="Supplier name")
+    name = models.CharField(max_length=200, unique=True, help_text="Supplier name")
     homepage_url = models.URLField(help_text="Supplier homepage URL")
-    slug = models.SlugField(max_length=200, blank=True)
+    slug = models.SlugField(max_length=200, unique=True, blank=True)
     allowed_domains = models.JSONField(default=list, blank=True)
     name_normalized = models.CharField(
         max_length=200,
+        unique=True,
         editable=False,
         help_text="Normalized name for deduplication"
     )
@@ -198,7 +199,7 @@ class Supplier(TimestampedModel):
 
         candidate = base_slug
         suffix = 2
-        qs = Supplier.objects.exclude(pk=self.pk).filter(project=self.project)
+        qs = Supplier.objects.exclude(pk=self.pk)
         while qs.filter(slug=candidate).exists():
             candidate = f"{base_slug}-{suffix}"
             suffix += 1

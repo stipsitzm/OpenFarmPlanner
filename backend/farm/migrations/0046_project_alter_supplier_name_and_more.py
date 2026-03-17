@@ -36,25 +36,6 @@ class Migration(migrations.Migration):
                 "ordering": ["name"],
             },
         ),
-        migrations.AlterField(
-            model_name="supplier",
-            name="name",
-            field=models.CharField(help_text="Supplier name", max_length=200),
-        ),
-        migrations.AlterField(
-            model_name="supplier",
-            name="name_normalized",
-            field=models.CharField(
-                editable=False,
-                help_text="Normalized name for deduplication",
-                max_length=200,
-            ),
-        ),
-        migrations.AlterField(
-            model_name="supplier",
-            name="slug",
-            field=models.SlugField(blank=True, max_length=200),
-        ),
         migrations.AddField(
             model_name="bed",
             name="project",
