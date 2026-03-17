@@ -1,93 +1,108 @@
 import { Alert, Box, Button, CircularProgress, Container, Stack, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { projectAPI } from '../api/api';
+import { useNavigate, useParams } from 'react-router-dom';
+import { projectAPI, type InvitationPublicStatus } from '../api/api';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from '../i18n';
 
 export default function InvitationPage(): React.ReactElement {
-  const { t } = useTranslation('auth');
+  const { t } = useTranslation('projectInvitations');
   const navigate = useNavigate();
-  const location = useLocation();
+  const { token } = useParams<{ token: string }>();
   const { user, switchActiveProject } = useAuth();
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [message, setMessage] = useState<string>('');
-
-  const token = new URLSearchParams(location.search).get('token')?.trim() ?? '';
+  const [status, setStatus] = useState<'loading' | 'ready' | 'accepting' | 'error'>('loading');
+  const [publicState, setPublicState] = useState<InvitationPublicStatus | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user || !token || status !== 'idle') {
+    if (!token) {
+      setStatus('error');
+      setErrorCode('invalid_token');
       return;
     }
 
-    const acceptInvitation = async (): Promise<void> => {
-      setStatus('loading');
+    const fetchInvitation = async (): Promise<void> => {
       try {
-        const response = await projectAPI.acceptInvitation(token);
-        const projectId = response.data.project_id;
-        if (projectId) {
-          try {
-            await switchActiveProject(projectId);
-          } catch {
-            window.localStorage.setItem('activeProjectId', String(projectId));
-          }
-        }
-        setMessage(t('invitation.accepted'));
-        setStatus('success');
-      } catch (error) {
+        const response = await projectAPI.getInvitationStatus(token);
+        setPublicState(response.data);
+        setStatus('ready');
+      } catch {
         setStatus('error');
-        setMessage(error instanceof Error ? error.message : t('invitation.failed'));
+        setErrorCode('invalid_token');
       }
     };
 
-    void acceptInvitation();
-  }, [status, switchActiveProject, t, token, user]);
+    void fetchInvitation();
+  }, [token]);
 
-  if (!token) {
-    return (
-      <Container maxWidth="sm" sx={{ py: 8 }}>
-        <Alert severity="error">{t('invitation.missingToken')}</Alert>
-      </Container>
-    );
-  }
+  const handleAccept = async (): Promise<void> => {
+    if (!token) {
+      return;
+    }
+    setStatus('accepting');
+    try {
+      const response = await projectAPI.acceptInvitationByToken(token);
+      if (response.data.project_id) {
+        await switchActiveProject(response.data.project_id);
+      }
+      navigate('/app', { replace: true });
+    } catch (acceptError: unknown) {
+      const code = (acceptError as { response?: { data?: { code?: string } } })?.response?.data?.code ?? 'invalid_token';
+      setStatus('error');
+      setErrorCode(code);
+    }
+  };
 
-  if (!user) {
+  const renderInfo = (): React.ReactElement => {
+    if (status === 'loading' || status === 'accepting') {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CircularProgress size={20} />
+          <Typography>{status === 'loading' ? t('loading') : t('accepting')}</Typography>
+        </Box>
+      );
+    }
+
+    if (status === 'error') {
+      return <Alert severity="error">{t(`result.${errorCode ?? 'invalid_token'}`)}</Alert>;
+    }
+
+    if (!publicState) {
+      return <Alert severity="error">{t('result.invalid_token')}</Alert>;
+    }
+
     return (
-      <Container maxWidth="sm" sx={{ py: 8 }}>
-        <Stack spacing={2}>
-          <Typography variant="h4">{t('invitation.title')}</Typography>
-          <Alert severity="info">{t('invitation.loginRequired')}</Alert>
-          <Button
-            variant="contained"
-            onClick={() => navigate('/login', {
-              replace: true,
-              state: { from: { pathname: location.pathname, search: location.search } },
-            })}
-          >
-            {t('invitation.toLogin')}
+      <Stack spacing={2}>
+        <Alert severity="info">{t(`result.${publicState.code}`)}</Alert>
+        <Typography variant="body2">{t('projectName', { name: publicState.project_name ?? '-' })}</Typography>
+        <Typography variant="body2">{t('emailMasked', { email: publicState.email_masked ?? '-' })}</Typography>
+
+        {!user ? (
+          <Button variant="contained" onClick={() => navigate('/login', { state: { from: { pathname: `/invite/${token}` } } })}>
+            {t('toLogin')}
           </Button>
-        </Stack>
-      </Container>
+        ) : null}
+
+        {user && publicState.code === 'pending' ? (
+          <Button variant="contained" onClick={() => void handleAccept()}>
+            {t('acceptAction')}
+          </Button>
+        ) : null}
+
+        {user && publicState.code === 'already_member' ? (
+          <Button variant="contained" onClick={() => navigate('/app', { replace: true })}>
+            {t('openApp')}
+          </Button>
+        ) : null}
+      </Stack>
     );
-  }
+  };
 
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
       <Stack spacing={2}>
-        <Typography variant="h4">{t('invitation.title')}</Typography>
-        {status === 'loading' ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CircularProgress size={20} />
-            <Typography>{t('invitation.processing')}</Typography>
-          </Box>
-        ) : null}
-        {status === 'success' ? <Alert severity="success">{message}</Alert> : null}
-        {status === 'error' ? <Alert severity="error">{message}</Alert> : null}
-        {status === 'success' ? (
-          <Button variant="contained" onClick={() => navigate('/app', { replace: true })}>
-            {t('invitation.openApp')}
-          </Button>
-        ) : null}
+        <Typography variant="h4">{t('inviteTitle')}</Typography>
+        {renderInfo()}
       </Stack>
     </Container>
   );

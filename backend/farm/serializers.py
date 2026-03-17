@@ -911,7 +911,45 @@ class ProjectMembershipSerializer(serializers.ModelSerializer):
 
 
 class ProjectInvitationSerializer(serializers.ModelSerializer):
+    resolved_status = serializers.CharField(read_only=True)
+
     class Meta:
         model = ProjectInvitation
-        fields = ['id', 'project', 'email', 'role', 'token', 'invited_by', 'accepted_at', 'expires_at', 'revoked_at', 'message', 'created_at']
-        read_only_fields = ['id', 'token', 'accepted_at', 'expires_at', 'revoked_at', 'created_at', 'project', 'invited_by']
+        fields = [
+            'id',
+            'project',
+            'email',
+            'email_normalized',
+            'role',
+            'token',
+            'status',
+            'resolved_status',
+            'invited_by',
+            'accepted_by',
+            'accepted_at',
+            'expires_at',
+            'revoked_at',
+            'revoked_by',
+            'message',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = [
+            'id',
+            'token',
+            'status',
+            'email_normalized',
+            'accepted_by',
+            'accepted_at',
+            'expires_at',
+            'revoked_at',
+            'revoked_by',
+            'created_at',
+            'updated_at',
+            'project',
+            'invited_by',
+        ]
+
+
+class InvitationTokenSerializer(serializers.Serializer):
+    token = serializers.CharField()

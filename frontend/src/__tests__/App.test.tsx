@@ -116,8 +116,8 @@ describe('App', () => {
 
 
   it('resolves basename only when current path matches configured base', () => {
-    expect(resolveRouterBasename('/openfarmplanner', '/openfarmplanner/invitation')).toBe('/openfarmplanner');
-    expect(resolveRouterBasename('/openfarmplanner', '/invitation')).toBe('');
+    expect(resolveRouterBasename('/openfarmplanner', '/openfarmplanner/invite/abc')).toBe('/openfarmplanner');
+    expect(resolveRouterBasename('/openfarmplanner', '/invite/abc')).toBe('');
   });
 
   it('redirects unauthenticated users from /app to login', async () => {

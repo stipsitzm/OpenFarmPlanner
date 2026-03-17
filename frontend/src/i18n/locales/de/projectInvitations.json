@@ -1,0 +1,50 @@
+{
+  "title": "Projekteinstellungen",
+  "noActiveProject": "Kein aktives Projekt ausgewählt.",
+  "projectLabel": "Projekt: {{name}}",
+  "inviteSectionTitle": "Nutzer einladen",
+  "emailLabel": "E-Mail",
+  "roleLabel": "Rolle",
+  "roleMember": "Mitglied",
+  "roleAdmin": "Admin",
+  "sendInvite": "Einladung senden",
+  "adminOnly": "Nur Admins können Nutzer einladen.",
+  "inviteSent": "Einladung gesendet.",
+  "inviteResent": "Einladung erneut gesendet.",
+  "inviteSentNoMail": "Einladung erstellt, aber E-Mail konnte nicht zugestellt werden.",
+  "inviteFailed": "Einladung konnte nicht versendet werden.",
+  "listTitle": "Einladungen",
+  "listEmpty": "Es gibt aktuell keine Einladungen.",
+  "revoke": "Einladung widerrufen",
+  "revokeSuccess": "Einladung widerrufen.",
+  "revokeFailed": "Einladung konnte nicht widerrufen werden.",
+  "expiresAt": "Ablauf: {{date}}",
+  "inviteTitle": "Projekteinladung",
+  "loading": "Einladung wird geprüft…",
+  "accepting": "Einladung wird angenommen…",
+  "toLogin": "Mit eingeladenem Konto anmelden",
+  "acceptAction": "Projekt beitreten",
+  "openApp": "Zur App",
+  "projectName": "Projekt: {{name}}",
+  "emailMasked": "Eingeladene E-Mail: {{email}}",
+  "status": {
+    "pending": "Ausstehend",
+    "accepted": "Angenommen",
+    "revoked": "Widerrufen",
+    "expired": "Abgelaufen"
+  },
+  "result": {
+    "pending": "Diese Einladung ist gültig.",
+    "accepted": "Diese Einladung wurde bereits verwendet.",
+    "already_member": "Du bist bereits Mitglied dieses Projekts.",
+    "revoked": "Diese Einladung wurde widerrufen.",
+    "expired": "Diese Einladung ist abgelaufen.",
+    "email_mismatch": "Diese Einladung ist für eine andere E-Mail-Adresse bestimmt.",
+    "invalid_token": "Ungültiger Einladungslink."
+  },
+  "error": {
+    "already_member": "Diese E-Mail-Adresse ist bereits Mitglied dieses Projekts.",
+    "invalid_email": "Bitte gib eine gültige E-Mail-Adresse ein.",
+    "invitation_error": "Einladung konnte nicht erstellt werden."
+  }
+}

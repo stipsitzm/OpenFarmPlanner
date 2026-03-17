@@ -8,7 +8,7 @@
  * @returns The main App component with routing
  */
 
-import { createBrowserRouter, RouterProvider, Outlet, NavLink, redirect, useLocation, useNavigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, NavLink, redirect, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -543,6 +543,16 @@ export function resolveRouterBasename(configuredBase: string, pathname: string):
   return '';
 }
 
+
+function LegacyInvitationRedirect(): React.ReactElement {
+  const location = useLocation();
+  const token = new URLSearchParams(location.search).get('token');
+  if (!token) {
+    return <Navigate to="/invite/invalid" replace />;
+  }
+  return <Navigate to={`/invite/${token}`} replace />;
+}
+
 function createAppRouter(basename: string) {
   return createBrowserRouter([
     {
@@ -571,6 +581,10 @@ function createAppRouter(basename: string) {
     },
     {
       path: '/invitation',
+      element: <LegacyInvitationRedirect />,
+    },
+    {
+      path: '/invite/:token',
       element: <InvitationPage />,
     },
     {

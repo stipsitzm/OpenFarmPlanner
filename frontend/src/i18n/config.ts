@@ -24,6 +24,8 @@ import ganttChartDE from './locales/de/ganttChart.json';
 import suppliersDE from './locales/de/suppliers.json';
 import authDE from './locales/de/auth.json';
 import accountDE from './locales/de/account.json';
+import projectInvitationsDE from './locales/de/projectInvitations.json';
+import projectInvitationsEN from './locales/en/projectInvitations.json';
 
 // Configure i18next
 i18n
@@ -37,7 +39,7 @@ i18n
     debug: import.meta.env.DEV,
     
     // Namespaces for organizing translations
-    ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart', 'suppliers', 'auth', 'account'],
+    ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart', 'suppliers', 'auth', 'account', 'projectInvitations'],
     defaultNS: 'common',
     
     // Translation resources
@@ -56,9 +58,11 @@ i18n
         suppliers: suppliersDE,
         auth: authDE,
         account: accountDE,
+        projectInvitations: projectInvitationsDE,
       },
       en: {
         navigation: navigationEN,
+        projectInvitations: projectInvitationsEN,
       },
     },
     

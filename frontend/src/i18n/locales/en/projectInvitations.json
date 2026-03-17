@@ -1,0 +1,50 @@
+{
+  "title": "Project settings",
+  "noActiveProject": "No active project selected.",
+  "projectLabel": "Project: {{name}}",
+  "inviteSectionTitle": "Invite users",
+  "emailLabel": "Email",
+  "roleLabel": "Role",
+  "roleMember": "Member",
+  "roleAdmin": "Admin",
+  "sendInvite": "Send invitation",
+  "adminOnly": "Only admins can invite users.",
+  "inviteSent": "Invitation sent.",
+  "inviteResent": "Invitation re-sent.",
+  "inviteSentNoMail": "Invitation created, but email delivery failed.",
+  "inviteFailed": "Invitation could not be sent.",
+  "listTitle": "Invitations",
+  "listEmpty": "There are currently no invitations.",
+  "revoke": "Revoke invitation",
+  "revokeSuccess": "Invitation revoked.",
+  "revokeFailed": "Invitation could not be revoked.",
+  "expiresAt": "Expires: {{date}}",
+  "inviteTitle": "Project invitation",
+  "loading": "Checking invitation…",
+  "accepting": "Accepting invitation…",
+  "toLogin": "Sign in with invited account",
+  "acceptAction": "Join project",
+  "openApp": "Open app",
+  "projectName": "Project: {{name}}",
+  "emailMasked": "Invited email: {{email}}",
+  "status": {
+    "pending": "Pending",
+    "accepted": "Accepted",
+    "revoked": "Revoked",
+    "expired": "Expired"
+  },
+  "result": {
+    "pending": "This invitation is valid.",
+    "accepted": "This invitation was already used.",
+    "already_member": "You are already a member of this project.",
+    "revoked": "This invitation has been revoked.",
+    "expired": "This invitation has expired.",
+    "email_mismatch": "This invitation is intended for another email address.",
+    "invalid_token": "Invalid invitation link."
+  },
+  "error": {
+    "already_member": "This email address is already a project member.",
+    "invalid_email": "Please provide a valid email address.",
+    "invitation_error": "Invitation could not be created."
+  }
+}

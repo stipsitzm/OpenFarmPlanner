@@ -1,9 +1,16 @@
-import { Alert, Box, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
-import { useMemo, useState } from 'react';
-import { projectAPI } from '../api/api';
+import { Alert, Box, Button, Chip, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { useEffect, useMemo, useState } from 'react';
+import { projectAPI, type ProjectInvitationPayload } from '../api/api';
 import { useAuth } from '../auth/AuthContext';
+import { useTranslation } from '../i18n';
+
+interface InviteFeedback {
+  severity: 'success' | 'error';
+  text: string;
+}
 
 export default function ProjectSettingsPage(): React.ReactElement {
+  const { t } = useTranslation('projectInvitations');
   const { user } = useAuth();
   const activeProjectId = Number(window.localStorage.getItem('activeProjectId'));
   const activeMembership = useMemo(
@@ -13,76 +20,127 @@ export default function ProjectSettingsPage(): React.ReactElement {
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'member'>('member');
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<InviteFeedback | null>(null);
+  const [invitations, setInvitations] = useState<ProjectInvitationPayload[]>([]);
+
+  const canManageInvites = activeMembership?.role === 'admin';
+
+  const loadInvitations = async (): Promise<void> => {
+    if (!activeMembership) {
+      return;
+    }
+    const response = await projectAPI.listInvitations(activeMembership.project_id);
+    setInvitations(response.data);
+  };
+
+  useEffect(() => {
+    void loadInvitations();
+  }, [activeMembership?.project_id]);
 
   if (!activeMembership) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography variant="h5">Projekteinstellungen</Typography>
-        <Alert severity="info" sx={{ mt: 2 }}>Kein aktives Projekt ausgewählt.</Alert>
+        <Typography variant="h5">{t('title')}</Typography>
+        <Alert severity="info" sx={{ mt: 2 }}>{t('noActiveProject')}</Alert>
       </Box>
     );
   }
 
   const handleInvite = async (): Promise<void> => {
-    setMessage(null);
-    setError(null);
+    setFeedback(null);
     try {
       const response = await projectAPI.invite(activeMembership.project_id, { email, role });
-      const data = response.data as { mail_sent?: boolean; invite_link?: string; mail_error?: string; email_backend?: string };
-      if (data.mail_sent) {
-        setMessage(`Einladung per E-Mail an ${email} wurde versendet.`);
-      } else if (data.invite_link) {
-        const details = data.mail_error ? ` Grund: ${data.mail_error}` : '';
-        const backend = data.email_backend ? ` [Backend: ${data.email_backend}]` : '';
-        setMessage(`E-Mail konnte nicht versendet werden.${details}${backend} Einladung: ${data.invite_link}`);
+      const data = response.data as { code?: string; mail_sent?: boolean; invite_link?: string };
+      if (data.code === 'invitation_resent') {
+        setFeedback({ severity: 'success', text: t('inviteResent') });
       } else {
-        setMessage(`Einladung für ${email} wurde erstellt.`);
+        setFeedback({ severity: 'success', text: t('inviteSent') });
+      }
+      if (!data.mail_sent && data.invite_link) {
+        setFeedback({ severity: 'success', text: `${t('inviteSentNoMail')} ${data.invite_link}` });
       }
       setEmail('');
       setRole('member');
-    } catch (inviteError) {
-      setError(inviteError instanceof Error ? inviteError.message : 'Einladung konnte nicht versendet werden.');
+      await loadInvitations();
+    } catch (inviteError: unknown) {
+      const code = (inviteError as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      const message = code ? t(`error.${code}`, { defaultValue: t('inviteFailed') }) : t('inviteFailed');
+      setFeedback({ severity: 'error', text: message });
+    }
+  };
+
+  const handleRevoke = async (invitationId: number): Promise<void> => {
+    setFeedback(null);
+    try {
+      await projectAPI.revokeInvitation(activeMembership.project_id, invitationId);
+      await loadInvitations();
+      setFeedback({ severity: 'success', text: t('revokeSuccess') });
+    } catch {
+      setFeedback({ severity: 'error', text: t('revokeFailed') });
     }
   };
 
   return (
     <Box sx={{ p: 3, maxWidth: 760, mx: 'auto' }}>
-      <Typography variant="h4" sx={{ mb: 1 }}>Projekteinstellungen</Typography>
-      <Typography sx={{ mb: 3 }}><strong>Projekt:</strong> {activeMembership.project_name}</Typography>
+      <Typography variant="h4" sx={{ mb: 1 }}>{t('title')}</Typography>
+      <Typography sx={{ mb: 3 }}>{t('projectLabel', { name: activeMembership.project_name })}</Typography>
 
-      <Typography variant="h6" sx={{ mb: 2 }}>Nutzer einladen</Typography>
+      <Typography variant="h6" sx={{ mb: 2 }}>{t('inviteSectionTitle')}</Typography>
       <Stack spacing={2}>
         <TextField
-          label="E-Mail"
+          label={t('emailLabel')}
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
         />
         <TextField
           select
-          label="Rolle"
+          label={t('roleLabel')}
           value={role}
           onChange={(event) => setRole(event.target.value as 'admin' | 'member')}
         >
-          <MenuItem value="member">Member</MenuItem>
-          <MenuItem value="admin">Admin</MenuItem>
+          <MenuItem value="member">{t('roleMember')}</MenuItem>
+          <MenuItem value="admin">{t('roleAdmin')}</MenuItem>
         </TextField>
         <Button
           variant="contained"
           onClick={() => void handleInvite()}
-          disabled={activeMembership.role !== 'admin' || !email.trim()}
+          disabled={!canManageInvites || !email.trim()}
         >
-          Einladung senden
+          {t('sendInvite')}
         </Button>
       </Stack>
 
-      {activeMembership.role !== 'admin' ? (
-        <Alert severity="info" sx={{ mt: 2 }}>Nur Admins können Nutzer einladen.</Alert>
+      {!canManageInvites ? (
+        <Alert severity="info" sx={{ mt: 2 }}>{t('adminOnly')}</Alert>
       ) : null}
-      {message ? <Alert severity="success" sx={{ mt: 2, wordBreak: 'break-all' }}>{message}</Alert> : null}
-      {error ? <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert> : null}
+
+      {feedback ? <Alert severity={feedback.severity} sx={{ mt: 2, wordBreak: 'break-all' }}>{feedback.text}</Alert> : null}
+
+      <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>{t('listTitle')}</Typography>
+      <Stack spacing={1.5}>
+        {invitations.map((invitation) => (
+          <Box key={invitation.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+              <Box>
+                <Typography sx={{ fontWeight: 600 }}>{invitation.email}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t('expiresAt', { date: new Date(invitation.expires_at).toLocaleString() })}
+                </Typography>
+              </Box>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Chip label={t(`status.${invitation.resolved_status}`)} size="small" />
+                {canManageInvites && invitation.resolved_status === 'pending' ? (
+                  <Button size="small" color="error" onClick={() => void handleRevoke(invitation.id)}>
+                    {t('revoke')}
+                  </Button>
+                ) : null}
+              </Stack>
+            </Stack>
+          </Box>
+        ))}
+        {invitations.length === 0 ? <Alert severity="info">{t('listEmpty')}</Alert> : null}
+      </Stack>
     </Box>
   );
 }

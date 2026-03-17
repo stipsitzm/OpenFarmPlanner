@@ -7,7 +7,7 @@ for its respective model.
 
 from collections import defaultdict
 import logging
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 import json
 
@@ -48,10 +48,19 @@ from .serializers import (
     ProjectSerializer,
     ProjectMembershipSerializer,
     ProjectInvitationSerializer,
+    InvitationTokenSerializer,
 )
 from accounts.models import UserProjectSettings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from .services.project_invitations import (
+    InvitationFlowError,
+    accept_invitation,
+    build_public_status,
+    create_or_resend_invitation,
+    get_invitation_by_token,
+    revoke_invitation,
+)
 
 from .services_area import calculate_remaining_bed_area
 
@@ -1689,8 +1698,7 @@ class ProjectInvitationView(APIView):
     """Create and list project invitations."""
 
     def get(self, request, project_id: int):
-        if not ProjectMembership.objects.filter(user=request.user, project_id=project_id).exists():
-            return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+        require_project_admin(request.user, project_id)
         invitations = ProjectInvitation.objects.filter(project_id=project_id).order_by('-created_at')
         return Response(ProjectInvitationSerializer(invitations, many=True).data)
 
@@ -1699,16 +1707,22 @@ class ProjectInvitationView(APIView):
         serializer = ProjectInvitationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         project = get_object_or_404(Project, id=project_id, is_active=True)
-        invitation = ProjectInvitation.objects.create(
-            project=project,
-            email=serializer.validated_data['email'].strip().lower(),
-            role=serializer.validated_data['role'],
-            token=get_random_string(48),
-            invited_by=request.user,
-            expires_at=timezone.now() + timedelta(days=14),
-            message=serializer.validated_data.get('message', ''),
-        )
-        invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invitation?token={invitation.token}"
+
+        try:
+            result = create_or_resend_invitation(
+                project=project,
+                invited_by=request.user,
+                email=serializer.validated_data['email'],
+                role=serializer.validated_data['role'],
+            )
+        except InvitationFlowError as exc:
+            return Response({'code': exc.code, 'detail': exc.message}, status=status.HTTP_400_BAD_REQUEST)
+
+        invitation = result.invitation
+        if invitation is None:
+            return Response({'code': 'invitation_error', 'detail': 'Invitation could not be created.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/{invitation.token}"
         with translation.override('de'):
             subject = _('Einladung zu OpenFarmPlanner: %(project)s') % {'project': project.name}
             body = render_to_string('accounts/emails/project_invitation_email.txt', {
@@ -1717,6 +1731,7 @@ class ProjectInvitationView(APIView):
                 'invite_link': invite_link,
                 'invited_by': request.user,
             })
+
         non_delivery_backends = {
             'django.core.mail.backends.console.EmailBackend',
             'django.core.mail.backends.locmem.EmailBackend',
@@ -1742,54 +1757,75 @@ class ProjectInvitationView(APIView):
             logger.info('Project invitation created without outbound email delivery because backend=%s', settings.EMAIL_BACKEND)
 
         payload = ProjectInvitationSerializer(invitation).data
+        payload['code'] = result.code
         payload['mail_sent'] = mail_sent
         payload['invite_link'] = invite_link
         payload['mail_error'] = mail_error
         payload['email_backend'] = settings.EMAIL_BACKEND
-        return Response(payload, status=status.HTTP_201_CREATED)
+        status_code = status.HTTP_201_CREATED if result.code == 'invitation_sent' else status.HTTP_200_OK
+        return Response(payload, status=status_code)
 
 
-class AcceptProjectInvitationView(APIView):
-    """Accept invitation token and create membership for matching account."""
+class PublicProjectInvitationView(APIView):
+    """Read public invitation status by token."""
 
     permission_classes = [permissions.AllowAny]
 
-    def post(self, request):
-        token = request.data.get('token', '')
-        invitation = ProjectInvitation.objects.select_related('project').filter(token=token).first()
-        if invitation is None:
-            return Response({'detail': 'Invalid or expired invitation.'}, status=status.HTTP_400_BAD_REQUEST)
+    def get(self, request, token: str):
+        try:
+            invitation = get_invitation_by_token(token)
+        except InvitationFlowError as exc:
+            return Response({'code': exc.code, 'detail': exc.message}, status=status.HTTP_404_NOT_FOUND)
 
-        if not request.user.is_authenticated:
-            if invitation.is_open:
-                return Response({'detail': 'Invitation token is valid. Please sign in to accept.'})
-            return Response({'detail': 'Invalid or expired invitation.'}, status=status.HTTP_400_BAD_REQUEST)
+        payload = build_public_status(invitation, request.user if request.user.is_authenticated else None)
+        return Response(payload)
 
-        if request.user.email.lower().strip() != invitation.email.lower().strip():
-            return Response({'detail': 'Invitation email does not match current user.'}, status=status.HTTP_403_FORBIDDEN)
 
-        if invitation.accepted_at is not None:
-            ProjectMembership.objects.get_or_create(
-                user=request.user,
-                project=invitation.project,
-                defaults={'role': invitation.role},
-            )
-            return Response({'detail': 'Invitation already accepted.', 'project_id': invitation.project_id})
+class AcceptProjectInvitationByTokenView(APIView):
+    """Accept invitation by token path parameter."""
 
-        if not invitation.is_open:
-            return Response({'detail': 'Invalid or expired invitation.'}, status=status.HTTP_400_BAD_REQUEST)
+    permission_classes = [permissions.IsAuthenticated]
 
-        ProjectMembership.objects.get_or_create(
-            user=request.user,
-            project=invitation.project,
-            defaults={'role': invitation.role},
-        )
-        invitation.accepted_at = timezone.now()
-        invitation.save(update_fields=['accepted_at'])
+    def post(self, request, token: str):
+        try:
+            invitation = get_invitation_by_token(token)
+            result = accept_invitation(invitation=invitation, user=request.user)
+        except InvitationFlowError as exc:
+            status_code = status.HTTP_403_FORBIDDEN if exc.code == 'email_mismatch' else status.HTTP_400_BAD_REQUEST
+            return Response({'code': exc.code, 'detail': exc.message}, status=status_code)
 
         settings_obj, _ = UserProjectSettings.objects.get_or_create(user=request.user)
         if settings_obj.default_project_id is None:
-            settings_obj.default_project = invitation.project
-        settings_obj.last_project = invitation.project
+            settings_obj.default_project = result.invitation.project
+        settings_obj.last_project = result.invitation.project
         settings_obj.save()
-        return Response({'detail': 'Invitation accepted.', 'project_id': invitation.project_id})
+
+        return Response(
+            {
+                'code': result.code,
+                'detail': result.message,
+                'project_id': result.invitation.project_id if result.invitation else None,
+            }
+        )
+
+
+class AcceptProjectInvitationView(APIView):
+    """Accept invitation token from request body for backward compatibility."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = InvitationTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data['token']
+        return AcceptProjectInvitationByTokenView().post(request, token)
+
+
+class RevokeProjectInvitationView(APIView):
+    """Revoke open invitations as project admin."""
+
+    def post(self, request, project_id: int, invitation_id: int):
+        require_project_admin(request.user, project_id)
+        invitation = get_object_or_404(ProjectInvitation, id=invitation_id, project_id=project_id)
+        result = revoke_invitation(invitation=invitation, actor=request.user)
+        return Response({'code': result.code, 'detail': result.message})

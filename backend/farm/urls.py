@@ -25,7 +25,10 @@ from .views import (
     ProjectSwitchView,
     ProjectMembersView,
     ProjectInvitationView,
+    PublicProjectInvitationView,
     AcceptProjectInvitationView,
+    AcceptProjectInvitationByTokenView,
+    RevokeProjectInvitationView,
 )
 
 router = DefaultRouter()
@@ -55,6 +58,9 @@ urlpatterns = [
     path('projects-switch/', ProjectSwitchView.as_view(), name='projects-switch'),
     path('projects/<int:project_id>/members/', ProjectMembersView.as_view(), name='project-members'),
     path('projects/<int:project_id>/invitations/', ProjectInvitationView.as_view(), name='project-invitations'),
+    path('projects/<int:project_id>/invitations/<int:invitation_id>/revoke/', RevokeProjectInvitationView.as_view(), name='project-invitations-revoke'),
     path('project-invitations/accept/', AcceptProjectInvitationView.as_view(), name='project-invitations-accept'),
+    path('project-invitations/<str:token>/accept/', AcceptProjectInvitationByTokenView.as_view(), name='project-invitations-token-accept'),
+    path('project-invitations/<str:token>/', PublicProjectInvitationView.as_view(), name='project-invitations-public'),
     path('', include(router.urls)),
 ]

@@ -1,0 +1,241 @@
+"""Project invitation domain services.
+
+This module centralizes invitation lifecycle operations and validation.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import timedelta
+import secrets
+
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db import IntegrityError, transaction
+from django.utils import timezone
+
+from farm.models import Project, ProjectInvitation, ProjectMembership
+
+User = get_user_model()
+
+
+@dataclass
+class InvitationResult:
+    """Structured invitation service result.
+
+    :param code: Stable machine-readable result code.
+    :param invitation: Invitation instance if available.
+    :param message: Human-readable message.
+    :return: InvitationResult object.
+    """
+
+    code: str
+    invitation: ProjectInvitation | None = None
+    message: str = ''
+
+
+class InvitationFlowError(Exception):
+    """Domain error for invitation operations."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
+def _expiry_days() -> int:
+    """Return invitation expiry duration in days.
+
+    :return: Positive expiry duration.
+    """
+    value = int(getattr(settings, 'PROJECT_INVITATION_EXPIRY_DAYS', 14))
+    return max(1, value)
+
+
+def _generate_token() -> str:
+    """Create a long cryptographically secure invitation token.
+
+    :return: URL-safe token.
+    """
+    return secrets.token_urlsafe(48)
+
+
+def normalize_email(email: str) -> str:
+    """Normalize email addresses consistently for invitation checks.
+
+    :param email: Raw email input.
+    :return: Canonical email.
+    """
+    return ProjectInvitation.normalize_email(email)
+
+
+def mask_email(email: str) -> str:
+    """Mask an email for public display.
+
+    :param email: Email address.
+    :return: Masked email.
+    """
+    normalized = normalize_email(email)
+    if '@' not in normalized:
+        return '***'
+    local, domain = normalized.split('@', 1)
+    local_mask = f"{local[:1]}***" if local else '***'
+    return f"{local_mask}@{domain}"
+
+
+def create_or_resend_invitation(*, project: Project, invited_by: User, email: str, role: str) -> InvitationResult:
+    """Create a new invitation or reuse an existing open one.
+
+    :param project: Target project.
+    :param invited_by: Actor user.
+    :param email: Invitee email.
+    :param role: Membership role.
+    :return: Result with code invitation_sent or invitation_resent.
+    """
+    email_normalized = normalize_email(email)
+    if not email_normalized:
+        raise InvitationFlowError('invalid_email', 'Invalid email address.')
+
+    existing_user = User.objects.filter(email__iexact=email_normalized).first()
+    if existing_user and ProjectMembership.objects.filter(project=project, user=existing_user).exists():
+        raise InvitationFlowError('already_member', 'User is already a project member.')
+
+    with transaction.atomic():
+        open_invitation = (
+            ProjectInvitation.objects
+            .select_for_update()
+            .filter(project=project, email_normalized=email_normalized, status=ProjectInvitation.STATUS_PENDING)
+            .first()
+        )
+
+        if open_invitation:
+            open_invitation.role = role
+            open_invitation.invited_by = invited_by
+            open_invitation.expires_at = timezone.now() + timedelta(days=_expiry_days())
+            open_invitation.message = ''
+            open_invitation.save(update_fields=['role', 'invited_by', 'expires_at', 'message', 'updated_at'])
+            return InvitationResult(code='invitation_resent', invitation=open_invitation, message='Invitation resent.')
+
+        try:
+            invitation = ProjectInvitation.objects.create(
+                project=project,
+                email=email_normalized,
+                role=role,
+                token=_generate_token(),
+                invited_by=invited_by,
+                status=ProjectInvitation.STATUS_PENDING,
+                expires_at=timezone.now() + timedelta(days=_expiry_days()),
+            )
+        except IntegrityError:
+            invitation = (
+                ProjectInvitation.objects
+                .filter(project=project, email_normalized=email_normalized, status=ProjectInvitation.STATUS_PENDING)
+                .first()
+            )
+            if invitation is None:
+                raise
+            return InvitationResult(code='invitation_resent', invitation=invitation, message='Invitation resent.')
+
+    return InvitationResult(code='invitation_sent', invitation=invitation, message='Invitation sent.')
+
+
+def get_invitation_by_token(token: str) -> ProjectInvitation:
+    """Lookup invitation by token.
+
+    :param token: Invitation token.
+    :return: Invitation object.
+    """
+    invitation = ProjectInvitation.objects.select_related('project', 'invited_by', 'accepted_by', 'revoked_by').filter(token=token).first()
+    if not invitation:
+        raise InvitationFlowError('invalid_token', 'Invalid invitation token.')
+    return invitation
+
+
+def build_public_status(invitation: ProjectInvitation, user: User | None) -> dict[str, object]:
+    """Build token status payload for frontend.
+
+    :param invitation: Invitation instance.
+    :param user: Optional authenticated user.
+    :return: Public status payload.
+    """
+    code = invitation.resolved_status
+    if invitation.resolved_status == ProjectInvitation.STATUS_ACCEPTED:
+        member_user = user if user and user.is_authenticated else None
+        if member_user and ProjectMembership.objects.filter(project=invitation.project, user=member_user).exists():
+            code = 'already_member'
+    elif invitation.resolved_status == ProjectInvitation.STATUS_PENDING and user and user.is_authenticated:
+        if normalize_email(user.email) != invitation.email_normalized:
+            code = 'email_mismatch'
+
+    return {
+        'code': code,
+        'project_name': invitation.project.name,
+        'email_masked': mask_email(invitation.email_normalized),
+        'requires_auth': not (user and user.is_authenticated),
+        'expires_at': invitation.expires_at,
+    }
+
+
+def accept_invitation(*, invitation: ProjectInvitation, user: User) -> InvitationResult:
+    """Accept invitation atomically for a matching authenticated user.
+
+    :param invitation: Invitation instance.
+    :param user: Authenticated user.
+    :return: Accept result.
+    """
+    if normalize_email(user.email) != invitation.email_normalized:
+        raise InvitationFlowError('email_mismatch', 'Invitation belongs to another email address.')
+
+    with transaction.atomic():
+        locked = ProjectInvitation.objects.select_for_update().get(pk=invitation.pk)
+
+        if locked.resolved_status == 'expired':
+            raise InvitationFlowError('expired', 'Invitation has expired.')
+        if locked.status == ProjectInvitation.STATUS_REVOKED:
+            raise InvitationFlowError('revoked', 'Invitation was revoked.')
+
+        membership, created = ProjectMembership.objects.get_or_create(
+            project=locked.project,
+            user=user,
+            defaults={'role': locked.role},
+        )
+
+        if locked.status == ProjectInvitation.STATUS_ACCEPTED:
+            return InvitationResult(code='already_member', invitation=locked, message='User is already a member.')
+
+        if not created:
+            locked.status = ProjectInvitation.STATUS_ACCEPTED
+            locked.accepted_by = user
+            locked.accepted_at = timezone.now()
+            locked.save(update_fields=['status', 'accepted_by', 'accepted_at', 'updated_at'])
+            return InvitationResult(code='already_member', invitation=locked, message='User is already a member.')
+
+        locked.status = ProjectInvitation.STATUS_ACCEPTED
+        locked.accepted_by = user
+        locked.accepted_at = timezone.now()
+        locked.save(update_fields=['status', 'accepted_by', 'accepted_at', 'updated_at'])
+
+        return InvitationResult(code='accepted', invitation=locked, message='Invitation accepted.')
+
+
+def revoke_invitation(*, invitation: ProjectInvitation, actor: User) -> InvitationResult:
+    """Revoke an invitation if still pending.
+
+    :param invitation: Invitation object.
+    :param actor: Revoking admin.
+    :return: Revoke result.
+    """
+    with transaction.atomic():
+        locked = ProjectInvitation.objects.select_for_update().get(pk=invitation.pk)
+        if locked.status == ProjectInvitation.STATUS_REVOKED:
+            return InvitationResult(code='revoked', invitation=locked, message='Invitation already revoked.')
+        if locked.status == ProjectInvitation.STATUS_ACCEPTED:
+            return InvitationResult(code='already_accepted', invitation=locked, message='Invitation already accepted.')
+        if locked.resolved_status == 'expired':
+            return InvitationResult(code='expired', invitation=locked, message='Invitation has expired.')
+
+        locked.status = ProjectInvitation.STATUS_REVOKED
+        locked.revoked_at = timezone.now()
+        locked.revoked_by = actor
+        locked.save(update_fields=['status', 'revoked_at', 'revoked_by', 'updated_at'])
+        return InvitationResult(code='revoked', invitation=locked, message='Invitation revoked.')

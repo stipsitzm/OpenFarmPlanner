@@ -3,7 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import InvitationPage from '../pages/InvitationPage';
 
-const acceptMock = vi.fn(async () => ({ data: { detail: 'ok', project_id: 2 } }));
+const getStatusMock = vi.fn(async () => ({ data: { code: 'pending', project_name: 'Alpha', email_masked: 'i***@example.com', requires_auth: false } }));
+const acceptMock = vi.fn(async () => ({ data: { code: 'accepted', project_id: 2 } }));
 
 vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
@@ -11,7 +12,8 @@ vi.mock('../api/api', async () => {
     ...actual,
     projectAPI: {
       ...actual.projectAPI,
-      acceptInvitation: (...args: unknown[]) => acceptMock(...args),
+      getInvitationStatus: (...args: unknown[]) => getStatusMock(...args),
+      acceptInvitationByToken: (...args: unknown[]) => acceptMock(...args),
     },
   };
 });
@@ -19,21 +21,24 @@ vi.mock('../api/api', async () => {
 const switchActiveProjectMock = vi.fn(async () => {});
 
 vi.mock('../auth/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 1 }, switchActiveProject: switchActiveProjectMock }),
+  useAuth: () => ({ user: { id: 1, email: 'invitee@example.com' }, switchActiveProject: switchActiveProjectMock }),
 }));
 
 describe('InvitationPage', () => {
-  it('accepts invitation token from URL', async () => {
+  it('shows invitation and accepts it from token route', async () => {
     render(
-      <MemoryRouter initialEntries={['/invitation?token=abc123']}>
+      <MemoryRouter initialEntries={['/invite/abc123']}>
         <Routes>
-          <Route path="/invitation" element={<InvitationPage />} />
+          <Route path="/invite/:token" element={<InvitationPage />} />
         </Routes>
       </MemoryRouter>,
     );
 
+    await waitFor(() => expect(getStatusMock).toHaveBeenCalledWith('abc123'));
+    expect(await screen.findByText('Diese Einladung ist gültig.')).toBeInTheDocument();
+
+    (await screen.findByRole('button', { name: 'Projekt beitreten' })).click();
     await waitFor(() => expect(acceptMock).toHaveBeenCalledWith('abc123'));
     await waitFor(() => expect(switchActiveProjectMock).toHaveBeenCalledWith(2));
-    expect(await screen.findByText('Einladung wurde erfolgreich angenommen.')).toBeInTheDocument();
   });
 });

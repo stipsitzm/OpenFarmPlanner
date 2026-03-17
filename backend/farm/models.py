@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 
@@ -93,14 +94,25 @@ class ProjectMembership(models.Model):
 class ProjectInvitation(models.Model):
     """An invitation token for adding users to projects."""
 
+    STATUS_PENDING = 'pending'
+    STATUS_ACCEPTED = 'accepted'
+    STATUS_REVOKED = 'revoked'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_ACCEPTED, 'Accepted'),
+        (STATUS_REVOKED, 'Revoked'),
+    ]
+
     ROLE_ADMIN = ProjectMembership.ROLE_ADMIN
     ROLE_MEMBER = ProjectMembership.ROLE_MEMBER
     ROLE_CHOICES = ProjectMembership.ROLE_CHOICES
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='invitations')
     email = models.EmailField()
+    email_normalized = models.EmailField(blank=True, default='')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_MEMBER)
-    token = models.CharField(max_length=64, unique=True, db_index=True)
+    token = models.CharField(max_length=128, unique=True, db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     invited_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -108,14 +120,55 @@ class ProjectInvitation(models.Model):
         blank=True,
         related_name='project_invitations_sent',
     )
+    accepted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='project_invitations_accepted',
+    )
     accepted_at = models.DateTimeField(null=True, blank=True)
     expires_at = models.DateTimeField()
     revoked_at = models.DateTimeField(null=True, blank=True)
+    revoked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='project_invitations_revoked',
+    )
     message = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['project', 'email_normalized'],
+                condition=Q(status='pending'),
+                name='unique_open_project_invitation_per_email',
+            ),
+        ]
+
+    @staticmethod
+    def normalize_email(email: str) -> str:
+        """Normalize an invitation email for canonical comparisons.
+
+        :param email: Raw email value from input.
+        :return: Lower-cased, trimmed email value.
+        """
+        return (email or '').strip().lower()
+
+    @property
+    def resolved_status(self) -> str:
+        """Resolve runtime status including expiry for pending invitations.
+
+        :return: Resolved invitation status.
+        """
+        if self.status == self.STATUS_PENDING and self.is_expired:
+            return 'expired'
+        return self.status
 
     @property
     def is_expired(self) -> bool:
@@ -125,7 +178,18 @@ class ProjectInvitation(models.Model):
     @property
     def is_open(self) -> bool:
         """Return True if invitation can still be accepted."""
-        return self.accepted_at is None and self.revoked_at is None and not self.is_expired
+        return self.resolved_status == self.STATUS_PENDING
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Persist normalized email before writing invitation records.
+
+        :param args: Positional arguments for model save.
+        :param kwargs: Keyword arguments for model save.
+        :return: None.
+        """
+        self.email_normalized = self.normalize_email(self.email)
+        self.email = self.email_normalized
+        super().save(*args, **kwargs)
 
 
 class Supplier(TimestampedModel):

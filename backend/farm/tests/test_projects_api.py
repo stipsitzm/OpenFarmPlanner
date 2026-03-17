@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProjectSettings
-from farm.models import Project, ProjectMembership, Location, ProjectInvitation
+from farm.models import Project, ProjectInvitation, ProjectMembership, Location
 
 User = get_user_model()
 
@@ -16,6 +16,7 @@ class ProjectsApiTests(APITestCase):
     def setUp(self) -> None:
         self.user = User.objects.create_user(username='u1', email='u1@example.com', password='pass12345', is_active=True)
         self.other = User.objects.create_user(username='u2', email='u2@example.com', password='pass12345', is_active=True)
+        self.invitee = User.objects.create_user(username='invitee', email='invitee@example.com', password='pass12345', is_active=True)
         self.project = Project.objects.create(name='P1', slug='p1')
         self.project2 = Project.objects.create(name='P2', slug='p2')
         ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
@@ -42,7 +43,6 @@ class ProjectsApiTests(APITestCase):
         settings_obj = UserProjectSettings.objects.get(user=self.user)
         self.assertEqual(settings_obj.last_project_id, self.project2.id)
 
-
     def test_create_project_without_slug_succeeds(self) -> None:
         response = self.client.post('/openfarmplanner/api/projects/', {'name': 'Neues Projekt', 'description': ''}, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -56,6 +56,43 @@ class ProjectsApiTests(APITestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['code'], 'invitation_sent')
+
+    def test_member_cannot_invite(self) -> None:
+        ProjectMembership.objects.update_or_create(user=self.user, project=self.project, defaults={'role': 'member'})
+        response = self.client.post(
+            f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
+            {'email': 'invitee@example.com', 'role': 'member'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_invitation_for_existing_member_is_rejected(self) -> None:
+        ProjectMembership.objects.create(user=self.invitee, project=self.project, role='member')
+        response = self.client.post(
+            f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
+            {'email': 'invitee@example.com', 'role': 'member'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['code'], 'already_member')
+
+    def test_second_open_invitation_is_resent_not_duplicated(self) -> None:
+        first = self.client.post(
+            f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
+            {'email': 'invitee@example.com', 'role': 'member'},
+            format='json',
+        )
+        second = self.client.post(
+            f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
+            {'email': 'INVITEE@example.com', 'role': 'admin'},
+            format='json',
+        )
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(second.data['code'], 'invitation_resent')
+        self.assertEqual(ProjectInvitation.objects.filter(project=self.project, email_normalized='invitee@example.com', status='pending').count(), 1)
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend')
     def test_invitation_returns_mail_not_sent_on_console_backend(self) -> None:
@@ -67,36 +104,98 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertFalse(response.data['mail_sent'])
         self.assertIn('invite_link', response.data)
-        self.assertEqual(response.data['email_backend'], 'django.core.mail.backends.console.EmailBackend')
 
-    def test_member_cannot_invite(self) -> None:
-        ProjectMembership.objects.update_or_create(
-            user=self.user,
+    def test_accept_invitation_success(self) -> None:
+        invitation = ProjectInvitation.objects.create(
             project=self.project,
-            defaults={'role': 'member'},
+            email='invitee@example.com',
+            role='member',
+            token='token123',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
         )
-        response = self.client.post(
-            f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
-            {'email': 'invitee@example.com', 'role': 'member'},
-            format='json',
-        )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'invitee@example.com', 'password': 'pass12345'}, format='json')
 
-    def test_accept_invitation_is_idempotent_for_same_user(self) -> None:
+        response = self.client.post(f'/openfarmplanner/api/project-invitations/{invitation.token}/accept/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['code'], 'accepted')
+        self.assertTrue(ProjectMembership.objects.filter(project=self.project, user=self.invitee).exists())
+
+    def test_accept_invitation_email_mismatch(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='third@example.com',
+            role='member',
+            token='token-mismatch',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        response = self.client.post(f'/openfarmplanner/api/project-invitations/{invitation.token}/accept/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['code'], 'email_mismatch')
+
+    def test_expired_invitation_cannot_be_accepted(self) -> None:
         invitation = ProjectInvitation.objects.create(
             project=self.project,
             email=self.user.email,
             role='member',
-            token='token123',
+            token='token-expired',
+            invited_by=self.other,
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+        response = self.client.post(f'/openfarmplanner/api/project-invitations/{invitation.token}/accept/')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['code'], 'expired')
+
+    def test_revoked_invitation_cannot_be_accepted(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email=self.user.email,
+            role='member',
+            token='token-revoked',
+            invited_by=self.other,
+            expires_at=timezone.now() + timedelta(days=14),
+            status='revoked',
+            revoked_at=timezone.now(),
+        )
+        response = self.client.post(f'/openfarmplanner/api/project-invitations/{invitation.token}/accept/')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['code'], 'revoked')
+
+    def test_accept_is_idempotent(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email=self.user.email,
+            role='member',
+            token='token-idempotent',
             invited_by=self.other,
             expires_at=timezone.now() + timedelta(days=14),
         )
 
-        first = self.client.post('/openfarmplanner/api/project-invitations/accept/', {'token': invitation.token}, format='json')
+        first = self.client.post(f'/openfarmplanner/api/project-invitations/{invitation.token}/accept/')
+        second = self.client.post(f'/openfarmplanner/api/project-invitations/{invitation.token}/accept/')
+
         self.assertEqual(first.status_code, status.HTTP_200_OK)
-        self.assertEqual(first.data['project_id'], self.project.id)
-
-        second = self.client.post('/openfarmplanner/api/project-invitations/accept/', {'token': invitation.token}, format='json')
         self.assertEqual(second.status_code, status.HTTP_200_OK)
-        self.assertEqual(second.data['project_id'], self.project.id)
+        self.assertEqual(second.data['code'], 'already_member')
+        self.assertEqual(ProjectMembership.objects.filter(project=self.project, user=self.user).count(), 1)
 
+    def test_public_status_handles_invalid_token(self) -> None:
+        response = self.client.get('/openfarmplanner/api/project-invitations/does-not-exist/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['code'], 'invalid_token')
+
+    def test_admin_can_revoke_invitation(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='invitee@example.com',
+            role='member',
+            token='token-revoke',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        response = self.client.post(f'/openfarmplanner/api/projects/{self.project.id}/invitations/{invitation.id}/revoke/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.status, 'revoked')

@@ -158,13 +158,42 @@ export interface ProjectPayload {
   updated_at: string;
 }
 
+export interface ProjectInvitationPayload {
+  id: number;
+  email: string;
+  role: 'admin' | 'member';
+  token: string;
+  status: 'pending' | 'accepted' | 'revoked';
+  resolved_status: 'pending' | 'accepted' | 'revoked' | 'expired';
+  expires_at: string;
+  accepted_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+}
+
+export interface InvitationPublicStatus {
+  code: string;
+  project_name?: string;
+  email_masked?: string;
+  requires_auth: boolean;
+  expires_at?: string;
+}
+
 export const projectAPI = {
   create: (data: { name: string; description?: string }) =>
     http.post<ProjectPayload>('/projects/', data),
   invite: (projectId: number, data: { email: string; role: 'admin' | 'member' }) =>
     http.post(`/projects/${projectId}/invitations/`, data),
+  listInvitations: (projectId: number) =>
+    http.get<ProjectInvitationPayload[]>(`/projects/${projectId}/invitations/`),
+  revokeInvitation: (projectId: number, invitationId: number) =>
+    http.post(`/projects/${projectId}/invitations/${invitationId}/revoke/`),
+  getInvitationStatus: (token: string) =>
+    http.get<InvitationPublicStatus>(`/project-invitations/${token}/`),
+  acceptInvitationByToken: (token: string) =>
+    http.post<{ code: string; detail: string; project_id?: number }>(`/project-invitations/${token}/accept/`),
   acceptInvitation: (token: string) =>
-    http.post<{ detail: string; project_id?: number }>('/project-invitations/accept/', { token }),
+    http.post<{ code: string; detail: string; project_id?: number }>('/project-invitations/accept/', { token }),
 };
 
 export type {
