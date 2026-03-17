@@ -1757,14 +1757,27 @@ class AcceptProjectInvitationView(APIView):
     def post(self, request):
         token = request.data.get('token', '')
         invitation = ProjectInvitation.objects.select_related('project').filter(token=token).first()
-        if invitation is None or not invitation.is_open:
+        if invitation is None:
             return Response({'detail': 'Invalid or expired invitation.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if not request.user.is_authenticated:
-            return Response({'detail': 'Invitation token is valid. Please sign in to accept.'})
+            if invitation.is_open:
+                return Response({'detail': 'Invitation token is valid. Please sign in to accept.'})
+            return Response({'detail': 'Invalid or expired invitation.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if request.user.email.lower().strip() != invitation.email.lower().strip():
             return Response({'detail': 'Invitation email does not match current user.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if invitation.accepted_at is not None:
+            ProjectMembership.objects.get_or_create(
+                user=request.user,
+                project=invitation.project,
+                defaults={'role': invitation.role},
+            )
+            return Response({'detail': 'Invitation already accepted.', 'project_id': invitation.project_id})
+
+        if not invitation.is_open:
+            return Response({'detail': 'Invalid or expired invitation.'}, status=status.HTTP_400_BAD_REQUEST)
 
         ProjectMembership.objects.get_or_create(
             user=request.user,

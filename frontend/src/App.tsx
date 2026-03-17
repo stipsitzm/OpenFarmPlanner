@@ -512,6 +512,17 @@ function RootLayout(): React.ReactElement {
 /**
  * Create the router with data router API
  */
+export function resolveRouterBasename(configuredBase: string, pathname: string): string {
+  const normalizedBase = configuredBase.replace(/\/$/, '');
+  if (!normalizedBase) {
+    return '';
+  }
+  if (pathname === normalizedBase || pathname.startsWith(`${normalizedBase}/`)) {
+    return normalizedBase;
+  }
+  return '';
+}
+
 function createAppRouter(basename: string) {
   return createBrowserRouter([
     {
@@ -575,12 +586,13 @@ function createAppRouter(basename: string) {
 }
 
 function App(): React.ReactElement {
-  // Use Vite's base URL to set React Router basename so routes work under a subdirectory
-  // Vite provides BASE_URL ending with a trailing slash (e.g., "/openfarmplanner/")
-  const basename = import.meta.env.BASE_URL.replace(/\/$/, '');
-  
+  // Use Vite's base URL when URL is inside that subdirectory, otherwise fall back to root.
+  const configuredBase = import.meta.env.BASE_URL.replace(/\/$/, '');
+  const currentPath = window.location.pathname;
+  const basename = resolveRouterBasename(configuredBase, currentPath);
+
   const router = createAppRouter(basename);
-  
+
   return <RouterProvider router={router} />;
 }
 

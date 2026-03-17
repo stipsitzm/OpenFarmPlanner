@@ -1,10 +1,13 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.test import override_settings
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProjectSettings
-from farm.models import Project, ProjectMembership, Location
+from farm.models import Project, ProjectMembership, Location, ProjectInvitation
 
 User = get_user_model()
 
@@ -78,3 +81,22 @@ class ProjectsApiTests(APITestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_accept_invitation_is_idempotent_for_same_user(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email=self.user.email,
+            role='member',
+            token='token123',
+            invited_by=self.other,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+
+        first = self.client.post('/openfarmplanner/api/project-invitations/accept/', {'token': invitation.token}, format='json')
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(first.data['project_id'], self.project.id)
+
+        second = self.client.post('/openfarmplanner/api/project-invitations/accept/', {'token': invitation.token}, format='json')
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(second.data['project_id'], self.project.id)
+

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import App from '../App';
+import App, { resolveRouterBasename } from '../App';
 import { CommandProvider } from '../commands/CommandProvider';
 import translations from '@/test-utils/translations';
 import type { AuthUser } from '../auth/types';
@@ -112,6 +112,12 @@ describe('App', () => {
     render(<CommandProvider><App /></CommandProvider>);
     fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
     expect(await screen.findByText('Neues Projekt erstellen')).toBeInTheDocument();
+  });
+
+
+  it('resolves basename only when current path matches configured base', () => {
+    expect(resolveRouterBasename('/openfarmplanner', '/openfarmplanner/invitation')).toBe('/openfarmplanner');
+    expect(resolveRouterBasename('/openfarmplanner', '/invitation')).toBe('');
   });
 
   it('redirects unauthenticated users from /app to login', async () => {
