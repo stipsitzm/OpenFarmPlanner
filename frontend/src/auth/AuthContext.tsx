@@ -45,6 +45,15 @@ function applyResolvedProjectId(me: AuthUser): number | null {
   return null;
 }
 
+function mergeProjectSelection(user: AuthUser, projectState: { resolved_project_id?: number | null; last_project_id?: number | null; default_project_id?: number | null }): AuthUser {
+  return {
+    ...user,
+    resolved_project_id: projectState.resolved_project_id,
+    last_project_id: projectState.last_project_id,
+    default_project_id: projectState.default_project_id,
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,12 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       window.localStorage.setItem('activeProjectId', String(resolvedId));
       setActiveProjectId(resolvedId);
       if (user) {
-        setUser({
-          ...user,
-          resolved_project_id: switchResult.resolved_project_id,
-          last_project_id: switchResult.last_project_id,
-          default_project_id: switchResult.default_project_id,
-        });
+        setUser(mergeProjectSelection(user, switchResult));
       }
     },
   }), [activeProjectId, isLoading, user]);

@@ -64,6 +64,12 @@ import AccountSettingsPage from './pages/AccountSettingsPage';
 import ProjectSettingsPage from './pages/ProjectSettingsPage';
 import InvitationPage from './pages/InvitationPage';
 
+interface SnackbarState {
+  open: boolean;
+  message: string;
+  severity: 'success' | 'error';
+}
+
 
 /**
  * Root layout component with navigation.
@@ -122,7 +128,7 @@ function RootLayout(): React.ReactElement {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+  const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
     message: '',
     severity: 'success',
@@ -187,13 +193,20 @@ function RootLayout(): React.ReactElement {
     setIsCreateProjectOpen(true);
   };
 
-  const reloadAfterProjectContextChange = (): void => {
+  const applyProjectContextChange = async (projectId: number): Promise<void> => {
+    await switchActiveProject(projectId);
     window.location.reload();
   };
 
-  const applyProjectContextChange = async (projectId: number): Promise<void> => {
-    await switchActiveProject(projectId);
-    reloadAfterProjectContextChange();
+  const closeCreateProjectDialog = (): void => {
+    setIsCreateProjectOpen(false);
+    setNewProjectName('');
+    setNewProjectDescription('');
+  };
+
+  const navigateFromGlobalMenu = (path: string): void => {
+    handleGlobalMenuClose();
+    navigate(path);
   };
 
   const handleCreateProject = async (): Promise<void> => {
@@ -206,7 +219,7 @@ function RootLayout(): React.ReactElement {
         name: newProjectName.trim(),
         description: newProjectDescription.trim(),
       });
-      setIsCreateProjectOpen(false);
+      closeCreateProjectDialog();
       navigate('/app/anbauplaene');
       await applyProjectContextChange(response.data.id);
     } catch (error) {
@@ -374,10 +387,10 @@ function RootLayout(): React.ReactElement {
             <MenuItem onClick={() => void handleOpenProjectHistory()} disabled={historyLoading}>
               Versionsverlauf…
             </MenuItem>
-            <MenuItem onClick={() => { handleGlobalMenuClose(); navigate('/app/project-settings'); }}>
+            <MenuItem onClick={() => navigateFromGlobalMenu('/app/project-settings')}>
               Projekteinstellungen
             </MenuItem>
-            <MenuItem onClick={() => { handleGlobalMenuClose(); navigate('/app/account-settings'); }}>
+            <MenuItem onClick={() => navigateFromGlobalMenu('/app/account-settings')}>
               {t('accountSettings')}
             </MenuItem>
             <MenuItem onClick={handleOpenShortcuts}>
@@ -475,7 +488,7 @@ function RootLayout(): React.ReactElement {
       </Dialog>
 
 
-      <Dialog open={isCreateProjectOpen} onClose={() => setIsCreateProjectOpen(false)} fullWidth maxWidth="sm">
+      <Dialog open={isCreateProjectOpen} onClose={closeCreateProjectDialog} fullWidth maxWidth="sm">
         <DialogTitle>{t('projectSwitcher.createDialogTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -495,7 +508,7 @@ function RootLayout(): React.ReactElement {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsCreateProjectOpen(false)}>{t('projectSwitcher.createCancel')}</Button>
+          <Button onClick={closeCreateProjectDialog}>{t('projectSwitcher.createCancel')}</Button>
           <Button variant="contained" onClick={() => void handleCreateProject()} disabled={!newProjectName.trim() || isCreatingProject}>
             {t('projectSwitcher.createSubmit')}
           </Button>
