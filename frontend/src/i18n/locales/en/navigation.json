@@ -14,6 +14,13 @@
     "noProject": "No project",
     "zeroProjects": "You currently do not have access to any projects.",
     "newProjectPlaceholder": "New project (coming soon)",
-    "switchError": "Project could not be switched."
+    "switchError": "Project could not be switched.",
+    "newProjectAction": "Create new project",
+    "createDialogTitle": "Create new project",
+    "createNameLabel": "Project name",
+    "createDescriptionLabel": "Description",
+    "createCancel": "Cancel",
+    "createSubmit": "Create project",
+    "createError": "Project could not be created."
   }
 }

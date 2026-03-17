@@ -25,6 +25,7 @@ import {
   MenuItem,
   Snackbar,
   Stack,
+  TextField,
   Drawer,
   useMediaQuery,
 } from '@mui/material';
@@ -47,7 +48,7 @@ import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
-import { cultureAPI } from './api/api';
+import { cultureAPI, projectAPI } from './api/api';
 import type { CultureHistoryEntry } from './api/types';
 import './App.css';
 import { useAuth } from './auth/AuthContext';
@@ -81,6 +82,10 @@ function RootLayout(): React.ReactElement {
   const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isSwitchingProject, setIsSwitchingProject] = useState(false);
+  const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectDescription, setNewProjectDescription] = useState('');
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
   const routes = ['/app/locations', '/app/fields-beds', '/app/cultures', '/app/anbauplaene', '/app/gantt-chart', '/app/seed-demand', '/app/suppliers'];
   const navItems = [
     { to: '/app/locations', label: t('locations') },
@@ -172,6 +177,36 @@ function RootLayout(): React.ReactElement {
   const memberships = user?.memberships ?? [];
   const activeMembership = memberships.find((membership) => membership.project_id === activeProjectId) ?? null;
   const activeProjectLabel = activeMembership?.project_name ?? t('projectSwitcher.noProject');
+
+
+  const handleOpenCreateProject = (): void => {
+    handleProjectMenuClose();
+    setNewProjectName('');
+    setNewProjectDescription('');
+    setIsCreateProjectOpen(true);
+  };
+
+  const handleCreateProject = async (): Promise<void> => {
+    if (!newProjectName.trim()) {
+      return;
+    }
+    setIsCreatingProject(true);
+    try {
+      const response = await projectAPI.create({
+        name: newProjectName.trim(),
+        description: newProjectDescription.trim(),
+      });
+      await switchActiveProject(response.data.id);
+      setIsCreateProjectOpen(false);
+      navigate('/app/anbauplaene');
+      window.location.reload();
+    } catch (error) {
+      console.error('Error creating project:', error);
+      showSnackbar(t('projectSwitcher.createError'), 'error');
+    } finally {
+      setIsCreatingProject(false);
+    }
+  };
 
   const handleSwitchProject = async (projectId: number): Promise<void> => {
     handleProjectMenuClose();
@@ -305,10 +340,10 @@ function RootLayout(): React.ReactElement {
                 </MenuItem>
               ))
             )}
-            <MenuItem disabled>
+            <MenuItem onClick={handleOpenCreateProject}>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <AddIcon fontSize="small" />
-                <span>{t('projectSwitcher.newProjectPlaceholder')}</span>
+                <span>{t('projectSwitcher.newProjectAction')}</span>
               </Stack>
             </MenuItem>
           </Menu>
@@ -330,9 +365,6 @@ function RootLayout(): React.ReactElement {
           >
             <MenuItem onClick={() => void handleOpenProjectHistory()} disabled={historyLoading}>
               Versionsverlauf…
-            </MenuItem>
-            <MenuItem onClick={() => { handleGlobalMenuClose(); navigate('/app/project-selection'); }}>
-              Projekt wechseln
             </MenuItem>
             <MenuItem onClick={() => { handleGlobalMenuClose(); navigate('/app/project-settings'); }}>
               Projekteinstellungen
@@ -431,6 +463,34 @@ function RootLayout(): React.ReactElement {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShortcutsOpen(false)}>Schließen</Button>
+        </DialogActions>
+      </Dialog>
+
+
+      <Dialog open={isCreateProjectOpen} onClose={() => setIsCreateProjectOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>{t('projectSwitcher.createDialogTitle')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label={t('projectSwitcher.createNameLabel')}
+              value={newProjectName}
+              onChange={(event) => setNewProjectName(event.target.value)}
+              autoFocus
+            />
+            <TextField
+              label={t('projectSwitcher.createDescriptionLabel')}
+              value={newProjectDescription}
+              onChange={(event) => setNewProjectDescription(event.target.value)}
+              multiline
+              minRows={2}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsCreateProjectOpen(false)}>{t('projectSwitcher.createCancel')}</Button>
+          <Button variant="contained" onClick={() => void handleCreateProject()} disabled={!newProjectName.trim() || isCreatingProject}>
+            {t('projectSwitcher.createSubmit')}
+          </Button>
         </DialogActions>
       </Dialog>
 

@@ -86,6 +86,32 @@ describe('App', () => {
     render(<CommandProvider><App /></CommandProvider>);
     fireEvent.click(await screen.findByLabelText('Mehr'));
     expect(await screen.findByText('Kontoeinstellungen')).toBeInTheDocument();
+    expect(screen.queryByText('Projekt wechseln')).not.toBeInTheDocument();
+  });
+
+
+
+  it('shows create project action in project switcher menu', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: 1,
+      last_project_id: 1,
+      resolved_project_id: 1,
+      needs_project_selection: false,
+      memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+    };
+    authState.activeProjectId = 1;
+    window.history.pushState({}, '', '/app/anbauplaene');
+
+    render(<CommandProvider><App /></CommandProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
+    expect(await screen.findByText('Neues Projekt erstellen')).toBeInTheDocument();
   });
 
   it('redirects unauthenticated users from /app to login', async () => {

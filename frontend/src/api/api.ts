@@ -148,7 +148,19 @@ export const locationAPI = {
   delete: (id: number) => http.delete(`/locations/${id}/`),
 };
 
+export interface ProjectPayload {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export const projectAPI = {
+  create: (data: { name: string; description?: string }) =>
+    http.post<ProjectPayload>('/projects/', data),
   invite: (projectId: number, data: { email: string; role: 'admin' | 'member' }) =>
     http.post(`/projects/${projectId}/invitations/`, data),
 };
