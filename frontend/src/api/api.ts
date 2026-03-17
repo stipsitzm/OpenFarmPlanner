@@ -163,6 +163,8 @@ export const projectAPI = {
     http.post<ProjectPayload>('/projects/', data),
   invite: (projectId: number, data: { email: string; role: 'admin' | 'member' }) =>
     http.post(`/projects/${projectId}/invitations/`, data),
+  acceptInvitation: (token: string) =>
+    http.post<{ detail: string; project_id?: number }>('/project-invitations/accept/', { token }),
 };
 
 export type {

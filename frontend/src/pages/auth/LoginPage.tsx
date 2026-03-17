@@ -28,7 +28,8 @@ export default function LoginPage(): React.ReactElement {
       const me = await login(email.trim().toLowerCase(), password);
       const hasProjects = (me.memberships?.length ?? 0) > 0;
       const target = me.needs_project_selection || !hasProjects ? '/app/project-selection' : '/app';
-      const destination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? target;
+      const from = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
+      const destination = from?.pathname ? `${from.pathname}${from.search ?? ''}` : target;
       navigate(destination, { replace: true });
     } catch (err) {
       if (err instanceof AuthApiError && err.code === 'account_pending_deletion') {

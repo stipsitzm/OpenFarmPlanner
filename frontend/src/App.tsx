@@ -62,6 +62,7 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import ProjectSelectionPage from './pages/ProjectSelectionPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import ProjectSettingsPage from './pages/ProjectSettingsPage';
+import InvitationPage from './pages/InvitationPage';
 
 
 /**
@@ -536,6 +537,10 @@ function createAppRouter(basename: string) {
     {
       path: '/reset-password',
       element: <ResetPasswordPage />,
+    },
+    {
+      path: '/invitation',
+      element: <InvitationPage />,
     },
     {
       path: '/app',
