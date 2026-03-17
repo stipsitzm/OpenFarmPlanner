@@ -1,6 +1,14 @@
-You have been invited to join the project "{{ project_name }}".
+Hallo,
 
-Role: {{ role }}
+{{ invited_by }} hat dich zu OpenFarmPlanner eingeladen.
 
-Open the invitation link:
+Projekt: {{ project_name }}
+Rolle: {{ role }}
+
+Bitte öffne den folgenden Link, um die Einladung anzunehmen:
 {{ invite_link }}
+
+Falls du kein OpenFarmPlanner-Konto hast, registriere dich zuerst mit derselben E-Mail-Adresse.
+
+Viele Grüße
+OpenFarmPlanner

@@ -23,10 +23,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
+from django.utils import timezone, translation
 from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 from django.utils.dateparse import parse_date
+from django.utils.translation import gettext as _
 from .models import Location, Field, Bed, BedLayout, FieldLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
 from .project_context import get_active_project_or_400, require_project_admin, resolve_project_for_user
 from .serializers import (
@@ -1708,11 +1709,14 @@ class ProjectInvitationView(APIView):
             message=serializer.validated_data.get('message', ''),
         )
         invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invitation?token={invitation.token}"
-        body = render_to_string('accounts/emails/project_invitation_email.txt', {
-            'project_name': project.name,
-            'role': invitation.role,
-            'invite_link': invite_link,
-        })
+        with translation.override('de'):
+            subject = _('Einladung zu OpenFarmPlanner: %(project)s') % {'project': project.name}
+            body = render_to_string('accounts/emails/project_invitation_email.txt', {
+                'project_name': project.name,
+                'role': invitation.role,
+                'invite_link': invite_link,
+                'invited_by': request.user,
+            })
         non_delivery_backends = {
             'django.core.mail.backends.console.EmailBackend',
             'django.core.mail.backends.locmem.EmailBackend',
@@ -1725,7 +1729,7 @@ class ProjectInvitationView(APIView):
 
         if backend_is_delivery_capable:
             try:
-                sent_count = send_mail('Project invitation', body, settings.DEFAULT_FROM_EMAIL, [invitation.email], fail_silently=False)
+                sent_count = send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [invitation.email], fail_silently=False)
                 mail_sent = sent_count > 0
                 if not mail_sent:
                     mail_error = 'Mail backend accepted request but returned zero deliveries.'
