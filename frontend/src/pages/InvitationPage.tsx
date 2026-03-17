@@ -9,7 +9,7 @@ export default function InvitationPage(): React.ReactElement {
   const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, switchActiveProject } = useAuth();
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState<string>('');
 
@@ -22,10 +22,14 @@ export default function InvitationPage(): React.ReactElement {
 
     setStatus('loading');
     void projectAPI.acceptInvitation(token)
-      .then((response) => {
+      .then(async (response) => {
         const projectId = response.data.project_id;
         if (projectId) {
-          window.localStorage.setItem('activeProjectId', String(projectId));
+          try {
+            await switchActiveProject(projectId);
+          } catch {
+            window.localStorage.setItem('activeProjectId', String(projectId));
+          }
         }
         setMessage(t('invitation.accepted'));
         setStatus('success');
@@ -34,7 +38,7 @@ export default function InvitationPage(): React.ReactElement {
         setStatus('error');
         setMessage(error instanceof Error ? error.message : t('invitation.failed'));
       });
-  }, [status, t, token, user]);
+  }, [status, switchActiveProject, t, token, user]);
 
   if (!token) {
     return (
@@ -77,7 +81,7 @@ export default function InvitationPage(): React.ReactElement {
         {status === 'success' ? <Alert severity="success">{message}</Alert> : null}
         {status === 'error' ? <Alert severity="error">{message}</Alert> : null}
         {status === 'success' ? (
-          <Button variant="contained" onClick={() => { navigate('/app', { replace: true }); window.location.reload(); }}>
+          <Button variant="contained" onClick={() => navigate('/app', { replace: true })}>
             {t('invitation.openApp')}
           </Button>
         ) : null}

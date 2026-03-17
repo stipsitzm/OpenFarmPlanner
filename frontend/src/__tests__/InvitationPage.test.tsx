@@ -16,8 +16,10 @@ vi.mock('../api/api', async () => {
   };
 });
 
+const switchActiveProjectMock = vi.fn(async () => {});
+
 vi.mock('../auth/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 1 } }),
+  useAuth: () => ({ user: { id: 1 }, switchActiveProject: switchActiveProjectMock }),
 }));
 
 describe('InvitationPage', () => {
@@ -31,6 +33,7 @@ describe('InvitationPage', () => {
     );
 
     await waitFor(() => expect(acceptMock).toHaveBeenCalledWith('abc123'));
+    await waitFor(() => expect(switchActiveProjectMock).toHaveBeenCalledWith(2));
     expect(await screen.findByText('Einladung wurde erfolgreich angenommen.')).toBeInTheDocument();
   });
 });
