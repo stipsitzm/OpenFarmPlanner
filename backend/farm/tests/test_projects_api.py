@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -46,6 +47,18 @@ class ProjectsApiTests(APITestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend')
+    def test_invitation_returns_mail_not_sent_on_console_backend(self) -> None:
+        response = self.client.post(
+            f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
+            {'email': 'invitee@example.com', 'role': 'member'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(response.data['mail_sent'])
+        self.assertIn('invite_link', response.data)
+        self.assertEqual(response.data['email_backend'], 'django.core.mail.backends.console.EmailBackend')
 
     def test_member_cannot_invite(self) -> None:
         ProjectMembership.objects.update_or_create(

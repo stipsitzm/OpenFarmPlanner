@@ -1713,16 +1713,35 @@ class ProjectInvitationView(APIView):
             'role': invitation.role,
             'invite_link': invite_link,
         })
+        non_delivery_backends = {
+            'django.core.mail.backends.console.EmailBackend',
+            'django.core.mail.backends.locmem.EmailBackend',
+            'django.core.mail.backends.filebased.EmailBackend',
+            'django.core.mail.backends.dummy.EmailBackend',
+        }
+        backend_is_delivery_capable = settings.EMAIL_BACKEND not in non_delivery_backends
         mail_sent = False
-        try:
-            sent_count = send_mail('Project invitation', body, settings.DEFAULT_FROM_EMAIL, [invitation.email], fail_silently=False)
-            mail_sent = sent_count > 0
-        except Exception:  # noqa: BLE001
-            mail_sent = False
+        mail_error = ''
+
+        if backend_is_delivery_capable:
+            try:
+                sent_count = send_mail('Project invitation', body, settings.DEFAULT_FROM_EMAIL, [invitation.email], fail_silently=False)
+                mail_sent = sent_count > 0
+                if not mail_sent:
+                    mail_error = 'Mail backend accepted request but returned zero deliveries.'
+            except Exception as exc:  # noqa: BLE001
+                mail_sent = False
+                mail_error = str(exc)
+                logger.warning('Project invitation email could not be sent: %s', exc)
+        else:
+            mail_error = 'EMAIL_BACKEND is not configured for outbound delivery.'
+            logger.info('Project invitation created without outbound email delivery because backend=%s', settings.EMAIL_BACKEND)
 
         payload = ProjectInvitationSerializer(invitation).data
         payload['mail_sent'] = mail_sent
         payload['invite_link'] = invite_link
+        payload['mail_error'] = mail_error
+        payload['email_backend'] = settings.EMAIL_BACKEND
         return Response(payload, status=status.HTTP_201_CREATED)
 
 

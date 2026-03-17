@@ -30,11 +30,13 @@ export default function ProjectSettingsPage(): React.ReactElement {
     setError(null);
     try {
       const response = await projectAPI.invite(activeMembership.project_id, { email, role });
-      const data = response.data as { mail_sent?: boolean; invite_link?: string };
+      const data = response.data as { mail_sent?: boolean; invite_link?: string; mail_error?: string; email_backend?: string };
       if (data.mail_sent) {
         setMessage(`Einladung per E-Mail an ${email} wurde versendet.`);
       } else if (data.invite_link) {
-        setMessage(`E-Mail konnte nicht versendet werden. Einladung: ${data.invite_link}`);
+        const details = data.mail_error ? ` Grund: ${data.mail_error}` : '';
+        const backend = data.email_backend ? ` [Backend: ${data.email_backend}]` : '';
+        setMessage(`E-Mail konnte nicht versendet werden.${details}${backend} Einladung: ${data.invite_link}`);
       } else {
         setMessage(`Einladung für ${email} wurde erstellt.`);
       }
