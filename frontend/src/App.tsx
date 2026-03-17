@@ -187,6 +187,15 @@ function RootLayout(): React.ReactElement {
     setIsCreateProjectOpen(true);
   };
 
+  const reloadAfterProjectContextChange = (): void => {
+    window.location.reload();
+  };
+
+  const applyProjectContextChange = async (projectId: number): Promise<void> => {
+    await switchActiveProject(projectId);
+    reloadAfterProjectContextChange();
+  };
+
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
       return;
@@ -197,10 +206,9 @@ function RootLayout(): React.ReactElement {
         name: newProjectName.trim(),
         description: newProjectDescription.trim(),
       });
-      await switchActiveProject(response.data.id);
       setIsCreateProjectOpen(false);
       navigate('/app/anbauplaene');
-      window.location.reload();
+      await applyProjectContextChange(response.data.id);
     } catch (error) {
       console.error('Error creating project:', error);
       showSnackbar(t('projectSwitcher.createError'), 'error');
@@ -216,8 +224,7 @@ function RootLayout(): React.ReactElement {
     }
     setIsSwitchingProject(true);
     try {
-      await switchActiveProject(projectId);
-      window.location.reload();
+      await applyProjectContextChange(projectId);
     } catch (error) {
       console.error('Error switching project:', error);
       showSnackbar(t('projectSwitcher.switchError'), 'error');

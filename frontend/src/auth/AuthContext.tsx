@@ -32,12 +32,16 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+function clearStoredProjectId(): void {
+  window.localStorage.removeItem('activeProjectId');
+}
+
 function applyResolvedProjectId(me: AuthUser): number | null {
   if (me.resolved_project_id) {
     window.localStorage.setItem('activeProjectId', String(me.resolved_project_id));
     return me.resolved_project_id;
   }
-  window.localStorage.removeItem('activeProjectId');
+  clearStoredProjectId();
   return null;
 }
 
@@ -46,16 +50,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   const [isLoading, setIsLoading] = useState(true);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
 
+  const applyAuthenticatedUser = (me: AuthUser): void => {
+    setUser(me);
+    setActiveProjectId(applyResolvedProjectId(me));
+  };
+
+  const clearAuthenticatedUser = (): void => {
+    setUser(null);
+    setActiveProjectId(null);
+    clearStoredProjectId();
+  };
+
   useEffect(() => {
     void (async () => {
       try {
         const me = await getMe();
-        setUser(me);
-        setActiveProjectId(applyResolvedProjectId(me));
+        applyAuthenticatedUser(me);
       } catch {
-        setUser(null);
-        setActiveProjectId(null);
-        window.localStorage.removeItem('activeProjectId');
+        clearAuthenticatedUser();
       } finally {
         setIsLoading(false);
       }
@@ -68,15 +80,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     activeProjectId,
     login: async (email, password) => {
       const me = await loginRequest(email, password);
-      setUser(me);
-      setActiveProjectId(applyResolvedProjectId(me));
+      applyAuthenticatedUser(me);
       return me;
     },
     logout: async () => {
       await logoutRequest();
-      setUser(null);
-      setActiveProjectId(null);
-      window.localStorage.removeItem('activeProjectId');
+      clearAuthenticatedUser();
     },
     register: async (email, password, passwordConfirm, displayName = '') => {
       const response = await registerRequest(email, password, passwordConfirm, displayName);
@@ -84,8 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     },
     activate: async (uid, token) => {
       const me = await activateRequest(uid, token);
-      setUser(me);
-      setActiveProjectId(applyResolvedProjectId(me));
+      applyAuthenticatedUser(me);
     },
     resendActivation: async (email) => {
       const response = await resendActivationRequest(email);
@@ -101,15 +109,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     },
     requestAccountDeletion: async (password) => {
       const response = await requestAccountDeletionRequest(password);
-      setUser(null);
-      setActiveProjectId(null);
-      window.localStorage.removeItem('activeProjectId');
+      clearAuthenticatedUser();
       return response;
     },
     restoreAccount: async (email, password) => {
       const me = await restoreAccountRequest(email, password);
-      setUser(me);
-      setActiveProjectId(applyResolvedProjectId(me));
+      applyAuthenticatedUser(me);
       return me;
     },
     switchActiveProject: async (projectId: number) => {

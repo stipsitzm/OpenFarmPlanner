@@ -20,9 +20,10 @@ export default function InvitationPage(): React.ReactElement {
       return;
     }
 
-    setStatus('loading');
-    void projectAPI.acceptInvitation(token)
-      .then(async (response) => {
+    const acceptInvitation = async (): Promise<void> => {
+      setStatus('loading');
+      try {
+        const response = await projectAPI.acceptInvitation(token);
         const projectId = response.data.project_id;
         if (projectId) {
           try {
@@ -33,11 +34,13 @@ export default function InvitationPage(): React.ReactElement {
         }
         setMessage(t('invitation.accepted'));
         setStatus('success');
-      })
-      .catch((error) => {
+      } catch (error) {
         setStatus('error');
         setMessage(error instanceof Error ? error.message : t('invitation.failed'));
-      });
+      }
+    };
+
+    void acceptInvitation();
   }, [status, switchActiveProject, t, token, user]);
 
   if (!token) {
