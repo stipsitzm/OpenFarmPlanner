@@ -15,4 +15,11 @@ export interface AuthUser {
   resolved_project_id: number | null;
   needs_project_selection: boolean;
   memberships: ProjectMembershipInfo[];
+  account_pending_deletion: boolean;
+  scheduled_deletion_at: string | null;
+}
+
+export interface AccountDeleteResponse {
+  detail: string;
+  scheduled_deletion_at: string;
 }

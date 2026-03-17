@@ -14,6 +14,7 @@ from rest_framework import serializers
 
 from farm.models import ProjectMembership
 from farm.project_context import resolve_project_for_user
+from .models import AccountDeletionRequest
 
 User = get_user_model()
 _username_validator = UnicodeUsernameValidator()
@@ -60,6 +61,8 @@ class UserSerializer(serializers.ModelSerializer):
     memberships = serializers.SerializerMethodField()
     resolved_project_id = serializers.SerializerMethodField()
     needs_project_selection = serializers.SerializerMethodField()
+    account_pending_deletion = serializers.SerializerMethodField()
+    scheduled_deletion_at = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -74,6 +77,8 @@ class UserSerializer(serializers.ModelSerializer):
             'memberships',
             'resolved_project_id',
             'needs_project_selection',
+            'account_pending_deletion',
+            'scheduled_deletion_at',
         )
         read_only_fields = fields
 
@@ -111,6 +116,16 @@ class UserSerializer(serializers.ModelSerializer):
     def get_needs_project_selection(self, obj: User) -> bool:
         _, needs_selection = resolve_project_for_user(obj)
         return needs_selection
+
+    def get_account_pending_deletion(self, obj: User) -> bool:
+        deletion = AccountDeletionRequest.objects.filter(user=obj).first()
+        return bool(deletion and deletion.is_pending)
+
+    def get_scheduled_deletion_at(self, obj: User) -> str | None:
+        deletion = AccountDeletionRequest.objects.filter(user=obj).first()
+        if deletion is None or deletion.scheduled_deletion_at is None or deletion.deleted_at is not None:
+            return None
+        return deletion.scheduled_deletion_at.isoformat()
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -171,3 +186,12 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError({'password_confirm': _de(_('Passwords do not match.'))})
         validate_password(attrs['password'])
         return attrs
+
+
+class AccountDeleteRequestSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True)
+
+
+class AccountRestoreSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)

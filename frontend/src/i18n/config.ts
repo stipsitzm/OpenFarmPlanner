@@ -22,6 +22,7 @@ import hierarchyDE from './locales/de/hierarchy.json';
 import ganttChartDE from './locales/de/ganttChart.json';
 import suppliersDE from './locales/de/suppliers.json';
 import authDE from './locales/de/auth.json';
+import accountDE from './locales/de/account.json';
 
 // Configure i18next
 i18n
@@ -35,7 +36,7 @@ i18n
     debug: import.meta.env.DEV,
     
     // Namespaces for organizing translations
-    ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart', 'suppliers', 'auth'],
+    ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart', 'suppliers', 'auth', 'account'],
     defaultNS: 'common',
     
     // Translation resources
@@ -53,6 +54,7 @@ i18n
         ganttChart: ganttChartDE,
         suppliers: suppliersDE,
         auth: authDE,
+        account: accountDE,
       },
     },
     

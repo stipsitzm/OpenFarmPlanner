@@ -3,10 +3,11 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { AuthApiError } from '../../auth/authApi';
 import { useTranslation } from '../../i18n';
 
 export default function LoginPage(): React.ReactElement {
-  const { user, login } = useAuth();
+  const { user, login, restoreAccount } = useAuth();
   const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const location = useLocation();
@@ -14,6 +15,7 @@ export default function LoginPage(): React.ReactElement {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingDeletionAt, setPendingDeletionAt] = useState<string | null>(null);
 
   if (user) return <Navigate to="/app" replace />;
 
@@ -29,7 +31,26 @@ export default function LoginPage(): React.ReactElement {
       const destination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? target;
       navigate(destination, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('login.failed'));
+      if (err instanceof AuthApiError && err.code === 'account_pending_deletion') {
+        setPendingDeletionAt(err.scheduledDeletionAt ?? null);
+        setError(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : t('login.failed'));
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRestore = async (): Promise<void> => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const me = await restoreAccount(email.trim().toLowerCase(), password);
+      const hasProjects = (me.memberships?.length ?? 0) > 0;
+      navigate(hasProjects ? '/app' : '/app/project-selection', { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('login.restoreFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -41,9 +62,19 @@ export default function LoginPage(): React.ReactElement {
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2}>
           {error ? <Alert severity="error">{error}</Alert> : null}
+          {pendingDeletionAt ? (
+            <Alert severity="warning">
+              {t('login.pendingDeletion', { date: new Date(pendingDeletionAt).toLocaleString('de-DE') })}
+            </Alert>
+          ) : null}
           <TextField label={t('login.email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           <TextField label={t('login.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           <Button type="submit" variant="contained" disabled={submitting}>{submitting ? t('login.submitting') : t('login.submit')}</Button>
+          {pendingDeletionAt ? (
+            <Button variant="outlined" disabled={submitting} onClick={() => void handleRestore()}>
+              {t('login.restoreAccount')}
+            </Button>
+          ) : null}
           <Button component={RouterLink} to="/register">{t('login.noAccount')}</Button>
           <Button component={RouterLink} to="/forgot-password">{t('login.forgotPassword')}</Button>
         </Stack>

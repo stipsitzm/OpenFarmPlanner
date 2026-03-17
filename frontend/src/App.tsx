@@ -54,6 +54,7 @@ import ActivatePage from './pages/auth/ActivatePage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import ProjectSelectionPage from './pages/ProjectSelectionPage';
+import AccountSettingsPage from './pages/AccountSettingsPage';
 
 
 /**
@@ -248,6 +249,9 @@ function RootLayout(): React.ReactElement {
             <MenuItem onClick={() => { handleGlobalMenuClose(); navigate('/app/project-selection'); }}>
               Projekt wechseln
             </MenuItem>
+            <MenuItem onClick={() => { handleGlobalMenuClose(); navigate('/app/account-settings'); }}>
+              {t('accountSettings')}
+            </MenuItem>
             <MenuItem onClick={handleOpenShortcuts}>
               Tastenkürzel
             </MenuItem>
@@ -406,6 +410,7 @@ function createAppRouter(basename: string) {
             { path: 'gantt-chart', element: <GanttChart /> },
             { path: 'seed-demand', element: <SeedDemandPage /> },
             { path: 'project-selection', element: <ProjectSelectionPage /> },
+            { path: 'account-settings', element: <AccountSettingsPage /> },
           ],
         },
       ],

@@ -8,6 +8,8 @@ import {
   resendActivation as resendActivationRequest,
   requestPasswordReset as requestPasswordResetRequest,
   confirmPasswordReset as confirmPasswordResetRequest,
+  requestAccountDeletion as requestAccountDeletionRequest,
+  restoreAccount as restoreAccountRequest,
 } from './authApi';
 import type { AuthUser } from './types';
 
@@ -21,6 +23,8 @@ interface AuthContextValue {
   resendActivation: (email: string) => Promise<string>;
   requestPasswordReset: (email: string) => Promise<string>;
   confirmPasswordReset: (uid: string, token: string, password: string, passwordConfirm: string) => Promise<string>;
+  requestAccountDeletion: (password: string) => Promise<{ detail: string; scheduled_deletion_at: string }>;
+  restoreAccount: (email: string, password: string) => Promise<AuthUser>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -85,6 +89,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       const response = await confirmPasswordResetRequest(uid, token, password, passwordConfirm);
       return response.detail;
     },
+    requestAccountDeletion: async (password) => {
+      const response = await requestAccountDeletionRequest(password);
+      setUser(null);
+      window.localStorage.removeItem('activeProjectId');
+      return response;
+    },
+    restoreAccount: async (email, password) => {
+      const me = await restoreAccountRequest(email, password);
+      setUser(me);
+      if (me.resolved_project_id) {
+        window.localStorage.setItem('activeProjectId', String(me.resolved_project_id));
+      }
+      return me;
+    },
+
   }), [isLoading, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

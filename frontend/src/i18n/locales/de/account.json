@@ -1,0 +1,16 @@
+{
+  "title": "Kontoeinstellungen",
+  "email": "E-Mail",
+  "displayName": "Anzeigename",
+  "dangerZone": "Gefährlicher Bereich",
+  "deleteDescription": "Wenn du dein Konto löschst, wird es sofort deaktiviert und nach 14 Tagen endgültig anonymisiert oder gelöscht.",
+  "restoreDescription": "Innerhalb dieser Frist kannst du die Löschung rückgängig machen.",
+  "deleteButton": "Konto löschen",
+  "dialogTitle": "Konto zur Löschung vormerken",
+  "dialogWarning": "Bitte bestätige mit deinem aktuellen Passwort. Dein Konto wird deaktiviert und nach 14 Tagen endgültig anonymisiert.",
+  "currentPassword": "Aktuelles Passwort",
+  "cancel": "Abbrechen",
+  "confirmDelete": "Konto zur Löschung vormerken",
+  "deletionScheduled": "Dein Konto wurde zur Löschung vorgemerkt. Endgültige Löschung am {{date}}.",
+  "noDisplayName": "—"
+}
