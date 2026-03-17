@@ -24,3 +24,34 @@ class PendingActivation(models.Model):
         """
         identifier = getattr(self.user, 'email', '') or getattr(self.user, 'username', '')
         return f'{identifier} (expires: {self.activation_expires_at.isoformat()})'
+
+
+class UserProjectSettings(models.Model):
+    """Stores per-user project preferences for default and last active project."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='project_settings',
+    )
+    default_project = models.ForeignKey(
+        'farm.Project',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='default_for_users',
+    )
+    last_project = models.ForeignKey(
+        'farm.Project',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='last_for_users',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        """Return a human-readable identifier."""
+        identifier = getattr(self.user, 'email', '') or getattr(self.user, 'username', '')
+        return f'Project settings for {identifier}'

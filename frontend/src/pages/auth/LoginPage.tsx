@@ -23,8 +23,10 @@ export default function LoginPage(): React.ReactElement {
     setError(null);
 
     try {
-      await login(email.trim().toLowerCase(), password);
-      const destination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/app';
+      const me = await login(email.trim().toLowerCase(), password);
+      const hasProjects = (me.memberships?.length ?? 0) > 0;
+      const target = me.needs_project_selection || !hasProjects ? '/app/project-selection' : '/app';
+      const destination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? target;
       navigate(destination, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : t('login.failed'));

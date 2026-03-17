@@ -17,15 +17,18 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q, Count
 from django.db.models.functions import Coalesce, Ceil, Cast
-from rest_framework import viewsets, status, generics, parsers
+from rest_framework import viewsets, status, generics, parsers, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.crypto import get_random_string
+from django.utils.text import slugify
 from django.utils.dateparse import parse_date
-from .models import Location, Field, Bed, BedLayout, FieldLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, culture_media_upload_path, CultureRevision, ProjectRevision
+from .models import Location, Field, Bed, BedLayout, FieldLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
+from .project_context import get_active_project_or_400, require_project_admin
 from .serializers import (
     LocationSerializer,
     FieldSerializer,
@@ -41,7 +44,13 @@ from .serializers import (
     CultureHistoryEntrySerializer,
     CultureRestoreSerializer,
     SeedPackageSerializer,
+    ProjectSerializer,
+    ProjectMembershipSerializer,
+    ProjectInvitationSerializer,
 )
+from accounts.models import UserProjectSettings
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 
 from .services_area import calculate_remaining_bed_area
 
@@ -363,7 +372,28 @@ class ProjectRevisionMixin:
 
 
 
-class LocationViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
+
+
+class ProjectScopedMixin:
+    """Resolve active project from request and hard-scope querysets."""
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        request.active_project = get_active_project_or_400(request)
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if hasattr(queryset.model, 'project'):
+            return queryset.filter(project=self.request.active_project)
+        return queryset
+
+    def perform_create(self, serializer):
+        if 'project' in serializer.fields:
+            serializer.save(project=self.request.active_project)
+            return
+        serializer.save()
+
+class LocationViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Location model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -377,7 +407,7 @@ class LocationViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     serializer_class = LocationSerializer
 
     def perform_create(self, serializer):
-        instance = serializer.save()
+        instance = serializer.save(project=self.request.active_project)
         self.create_project_revision(f"Location created #{instance.pk}")
 
     def perform_update(self, serializer):
@@ -391,7 +421,7 @@ class LocationViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
 
 
 
-class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
+class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Supplier model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -497,7 +527,8 @@ class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         }
         supplier, created = Supplier.objects.get_or_create(
             name_normalized=normalized,
-            defaults=supplier_defaults
+            project=request.active_project,
+            defaults={**supplier_defaults, 'project': request.active_project}
         )
         if not created:
             update_fields: list[str] = []
@@ -521,7 +552,7 @@ class SupplierViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         )
 
 
-class FieldViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
+class FieldViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Field model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -535,7 +566,7 @@ class FieldViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     serializer_class = FieldSerializer
 
     def perform_create(self, serializer):
-        instance = serializer.save()
+        instance = serializer.save(project=self.request.active_project)
         self.create_project_revision(f"Field created #{instance.pk}")
 
     def perform_update(self, serializer):
@@ -549,7 +580,7 @@ class FieldViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
 
 
 
-class BedViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
+class BedViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Bed model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -563,7 +594,7 @@ class BedViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     serializer_class = BedSerializer
 
     def perform_create(self, serializer):
-        instance = serializer.save()
+        instance = serializer.save(project=self.request.active_project)
         self.create_project_revision(f"Bed created #{instance.pk}")
 
     def perform_update(self, serializer):
@@ -577,7 +608,7 @@ class BedViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
 
 
 
-class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
+class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Culture model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -592,14 +623,14 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
 
     
     def perform_create(self, serializer):
-        instance = serializer.save()
+        instance = serializer.save(project=self.request.active_project)
         self.create_project_revision(f"Culture created #{instance.pk}")
 
     def get_queryset(self):
         include_deleted = self.request.query_params.get('include_deleted') in {'1', 'true', 'True'}
         if include_deleted:
-            return Culture.all_objects.all()
-        return Culture.objects.all()
+            return Culture.all_objects.filter(project=self.request.active_project)
+        return Culture.objects.filter(project=self.request.active_project)
     
     def _resolve_supplier(self, culture_data: dict) -> Supplier | None:
         """Resolve supplier from culture data using supplier_id or supplier_name.
@@ -1078,12 +1109,12 @@ class CultureViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
 
 
 
-class SeedPackageViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
+class SeedPackageViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
     queryset = SeedPackage.objects.select_related('culture').all().order_by('size_unit', 'size_value')
     serializer_class = SeedPackageSerializer
 
     def perform_create(self, serializer):
-        instance = serializer.save()
+        instance = serializer.save(project=self.request.active_project)
         self.create_project_revision(f"Seed package created #{instance.pk}")
 
     def perform_update(self, serializer):
@@ -1095,7 +1126,7 @@ class SeedPackageViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
         instance.delete()
         self.create_project_revision(f"Seed package deleted #{package_id}")
 
-class PlantingPlanViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
+class PlantingPlanViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for PlantingPlan model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -1116,7 +1147,7 @@ class PlantingPlanViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         current_user = self.request.user if self.request.user.is_authenticated else None
-        instance = serializer.save(created_by=current_user, updated_by=current_user)
+        instance = serializer.save(created_by=current_user, updated_by=current_user, project=self.request.active_project)
         self.create_project_revision(f"PlantingPlan created #{instance.pk}")
 
     def perform_update(self, serializer):
@@ -1192,7 +1223,7 @@ class PlantingPlanViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
             'end_date': end_date.isoformat(),
         })
 
-class TaskViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
+class TaskViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Task model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -1206,7 +1237,7 @@ class TaskViewSet(ProjectRevisionMixin, viewsets.ModelViewSet):
     serializer_class = TaskSerializer
 
     def perform_create(self, serializer):
-        instance = serializer.save()
+        instance = serializer.save(project=self.request.active_project)
         self.create_project_revision(f"Task created #{instance.pk}")
 
     def perform_update(self, serializer):
@@ -1546,3 +1577,164 @@ class SeedDemandListView(generics.ListAPIView):
 
         serializer = self.get_serializer(rows, many=True)
         return Response({'count': len(rows), 'next': None, 'previous': None, 'results': serializer.data})
+
+class MyProjectsView(APIView):
+    """Return all projects for current user with membership metadata."""
+
+    def get(self, request):
+        memberships = ProjectMembership.objects.select_related('project').filter(
+            user=request.user,
+            project__is_active=True,
+        )
+        settings_obj, _ = UserProjectSettings.objects.get_or_create(user=request.user)
+        payload = []
+        for membership in memberships:
+            project = membership.project
+            payload.append(
+                {
+                    'project': ProjectSerializer(project).data,
+                    'role': membership.role,
+                    'is_default': settings_obj.default_project_id == project.id,
+                    'is_last': settings_obj.last_project_id == project.id,
+                }
+            )
+        return Response(payload)
+
+
+class ProjectSwitchView(APIView):
+    """Switch active project for current user and persist last project."""
+
+    def post(self, request):
+        project_id = request.data.get('project_id')
+        try:
+            project_id = int(project_id)
+        except (TypeError, ValueError):
+            return Response({'detail': 'Invalid project_id.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        membership = ProjectMembership.objects.filter(user=request.user, project_id=project_id).first()
+        if membership is None:
+            return Response({'detail': 'Not a member of the selected project.'}, status=status.HTTP_403_FORBIDDEN)
+
+        settings_obj, _ = UserProjectSettings.objects.get_or_create(user=request.user)
+        settings_obj.last_project_id = project_id
+        if request.data.get('set_default') is True:
+            settings_obj.default_project_id = project_id
+        settings_obj.save(update_fields=['last_project', 'default_project', 'updated_at'])
+        return Response({'detail': 'Project switched.', 'project_id': project_id})
+
+
+class ProjectViewSet(viewsets.ModelViewSet):
+    """Project CRUD for authenticated users."""
+
+    serializer_class = ProjectSerializer
+    queryset = Project.objects.filter(is_active=True)
+
+    def get_queryset(self):
+        return Project.objects.filter(memberships__user=self.request.user, is_active=True).distinct()
+
+    def perform_create(self, serializer):
+        project = serializer.save(slug=slugify(serializer.validated_data['name']) or get_random_string(8).lower())
+        ProjectMembership.objects.get_or_create(
+            user=self.request.user,
+            project=project,
+            defaults={'role': ProjectMembership.ROLE_ADMIN},
+        )
+        settings_obj, _ = UserProjectSettings.objects.get_or_create(user=self.request.user)
+        if settings_obj.default_project_id is None:
+            settings_obj.default_project = project
+        settings_obj.last_project = project
+        settings_obj.save()
+
+
+class ProjectMembersView(APIView):
+    """List and mutate project memberships."""
+
+    def get(self, request, project_id: int):
+        memberships = ProjectMembership.objects.select_related('user').filter(project_id=project_id, user__is_active=True)
+        if not memberships.filter(user=request.user).exists():
+            return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+        return Response(ProjectMembershipSerializer(memberships, many=True).data)
+
+    def patch(self, request, project_id: int):
+        require_project_admin(request.user, project_id)
+        membership_id = request.data.get('membership_id')
+        role = request.data.get('role')
+        membership = get_object_or_404(ProjectMembership, id=membership_id, project_id=project_id)
+        if role not in {ProjectMembership.ROLE_ADMIN, ProjectMembership.ROLE_MEMBER}:
+            return Response({'detail': 'Invalid role.'}, status=status.HTTP_400_BAD_REQUEST)
+        membership.role = role
+        membership.save(update_fields=['role'])
+        return Response(ProjectMembershipSerializer(membership).data)
+
+    def delete(self, request, project_id: int):
+        require_project_admin(request.user, project_id)
+        membership_id = request.data.get('membership_id')
+        membership = get_object_or_404(ProjectMembership, id=membership_id, project_id=project_id)
+        membership.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ProjectInvitationView(APIView):
+    """Create and list project invitations."""
+
+    def get(self, request, project_id: int):
+        if not ProjectMembership.objects.filter(user=request.user, project_id=project_id).exists():
+            return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+        invitations = ProjectInvitation.objects.filter(project_id=project_id).order_by('-created_at')
+        return Response(ProjectInvitationSerializer(invitations, many=True).data)
+
+    def post(self, request, project_id: int):
+        require_project_admin(request.user, project_id)
+        serializer = ProjectInvitationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        project = get_object_or_404(Project, id=project_id, is_active=True)
+        invitation = ProjectInvitation.objects.create(
+            project=project,
+            email=serializer.validated_data['email'].strip().lower(),
+            role=serializer.validated_data['role'],
+            token=get_random_string(48),
+            invited_by=request.user,
+            expires_at=timezone.now() + timedelta(days=14),
+            message=serializer.validated_data.get('message', ''),
+        )
+        invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invitation?token={invitation.token}"
+        body = render_to_string('accounts/emails/project_invitation_email.txt', {
+            'project_name': project.name,
+            'role': invitation.role,
+            'invite_link': invite_link,
+        })
+        send_mail('Project invitation', body, settings.DEFAULT_FROM_EMAIL, [invitation.email])
+        return Response(ProjectInvitationSerializer(invitation).data, status=status.HTTP_201_CREATED)
+
+
+class AcceptProjectInvitationView(APIView):
+    """Accept invitation token and create membership for matching account."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        token = request.data.get('token', '')
+        invitation = ProjectInvitation.objects.select_related('project').filter(token=token).first()
+        if invitation is None or not invitation.is_open:
+            return Response({'detail': 'Invalid or expired invitation.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not request.user.is_authenticated:
+            return Response({'detail': 'Invitation token is valid. Please sign in to accept.'})
+
+        if request.user.email.lower().strip() != invitation.email.lower().strip():
+            return Response({'detail': 'Invitation email does not match current user.'}, status=status.HTTP_403_FORBIDDEN)
+
+        ProjectMembership.objects.get_or_create(
+            user=request.user,
+            project=invitation.project,
+            defaults={'role': invitation.role},
+        )
+        invitation.accepted_at = timezone.now()
+        invitation.save(update_fields=['accepted_at'])
+
+        settings_obj, _ = UserProjectSettings.objects.get_or_create(user=request.user)
+        if settings_obj.default_project_id is None:
+            settings_obj.default_project = invitation.project
+        settings_obj.last_project = invitation.project
+        settings_obj.save()
+        return Response({'detail': 'Invitation accepted.', 'project_id': invitation.project_id})

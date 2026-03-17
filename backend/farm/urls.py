@@ -20,6 +20,12 @@ from .views import (
     CultureUndeleteView,
     SeedPackageViewSet,
     BedLayoutByLocationView,
+    ProjectViewSet,
+    MyProjectsView,
+    ProjectSwitchView,
+    ProjectMembersView,
+    ProjectInvitationView,
+    AcceptProjectInvitationView,
 )
 
 router = DefaultRouter()
@@ -31,6 +37,7 @@ router.register(r'cultures', CultureViewSet)
 router.register(r'seed-packages', SeedPackageViewSet)
 router.register(r'planting-plans', PlantingPlanViewSet)
 router.register(r'tasks', TaskViewSet)
+router.register(r'projects', ProjectViewSet, basename='projects')
 
 urlpatterns = [
     path('history/project/', ProjectHistoryListView.as_view(), name='project-history-list'),
@@ -44,5 +51,10 @@ urlpatterns = [
     path('seed-demand/', SeedDemandListView.as_view(), name='seed-demand-list'),
     path('yield-calendar/', YieldCalendarListView.as_view(), name='yield-calendar-list'),
     path('locations/<int:location_id>/layouts/', BedLayoutByLocationView.as_view(), name='location-layouts'),
+    path('projects-bootstrap/', MyProjectsView.as_view(), name='projects-bootstrap'),
+    path('projects-switch/', ProjectSwitchView.as_view(), name='projects-switch'),
+    path('projects/<int:project_id>/members/', ProjectMembersView.as_view(), name='project-members'),
+    path('projects/<int:project_id>/invitations/', ProjectInvitationView.as_view(), name='project-invitations'),
+    path('project-invitations/accept/', AcceptProjectInvitationView.as_view(), name='project-invitations-accept'),
     path('', include(router.urls)),
 ]

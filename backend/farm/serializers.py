@@ -20,6 +20,9 @@ from .models import (
     Supplier,
     Task,
     SeedPackage,
+    Project,
+    ProjectMembership,
+    ProjectInvitation,
     is_supplier_domain,
 )
 
@@ -889,3 +892,26 @@ class CultureHistoryEntrySerializer(serializers.Serializer):
 
 class CultureRestoreSerializer(serializers.Serializer):
     history_id = serializers.IntegerField()
+
+
+class ProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = ['id', 'name', 'slug', 'description', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ProjectMembershipSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+
+    class Meta:
+        model = ProjectMembership
+        fields = ['id', 'user', 'user_email', 'project', 'role', 'created_at']
+        read_only_fields = ['id', 'created_at', 'project']
+
+
+class ProjectInvitationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectInvitation
+        fields = ['id', 'project', 'email', 'role', 'token', 'invited_by', 'accepted_at', 'expires_at', 'revoked_at', 'message', 'created_at']
+        read_only_fields = ['id', 'token', 'accepted_at', 'revoked_at', 'created_at', 'project', 'invited_by']

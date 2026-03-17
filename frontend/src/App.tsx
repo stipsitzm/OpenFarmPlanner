@@ -53,6 +53,7 @@ import RegisterPage from './pages/auth/RegisterPage';
 import ActivatePage from './pages/auth/ActivatePage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import ProjectSelectionPage from './pages/ProjectSelectionPage';
 
 
 /**
@@ -209,7 +210,7 @@ function RootLayout(): React.ReactElement {
             >
               <MenuIcon fontSize="small" />
             </IconButton>
-            <span className="mobile-nav-title">OpenFarmPlanner</span>
+            <span className="mobile-nav-title">OpenFarmPlanner {user?.memberships?.find((m) => m.project_id === Number(window.localStorage.getItem('activeProjectId')))?.project_name ? `· ${user.memberships.find((m) => m.project_id === Number(window.localStorage.getItem('activeProjectId')))?.project_name}` : ''}</span>
           </div>
         ) : (
           <div className="nav-links">
@@ -243,6 +244,9 @@ function RootLayout(): React.ReactElement {
           >
             <MenuItem onClick={() => void handleOpenProjectHistory()} disabled={historyLoading}>
               Versionsverlauf…
+            </MenuItem>
+            <MenuItem onClick={() => { handleGlobalMenuClose(); navigate('/app/project-selection'); }}>
+              Projekt wechseln
             </MenuItem>
             <MenuItem onClick={handleOpenShortcuts}>
               Tastenkürzel
@@ -401,6 +405,7 @@ function createAppRouter(basename: string) {
             { path: 'planting-plans', element: <PlantingPlans /> },
             { path: 'gantt-chart', element: <GanttChart /> },
             { path: 'seed-demand', element: <SeedDemandPage /> },
+            { path: 'project-selection', element: <ProjectSelectionPage /> },
           ],
         },
       ],

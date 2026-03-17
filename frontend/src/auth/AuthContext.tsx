@@ -14,7 +14,7 @@ import type { AuthUser } from './types';
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
   register: (email: string, password: string, passwordConfirm: string, displayName?: string) => Promise<string>;
   activate: (uid: string, token: string) => Promise<void>;
@@ -32,9 +32,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   useEffect(() => {
     void (async () => {
       try {
-        setUser(await getMe());
+        const me = await getMe();
+        setUser(me);
+        if (me.resolved_project_id) {
+          window.localStorage.setItem('activeProjectId', String(me.resolved_project_id));
+        }
       } catch {
         setUser(null);
+      window.localStorage.removeItem('activeProjectId');
       } finally {
         setIsLoading(false);
       }
@@ -45,18 +50,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     user,
     isLoading,
     login: async (email, password) => {
-      setUser(await loginRequest(email, password));
+      const me = await loginRequest(email, password);
+      setUser(me);
+      if (me.resolved_project_id) {
+        window.localStorage.setItem('activeProjectId', String(me.resolved_project_id));
+      }
+      return me;
     },
     logout: async () => {
       await logoutRequest();
       setUser(null);
+      window.localStorage.removeItem('activeProjectId');
     },
     register: async (email, password, passwordConfirm, displayName = '') => {
       const response = await registerRequest(email, password, passwordConfirm, displayName);
       return response.detail;
     },
     activate: async (uid, token) => {
-      setUser(await activateRequest(uid, token));
+      const me = await activateRequest(uid, token);
+      setUser(me);
+      if (me.resolved_project_id) {
+        window.localStorage.setItem('activeProjectId', String(me.resolved_project_id));
+      }
     },
     resendActivation: async (email) => {
       const response = await resendActivationRequest(email);
