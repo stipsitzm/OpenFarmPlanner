@@ -40,6 +40,12 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(settings_obj.last_project_id, self.project2.id)
 
 
+    def test_create_project_without_slug_succeeds(self) -> None:
+        response = self.client.post('/openfarmplanner/api/projects/', {'name': 'Neues Projekt', 'description': ''}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['name'], 'Neues Projekt')
+        self.assertTrue(response.data['slug'])
+
     def test_admin_can_invite_member(self) -> None:
         response = self.client.post(
             f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
