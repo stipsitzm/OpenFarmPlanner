@@ -1,4 +1,4 @@
-import type { AccountDeleteResponse, AuthUser } from './types';
+import type { AccountDeleteResponse, AuthUser, ProjectSwitchResponse } from './types';
 
 const API_BASE = import.meta.env.PROD
   ? '/openfarmplanner/api'
@@ -150,5 +150,14 @@ export async function confirmPasswordReset(uid: string, token: string, password:
     method: 'POST',
     headers: csrfHeader(),
     body: JSON.stringify({ uid, token, password, password_confirm: passwordConfirm }),
+  });
+}
+
+export async function switchActiveProject(projectId: number): Promise<ProjectSwitchResponse> {
+  await ensureCsrfCookie();
+  return request<ProjectSwitchResponse>('/projects-switch/', {
+    method: 'POST',
+    headers: csrfHeader(),
+    body: JSON.stringify({ project_id: projectId }),
   });
 }

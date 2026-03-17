@@ -8,6 +8,7 @@ import type { AuthUser } from '../auth/types';
 const authState = {
   user: null as AuthUser | null,
   isLoading: false,
+  activeProjectId: null as number | null,
   login: vi.fn(async () => ({}) as AuthUser),
   logout: vi.fn(async () => {}),
   register: vi.fn(async () => 'ok'),
@@ -17,6 +18,7 @@ const authState = {
   confirmPasswordReset: vi.fn(async () => 'ok'),
   requestAccountDeletion: vi.fn(async () => ({ detail: 'ok', scheduled_deletion_at: new Date().toISOString() })),
   restoreAccount: vi.fn(async () => ({}) as AuthUser),
+  switchActiveProject: vi.fn(async () => {}),
 };
 
 vi.mock('../auth/AuthContext', () => ({
@@ -27,6 +29,7 @@ describe('App', () => {
   beforeEach(() => {
     authState.user = null;
     authState.isLoading = false;
+    authState.activeProjectId = null;
     window.history.pushState({}, '', '/');
   });
 
@@ -52,6 +55,7 @@ describe('App', () => {
       account_pending_deletion: false,
       scheduled_deletion_at: null,
     };
+    authState.activeProjectId = null;
     window.history.pushState({}, '', '/app/anbauplaene');
 
     render(<CommandProvider><App /></CommandProvider>);
@@ -59,6 +63,7 @@ describe('App', () => {
     expect(await screen.findByText(translations.navigation.locations)).toBeInTheDocument();
     expect(screen.getByText(translations.navigation.cultures)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: translations.navigation.plantingPlans })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aktives Projekt wechseln' })).toBeInTheDocument();
   });
 
   it('shows account settings in three-dot menu', async () => {

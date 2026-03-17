@@ -1,0 +1,19 @@
+{
+  "home": "Home",
+  "locations": "Locations",
+  "fieldsAndBeds": "Fields",
+  "cultures": "Cultures",
+  "suppliers": "Suppliers",
+  "plantingPlans": "Planting plans",
+  "ganttChart": "Planting calendar",
+  "seedDemand": "Seed demand",
+  "graphicalFields": "Graphical view",
+  "accountSettings": "Account settings",
+  "projectSwitcher": {
+    "ariaLabel": "Switch active project",
+    "noProject": "No project",
+    "zeroProjects": "You currently do not have access to any projects.",
+    "newProjectPlaceholder": "New project (coming soon)",
+    "switchError": "Project could not be switched."
+  }
+}

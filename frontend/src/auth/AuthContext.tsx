@@ -10,12 +10,14 @@ import {
   confirmPasswordReset as confirmPasswordResetRequest,
   requestAccountDeletion as requestAccountDeletionRequest,
   restoreAccount as restoreAccountRequest,
+  switchActiveProject as switchActiveProjectRequest,
 } from './authApi';
 import type { AuthUser } from './types';
 
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
+  activeProjectId: number | null;
   login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
   register: (email: string, password: string, passwordConfirm: string, displayName?: string) => Promise<string>;
@@ -25,25 +27,35 @@ interface AuthContextValue {
   confirmPasswordReset: (uid: string, token: string, password: string, passwordConfirm: string) => Promise<string>;
   requestAccountDeletion: (password: string) => Promise<{ detail: string; scheduled_deletion_at: string }>;
   restoreAccount: (email: string, password: string) => Promise<AuthUser>;
+  switchActiveProject: (projectId: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+function applyResolvedProjectId(me: AuthUser): number | null {
+  if (me.resolved_project_id) {
+    window.localStorage.setItem('activeProjectId', String(me.resolved_project_id));
+    return me.resolved_project_id;
+  }
+  window.localStorage.removeItem('activeProjectId');
+  return null;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
 
   useEffect(() => {
     void (async () => {
       try {
         const me = await getMe();
         setUser(me);
-        if (me.resolved_project_id) {
-          window.localStorage.setItem('activeProjectId', String(me.resolved_project_id));
-        }
+        setActiveProjectId(applyResolvedProjectId(me));
       } catch {
         setUser(null);
-      window.localStorage.removeItem('activeProjectId');
+        setActiveProjectId(null);
+        window.localStorage.removeItem('activeProjectId');
       } finally {
         setIsLoading(false);
       }
@@ -53,17 +65,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   const value = useMemo<AuthContextValue>(() => ({
     user,
     isLoading,
+    activeProjectId,
     login: async (email, password) => {
       const me = await loginRequest(email, password);
       setUser(me);
-      if (me.resolved_project_id) {
-        window.localStorage.setItem('activeProjectId', String(me.resolved_project_id));
-      }
+      setActiveProjectId(applyResolvedProjectId(me));
       return me;
     },
     logout: async () => {
       await logoutRequest();
       setUser(null);
+      setActiveProjectId(null);
       window.localStorage.removeItem('activeProjectId');
     },
     register: async (email, password, passwordConfirm, displayName = '') => {
@@ -73,9 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     activate: async (uid, token) => {
       const me = await activateRequest(uid, token);
       setUser(me);
-      if (me.resolved_project_id) {
-        window.localStorage.setItem('activeProjectId', String(me.resolved_project_id));
-      }
+      setActiveProjectId(applyResolvedProjectId(me));
     },
     resendActivation: async (email) => {
       const response = await resendActivationRequest(email);
@@ -92,19 +102,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     requestAccountDeletion: async (password) => {
       const response = await requestAccountDeletionRequest(password);
       setUser(null);
+      setActiveProjectId(null);
       window.localStorage.removeItem('activeProjectId');
       return response;
     },
     restoreAccount: async (email, password) => {
       const me = await restoreAccountRequest(email, password);
       setUser(me);
-      if (me.resolved_project_id) {
-        window.localStorage.setItem('activeProjectId', String(me.resolved_project_id));
-      }
+      setActiveProjectId(applyResolvedProjectId(me));
       return me;
     },
-
-  }), [isLoading, user]);
+    switchActiveProject: async (projectId: number) => {
+      const switchResult = await switchActiveProjectRequest(projectId);
+      const resolvedId = switchResult.resolved_project_id ?? projectId;
+      window.localStorage.setItem('activeProjectId', String(resolvedId));
+      setActiveProjectId(resolvedId);
+      if (user) {
+        setUser({
+          ...user,
+          resolved_project_id: switchResult.resolved_project_id,
+          last_project_id: switchResult.last_project_id,
+          default_project_id: switchResult.default_project_id,
+        });
+      }
+    },
+  }), [activeProjectId, isLoading, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

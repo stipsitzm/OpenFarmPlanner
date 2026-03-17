@@ -12,6 +12,7 @@ import { initReactI18next } from 'react-i18next';
 // Import translation files
 import commonDE from './locales/de/common.json';
 import navigationDE from './locales/de/navigation.json';
+import navigationEN from './locales/en/navigation.json';
 import homeDE from './locales/de/home.json';
 import locationsDE from './locales/de/locations.json';
 import culturesDE from './locales/de/cultures.json';
@@ -55,6 +56,9 @@ i18n
         suppliers: suppliersDE,
         auth: authDE,
         account: accountDE,
+      },
+      en: {
+        navigation: navigationEN,
       },
     },
     

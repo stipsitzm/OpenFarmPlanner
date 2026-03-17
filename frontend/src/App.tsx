@@ -24,6 +24,7 @@ import {
   Menu,
   MenuItem,
   Snackbar,
+  Stack,
   Drawer,
   useMediaQuery,
 } from '@mui/material';
@@ -42,6 +43,10 @@ import SeedDemandPage from './pages/SeedDemand';
 import Suppliers from './pages/Suppliers';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import MenuIcon from '@mui/icons-material/Menu';
+import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import CheckIcon from '@mui/icons-material/Check';
+import AddIcon from '@mui/icons-material/Add';
 import { cultureAPI } from './api/api';
 import type { CultureHistoryEntry } from './api/types';
 import './App.css';
@@ -71,9 +76,11 @@ function RootLayout(): React.ReactElement {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, logout } = useAuth();
+  const { user, logout, activeProjectId, switchActiveProject } = useAuth();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
+  const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [isSwitchingProject, setIsSwitchingProject] = useState(false);
   const routes = ['/app/locations', '/app/fields-beds', '/app/cultures', '/app/anbauplaene', '/app/gantt-chart', '/app/seed-demand', '/app/suppliers'];
   const navItems = [
     { to: '/app/locations', label: t('locations') },
@@ -91,6 +98,14 @@ function RootLayout(): React.ReactElement {
 
   const handleGlobalMenuClose = () => {
     setGlobalMenuAnchor(null);
+  };
+
+  const handleProjectMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setProjectMenuAnchor(event.currentTarget);
+  };
+
+  const handleProjectMenuClose = () => {
+    setProjectMenuAnchor(null);
   };
 
   const closeMobileNav = () => {
@@ -154,6 +169,27 @@ function RootLayout(): React.ReactElement {
     }
   };
 
+  const memberships = user?.memberships ?? [];
+  const activeMembership = memberships.find((membership) => membership.project_id === activeProjectId) ?? null;
+  const activeProjectLabel = activeMembership?.project_name ?? t('projectSwitcher.noProject');
+
+  const handleSwitchProject = async (projectId: number): Promise<void> => {
+    handleProjectMenuClose();
+    if (projectId === activeProjectId) {
+      return;
+    }
+    setIsSwitchingProject(true);
+    try {
+      await switchActiveProject(projectId);
+      window.location.reload();
+    } catch (error) {
+      console.error('Error switching project:', error);
+      showSnackbar(t('projectSwitcher.switchError'), 'error');
+    } finally {
+      setIsSwitchingProject(false);
+    }
+  };
+
   const globalCommands = useMemo<CommandSpec[]>(() => [
     {
       id: 'global.nextPage',
@@ -212,7 +248,7 @@ function RootLayout(): React.ReactElement {
             >
               <MenuIcon fontSize="small" />
             </IconButton>
-            <span className="mobile-nav-title">OpenFarmPlanner {user?.memberships?.find((m) => m.project_id === Number(window.localStorage.getItem('activeProjectId')))?.project_name ? `· ${user.memberships.find((m) => m.project_id === Number(window.localStorage.getItem('activeProjectId')))?.project_name}` : ''}</span>
+            <span className="mobile-nav-title">OpenFarmPlanner · {activeProjectLabel}</span>
           </div>
         ) : (
           <div className="nav-links">
@@ -228,6 +264,54 @@ function RootLayout(): React.ReactElement {
           </div>
         )}
         <div className="nav-actions">
+          <Button
+            aria-label={t('projectSwitcher.ariaLabel')}
+            aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}
+            aria-haspopup="true"
+            onClick={handleProjectMenuOpen}
+            size="small"
+            disabled={isSwitchingProject}
+            sx={{
+              color: 'white',
+              textTransform: 'none',
+              maxWidth: { xs: 180, sm: 260, md: 320 },
+              minWidth: 0,
+            }}
+            startIcon={<FolderOpenOutlinedIcon fontSize="small" />}
+            endIcon={<KeyboardArrowDownIcon fontSize="small" />}
+          >
+            <span className="project-switcher-label">{activeProjectLabel}</span>
+          </Button>
+          <Menu
+            id="project-switcher-menu"
+            anchorEl={projectMenuAnchor}
+            open={Boolean(projectMenuAnchor)}
+            onClose={handleProjectMenuClose}
+          >
+            {memberships.length === 0 ? (
+              <MenuItem disabled>{t('projectSwitcher.zeroProjects')}</MenuItem>
+            ) : (
+              memberships.map((membership) => (
+                <MenuItem
+                  key={membership.project_id}
+                  onClick={() => void handleSwitchProject(membership.project_id)}
+                  selected={membership.project_id === activeProjectId}
+                  disabled={isSwitchingProject}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{membership.project_name}</span>
+                    {membership.project_id === activeProjectId ? <CheckIcon fontSize="small" /> : null}
+                  </Stack>
+                </MenuItem>
+              ))
+            )}
+            <MenuItem disabled>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <AddIcon fontSize="small" />
+                <span>{t('projectSwitcher.newProjectPlaceholder')}</span>
+              </Stack>
+            </MenuItem>
+          </Menu>
           <IconButton
             aria-label="Mehr"
             aria-controls={globalMenuAnchor ? 'global-actions-menu' : undefined}

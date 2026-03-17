@@ -32,6 +32,8 @@ class ProjectsApiTests(APITestCase):
 
         response = self.client.post('/openfarmplanner/api/projects-switch/', {'project_id': self.project2.id}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['resolved_project_id'], self.project2.id)
+        self.assertEqual(response.data['last_project_id'], self.project2.id)
 
         settings_obj = UserProjectSettings.objects.get(user=self.user)
         self.assertEqual(settings_obj.last_project_id, self.project2.id)

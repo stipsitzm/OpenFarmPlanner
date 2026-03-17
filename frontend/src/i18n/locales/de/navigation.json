@@ -8,5 +8,12 @@
   "ganttChart": "Anbaukalender",
   "seedDemand": "Saatgutbedarf",
   "graphicalFields": "Grafische Ansicht",
-  "accountSettings": "Kontoeinstellungen"
+  "accountSettings": "Kontoeinstellungen",
+  "projectSwitcher": {
+    "ariaLabel": "Aktives Projekt wechseln",
+    "noProject": "Kein Projekt",
+    "zeroProjects": "Du hast aktuell keinen Projektzugriff.",
+    "newProjectPlaceholder": "Neues Projekt (bald verfügbar)",
+    "switchError": "Projekt konnte nicht gewechselt werden."
+  }
 }

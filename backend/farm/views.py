@@ -28,7 +28,7 @@ from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 from django.utils.dateparse import parse_date
 from .models import Location, Field, Bed, BedLayout, FieldLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
-from .project_context import get_active_project_or_400, require_project_admin
+from .project_context import get_active_project_or_400, require_project_admin, resolve_project_for_user
 from .serializers import (
     LocationSerializer,
     FieldSerializer,
@@ -1611,16 +1611,26 @@ class ProjectSwitchView(APIView):
         except (TypeError, ValueError):
             return Response({'detail': 'Invalid project_id.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        membership = ProjectMembership.objects.filter(user=request.user, project_id=project_id).first()
+        membership = ProjectMembership.objects.filter(user=request.user, project_id=project_id, project__is_active=True).first()
         if membership is None:
             return Response({'detail': 'Not a member of the selected project.'}, status=status.HTTP_403_FORBIDDEN)
 
         settings_obj, _ = UserProjectSettings.objects.get_or_create(user=request.user)
         settings_obj.last_project_id = project_id
+        update_fields = ['last_project', 'updated_at']
         if request.data.get('set_default') is True:
             settings_obj.default_project_id = project_id
-        settings_obj.save(update_fields=['last_project', 'default_project', 'updated_at'])
-        return Response({'detail': 'Project switched.', 'project_id': project_id})
+            update_fields.append('default_project')
+        settings_obj.save(update_fields=update_fields)
+
+        active_project, _ = resolve_project_for_user(request.user)
+        return Response({
+            'detail': 'Project switched.',
+            'project_id': project_id,
+            'resolved_project_id': active_project.id if active_project else None,
+            'last_project_id': settings_obj.last_project_id,
+            'default_project_id': settings_obj.default_project_id,
+        })
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
