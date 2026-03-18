@@ -903,10 +903,11 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 class ProjectMembershipSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_display_name = serializers.CharField(source='user.display_name', read_only=True)
 
     class Meta:
         model = ProjectMembership
-        fields = ['id', 'user', 'user_email', 'project', 'role', 'created_at']
+        fields = ['id', 'user', 'user_email', 'user_display_name', 'project', 'role', 'created_at']
         read_only_fields = ['id', 'created_at', 'project']
 
 

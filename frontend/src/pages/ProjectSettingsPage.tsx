@@ -1,6 +1,6 @@
 import { Alert, Box, Button, Chip, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { projectAPI, type ProjectInvitationPayload } from '../api/api';
+import { projectAPI, type ProjectInvitationPayload, type ProjectMemberPayload } from '../api/api';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from '../i18n';
 
@@ -22,6 +22,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
   const [role, setRole] = useState<'admin' | 'member'>('member');
   const [feedback, setFeedback] = useState<InviteFeedback | null>(null);
   const [invitations, setInvitations] = useState<ProjectInvitationPayload[]>([]);
+  const [members, setMembers] = useState<ProjectMemberPayload[]>([]);
 
   const canManageInvites = activeMembership?.role === 'admin';
 
@@ -43,11 +44,24 @@ export default function ProjectSettingsPage(): React.ReactElement {
     } catch {
       setFeedback((current) => current ?? { severity: 'error', text: t('listLoadFailed') });
     }
-  }, [activeMembership]);
+  }, [activeMembership, t]);
+
+  const loadMembers = useCallback(async (): Promise<void> => {
+    if (!activeMembership) {
+      return;
+    }
+    try {
+      const response = await projectAPI.listMembers(activeMembership.project_id);
+      setMembers(response.data);
+    } catch {
+      setFeedback((current) => current ?? { severity: 'error', text: t('memberListLoadFailed') });
+    }
+  }, [activeMembership, t]);
 
   useEffect(() => {
     void loadInvitations();
-  }, [activeMembership?.project_id]);
+    void loadMembers();
+  }, [activeMembership?.project_id, loadInvitations, loadMembers]);
 
   if (!activeMembership) {
     return (
@@ -94,6 +108,42 @@ export default function ProjectSettingsPage(): React.ReactElement {
     }
   };
 
+  const handleMemberRoleChange = async (membershipId: number, nextRole: 'admin' | 'member', isCurrentUser: boolean): Promise<void> => {
+    if (isCurrentUser) {
+      setFeedback({ severity: 'error', text: t('roleChangeBlocked') });
+      return;
+    }
+    try {
+      await projectAPI.updateMember(activeMembership.project_id, membershipId, nextRole);
+      setFeedback({ severity: 'success', text: t('memberRoleUpdated') });
+      await loadMembers();
+    } catch (memberError: unknown) {
+      const payload = extractErrorPayload(memberError);
+      const message = payload.code
+        ? t(`error.${payload.code}`, { defaultValue: payload.detail ?? t('memberRoleUpdateFailed') })
+        : (payload.detail ?? t('memberRoleUpdateFailed'));
+      setFeedback({ severity: 'error', text: message });
+    }
+  };
+
+  const handleRemoveMember = async (membershipId: number, isCurrentUser: boolean): Promise<void> => {
+    if (isCurrentUser) {
+      setFeedback({ severity: 'error', text: t('removeBlocked') });
+      return;
+    }
+    try {
+      await projectAPI.removeMember(activeMembership.project_id, membershipId);
+      setFeedback({ severity: 'success', text: t('memberRemoved') });
+      await loadMembers();
+    } catch (memberError: unknown) {
+      const payload = extractErrorPayload(memberError);
+      const message = payload.code
+        ? t(`error.${payload.code}`, { defaultValue: payload.detail ?? t('memberRemoveFailed') })
+        : (payload.detail ?? t('memberRemoveFailed'));
+      setFeedback({ severity: 'error', text: message });
+    }
+  };
+
   return (
     <Box sx={{ p: 3, maxWidth: 760, mx: 'auto' }}>
       <Typography variant="h4" sx={{ mb: 1 }}>{t('title')}</Typography>
@@ -130,6 +180,51 @@ export default function ProjectSettingsPage(): React.ReactElement {
       ) : null}
 
       {feedback ? <Alert severity={feedback.severity} sx={{ mt: 2, wordBreak: 'break-all' }}>{feedback.text}</Alert> : null}
+
+      <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>{t('membersSectionTitle')}</Typography>
+      <Stack spacing={1.5}>
+        {members.map((member) => {
+          const isCurrentUser = member.user === user?.id;
+          const displayName = member.user_display_name || t('memberDisplayFallback');
+
+          return (
+            <Box key={member.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
+              <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2}>
+                <Box>
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                    <Typography sx={{ fontWeight: 600 }}>{displayName}</Typography>
+                    {isCurrentUser ? <Chip label={t('memberYou')} size="small" /> : null}
+                  </Stack>
+                  <Typography variant="body2" color="text.secondary">{member.user_email}</Typography>
+                </Box>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                  <TextField
+                    select
+                    size="small"
+                    label={t('memberRoleLabel')}
+                    value={member.role}
+                    onChange={(event) => void handleMemberRoleChange(member.id, event.target.value as 'admin' | 'member', isCurrentUser)}
+                    disabled={!canManageInvites || isCurrentUser}
+                    sx={{ minWidth: 160 }}
+                  >
+                    <MenuItem value="member">{t('roleMember')}</MenuItem>
+                    <MenuItem value="admin">{t('roleAdmin')}</MenuItem>
+                  </TextField>
+                  <Button
+                    size="small"
+                    color="error"
+                    onClick={() => void handleRemoveMember(member.id, isCurrentUser)}
+                    disabled={!canManageInvites || isCurrentUser}
+                  >
+                    {t('removeMember')}
+                  </Button>
+                </Stack>
+              </Stack>
+            </Box>
+          );
+        })}
+        {members.length === 0 ? <Alert severity="info">{t('membersEmpty')}</Alert> : null}
+      </Stack>
 
       <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>{t('listTitle')}</Typography>
       <Stack spacing={1.5}>

@@ -199,3 +199,42 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         invitation.refresh_from_db()
         self.assertEqual(invitation.status, 'revoked')
+
+    def test_admin_can_change_member_role(self) -> None:
+        member = ProjectMembership.objects.create(user=self.invitee, project=self.project, role='member')
+        response = self.client.patch(
+            f'/openfarmplanner/api/projects/{self.project.id}/members/',
+            {'membership_id': member.id, 'role': 'admin'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        member.refresh_from_db()
+        self.assertEqual(member.role, 'admin')
+
+    def test_cannot_demote_last_admin(self) -> None:
+        own_membership = ProjectMembership.objects.get(user=self.user, project=self.project)
+        response = self.client.patch(
+            f'/openfarmplanner/api/projects/{self.project.id}/members/',
+            {'membership_id': own_membership.id, 'role': 'member'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_admin_can_remove_member(self) -> None:
+        member = ProjectMembership.objects.create(user=self.invitee, project=self.project, role='member')
+        response = self.client.delete(
+            f'/openfarmplanner/api/projects/{self.project.id}/members/',
+            {'membership_id': member.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(ProjectMembership.objects.filter(id=member.id).exists())
+
+    def test_cannot_remove_self_from_project_settings(self) -> None:
+        own_membership = ProjectMembership.objects.get(user=self.user, project=self.project)
+        response = self.client.delete(
+            f'/openfarmplanner/api/projects/{self.project.id}/members/',
+            {'membership_id': own_membership.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

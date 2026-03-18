@@ -13,6 +13,19 @@
   "inviteResent": "Einladung erneut gesendet.",
   "inviteSentNoMail": "Einladung erstellt, aber E-Mail konnte nicht zugestellt werden.",
   "inviteFailed": "Einladung konnte nicht versendet werden.",
+  "membersSectionTitle": "Mitglieder",
+  "membersEmpty": "Es gibt aktuell keine Mitglieder.",
+  "memberRoleUpdated": "Mitgliedsrolle aktualisiert.",
+  "memberRoleUpdateFailed": "Mitgliedsrolle konnte nicht aktualisiert werden.",
+  "memberRemoved": "Mitglied aus dem Projekt entfernt.",
+  "memberRemoveFailed": "Mitglied konnte nicht entfernt werden.",
+  "memberListLoadFailed": "Mitglieder konnten nicht geladen werden.",
+  "memberRoleLabel": "Projektrolle",
+  "memberDisplayFallback": "Ohne Anzeigenamen",
+  "memberYou": "Du",
+  "removeMember": "Aus Projekt entfernen",
+  "roleChangeBlocked": "Die eigene Rolle kann hier nicht geändert werden.",
+  "removeBlocked": "Du kannst dich hier nicht selbst aus dem Projekt entfernen.",
   "listTitle": "Einladungen",
   "listEmpty": "Es gibt aktuell keine Einladungen.",
   "revoke": "Einladung widerrufen",
@@ -45,7 +58,8 @@
   "error": {
     "already_member": "Diese E-Mail-Adresse ist bereits Mitglied dieses Projekts.",
     "invalid_email": "Bitte gib eine gültige E-Mail-Adresse ein.",
-    "invitation_error": "Einladung konnte nicht erstellt werden."
+    "invitation_error": "Einladung konnte nicht erstellt werden.",
+    "last_admin": "Mindestens ein Projekt-Admin muss erhalten bleiben."
   },
   "listLoadFailed": "Einladungen konnten nicht geladen werden."
 }

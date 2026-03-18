@@ -13,6 +13,19 @@
   "inviteResent": "Invitation re-sent.",
   "inviteSentNoMail": "Invitation created, but email delivery failed.",
   "inviteFailed": "Invitation could not be sent.",
+  "membersSectionTitle": "Members",
+  "membersEmpty": "There are currently no members.",
+  "memberRoleUpdated": "Member role updated.",
+  "memberRoleUpdateFailed": "Member role could not be updated.",
+  "memberRemoved": "Member removed from project.",
+  "memberRemoveFailed": "Member could not be removed.",
+  "memberListLoadFailed": "Members could not be loaded.",
+  "memberRoleLabel": "Project role",
+  "memberDisplayFallback": "No display name",
+  "memberYou": "You",
+  "removeMember": "Remove from project",
+  "roleChangeBlocked": "Your own role cannot be changed here.",
+  "removeBlocked": "You cannot remove yourself from the project here.",
   "listTitle": "Invitations",
   "listEmpty": "There are currently no invitations.",
   "revoke": "Revoke invitation",
@@ -45,7 +58,8 @@
   "error": {
     "already_member": "This email address is already a project member.",
     "invalid_email": "Please provide a valid email address.",
-    "invitation_error": "Invitation could not be created."
+    "invitation_error": "Invitation could not be created.",
+    "last_admin": "At least one project admin must remain."
   },
   "listLoadFailed": "Invitations could not be loaded."
 }

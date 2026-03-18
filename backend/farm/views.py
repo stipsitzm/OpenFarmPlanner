@@ -1722,6 +1722,12 @@ class ProjectMembersView(APIView):
         membership = get_object_or_404(ProjectMembership, id=membership_id, project_id=project_id)
         if role not in {ProjectMembership.ROLE_ADMIN, ProjectMembership.ROLE_MEMBER}:
             return Response({'detail': 'Invalid role.'}, status=status.HTTP_400_BAD_REQUEST)
+        if membership.user_id == request.user.id:
+            return Response({'detail': 'You cannot change your own project role here.'}, status=status.HTTP_400_BAD_REQUEST)
+        if membership.role == ProjectMembership.ROLE_ADMIN and role != ProjectMembership.ROLE_ADMIN:
+            admin_count = ProjectMembership.objects.filter(project_id=project_id, role=ProjectMembership.ROLE_ADMIN).count()
+            if admin_count <= 1:
+                return Response({'detail': 'At least one project admin must remain.'}, status=status.HTTP_400_BAD_REQUEST)
         membership.role = role
         membership.save(update_fields=['role'])
         return Response(ProjectMembershipSerializer(membership).data)
@@ -1730,6 +1736,12 @@ class ProjectMembersView(APIView):
         require_project_admin(request.user, project_id)
         membership_id = request.data.get('membership_id')
         membership = get_object_or_404(ProjectMembership, id=membership_id, project_id=project_id)
+        if membership.user_id == request.user.id:
+            return Response({'detail': 'You cannot remove yourself from the project here.'}, status=status.HTTP_400_BAD_REQUEST)
+        if membership.role == ProjectMembership.ROLE_ADMIN:
+            admin_count = ProjectMembership.objects.filter(project_id=project_id, role=ProjectMembership.ROLE_ADMIN).count()
+            if admin_count <= 1:
+                return Response({'detail': 'At least one project admin must remain.'}, status=status.HTTP_400_BAD_REQUEST)
         membership.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

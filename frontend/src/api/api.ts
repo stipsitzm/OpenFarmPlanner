@@ -171,6 +171,16 @@ export interface ProjectInvitationPayload {
   created_at: string;
 }
 
+export interface ProjectMemberPayload {
+  id: number;
+  user: number;
+  user_email: string;
+  user_display_name: string;
+  project: number;
+  role: 'admin' | 'member';
+  created_at: string;
+}
+
 export interface InvitationPublicStatus {
   code: string;
   project_name?: string;
@@ -184,6 +194,12 @@ export const projectAPI = {
     http.post<ProjectPayload>('/projects/', data),
   invite: (projectId: number, data: { email: string; role: 'admin' | 'member' }) =>
     http.post(`/projects/${projectId}/invitations/`, data),
+  listMembers: (projectId: number) =>
+    http.get<ProjectMemberPayload[]>(`/projects/${projectId}/members/`),
+  updateMember: (projectId: number, membershipId: number, role: 'admin' | 'member') =>
+    http.patch<ProjectMemberPayload>(`/projects/${projectId}/members/`, { membership_id: membershipId, role }),
+  removeMember: (projectId: number, membershipId: number) =>
+    http.delete(`/projects/${projectId}/members/`, { data: { membership_id: membershipId } }),
   listInvitations: (projectId: number) =>
     http.get<ProjectInvitationPayload[]>(`/projects/${projectId}/invitations/`),
   revokeInvitation: (projectId: number, invitationId: number) =>
