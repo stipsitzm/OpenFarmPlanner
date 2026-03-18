@@ -14,6 +14,10 @@ export default function InvitationPage(): React.ReactElement {
   const [publicState, setPublicState] = useState<InvitationPublicStatus | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
 
+  const extractApiCode = (error: unknown): string => {
+    return (error as { response?: { data?: { code?: string } } })?.response?.data?.code ?? 'invalid_token';
+  };
+
   useEffect(() => {
     if (!token) {
       setStatus('error');
@@ -47,9 +51,8 @@ export default function InvitationPage(): React.ReactElement {
       }
       navigate('/app', { replace: true });
     } catch (acceptError: unknown) {
-      const code = (acceptError as { response?: { data?: { code?: string } } })?.response?.data?.code ?? 'invalid_token';
       setStatus('error');
-      setErrorCode(code);
+      setErrorCode(extractApiCode(acceptError));
     }
   };
 

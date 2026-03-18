@@ -76,6 +76,46 @@ from .services.seed_packages import PackageOption, compute_seed_package_suggesti
 logger = logging.getLogger(__name__)
 
 
+def _invitation_error_response(exc: InvitationFlowError) -> Response:
+    """Build a consistent error response for invitation domain errors."""
+    status_code = status.HTTP_403_FORBIDDEN if exc.code == 'email_mismatch' else status.HTTP_400_BAD_REQUEST
+    return Response({'code': exc.code, 'detail': exc.message}, status=status_code)
+
+
+def _send_project_invitation_email(*, invitation: ProjectInvitation, project_name: str, invited_by: object) -> tuple[bool, str]:
+    """Send invitation email and return delivery result plus diagnostic message."""
+    invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/{invitation.token}"
+    with translation.override('de'):
+        subject = _('Einladung zu OpenFarmPlanner: %(project)s') % {'project': project_name}
+        body = render_to_string('accounts/emails/project_invitation_email.txt', {
+            'project_name': project_name,
+            'role': invitation.role,
+            'invite_link': invite_link,
+            'invited_by': invited_by,
+        })
+
+    non_delivery_backends = {
+        'django.core.mail.backends.console.EmailBackend',
+        'django.core.mail.backends.locmem.EmailBackend',
+        'django.core.mail.backends.filebased.EmailBackend',
+        'django.core.mail.backends.dummy.EmailBackend',
+    }
+    backend_is_delivery_capable = settings.EMAIL_BACKEND not in non_delivery_backends
+
+    if not backend_is_delivery_capable:
+        logger.info('Project invitation created without outbound email delivery because backend=%s', settings.EMAIL_BACKEND)
+        return False, 'EMAIL_BACKEND is not configured for outbound delivery.'
+
+    try:
+        sent_count = send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [invitation.email], fail_silently=False)
+        if sent_count > 0:
+            return True, ''
+        return False, 'Mail backend accepted request but returned zero deliveries.'
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('Project invitation email could not be sent: %s', exc)
+        return False, str(exc)
+
+
 def _coerce_request_string(value, default='') -> str:
     """Coerce request payload values to safe strings."""
     if value is None:
@@ -1716,45 +1756,18 @@ class ProjectInvitationView(APIView):
                 role=serializer.validated_data['role'],
             )
         except InvitationFlowError as exc:
-            return Response({'code': exc.code, 'detail': exc.message}, status=status.HTTP_400_BAD_REQUEST)
+            return _invitation_error_response(exc)
 
         invitation = result.invitation
         if invitation is None:
             return Response({'code': 'invitation_error', 'detail': 'Invitation could not be created.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/{invitation.token}"
-        with translation.override('de'):
-            subject = _('Einladung zu OpenFarmPlanner: %(project)s') % {'project': project.name}
-            body = render_to_string('accounts/emails/project_invitation_email.txt', {
-                'project_name': project.name,
-                'role': invitation.role,
-                'invite_link': invite_link,
-                'invited_by': request.user,
-            })
-
-        non_delivery_backends = {
-            'django.core.mail.backends.console.EmailBackend',
-            'django.core.mail.backends.locmem.EmailBackend',
-            'django.core.mail.backends.filebased.EmailBackend',
-            'django.core.mail.backends.dummy.EmailBackend',
-        }
-        backend_is_delivery_capable = settings.EMAIL_BACKEND not in non_delivery_backends
-        mail_sent = False
-        mail_error = ''
-
-        if backend_is_delivery_capable:
-            try:
-                sent_count = send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [invitation.email], fail_silently=False)
-                mail_sent = sent_count > 0
-                if not mail_sent:
-                    mail_error = 'Mail backend accepted request but returned zero deliveries.'
-            except Exception as exc:  # noqa: BLE001
-                mail_sent = False
-                mail_error = str(exc)
-                logger.warning('Project invitation email could not be sent: %s', exc)
-        else:
-            mail_error = 'EMAIL_BACKEND is not configured for outbound delivery.'
-            logger.info('Project invitation created without outbound email delivery because backend=%s', settings.EMAIL_BACKEND)
+        mail_sent, mail_error = _send_project_invitation_email(
+            invitation=invitation,
+            project_name=project.name,
+            invited_by=request.user,
+        )
 
         payload = ProjectInvitationSerializer(invitation).data
         payload['code'] = result.code
@@ -1791,8 +1804,7 @@ class AcceptProjectInvitationByTokenView(APIView):
             invitation = get_invitation_by_token(token)
             result = accept_invitation(invitation=invitation, user=request.user)
         except InvitationFlowError as exc:
-            status_code = status.HTTP_403_FORBIDDEN if exc.code == 'email_mismatch' else status.HTTP_400_BAD_REQUEST
-            return Response({'code': exc.code, 'detail': exc.message}, status=status_code)
+            return _invitation_error_response(exc)
 
         settings_obj, _ = UserProjectSettings.objects.get_or_create(user=request.user)
         if settings_obj.default_project_id is None:

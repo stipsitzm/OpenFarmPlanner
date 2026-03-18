@@ -1,5 +1,5 @@
 import { Alert, Box, Button, Chip, MenuItem, Stack, TextField, Typography } from '@mui/material';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { projectAPI, type ProjectInvitationPayload } from '../api/api';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from '../i18n';
@@ -25,13 +25,17 @@ export default function ProjectSettingsPage(): React.ReactElement {
 
   const canManageInvites = activeMembership?.role === 'admin';
 
-  const loadInvitations = async (): Promise<void> => {
+  const extractErrorCode = (error: unknown): string | null => {
+    return (error as { response?: { data?: { code?: string } } })?.response?.data?.code ?? null;
+  };
+
+  const loadInvitations = useCallback(async (): Promise<void> => {
     if (!activeMembership) {
       return;
     }
     const response = await projectAPI.listInvitations(activeMembership.project_id);
     setInvitations(response.data);
-  };
+  }, [activeMembership]);
 
   useEffect(() => {
     void loadInvitations();
@@ -63,7 +67,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
       setRole('member');
       await loadInvitations();
     } catch (inviteError: unknown) {
-      const code = (inviteError as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      const code = extractErrorCode(inviteError);
       const message = code ? t(`error.${code}`, { defaultValue: t('inviteFailed') }) : t('inviteFailed');
       setFeedback({ severity: 'error', text: message });
     }
