@@ -69,6 +69,8 @@ describe('ProjectSettingsPage', () => {
     await waitFor(() => expect(updateMemberMock).toHaveBeenCalledWith(1, 11, 'admin'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Aus Projekt entfernen' }));
+    expect(await screen.findByText('Mitglied wirklich entfernen?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Jetzt entfernen' }));
     await waitFor(() => expect(removeMemberMock).toHaveBeenCalledWith(1, 11));
   });
 });

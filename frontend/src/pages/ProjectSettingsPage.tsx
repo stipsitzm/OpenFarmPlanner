@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Chip, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { projectAPI, type ProjectInvitationPayload, type ProjectMemberPayload } from '../api/api';
 import { useAuth } from '../auth/AuthContext';
@@ -23,6 +23,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
   const [feedback, setFeedback] = useState<InviteFeedback | null>(null);
   const [invitations, setInvitations] = useState<ProjectInvitationPayload[]>([]);
   const [members, setMembers] = useState<ProjectMemberPayload[]>([]);
+  const [pendingRemovalMember, setPendingRemovalMember] = useState<ProjectMemberPayload | null>(null);
 
   const canManageInvites = activeMembership?.role === 'admin';
 
@@ -134,6 +135,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
     try {
       await projectAPI.removeMember(activeMembership.project_id, membershipId);
       setFeedback({ severity: 'success', text: t('memberRemoved') });
+      setPendingRemovalMember(null);
       await loadMembers();
     } catch (memberError: unknown) {
       const payload = extractErrorPayload(memberError);
@@ -213,7 +215,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
                   <Button
                     size="small"
                     color="error"
-                    onClick={() => void handleRemoveMember(member.id, isCurrentUser)}
+                    onClick={() => setPendingRemovalMember(member)}
                     disabled={!canManageInvites || isCurrentUser}
                   >
                     {t('removeMember')}
@@ -250,6 +252,28 @@ export default function ProjectSettingsPage(): React.ReactElement {
         ))}
         {invitations.length === 0 ? <Alert severity="info">{t('listEmpty')}</Alert> : null}
       </Stack>
+
+      <Dialog open={pendingRemovalMember !== null} onClose={() => setPendingRemovalMember(null)} fullWidth maxWidth="xs">
+        <DialogTitle>{t('removeDialogTitle')}</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {t('removeDialogText', {
+              email: pendingRemovalMember?.user_email ?? '',
+              name: pendingRemovalMember?.user_display_name || t('memberDisplayFallback'),
+            })}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingRemovalMember(null)}>{t('removeDialogCancel')}</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => pendingRemovalMember ? void handleRemoveMember(pendingRemovalMember.id, pendingRemovalMember.user === user?.id) : undefined}
+          >
+            {t('removeDialogConfirm')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
