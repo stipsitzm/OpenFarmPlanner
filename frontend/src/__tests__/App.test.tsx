@@ -66,7 +66,7 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Aktives Projekt wechseln' })).toBeInTheDocument();
   });
 
-  it('shows account settings in three-dot menu', async () => {
+  it('shows account settings in three-dot menu without project settings', async () => {
     authState.user = {
       id: 1,
       email: 'demo@example.com',
@@ -86,12 +86,12 @@ describe('App', () => {
     render(<CommandProvider><App /></CommandProvider>);
     fireEvent.click(await screen.findByLabelText('Mehr'));
     expect(await screen.findByText('Kontoeinstellungen')).toBeInTheDocument();
-    expect(screen.queryByText('Projekt wechseln')).not.toBeInTheDocument();
+    expect(screen.queryByText('Projekteinstellungen')).not.toBeInTheDocument();
   });
 
 
 
-  it('shows create project action in project switcher menu', async () => {
+  it('shows project actions in project switcher menu', async () => {
     authState.user = {
       id: 1,
       email: 'demo@example.com',
@@ -111,6 +111,8 @@ describe('App', () => {
 
     render(<CommandProvider><App /></CommandProvider>);
     fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
+    expect(await screen.findByText('Projekteinstellungen')).toBeInTheDocument();
+    expect(screen.getByText('Mitglieder verwalten')).toBeInTheDocument();
     expect(await screen.findByText('Neues Projekt erstellen')).toBeInTheDocument();
   });
 

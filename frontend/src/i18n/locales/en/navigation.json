@@ -9,6 +9,12 @@
   "seedDemand": "Seed demand",
   "graphicalFields": "Graphical view",
   "accountSettings": "Account settings",
+  "project": {
+    "settings": "Project settings",
+    "members": "Manage members",
+    "create": "Create new project",
+    "switch": "Switch project"
+  },
   "projectSwitcher": {
     "ariaLabel": "Switch active project",
     "noProject": "No project",

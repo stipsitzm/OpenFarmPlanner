@@ -9,6 +9,12 @@
   "seedDemand": "Saatgutbedarf",
   "graphicalFields": "Grafische Ansicht",
   "accountSettings": "Kontoeinstellungen",
+  "project": {
+    "settings": "Projekteinstellungen",
+    "members": "Mitglieder verwalten",
+    "create": "Neues Projekt erstellen",
+    "switch": "Projekt wechseln"
+  },
   "projectSwitcher": {
     "ariaLabel": "Aktives Projekt wechseln",
     "noProject": "Kein Projekt",

@@ -13,6 +13,7 @@ import {
   Alert,
   Button,
   Chip,
+  Divider,
   Dialog,
   DialogActions,
   DialogContent,
@@ -68,6 +69,127 @@ interface SnackbarState {
   open: boolean;
   message: string;
   severity: 'success' | 'error';
+}
+
+interface ProjectMenuProps {
+  anchorEl: HTMLElement | null;
+  open: boolean;
+  memberships: { project_id: number; project_name: string; role: 'admin' | 'member' }[];
+  activeProjectId: number | null;
+  isSwitchingProject: boolean;
+  onClose: () => void;
+  onSwitchProject: (projectId: number) => Promise<void>;
+  onOpenProjectSettings: () => void;
+  onOpenMemberManagement: () => void;
+  onOpenCreateProject: () => void;
+  t: (key: string) => string;
+}
+
+function ProjectMenu(props: ProjectMenuProps): React.ReactElement {
+  const {
+    anchorEl,
+    open,
+    memberships,
+    activeProjectId,
+    isSwitchingProject,
+    onClose,
+    onSwitchProject,
+    onOpenProjectSettings,
+    onOpenMemberManagement,
+    onOpenCreateProject,
+    t,
+  } = props;
+
+  return (
+    <Menu
+      id="project-switcher-menu"
+      anchorEl={anchorEl}
+      open={open}
+      onClose={onClose}
+    >
+      {memberships.length === 0 ? (
+        <MenuItem disabled>{t('projectSwitcher.zeroProjects')}</MenuItem>
+      ) : (
+        memberships.map((membership) => (
+          <MenuItem
+            key={membership.project_id}
+            onClick={() => void onSwitchProject(membership.project_id)}
+            selected={membership.project_id === activeProjectId}
+            disabled={isSwitchingProject}
+          >
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{membership.project_name}</span>
+              {membership.project_id === activeProjectId ? <CheckIcon fontSize="small" /> : null}
+            </Stack>
+          </MenuItem>
+        ))
+      )}
+      <Divider />
+      <MenuItem onClick={onOpenProjectSettings}>
+        {t('project.settings')}
+      </MenuItem>
+      <MenuItem onClick={onOpenMemberManagement}>
+        {t('project.members')}
+      </MenuItem>
+      <Divider />
+      <MenuItem onClick={onOpenCreateProject}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <AddIcon fontSize="small" />
+          <span>{t('project.create')}</span>
+        </Stack>
+      </MenuItem>
+    </Menu>
+  );
+}
+
+interface GlobalMenuProps {
+  anchorEl: HTMLElement | null;
+  open: boolean;
+  historyLoading: boolean;
+  userLabel: string;
+  onClose: () => void;
+  onOpenProjectHistory: () => Promise<void>;
+  onOpenAccountSettings: () => void;
+  onOpenShortcuts: () => void;
+  onLogout: () => Promise<void>;
+  t: (key: string) => string;
+}
+
+function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
+  const {
+    anchorEl,
+    open,
+    historyLoading,
+    userLabel,
+    onClose,
+    onOpenProjectHistory,
+    onOpenAccountSettings,
+    onOpenShortcuts,
+    onLogout,
+    t,
+  } = props;
+
+  return (
+    <Menu
+      id="global-actions-menu"
+      anchorEl={anchorEl}
+      open={open}
+      onClose={onClose}
+    >
+      <MenuItem onClick={() => void onOpenProjectHistory()} disabled={historyLoading}>
+        Versionsverlauf…
+      </MenuItem>
+      <MenuItem onClick={onOpenAccountSettings}>
+        {t('accountSettings')}
+      </MenuItem>
+      <MenuItem onClick={onOpenShortcuts}>
+        Tastenkürzel
+      </MenuItem>
+      <MenuItem onClick={() => void onLogout()}>
+        Logout {userLabel}
+      </MenuItem>
+    </Menu>
+  );
 }
 
 
@@ -191,6 +313,16 @@ function RootLayout(): React.ReactElement {
     setNewProjectName('');
     setNewProjectDescription('');
     setIsCreateProjectOpen(true);
+  };
+
+  const handleOpenProjectSettings = (): void => {
+    handleProjectMenuClose();
+    navigate('/app/project-settings');
+  };
+
+  const handleOpenProjectMembers = (): void => {
+    handleProjectMenuClose();
+    navigate('/app/project-settings#members');
   };
 
   const applyProjectContextChange = async (projectId: number): Promise<void> => {
@@ -338,36 +470,19 @@ function RootLayout(): React.ReactElement {
           >
             <span className="project-switcher-label">{activeProjectLabel}</span>
           </Button>
-          <Menu
-            id="project-switcher-menu"
+          <ProjectMenu
             anchorEl={projectMenuAnchor}
             open={Boolean(projectMenuAnchor)}
+            memberships={memberships}
+            activeProjectId={activeProjectId}
+            isSwitchingProject={isSwitchingProject}
             onClose={handleProjectMenuClose}
-          >
-            {memberships.length === 0 ? (
-              <MenuItem disabled>{t('projectSwitcher.zeroProjects')}</MenuItem>
-            ) : (
-              memberships.map((membership) => (
-                <MenuItem
-                  key={membership.project_id}
-                  onClick={() => void handleSwitchProject(membership.project_id)}
-                  selected={membership.project_id === activeProjectId}
-                  disabled={isSwitchingProject}
-                >
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{membership.project_name}</span>
-                    {membership.project_id === activeProjectId ? <CheckIcon fontSize="small" /> : null}
-                  </Stack>
-                </MenuItem>
-              ))
-            )}
-            <MenuItem onClick={handleOpenCreateProject}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <AddIcon fontSize="small" />
-                <span>{t('projectSwitcher.newProjectAction')}</span>
-              </Stack>
-            </MenuItem>
-          </Menu>
+            onSwitchProject={handleSwitchProject}
+            onOpenProjectSettings={handleOpenProjectSettings}
+            onOpenMemberManagement={handleOpenProjectMembers}
+            onOpenCreateProject={handleOpenCreateProject}
+            t={t}
+          />
           <IconButton
             aria-label="Mehr"
             aria-controls={globalMenuAnchor ? 'global-actions-menu' : undefined}
@@ -378,28 +493,18 @@ function RootLayout(): React.ReactElement {
           >
             <MoreVertIcon fontSize="small" />
           </IconButton>
-          <Menu
-            id="global-actions-menu"
+          <GlobalMenu
             anchorEl={globalMenuAnchor}
             open={Boolean(globalMenuAnchor)}
+            historyLoading={historyLoading}
+            userLabel={user?.email ? `(${user.email})` : (user?.display_label ? `(${user.display_label})` : '')}
             onClose={handleGlobalMenuClose}
-          >
-            <MenuItem onClick={() => void handleOpenProjectHistory()} disabled={historyLoading}>
-              Versionsverlauf…
-            </MenuItem>
-            <MenuItem onClick={() => navigateFromGlobalMenu('/app/project-settings')}>
-              Projekteinstellungen
-            </MenuItem>
-            <MenuItem onClick={() => navigateFromGlobalMenu('/app/account-settings')}>
-              {t('accountSettings')}
-            </MenuItem>
-            <MenuItem onClick={handleOpenShortcuts}>
-              Tastenkürzel
-            </MenuItem>
-            <MenuItem onClick={() => void handleLogout()}>
-              Logout {user?.display_label ? `(${user.display_label})` : ''}
-            </MenuItem>
-          </Menu>
+            onOpenProjectHistory={handleOpenProjectHistory}
+            onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
+            onOpenShortcuts={handleOpenShortcuts}
+            onLogout={handleLogout}
+            t={t}
+          />
         </div>
       </nav>
 
