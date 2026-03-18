@@ -30,8 +30,18 @@ from .models import (
 class AuditUserSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     email = serializers.EmailField()
-    display_name = serializers.CharField(allow_blank=True)
-    display_label = serializers.CharField()
+    display_name = serializers.SerializerMethodField()
+    display_label = serializers.SerializerMethodField()
+
+    def get_display_name(self, obj) -> str:
+        full_name = f'{obj.first_name or ""} {obj.last_name or ""}'.strip()
+        return full_name or obj.username
+
+    def get_display_label(self, obj) -> str:
+        full_name = self.get_display_name(obj)
+        if full_name:
+            return f'{full_name} ({obj.email})'
+        return obj.email or obj.username
 
 
 class CentimetersField(serializers.FloatField):

@@ -1,23 +1,32 @@
 from datetime import date
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from farm.models import Bed, Culture, Field, Location, PlantingPlan
+from farm.models import Bed, Culture, Field, Location, PlantingPlan, Project, ProjectMembership
+
+User = get_user_model()
 
 
 class YieldCalendarAPITest(TestCase):
     def setUp(self):
         self.client = APIClient()
-        location = Location.objects.create(name='Loc')
-        field = Field.objects.create(name='Field', location=location)
-        self.bed = Bed.objects.create(name='Bed', field=field, area_sqm=100)
+        self.user = User.objects.create_user(username='yielduser', email='yield@example.com', password='testpass', is_active=True)
+        self.project = Project.objects.create(name='Yield Project', slug='yield-project')
+        ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
+        self.client.force_authenticate(user=self.user)
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
+        location = Location.objects.create(name='Loc', project=self.project)
+        field = Field.objects.create(name='Field', location=location, project=self.project)
+        self.bed = Bed.objects.create(name='Bed', field=field, area_sqm=100, project=self.project)
 
     def _create_plan(self, *, culture: Culture, harvest_start: date, harvest_end: date):
         plan = PlantingPlan.objects.create(
             culture=culture,
             bed=self.bed,
             planting_date=harvest_start,
+            project=self.project,
         )
         PlantingPlan.objects.filter(id=plan.id).update(harvest_date=harvest_start, harvest_end_date=harvest_end)
         plan.refresh_from_db()
