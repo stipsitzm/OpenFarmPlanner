@@ -32,6 +32,41 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 1)
 
+    def test_yield_calendar_is_scoped_to_active_project(self) -> None:
+        location1 = Location.objects.create(name='L1', project=self.project)
+        field1 = location1.fields.create(name='F1', project=self.project)
+        bed1 = field1.beds.create(name='B1', area_sqm=10, project=self.project)
+
+        location2 = Location.objects.create(name='L2', project=self.project2)
+        field2 = location2.fields.create(name='F2', project=self.project2)
+        bed2 = field2.beds.create(name='B2', area_sqm=10, project=self.project2)
+
+        from farm.models import Culture, PlantingPlan
+
+        culture1 = Culture.objects.create(name='Karotte', expected_yield=12, project=self.project)
+        culture2 = Culture.objects.create(name='Tomate', expected_yield=99, project=self.project2)
+
+        plan1 = PlantingPlan.objects.create(
+            culture=culture1,
+            bed=bed1,
+            planting_date='2026-03-01',
+            project=self.project,
+        )
+        plan2 = PlantingPlan.objects.create(
+            culture=culture2,
+            bed=bed2,
+            planting_date='2026-03-01',
+            project=self.project2,
+        )
+        PlantingPlan.objects.filter(id=plan1.id).update(harvest_date='2026-03-03', harvest_end_date='2026-03-06')
+        PlantingPlan.objects.filter(id=plan2.id).update(harvest_date='2026-03-03', harvest_end_date='2026-03-06')
+
+        response = self.client.get('/openfarmplanner/api/yield-calendar/?year=2026', HTTP_X_PROJECT_ID=str(self.project.id))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['cultures'][0]['culture_name'], 'Karotte')
+
     def test_switch_project_updates_last_project(self) -> None:
         ProjectMembership.objects.create(user=self.user, project=self.project2, role='member')
 

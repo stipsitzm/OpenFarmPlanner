@@ -7,7 +7,7 @@ for its respective model.
 
 from collections import defaultdict
 import logging
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import json
 
@@ -313,6 +313,7 @@ class YieldCalendarListView(generics.GenericAPIView):
     """Return expected yield distribution aggregated by ISO week and culture."""
 
     def get(self, request):
+        active_project = get_active_project_or_400(request)
         year_param = request.query_params.get('year')
         try:
             iso_year = int(year_param) if year_param else date.today().year
@@ -329,6 +330,7 @@ class YieldCalendarListView(generics.GenericAPIView):
             PlantingPlan.objects
             .select_related('culture')
             .filter(
+                project=active_project,
                 harvest_date__isnull=False,
                 harvest_end_date__isnull=False,
                 culture__expected_yield__gt=0,
