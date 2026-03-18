@@ -80,7 +80,6 @@ interface ProjectMenuProps {
   onClose: () => void;
   onSwitchProject: (projectId: number) => Promise<void>;
   onOpenProjectSettings: () => void;
-  onOpenMemberManagement: () => void;
   onOpenCreateProject: () => void;
   t: (key: string) => string;
 }
@@ -95,7 +94,6 @@ function ProjectMenu(props: ProjectMenuProps): React.ReactElement {
     onClose,
     onSwitchProject,
     onOpenProjectSettings,
-    onOpenMemberManagement,
     onOpenCreateProject,
     t,
   } = props;
@@ -127,9 +125,6 @@ function ProjectMenu(props: ProjectMenuProps): React.ReactElement {
       <Divider />
       <MenuItem onClick={onOpenProjectSettings}>
         {t('project.settings')}
-      </MenuItem>
-      <MenuItem onClick={onOpenMemberManagement}>
-        {t('project.members')}
       </MenuItem>
       <Divider />
       <MenuItem onClick={onOpenCreateProject}>
@@ -320,11 +315,6 @@ function RootLayout(): React.ReactElement {
     navigate('/app/project-settings');
   };
 
-  const handleOpenProjectMembers = (): void => {
-    handleProjectMenuClose();
-    navigate('/app/project-settings#members');
-  };
-
   const applyProjectContextChange = async (projectId: number): Promise<void> => {
     await switchActiveProject(projectId);
     window.location.reload();
@@ -479,7 +469,6 @@ function RootLayout(): React.ReactElement {
             onClose={handleProjectMenuClose}
             onSwitchProject={handleSwitchProject}
             onOpenProjectSettings={handleOpenProjectSettings}
-            onOpenMemberManagement={handleOpenProjectMembers}
             onOpenCreateProject={handleOpenCreateProject}
             t={t}
           />

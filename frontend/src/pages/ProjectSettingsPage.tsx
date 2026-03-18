@@ -24,8 +24,11 @@ export default function ProjectSettingsPage(): React.ReactElement {
   const [invitations, setInvitations] = useState<ProjectInvitationPayload[]>([]);
   const [members, setMembers] = useState<ProjectMemberPayload[]>([]);
   const [pendingRemovalMember, setPendingRemovalMember] = useState<ProjectMemberPayload | null>(null);
+  const [memberLoadError, setMemberLoadError] = useState<string | null>(null);
+  const [invitationLoadError, setInvitationLoadError] = useState<string | null>(null);
 
-  const canManageInvites = activeMembership?.role === 'admin';
+  const isProjectAdmin = activeMembership?.role === 'admin';
+  const canManageMembers = isProjectAdmin;
 
   const extractErrorPayload = (error: unknown): { code: string | null; detail: string | null } => {
     const payload = (error as { response?: { data?: { code?: string; detail?: string } } })?.response?.data;
@@ -36,16 +39,20 @@ export default function ProjectSettingsPage(): React.ReactElement {
   };
 
   const loadInvitations = useCallback(async (): Promise<void> => {
-    if (!activeMembership) {
+    if (!activeMembership || !canManageMembers) {
+      setInvitations([]);
+      setInvitationLoadError(null);
       return;
     }
     try {
       const response = await projectAPI.listInvitations(activeMembership.project_id);
       setInvitations(response.data);
+      setInvitationLoadError(null);
     } catch {
-      setFeedback((current) => current ?? { severity: 'error', text: t('listLoadFailed') });
+      setInvitations([]);
+      setInvitationLoadError(t('projectMembers.invitations.loadError'));
     }
-  }, [activeMembership, t]);
+  }, [activeMembership, canManageMembers, t]);
 
   const loadMembers = useCallback(async (): Promise<void> => {
     if (!activeMembership) {
@@ -54,15 +61,20 @@ export default function ProjectSettingsPage(): React.ReactElement {
     try {
       const response = await projectAPI.listMembers(activeMembership.project_id);
       setMembers(response.data);
+      setMemberLoadError(null);
     } catch {
-      setFeedback((current) => current ?? { severity: 'error', text: t('memberListLoadFailed') });
+      setMembers([]);
+      setMemberLoadError(t('memberListLoadFailed'));
     }
   }, [activeMembership, t]);
 
   useEffect(() => {
-    void loadInvitations();
     void loadMembers();
-  }, [activeMembership?.project_id, loadInvitations, loadMembers]);
+  }, [loadMembers]);
+
+  useEffect(() => {
+    void loadInvitations();
+  }, [loadInvitations]);
 
   if (!activeMembership) {
     return (
@@ -74,6 +86,11 @@ export default function ProjectSettingsPage(): React.ReactElement {
   }
 
   const handleInvite = async (): Promise<void> => {
+    if (!canManageMembers) {
+      setFeedback({ severity: 'error', text: t('projectMembers.invite.noPermission') });
+      return;
+    }
+
     setFeedback(null);
     try {
       const response = await projectAPI.invite(activeMembership.project_id, { email, role });
@@ -146,6 +163,19 @@ export default function ProjectSettingsPage(): React.ReactElement {
     }
   };
 
+  const invitationStatus = (() => {
+    if (!canManageMembers) {
+      return <Alert severity="info">{t('projectMembers.invitations.noAccess')}</Alert>;
+    }
+    if (invitationLoadError) {
+      return <Alert severity="error">{invitationLoadError}</Alert>;
+    }
+    if (invitations.length === 0) {
+      return <Alert severity="info">{t('projectMembers.invitations.empty')}</Alert>;
+    }
+    return null;
+  })();
+
   return (
     <Box sx={{ p: 3, maxWidth: 760, mx: 'auto' }}>
       <Typography variant="h4" sx={{ mb: 1 }}>{t('title')}</Typography>
@@ -158,12 +188,14 @@ export default function ProjectSettingsPage(): React.ReactElement {
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
+          disabled={!canManageMembers}
         />
         <TextField
           select
           label={t('roleLabel')}
           value={role}
           onChange={(event) => setRole(event.target.value as 'admin' | 'member')}
+          disabled={!canManageMembers}
         >
           <MenuItem value="member">{t('roleMember')}</MenuItem>
           <MenuItem value="admin">{t('roleAdmin')}</MenuItem>
@@ -171,21 +203,22 @@ export default function ProjectSettingsPage(): React.ReactElement {
         <Button
           variant="contained"
           onClick={() => void handleInvite()}
-          disabled={!canManageInvites || !email.trim()}
+          disabled={!canManageMembers || !email.trim()}
         >
           {t('sendInvite')}
         </Button>
       </Stack>
 
-      {!canManageInvites ? (
-        <Alert severity="info" sx={{ mt: 2 }}>{t('adminOnly')}</Alert>
+      {!canManageMembers ? (
+        <Alert severity="info" sx={{ mt: 2 }}>{t('projectMembers.invite.noPermission')}</Alert>
       ) : null}
 
       {feedback ? <Alert severity={feedback.severity} sx={{ mt: 2, wordBreak: 'break-all' }}>{feedback.text}</Alert> : null}
 
       <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>{t('membersSectionTitle')}</Typography>
       <Stack spacing={1.5}>
-        {members.map((member) => {
+        {memberLoadError ? <Alert severity="error">{memberLoadError}</Alert> : null}
+        {!memberLoadError ? members.map((member) => {
           const isCurrentUser = member.user === user?.id;
           const displayName = member.user_display_name || t('memberDisplayFallback');
 
@@ -206,7 +239,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
                     label={t('memberRoleLabel')}
                     value={member.role}
                     onChange={(event) => void handleMemberRoleChange(member.id, event.target.value as 'admin' | 'member', isCurrentUser)}
-                    disabled={!canManageInvites || isCurrentUser}
+                    disabled={!canManageMembers || isCurrentUser}
                     sx={{ minWidth: 160 }}
                   >
                     <MenuItem value="member">{t('roleMember')}</MenuItem>
@@ -216,7 +249,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
                     size="small"
                     color="error"
                     onClick={() => setPendingRemovalMember(member)}
-                    disabled={!canManageInvites || isCurrentUser}
+                    disabled={!canManageMembers || isCurrentUser}
                   >
                     {t('removeMember')}
                   </Button>
@@ -224,13 +257,13 @@ export default function ProjectSettingsPage(): React.ReactElement {
               </Stack>
             </Box>
           );
-        })}
-        {members.length === 0 ? <Alert severity="info">{t('membersEmpty')}</Alert> : null}
+        }) : null}
+        {!memberLoadError && members.length === 0 ? <Alert severity="info">{t('membersEmpty')}</Alert> : null}
       </Stack>
 
       <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>{t('listTitle')}</Typography>
       <Stack spacing={1.5}>
-        {invitations.map((invitation) => (
+        {canManageMembers && !invitationLoadError ? invitations.map((invitation) => (
           <Box key={invitation.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
               <Box>
@@ -241,7 +274,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
               </Box>
               <Stack direction="row" spacing={1} alignItems="center">
                 <Chip label={t(`status.${invitation.resolved_status}`)} size="small" />
-                {canManageInvites && invitation.resolved_status === 'pending' ? (
+                {invitation.resolved_status === 'pending' ? (
                   <Button size="small" color="error" onClick={() => void handleRevoke(invitation.id)}>
                     {t('revoke')}
                   </Button>
@@ -249,8 +282,8 @@ export default function ProjectSettingsPage(): React.ReactElement {
               </Stack>
             </Stack>
           </Box>
-        ))}
-        {invitations.length === 0 ? <Alert severity="info">{t('listEmpty')}</Alert> : null}
+        )) : null}
+        {invitationStatus}
       </Stack>
 
       <Dialog open={pendingRemovalMember !== null} onClose={() => setPendingRemovalMember(null)} fullWidth maxWidth="xs">

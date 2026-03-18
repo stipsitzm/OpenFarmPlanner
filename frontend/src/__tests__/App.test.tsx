@@ -112,7 +112,7 @@ describe('App', () => {
     render(<CommandProvider><App /></CommandProvider>);
     fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
     expect(await screen.findByText('Projekteinstellungen')).toBeInTheDocument();
-    expect(screen.getByText('Mitglieder verwalten')).toBeInTheDocument();
+    expect(screen.queryByText('Mitglieder verwalten')).not.toBeInTheDocument();
     expect(await screen.findByText('Neues Projekt erstellen')).toBeInTheDocument();
   });
 

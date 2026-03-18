@@ -65,5 +65,15 @@
     "invitation_error": "Einladung konnte nicht erstellt werden.",
     "last_admin": "Mindestens ein Projekt-Admin muss erhalten bleiben."
   },
-  "listLoadFailed": "Einladungen konnten nicht geladen werden."
+  "listLoadFailed": "Einladungen konnten nicht geladen werden.",
+  "projectMembers": {
+    "invitations": {
+      "noAccess": "Nur Admins können Einladungen sehen und verwalten.",
+      "loadError": "Einladungen konnten nicht geladen werden.",
+      "empty": "Es gibt aktuell keine Einladungen."
+    },
+    "invite": {
+      "noPermission": "Nur Admins können Einladungen senden und verwalten."
+    }
+  }
 }
