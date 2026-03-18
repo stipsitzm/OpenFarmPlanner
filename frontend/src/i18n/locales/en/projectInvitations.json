@@ -46,5 +46,6 @@
     "already_member": "This email address is already a project member.",
     "invalid_email": "Please provide a valid email address.",
     "invitation_error": "Invitation could not be created."
-  }
+  },
+  "listLoadFailed": "Invitations could not be loaded."
 }

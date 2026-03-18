@@ -46,5 +46,6 @@
     "already_member": "Diese E-Mail-Adresse ist bereits Mitglied dieses Projekts.",
     "invalid_email": "Bitte gib eine gültige E-Mail-Adresse ein.",
     "invitation_error": "Einladung konnte nicht erstellt werden."
-  }
+  },
+  "listLoadFailed": "Einladungen konnten nicht geladen werden."
 }

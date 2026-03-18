@@ -25,16 +25,24 @@ export default function ProjectSettingsPage(): React.ReactElement {
 
   const canManageInvites = activeMembership?.role === 'admin';
 
-  const extractErrorCode = (error: unknown): string | null => {
-    return (error as { response?: { data?: { code?: string } } })?.response?.data?.code ?? null;
+  const extractErrorPayload = (error: unknown): { code: string | null; detail: string | null } => {
+    const payload = (error as { response?: { data?: { code?: string; detail?: string } } })?.response?.data;
+    return {
+      code: payload?.code ?? null,
+      detail: payload?.detail ?? null,
+    };
   };
 
   const loadInvitations = useCallback(async (): Promise<void> => {
     if (!activeMembership) {
       return;
     }
-    const response = await projectAPI.listInvitations(activeMembership.project_id);
-    setInvitations(response.data);
+    try {
+      const response = await projectAPI.listInvitations(activeMembership.project_id);
+      setInvitations(response.data);
+    } catch {
+      setFeedback((current) => current ?? { severity: 'error', text: t('listLoadFailed') });
+    }
   }, [activeMembership]);
 
   useEffect(() => {
@@ -67,8 +75,10 @@ export default function ProjectSettingsPage(): React.ReactElement {
       setRole('member');
       await loadInvitations();
     } catch (inviteError: unknown) {
-      const code = extractErrorCode(inviteError);
-      const message = code ? t(`error.${code}`, { defaultValue: t('inviteFailed') }) : t('inviteFailed');
+      const payload = extractErrorPayload(inviteError);
+      const message = payload.code
+        ? t(`error.${payload.code}`, { defaultValue: payload.detail ?? t('inviteFailed') })
+        : (payload.detail ?? t('inviteFailed'));
       setFeedback({ severity: 'error', text: message });
     }
   };
