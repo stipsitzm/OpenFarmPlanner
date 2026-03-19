@@ -6,6 +6,7 @@ This module centralizes invitation lifecycle operations and validation.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from datetime import timedelta
 import secrets
 from typing import Any
@@ -19,6 +20,8 @@ from farm.models import Project, ProjectInvitation, ProjectMembership
 
 User = get_user_model()
 PENDING_INVITATION_SESSION_KEY = 'pending_project_invitation_token'
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -183,6 +186,7 @@ def get_invitation_by_token(token: str) -> ProjectInvitation:
     """
     invitation = ProjectInvitation.objects.select_related('project', 'invited_by', 'accepted_by', 'revoked_by').filter(token=token).first()
     if not invitation:
+        logger.warning('Invitation token lookup failed', extra={'token': token})
         raise InvitationFlowError('invalid_token', 'Invalid invitation token.')
     return invitation
 
@@ -223,14 +227,17 @@ def accept_invitation(*, invitation: ProjectInvitation, user: User) -> Invitatio
     :return: Accept result.
     """
     if normalize_email(user.email) != invitation.email_normalized:
+        logger.warning('Invitation accept rejected due to email mismatch', extra={'user_id': user.id, 'token': invitation.token, 'invitation_email': invitation.email_normalized, 'user_email': normalize_email(user.email)})
         raise InvitationFlowError('email_mismatch', 'Invitation belongs to another email address.')
 
     with transaction.atomic():
         locked = ProjectInvitation.objects.select_for_update().get(pk=invitation.pk)
 
         if locked.resolved_status == 'expired':
+            logger.warning('Invitation accept rejected because invitation expired', extra={'user_id': user.id, 'token': locked.token})
             raise InvitationFlowError('expired', 'Invitation has expired.')
         if locked.status == ProjectInvitation.STATUS_REVOKED:
+            logger.warning('Invitation accept rejected because invitation was revoked', extra={'user_id': user.id, 'token': locked.token})
             raise InvitationFlowError('revoked', 'Invitation was revoked.')
 
         membership, created = ProjectMembership.objects.get_or_create(
@@ -240,15 +247,18 @@ def accept_invitation(*, invitation: ProjectInvitation, user: User) -> Invitatio
         )
 
         if locked.status == ProjectInvitation.STATUS_ACCEPTED:
+            logger.info('Invitation already accepted before current request', extra={'user_id': user.id, 'token': locked.token, 'project_id': locked.project_id})
             return InvitationResult(code='already_member', invitation=locked, message='User is already a member.')
 
         if not created:
+            logger.info('Invitation accept found existing project membership', extra={'user_id': user.id, 'token': locked.token, 'project_id': locked.project_id})
             locked.status = ProjectInvitation.STATUS_ACCEPTED
             locked.accepted_by = user
             locked.accepted_at = timezone.now()
             locked.save(update_fields=['status', 'accepted_by', 'accepted_at', 'updated_at'])
             return InvitationResult(code='already_member', invitation=locked, message='User is already a member.')
 
+        logger.info('Invitation accepted and membership created', extra={'user_id': user.id, 'token': locked.token, 'project_id': locked.project_id})
         locked.status = ProjectInvitation.STATUS_ACCEPTED
         locked.accepted_by = user
         locked.accepted_at = timezone.now()

@@ -139,6 +139,7 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertFalse(response.data['mail_sent'])
         self.assertIn('invite_link', response.data)
+        self.assertIn('/invite/accept?token=', response.data['invite_link'])
 
     def test_accept_invitation_success(self) -> None:
         invitation = ProjectInvitation.objects.create(

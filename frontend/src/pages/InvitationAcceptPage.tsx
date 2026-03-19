@@ -1,85 +1,125 @@
-import { Alert, Button, Container, Stack, Typography } from '@mui/material';
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { projectAPI } from '../api/api';
-import { useAuth } from '../auth/AuthContext';
-import { useTranslation } from '../i18n';
+import { Alert, Button, Container, Stack, Typography } from "@mui/material";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { projectAPI } from "../api/api";
+import { useAuth } from "../auth/AuthContext";
+import { useTranslation } from "../i18n";
 import {
   buildInvitationAcceptPath,
   clearInvitationRedirectStorage,
   getStoredInvitationToken,
   storeInvitationRedirect,
-} from './invitationAcceptance';
+} from "./invitationAcceptance";
 
-type AcceptStatus = 'loading' | 'redirecting' | 'success' | 'error';
+type AcceptStatus = "loading" | "redirecting" | "success" | "error";
 
 export default function InvitationAcceptPage(): React.ReactElement {
-  const { t } = useTranslation('projectInvitations');
+  const { t } = useTranslation("projectInvitations");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, switchActiveProject } = useAuth();
-  const [status, setStatus] = useState<AcceptStatus>('loading');
-  const [message, setMessage] = useState<string>('');
+  const { user, switchActiveProject, refreshUser } = useAuth();
+  const [status, setStatus] = useState<AcceptStatus>("loading");
+  const [message, setMessage] = useState<string>("");
 
   const token = useMemo(() => {
-    const tokenFromQuery = searchParams.get('token');
+    const tokenFromQuery = searchParams.get("token");
     return tokenFromQuery?.trim() || getStoredInvitationToken();
   }, [searchParams]);
 
   useEffect(() => {
+    console.info("[InvitationAcceptPage] route reached", {
+      path: window.location.pathname,
+      search: window.location.search,
+    });
+
     if (!token) {
-      setStatus('error');
-      setMessage(t('result.invalid_token'));
+      setStatus("error");
+      setMessage(t("result.invalid_token"));
       return;
     }
 
+    console.info("[InvitationAcceptPage] parsed token", { token });
     const nextPath = buildInvitationAcceptPath(token);
     storeInvitationRedirect(nextPath, token);
 
     if (!user) {
-      setStatus('redirecting');
-      navigate(`/login?next=${encodeURIComponent(nextPath)}`, { replace: true });
+      setStatus("redirecting");
+      console.info(
+        "[InvitationAcceptPage] user not authenticated, redirecting to login",
+        { nextPath },
+      );
+      navigate(`/login?next=${encodeURIComponent(nextPath)}`, {
+        replace: true,
+      });
       return;
     }
 
     let cancelled = false;
 
     const acceptInvitation = async (): Promise<void> => {
-      setStatus('loading');
-      setMessage(t('acceptPage.accepting'));
+      setStatus("loading");
+      setMessage(t("acceptPage.accepting"));
 
       try {
-        const response = await projectAPI.acceptInvitation(token);
+        console.info("[InvitationAcceptPage] calling accept API", { token });
+        const response = await projectAPI.acceptInvitationByToken(token);
         const projectId = response.data.project?.id ?? response.data.project_id;
         if (projectId) {
+          window.localStorage.setItem("activeProjectId", String(projectId));
           await switchActiveProject(projectId);
+          await refreshUser();
         }
         clearInvitationRedirectStorage();
         if (cancelled) {
           return;
         }
-        setStatus('success');
-        setMessage(t('acceptPage.addedToProject'));
-        window.setTimeout(() => navigate('/app', { replace: true }), 1200);
+        console.info(
+          "[InvitationAcceptPage] invitation accepted successfully",
+          { projectId },
+        );
+        setStatus("success");
+        setMessage(t("acceptPage.addedToProject"));
+        window.setTimeout(
+          () => navigate("/app/anbauplaene", { replace: true }),
+          1200,
+        );
       } catch (acceptError: unknown) {
         if (cancelled) {
           return;
         }
-        const code = (acceptError as { response?: { data?: { code?: string } } })?.response?.data?.code ?? 'invalid_token';
-        if (code === 'already_member' || code === 'accepted') {
+        console.error(
+          "[InvitationAcceptPage] invitation acceptance failed",
+          acceptError,
+        );
+        const code =
+          (acceptError as { response?: { data?: { code?: string } } })?.response
+            ?.data?.code ?? "invalid_token";
+        if (code === "already_member" || code === "accepted") {
           clearInvitationRedirectStorage();
-          setStatus('success');
+          console.info("[InvitationAcceptPage] invitation already satisfied", {
+            code,
+          });
+          setStatus("success");
           setMessage(t(`result.${code}`));
-          window.setTimeout(() => navigate('/app', { replace: true }), 1200);
+          window.setTimeout(
+            () => navigate("/app/anbauplaene", { replace: true }),
+            1200,
+          );
           return;
         }
 
-        if (code === 'invalid_token' || code === 'expired' || code === 'revoked') {
+        if (
+          code === "invalid_token" ||
+          code === "expired" ||
+          code === "revoked"
+        ) {
           clearInvitationRedirectStorage();
         }
 
-        setStatus('error');
-        setMessage(t(`result.${code}`, { defaultValue: t('result.invalid_token') }));
+        setStatus("error");
+        setMessage(
+          t(`result.${code}`, { defaultValue: t("result.invalid_token") }),
+        );
       }
     };
 
@@ -88,21 +128,28 @@ export default function InvitationAcceptPage(): React.ReactElement {
     return () => {
       cancelled = true;
     };
-  }, [navigate, switchActiveProject, t, token, user]);
+  }, [navigate, refreshUser, switchActiveProject, t, token, user]);
 
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
       <Stack spacing={2}>
-        <Typography variant="h4">{t('acceptPage.title')}</Typography>
-        {status === 'loading' || status === 'redirecting' ? (
+        <Typography variant="h4">{t("acceptPage.title")}</Typography>
+        {status === "loading" || status === "redirecting" ? (
           <Alert severity="info">
-            {status === 'redirecting' ? t('acceptPage.redirectingToLogin') : message || t('acceptPage.accepting')}
+            {status === "redirecting"
+              ? t("acceptPage.redirectingToLogin")
+              : message || t("acceptPage.accepting")}
           </Alert>
         ) : null}
-        {status === 'success' ? <Alert severity="success">{message}</Alert> : null}
-        {status === 'error' ? <Alert severity="error">{message}</Alert> : null}
-        <Button variant="outlined" onClick={() => navigate('/app', { replace: true })}>
-          {t('openApp')}
+        {status === "success" ? (
+          <Alert severity="success">{message}</Alert>
+        ) : null}
+        {status === "error" ? <Alert severity="error">{message}</Alert> : null}
+        <Button
+          variant="outlined"
+          onClick={() => navigate("/app/anbauplaene", { replace: true })}
+        >
+          {t("openApp")}
         </Button>
       </Stack>
     </Container>

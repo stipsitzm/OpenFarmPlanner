@@ -1793,7 +1793,7 @@ class ProjectInvitationView(APIView):
         if invitation is None:
             return Response({'code': 'invitation_error', 'detail': 'Invitation could not be created.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/{invitation.token}"
+        invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/accept?token={invitation.token}"
         mail_sent, mail_error = _send_project_invitation_email(
             invitation=invitation,
             project_name=project.name,
@@ -1862,13 +1862,16 @@ class AcceptProjectInvitationByTokenView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, token: str):
+        logger.info('Invitation accept endpoint reached', extra={'user_id': request.user.id, 'token': token, 'path': request.path})
         try:
             invitation = get_invitation_by_token(token)
             result = accept_invitation(invitation=invitation, user=request.user)
         except InvitationFlowError as exc:
+            logger.warning('Invitation accept failed', extra={'user_id': request.user.id, 'token': token, 'code': exc.code, 'path': request.path})
             return _invitation_error_response(exc)
 
         project_payload = _apply_invitation_project_settings(user=request.user, project=result.invitation.project)
+        clear_pending_invitation_token(session=request.session)
 
         return Response(
             {
@@ -1889,6 +1892,7 @@ class AcceptProjectInvitationView(APIView):
         serializer = InvitationTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         token = serializer.validated_data['token']
+        logger.info('Invitation accept body endpoint reached', extra={'user_id': request.user.id, 'token': token, 'path': request.path})
         return AcceptProjectInvitationByTokenView().post(request, token)
 
 
@@ -1898,12 +1902,15 @@ class AcceptPendingProjectInvitationView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        logger.info('Pending invitation accept endpoint reached', extra={'user_id': request.user.id, 'path': request.path})
         try:
             result = accept_pending_invitation_from_session(session=request.session, user=request.user)
         except InvitationFlowError as exc:
+            logger.warning('Pending invitation accept failed', extra={'user_id': request.user.id, 'code': exc.code, 'path': request.path})
             return _invitation_error_response(exc)
 
         project_payload = _apply_invitation_project_settings(user=request.user, project=result.invitation.project)
+        clear_pending_invitation_token(session=request.session)
 
         return Response(
             {
