@@ -26,7 +26,7 @@
     "title": "Grafische Ansicht der Anbauflächen",
     "viewMode": "Ansichtsmodus",
     "editMode": "Editiermodus",
-    "viewModeDescription": "Navigieren, hinein- und herauszoomen und Details öffnen.",
+    "viewModeDescription": "Navigieren, hinein- und herauszoomen und Details öffnen. Schläge und Beete lassen sich nur im Editiermodus verschieben oder bearbeiten.",
     "editModeDescription": "Flächen verschieben und Layouts anpassen.",
     "editModeBanner": "Editiermodus aktiv – Schläge und Beete können jetzt verschoben werden.",
     "editModeShortcut": "Tastenkürzel: Alt+E",

@@ -26,7 +26,7 @@
     "title": "Graphical field view",
     "viewMode": "View mode",
     "editMode": "Edit mode",
-    "viewModeDescription": "Navigate, zoom and inspect details.",
+    "viewModeDescription": "Navigate, zoom and inspect details. Fields and beds can only be moved or edited in edit mode.",
     "editModeDescription": "Move fields and beds and adjust layouts.",
     "editModeBanner": "Edit mode active – fields and beds can now be moved.",
     "editModeShortcut": "Shortcut: Alt+E",
