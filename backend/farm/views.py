@@ -56,10 +56,14 @@ from django.template.loader import render_to_string
 from .services.project_invitations import (
     InvitationFlowError,
     accept_invitation,
+    accept_pending_invitation_from_session,
     build_public_status,
+    clear_pending_invitation_token,
     create_or_resend_invitation,
+    get_pending_invitation_token,
     get_invitation_by_token,
     revoke_invitation,
+    store_pending_invitation_token,
 )
 
 from .services_area import calculate_remaining_bed_area
@@ -1804,8 +1808,39 @@ class PublicProjectInvitationView(APIView):
         except InvitationFlowError as exc:
             return Response({'code': exc.code, 'detail': exc.message}, status=status.HTTP_404_NOT_FOUND)
 
+        if request.user.is_authenticated:
+            clear_pending_invitation_token(session=request.session)
+        elif invitation.is_open:
+            store_pending_invitation_token(session=request.session, token=invitation.token)
+        else:
+            clear_pending_invitation_token(session=request.session)
+
         payload = build_public_status(invitation, request.user if request.user.is_authenticated else None)
         return Response(payload)
+
+
+class PendingProjectInvitationView(APIView):
+    """Read or clear the pending invitation token kept in the current session."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        token = get_pending_invitation_token(session=request.session)
+        if token is None:
+            return Response({'code': 'no_pending_invitation', 'requires_auth': not request.user.is_authenticated})
+
+        try:
+            invitation = get_invitation_by_token(token)
+        except InvitationFlowError as exc:
+            clear_pending_invitation_token(session=request.session)
+            return _invitation_error_response(exc)
+
+        payload = build_public_status(invitation, request.user if request.user.is_authenticated else None)
+        return Response(payload)
+
+    def delete(self, request):
+        clear_pending_invitation_token(session=request.session)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AcceptProjectInvitationByTokenView(APIView):
@@ -1845,6 +1880,32 @@ class AcceptProjectInvitationView(APIView):
         serializer.is_valid(raise_exception=True)
         token = serializer.validated_data['token']
         return AcceptProjectInvitationByTokenView().post(request, token)
+
+
+class AcceptPendingProjectInvitationView(APIView):
+    """Accept the invitation token currently stored in the session."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            result = accept_pending_invitation_from_session(session=request.session, user=request.user)
+        except InvitationFlowError as exc:
+            return _invitation_error_response(exc)
+
+        settings_obj, _ = UserProjectSettings.objects.get_or_create(user=request.user)
+        if settings_obj.default_project_id is None:
+            settings_obj.default_project = result.invitation.project
+        settings_obj.last_project = result.invitation.project
+        settings_obj.save()
+
+        return Response(
+            {
+                'code': result.code,
+                'detail': result.message,
+                'project_id': result.invitation.project_id if result.invitation else None,
+            }
+        )
 
 
 class RevokeProjectInvitationView(APIView):

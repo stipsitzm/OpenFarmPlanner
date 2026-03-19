@@ -39,50 +39,54 @@ export function createCulturesCommandSpecs({
   const aiCommands: CommandSpec[] = enableAiEnrichment ? [
     {
       id: 'culture.aiCompleteCurrent',
-      title: 'Kultur per KI vervollständigen (Alt+U)',
+      label: 'Kultur per KI vervollständigen (Alt+U)',
+      group: 'navigation',
       keywords: ['ki', 'ai', 'vervollständigen', 'complete', 'kultur'],
       shortcutHint: 'Alt+U',
       keys: { alt: true, key: 'u' },
       contextTags: ['cultures'],
-      isAvailable: () => Boolean(selectedCulture) && canRunEnrichmentForCulture(selectedCulture) && !enrichmentLoading,
-      run: () => {
+      isEnabled: () => Boolean(selectedCulture) && canRunEnrichmentForCulture(selectedCulture) && !enrichmentLoading,
+      action: () => {
         void handleEnrichCurrent('complete');
       },
     },
     {
       id: 'culture.aiReresearchCurrent',
-      title: 'Kultur per KI neu recherchieren (Alt+R)',
+      label: 'Kultur per KI neu recherchieren (Alt+R)',
+      group: 'navigation',
       keywords: ['ki', 'ai', 'recherche', 'reresearch', 'kultur'],
       shortcutHint: 'Alt+R',
       keys: { alt: true, key: 'r' },
       contextTags: ['cultures'],
-      isAvailable: () => Boolean(selectedCulture) && canRunEnrichmentForCulture(selectedCulture) && !enrichmentLoading,
-      run: () => {
+      isEnabled: () => Boolean(selectedCulture) && canRunEnrichmentForCulture(selectedCulture) && !enrichmentLoading,
+      action: () => {
         void handleEnrichCurrent('reresearch');
       },
     },
     {
       id: 'culture.aiCompleteAll',
-      title: 'Alle Kulturen per KI vervollständigen (Alt+A)',
+      label: 'Alle Kulturen per KI vervollständigen (Alt+A)',
+      group: 'navigation',
       keywords: ['ki', 'ai', 'alle', 'kulturen', 'vervollständigen'],
       shortcutHint: 'Alt+A',
       keys: { alt: true, key: 'a' },
       contextTags: ['cultures'],
-      isAvailable: () => cultures.some((culture) => canRunEnrichmentForCulture(culture)) && !enrichmentLoading,
-      run: () => setEnrichAllConfirmOpen(true),
+      isEnabled: () => cultures.some((culture) => canRunEnrichmentForCulture(culture)) && !enrichmentLoading,
+      action: () => setEnrichAllConfirmOpen(true),
     },
   ] : [];
 
   return [
     {
       id: 'culture.edit',
-      title: 'Kultur bearbeiten (Alt+E)',
+      label: 'Kultur bearbeiten (Alt+E)',
+      group: 'navigation',
       keywords: ['kultur', 'bearbeiten', 'edit'],
       shortcutHint: 'Alt+E',
       keys: { alt: true, key: 'e' },
       contextTags: ['cultures'],
-      isAvailable: () => Boolean(selectedCulture),
-      run: () => {
+      isEnabled: () => Boolean(selectedCulture),
+      action: () => {
         if (selectedCulture) {
           handleEdit(selectedCulture);
         }
@@ -90,13 +94,14 @@ export function createCulturesCommandSpecs({
     },
     {
       id: 'culture.delete',
-      title: 'Kultur löschen (Alt+Shift+D)',
+      label: 'Kultur löschen (Alt+Shift+D)',
+      group: 'navigation',
       keywords: ['kultur', 'löschen', 'delete'],
       shortcutHint: 'Alt+Shift+D',
       keys: { alt: true, shift: true, key: 'd' },
       contextTags: ['cultures'],
-      isAvailable: () => Boolean(selectedCulture),
-      run: () => {
+      isEnabled: () => Boolean(selectedCulture),
+      action: () => {
         if (selectedCulture) {
           handleDelete(selectedCulture);
         }
@@ -104,64 +109,70 @@ export function createCulturesCommandSpecs({
     },
     {
       id: 'culture.exportCurrent',
-      title: 'JSON exportieren (Alt+J)',
+      label: 'JSON exportieren (Alt+J)',
+      group: 'navigation',
       keywords: ['json', 'export', 'kultur'],
       shortcutHint: 'Alt+J',
       keys: { alt: true, key: 'j' },
       contextTags: ['cultures'],
-      isAvailable: () => Boolean(selectedCulture),
-      run: handleExportCurrentCulture,
+      isEnabled: () => Boolean(selectedCulture),
+      action: handleExportCurrentCulture,
     },
     {
       id: 'culture.exportAll',
-      title: 'Alle Kulturen exportieren (Alt+Shift+J)',
+      label: 'Alle Kulturen exportieren (Alt+Shift+J)',
+      group: 'navigation',
       keywords: ['json', 'export', 'alle', 'kulturen'],
       shortcutHint: 'Alt+Shift+J',
       keys: { alt: true, shift: true, key: 'j' },
       contextTags: ['cultures'],
-      isAvailable: () => true,
-      run: handleExportAllCultures,
+      isEnabled: () => true,
+      action: handleExportAllCultures,
     },
     {
       id: 'culture.import',
-      title: 'JSON importieren (Alt+I)',
+      label: 'JSON importieren (Alt+I)',
+      group: 'navigation',
       keywords: ['json', 'import'],
       shortcutHint: 'Alt+I',
       keys: { alt: true, key: 'i' },
       contextTags: ['cultures'],
-      isAvailable: () => true,
-      run: handleImportFileTrigger,
+      isEnabled: () => true,
+      action: handleImportFileTrigger,
     },
     {
       id: 'culture.createPlan',
-      title: 'Anbauplan erstellen (Alt+P)',
+      label: 'Anbauplan erstellen (Alt+P)',
+      group: 'navigation',
       keywords: ['anbauplan', 'planting', 'plan'],
       shortcutHint: 'Alt+P',
       keys: { alt: true, key: 'p' },
       contextTags: ['cultures'],
-      isAvailable: () => Boolean(selectedCultureId),
-      run: handleCreatePlantingPlan,
+      isEnabled: () => Boolean(selectedCultureId),
+      action: handleCreatePlantingPlan,
     },
     ...aiCommands,
     {
       id: 'culture.previous',
-      title: 'Vorherige Kultur (Alt+Shift+←)',
+      label: 'Vorherige Kultur (Alt+Shift+←)',
+      group: 'navigation',
       keywords: ['vorherige', 'kultur', 'left'],
       shortcutHint: 'Alt+Shift+←',
       keys: { alt: true, shift: true, key: 'ArrowLeft' },
       contextTags: ['cultures'],
-      isAvailable: () => cultures.length > 1 && Boolean(selectedCultureId),
-      run: () => goToRelativeCulture('previous'),
+      isEnabled: () => cultures.length > 1 && Boolean(selectedCultureId),
+      action: () => goToRelativeCulture('previous'),
     },
     {
       id: 'culture.next',
-      title: 'Nächste Kultur (Alt+Shift+→)',
+      label: 'Nächste Kultur (Alt+Shift+→)',
+      group: 'navigation',
       keywords: ['nächste', 'kultur', 'right'],
       shortcutHint: 'Alt+Shift+→',
       keys: { alt: true, shift: true, key: 'ArrowRight' },
       contextTags: ['cultures'],
-      isAvailable: () => cultures.length > 1 && Boolean(selectedCultureId),
-      run: () => goToRelativeCulture('next'),
+      isEnabled: () => cultures.length > 1 && Boolean(selectedCultureId),
+      action: () => goToRelativeCulture('next'),
     },
   ];
 }

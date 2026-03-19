@@ -18,6 +18,7 @@ import locationsDE from './locales/de/locations.json';
 import culturesDE from './locales/de/cultures.json';
 import plantingPlansDE from './locales/de/plantingPlans.json';
 import fieldsDE from './locales/de/fields.json';
+import fieldsEN from './locales/en/fields.json';
 import bedsDE from './locales/de/beds.json';
 import hierarchyDE from './locales/de/hierarchy.json';
 import ganttChartDE from './locales/de/ganttChart.json';
@@ -62,6 +63,7 @@ i18n
       },
       en: {
         navigation: navigationEN,
+        fields: fieldsEN,
         projectInvitations: projectInvitationsEN,
       },
     },

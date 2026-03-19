@@ -183,6 +183,7 @@ export interface ProjectMemberPayload {
 
 export interface InvitationPublicStatus {
   code: string;
+  token?: string;
   project_name?: string;
   email_masked?: string;
   requires_auth: boolean;
@@ -206,6 +207,12 @@ export const projectAPI = {
     http.post(`/projects/${projectId}/invitations/${invitationId}/revoke/`),
   getInvitationStatus: (token: string) =>
     http.get<InvitationPublicStatus>(`/project-invitations/${token}/`),
+  getPendingInvitation: () =>
+    http.get<InvitationPublicStatus>('/project-invitations/pending/'),
+  clearPendingInvitation: () =>
+    http.delete('/project-invitations/pending/'),
+  acceptPendingInvitation: () =>
+    http.post<{ code: string; detail: string; project_id?: number }>('/project-invitations/pending/accept/'),
   acceptInvitationByToken: (token: string) =>
     http.post<{ code: string; detail: string; project_id?: number }>(`/project-invitations/${token}/accept/`),
   acceptInvitation: (token: string) =>

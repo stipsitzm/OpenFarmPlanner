@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CommandPalette } from './CommandPalette';
+import { getRunnableCommands, getVisibleCommands } from './commands';
 import type { CommandContextTag, CommandSpec } from './types';
 import type { ShortcutSpec } from '../hooks/useKeyboardShortcuts';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -101,38 +102,36 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
   const allCommands = useMemo(() => Object.values(commandsByScope).flat(), [commandsByScope]);
 
   const activeCommands = useMemo(() => {
-    return allCommands
-      .filter((command) => command.contextTags.every((tag) => currentContextTags.includes(tag)))
-      .filter((command) => command.isAvailable());
+    return getRunnableCommands(
+      allCommands.filter((command) => command.contextTags.every((tag) => currentContextTags.includes(tag))),
+    );
   }, [allCommands, currentContextTags]);
 
-  const helpCommands = useMemo(() => {
-    return allCommands.filter((command) => command.isAvailable());
-  }, [allCommands]);
+  const helpCommands = useMemo(() => getVisibleCommands(allCommands), [allCommands]);
 
   const shortcutSpecs = useMemo<ShortcutSpec[]>(() => {
     const commandShortcuts: ShortcutSpec[] = activeCommands
       .filter((command): command is CommandSpec & { keys: NonNullable<CommandSpec['keys']> } => Boolean(command.keys))
       .map((command) => ({
         id: command.id,
-        title: command.title,
+        title: command.label,
         keys: command.keys,
         contexts: command.contextTags,
-        when: command.isAvailable,
-        action: command.run,
+        when: () => (command.isVisible?.() ?? true) && (command.isEnabled?.() ?? true),
+        action: () => { void command.action(); },
       }));
 
     return [
       {
         id: 'command-palette.open',
-        title: 'Command Palette',
+        title: 'Aktionssuche',
         keys: { alt: true, key: 'k' },
         contexts: [],
         action: openPalette,
       },
       {
         id: 'shortcuts-help.open',
-        title: 'Shortcuts Hilfe',
+        title: 'Tastenkürzelhilfe',
         keys: { alt: true, key: 'h' },
         contexts: [],
         action: () => setHelpOpen(true),
@@ -181,7 +180,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
                 {group.commands.map((command) => (
                   <ListItem key={`${group.tag}-${command.id}`}>
                     <ListItemText
-                      primary={command.title}
+                      primary={command.label}
                       secondary={command.shortcutHint}
                       slotProps={{
                         secondary: {

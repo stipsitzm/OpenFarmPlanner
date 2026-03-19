@@ -48,9 +48,9 @@ function applyResolvedProjectId(me: AuthUser): number | null {
 function mergeProjectSelection(user: AuthUser, projectState: { resolved_project_id?: number | null; last_project_id?: number | null; default_project_id?: number | null }): AuthUser {
   return {
     ...user,
-    resolved_project_id: projectState.resolved_project_id,
-    last_project_id: projectState.last_project_id,
-    default_project_id: projectState.default_project_id,
+    resolved_project_id: projectState.resolved_project_id ?? null,
+    last_project_id: projectState.last_project_id ?? null,
+    default_project_id: projectState.default_project_id ?? null,
   };
 }
 

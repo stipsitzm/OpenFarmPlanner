@@ -21,5 +21,26 @@
   "createNew": "Neuen Schlag erstellen",
   "cancel": "Abbrechen",
   "submit": "Erstellen",
-  "selectLocation": "Standort auswählen"
+  "selectLocation": "Standort auswählen",
+  "graphical": {
+    "title": "Grafische Ansicht der Anbauflächen",
+    "viewMode": "Ansichtsmodus",
+    "editMode": "Editiermodus",
+    "viewModeDescription": "Navigieren, hinein- und herauszoomen und Details öffnen.",
+    "editModeDescription": "Flächen verschieben und Layouts anpassen.",
+    "editModeBanner": "Editiermodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+    "modeToggleAria": "Modus der grafischen Ansicht wechseln",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitToView": "Alles einpassen",
+    "zoomLevel": "Zoom: {{value}}×",
+    "locationTitle": "Standort: {{name}}",
+    "details": {
+      "field": "Schlagdetails",
+      "bed": "Beetdetails"
+    },
+    "location": "Standort",
+    "parentField": "Schlag",
+    "area": "Fläche"
+  }
 }

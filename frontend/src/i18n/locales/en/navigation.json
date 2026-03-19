@@ -28,5 +28,39 @@
     "createCancel": "Cancel",
     "createSubmit": "Create project",
     "createError": "Project could not be created."
+  },
+  "commandGroups": {
+    "project": "Project",
+    "account": "Account",
+    "navigation": "Navigation",
+    "help": "Help"
+  },
+  "commandPalette": {
+    "label": "Action search (Alt+K)",
+    "placeholder": "Search action or run directly",
+    "emptyTitle": "No matching actions found.",
+    "emptyDescription": "Try another search term or check whether more actions are available in the current context.",
+    "shortcutsTitle": "Keyboard shortcuts",
+    "currentVersion": "Current version",
+    "restoreVersion": "Restore",
+    "commands": {
+      "nextPage": "Next page",
+      "previousPage": "Previous page",
+      "openProjectSettings": "Open project settings",
+      "openProjectMembers": "Open members area",
+      "createProject": "Create new project",
+      "switchProjectPrefix": "Switch project",
+      "openAccountSettings": "Open account settings",
+      "openVersionHistory": "Open version history",
+      "logout": "Logout",
+      "openShortcuts": "Open shortcuts",
+      "closeDialog": "Close dialog"
+    },
+    "feedback": {
+      "versionHistoryLoadError": "Could not load version history.",
+      "versionRestored": "Project version restored.",
+      "versionRestoreError": "Could not restore project version.",
+      "logoutError": "Logout failed. Please try again."
+    }
   }
 }

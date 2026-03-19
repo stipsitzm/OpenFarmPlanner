@@ -28,5 +28,39 @@
     "createCancel": "Abbrechen",
     "createSubmit": "Projekt erstellen",
     "createError": "Projekt konnte nicht erstellt werden."
+  },
+  "commandGroups": {
+    "project": "Projekt",
+    "account": "Konto",
+    "navigation": "Navigation",
+    "help": "Hilfe"
+  },
+  "commandPalette": {
+    "label": "Aktionssuche (Alt+K)",
+    "placeholder": "Aktion suchen oder direkt ausführen",
+    "emptyTitle": "Keine passenden Aktionen gefunden.",
+    "emptyDescription": "Versuche einen anderen Suchbegriff oder prüfe, ob im aktuellen Kontext weitere Aktionen verfügbar sind.",
+    "shortcutsTitle": "Tastenkürzel",
+    "currentVersion": "Aktuelle Version",
+    "restoreVersion": "Wiederherstellen",
+    "commands": {
+      "nextPage": "Nächste Seite",
+      "previousPage": "Vorherige Seite",
+      "openProjectSettings": "Projekteinstellungen öffnen",
+      "openProjectMembers": "Mitgliederbereich öffnen",
+      "createProject": "Neues Projekt erstellen",
+      "switchProjectPrefix": "Projekt wechseln",
+      "openAccountSettings": "Kontoeinstellungen öffnen",
+      "openVersionHistory": "Versionsverlauf öffnen",
+      "logout": "Logout",
+      "openShortcuts": "Tastenkürzel öffnen",
+      "closeDialog": "Dialog schließen"
+    },
+    "feedback": {
+      "versionHistoryLoadError": "Versionsverlauf konnte nicht geladen werden.",
+      "versionRestored": "Projektversion wurde wiederhergestellt.",
+      "versionRestoreError": "Projektversion konnte nicht wiederhergestellt werden.",
+      "logoutError": "Logout fehlgeschlagen. Bitte versuche es erneut."
+    }
   }
 }

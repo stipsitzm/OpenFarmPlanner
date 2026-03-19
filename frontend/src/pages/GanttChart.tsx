@@ -117,12 +117,13 @@ function GanttChartPage(): React.ReactElement {
   const calendarCommands = useMemo<CommandSpec[]>(() => [
     {
       id: 'calendar.toggleEdit',
-      title: editMode ? 'Bearbeiten deaktivieren' : 'Bearbeiten aktivieren',
+      label: editMode ? 'Bearbeiten deaktivieren' : 'Bearbeiten aktivieren',
+      group: 'navigation',
       keywords: ['kalender', 'bearbeiten', 'toggle'],
       shortcutHint: '—',
       contextTags: ['calendar'],
-      isAvailable: () => true,
-      run: () => setEditMode((value) => !value),
+      isEnabled: () => true,
+      action: () => setEditMode((value) => !value),
     },
   ], [editMode]);
 

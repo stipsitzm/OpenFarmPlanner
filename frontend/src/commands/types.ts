@@ -9,13 +9,17 @@ export type CommandContextTag =
   | 'calendar'
   | 'seedDemand';
 
+export type CommandGroup = 'project' | 'account' | 'navigation' | 'help';
+
 export interface CommandSpec {
   id: string;
-  title: string;
+  label: string;
   keywords: string[];
-  shortcutHint: string;
+  group: CommandGroup;
+  shortcutHint?: string;
   keys?: ShortcutKeys;
   contextTags: CommandContextTag[];
-  isAvailable: () => boolean;
-  run: () => void;
+  isVisible?: () => boolean;
+  isEnabled?: () => boolean;
+  action: () => void | Promise<void>;
 }

@@ -157,6 +157,61 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(response.data['code'], 'accepted')
         self.assertTrue(ProjectMembership.objects.filter(project=self.project, user=self.invitee).exists())
 
+    def test_public_status_stores_pending_token_for_anonymous_user(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='invitee@example.com',
+            role='member',
+            token='token-store',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+
+        response = self.client.get(f'/openfarmplanner/api/project-invitations/{invitation.token}/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.client.session.get('pending_project_invitation_token'), invitation.token)
+
+    def test_pending_invitation_can_be_accepted_after_login(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='invitee@example.com',
+            role='member',
+            token='token-pending-login',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.get(f'/openfarmplanner/api/project-invitations/{invitation.token}/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'invitee@example.com', 'password': 'pass12345'}, format='json')
+
+        response = self.client.post('/openfarmplanner/api/project-invitations/pending/accept/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['code'], 'accepted')
+        self.assertTrue(ProjectMembership.objects.filter(project=self.project, user=self.invitee).exists())
+        self.assertIsNone(self.client.session.get('pending_project_invitation_token'))
+
+    def test_pending_invitation_rejects_other_email_and_keeps_token(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='invitee@example.com',
+            role='member',
+            token='token-pending-mismatch',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.get(f'/openfarmplanner/api/project-invitations/{invitation.token}/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'u2@example.com', 'password': 'pass12345'}, format='json')
+
+        response = self.client.post('/openfarmplanner/api/project-invitations/pending/accept/')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['code'], 'email_mismatch')
+        self.assertEqual(self.client.session.get('pending_project_invitation_token'), invitation.token)
+
     def test_accept_invitation_email_mismatch(self) -> None:
         invitation = ProjectInvitation.objects.create(
             project=self.project,
@@ -215,6 +270,27 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(second.status_code, status.HTTP_200_OK)
         self.assertEqual(second.data['code'], 'already_member')
         self.assertEqual(ProjectMembership.objects.filter(project=self.project, user=self.user).count(), 1)
+
+    def test_pending_invitation_returns_already_member_without_duplicate_membership(self) -> None:
+        ProjectMembership.objects.create(user=self.invitee, project=self.project, role='member')
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='invitee@example.com',
+            role='member',
+            token='token-pending-member',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.get(f'/openfarmplanner/api/project-invitations/{invitation.token}/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'invitee@example.com', 'password': 'pass12345'}, format='json')
+
+        response = self.client.post('/openfarmplanner/api/project-invitations/pending/accept/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['code'], 'already_member')
+        self.assertEqual(ProjectMembership.objects.filter(project=self.project, user=self.invitee).count(), 1)
+        self.assertIsNone(self.client.session.get('pending_project_invitation_token'))
 
     def test_public_status_handles_invalid_token(self) -> None:
         response = self.client.get('/openfarmplanner/api/project-invitations/does-not-exist/')

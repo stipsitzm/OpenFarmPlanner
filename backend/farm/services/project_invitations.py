@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta
 import secrets
+from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -17,6 +18,7 @@ from django.utils import timezone
 from farm.models import Project, ProjectInvitation, ProjectMembership
 
 User = get_user_model()
+PENDING_INVITATION_SESSION_KEY = 'pending_project_invitation_token'
 
 
 @dataclass
@@ -41,6 +43,40 @@ class InvitationFlowError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+def clear_pending_invitation_token(*, session: Any) -> None:
+    """Remove the stored pending invitation token from a session-like object.
+
+    :param session: Django session or compatible mapping.
+    :return: None.
+    """
+    if PENDING_INVITATION_SESSION_KEY in session:
+        session.pop(PENDING_INVITATION_SESSION_KEY, None)
+        if hasattr(session, 'modified'):
+            session.modified = True
+
+
+def store_pending_invitation_token(*, session: Any, token: str) -> None:
+    """Store a pending invitation token in the current session.
+
+    :param session: Django session or compatible mapping.
+    :param token: Invitation token.
+    :return: None.
+    """
+    session[PENDING_INVITATION_SESSION_KEY] = token
+    if hasattr(session, 'modified'):
+        session.modified = True
+
+
+def get_pending_invitation_token(*, session: Any) -> str | None:
+    """Read the pending invitation token from the current session.
+
+    :param session: Django session or compatible mapping.
+    :return: Stored token or None.
+    """
+    value = session.get(PENDING_INVITATION_SESSION_KEY)
+    return value if isinstance(value, str) and value else None
 
 
 def _expiry_days() -> int:
@@ -166,9 +202,12 @@ def build_public_status(invitation: ProjectInvitation, user: User | None) -> dic
     elif invitation.resolved_status == ProjectInvitation.STATUS_PENDING and user and user.is_authenticated:
         if normalize_email(user.email) != invitation.email_normalized:
             code = 'email_mismatch'
+        elif ProjectMembership.objects.filter(project=invitation.project, user=user).exists():
+            code = 'already_member'
 
     return {
         'code': code,
+        'token': invitation.token,
         'project_name': invitation.project.name,
         'email_masked': mask_email(invitation.email_normalized),
         'requires_auth': not (user and user.is_authenticated),
@@ -216,6 +255,29 @@ def accept_invitation(*, invitation: ProjectInvitation, user: User) -> Invitatio
         locked.save(update_fields=['status', 'accepted_by', 'accepted_at', 'updated_at'])
 
         return InvitationResult(code='accepted', invitation=locked, message='Invitation accepted.')
+
+
+def accept_pending_invitation_from_session(*, session: Any, user: User) -> InvitationResult:
+    """Accept a pending invitation token currently stored in the session.
+
+    :param session: Django session or compatible mapping.
+    :param user: Authenticated user.
+    :return: InvitationResult for the stored invitation.
+    """
+    token = get_pending_invitation_token(session=session)
+    if token is None:
+        raise InvitationFlowError('no_pending_invitation', 'No pending invitation token was found.')
+
+    try:
+        invitation = get_invitation_by_token(token)
+        result = accept_invitation(invitation=invitation, user=user)
+    except InvitationFlowError as exc:
+        if exc.code in {'invalid_token', 'accepted', 'revoked', 'expired'}:
+            clear_pending_invitation_token(session=session)
+        raise
+
+    clear_pending_invitation_token(session=session)
+    return result
 
 
 def revoke_invitation(*, invitation: ProjectInvitation, actor: User) -> InvitationResult:

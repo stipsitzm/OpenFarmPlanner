@@ -9,12 +9,13 @@ function CommandFixture({ available }: { available: boolean }): React.ReactEleme
   const commands = useMemo<CommandSpec[]>(() => [
     {
       id: 'fixture.command',
-      title: 'Fixture Command',
+      label: 'Fixture Command',
+      group: 'project',
       keywords: ['fixture'],
       shortcutHint: 'Alt+X',
       contextTags: ['global'],
-      isAvailable: () => available,
-      run: vi.fn(),
+      isEnabled: () => available,
+      action: vi.fn(),
     },
   ], [available]);
 
