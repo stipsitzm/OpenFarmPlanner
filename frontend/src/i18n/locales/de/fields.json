@@ -29,7 +29,7 @@
     "viewModeDescription": "Navigieren, hinein- und herauszoomen und Details öffnen.",
     "editModeDescription": "Flächen verschieben und Layouts anpassen.",
     "editModeBanner": "Editiermodus aktiv – Schläge und Beete können jetzt verschoben werden.",
-    "modeToggleAria": "Modus der grafischen Ansicht wechseln",
+    "editModeShortcut": "Tastenkürzel: Alt+E",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "fitToView": "Alles einpassen",

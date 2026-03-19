@@ -6,26 +6,27 @@ import {
   Alert,
   Box,
   Button,
-  ButtonGroup,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   Stack,
+  Switch,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import FitScreenIcon from '@mui/icons-material/FitScreen';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import EditIcon from '@mui/icons-material/Edit';
 import { Group, Layer, Rect, Stage, Text } from 'react-konva';
 import type Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 import { layoutAPI, type BedLayoutEntry, type FieldLayoutEntry } from '../api/api';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useTranslation } from '../i18n';
 import { clampInsideParent, getBedRectSizeWithinField, getFieldRectSize, initialAutoLayout, type RectSize } from './graphicalLayoutUtils';
 import {
@@ -284,6 +285,22 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
     };
   }, []);
 
+  useKeyboardShortcuts(
+    [
+      {
+        id: 'graphical-fields.toggle-edit-mode',
+        title: t('fields:graphical.editMode'),
+        keys: { alt: true, key: 'e' },
+        contexts: [],
+        action: () => {
+          setInteractionMode((previous) => (previous === 'edit' ? 'view' : 'edit'));
+        },
+      },
+    ],
+    true,
+    { currentContexts: [] },
+  );
+
   const saveBedLayout = (locationId: number, payload: BedLayoutEntry): void => {
     const timerKey = `bed-${payload.bed}`;
     if (saveTimers.current[timerKey]) {
@@ -496,24 +513,23 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
             {interactionMode === 'view' ? t('fields:graphical.viewModeDescription') : t('fields:graphical.editModeDescription')}
           </Typography>
         </Box>
-        <ButtonGroup aria-label={t('fields:graphical.modeToggleAria')}>
-          <Button
-            variant={interactionMode === 'view' ? 'contained' : 'outlined'}
-            startIcon={<VisibilityIcon />}
-            onClick={() => setInteractionMode('view')}
-            aria-label={t('fields:graphical.viewMode')}
-          >
-            {t('fields:graphical.viewMode')}
-          </Button>
-          <Button
-            variant={interactionMode === 'edit' ? 'contained' : 'outlined'}
-            startIcon={<EditIcon />}
-            onClick={() => setInteractionMode('edit')}
-            aria-label={t('fields:graphical.editMode')}
-          >
-            {t('fields:graphical.editMode')}
-          </Button>
-        </ButtonGroup>
+        <Tooltip title={t('fields:graphical.editModeShortcut')} placement="top">
+          <FormControlLabel
+            control={
+              <Switch
+                checked={interactionMode === 'edit'}
+                onChange={(_, checked) => setInteractionMode(checked ? 'edit' : 'view')}
+                color="primary"
+                inputProps={{
+                  'aria-label': t('fields:graphical.editMode'),
+                  'aria-description': t('fields:graphical.editModeShortcut'),
+                }}
+              />
+            }
+            label={t('fields:graphical.editMode')}
+            sx={{ mr: 0 }}
+          />
+        </Tooltip>
       </Stack>
 
       {interactionMode === 'edit' ? <Alert severity="warning" sx={{ mb: 2 }}>{t('fields:graphical.editModeBanner')}</Alert> : null}

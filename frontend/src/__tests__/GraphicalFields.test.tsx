@@ -153,22 +153,24 @@ describe('GraphicalFields', () => {
     });
   });
 
-  it('starts in view mode and allows switching to edit mode', async () => {
+  it('renders the edit mode switch and allows toggling it by click', async () => {
     render(<GraphicalFields />);
 
-    expect(await screen.findByText('Ansichtsmodus')).toBeInTheDocument();
+    expect(await screen.findByText('Navigieren, hinein- und herauszoomen und Details öffnen.')).toBeInTheDocument();
     expect(screen.queryByText('Editiermodus aktiv – Schläge und Beete können jetzt verschoben werden.')).not.toBeInTheDocument();
+    expect(screen.getByRole('switch')).not.toBeChecked();
 
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'Editiermodus' }));
+      fireEvent.click(screen.getByRole('switch'));
     });
 
+    expect(screen.getByRole('switch')).toBeChecked();
     expect(screen.getByText('Editiermodus aktiv – Schläge und Beete können jetzt verschoben werden.')).toBeInTheDocument();
   }, 15000);
 
   it('renders fit-to-view and zoom controls', async () => {
     render(<GraphicalFields />);
-    expect(await screen.findByText('Ansichtsmodus')).toBeInTheDocument();
+    expect(await screen.findByText('Navigieren, hinein- und herauszoomen und Details öffnen.')).toBeInTheDocument();
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: 'Standort: Hof Nord' }));
     });
@@ -232,8 +234,8 @@ describe('GraphicalFields', () => {
     expect(Number(movedStage.getAttribute('data-y'))).toBe(initialY + 55);
 
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'Editiermodus' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Ansichtsmodus' }));
+      fireEvent.click(screen.getByRole('switch'));
+      fireEvent.click(screen.getByRole('switch'));
     });
 
     const modeToggledStage = screen.getByTestId('konva-stage');
@@ -247,5 +249,31 @@ describe('GraphicalFields', () => {
     const resetStage = screen.getByTestId('konva-stage');
     expect(Number(resetStage.getAttribute('data-x'))).not.toBe(initialX + 45);
     expect(Number(resetStage.getAttribute('data-y'))).not.toBe(initialY + 55);
+  }, 15000);
+
+  it('toggles edit mode via Alt+E but ignores the shortcut while typing in an input', async () => {
+    render(<GraphicalFields />);
+    await screen.findByText('Navigieren, hinein- und herauszoomen und Details öffnen.');
+    expect(screen.getByRole('switch')).not.toBeChecked();
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'e', altKey: true });
+    });
+
+    expect(screen.getByRole('switch')).toBeChecked();
+    expect(screen.getByText('Editiermodus aktiv – Schläge und Beete können jetzt verschoben werden.')).toBeInTheDocument();
+
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'e', altKey: true });
+    });
+
+    expect(screen.getByRole('switch')).toBeChecked();
+
+    input.blur();
+    document.body.removeChild(input);
   }, 15000);
 });

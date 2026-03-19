@@ -29,7 +29,7 @@
     "viewModeDescription": "Navigate, zoom and inspect details.",
     "editModeDescription": "Move fields and beds and adjust layouts.",
     "editModeBanner": "Edit mode active – fields and beds can now be moved.",
-    "modeToggleAria": "Switch graphical view mode",
+    "editModeShortcut": "Shortcut: Alt+E",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "fitToView": "Fit all",
