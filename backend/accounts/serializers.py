@@ -12,6 +12,10 @@ from django.utils.text import slugify
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
+from farm.models import ProjectMembership
+from farm.project_context import resolve_project_for_user
+from .models import AccountDeletionRequest
+
 User = get_user_model()
 _username_validator = UnicodeUsernameValidator()
 _password_field_kwargs = {'write_only': True}
@@ -52,10 +56,30 @@ def build_username_from_email(email: str) -> str:
 class UserSerializer(serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
     display_label = serializers.SerializerMethodField()
+    default_project_id = serializers.SerializerMethodField()
+    last_project_id = serializers.SerializerMethodField()
+    memberships = serializers.SerializerMethodField()
+    resolved_project_id = serializers.SerializerMethodField()
+    needs_project_selection = serializers.SerializerMethodField()
+    account_pending_deletion = serializers.SerializerMethodField()
+    scheduled_deletion_at = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'display_name', 'display_label', 'is_active')
+        fields = (
+            'id',
+            'email',
+            'display_name',
+            'display_label',
+            'is_active',
+            'default_project_id',
+            'last_project_id',
+            'memberships',
+            'resolved_project_id',
+            'needs_project_selection',
+            'account_pending_deletion',
+            'scheduled_deletion_at',
+        )
         read_only_fields = fields
 
     def get_display_name(self, obj: User) -> str:
@@ -65,6 +89,43 @@ class UserSerializer(serializers.ModelSerializer):
     def get_display_label(self, obj: User) -> str:
         full_name = self.get_display_name(obj)
         return full_name or obj.email or obj.username
+
+    def get_default_project_id(self, obj: User) -> int | None:
+        settings = getattr(obj, 'project_settings', None)
+        return getattr(settings, 'default_project_id', None)
+
+    def get_last_project_id(self, obj: User) -> int | None:
+        settings = getattr(obj, 'project_settings', None)
+        return getattr(settings, 'last_project_id', None)
+
+    def get_memberships(self, obj: User) -> list[dict[str, str | int]]:
+        rows = ProjectMembership.objects.select_related('project').filter(user=obj, project__is_active=True)
+        return [
+            {
+                'project_id': row.project_id,
+                'project_name': row.project.name,
+                'role': row.role,
+            }
+            for row in rows
+        ]
+
+    def get_resolved_project_id(self, obj: User) -> int | None:
+        project, _ = resolve_project_for_user(obj)
+        return project.id if project else None
+
+    def get_needs_project_selection(self, obj: User) -> bool:
+        _, needs_selection = resolve_project_for_user(obj)
+        return needs_selection
+
+    def get_account_pending_deletion(self, obj: User) -> bool:
+        deletion = AccountDeletionRequest.objects.filter(user=obj).first()
+        return bool(deletion and deletion.is_pending)
+
+    def get_scheduled_deletion_at(self, obj: User) -> str | None:
+        deletion = AccountDeletionRequest.objects.filter(user=obj).first()
+        if deletion is None or deletion.scheduled_deletion_at is None or deletion.deleted_at is not None:
+            return None
+        return deletion.scheduled_deletion_at.isoformat()
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -125,3 +186,12 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError({'password_confirm': _de(_('Passwords do not match.'))})
         validate_password(attrs['password'])
         return attrs
+
+
+class AccountDeleteRequestSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True)
+
+
+class AccountRestoreSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)

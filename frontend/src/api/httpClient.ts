@@ -54,6 +54,13 @@ httpClient.interceptors.request.use((config) => {
     }
   }
 
+  const activeProjectId = window.localStorage.getItem('activeProjectId');
+  if (activeProjectId) {
+    config.headers = config.headers ?? {};
+    config.headers['X-Project-Id'] = activeProjectId;
+  }
+
+
   const method = (config.method ?? 'get').toLowerCase();
   if (['post', 'put', 'patch', 'delete'].includes(method)) {
     const csrfToken = getCookie('csrftoken');

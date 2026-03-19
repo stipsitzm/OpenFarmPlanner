@@ -38,6 +38,13 @@
   margin-left: auto;
   display: flex;
   align-items: center;
+  gap: 6px;
+}
+
+.project-switcher-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mobile-nav-row {

@@ -1,26 +1,31 @@
-import type { AuthUser } from './types';
+import type { AccountDeleteResponse, AuthUser, ProjectSwitchResponse } from './types';
 
 const API_BASE = import.meta.env.PROD
   ? '/openfarmplanner/api'
   : import.meta.env.VITE_API_BASE_URL || '/openfarmplanner/api';
 
-function extractErrorMessage(raw: string): string {
+export class AuthApiError extends Error {
+  code?: string;
+  scheduledDeletionAt?: string;
+
+  constructor(message: string, code?: string, scheduledDeletionAt?: string) {
+    super(message);
+    this.code = code;
+    this.scheduledDeletionAt = scheduledDeletionAt;
+  }
+}
+
+function extractError(raw: string): AuthApiError {
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (typeof parsed.detail === 'string') {
-      return parsed.detail;
-    }
-
-    return Object.entries(parsed)
-      .map(([field, value]) => {
-        if (Array.isArray(value)) {
-          return `${field}: ${value.join(' ')}`;
-        }
-        return `${field}: ${String(value)}`;
-      })
-      .join(' | ');
+    const detail = typeof parsed.detail === 'string'
+      ? parsed.detail
+      : Object.entries(parsed).map(([field, value]) => `${field}: ${String(value)}`).join(' | ');
+    const code = typeof parsed.code === 'string' ? parsed.code : undefined;
+    const scheduledDeletionAt = typeof parsed.scheduled_deletion_at === 'string' ? parsed.scheduled_deletion_at : undefined;
+    return new AuthApiError(detail || 'Request failed.', code, scheduledDeletionAt);
   } catch {
-    return raw || 'Request failed.';
+    return new AuthApiError(raw || 'Request failed.');
   }
 }
 
@@ -44,7 +49,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(extractErrorMessage(await response.text()));
+    throw extractError(await response.text());
   }
 
   if (response.status === 204) {
@@ -103,6 +108,24 @@ export async function logout(): Promise<void> {
   await request('/auth/logout/', { method: 'POST', headers: csrfHeader(), body: JSON.stringify({}) });
 }
 
+export async function requestAccountDeletion(password: string): Promise<AccountDeleteResponse> {
+  await ensureCsrfCookie();
+  return request<AccountDeleteResponse>('/auth/account/delete-request/', {
+    method: 'POST',
+    headers: csrfHeader(),
+    body: JSON.stringify({ password }),
+  });
+}
+
+export async function restoreAccount(email: string, password: string): Promise<AuthUser> {
+  await ensureCsrfCookie();
+  return request<AuthUser>('/auth/account/restore/', {
+    method: 'POST',
+    headers: csrfHeader(),
+    body: JSON.stringify({ email, password }),
+  });
+}
+
 export async function resendActivation(email: string): Promise<{ detail: string }> {
   await ensureCsrfCookie();
   return request<{ detail: string }>('/auth/resend-activation/', {
@@ -127,5 +150,14 @@ export async function confirmPasswordReset(uid: string, token: string, password:
     method: 'POST',
     headers: csrfHeader(),
     body: JSON.stringify({ uid, token, password, password_confirm: passwordConfirm }),
+  });
+}
+
+export async function switchActiveProject(projectId: number): Promise<ProjectSwitchResponse> {
+  await ensureCsrfCookie();
+  return request<ProjectSwitchResponse>('/projects-switch/', {
+    method: 'POST',
+    headers: csrfHeader(),
+    body: JSON.stringify({ project_id: projectId }),
   });
 }

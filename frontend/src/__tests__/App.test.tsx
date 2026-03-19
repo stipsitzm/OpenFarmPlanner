@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import App from '../App';
+import { fireEvent, render, screen } from '@testing-library/react';
+import App, { resolveRouterBasename } from '../App';
 import { CommandProvider } from '../commands/CommandProvider';
 import translations from '@/test-utils/translations';
 import type { AuthUser } from '../auth/types';
@@ -8,13 +8,17 @@ import type { AuthUser } from '../auth/types';
 const authState = {
   user: null as AuthUser | null,
   isLoading: false,
-  login: vi.fn(async () => {}),
+  activeProjectId: null as number | null,
+  login: vi.fn(async () => ({}) as AuthUser),
   logout: vi.fn(async () => {}),
   register: vi.fn(async () => 'ok'),
   activate: vi.fn(async () => {}),
   resendActivation: vi.fn(async () => 'ok'),
   requestPasswordReset: vi.fn(async () => 'ok'),
   confirmPasswordReset: vi.fn(async () => 'ok'),
+  requestAccountDeletion: vi.fn(async () => ({ detail: 'ok', scheduled_deletion_at: new Date().toISOString() })),
+  restoreAccount: vi.fn(async () => ({}) as AuthUser),
+  switchActiveProject: vi.fn(async () => {}),
 };
 
 vi.mock('../auth/AuthContext', () => ({
@@ -25,6 +29,7 @@ describe('App', () => {
   beforeEach(() => {
     authState.user = null;
     authState.isLoading = false;
+    authState.activeProjectId = null;
     window.history.pushState({}, '', '/');
   });
 
@@ -42,14 +47,79 @@ describe('App', () => {
       display_name: 'Demo',
       display_label: 'Demo',
       is_active: true,
+      default_project_id: null,
+      last_project_id: null,
+      resolved_project_id: null,
+      needs_project_selection: false,
+      memberships: [],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
     };
-    window.history.pushState({}, '', '/app');
+    authState.activeProjectId = null;
+    window.history.pushState({}, '', '/app/anbauplaene');
 
     render(<CommandProvider><App /></CommandProvider>);
 
     expect(await screen.findByText(translations.navigation.locations)).toBeInTheDocument();
     expect(screen.getByText(translations.navigation.cultures)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: translations.navigation.plantingPlans })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aktives Projekt wechseln' })).toBeInTheDocument();
+  });
+
+  it('shows account settings in three-dot menu without project settings', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: null,
+      last_project_id: null,
+      resolved_project_id: null,
+      needs_project_selection: false,
+      memberships: [],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+    };
+    window.history.pushState({}, '', '/app');
+
+    render(<CommandProvider><App /></CommandProvider>);
+    fireEvent.click(await screen.findByLabelText('Mehr'));
+    expect(await screen.findByText('Kontoeinstellungen')).toBeInTheDocument();
+    expect(screen.queryByText('Projekteinstellungen')).not.toBeInTheDocument();
+  });
+
+
+
+  it('shows project actions in project switcher menu', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: 1,
+      last_project_id: 1,
+      resolved_project_id: 1,
+      needs_project_selection: false,
+      memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+    };
+    authState.activeProjectId = 1;
+    window.history.pushState({}, '', '/app/anbauplaene');
+
+    render(<CommandProvider><App /></CommandProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
+    expect(await screen.findByText('Projekteinstellungen')).toBeInTheDocument();
+    expect(screen.queryByText('Mitglieder verwalten')).not.toBeInTheDocument();
+    expect(await screen.findByText('Neues Projekt erstellen')).toBeInTheDocument();
+  });
+
+
+  it('resolves basename only when current path matches configured base', () => {
+    expect(resolveRouterBasename('/openfarmplanner', '/openfarmplanner/invite/abc')).toBe('/openfarmplanner');
+    expect(resolveRouterBasename('/openfarmplanner', '/invite/abc')).toBe('');
   });
 
   it('redirects unauthenticated users from /app to login', async () => {

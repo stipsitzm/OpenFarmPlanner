@@ -13,7 +13,7 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.models import PendingActivation
+from accounts.models import AccountDeletionRequest, PendingActivation
 
 User = get_user_model()
 
@@ -229,3 +229,69 @@ class AuthApiTest(APITestCase):
         call_command('delete_expired_inactive_users')
 
         self.assertTrue(User.objects.filter(pk=active.pk).exists())
+
+
+    def test_account_delete_request_requires_password(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.post('/openfarmplanner/api/auth/account/delete-request/', {'password': 'wrong'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_account_delete_request_and_login_block(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.post('/openfarmplanner/api/auth/account/delete-request/', {'password': self.password}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        deletion = AccountDeletionRequest.objects.get(user=self.user)
+        self.assertIsNotNone(deletion.scheduled_deletion_at)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_active)
+
+        blocked = self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        self.assertEqual(blocked.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(blocked.data.get('code'), 'account_pending_deletion')
+
+    def test_account_restore_within_grace_period(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        self.client.post('/openfarmplanner/api/auth/account/delete-request/', {'password': self.password}, format='json')
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/restore/',
+            {'email': self.user.email, 'password': self.password},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        deletion = AccountDeletionRequest.objects.get(user=self.user)
+        self.assertIsNone(deletion.deletion_requested_at)
+        self.assertIsNone(deletion.scheduled_deletion_at)
+
+    def test_account_restore_after_grace_period_fails(self) -> None:
+        deletion = AccountDeletionRequest.objects.create(
+            user=self.user,
+            deletion_requested_at=timezone.now() - timedelta(days=15),
+            scheduled_deletion_at=timezone.now() - timedelta(days=1),
+        )
+        self.user.is_active = False
+        self.user.save(update_fields=['is_active'])
+
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/restore/',
+            {'email': self.user.email, 'password': self.password},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_purge_deleted_accounts_anonymizes_and_is_idempotent(self) -> None:
+        AccountDeletionRequest.objects.create(
+            user=self.user,
+            deletion_requested_at=timezone.now() - timedelta(days=20),
+            scheduled_deletion_at=timezone.now() - timedelta(days=2),
+        )
+        output = StringIO()
+        call_command('purge_deleted_accounts', stdout=output)
+        self.user.refresh_from_db()
+        deletion = AccountDeletionRequest.objects.get(user=self.user)
+        self.assertIsNotNone(deletion.deleted_at)
+        self.assertFalse(self.user.is_active)
+        self.assertTrue(self.user.email.startswith('deleted-user-'))
+
+        second = StringIO()
+        call_command('purge_deleted_accounts', stdout=second)
+        self.assertIn('Finalized 0 accounts.', second.getvalue())

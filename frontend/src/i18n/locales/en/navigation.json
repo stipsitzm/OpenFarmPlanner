@@ -1,0 +1,32 @@
+{
+  "home": "Home",
+  "locations": "Locations",
+  "fieldsAndBeds": "Fields",
+  "cultures": "Cultures",
+  "suppliers": "Suppliers",
+  "plantingPlans": "Planting plans",
+  "ganttChart": "Planting calendar",
+  "seedDemand": "Seed demand",
+  "graphicalFields": "Graphical view",
+  "accountSettings": "Account settings",
+  "project": {
+    "settings": "Project settings",
+    "members": "Manage members",
+    "create": "Create new project",
+    "switch": "Switch project"
+  },
+  "projectSwitcher": {
+    "ariaLabel": "Switch active project",
+    "noProject": "No project",
+    "zeroProjects": "You currently do not have access to any projects.",
+    "newProjectPlaceholder": "New project (coming soon)",
+    "switchError": "Project could not be switched.",
+    "newProjectAction": "Create new project",
+    "createDialogTitle": "Create new project",
+    "createNameLabel": "Project name",
+    "createDescriptionLabel": "Description",
+    "createCancel": "Cancel",
+    "createSubmit": "Create project",
+    "createError": "Project could not be created."
+  }
+}

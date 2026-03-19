@@ -12,6 +12,7 @@ import { initReactI18next } from 'react-i18next';
 // Import translation files
 import commonDE from './locales/de/common.json';
 import navigationDE from './locales/de/navigation.json';
+import navigationEN from './locales/en/navigation.json';
 import homeDE from './locales/de/home.json';
 import locationsDE from './locales/de/locations.json';
 import culturesDE from './locales/de/cultures.json';
@@ -22,6 +23,9 @@ import hierarchyDE from './locales/de/hierarchy.json';
 import ganttChartDE from './locales/de/ganttChart.json';
 import suppliersDE from './locales/de/suppliers.json';
 import authDE from './locales/de/auth.json';
+import accountDE from './locales/de/account.json';
+import projectInvitationsDE from './locales/de/projectInvitations.json';
+import projectInvitationsEN from './locales/en/projectInvitations.json';
 
 // Configure i18next
 i18n
@@ -35,7 +39,7 @@ i18n
     debug: import.meta.env.DEV,
     
     // Namespaces for organizing translations
-    ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart', 'suppliers', 'auth'],
+    ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart', 'suppliers', 'auth', 'account', 'projectInvitations'],
     defaultNS: 'common',
     
     // Translation resources
@@ -53,6 +57,12 @@ i18n
         ganttChart: ganttChartDE,
         suppliers: suppliersDE,
         auth: authDE,
+        account: accountDE,
+        projectInvitations: projectInvitationsDE,
+      },
+      en: {
+        navigation: navigationEN,
+        projectInvitations: projectInvitationsEN,
       },
     },
     

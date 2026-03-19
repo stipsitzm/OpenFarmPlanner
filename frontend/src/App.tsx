@@ -8,11 +8,12 @@
  * @returns The main App component with routing
  */
 
-import { createBrowserRouter, RouterProvider, Outlet, NavLink, redirect, useLocation, useNavigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, NavLink, redirect, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import {
   Alert,
   Button,
   Chip,
+  Divider,
   Dialog,
   DialogActions,
   DialogContent,
@@ -24,6 +25,8 @@ import {
   Menu,
   MenuItem,
   Snackbar,
+  Stack,
+  TextField,
   Drawer,
   useMediaQuery,
 } from '@mui/material';
@@ -42,7 +45,11 @@ import SeedDemandPage from './pages/SeedDemand';
 import Suppliers from './pages/Suppliers';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import MenuIcon from '@mui/icons-material/Menu';
-import { cultureAPI } from './api/api';
+import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import CheckIcon from '@mui/icons-material/Check';
+import AddIcon from '@mui/icons-material/Add';
+import { cultureAPI, projectAPI } from './api/api';
 import type { CultureHistoryEntry } from './api/types';
 import './App.css';
 import { useAuth } from './auth/AuthContext';
@@ -53,6 +60,132 @@ import RegisterPage from './pages/auth/RegisterPage';
 import ActivatePage from './pages/auth/ActivatePage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import ProjectSelectionPage from './pages/ProjectSelectionPage';
+import AccountSettingsPage from './pages/AccountSettingsPage';
+import ProjectSettingsPage from './pages/ProjectSettingsPage';
+import InvitationPage from './pages/InvitationPage';
+
+interface SnackbarState {
+  open: boolean;
+  message: string;
+  severity: 'success' | 'error';
+}
+
+interface ProjectMenuProps {
+  anchorEl: HTMLElement | null;
+  open: boolean;
+  memberships: { project_id: number; project_name: string; role: 'admin' | 'member' }[];
+  activeProjectId: number | null;
+  isSwitchingProject: boolean;
+  onClose: () => void;
+  onSwitchProject: (projectId: number) => Promise<void>;
+  onOpenProjectSettings: () => void;
+  onOpenCreateProject: () => void;
+  t: (key: string) => string;
+}
+
+function ProjectMenu(props: ProjectMenuProps): React.ReactElement {
+  const {
+    anchorEl,
+    open,
+    memberships,
+    activeProjectId,
+    isSwitchingProject,
+    onClose,
+    onSwitchProject,
+    onOpenProjectSettings,
+    onOpenCreateProject,
+    t,
+  } = props;
+
+  return (
+    <Menu
+      id="project-switcher-menu"
+      anchorEl={anchorEl}
+      open={open}
+      onClose={onClose}
+    >
+      {memberships.length === 0 ? (
+        <MenuItem disabled>{t('projectSwitcher.zeroProjects')}</MenuItem>
+      ) : (
+        memberships.map((membership) => (
+          <MenuItem
+            key={membership.project_id}
+            onClick={() => void onSwitchProject(membership.project_id)}
+            selected={membership.project_id === activeProjectId}
+            disabled={isSwitchingProject}
+          >
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{membership.project_name}</span>
+              {membership.project_id === activeProjectId ? <CheckIcon fontSize="small" /> : null}
+            </Stack>
+          </MenuItem>
+        ))
+      )}
+      <Divider />
+      <MenuItem onClick={onOpenProjectSettings}>
+        {t('project.settings')}
+      </MenuItem>
+      <Divider />
+      <MenuItem onClick={onOpenCreateProject}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <AddIcon fontSize="small" />
+          <span>{t('project.create')}</span>
+        </Stack>
+      </MenuItem>
+    </Menu>
+  );
+}
+
+interface GlobalMenuProps {
+  anchorEl: HTMLElement | null;
+  open: boolean;
+  historyLoading: boolean;
+  userLabel: string;
+  onClose: () => void;
+  onOpenProjectHistory: () => Promise<void>;
+  onOpenAccountSettings: () => void;
+  onOpenShortcuts: () => void;
+  onLogout: () => Promise<void>;
+  t: (key: string) => string;
+}
+
+function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
+  const {
+    anchorEl,
+    open,
+    historyLoading,
+    userLabel,
+    onClose,
+    onOpenProjectHistory,
+    onOpenAccountSettings,
+    onOpenShortcuts,
+    onLogout,
+    t,
+  } = props;
+
+  return (
+    <Menu
+      id="global-actions-menu"
+      anchorEl={anchorEl}
+      open={open}
+      onClose={onClose}
+    >
+      <MenuItem onClick={() => void onOpenProjectHistory()} disabled={historyLoading}>
+        Versionsverlauf…
+      </MenuItem>
+      <MenuItem onClick={onOpenAccountSettings}>
+        {t('accountSettings')}
+      </MenuItem>
+      <MenuItem onClick={onOpenShortcuts}>
+        Tastenkürzel
+      </MenuItem>
+      <MenuItem onClick={() => void onLogout()}>
+        Logout {userLabel}
+      </MenuItem>
+    </Menu>
+  );
+}
 
 
 /**
@@ -68,9 +201,15 @@ function RootLayout(): React.ReactElement {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, logout } = useAuth();
+  const { user, logout, activeProjectId, switchActiveProject } = useAuth();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
+  const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [isSwitchingProject, setIsSwitchingProject] = useState(false);
+  const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectDescription, setNewProjectDescription] = useState('');
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
   const routes = ['/app/locations', '/app/fields-beds', '/app/cultures', '/app/anbauplaene', '/app/gantt-chart', '/app/seed-demand', '/app/suppliers'];
   const navItems = [
     { to: '/app/locations', label: t('locations') },
@@ -90,6 +229,14 @@ function RootLayout(): React.ReactElement {
     setGlobalMenuAnchor(null);
   };
 
+  const handleProjectMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setProjectMenuAnchor(event.currentTarget);
+  };
+
+  const handleProjectMenuClose = () => {
+    setProjectMenuAnchor(null);
+  };
+
   const closeMobileNav = () => {
     setMobileNavOpen(false);
   };
@@ -98,7 +245,7 @@ function RootLayout(): React.ReactElement {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+  const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
     message: '',
     severity: 'success',
@@ -148,6 +295,76 @@ function RootLayout(): React.ReactElement {
     } catch (error) {
       console.error('Error logging out:', error);
       showSnackbar('Logout failed. Please try again.', 'error');
+    }
+  };
+
+  const memberships = user?.memberships ?? [];
+  const activeMembership = memberships.find((membership) => membership.project_id === activeProjectId) ?? null;
+  const activeProjectLabel = activeMembership?.project_name ?? t('projectSwitcher.noProject');
+
+
+  const handleOpenCreateProject = (): void => {
+    handleProjectMenuClose();
+    setNewProjectName('');
+    setNewProjectDescription('');
+    setIsCreateProjectOpen(true);
+  };
+
+  const handleOpenProjectSettings = (): void => {
+    handleProjectMenuClose();
+    navigate('/app/project-settings');
+  };
+
+  const applyProjectContextChange = async (projectId: number): Promise<void> => {
+    await switchActiveProject(projectId);
+    window.location.reload();
+  };
+
+  const closeCreateProjectDialog = (): void => {
+    setIsCreateProjectOpen(false);
+    setNewProjectName('');
+    setNewProjectDescription('');
+  };
+
+  const navigateFromGlobalMenu = (path: string): void => {
+    handleGlobalMenuClose();
+    navigate(path);
+  };
+
+  const handleCreateProject = async (): Promise<void> => {
+    if (!newProjectName.trim()) {
+      return;
+    }
+    setIsCreatingProject(true);
+    try {
+      const response = await projectAPI.create({
+        name: newProjectName.trim(),
+        description: newProjectDescription.trim(),
+      });
+      closeCreateProjectDialog();
+      navigate('/app/anbauplaene');
+      await applyProjectContextChange(response.data.id);
+    } catch (error) {
+      console.error('Error creating project:', error);
+      showSnackbar(t('projectSwitcher.createError'), 'error');
+    } finally {
+      setIsCreatingProject(false);
+    }
+  };
+
+  const handleSwitchProject = async (projectId: number): Promise<void> => {
+    handleProjectMenuClose();
+    if (projectId === activeProjectId) {
+      return;
+    }
+    setIsSwitchingProject(true);
+    try {
+      await applyProjectContextChange(projectId);
+    } catch (error) {
+      console.error('Error switching project:', error);
+      showSnackbar(t('projectSwitcher.switchError'), 'error');
+    } finally {
+      setIsSwitchingProject(false);
     }
   };
 
@@ -209,7 +426,7 @@ function RootLayout(): React.ReactElement {
             >
               <MenuIcon fontSize="small" />
             </IconButton>
-            <span className="mobile-nav-title">OpenFarmPlanner</span>
+            <span className="mobile-nav-title">OpenFarmPlanner · {activeProjectLabel}</span>
           </div>
         ) : (
           <div className="nav-links">
@@ -225,6 +442,36 @@ function RootLayout(): React.ReactElement {
           </div>
         )}
         <div className="nav-actions">
+          <Button
+            aria-label={t('projectSwitcher.ariaLabel')}
+            aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}
+            aria-haspopup="true"
+            onClick={handleProjectMenuOpen}
+            size="small"
+            disabled={isSwitchingProject}
+            sx={{
+              color: 'white',
+              textTransform: 'none',
+              maxWidth: { xs: 180, sm: 260, md: 320 },
+              minWidth: 0,
+            }}
+            startIcon={<FolderOpenOutlinedIcon fontSize="small" />}
+            endIcon={<KeyboardArrowDownIcon fontSize="small" />}
+          >
+            <span className="project-switcher-label">{activeProjectLabel}</span>
+          </Button>
+          <ProjectMenu
+            anchorEl={projectMenuAnchor}
+            open={Boolean(projectMenuAnchor)}
+            memberships={memberships}
+            activeProjectId={activeProjectId}
+            isSwitchingProject={isSwitchingProject}
+            onClose={handleProjectMenuClose}
+            onSwitchProject={handleSwitchProject}
+            onOpenProjectSettings={handleOpenProjectSettings}
+            onOpenCreateProject={handleOpenCreateProject}
+            t={t}
+          />
           <IconButton
             aria-label="Mehr"
             aria-controls={globalMenuAnchor ? 'global-actions-menu' : undefined}
@@ -235,22 +482,18 @@ function RootLayout(): React.ReactElement {
           >
             <MoreVertIcon fontSize="small" />
           </IconButton>
-          <Menu
-            id="global-actions-menu"
+          <GlobalMenu
             anchorEl={globalMenuAnchor}
             open={Boolean(globalMenuAnchor)}
+            historyLoading={historyLoading}
+            userLabel={user?.email ? `(${user.email})` : (user?.display_label ? `(${user.display_label})` : '')}
             onClose={handleGlobalMenuClose}
-          >
-            <MenuItem onClick={() => void handleOpenProjectHistory()} disabled={historyLoading}>
-              Versionsverlauf…
-            </MenuItem>
-            <MenuItem onClick={handleOpenShortcuts}>
-              Tastenkürzel
-            </MenuItem>
-            <MenuItem onClick={() => void handleLogout()}>
-              Logout {user?.display_label ? `(${user.display_label})` : ''}
-            </MenuItem>
-          </Menu>
+            onOpenProjectHistory={handleOpenProjectHistory}
+            onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
+            onOpenShortcuts={handleOpenShortcuts}
+            onLogout={handleLogout}
+            t={t}
+          />
         </div>
       </nav>
 
@@ -338,6 +581,34 @@ function RootLayout(): React.ReactElement {
         </DialogActions>
       </Dialog>
 
+
+      <Dialog open={isCreateProjectOpen} onClose={closeCreateProjectDialog} fullWidth maxWidth="sm">
+        <DialogTitle>{t('projectSwitcher.createDialogTitle')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label={t('projectSwitcher.createNameLabel')}
+              value={newProjectName}
+              onChange={(event) => setNewProjectName(event.target.value)}
+              autoFocus
+            />
+            <TextField
+              label={t('projectSwitcher.createDescriptionLabel')}
+              value={newProjectDescription}
+              onChange={(event) => setNewProjectDescription(event.target.value)}
+              multiline
+              minRows={2}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeCreateProjectDialog}>{t('projectSwitcher.createCancel')}</Button>
+          <Button variant="contained" onClick={() => void handleCreateProject()} disabled={!newProjectName.trim() || isCreatingProject}>
+            {t('projectSwitcher.createSubmit')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={5000}
@@ -355,6 +626,27 @@ function RootLayout(): React.ReactElement {
 /**
  * Create the router with data router API
  */
+export function resolveRouterBasename(configuredBase: string, pathname: string): string {
+  const normalizedBase = configuredBase.replace(/\/$/, '');
+  if (!normalizedBase) {
+    return '';
+  }
+  if (pathname === normalizedBase || pathname.startsWith(`${normalizedBase}/`)) {
+    return normalizedBase;
+  }
+  return '';
+}
+
+
+function LegacyInvitationRedirect(): React.ReactElement {
+  const location = useLocation();
+  const token = new URLSearchParams(location.search).get('token');
+  if (!token) {
+    return <Navigate to="/invite/invalid" replace />;
+  }
+  return <Navigate to={`/invite/${token}`} replace />;
+}
+
 function createAppRouter(basename: string) {
   return createBrowserRouter([
     {
@@ -382,6 +674,14 @@ function createAppRouter(basename: string) {
       element: <ResetPasswordPage />,
     },
     {
+      path: '/invitation',
+      element: <LegacyInvitationRedirect />,
+    },
+    {
+      path: '/invite/:token',
+      element: <InvitationPage />,
+    },
+    {
       path: '/app',
       element: <ProtectedRoute />,
       children: [
@@ -401,6 +701,9 @@ function createAppRouter(basename: string) {
             { path: 'planting-plans', element: <PlantingPlans /> },
             { path: 'gantt-chart', element: <GanttChart /> },
             { path: 'seed-demand', element: <SeedDemandPage /> },
+            { path: 'project-selection', element: <ProjectSelectionPage /> },
+            { path: 'account-settings', element: <AccountSettingsPage /> },
+            { path: 'project-settings', element: <ProjectSettingsPage /> },
           ],
         },
       ],
@@ -411,12 +714,13 @@ function createAppRouter(basename: string) {
 }
 
 function App(): React.ReactElement {
-  // Use Vite's base URL to set React Router basename so routes work under a subdirectory
-  // Vite provides BASE_URL ending with a trailing slash (e.g., "/openfarmplanner/")
-  const basename = import.meta.env.BASE_URL.replace(/\/$/, '');
-  
+  // Use Vite's base URL when URL is inside that subdirectory, otherwise fall back to root.
+  const configuredBase = import.meta.env.BASE_URL.replace(/\/$/, '');
+  const currentPath = window.location.pathname;
+  const basename = resolveRouterBasename(configuredBase, currentPath);
+
   const router = createAppRouter(basename);
-  
+
   return <RouterProvider router={router} />;
 }
 

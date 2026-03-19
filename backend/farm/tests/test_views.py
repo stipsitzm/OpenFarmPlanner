@@ -1,27 +1,38 @@
 from unittest.mock import patch
+from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from datetime import date
 
 from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
 
-from farm.models import Bed, BedLayout, Culture, Field, FieldLayout, Location, PlantingPlan, Supplier, NoteAttachment, SeedPackage
+from farm.models import Bed, BedLayout, Culture, Field, FieldLayout, Location, PlantingPlan, Project, ProjectMembership, Supplier, NoteAttachment, SeedPackage
+
+User = get_user_model()
+
 
 class ApiEndpointsTest(DRFAPITestCase):
     def setUp(self):
-        self.location = Location.objects.create(name="API Test Location")
-        self.field = Field.objects.create(name="API Test Field", location=self.location)
+        self.user = User.objects.create_user(username='testuser', email='test@example.com', password='testpass', is_active=True)
+        self.project = Project.objects.create(name='Test Project', slug='test-project')
+        ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
+        self.client.force_authenticate(user=self.user)
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
+        self.location = Location.objects.create(name="API Test Location", project=self.project)
+        self.field = Field.objects.create(name="API Test Field", location=self.location, project=self.project)
         self.bed = Bed.objects.create(
-            name="API Test Bed", 
+            name="API Test Bed",
             field=self.field,
-            area_sqm=20.0  # Total area: 20 sqm
+            area_sqm=20.0,  # Total area: 20 sqm
+            project=self.project,
         )
         self.culture = Culture.objects.create(
             name="API Test Culture",
             growth_duration_days=7,
-            harvest_duration_days=2
+            harvest_duration_days=2,
+            project=self.project,
         )
-        self.supplier = Supplier.objects.create(name="Test Supplier Co.", homepage_url='https://test-supplier-co..example')
+        self.supplier = Supplier.objects.create(name="Test Supplier Co.", homepage_url='https://test-supplier-co..example', project=self.project)
 
     def test_supplier_list(self):
         """Test listing suppliers"""
@@ -70,9 +81,10 @@ class ApiEndpointsTest(DRFAPITestCase):
             Supplier.objects.create(
                 name=f"A Supplier {idx:02d}",
                 homepage_url=f"https://a-supplier-{idx:02d}.example",
+                project=self.project,
             )
 
-        target = Supplier.objects.create(name='ZZZ Supplier', homepage_url='https://zzz.example')
+        target = Supplier.objects.create(name='ZZZ Supplier', homepage_url='https://zzz.example', project=self.project)
 
         response = self.client.put(
             f'/openfarmplanner/api/suppliers/{target.id}/',
@@ -322,7 +334,7 @@ class ApiEndpointsTest(DRFAPITestCase):
     
     def test_culture_update_with_seed_packages_payload_from_get(self):
         """PUT with seed package objects (including id/culture) should stay valid."""
-        supplier = Supplier.objects.create(name='Seed Supplier', homepage_url='https://seed-supplier.example')
+        supplier = Supplier.objects.create(name='Seed Supplier', homepage_url='https://seed-supplier.example', project=self.project)
         culture = Culture.objects.create(
             name='Payload Culture',
             variety='Classic',
@@ -330,8 +342,9 @@ class ApiEndpointsTest(DRFAPITestCase):
             growth_duration_days=10,
             harvest_duration_days=2,
             harvest_method='per_plant',
+            project=self.project,
         )
-        package = SeedPackage.objects.create(culture=culture, size_value='25.0', size_unit='g')
+        package = SeedPackage.objects.create(culture=culture, size_value='25.0', size_unit='g', project=self.project)
 
         payload = {
             'id': culture.id,
@@ -512,10 +525,15 @@ class ApiEndpointsTest(DRFAPITestCase):
 
 class CultureImportAPITest(DRFAPITestCase):
     """Tests for culture import API endpoints."""
-    
+
     def setUp(self):
         """Set up test data."""
-        self.supplier = Supplier.objects.create(name="Test Supplier", homepage_url='https://test-supplier.example')
+        self.user = User.objects.create_user(username='importuser', email='import@example.com', password='testpass', is_active=True)
+        self.project = Project.objects.create(name='Import Project', slug='import-project')
+        ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
+        self.client.force_authenticate(user=self.user)
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
+        self.supplier = Supplier.objects.create(name="Test Supplier", homepage_url='https://test-supplier.example', project=self.project)
         self.existing_culture = Culture.objects.create(
             name="Tomato",
             variety="Cherry",
@@ -523,7 +541,8 @@ class CultureImportAPITest(DRFAPITestCase):
             growth_duration_days=60,
             harvest_duration_days=30,
             harvest_method='per_plant',
-            notes="Existing notes"
+            notes="Existing notes",
+            project=self.project,
         )
     
     def test_import_preview_new_culture(self):
@@ -586,6 +605,7 @@ class CultureImportAPITest(DRFAPITestCase):
             seed_supplier="Rainsaat R-Codes",
             growth_duration_days=45,
             harvest_duration_days=20,
+            project=self.project,
         )
         data = [{
             'name': 'Lettuce',
@@ -611,6 +631,7 @@ class CultureImportAPITest(DRFAPITestCase):
             harvest_duration_days=30,
             harvest_method='per_plant',
             notes="Before import",
+            project=self.project,
         )
         data = {
             'items': [{
@@ -743,36 +764,45 @@ class CultureImportAPITest(DRFAPITestCase):
 
 class PlantingPlanAreaInputTest(DRFAPITestCase):
     """Test area input as m² or plants for PlantingPlan."""
-    
+
     def setUp(self):
         """Create test data."""
+        self.user = User.objects.create_user(username='ppuser', email='pp@example.com', password='testpass', is_active=True)
+        self.project = Project.objects.create(name='PP Project', slug='pp-project')
+        ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
+        self.client.force_authenticate(user=self.user)
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
         # Create location, field, and bed
-        self.location = Location.objects.create(name="Test Farm")
+        self.location = Location.objects.create(name="Test Farm", project=self.project)
         self.field = Field.objects.create(
             name="Test Field",
             location=self.location,
-            area_sqm=100.00
+            area_sqm=100.00,
+            project=self.project,
         )
         self.bed = Bed.objects.create(
             name="Test Bed",
             field=self.field,
-            area_sqm=10.00
+            area_sqm=10.00,
+            project=self.project,
         )
-        
+
         # Create culture with spacing data
         self.culture_with_spacing = Culture.objects.create(
             name="Tomato",
             growth_duration_days=60,
             harvest_duration_days=30,
             row_spacing_m=0.50,  # 50 cm
-            distance_within_row_m=0.40  # 40 cm
+            distance_within_row_m=0.40,  # 40 cm
+            project=self.project,
         )
-        
+
         # Create culture without spacing data
         self.culture_no_spacing = Culture.objects.create(
             name="Cucumber",
             growth_duration_days=50,
-            harvest_duration_days=20
+            harvest_duration_days=20,
+            project=self.project,
         )
     
     def test_plants_per_m2_calculation(self):
@@ -883,7 +913,8 @@ class PlantingPlanAreaInputTest(DRFAPITestCase):
             culture=self.culture_with_spacing,
             bed=self.bed,
             planting_date=date(2024, 3, 1),
-            area_usage_sqm=1.0
+            area_usage_sqm=1.0,
+            project=self.project,
         )
         
         # Update with PLANTS input: 15 plants / 5 plants_per_m2 = 3.0 m²
@@ -968,16 +999,23 @@ class NoteAttachmentApiTest(DRFAPITestCase):
 
 class PlantingPlanAttachmentCountApiTest(DRFAPITestCase):
     def setUp(self):
-        self.location = Location.objects.create(name="Plan Location")
-        self.field = Field.objects.create(name="Plan Field", location=self.location)
-        self.bed = Bed.objects.create(name="Plan Bed", field=self.field)
-        self.culture = Culture.objects.create(name="Plan Culture", growth_duration_days=7, harvest_duration_days=2)
+        self.user = User.objects.create_user(username='attachcountuser', email='attachcount@example.com', password='testpass', is_active=True)
+        self.project = Project.objects.create(name='Attach Count Project', slug='attach-count-project')
+        ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
+        self.client.force_authenticate(user=self.user)
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
+        self.location = Location.objects.create(name="Plan Location", project=self.project)
+        self.field = Field.objects.create(name="Plan Field", location=self.location, project=self.project)
+        self.bed = Bed.objects.create(name="Plan Bed", field=self.field, project=self.project)
+        self.culture = Culture.objects.create(name="Plan Culture", growth_duration_days=7, harvest_duration_days=2, project=self.project)
 
         self.plan_without_attachments = PlantingPlan.objects.create(
-            culture=self.culture, bed=self.bed, planting_date=date(2024, 3, 1), notes='No attachments'
+            culture=self.culture, bed=self.bed, planting_date=date(2024, 3, 1), notes='No attachments',
+            project=self.project,
         )
         self.plan_with_attachments = PlantingPlan.objects.create(
-            culture=self.culture, bed=self.bed, planting_date=date(2024, 3, 2), notes='With attachments'
+            culture=self.culture, bed=self.bed, planting_date=date(2024, 3, 2), notes='With attachments',
+            project=self.project,
         )
 
         NoteAttachment.objects.create(
@@ -1006,7 +1044,8 @@ class PlantingPlanAttachmentCountApiTest(DRFAPITestCase):
         self.assertEqual(by_id[self.plan_with_attachments.id]['note_attachment_count'], 2)
 
     def test_planting_plan_list_query_count_stays_stable(self):
-        with self.assertNumQueries(2):
+        # 3 queries: 1 project membership lookup + 1 COUNT (pagination) + 1 SELECT with annotation
+        with self.assertNumQueries(3):
             response = self.client.get('/openfarmplanner/api/planting-plans/')
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -1015,14 +1054,20 @@ class PlantingPlanRemainingAreaApiTest(DRFAPITestCase):
     """Tests for remaining-area endpoint on planting plans."""
 
     def setUp(self):
-        self.location = Location.objects.create(name='Remaining Location')
-        self.field = Field.objects.create(name='Remaining Field', location=self.location)
-        self.bed = Bed.objects.create(name='Remaining Bed', field=self.field, area_sqm=20)
-        self.other_bed = Bed.objects.create(name='Other Bed', field=self.field, area_sqm=15)
+        self.user = User.objects.create_user(username='remaininguser', email='remaining@example.com', password='testpass', is_active=True)
+        self.project = Project.objects.create(name='Remaining Area Project', slug='remaining-area-project')
+        ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
+        self.client.force_authenticate(user=self.user)
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
+        self.location = Location.objects.create(name='Remaining Location', project=self.project)
+        self.field = Field.objects.create(name='Remaining Field', location=self.location, project=self.project)
+        self.bed = Bed.objects.create(name='Remaining Bed', field=self.field, area_sqm=20, project=self.project)
+        self.other_bed = Bed.objects.create(name='Other Bed', field=self.field, area_sqm=15, project=self.project)
         self.culture = Culture.objects.create(
             name='Lettuce',
             growth_duration_days=30,
             harvest_duration_days=10,
+            project=self.project,
         )
 
         self.plan_one = PlantingPlan.objects.create(
@@ -1112,8 +1157,13 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
     """Tests for enrichment endpoints on cultures."""
 
     def setUp(self):
-        self.supplier = Supplier.objects.create(name='Default Supplier', homepage_url='https://supplier.example')
-        self.culture = Culture.objects.create(name='Tomate', variety='Roma', supplier=self.supplier, supplier_product_url='https://supplier.example/tomate')
+        self.user = User.objects.create_user(username='enrichuser', email='enrich@example.com', password='testpass', is_active=True)
+        self.project = Project.objects.create(name='Enrichment Project', slug='enrichment-project')
+        ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
+        self.client.force_authenticate(user=self.user)
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
+        self.supplier = Supplier.objects.create(name='Default Supplier', homepage_url='https://supplier.example', project=self.project)
+        self.culture = Culture.objects.create(name='Tomate', variety='Roma', supplier=self.supplier, supplier_product_url='https://supplier.example/tomate', project=self.project)
 
     def test_enrich_single_returns_payload(self):
         response = self.client.post(

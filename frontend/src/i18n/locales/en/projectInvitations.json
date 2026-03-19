@@ -1,0 +1,79 @@
+{
+  "title": "Project settings",
+  "noActiveProject": "No active project selected.",
+  "projectLabel": "Project: {{name}}",
+  "inviteSectionTitle": "Invite users",
+  "emailLabel": "Email",
+  "roleLabel": "Role",
+  "roleMember": "Member",
+  "roleAdmin": "Admin",
+  "sendInvite": "Send invitation",
+  "adminOnly": "Only admins can invite users.",
+  "inviteSent": "Invitation sent.",
+  "inviteResent": "Invitation re-sent.",
+  "inviteSentNoMail": "Invitation created, but email delivery failed.",
+  "inviteFailed": "Invitation could not be sent.",
+  "membersSectionTitle": "Members",
+  "membersEmpty": "There are currently no members.",
+  "memberRoleUpdated": "Member role updated.",
+  "memberRoleUpdateFailed": "Member role could not be updated.",
+  "memberRemoved": "Member removed from project.",
+  "memberRemoveFailed": "Member could not be removed.",
+  "memberListLoadFailed": "Members could not be loaded.",
+  "memberRoleLabel": "Project role",
+  "memberDisplayFallback": "No display name",
+  "memberYou": "You",
+  "removeMember": "Remove from project",
+  "removeDialogTitle": "Remove member?",
+  "removeDialogText": "Do you really want to remove {{name}} ({{email}}) from this project?",
+  "removeDialogCancel": "Cancel",
+  "removeDialogConfirm": "Remove now",
+  "roleChangeBlocked": "Your own role cannot be changed here.",
+  "removeBlocked": "You cannot remove yourself from the project here.",
+  "listTitle": "Invitations",
+  "listEmpty": "There are currently no invitations.",
+  "revoke": "Revoke invitation",
+  "revokeSuccess": "Invitation revoked.",
+  "revokeFailed": "Invitation could not be revoked.",
+  "expiresAt": "Expires: {{date}}",
+  "inviteTitle": "Project invitation",
+  "loading": "Checking invitation…",
+  "accepting": "Accepting invitation…",
+  "toLogin": "Sign in with invited account",
+  "acceptAction": "Join project",
+  "openApp": "Open app",
+  "projectName": "Project: {{name}}",
+  "emailMasked": "Invited email: {{email}}",
+  "status": {
+    "pending": "Pending",
+    "accepted": "Accepted",
+    "revoked": "Revoked",
+    "expired": "Expired"
+  },
+  "result": {
+    "pending": "This invitation is valid.",
+    "accepted": "This invitation was already used.",
+    "already_member": "You are already a member of this project.",
+    "revoked": "This invitation has been revoked.",
+    "expired": "This invitation has expired.",
+    "email_mismatch": "This invitation is intended for another email address.",
+    "invalid_token": "Invalid invitation link."
+  },
+  "error": {
+    "already_member": "This email address is already a project member.",
+    "invalid_email": "Please provide a valid email address.",
+    "invitation_error": "Invitation could not be created.",
+    "last_admin": "At least one project admin must remain."
+  },
+  "listLoadFailed": "Invitations could not be loaded.",
+  "projectMembers": {
+    "invitations": {
+      "noAccess": "Only admins can view and manage invitations.",
+      "loadError": "Invitations could not be loaded.",
+      "empty": "There are currently no invitations."
+    },
+    "invite": {
+      "noPermission": "Only admins can send and manage invitations."
+    }
+  }
+}
