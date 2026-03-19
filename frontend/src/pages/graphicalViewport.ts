@@ -16,6 +16,13 @@ export interface ViewportState {
   y: number;
 }
 
+export interface PanSession {
+  startPointerX: number;
+  startPointerY: number;
+  startTranslateX: number;
+  startTranslateY: number;
+}
+
 export interface VisibilityState {
   showBeds: boolean;
   showBedLabels: boolean;
@@ -85,5 +92,26 @@ export function zoomAroundPoint(viewport: ViewportState, nextScale: number, anch
     scale: clampedScale,
     x: anchor.x - stagePoint.x * clampedScale,
     y: anchor.y - stagePoint.y * clampedScale,
+  };
+}
+
+export function startPanSession(viewport: ViewportState, pointer: { x: number; y: number }): PanSession {
+  return {
+    startPointerX: pointer.x,
+    startPointerY: pointer.y,
+    startTranslateX: viewport.x,
+    startTranslateY: viewport.y,
+  };
+}
+
+export function panViewport(session: PanSession, pointer: { x: number; y: number }, scale: number): ViewportState {
+  const safeScale = clampScale(scale);
+  const deltaX = pointer.x - session.startPointerX;
+  const deltaY = pointer.y - session.startPointerY;
+
+  return {
+    scale: safeScale,
+    x: session.startTranslateX + deltaX,
+    y: session.startTranslateY + deltaY,
   };
 }

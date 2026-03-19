@@ -31,8 +31,11 @@ import { clampInsideParent, getBedRectSizeWithinField, getFieldRectSize, initial
 import {
   fitContentToStage,
   getVisibleElements,
+  panViewport,
   shouldShowBedLabel,
   shouldShowFieldLabel,
+  startPanSession,
+  type PanSession,
   type ViewportState,
   zoomAroundPoint,
 } from './graphicalViewport';
@@ -213,6 +216,7 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
   const containerRef = useRef<HTMLDivElement | null>(null);
   const stageRefs = useRef<Record<number, Konva.Stage | null>>({});
   const saveTimers = useRef<Record<string, number>>({});
+  const panSessionRef = useRef<Record<number, PanSession | null>>({});
   const pinchStateRef = useRef<Record<number, { distance: number; center: Point } | null>>({});
 
   useEffect(() => {
@@ -415,6 +419,37 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
     handleZoom(locationId, ZOOM_STEP);
   };
 
+  const handleStageDragStart = (locationId: number, viewport: ViewportState): void => {
+    if (interactionMode !== 'view') {
+      return;
+    }
+
+    const pointer = stageRefs.current[locationId]?.getPointerPosition();
+    if (!pointer) {
+      return;
+    }
+
+    panSessionRef.current[locationId] = startPanSession(viewport, pointer);
+  };
+
+  const handleStageDragMove = (locationId: number, viewport: ViewportState, event: KonvaEventObject<DragEvent>): void => {
+    const stage = stageRefs.current[locationId];
+    const panSession = panSessionRef.current[locationId];
+    const pointer = stage?.getPointerPosition();
+    if (!stage || !panSession || !pointer || interactionMode !== 'view') {
+      return;
+    }
+
+    const nextViewport = panViewport(panSession, pointer, viewport.scale);
+    event.target.position({ x: nextViewport.x, y: nextViewport.y });
+    setViewportByLocation((prev) => ({ ...prev, [locationId]: nextViewport }));
+  };
+
+  const handleStageDragEnd = (locationId: number, viewport: ViewportState, event: KonvaEventObject<DragEvent>): void => {
+    handleStageDragMove(locationId, viewport, event);
+    panSessionRef.current[locationId] = null;
+  };
+
   const handleStageTouchMove = (locationId: number, event: KonvaEventObject<TouchEvent>): void => {
     const stage = stageRefs.current[locationId];
     const touches = event.evt.touches;
@@ -517,14 +552,14 @@ export default function GraphicalFields({ showTitle = true }: GraphicalFieldsPro
                 <Stage
                   width={stageWidth}
                   height={stageHeight}
-                  draggable
+                  draggable={interactionMode === 'view'}
                   x={viewport.x}
                   y={viewport.y}
                   scaleX={viewport.scale}
                   scaleY={viewport.scale}
-                  onDragEnd={(event: KonvaEventObject<DragEvent>) => {
-                    setViewportByLocation((prev) => ({ ...prev, [locationId]: { ...viewport, x: event.target.x(), y: event.target.y() } }));
-                  }}
+                  onDragStart={() => handleStageDragStart(locationId, viewport)}
+                  onDragMove={(event: KonvaEventObject<DragEvent>) => handleStageDragMove(locationId, viewport, event)}
+                  onDragEnd={(event: KonvaEventObject<DragEvent>) => handleStageDragEnd(locationId, viewport, event)}
                   onWheel={(event) => handleStageWheel(locationId, event)}
                   onDblTap={() => handleStageDoubleTap(locationId)}
                   onDblClick={() => handleStageDoubleTap(locationId)}
