@@ -61,6 +61,7 @@ urlpatterns = [
     path('projects/<int:project_id>/members/', ProjectMembersView.as_view(), name='project-members'),
     path('projects/<int:project_id>/invitations/', ProjectInvitationView.as_view(), name='project-invitations'),
     path('projects/<int:project_id>/invitations/<int:invitation_id>/revoke/', RevokeProjectInvitationView.as_view(), name='project-invitations-revoke'),
+    path('invitations/accept/', AcceptProjectInvitationView.as_view(), name='invitations-accept'),
     path('project-invitations/accept/', AcceptProjectInvitationView.as_view(), name='project-invitations-accept'),
     path('project-invitations/pending/', PendingProjectInvitationView.as_view(), name='project-invitations-pending'),
     path('project-invitations/pending/accept/', AcceptPendingProjectInvitationView.as_view(), name='project-invitations-pending-accept'),

@@ -30,6 +30,7 @@ describe('ActivatePage', () => {
     activateMock.mockReset();
     switchActiveProjectMock.mockClear();
     acceptPendingInvitationMock.mockReset();
+    window.localStorage.clear();
   });
 
   it('reads uid and token from query string and triggers activation plus pending invitation acceptance', async () => {
@@ -70,6 +71,29 @@ describe('ActivatePage', () => {
     });
 
     expect(activateMock).not.toHaveBeenCalled();
+    expect(acceptPendingInvitationMock).not.toHaveBeenCalled();
+  });
+
+  it('redirects back to the stored invitation accept URL after activation', async () => {
+    activateMock.mockResolvedValueOnce(undefined);
+    window.localStorage.setItem('ofp.invitationAcceptNext', '/invite/accept?token=abc123');
+    window.localStorage.setItem('ofp.invitationAcceptToken', 'abc123');
+
+    render(
+      <MemoryRouter initialEntries={['/activate?uid=MTA&token=abc123']}>
+        <Routes>
+          <Route path="/activate" element={<ActivatePage />} />
+          <Route path="/invite/accept" element={<div>Accept route</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(activateMock).toHaveBeenCalledWith('MTA', 'abc123');
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Accept route')).toBeInTheDocument();
+    });
     expect(acceptPendingInvitationMock).not.toHaveBeenCalled();
   });
 });

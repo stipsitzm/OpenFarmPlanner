@@ -156,6 +156,29 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['code'], 'accepted')
         self.assertTrue(ProjectMembership.objects.filter(project=self.project, user=self.invitee).exists())
+        self.assertEqual(response.data['project']['id'], self.project.id)
+
+    def test_accept_invitation_via_body_endpoint_sets_project_as_active_default(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project2,
+            email='invitee@example.com',
+            role='member',
+            token='token-body-endpoint',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'invitee@example.com', 'password': 'pass12345'}, format='json')
+
+        response = self.client.post('/openfarmplanner/api/invitations/accept/', {'token': invitation.token}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['code'], 'accepted')
+        self.assertEqual(response.data['project']['id'], self.project2.id)
+
+        settings_obj = UserProjectSettings.objects.get(user=self.invitee)
+        self.assertEqual(settings_obj.default_project_id, self.project2.id)
+        self.assertEqual(settings_obj.last_project_id, self.project2.id)
 
     def test_public_status_stores_pending_token_for_anonymous_user(self) -> None:
         invitation = ProjectInvitation.objects.create(

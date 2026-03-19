@@ -88,7 +88,7 @@ def _invitation_error_response(exc: InvitationFlowError) -> Response:
 
 def _send_project_invitation_email(*, invitation: ProjectInvitation, project_name: str, invited_by: object) -> tuple[bool, str]:
     """Send invitation email and return delivery result plus diagnostic message."""
-    invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/{invitation.token}"
+    invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/accept?token={invitation.token}"
     with translation.override('de'):
         subject = _('Einladung zu OpenFarmPlanner: %(project)s') % {'project': project_name}
         body = render_to_string('accounts/emails/project_invitation_email.txt', {
@@ -136,6 +136,19 @@ def _coerce_request_string(value, default='') -> str:
             return first.strip()
         return str(first).strip()
     return default
+
+
+def _apply_invitation_project_settings(*, user, project: Project) -> dict[str, int | str]:
+    """Persist accepted invitation project as active/default project and return payload."""
+    settings_obj, _ = UserProjectSettings.objects.get_or_create(user=user)
+    settings_obj.default_project = project
+    settings_obj.last_project = project
+    settings_obj.save(update_fields=['default_project', 'last_project', 'updated_at'])
+    return {
+        'id': project.id,
+        'name': project.name,
+        'slug': project.slug,
+    }
 
 
 
@@ -1855,17 +1868,14 @@ class AcceptProjectInvitationByTokenView(APIView):
         except InvitationFlowError as exc:
             return _invitation_error_response(exc)
 
-        settings_obj, _ = UserProjectSettings.objects.get_or_create(user=request.user)
-        if settings_obj.default_project_id is None:
-            settings_obj.default_project = result.invitation.project
-        settings_obj.last_project = result.invitation.project
-        settings_obj.save()
+        project_payload = _apply_invitation_project_settings(user=request.user, project=result.invitation.project)
 
         return Response(
             {
                 'code': result.code,
                 'detail': result.message,
                 'project_id': result.invitation.project_id if result.invitation else None,
+                'project': project_payload,
             }
         )
 
@@ -1893,17 +1903,14 @@ class AcceptPendingProjectInvitationView(APIView):
         except InvitationFlowError as exc:
             return _invitation_error_response(exc)
 
-        settings_obj, _ = UserProjectSettings.objects.get_or_create(user=request.user)
-        if settings_obj.default_project_id is None:
-            settings_obj.default_project = result.invitation.project
-        settings_obj.last_project = result.invitation.project
-        settings_obj.save()
+        project_payload = _apply_invitation_project_settings(user=request.user, project=result.invitation.project)
 
         return Response(
             {
                 'code': result.code,
                 'detail': result.message,
                 'project_id': result.invitation.project_id if result.invitation else None,
+                'project': project_payload,
             }
         )
 

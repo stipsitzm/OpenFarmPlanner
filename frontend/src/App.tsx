@@ -63,7 +63,8 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import ProjectSelectionPage from './pages/ProjectSelectionPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import ProjectSettingsPage from './pages/ProjectSettingsPage';
-import InvitationPage from './pages/InvitationPage';
+import InvitationAcceptPage from './pages/InvitationAcceptPage';
+import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 
 interface SnackbarState {
   open: boolean;
@@ -646,7 +647,16 @@ function LegacyInvitationRedirect(): React.ReactElement {
   if (!token) {
     return <Navigate to="/invite/invalid" replace />;
   }
-  return <Navigate to={`/invite/${token}`} replace />;
+  return <Navigate to={buildInvitationAcceptPath(token)} replace />;
+}
+
+function TokenInvitationRedirect(): React.ReactElement {
+  const location = useLocation();
+  const token = location.pathname.split('/').pop();
+  if (!token) {
+    return <Navigate to="/invite/invalid" replace />;
+  }
+  return <Navigate to={buildInvitationAcceptPath(token)} replace />;
 }
 
 function createAppRouter(basename: string) {
@@ -680,8 +690,12 @@ function createAppRouter(basename: string) {
       element: <LegacyInvitationRedirect />,
     },
     {
+      path: '/invite/accept',
+      element: <InvitationAcceptPage />,
+    },
+    {
       path: '/invite/:token',
-      element: <InvitationPage />,
+      element: <TokenInvitationRedirect />,
     },
     {
       path: '/app',

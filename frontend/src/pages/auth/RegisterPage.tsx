@@ -5,6 +5,7 @@ import { Link as RouterLink, Navigate, useLocation } from 'react-router-dom';
 import { projectAPI, type InvitationPublicStatus } from '../../api/api';
 import { useAuth } from '../../auth/AuthContext';
 import { useTranslation } from '../../i18n';
+import { getNextFromSearch, getTokenFromNextPath, storeInvitationRedirect } from '../invitationAcceptance';
 
 export default function RegisterPage(): React.ReactElement {
   const { user, register, resendActivation } = useAuth();
@@ -18,6 +19,7 @@ export default function RegisterPage(): React.ReactElement {
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [pendingInvitation, setPendingInvitation] = useState<InvitationPublicStatus | null>(null);
+  const nextPath = getNextFromSearch(location.search);
 
   useEffect(() => {
     const loadPendingInvitation = async (): Promise<void> => {
@@ -48,6 +50,9 @@ export default function RegisterPage(): React.ReactElement {
 
     setSubmitting(true);
     try {
+      if (nextPath) {
+        storeInvitationRedirect(nextPath, getTokenFromNextPath(nextPath));
+      }
       const message = await register(email.trim().toLowerCase(), password, passwordConfirm, displayName.trim());
       setSuccess(pendingInvitation ? t('projectInvitations:registerSuccessWithInvitation', { detail: message }) : message);
     } catch (err) {
@@ -83,7 +88,7 @@ export default function RegisterPage(): React.ReactElement {
           <TextField label={t('auth:register.passwordConfirm')} type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} required />
           <Button type="submit" variant="contained" disabled={submitting}>{submitting ? t('auth:register.submitting') : t('auth:register.submit')}</Button>
           <Button onClick={() => void handleResend()} disabled={!email}>{t('auth:register.resendActivation')}</Button>
-          <Button component={RouterLink} to="/login" state={location.state}>{t('auth:register.hasAccount')}</Button>
+          <Button component={RouterLink} to={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'} state={location.state}>{t('auth:register.hasAccount')}</Button>
         </Stack>
       </Box>
     </Container>

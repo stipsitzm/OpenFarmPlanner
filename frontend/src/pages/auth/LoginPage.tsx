@@ -6,6 +6,7 @@ import { projectAPI, type InvitationPublicStatus } from '../../api/api';
 import { useAuth } from '../../auth/AuthContext';
 import { AuthApiError } from '../../auth/authApi';
 import { useTranslation } from '../../i18n';
+import { getNextFromSearch } from '../invitationAcceptance';
 
 export default function LoginPage(): React.ReactElement {
   const { user, login, restoreAccount } = useAuth();
@@ -18,6 +19,7 @@ export default function LoginPage(): React.ReactElement {
   const [submitting, setSubmitting] = useState(false);
   const [pendingDeletionAt, setPendingDeletionAt] = useState<string | null>(null);
   const [pendingInvitation, setPendingInvitation] = useState<InvitationPublicStatus | null>(null);
+  const nextPath = getNextFromSearch(location.search);
 
   useEffect(() => {
     const loadPendingInvitation = async (): Promise<void> => {
@@ -46,7 +48,7 @@ export default function LoginPage(): React.ReactElement {
       const hasProjects = (me.memberships?.length ?? 0) > 0;
       const target = me.needs_project_selection || !hasProjects ? '/app/project-selection' : '/app';
       const from = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
-      const destination = from?.pathname ? `${from.pathname}${from.search ?? ''}` : target;
+      const destination = nextPath ?? (from?.pathname ? `${from.pathname}${from.search ?? ''}` : target);
       navigate(destination, { replace: true });
     } catch (err) {
       if (err instanceof AuthApiError && err.code === 'account_pending_deletion') {
@@ -66,7 +68,7 @@ export default function LoginPage(): React.ReactElement {
     try {
       const me = await restoreAccount(email.trim().toLowerCase(), password);
       const hasProjects = (me.memberships?.length ?? 0) > 0;
-      navigate(hasProjects ? '/app' : '/app/project-selection', { replace: true });
+      navigate(nextPath ?? (hasProjects ? '/app' : '/app/project-selection'), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth:login.restoreFailed'));
     } finally {
@@ -101,7 +103,7 @@ export default function LoginPage(): React.ReactElement {
               {t('auth:login.restoreAccount')}
             </Button>
           ) : null}
-          <Button component={RouterLink} to="/register" state={location.state}>{t('auth:login.noAccount')}</Button>
+          <Button component={RouterLink} to={nextPath ? `/register?next=${encodeURIComponent(nextPath)}` : '/register'} state={location.state}>{t('auth:login.noAccount')}</Button>
           <Button component={RouterLink} to="/forgot-password">{t('auth:login.forgotPassword')}</Button>
         </Stack>
       </Box>

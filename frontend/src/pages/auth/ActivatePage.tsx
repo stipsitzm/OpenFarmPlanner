@@ -4,6 +4,7 @@ import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-d
 import { projectAPI } from '../../api/api';
 import { useAuth } from '../../auth/AuthContext';
 import { useTranslation } from '../../i18n';
+import { buildInvitationAcceptPath, getStoredInvitationNext, getStoredInvitationToken } from '../invitationAcceptance';
 
 type ActivateStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -29,6 +30,17 @@ export default function ActivatePage(): React.ReactElement {
       setStatus('loading');
       try {
         await activate(uid, token);
+
+        const storedNext = getStoredInvitationNext();
+        const storedToken = getStoredInvitationToken();
+        const invitationReturnPath = storedNext ?? (storedToken ? buildInvitationAcceptPath(storedToken) : null);
+
+        if (invitationReturnPath) {
+          setStatus('success');
+          setMessage(t('projectInvitations:acceptPage.redirectingBack'));
+          setTimeout(() => navigate(invitationReturnPath, { replace: true }), 800);
+          return;
+        }
 
         try {
           const invitationResponse = await projectAPI.acceptPendingInvitation();

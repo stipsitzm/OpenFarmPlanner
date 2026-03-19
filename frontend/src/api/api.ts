@@ -190,6 +190,17 @@ export interface InvitationPublicStatus {
   expires_at?: string;
 }
 
+export interface InvitationAcceptResponse {
+  code: string;
+  detail: string;
+  project_id?: number;
+  project?: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+}
+
 export const projectAPI = {
   create: (data: { name: string; description?: string }) =>
     http.post<ProjectPayload>('/projects/', data),
@@ -212,11 +223,11 @@ export const projectAPI = {
   clearPendingInvitation: () =>
     http.delete('/project-invitations/pending/'),
   acceptPendingInvitation: () =>
-    http.post<{ code: string; detail: string; project_id?: number }>('/project-invitations/pending/accept/'),
+    http.post<InvitationAcceptResponse>('/project-invitations/pending/accept/'),
   acceptInvitationByToken: (token: string) =>
-    http.post<{ code: string; detail: string; project_id?: number }>(`/project-invitations/${token}/accept/`),
+    http.post<InvitationAcceptResponse>(`/project-invitations/${token}/accept/`),
   acceptInvitation: (token: string) =>
-    http.post<{ code: string; detail: string; project_id?: number }>('/project-invitations/accept/', { token }),
+    http.post<InvitationAcceptResponse>('/invitations/accept/', { token }),
 };
 
 export type {
