@@ -1,15 +1,23 @@
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 
-from farm.models import Culture, MediaFile, CultureRevision
+from farm.models import Culture, MediaFile, CultureRevision, Project, ProjectMembership
+
+User = get_user_model()
 
 
 class CultureHistoryTests(TestCase):
     def setUp(self):
-        self.culture = Culture.objects.create(name='Carrot', variety='Nantes', growth_duration_days=60, harvest_duration_days=20, harvest_method='per_plant')
+        self.user = User.objects.create_user(username='histuser', email='hist@example.com', password='testpass', is_active=True)
+        self.client.force_login(self.user)
+        self.project = Project.objects.create(name='History Project', slug='history-project')
+        ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
+        self.culture = Culture.objects.create(name='Carrot', variety='Nantes', growth_duration_days=60, harvest_duration_days=20, harvest_method='per_plant', project=self.project)
 
     def test_history_list_endpoint(self):
         self.culture.name = 'Carrot Updated'

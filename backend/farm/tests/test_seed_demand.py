@@ -1,21 +1,38 @@
 from datetime import date
 
 import pytest
+from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
-from farm.models import Location, Field, Bed, Culture, PlantingPlan, SeedPackage
+from farm.models import Location, Field, Bed, Culture, PlantingPlan, Project, ProjectMembership, SeedPackage
+
+User = get_user_model()
 
 
 @pytest.fixture
-def api_client():
-    return APIClient()
+def project_context(db):
+    """Create a user, project, and membership for project-scoped API tests."""
+    user = User.objects.create_user(username='sduser', email='sd@example.com', password='testpass', is_active=True)
+    project = Project.objects.create(name='Seed Demand Project', slug='seed-demand-project')
+    ProjectMembership.objects.create(user=user, project=project, role='admin')
+    return user, project
 
 
 @pytest.fixture
-def bed():
-    location = Location.objects.create(name='Loc')
-    field = Field.objects.create(name='Field', location=location)
-    return Bed.objects.create(name='Bed', field=field, area_sqm=100)
+def api_client(project_context):
+    user, project = project_context
+    client = APIClient()
+    client.force_authenticate(user=user)
+    client.defaults['HTTP_X_PROJECT_ID'] = str(project.id)
+    return client
+
+
+@pytest.fixture
+def bed(project_context):
+    _, project = project_context
+    location = Location.objects.create(name='Loc', project=project)
+    field = Field.objects.create(name='Field', location=location, project=project)
+    return Bed.objects.create(name='Bed', field=field, area_sqm=100, project=project)
 
 
 def _create_plan(culture: Culture, bed: Bed, area: float, quantity: int | None = None):
