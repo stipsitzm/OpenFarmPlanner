@@ -164,6 +164,7 @@ vi.mock("react-konva", async () => {
           ref={ref}
           data-x={String(x ?? 0)}
           data-y={String(y ?? 0)}
+          data-strict-mode={String(Boolean(_useStrictMode))}
           {...domProps}
         >
           {children}
@@ -384,6 +385,10 @@ describe("GraphicalFields", () => {
       "draggable",
       "false",
     );
+    expect(screen.getByTestId("field-rect-10")).toHaveAttribute(
+      "data-strict-mode",
+      "false",
+    );
     expect(
       screen.getByText(
         /Navigieren, hinein- und herauszoomen und Details öffnen\./,
@@ -590,6 +595,7 @@ describe("GraphicalFields", () => {
 
     const fieldRect = await screen.findByTestId("field-rect-10");
     expect(fieldRect).toHaveAttribute("draggable", "true");
+    expect(fieldRect).toHaveAttribute("data-strict-mode", "false");
 
     const node = mockKonvaNodes["field-rect-10"];
     const startPosition = node.getPosition();

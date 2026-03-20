@@ -1186,7 +1186,6 @@ export default function GraphicalFields({
                               strokeWidth={2}
                               cornerRadius={4}
                               name="graphical-editable"
-                              _useStrictMode
                               data-testid={`field-rect-${fieldId}`}
                               {...getFieldInteractionProps(
                                 fieldId,
@@ -1234,7 +1233,6 @@ export default function GraphicalFields({
                                       stroke="#2b6cb0"
                                       strokeWidth={1}
                                       name="graphical-editable"
-                                      _useStrictMode
                                       data-testid={`bed-rect-${bedVm.id}`}
                                       {...getBedInteractionProps(
                                         bedVm,
