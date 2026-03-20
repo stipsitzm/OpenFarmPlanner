@@ -141,6 +141,30 @@ class ProjectsApiTests(APITestCase):
         self.assertIn('invite_link', response.data)
         self.assertIn('/invite/accept?token=', response.data['invite_link'])
 
+
+    def test_accept_invitation_invalid_token(self) -> None:
+        response = self.client.post('/openfarmplanner/api/project-invitations/not-a-real-token/accept/')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['code'], 'invalid_token')
+
+    def test_accept_invitation_matches_email_case_insensitively(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='INVITEE@EXAMPLE.COM',
+            role='member',
+            token='token-case-match',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'invitee@example.com', 'password': 'pass12345'}, format='json')
+
+        response = self.client.post(f'/openfarmplanner/api/project-invitations/{invitation.token}/accept/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['code'], 'accepted')
+        self.assertTrue(ProjectMembership.objects.filter(project=self.project, user=self.invitee).exists())
+
     def test_accept_invitation_success(self) -> None:
         invitation = ProjectInvitation.objects.create(
             project=self.project,
