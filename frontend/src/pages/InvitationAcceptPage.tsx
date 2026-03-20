@@ -48,18 +48,6 @@ export default function InvitationAcceptPage(): React.ReactElement {
       return;
     }
 
-    if (!user) {
-      setStatus("redirecting");
-      console.info(
-        "[InvitationAcceptPage] user not authenticated, redirecting to login",
-        { nextPath },
-      );
-      navigate(`/login?next=${encodeURIComponent(nextPath)}`, {
-        replace: true,
-      });
-      return;
-    }
-
     let cancelled = false;
 
     const acceptInvitation = async (): Promise<void> => {
@@ -130,7 +118,51 @@ export default function InvitationAcceptPage(): React.ReactElement {
       }
     };
 
-    void acceptInvitation();
+    const continueAnonymousFlow = async (): Promise<void> => {
+      if (user) {
+        void acceptInvitation();
+        return;
+      }
+
+      try {
+        const statusResponse = await projectAPI.getInvitationStatus(token);
+        if (cancelled) {
+          return;
+        }
+        if (statusResponse.data.code !== "pending") {
+          clearInvitationRedirectStorage();
+          setStatus("error");
+          setMessage(
+            t(`result.${statusResponse.data.code}`, {
+              defaultValue: t("result.invalid_token"),
+            }),
+          );
+          return;
+        }
+      } catch (statusError: unknown) {
+        if (cancelled) {
+          return;
+        }
+        const code =
+          (statusError as { response?: { data?: { code?: string } } })?.response
+            ?.data?.code ?? "invalid_token";
+        clearInvitationRedirectStorage();
+        setStatus("error");
+        setMessage(t(`result.${code}`, { defaultValue: t("result.invalid_token") }));
+        return;
+      }
+
+      setStatus("redirecting");
+      console.info(
+        "[InvitationAcceptPage] user not authenticated, redirecting to login",
+        { nextPath },
+      );
+      navigate(`/login?next=${encodeURIComponent(nextPath)}`, {
+        replace: true,
+      });
+    };
+
+    void continueAnonymousFlow();
 
     return () => {
       cancelled = true;

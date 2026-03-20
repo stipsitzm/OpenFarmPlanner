@@ -1,0 +1,119 @@
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+
+type InviteFixture = {
+  projectName: string;
+  projectSlug: string;
+  inviteToken: string;
+  inviteUrl: string;
+  invitee: { email: string; password: string };
+  outsider: { email: string; password: string };
+  admin: { email: string; password: string };
+};
+
+const e2eApiBase =
+  process.env.PLAYWRIGHT_E2E_API_BASE ??
+  'http://127.0.0.1:8000/openfarmplanner/api/__e2e__/invite-flow/';
+const e2eToken = process.env.E2E_TEST_TOKEN || 'openfarmplanner-e2e-token';
+
+async function invokeE2EAction(
+  request: APIRequestContext,
+  action: string,
+  payload: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const response = await request.post(e2eApiBase, {
+    headers: { 'X-E2E-Token': e2eToken },
+    data: { action, ...payload },
+  });
+  expect(response.ok()).toBeTruthy();
+  return (await response.json()) as Record<string, unknown>;
+}
+
+async function setupInviteFixture(
+  request: APIRequestContext,
+  scenarioId: string,
+  invitationState: 'pending' | 'accepted' | 'revoked' = 'pending',
+): Promise<InviteFixture> {
+  await invokeE2EAction(request, 'reset', { scenario_id: scenarioId });
+  return (await invokeE2EAction(request, 'setup', {
+    scenario_id: scenarioId,
+    invitation_state: invitationState,
+  })) as InviteFixture;
+}
+
+async function removeInviteeMembership(
+  request: APIRequestContext,
+  scenarioId: string,
+): Promise<void> {
+  await invokeE2EAction(request, 'remove_member', { scenario_id: scenarioId });
+}
+
+async function loginViaUi(page: Page, email: string, password: string): Promise<void> {
+  await page.getByLabel('E-Mail').fill(email);
+  await page.getByLabel('Passwort').fill(password);
+  await page.getByRole('button', { name: 'Anmelden' }).click();
+}
+
+test.describe('project invitation flow', () => {
+  test('continues invite context through login and accepts the invitation', async ({ page, request }, testInfo) => {
+    const scenarioId = `invite-login-${testInfo.workerIndex}`;
+    const fixture = await setupInviteFixture(request, scenarioId);
+
+    await page.goto(fixture.inviteUrl);
+    await expect(page).toHaveURL(/\/login\?next=/);
+
+    await loginViaUi(page, fixture.invitee.email, fixture.invitee.password);
+
+    await expect(page.getByText('Du wurdest dem Projekt hinzugefügt.')).toBeVisible();
+    await expect(page).toHaveURL(/\/app\/anbauplaene/);
+    await expect(page.getByText(fixture.projectName)).toBeVisible();
+  });
+
+  test('rejects a second use of the same invitation link with a clear error state', async ({ page, request }, testInfo) => {
+    const scenarioId = `invite-reuse-${testInfo.workerIndex}`;
+    const fixture = await setupInviteFixture(request, scenarioId);
+
+    await page.goto(fixture.inviteUrl);
+    await loginViaUi(page, fixture.invitee.email, fixture.invitee.password);
+    await expect(page.getByText('Du wurdest dem Projekt hinzugefügt.')).toBeVisible();
+
+    await page.goto(fixture.inviteUrl);
+    await expect(page.getByText('Diese Einladung wurde bereits verwendet.')).toBeVisible();
+  });
+
+  test('does not allow rejoin through an old link after the member was removed', async ({ page, request }, testInfo) => {
+    const scenarioId = `invite-remove-${testInfo.workerIndex}`;
+    const fixture = await setupInviteFixture(request, scenarioId);
+
+    await page.goto(fixture.inviteUrl);
+    await loginViaUi(page, fixture.invitee.email, fixture.invitee.password);
+    await expect(page.getByText('Du wurdest dem Projekt hinzugefügt.')).toBeVisible();
+
+    await removeInviteeMembership(request, scenarioId);
+
+    await page.goto(fixture.inviteUrl);
+    await expect(page.getByText('Diese Einladung wurde bereits verwendet.')).toBeVisible();
+  });
+
+  test('shows a clear mismatch error for the wrong logged-in user', async ({ page, request }, testInfo) => {
+    const scenarioId = `invite-mismatch-${testInfo.workerIndex}`;
+    const fixture = await setupInviteFixture(request, scenarioId);
+
+    await page.goto(fixture.inviteUrl);
+    await loginViaUi(page, fixture.outsider.email, fixture.outsider.password);
+
+    await expect(
+      page.getByText('Diese Einladung ist für eine andere E-Mail-Adresse bestimmt.'),
+    ).toBeVisible();
+  });
+
+  test('shows a safe terminal error for revoked and invalid invitation links', async ({ page, request }, testInfo) => {
+    const scenarioId = `invite-revoked-${testInfo.workerIndex}`;
+    const revokedFixture = await setupInviteFixture(request, scenarioId, 'revoked');
+
+    await page.goto(revokedFixture.inviteUrl);
+    await expect(page.getByText('Diese Einladung wurde widerrufen.')).toBeVisible();
+
+    await page.goto('/invite/accept?token=this-token-does-not-exist');
+    await expect(page.getByText('Ungültiger Einladungslink.')).toBeVisible();
+  });
+});

@@ -6,6 +6,7 @@ import InvitationAcceptPage from "../pages/InvitationAcceptPage";
 const switchActiveProjectMock = vi.fn(async () => {});
 const refreshUserMock = vi.fn(async () => null);
 const acceptInvitationByTokenMock = vi.fn();
+const getInvitationStatusMock = vi.fn();
 const mockAuthState = {
   user: null as null | { id: number; email: string },
   isLoading: false,
@@ -34,6 +35,7 @@ vi.mock("../api/api", async () => {
       ...actual.projectAPI,
       acceptInvitationByToken: (...args: unknown[]) =>
         acceptInvitationByTokenMock(...args),
+      getInvitationStatus: (...args: unknown[]) => getInvitationStatusMock(...args),
     },
   };
 });
@@ -45,10 +47,15 @@ describe("InvitationAcceptPage", () => {
     switchActiveProjectMock.mockClear();
     refreshUserMock.mockReset();
     acceptInvitationByTokenMock.mockReset();
+    getInvitationStatusMock.mockReset();
     window.localStorage.clear();
   });
 
   it("redirects anonymous users to login with a next parameter and stores token fallback", async () => {
+    getInvitationStatusMock.mockResolvedValueOnce({
+      data: { code: "pending", requires_auth: true },
+    });
+
     render(
       <MemoryRouter initialEntries={["/invite/accept?token=abc123"]}>
         <Routes>
@@ -71,6 +78,28 @@ describe("InvitationAcceptPage", () => {
     );
   });
 
+
+
+  it("shows an error for an anonymous already used invitation instead of redirecting to login", async () => {
+    getInvitationStatusMock.mockResolvedValueOnce({
+      data: { code: "accepted", requires_auth: false },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/invite/accept?token=usedanon"]}>
+        <Routes>
+          <Route path="/invite/accept" element={<InvitationAcceptPage />} />
+          <Route path="/login" element={<LocationEcho />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByText("Diese Einladung wurde bereits verwendet."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/\/login\?next=/)).not.toBeInTheDocument();
+    expect(acceptInvitationByTokenMock).not.toHaveBeenCalled();
+  });
 
   it("waits for auth bootstrap before redirecting already logged-in invitees", async () => {
     mockAuthState.isLoading = true;
@@ -157,6 +186,10 @@ describe("InvitationAcceptPage", () => {
         project_id: 7,
         project: { id: 7, name: "Projekt Nord", slug: "projekt-nord" },
       },
+    });
+
+    getInvitationStatusMock.mockResolvedValueOnce({
+      data: { code: "pending", requires_auth: true },
     });
 
     render(

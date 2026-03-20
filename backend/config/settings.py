@@ -253,3 +253,5 @@ AI_ENRICHMENT_READ_TIMEOUT_SECONDS = float(_ai_read_timeout_raw) if _ai_read_tim
 OPENAI_RESPONSES_API_URL = _env_str('OPENAI_RESPONSES_API_URL', 'https://api.openai.com/v1/responses')
 AI_ENRICHMENT_FAIL_FAST = os.getenv('AI_ENRICHMENT_FAIL_FAST', 'False' if DEBUG else 'True').lower() in ('true', '1', 'yes')
 AI_STARTUP_DIAGNOSTICS = os.getenv('AI_STARTUP_DIAGNOSTICS', 'True').lower() in ('true', '1', 'yes')
+
+E2E_TEST_TOKEN = os.getenv('E2E_TEST_TOKEN', '').strip()

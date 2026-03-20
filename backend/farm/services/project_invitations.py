@@ -199,11 +199,7 @@ def build_public_status(invitation: ProjectInvitation, user: User | None) -> dic
     :return: Public status payload.
     """
     code = invitation.resolved_status
-    if invitation.resolved_status == ProjectInvitation.STATUS_ACCEPTED:
-        member_user = user if user and user.is_authenticated else None
-        if member_user and ProjectMembership.objects.filter(project=invitation.project, user=member_user).exists():
-            code = 'already_member'
-    elif invitation.resolved_status == ProjectInvitation.STATUS_PENDING and user and user.is_authenticated:
+    if invitation.resolved_status == ProjectInvitation.STATUS_PENDING and user and user.is_authenticated:
         if normalize_email(user.email) != invitation.email_normalized:
             code = 'email_mismatch'
         elif ProjectMembership.objects.filter(project=invitation.project, user=user).exists():
