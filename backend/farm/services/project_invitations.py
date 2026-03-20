@@ -239,26 +239,29 @@ def accept_invitation(*, invitation: ProjectInvitation, user: User) -> Invitatio
         if locked.status == ProjectInvitation.STATUS_REVOKED:
             logger.warning('Invitation accept rejected because invitation was revoked', extra={'user_id': user.id, 'token': locked.token})
             raise InvitationFlowError('revoked', 'Invitation was revoked.')
+        if locked.status == ProjectInvitation.STATUS_ACCEPTED:
+            logger.warning('Invitation accept rejected because invitation was already used', extra={'user_id': user.id, 'token': locked.token, 'project_id': locked.project_id})
+            raise InvitationFlowError('accepted', 'Invitation has already been used.')
 
-        membership, created = ProjectMembership.objects.get_or_create(
+        existing_membership = ProjectMembership.objects.filter(
             project=locked.project,
             user=user,
-            defaults={'role': locked.role},
-        )
-
-        if locked.status == ProjectInvitation.STATUS_ACCEPTED:
-            logger.info('Invitation already accepted before current request', extra={'user_id': user.id, 'token': locked.token, 'project_id': locked.project_id})
-            return InvitationResult(code='already_member', invitation=locked, message='User is already a member.')
-
-        if not created:
+        ).first()
+        if existing_membership is not None:
             logger.info('Invitation accept found existing project membership', extra={'user_id': user.id, 'token': locked.token, 'project_id': locked.project_id})
             locked.status = ProjectInvitation.STATUS_ACCEPTED
             locked.accepted_by = user
-            locked.accepted_at = timezone.now()
+            locked.accepted_at = locked.accepted_at or timezone.now()
             locked.save(update_fields=['status', 'accepted_by', 'accepted_at', 'updated_at'])
             return InvitationResult(code='already_member', invitation=locked, message='User is already a member.')
 
-        logger.info('Invitation accepted and membership created', extra={'user_id': user.id, 'token': locked.token, 'project_id': locked.project_id})
+        membership = ProjectMembership.objects.create(
+            project=locked.project,
+            user=user,
+            role=locked.role,
+        )
+
+        logger.info('Invitation accepted and membership created', extra={'user_id': user.id, 'token': locked.token, 'project_id': locked.project_id, 'membership_id': membership.id})
         locked.status = ProjectInvitation.STATUS_ACCEPTED
         locked.accepted_by = user
         locked.accepted_at = timezone.now()

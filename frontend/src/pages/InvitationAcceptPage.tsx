@@ -100,7 +100,7 @@ export default function InvitationAcceptPage(): React.ReactElement {
         const code =
           (acceptError as { response?: { data?: { code?: string } } })?.response
             ?.data?.code ?? "invalid_token";
-        if (code === "already_member" || code === "accepted") {
+        if (code === "already_member") {
           clearInvitationRedirectStorage();
           console.info("[InvitationAcceptPage] invitation already satisfied", {
             code,
@@ -117,7 +117,8 @@ export default function InvitationAcceptPage(): React.ReactElement {
         if (
           code === "invalid_token" ||
           code === "expired" ||
-          code === "revoked"
+          code === "revoked" ||
+          code === "accepted"
         ) {
           clearInvitationRedirectStorage();
         }

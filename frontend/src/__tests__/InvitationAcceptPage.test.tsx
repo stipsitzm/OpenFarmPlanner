@@ -120,6 +120,34 @@ describe("InvitationAcceptPage", () => {
     });
   });
 
+  it("shows a terminal error for an already used invitation link", async () => {
+    mockAuthState.user = { id: 1, email: "invitee@example.com" };
+    acceptInvitationByTokenMock.mockRejectedValueOnce({
+      response: {
+        data: {
+          code: "accepted",
+        },
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/invite/accept?token=used123"]}>
+        <Routes>
+          <Route path="/invite/accept" element={<InvitationAcceptPage />} />
+          <Route path="/app/anbauplaene" element={<div>Anbaupläne</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(acceptInvitationByTokenMock).toHaveBeenCalledWith("used123");
+    });
+    expect(
+      await screen.findByText("Diese Einladung wurde bereits verwendet."),
+    ).toBeInTheDocument();
+    expect(switchActiveProjectMock).not.toHaveBeenCalled();
+  });
+
   it("accepts the invitation for authenticated users and switches the active project", async () => {
     mockAuthState.user = { id: 1, email: "invitee@example.com" };
     acceptInvitationByTokenMock.mockResolvedValueOnce({
