@@ -1,5 +1,5 @@
 import { Alert, Button, Container, Stack, Typography } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { projectAPI } from "../api/api";
 import { useAuth } from "../auth/AuthContext";
@@ -20,6 +20,7 @@ export default function InvitationAcceptPage(): React.ReactElement {
   const { user, isLoading, switchActiveProject, refreshUser } = useAuth();
   const [status, setStatus] = useState<AcceptStatus>("loading");
   const [message, setMessage] = useState<string>("");
+  const processedTokenRef = useRef<string | null>(null);
 
   const token = useMemo(() => {
     const tokenFromQuery = searchParams.get("token");
@@ -48,9 +49,11 @@ export default function InvitationAcceptPage(): React.ReactElement {
       return;
     }
 
-    let cancelled = false;
-
     const acceptInvitation = async (): Promise<void> => {
+      if (processedTokenRef.current === token) {
+        return;
+      }
+      processedTokenRef.current = token;
       setStatus("loading");
       setMessage(t("acceptPage.accepting"));
 
@@ -64,9 +67,6 @@ export default function InvitationAcceptPage(): React.ReactElement {
           await refreshUser();
         }
         clearInvitationRedirectStorage();
-        if (cancelled) {
-          return;
-        }
         console.info(
           "[InvitationAcceptPage] invitation accepted successfully",
           { projectId },
@@ -78,9 +78,6 @@ export default function InvitationAcceptPage(): React.ReactElement {
           1200,
         );
       } catch (acceptError: unknown) {
-        if (cancelled) {
-          return;
-        }
         console.error(
           "[InvitationAcceptPage] invitation acceptance failed",
           acceptError,
@@ -126,9 +123,6 @@ export default function InvitationAcceptPage(): React.ReactElement {
 
       try {
         const statusResponse = await projectAPI.getInvitationStatus(token);
-        if (cancelled) {
-          return;
-        }
         if (statusResponse.data.code !== "pending") {
           clearInvitationRedirectStorage();
           setStatus("error");
@@ -140,9 +134,6 @@ export default function InvitationAcceptPage(): React.ReactElement {
           return;
         }
       } catch (statusError: unknown) {
-        if (cancelled) {
-          return;
-        }
         const code =
           (statusError as { response?: { data?: { code?: string } } })?.response
             ?.data?.code ?? "invalid_token";
@@ -163,10 +154,6 @@ export default function InvitationAcceptPage(): React.ReactElement {
     };
 
     void continueAnonymousFlow();
-
-    return () => {
-      cancelled = true;
-    };
   }, [isLoading, navigate, refreshUser, switchActiveProject, t, token, user]);
 
   return (

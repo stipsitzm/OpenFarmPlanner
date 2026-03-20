@@ -20,6 +20,9 @@ export default function LoginPage(): React.ReactElement {
   const [pendingDeletionAt, setPendingDeletionAt] = useState<string | null>(null);
   const [pendingInvitation, setPendingInvitation] = useState<InvitationPublicStatus | null>(null);
   const nextPath = getNextFromSearch(location.search);
+  const from = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
+  const authenticatedDestination =
+    nextPath ?? (from?.pathname ? `${from.pathname}${from.search ?? ''}` : '/app');
 
   useEffect(() => {
     const loadPendingInvitation = async (): Promise<void> => {
@@ -36,7 +39,7 @@ export default function LoginPage(): React.ReactElement {
     void loadPendingInvitation();
   }, []);
 
-  if (user) return <Navigate to="/app" replace />;
+  if (user) return <Navigate to={authenticatedDestination} replace />;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -47,7 +50,6 @@ export default function LoginPage(): React.ReactElement {
       const me = await login(email.trim().toLowerCase(), password);
       const hasProjects = (me.memberships?.length ?? 0) > 0;
       const target = me.needs_project_selection || !hasProjects ? '/app/project-selection' : '/app';
-      const from = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
       const destination = nextPath ?? (from?.pathname ? `${from.pathname}${from.search ?? ''}` : target);
       navigate(destination, { replace: true });
     } catch (err) {

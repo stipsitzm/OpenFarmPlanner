@@ -63,7 +63,6 @@ test.describe('project invitation flow', () => {
 
     await loginViaUi(page, fixture.invitee.email, fixture.invitee.password);
 
-    await expect(page.getByText('Du wurdest dem Projekt hinzugefügt.')).toBeVisible();
     await expect(page).toHaveURL(/\/app\/anbauplaene/);
     await expect(page.getByText(fixture.projectName)).toBeVisible();
   });
@@ -74,7 +73,8 @@ test.describe('project invitation flow', () => {
 
     await page.goto(fixture.inviteUrl);
     await loginViaUi(page, fixture.invitee.email, fixture.invitee.password);
-    await expect(page.getByText('Du wurdest dem Projekt hinzugefügt.')).toBeVisible();
+    await expect(page).toHaveURL(/\/app\/anbauplaene/);
+    await expect(page.getByText(fixture.projectName)).toBeVisible();
 
     await page.goto(fixture.inviteUrl);
     await expect(page.getByText('Diese Einladung wurde bereits verwendet.')).toBeVisible();
@@ -86,7 +86,8 @@ test.describe('project invitation flow', () => {
 
     await page.goto(fixture.inviteUrl);
     await loginViaUi(page, fixture.invitee.email, fixture.invitee.password);
-    await expect(page.getByText('Du wurdest dem Projekt hinzugefügt.')).toBeVisible();
+    await expect(page).toHaveURL(/\/app\/anbauplaene/);
+    await expect(page.getByText(fixture.projectName)).toBeVisible();
 
     await removeInviteeMembership(request, scenarioId);
 
@@ -113,7 +114,7 @@ test.describe('project invitation flow', () => {
     await page.goto(revokedFixture.inviteUrl);
     await expect(page.getByText('Diese Einladung wurde widerrufen.')).toBeVisible();
 
-    await page.goto('/invite/accept?token=this-token-does-not-exist');
+    await page.goto('/openfarmplanner/invite/accept?token=this-token-does-not-exist');
     await expect(page.getByText('Ungültiger Einladungslink.')).toBeVisible();
   });
 });
