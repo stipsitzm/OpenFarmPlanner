@@ -8,6 +8,7 @@ const refreshUserMock = vi.fn(async () => null);
 const acceptInvitationByTokenMock = vi.fn();
 const mockAuthState = {
   user: null as null | { id: number; email: string },
+  isLoading: false,
 };
 
 function LocationEcho(): React.ReactElement {
@@ -18,6 +19,7 @@ function LocationEcho(): React.ReactElement {
 vi.mock("../auth/AuthContext", () => ({
   useAuth: () => ({
     user: mockAuthState.user,
+    isLoading: mockAuthState.isLoading,
     switchActiveProject: switchActiveProjectMock,
     refreshUser: refreshUserMock,
   }),
@@ -39,6 +41,7 @@ vi.mock("../api/api", async () => {
 describe("InvitationAcceptPage", () => {
   beforeEach(() => {
     mockAuthState.user = null;
+    mockAuthState.isLoading = false;
     switchActiveProjectMock.mockClear();
     refreshUserMock.mockReset();
     acceptInvitationByTokenMock.mockReset();
@@ -66,6 +69,55 @@ describe("InvitationAcceptPage", () => {
     expect(window.localStorage.getItem("ofp.invitationAcceptNext")).toBe(
       "/invite/accept?token=abc123",
     );
+  });
+
+
+  it("waits for auth bootstrap before redirecting already logged-in invitees", async () => {
+    mockAuthState.isLoading = true;
+    acceptInvitationByTokenMock.mockResolvedValueOnce({
+      data: {
+        code: "accepted",
+        detail: "Invitation accepted.",
+        project_id: 11,
+        project: { id: 11, name: "Projekt Süd", slug: "projekt-sued" },
+      },
+    });
+
+    const { rerender } = render(
+      <MemoryRouter initialEntries={["/invite/accept?token=delayed123"]}>
+        <Routes>
+          <Route path="/invite/accept" element={<InvitationAcceptPage />} />
+          <Route path="/login" element={<LocationEcho />} />
+          <Route path="/app/anbauplaene" element={<div>Anbaupläne</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Einladung wird angenommen/)).toBeInTheDocument();
+    });
+    expect(acceptInvitationByTokenMock).not.toHaveBeenCalled();
+    expect(screen.queryByText(/\/login\?next=/)).not.toBeInTheDocument();
+
+    mockAuthState.isLoading = false;
+    mockAuthState.user = { id: 4, email: "invitee@example.com" };
+
+    rerender(
+      <MemoryRouter initialEntries={["/invite/accept?token=delayed123"]}>
+        <Routes>
+          <Route path="/invite/accept" element={<InvitationAcceptPage />} />
+          <Route path="/login" element={<LocationEcho />} />
+          <Route path="/app/anbauplaene" element={<div>Anbaupläne</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(acceptInvitationByTokenMock).toHaveBeenCalledWith("delayed123");
+    });
+    await waitFor(() => {
+      expect(switchActiveProjectMock).toHaveBeenCalledWith(11);
+    });
   });
 
   it("accepts the invitation for authenticated users and switches the active project", async () => {

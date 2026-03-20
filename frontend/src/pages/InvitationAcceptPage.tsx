@@ -17,7 +17,7 @@ export default function InvitationAcceptPage(): React.ReactElement {
   const { t } = useTranslation("projectInvitations");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, switchActiveProject, refreshUser } = useAuth();
+  const { user, isLoading, switchActiveProject, refreshUser } = useAuth();
   const [status, setStatus] = useState<AcceptStatus>("loading");
   const [message, setMessage] = useState<string>("");
 
@@ -41,6 +41,12 @@ export default function InvitationAcceptPage(): React.ReactElement {
     console.info("[InvitationAcceptPage] parsed token", { token });
     const nextPath = buildInvitationAcceptPath(token);
     storeInvitationRedirect(nextPath, token);
+
+    if (isLoading) {
+      setStatus("loading");
+      setMessage(t("acceptPage.accepting"));
+      return;
+    }
 
     if (!user) {
       setStatus("redirecting");
@@ -128,7 +134,7 @@ export default function InvitationAcceptPage(): React.ReactElement {
     return () => {
       cancelled = true;
     };
-  }, [navigate, refreshUser, switchActiveProject, t, token, user]);
+  }, [isLoading, navigate, refreshUser, switchActiveProject, t, token, user]);
 
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
