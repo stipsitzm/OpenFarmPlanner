@@ -593,44 +593,25 @@ export default function GraphicalFields({
   };
 
   const handleStageDragStart = (
-    locationId: number,
-    viewport: ViewportState,
+    _locationId: number,
+    _viewport: ViewportState,
   ): void => {
-    if (!isViewMode) {
-      return;
-    }
-
-    const pointer = stageRefs.current[locationId]?.getPointerPosition();
-    if (!pointer) {
-      return;
-    }
-
-    panSessionRef.current[locationId] = startPanSession(viewport, pointer);
+    return;
   };
 
   const handleStageDragMove = (
-    locationId: number,
-    viewport: ViewportState,
-    event: KonvaEventObject<DragEvent>,
+    _locationId: number,
+    _viewport: ViewportState,
+    _event: KonvaEventObject<DragEvent>,
   ): void => {
-    const stage = stageRefs.current[locationId];
-    const panSession = panSessionRef.current[locationId];
-    const pointer = stage?.getPointerPosition();
-    if (!stage || !panSession || !pointer || interactionMode !== "view") {
-      return;
-    }
-
-    const nextViewport = panViewport(panSession, pointer, viewport.scale);
-    event.target.position({ x: nextViewport.x, y: nextViewport.y });
-    setViewportByLocation((prev) => ({ ...prev, [locationId]: nextViewport }));
+    return;
   };
 
   const handleStageDragEnd = (
     locationId: number,
-    viewport: ViewportState,
-    event: KonvaEventObject<DragEvent>,
+    _viewport: ViewportState,
+    _event: KonvaEventObject<DragEvent>,
   ): void => {
-    handleStageDragMove(locationId, viewport, event);
     panSessionRef.current[locationId] = null;
   };
 
@@ -1080,7 +1061,7 @@ export default function GraphicalFields({
                     key={`stage-${locationId}-${interactionMode}`}
                     width={stageWidth}
                     height={stageHeight}
-                    draggable={isViewMode}
+                    draggable={false}
                     x={viewport.x}
                     y={viewport.y}
                     scaleX={viewport.scale}
