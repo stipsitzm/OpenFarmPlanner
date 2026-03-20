@@ -12,6 +12,8 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
+  IconButton,
+  Paper,
   Stack,
   Switch,
   Tooltip,
@@ -248,6 +250,8 @@ export default function GraphicalFields({
   const [activeGuides, setActiveGuides] = useState<GuideLine[]>([]);
   const [interactionMode, setInteractionMode] =
     useState<InteractionMode>("view");
+  const isEditMode = interactionMode === "edit";
+  const isViewMode = interactionMode === "view";
   const [viewportByLocation, setViewportByLocation] = useState<
     Record<number, ViewportState>
   >({});
@@ -362,9 +366,7 @@ export default function GraphicalFields({
 
   useEffect(() => {
     resetTransientInteractionState();
-    if (interactionMode === "view") {
-      stopKonvaDragging();
-    }
+    stopKonvaDragging();
   }, [interactionMode]);
 
   useKeyboardShortcuts(
@@ -594,7 +596,7 @@ export default function GraphicalFields({
     locationId: number,
     viewport: ViewportState,
   ): void => {
-    if (interactionMode !== "view") {
+    if (!isViewMode) {
       return;
     }
 
@@ -686,7 +688,7 @@ export default function GraphicalFields({
     locationName: string,
     locationId: number,
   ) => {
-    if (interactionMode === "view") {
+    if (isViewMode) {
       return {
         draggable: false,
         onClick: () => {
@@ -774,7 +776,7 @@ export default function GraphicalFields({
     fieldName: string,
     locationId: number,
   ) => {
-    if (interactionMode === "view") {
+    if (isViewMode) {
       return {
         draggable: false,
         onClick: () => {
@@ -910,7 +912,7 @@ export default function GraphicalFields({
             </Typography>
           ) : null}
           <Typography variant="body2" color="text.secondary">
-            {interactionMode === "view"
+            {isViewMode
               ? t("fields:graphical.viewModeDescription")
               : t("fields:graphical.editModeDescription")}
           </Typography>
@@ -919,7 +921,7 @@ export default function GraphicalFields({
           <FormControlLabel
             control={
               <Switch
-                checked={interactionMode === "edit"}
+                checked={isEditMode}
                 onChange={(_, checked) =>
                   setInteractionMode(checked ? "edit" : "view")
                 }
@@ -936,7 +938,7 @@ export default function GraphicalFields({
         </Tooltip>
       </Stack>
 
-      {interactionMode === "edit" ? (
+      {isEditMode ? (
         <Alert severity="warning" sx={{ mb: 2 }}>
           {t("fields:graphical.editModeBanner")}
         </Alert>
@@ -979,48 +981,6 @@ export default function GraphicalFields({
                 </Typography>
               </AccordionSummary>
               <AccordionDetails>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{ mb: 1, flexWrap: "wrap" }}
-                >
-                  <Button
-                    size="large"
-                    variant="outlined"
-                    startIcon={<AddIcon />}
-                    onClick={() => handleZoom(locationId, ZOOM_STEP)}
-                    aria-label={t("fields:graphical.zoomIn")}
-                  >
-                    {t("fields:graphical.zoomIn")}
-                  </Button>
-                  <Button
-                    size="large"
-                    variant="outlined"
-                    startIcon={<RemoveIcon />}
-                    onClick={() => handleZoom(locationId, 1 / ZOOM_STEP)}
-                    aria-label={t("fields:graphical.zoomOut")}
-                  >
-                    {t("fields:graphical.zoomOut")}
-                  </Button>
-                  <Button
-                    size="large"
-                    variant="outlined"
-                    startIcon={<FitScreenIcon />}
-                    onClick={() => resetViewport(locationId)}
-                    aria-label={t("fields:graphical.fitToView")}
-                  >
-                    {t("fields:graphical.fitToView")}
-                  </Button>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ alignSelf: "center", ml: 1 }}
-                  >
-                    {t("fields:graphical.zoomLevel", {
-                      value: viewport.scale.toFixed(2),
-                    })}
-                  </Typography>
-                </Stack>
                 <Box
                   sx={{
                     width: "100%",
@@ -1029,12 +989,98 @@ export default function GraphicalFields({
                     border: "1px solid",
                     borderColor: "divider",
                     touchAction: "none",
+                    position: "relative",
+                    bgcolor: "background.paper",
                   }}
                 >
+                  <Paper
+                    elevation={3}
+                    sx={{
+                      position: "absolute",
+                      top: 12,
+                      right: 12,
+                      zIndex: 2,
+                      borderRadius: 3,
+                      overflow: "hidden",
+                      bgcolor: "background.paper",
+                    }}
+                  >
+                    <Stack spacing={0} alignItems="stretch">
+                      <Tooltip
+                        title={t("fields:graphical.zoomIn")}
+                        placement="left"
+                      >
+                        <IconButton
+                          size="small"
+                          onClick={() => handleZoom(locationId, ZOOM_STEP)}
+                          aria-label={t("fields:graphical.zoomIn")}
+                          sx={{ borderRadius: 0, p: 1.25 }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip
+                        title={t("fields:graphical.zoomOut")}
+                        placement="left"
+                      >
+                        <IconButton
+                          size="small"
+                          onClick={() => handleZoom(locationId, 1 / ZOOM_STEP)}
+                          aria-label={t("fields:graphical.zoomOut")}
+                          sx={{
+                            borderRadius: 0,
+                            p: 1.25,
+                            borderTop: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
+                          <RemoveIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip
+                        title={t("fields:graphical.fitToView")}
+                        placement="left"
+                      >
+                        <IconButton
+                          size="small"
+                          onClick={() => resetViewport(locationId)}
+                          aria-label={t("fields:graphical.fitToView")}
+                          sx={{
+                            borderRadius: 0,
+                            p: 1.25,
+                            borderTop: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
+                          <FitScreenIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </Paper>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{
+                      position: "absolute",
+                      left: 12,
+                      top: 12,
+                      zIndex: 2,
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 2,
+                      bgcolor: "rgba(255,255,255,0.78)",
+                      backdropFilter: "blur(2px)",
+                    }}
+                  >
+                    {t("fields:graphical.zoomLevel", {
+                      value: viewport.scale.toFixed(2),
+                    })}
+                  </Typography>
                   <Stage
+                    key={`stage-${locationId}-${interactionMode}`}
                     width={stageWidth}
                     height={stageHeight}
-                    draggable={interactionMode === "view"}
+                    draggable={isViewMode}
                     x={viewport.x}
                     y={viewport.y}
                     scaleX={viewport.scale}

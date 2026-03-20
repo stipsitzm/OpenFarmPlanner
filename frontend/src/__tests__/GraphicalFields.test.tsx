@@ -4,6 +4,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import GraphicalFields from "../pages/GraphicalFields";
 
 const mockUseHierarchyData = vi.fn();
+const { listByLocationMock, saveByLocationMock } = vi.hoisted(() => ({
+  listByLocationMock: vi.fn(async () => ({
+    data: { bed_layouts: [], field_layouts: [] },
+  })),
+  saveByLocationMock: vi.fn(async () => ({
+    data: { bed_layouts: [], field_layouts: [] },
+  })),
+}));
 const mockStageApi = {
   pointer: { x: 0, y: 0 },
   handlers: {} as {
@@ -84,12 +92,8 @@ vi.mock("../api/api", async () => {
     ...actual,
     layoutAPI: {
       ...actual.layoutAPI,
-      listByLocation: vi.fn(async () => ({
-        data: { bed_layouts: [], field_layouts: [] },
-      })),
-      saveByLocation: vi.fn(async () => ({
-        data: { bed_layouts: [], field_layouts: [] },
-      })),
+      listByLocation: listByLocationMock,
+      saveByLocation: saveByLocationMock,
     },
   };
 });
@@ -111,6 +115,7 @@ vi.mock("react-konva", async () => {
         onDragEnd,
         onDblTap,
         onDblClick,
+        _useStrictMode,
         x,
         y,
         ...domProps
@@ -122,6 +127,7 @@ vi.mock("react-konva", async () => {
       void onTap;
       void onDblTap;
       void onDblClick;
+      void _useStrictMode;
 
       const testId =
         typeof props["data-testid"] === "string" ? props["data-testid"] : null;
@@ -286,6 +292,8 @@ describe("GraphicalFields", () => {
   beforeEach(() => {
     mockStageApi.setPointer(0, 0);
     mockStageApi.handlers = {};
+    listByLocationMock.mockClear();
+    saveByLocationMock.mockClear();
     Object.keys(mockKonvaNodes).forEach((key) => delete mockKonvaNodes[key]);
     mockUseHierarchyData.mockReturnValue({
       loading: false,
@@ -319,7 +327,7 @@ describe("GraphicalFields", () => {
 
     expect(
       await screen.findByText(
-        "Navigieren, hinein- und herauszoomen und Details öffnen.",
+        /Navigieren, hinein- und herauszoomen und Details öffnen\./,
       ),
     ).toBeInTheDocument();
     expect(
@@ -345,7 +353,7 @@ describe("GraphicalFields", () => {
     render(<GraphicalFields />);
     expect(
       await screen.findByText(
-        "Navigieren, hinein- und herauszoomen und Details öffnen.",
+        /Navigieren, hinein- und herauszoomen und Details öffnen\./,
       ),
     ).toBeInTheDocument();
     act(() => {
@@ -354,6 +362,63 @@ describe("GraphicalFields", () => {
       );
     });
 
+    expect(screen.getByRole("button", { name: "Zoom in" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Zoom out" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Alles einpassen" }),
+    ).toBeInTheDocument();
+  }, 15000);
+
+  it("keeps UI hint and interaction state consistent with the edit mode switch", async () => {
+    render(<GraphicalFields />);
+    act(() => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+      );
+    });
+
+    expect(screen.getByRole("switch")).not.toBeChecked();
+    expect(await screen.findByTestId("field-rect-10")).toHaveAttribute(
+      "draggable",
+      "false",
+    );
+    expect(
+      screen.getByText(
+        /Navigieren, hinein- und herauszoomen und Details öffnen\./,
+      ),
+    ).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(screen.getByRole("switch"));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("switch")).toBeChecked();
+      expect(screen.getByTestId("field-rect-10")).toHaveAttribute(
+        "draggable",
+        "true",
+      );
+    });
+    expect(
+      screen.getByText(
+        "Editiermodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+      ),
+    ).toBeInTheDocument();
+  }, 15000);
+
+  it("renders compact overlay zoom controls inside the graphic container", async () => {
+    render(<GraphicalFields />);
+    act(() => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+      );
+    });
+
+    expect(screen.queryByText("Zoom in")).not.toBeInTheDocument();
+    expect(screen.queryByText("Zoom out")).not.toBeInTheDocument();
+    expect(screen.queryByText("Alles einpassen")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Zoom in" })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Zoom out" }),
@@ -479,10 +544,10 @@ describe("GraphicalFields", () => {
       );
     });
 
-    const bedRect = await screen.findByTestId("bed-rect-100");
-    expect(bedRect).toHaveAttribute("draggable", "false");
+    const fieldRect = await screen.findByTestId("field-rect-10");
+    expect(fieldRect).toHaveAttribute("draggable", "false");
 
-    const node = mockKonvaNodes["bed-rect-100"];
+    const node = mockKonvaNodes["field-rect-10"];
     const startPosition = node.getPosition();
     node.setPosition({ x: startPosition.x + 50, y: startPosition.y + 30 });
 
@@ -503,11 +568,11 @@ describe("GraphicalFields", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId("bed-rect-100")).toHaveAttribute(
+      expect(screen.getByTestId("field-rect-10")).toHaveAttribute(
         "data-x",
         String(startPosition.x),
       );
-      expect(screen.getByTestId("bed-rect-100")).toHaveAttribute(
+      expect(screen.getByTestId("field-rect-10")).toHaveAttribute(
         "data-y",
         String(startPosition.y),
       );
@@ -523,10 +588,10 @@ describe("GraphicalFields", () => {
       fireEvent.click(screen.getByRole("switch"));
     });
 
-    const bedRect = await screen.findByTestId("bed-rect-100");
-    expect(bedRect).toHaveAttribute("draggable", "true");
+    const fieldRect = await screen.findByTestId("field-rect-10");
+    expect(fieldRect).toHaveAttribute("draggable", "true");
 
-    const node = mockKonvaNodes["bed-rect-100"];
+    const node = mockKonvaNodes["field-rect-10"];
     const startPosition = node.getPosition();
     const dragTargetRef = {
       current: { x: startPosition.x + 40, y: startPosition.y + 25 },
@@ -544,9 +609,56 @@ describe("GraphicalFields", () => {
     });
 
     await waitFor(() => {
-      const moved = screen.getByTestId("bed-rect-100");
+      const moved = screen.getByTestId("field-rect-10");
       expect(Number(moved.getAttribute("data-x"))).not.toBe(startPosition.x);
       expect(Number(moved.getAttribute("data-y"))).not.toBe(startPosition.y);
+    });
+  }, 15000);
+
+  it("persists layout changes only in edit mode", async () => {
+    render(<GraphicalFields />);
+    act(() => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+      );
+    });
+
+    const viewNode = mockKonvaNodes["field-rect-10"];
+    act(() => {
+      viewNode.handlers.onDragEnd?.({
+        evt: new Event("dragend"),
+        target: createKonvaTarget({
+          current: {
+            x: viewNode.getPosition().x + 25,
+            y: viewNode.getPosition().y + 15,
+          },
+        }),
+      });
+    });
+
+    await waitFor(() => {
+      expect(saveByLocationMock).not.toHaveBeenCalled();
+    });
+
+    act(() => {
+      fireEvent.click(screen.getByRole("switch"));
+    });
+
+    const editNode = mockKonvaNodes["field-rect-10"];
+    act(() => {
+      editNode.handlers.onDragEnd?.({
+        evt: new Event("dragend"),
+        target: createKonvaTarget({
+          current: {
+            x: editNode.getPosition().x + 25,
+            y: editNode.getPosition().y + 15,
+          },
+        }),
+      });
+    });
+
+    await waitFor(() => {
+      expect(saveByLocationMock).toHaveBeenCalledTimes(1);
     });
   }, 15000);
 
@@ -559,7 +671,7 @@ describe("GraphicalFields", () => {
       fireEvent.click(screen.getByRole("switch"));
     });
 
-    const node = mockKonvaNodes["bed-rect-100"];
+    const node = mockKonvaNodes["field-rect-10"];
     const startPosition = node.getPosition();
     const dragTargetRef = {
       current: { x: startPosition.x + 35, y: startPosition.y + 20 },
@@ -577,7 +689,7 @@ describe("GraphicalFields", () => {
     });
 
     await waitFor(() => {
-      const resetNode = screen.getByTestId("bed-rect-100");
+      const resetNode = screen.getByTestId("field-rect-10");
       expect(resetNode).toHaveAttribute("draggable", "false");
       expect(resetNode).toHaveAttribute("data-x", String(startPosition.x));
       expect(resetNode).toHaveAttribute("data-y", String(startPosition.y));
@@ -587,7 +699,7 @@ describe("GraphicalFields", () => {
   it("toggles edit mode via Alt+E but ignores the shortcut while typing in an input", async () => {
     render(<GraphicalFields />);
     await screen.findByText(
-      "Navigieren, hinein- und herauszoomen und Details öffnen.",
+      /Navigieren, hinein- und herauszoomen und Details öffnen\./,
     );
     expect(screen.getByRole("switch")).not.toBeChecked();
 
