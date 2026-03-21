@@ -44,10 +44,8 @@ import {
 import {
   fitContentToStage,
   getVisibleElements,
-  panViewport,
   shouldShowBedLabel,
   shouldShowFieldLabel,
-  startPanSession,
   type PanSession,
   type ViewportState,
   zoomAroundPoint,
@@ -908,12 +906,18 @@ export default function GraphicalFields({
                 }
                 color="primary"
                 inputProps={{
-                  "aria-label": t("fields:graphical.editMode"),
+                  "aria-label": isEditMode
+                    ? t("fields:graphical.editMode")
+                    : t("fields:graphical.viewMode"),
                   "aria-description": t("fields:graphical.editModeShortcut"),
                 }}
               />
             }
-            label={t("fields:graphical.editMode")}
+            label={
+              isEditMode
+                ? t("fields:graphical.editMode")
+                : t("fields:graphical.viewMode")
+            }
             sx={{ mr: 0 }}
           />
         </Tooltip>
