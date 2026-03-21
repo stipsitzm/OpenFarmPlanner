@@ -1493,7 +1493,7 @@ class NoteAttachmentDeleteView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class SeedDemandListView(generics.ListAPIView):
+class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
     """Read-only endpoint returning gram-based seed demand aggregated by culture."""
 
     serializer_class = SeedDemandSerializer
@@ -1504,6 +1504,7 @@ class SeedDemandListView(generics.ListAPIView):
 
         return (
             PlantingPlan.objects
+            .filter(project=self.request.active_project)
             .values(
                 'culture_id',
                 culture_name=F('culture__name'),
@@ -1600,7 +1601,10 @@ class SeedDemandListView(generics.ListAPIView):
         rows = list(self.get_queryset())
         culture_ids = [row['culture_id'] for row in rows]
         package_map: dict[int, list[SeedPackage]] = defaultdict(list)
-        for package in SeedPackage.objects.filter(culture_id__in=culture_ids).order_by('size_unit', 'size_value'):
+        for package in SeedPackage.objects.filter(
+            project=request.active_project,
+            culture_id__in=culture_ids,
+        ).order_by('size_unit', 'size_value'):
             package_map[package.culture_id].append(package)
 
         for row in rows:
