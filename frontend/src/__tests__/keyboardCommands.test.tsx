@@ -43,7 +43,7 @@ describe('useKeyboardShortcuts context guard', () => {
     render(
       <ShortcutHarness
         contexts={['global']}
-        shortcut={{ id: 'a', title: 'A', keys: { alt: true, key: 'e' }, contexts: ['cultureDetail'], action }}
+        shortcut={{ id: 'a', label: 'A', keys: { alt: true, key: 'e' }, contexts: ['cultureDetail'], action }}
       />,
     );
 
@@ -54,16 +54,17 @@ describe('useKeyboardShortcuts context guard', () => {
 
 describe('command palette', () => {
   it('filters and executes a command', () => {
-    const run = vi.fn();
+    const action = vi.fn();
     const commands: CommandSpec[] = [
       {
         id: 'culture.edit',
-        title: 'Kultur bearbeiten (Alt+E)',
+        label: 'Kultur bearbeiten (Alt+E)',
+        group: 'navigation',
         keywords: ['kultur', 'bearbeiten'],
         shortcutHint: 'Alt+E',
-        contextTags: ['cultureDetail'],
-        isAvailable: () => true,
-        run,
+        contextTags: ['cultures'],
+        isEnabled: () => true,
+        action,
       },
     ];
 
@@ -71,10 +72,10 @@ describe('command palette', () => {
 
     render(<CommandPalette open commands={commands} onClose={vi.fn()} />);
 
-    const input = screen.getByRole('textbox', { name: 'Command Palette (Alt+K)' });
+    const input = screen.getByRole('textbox', { name: 'Aktionssuche (Alt+K)' });
     fireEvent.change(input, { target: { value: 'bearb' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(run).toHaveBeenCalledTimes(1);
+    expect(action).toHaveBeenCalledTimes(1);
   });
 });

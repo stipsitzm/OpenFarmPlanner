@@ -1,14 +1,16 @@
 import { Alert, Box, Button, Container, Stack, TextField, Typography } from '@mui/material';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { projectAPI, type InvitationPublicStatus } from '../../api/api';
 import { useAuth } from '../../auth/AuthContext';
 import { AuthApiError } from '../../auth/authApi';
 import { useTranslation } from '../../i18n';
+import { getNextFromSearch } from '../invitationAcceptance';
 
 export default function LoginPage(): React.ReactElement {
   const { user, login, restoreAccount } = useAuth();
-  const { t } = useTranslation('auth');
+  const { t } = useTranslation(['auth', 'projectInvitations']);
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');
@@ -16,8 +18,28 @@ export default function LoginPage(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [pendingDeletionAt, setPendingDeletionAt] = useState<string | null>(null);
+  const [pendingInvitation, setPendingInvitation] = useState<InvitationPublicStatus | null>(null);
+  const nextPath = getNextFromSearch(location.search);
+  const from = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
+  const authenticatedDestination =
+    nextPath ?? (from?.pathname ? `${from.pathname}${from.search ?? ''}` : '/app');
 
-  if (user) return <Navigate to="/app" replace />;
+  useEffect(() => {
+    const loadPendingInvitation = async (): Promise<void> => {
+      try {
+        const response = await projectAPI.getPendingInvitation();
+        if (response.data.code !== 'no_pending_invitation') {
+          setPendingInvitation(response.data);
+        }
+      } catch {
+        setPendingInvitation(null);
+      }
+    };
+
+    void loadPendingInvitation();
+  }, []);
+
+  if (user) return <Navigate to={authenticatedDestination} replace />;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -28,15 +50,14 @@ export default function LoginPage(): React.ReactElement {
       const me = await login(email.trim().toLowerCase(), password);
       const hasProjects = (me.memberships?.length ?? 0) > 0;
       const target = me.needs_project_selection || !hasProjects ? '/app/project-selection' : '/app';
-      const from = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
-      const destination = from?.pathname ? `${from.pathname}${from.search ?? ''}` : target;
+      const destination = nextPath ?? (from?.pathname ? `${from.pathname}${from.search ?? ''}` : target);
       navigate(destination, { replace: true });
     } catch (err) {
       if (err instanceof AuthApiError && err.code === 'account_pending_deletion') {
         setPendingDeletionAt(err.scheduledDeletionAt ?? null);
         setError(err.message);
       } else {
-        setError(err instanceof Error ? err.message : t('login.failed'));
+        setError(err instanceof Error ? err.message : t('auth:login.failed'));
       }
     } finally {
       setSubmitting(false);
@@ -49,9 +70,9 @@ export default function LoginPage(): React.ReactElement {
     try {
       const me = await restoreAccount(email.trim().toLowerCase(), password);
       const hasProjects = (me.memberships?.length ?? 0) > 0;
-      navigate(hasProjects ? '/app' : '/app/project-selection', { replace: true });
+      navigate(nextPath ?? (hasProjects ? '/app' : '/app/project-selection'), { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('login.restoreFailed'));
+      setError(err instanceof Error ? err.message : t('auth:login.restoreFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -59,25 +80,33 @@ export default function LoginPage(): React.ReactElement {
 
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>{t('login.title')}</Typography>
+      <Typography variant="h4" sx={{ mb: 3 }}>{t('auth:login.title')}</Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2}>
+          {pendingInvitation ? (
+            <Alert severity="info">
+              {t('projectInvitations:authHint', {
+                project: pendingInvitation.project_name ?? '–',
+                email: pendingInvitation.email_masked ?? '–',
+              })}
+            </Alert>
+          ) : null}
           {error ? <Alert severity="error">{error}</Alert> : null}
           {pendingDeletionAt ? (
             <Alert severity="warning">
-              {t('login.pendingDeletion', { date: new Date(pendingDeletionAt).toLocaleString('de-DE') })}
+              {t('auth:login.pendingDeletion', { date: new Date(pendingDeletionAt).toLocaleString('de-DE') })}
             </Alert>
           ) : null}
-          <TextField label={t('login.email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <TextField label={t('login.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <Button type="submit" variant="contained" disabled={submitting}>{submitting ? t('login.submitting') : t('login.submit')}</Button>
+          <TextField label={t('auth:login.email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <TextField label={t('auth:login.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <Button type="submit" variant="contained" disabled={submitting}>{submitting ? t('auth:login.submitting') : t('auth:login.submit')}</Button>
           {pendingDeletionAt ? (
             <Button variant="outlined" disabled={submitting} onClick={() => void handleRestore()}>
-              {t('login.restoreAccount')}
+              {t('auth:login.restoreAccount')}
             </Button>
           ) : null}
-          <Button component={RouterLink} to="/register">{t('login.noAccount')}</Button>
-          <Button component={RouterLink} to="/forgot-password">{t('login.forgotPassword')}</Button>
+          <Button component={RouterLink} to={nextPath ? `/register?next=${encodeURIComponent(nextPath)}` : '/register'} state={location.state}>{t('auth:login.noAccount')}</Button>
+          <Button component={RouterLink} to="/forgot-password">{t('auth:login.forgotPassword')}</Button>
         </Stack>
       </Box>
     </Container>

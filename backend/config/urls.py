@@ -25,6 +25,9 @@ urlpatterns = [
     path('openfarmplanner/api/', include('farm.urls')),
 ]
 
+if getattr(settings, 'DEBUG', False) and getattr(settings, 'E2E_TEST_TOKEN', ''):
+    urlpatterns.append(path('openfarmplanner/api/', include('farm.e2e_urls')))
+
 # Debug Toolbar URLs nur in Entwicklung
 if getattr(settings, 'DEBUG', False):
     import debug_toolbar

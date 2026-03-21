@@ -6,8 +6,10 @@ This module centralizes invitation lifecycle operations and validation.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from datetime import timedelta
 import secrets
+from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -17,6 +19,9 @@ from django.utils import timezone
 from farm.models import Project, ProjectInvitation, ProjectMembership
 
 User = get_user_model()
+PENDING_INVITATION_SESSION_KEY = 'pending_project_invitation_token'
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -41,6 +46,40 @@ class InvitationFlowError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+def clear_pending_invitation_token(*, session: Any) -> None:
+    """Remove the stored pending invitation token from a session-like object.
+
+    :param session: Django session or compatible mapping.
+    :return: None.
+    """
+    if PENDING_INVITATION_SESSION_KEY in session:
+        session.pop(PENDING_INVITATION_SESSION_KEY, None)
+        if hasattr(session, 'modified'):
+            session.modified = True
+
+
+def store_pending_invitation_token(*, session: Any, token: str) -> None:
+    """Store a pending invitation token in the current session.
+
+    :param session: Django session or compatible mapping.
+    :param token: Invitation token.
+    :return: None.
+    """
+    session[PENDING_INVITATION_SESSION_KEY] = token
+    if hasattr(session, 'modified'):
+        session.modified = True
+
+
+def get_pending_invitation_token(*, session: Any) -> str | None:
+    """Read the pending invitation token from the current session.
+
+    :param session: Django session or compatible mapping.
+    :return: Stored token or None.
+    """
+    value = session.get(PENDING_INVITATION_SESSION_KEY)
+    return value if isinstance(value, str) and value else None
 
 
 def _expiry_days() -> int:
@@ -147,6 +186,7 @@ def get_invitation_by_token(token: str) -> ProjectInvitation:
     """
     invitation = ProjectInvitation.objects.select_related('project', 'invited_by', 'accepted_by', 'revoked_by').filter(token=token).first()
     if not invitation:
+        logger.warning('Invitation token lookup failed', extra={'token': token})
         raise InvitationFlowError('invalid_token', 'Invalid invitation token.')
     return invitation
 
@@ -159,16 +199,15 @@ def build_public_status(invitation: ProjectInvitation, user: User | None) -> dic
     :return: Public status payload.
     """
     code = invitation.resolved_status
-    if invitation.resolved_status == ProjectInvitation.STATUS_ACCEPTED:
-        member_user = user if user and user.is_authenticated else None
-        if member_user and ProjectMembership.objects.filter(project=invitation.project, user=member_user).exists():
-            code = 'already_member'
-    elif invitation.resolved_status == ProjectInvitation.STATUS_PENDING and user and user.is_authenticated:
+    if invitation.resolved_status == ProjectInvitation.STATUS_PENDING and user and user.is_authenticated:
         if normalize_email(user.email) != invitation.email_normalized:
             code = 'email_mismatch'
+        elif ProjectMembership.objects.filter(project=invitation.project, user=user).exists():
+            code = 'already_member'
 
     return {
         'code': code,
+        'token': invitation.token,
         'project_name': invitation.project.name,
         'email_masked': mask_email(invitation.email_normalized),
         'requires_auth': not (user and user.is_authenticated),
@@ -184,38 +223,70 @@ def accept_invitation(*, invitation: ProjectInvitation, user: User) -> Invitatio
     :return: Accept result.
     """
     if normalize_email(user.email) != invitation.email_normalized:
+        logger.warning('Invitation accept rejected due to email mismatch', extra={'user_id': user.id, 'token': invitation.token, 'invitation_email': invitation.email_normalized, 'user_email': normalize_email(user.email)})
         raise InvitationFlowError('email_mismatch', 'Invitation belongs to another email address.')
 
     with transaction.atomic():
         locked = ProjectInvitation.objects.select_for_update().get(pk=invitation.pk)
 
         if locked.resolved_status == 'expired':
+            logger.warning('Invitation accept rejected because invitation expired', extra={'user_id': user.id, 'token': locked.token})
             raise InvitationFlowError('expired', 'Invitation has expired.')
         if locked.status == ProjectInvitation.STATUS_REVOKED:
+            logger.warning('Invitation accept rejected because invitation was revoked', extra={'user_id': user.id, 'token': locked.token})
             raise InvitationFlowError('revoked', 'Invitation was revoked.')
+        if locked.status == ProjectInvitation.STATUS_ACCEPTED:
+            logger.warning('Invitation accept rejected because invitation was already used', extra={'user_id': user.id, 'token': locked.token, 'project_id': locked.project_id})
+            raise InvitationFlowError('accepted', 'Invitation has already been used.')
 
-        membership, created = ProjectMembership.objects.get_or_create(
+        existing_membership = ProjectMembership.objects.filter(
             project=locked.project,
             user=user,
-            defaults={'role': locked.role},
-        )
-
-        if locked.status == ProjectInvitation.STATUS_ACCEPTED:
-            return InvitationResult(code='already_member', invitation=locked, message='User is already a member.')
-
-        if not created:
+        ).first()
+        if existing_membership is not None:
+            logger.info('Invitation accept found existing project membership', extra={'user_id': user.id, 'token': locked.token, 'project_id': locked.project_id})
             locked.status = ProjectInvitation.STATUS_ACCEPTED
             locked.accepted_by = user
-            locked.accepted_at = timezone.now()
+            locked.accepted_at = locked.accepted_at or timezone.now()
             locked.save(update_fields=['status', 'accepted_by', 'accepted_at', 'updated_at'])
             return InvitationResult(code='already_member', invitation=locked, message='User is already a member.')
 
+        membership = ProjectMembership.objects.create(
+            project=locked.project,
+            user=user,
+            role=locked.role,
+        )
+
+        logger.info('Invitation accepted and membership created', extra={'user_id': user.id, 'token': locked.token, 'project_id': locked.project_id, 'membership_id': membership.id})
         locked.status = ProjectInvitation.STATUS_ACCEPTED
         locked.accepted_by = user
         locked.accepted_at = timezone.now()
         locked.save(update_fields=['status', 'accepted_by', 'accepted_at', 'updated_at'])
 
         return InvitationResult(code='accepted', invitation=locked, message='Invitation accepted.')
+
+
+def accept_pending_invitation_from_session(*, session: Any, user: User) -> InvitationResult:
+    """Accept a pending invitation token currently stored in the session.
+
+    :param session: Django session or compatible mapping.
+    :param user: Authenticated user.
+    :return: InvitationResult for the stored invitation.
+    """
+    token = get_pending_invitation_token(session=session)
+    if token is None:
+        raise InvitationFlowError('no_pending_invitation', 'No pending invitation token was found.')
+
+    try:
+        invitation = get_invitation_by_token(token)
+        result = accept_invitation(invitation=invitation, user=user)
+    except InvitationFlowError as exc:
+        if exc.code in {'invalid_token', 'accepted', 'revoked', 'expired'}:
+            clear_pending_invitation_token(session=session)
+        raise
+
+    clear_pending_invitation_token(session=session)
+    return result
 
 
 def revoke_invitation(*, invitation: ProjectInvitation, actor: User) -> InvitationResult:

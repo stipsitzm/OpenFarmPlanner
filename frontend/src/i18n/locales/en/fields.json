@@ -1,0 +1,46 @@
+{
+  "title": "Fields",
+  "columns": {
+    "name": "Name",
+    "location": "Location",
+    "area": "Area (m²)",
+    "notes": "Notes"
+  },
+  "errors": {
+    "load": "Error loading fields",
+    "save": "Error saving field",
+    "delete": "Error deleting field",
+    "loadLocations": "Error loading locations"
+  },
+  "validation": {
+    "nameRequired": "Name is required",
+    "locationRequired": "Location is required"
+  },
+  "confirmDelete": "Do you really want to delete this field?",
+  "addButton": "Add new field",
+  "createNew": "Create new field",
+  "cancel": "Cancel",
+  "submit": "Create",
+  "selectLocation": "Select location",
+  "graphical": {
+    "title": "Graphical field view",
+    "viewMode": "View mode",
+    "editMode": "Edit mode",
+    "viewModeDescription": "Navigate, zoom and inspect details. Fields and beds can only be moved or edited in edit mode.",
+    "editModeDescription": "Move fields and beds and adjust layouts.",
+    "editModeBanner": "Edit mode active – fields and beds can now be moved.",
+    "editModeShortcut": "Shortcut: Alt+E",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitToView": "Fit all",
+    "zoomLevel": "Zoom: {{value}}×",
+    "locationTitle": "Location: {{name}}",
+    "details": {
+      "field": "Field details",
+      "bed": "Bed details"
+    },
+    "location": "Location",
+    "parentField": "Field",
+    "area": "Area"
+  }
+}

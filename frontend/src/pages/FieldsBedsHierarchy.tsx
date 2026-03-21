@@ -574,35 +574,38 @@ function FieldsBedsHierarchy({
     () => [
       {
         id: "areas.create",
-        title: "Neu erstellen (Alt+N)",
-        keywords: ["neu", "anbauflächen", "create"],
+        label: "Neu erstellen (Alt+N)",
+        group: 'navigation',
+      keywords: ["neu", "anbauflächen", "create"],
         shortcutHint: "Alt+N",
         keys: { alt: true, key: "n" },
         contextTags: ["areas"],
-        isAvailable: () => selectedRow !== null,
-        run: handleCreateBySelection,
+        isEnabled: () => selectedRow !== null,
+        action: handleCreateBySelection,
       },
       {
         id: "areas.edit",
-        title: "Bearbeiten (Alt+E)",
-        keywords: ["bearbeiten", "edit"],
+        label: "Bearbeiten (Alt+E)",
+        group: 'navigation',
+      keywords: ["bearbeiten", "edit"],
         shortcutHint: "Alt+E",
         keys: { alt: true, key: "e" },
         contextTags: ["areas"],
-        isAvailable: () =>
+        isEnabled: () =>
           selectedRow !== null && selectedRow.type !== "location",
-        run: handleEditSelected,
+        action: handleEditSelected,
       },
       {
         id: "areas.delete",
-        title: "Löschen (Alt+Shift+D)",
-        keywords: ["löschen", "delete"],
+        label: "Löschen (Alt+Shift+D)",
+        group: 'navigation',
+      keywords: ["löschen", "delete"],
         shortcutHint: "Alt+Shift+D",
         keys: { alt: true, shift: true, key: "d" },
         contextTags: ["areas"],
-        isAvailable: () =>
+        isEnabled: () =>
           selectedRow !== null && selectedRow.type !== "location",
-        run: handleDeleteSelected,
+        action: handleDeleteSelected,
       },
     ],
     [

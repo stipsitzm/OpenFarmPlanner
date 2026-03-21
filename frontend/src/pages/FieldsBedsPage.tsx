@@ -20,12 +20,13 @@ export default function FieldsBedsPage(): React.ReactElement {
   const commands = useMemo<CommandSpec[]>(() => [
     {
       id: 'areas.toggleGraphicalView',
-      title: 'Ansicht umschalten (Alt+G)',
+      label: 'Ansicht umschalten (Alt+G)',
+      group: 'navigation',
       keywords: ['ansicht', 'grafisch', 'tabelle', 'anbauflächen'],
       shortcutHint: 'Alt+G',
       contextTags: ['areas'],
-      isAvailable: () => true,
-      run: () => {
+      isEnabled: () => true,
+      action: () => {
         setViewMode((previous) => (previous === 'graphical' ? 'table' : 'graphical'));
       },
     },

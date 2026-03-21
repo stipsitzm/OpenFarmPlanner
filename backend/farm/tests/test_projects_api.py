@@ -139,6 +139,31 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertFalse(response.data['mail_sent'])
         self.assertIn('invite_link', response.data)
+        self.assertIn('/invite/accept?token=', response.data['invite_link'])
+
+
+    def test_accept_invitation_invalid_token(self) -> None:
+        response = self.client.post('/openfarmplanner/api/project-invitations/not-a-real-token/accept/')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['code'], 'invalid_token')
+
+    def test_accept_invitation_matches_email_case_insensitively(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='INVITEE@EXAMPLE.COM',
+            role='member',
+            token='token-case-match',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'invitee@example.com', 'password': 'pass12345'}, format='json')
+
+        response = self.client.post(f'/openfarmplanner/api/project-invitations/{invitation.token}/accept/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['code'], 'accepted')
+        self.assertTrue(ProjectMembership.objects.filter(project=self.project, user=self.invitee).exists())
 
     def test_accept_invitation_success(self) -> None:
         invitation = ProjectInvitation.objects.create(
@@ -156,6 +181,84 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['code'], 'accepted')
         self.assertTrue(ProjectMembership.objects.filter(project=self.project, user=self.invitee).exists())
+        self.assertEqual(response.data['project']['id'], self.project.id)
+
+    def test_accept_invitation_via_body_endpoint_sets_project_as_active_default(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project2,
+            email='invitee@example.com',
+            role='member',
+            token='token-body-endpoint',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'invitee@example.com', 'password': 'pass12345'}, format='json')
+
+        response = self.client.post('/openfarmplanner/api/invitations/accept/', {'token': invitation.token}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['code'], 'accepted')
+        self.assertEqual(response.data['project']['id'], self.project2.id)
+
+        settings_obj = UserProjectSettings.objects.get(user=self.invitee)
+        self.assertEqual(settings_obj.default_project_id, self.project2.id)
+        self.assertEqual(settings_obj.last_project_id, self.project2.id)
+
+    def test_public_status_stores_pending_token_for_anonymous_user(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='invitee@example.com',
+            role='member',
+            token='token-store',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+
+        response = self.client.get(f'/openfarmplanner/api/project-invitations/{invitation.token}/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.client.session.get('pending_project_invitation_token'), invitation.token)
+
+    def test_pending_invitation_can_be_accepted_after_login(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='invitee@example.com',
+            role='member',
+            token='token-pending-login',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.get(f'/openfarmplanner/api/project-invitations/{invitation.token}/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'invitee@example.com', 'password': 'pass12345'}, format='json')
+
+        response = self.client.post('/openfarmplanner/api/project-invitations/pending/accept/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['code'], 'accepted')
+        self.assertTrue(ProjectMembership.objects.filter(project=self.project, user=self.invitee).exists())
+        self.assertIsNone(self.client.session.get('pending_project_invitation_token'))
+
+    def test_pending_invitation_rejects_other_email_and_keeps_token(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='invitee@example.com',
+            role='member',
+            token='token-pending-mismatch',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.get(f'/openfarmplanner/api/project-invitations/{invitation.token}/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'u2@example.com', 'password': 'pass12345'}, format='json')
+
+        response = self.client.post('/openfarmplanner/api/project-invitations/pending/accept/')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['code'], 'email_mismatch')
+        self.assertEqual(self.client.session.get('pending_project_invitation_token'), invitation.token)
 
     def test_accept_invitation_email_mismatch(self) -> None:
         invitation = ProjectInvitation.objects.create(
@@ -198,7 +301,7 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['code'], 'revoked')
 
-    def test_accept_is_idempotent(self) -> None:
+    def test_accept_invitation_can_only_succeed_once(self) -> None:
         invitation = ProjectInvitation.objects.create(
             project=self.project,
             email=self.user.email,
@@ -212,9 +315,91 @@ class ProjectsApiTests(APITestCase):
         second = self.client.post(f'/openfarmplanner/api/project-invitations/{invitation.token}/accept/')
 
         self.assertEqual(first.status_code, status.HTTP_200_OK)
-        self.assertEqual(second.status_code, status.HTTP_200_OK)
-        self.assertEqual(second.data['code'], 'already_member')
+        self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(second.data['code'], 'accepted')
         self.assertEqual(ProjectMembership.objects.filter(project=self.project, user=self.user).count(), 1)
+
+    def test_used_invitation_cannot_restore_membership_after_member_removal(self) -> None:
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='invitee@example.com',
+            role='member',
+            token='token-remove-reuse',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'invitee@example.com', 'password': 'pass12345'}, format='json')
+
+        first = self.client.post(f'/openfarmplanner/api/project-invitations/{invitation.token}/accept/')
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertTrue(ProjectMembership.objects.filter(project=self.project, user=self.invitee).exists())
+
+        ProjectMembership.objects.filter(project=self.project, user=self.invitee).delete()
+
+        second = self.client.post(f'/openfarmplanner/api/project-invitations/{invitation.token}/accept/')
+        self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(second.data['code'], 'accepted')
+        self.assertFalse(ProjectMembership.objects.filter(project=self.project, user=self.invitee).exists())
+
+    def test_removed_member_can_rejoin_only_with_new_invitation(self) -> None:
+        old_invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='invitee@example.com',
+            role='member',
+            token='token-old-used',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'invitee@example.com', 'password': 'pass12345'}, format='json')
+        self.client.post(f'/openfarmplanner/api/project-invitations/{old_invitation.token}/accept/')
+        ProjectMembership.objects.filter(project=self.project, user=self.invitee).delete()
+
+        old_retry = self.client.post(f'/openfarmplanner/api/project-invitations/{old_invitation.token}/accept/')
+        self.assertEqual(old_retry.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(old_retry.data['code'], 'accepted')
+
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'u1@example.com', 'password': 'pass12345'}, format='json')
+        create_response = self.client.post(
+            f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
+            {'email': 'invitee@example.com', 'role': 'member'},
+            format='json',
+        )
+        self.assertIn(create_response.status_code, {status.HTTP_200_OK, status.HTTP_201_CREATED})
+        new_token = create_response.data['token']
+
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'invitee@example.com', 'password': 'pass12345'}, format='json')
+        new_accept = self.client.post(f'/openfarmplanner/api/project-invitations/{new_token}/accept/')
+        self.assertEqual(new_accept.status_code, status.HTTP_200_OK)
+        self.assertEqual(new_accept.data['code'], 'accepted')
+        self.assertTrue(ProjectMembership.objects.filter(project=self.project, user=self.invitee).exists())
+
+    def test_pending_invitation_returns_already_member_without_duplicate_membership(self) -> None:
+        ProjectMembership.objects.create(user=self.invitee, project=self.project, role='member')
+        invitation = ProjectInvitation.objects.create(
+            project=self.project,
+            email='invitee@example.com',
+            role='member',
+            token='token-pending-member',
+            invited_by=self.user,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.get(f'/openfarmplanner/api/project-invitations/{invitation.token}/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'invitee@example.com', 'password': 'pass12345'}, format='json')
+
+        response = self.client.post('/openfarmplanner/api/project-invitations/pending/accept/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['code'], 'already_member')
+        self.assertEqual(ProjectMembership.objects.filter(project=self.project, user=self.invitee).count(), 1)
+        self.assertIsNone(self.client.session.get('pending_project_invitation_token'))
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.status, ProjectInvitation.STATUS_ACCEPTED)
+        self.assertIsNotNone(invitation.accepted_at)
 
     def test_public_status_handles_invalid_token(self) -> None:
         response = self.client.get('/openfarmplanner/api/project-invitations/does-not-exist/')

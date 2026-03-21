@@ -75,5 +75,17 @@
     "invite": {
       "noPermission": "Nur Admins können Einladungen senden und verwalten."
     }
+  },
+  "toRegister": "Registrieren",
+  "loginWithDifferentAccount": "Mit anderem Konto anmelden",
+  "authHint": "Du wurdest zum Projekt {{project}} eingeladen. Bitte melde dich mit {{email}} an.",
+  "registerHint": "Du wurdest zum Projekt {{project}} eingeladen. Registriere dich mit {{email}}, damit die Einladung nach der Aktivierung automatisch übernommen werden kann.",
+  "registerSuccessWithInvitation": "{{detail}} Nach der Aktivierung wird die Projekteinladung automatisch verarbeitet.",
+  "acceptPage": {
+    "title": "Projekteinladung annehmen",
+    "accepting": "Einladung wird angenommen…",
+    "redirectingToLogin": "Weiterleitung zur Anmeldung…",
+    "redirectingBack": "Anmeldung erfolgreich. Einladung wird jetzt verarbeitet…",
+    "addedToProject": "Du wurdest dem Projekt hinzugefügt."
   }
 }

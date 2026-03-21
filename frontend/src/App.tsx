@@ -34,7 +34,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from './i18n';
 import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 import { useRegisterCommands } from './commands/CommandProvider';
-import type { CommandSpec } from './commands/types';
+import { createRootCommands } from './commands/commands';
 import { useMemo, useState } from 'react';
 import Locations from './pages/Locations';
 import FieldsBedsPage from './pages/FieldsBedsPage';
@@ -63,7 +63,8 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import ProjectSelectionPage from './pages/ProjectSelectionPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import ProjectSettingsPage from './pages/ProjectSettingsPage';
-import InvitationPage from './pages/InvitationPage';
+import InvitationAcceptPage from './pages/InvitationAcceptPage';
+import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 
 interface SnackbarState {
   open: boolean;
@@ -172,7 +173,7 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
       onClose={onClose}
     >
       <MenuItem onClick={() => void onOpenProjectHistory()} disabled={historyLoading}>
-        Versionsverlauf…
+        {t('commandPalette.commands.openVersionHistory')}
       </MenuItem>
       <MenuItem onClick={onOpenAccountSettings}>
         {t('accountSettings')}
@@ -181,7 +182,7 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
         Tastenkürzel
       </MenuItem>
       <MenuItem onClick={() => void onLogout()}>
-        Logout {userLabel}
+        {t('commandPalette.commands.logout')} {userLabel}
       </MenuItem>
     </Menu>
   );
@@ -212,13 +213,13 @@ function RootLayout(): React.ReactElement {
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const routes = ['/app/locations', '/app/fields-beds', '/app/cultures', '/app/anbauplaene', '/app/gantt-chart', '/app/seed-demand', '/app/suppliers'];
   const navItems = [
-    { to: '/app/locations', label: t('locations') },
-    { to: '/app/fields-beds', label: t('fieldsAndBeds') },
-    { to: '/app/cultures', label: t('cultures') },
-    { to: '/app/anbauplaene', label: t('plantingPlans'), activePath: '/app/planting-plans' },
-    { to: '/app/gantt-chart', label: t('ganttChart') },
-    { to: '/app/seed-demand', label: t('seedDemand') },
-    { to: '/app/suppliers', label: t('suppliers') },
+    { to: '/app/locations', label: t('locations'), keywords: ['standorte', 'orte', 'locations'] },
+    { to: '/app/fields-beds', label: t('fieldsAndBeds'), keywords: ['anbauflächen', 'felder', 'beete'] },
+    { to: '/app/cultures', label: t('cultures'), keywords: ['kulturen', 'kultur'] },
+    { to: '/app/anbauplaene', label: t('plantingPlans'), activePath: '/app/planting-plans', keywords: ['anbaupläne', 'pläne', 'planung'] },
+    { to: '/app/gantt-chart', label: t('ganttChart'), keywords: ['anbaukalender', 'kalender', 'gantt'] },
+    { to: '/app/seed-demand', label: t('seedDemand'), keywords: ['saatgutbedarf', 'saatgut'] },
+    { to: '/app/suppliers', label: t('suppliers'), keywords: ['lieferanten', 'einkauf'] },
   ];
 
   const handleGlobalMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -264,7 +265,7 @@ function RootLayout(): React.ReactElement {
       setProjectHistoryOpen(true);
     } catch (error) {
       console.error('Error loading project history:', error);
-      showSnackbar('Versionsverlauf konnte nicht geladen werden.', 'error');
+      showSnackbar(t('commandPalette.feedback.versionHistoryLoadError'), 'error');
     } finally {
       setHistoryLoading(false);
     }
@@ -273,12 +274,12 @@ function RootLayout(): React.ReactElement {
   const handleRestoreProjectVersion = async (historyId: number) => {
     try {
       await cultureAPI.projectRestore(historyId);
-      showSnackbar('Projektversion wurde wiederhergestellt.', 'success');
+      showSnackbar(t('commandPalette.feedback.versionRestored'), 'success');
       setProjectHistoryOpen(false);
       window.location.reload();
     } catch (error) {
       console.error('Error restoring project version:', error);
-      showSnackbar('Projektversion konnte nicht wiederhergestellt werden.', 'error');
+      showSnackbar(t('commandPalette.feedback.versionRestoreError'), 'error');
     }
   };
 
@@ -294,7 +295,7 @@ function RootLayout(): React.ReactElement {
       navigate('/login', { replace: true });
     } catch (error) {
       console.error('Error logging out:', error);
-      showSnackbar('Logout failed. Please try again.', 'error');
+      showSnackbar(t('commandPalette.feedback.logoutError'), 'error');
     }
   };
 
@@ -368,48 +369,50 @@ function RootLayout(): React.ReactElement {
     }
   };
 
-  const globalCommands = useMemo<CommandSpec[]>(() => [
-    {
-      id: 'global.nextPage',
-      title: 'Nächste Seite (Ctrl+Shift+→)',
-      keywords: ['seite', 'nächste', 'navigation'],
-      shortcutHint: 'Ctrl+Shift+→',
-      contextTags: ['global'],
-      isAvailable: () => true,
-      run: () => {
-        const normalizedPath = location.pathname.replace(/\/$/, '') || '/';
-        const currentIndex = routes.indexOf(normalizedPath);
-        const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % routes.length;
-        navigate(routes[nextIndex]);
-      },
+  const activeMembershipRole = activeMembership?.role ?? null;
+
+  const goToNextPage = (): void => {
+    const normalizedPath = location.pathname.replace(/\/$/, '') || '/';
+    const currentIndex = routes.indexOf(normalizedPath);
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % routes.length;
+    navigate(routes[nextIndex]);
+  };
+
+  const goToPreviousPage = (): void => {
+    const normalizedPath = location.pathname.replace(/\/$/, '') || '/';
+    const currentIndex = routes.indexOf(normalizedPath);
+    const previousIndex = currentIndex === -1 ? 0 : (currentIndex - 1 + routes.length) % routes.length;
+    navigate(routes[previousIndex]);
+  };
+
+  const globalCommands = useMemo(() => createRootCommands({
+    currentPath: location.pathname.replace(/\/$/, '') || '/',
+    activeProjectId,
+    isProjectAdmin: activeMembershipRole === 'admin',
+    memberships,
+    navigationItems: navItems.map((item) => ({ to: item.to, label: item.label, keywords: item.keywords })),
+    onNextPage: goToNextPage,
+    onPreviousPage: goToPreviousPage,
+    onOpenProjectSettings: handleOpenProjectSettings,
+    onOpenProjectMembers: handleOpenProjectSettings,
+    onOpenCreateProject: handleOpenCreateProject,
+    onSwitchProject: (projectId) => { void handleSwitchProject(projectId); },
+    onOpenAccountSettings: () => navigate('/app/account-settings'),
+    onOpenVersionHistory: () => { void handleOpenProjectHistory(); },
+    onLogout: () => { void handleLogout(); },
+    onNavigate: (path) => navigate(path),
+    labels: {
+      nextPage: t('commandPalette.commands.nextPage'),
+      previousPage: t('commandPalette.commands.previousPage'),
+      openProjectSettings: t('commandPalette.commands.openProjectSettings'),
+      openProjectMembers: t('commandPalette.commands.openProjectMembers'),
+      createProject: t('commandPalette.commands.createProject'),
+      switchProjectPrefix: t('commandPalette.commands.switchProjectPrefix'),
+      openAccountSettings: t('commandPalette.commands.openAccountSettings'),
+      openVersionHistory: t('commandPalette.commands.openVersionHistory'),
+      logout: t('commandPalette.commands.logout'),
     },
-    {
-      id: 'global.openVersionHistory',
-      title: 'Versionsverlauf öffnen (Alt+Shift+V)',
-      keywords: ['versionsverlauf', 'history', 'projekt'],
-      shortcutHint: 'Alt+Shift+V',
-      keys: { alt: true, shift: true, key: 'V' },
-      contextTags: ['global'],
-      isAvailable: () => true,
-      run: () => {
-        void handleOpenProjectHistory();
-      },
-    },
-    {
-      id: 'global.previousPage',
-      title: 'Vorherige Seite (Ctrl+Shift+←)',
-      keywords: ['seite', 'vorherige', 'navigation'],
-      shortcutHint: 'Ctrl+Shift+←',
-      contextTags: ['global'],
-      isAvailable: () => true,
-      run: () => {
-        const normalizedPath = location.pathname.replace(/\/$/, '') || '/';
-        const currentIndex = routes.indexOf(normalizedPath);
-        const previousIndex = currentIndex === -1 ? 0 : (currentIndex - 1 + routes.length) % routes.length;
-        navigate(routes[previousIndex]);
-      },
-    },
-  ], [location.pathname, navigate]);
+  }), [activeMembershipRole, activeProjectId, location.pathname, memberships, navItems, navigate, t]);
 
   useRegisterCommands('global-app', globalCommands);
   
@@ -529,7 +532,7 @@ function RootLayout(): React.ReactElement {
       <Outlet />
 
       <Dialog open={projectHistoryOpen} onClose={() => setProjectHistoryOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Versionsverlauf</DialogTitle>
+        <DialogTitle>{t('commandPalette.commands.openVersionHistory')}</DialogTitle>
         <DialogContent>
           <List>
             {historyItems.map((item, index) => {
@@ -540,8 +543,8 @@ function RootLayout(): React.ReactElement {
                   key={item.history_id}
                   secondaryAction={
                     isCurrentVersion
-                      ? <Chip label="Aktuelle Version" size="small" color="success" variant="outlined" />
-                      : <Button onClick={() => void handleRestoreProjectVersion(item.history_id)}>Wiederherstellen</Button>
+                      ? <Chip label={t('commandPalette.currentVersion')} size="small" color="success" variant="outlined" />
+                      : <Button onClick={() => void handleRestoreProjectVersion(item.history_id)}>{t('commandPalette.restoreVersion')}</Button>
                   }
                 >
                   <ListItemText
@@ -554,30 +557,30 @@ function RootLayout(): React.ReactElement {
           </List>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setProjectHistoryOpen(false)}>Close</Button>
+          <Button onClick={() => setProjectHistoryOpen(false)}>{t('common:actions.close')}</Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Tastenkürzel</DialogTitle>
+        <DialogTitle>{t('commandPalette.shortcutsTitle')}</DialogTitle>
         <DialogContent>
           <List dense>
             <ListItem>
-              <ListItemText primary="Tastenkürzel öffnen" secondary="?" />
+              <ListItemText primary={t('commandPalette.commands.openShortcuts')} secondary="Alt+H" />
             </ListItem>
             <ListItem>
-              <ListItemText primary="Command Palette" secondary="Alt+K" />
+              <ListItemText primary={t('commandPalette.label')} secondary="Alt+K" />
             </ListItem>
             <ListItem>
-              <ListItemText primary="Versionsverlauf öffnen" secondary="Alt+Shift+V" />
+              <ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="–" />
             </ListItem>
             <ListItem>
-              <ListItemText primary="Dialog schließen" secondary="Esc" />
+              <ListItemText primary={t('commandPalette.commands.closeDialog')} secondary="Esc" />
             </ListItem>
           </List>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShortcutsOpen(false)}>Schließen</Button>
+          <Button onClick={() => setShortcutsOpen(false)}>{t('common:actions.close')}</Button>
         </DialogActions>
       </Dialog>
 
@@ -644,7 +647,16 @@ function LegacyInvitationRedirect(): React.ReactElement {
   if (!token) {
     return <Navigate to="/invite/invalid" replace />;
   }
-  return <Navigate to={`/invite/${token}`} replace />;
+  return <Navigate to={buildInvitationAcceptPath(token)} replace />;
+}
+
+function TokenInvitationRedirect(): React.ReactElement {
+  const location = useLocation();
+  const token = location.pathname.split('/').pop();
+  if (!token) {
+    return <Navigate to="/invite/invalid" replace />;
+  }
+  return <Navigate to={buildInvitationAcceptPath(token)} replace />;
 }
 
 function createAppRouter(basename: string) {
@@ -678,8 +690,12 @@ function createAppRouter(basename: string) {
       element: <LegacyInvitationRedirect />,
     },
     {
+      path: '/invite/accept',
+      element: <InvitationAcceptPage />,
+    },
+    {
       path: '/invite/:token',
-      element: <InvitationPage />,
+      element: <TokenInvitationRedirect />,
     },
     {
       path: '/app',

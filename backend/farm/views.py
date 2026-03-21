@@ -56,10 +56,14 @@ from django.template.loader import render_to_string
 from .services.project_invitations import (
     InvitationFlowError,
     accept_invitation,
+    accept_pending_invitation_from_session,
     build_public_status,
+    clear_pending_invitation_token,
     create_or_resend_invitation,
+    get_pending_invitation_token,
     get_invitation_by_token,
     revoke_invitation,
+    store_pending_invitation_token,
 )
 
 from .services_area import calculate_remaining_bed_area
@@ -84,7 +88,7 @@ def _invitation_error_response(exc: InvitationFlowError) -> Response:
 
 def _send_project_invitation_email(*, invitation: ProjectInvitation, project_name: str, invited_by: object) -> tuple[bool, str]:
     """Send invitation email and return delivery result plus diagnostic message."""
-    invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/{invitation.token}"
+    invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/accept?token={invitation.token}"
     with translation.override('de'):
         subject = _('Einladung zu OpenFarmPlanner: %(project)s') % {'project': project_name}
         body = render_to_string('accounts/emails/project_invitation_email.txt', {
@@ -132,6 +136,19 @@ def _coerce_request_string(value, default='') -> str:
             return first.strip()
         return str(first).strip()
     return default
+
+
+def _apply_invitation_project_settings(*, user, project: Project) -> dict[str, int | str]:
+    """Persist accepted invitation project as active/default project and return payload."""
+    settings_obj, _ = UserProjectSettings.objects.get_or_create(user=user)
+    settings_obj.default_project = project
+    settings_obj.last_project = project
+    settings_obj.save(update_fields=['default_project', 'last_project', 'updated_at'])
+    return {
+        'id': project.id,
+        'name': project.name,
+        'slug': project.slug,
+    }
 
 
 
@@ -1776,7 +1793,7 @@ class ProjectInvitationView(APIView):
         if invitation is None:
             return Response({'code': 'invitation_error', 'detail': 'Invitation could not be created.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/{invitation.token}"
+        invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/accept?token={invitation.token}"
         mail_sent, mail_error = _send_project_invitation_email(
             invitation=invitation,
             project_name=project.name,
@@ -1804,8 +1821,39 @@ class PublicProjectInvitationView(APIView):
         except InvitationFlowError as exc:
             return Response({'code': exc.code, 'detail': exc.message}, status=status.HTTP_404_NOT_FOUND)
 
+        if request.user.is_authenticated:
+            clear_pending_invitation_token(session=request.session)
+        elif invitation.is_open:
+            store_pending_invitation_token(session=request.session, token=invitation.token)
+        else:
+            clear_pending_invitation_token(session=request.session)
+
         payload = build_public_status(invitation, request.user if request.user.is_authenticated else None)
         return Response(payload)
+
+
+class PendingProjectInvitationView(APIView):
+    """Read or clear the pending invitation token kept in the current session."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        token = get_pending_invitation_token(session=request.session)
+        if token is None:
+            return Response({'code': 'no_pending_invitation', 'requires_auth': not request.user.is_authenticated})
+
+        try:
+            invitation = get_invitation_by_token(token)
+        except InvitationFlowError as exc:
+            clear_pending_invitation_token(session=request.session)
+            return _invitation_error_response(exc)
+
+        payload = build_public_status(invitation, request.user if request.user.is_authenticated else None)
+        return Response(payload)
+
+    def delete(self, request):
+        clear_pending_invitation_token(session=request.session)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AcceptProjectInvitationByTokenView(APIView):
@@ -1814,23 +1862,23 @@ class AcceptProjectInvitationByTokenView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, token: str):
+        logger.info('Invitation accept endpoint reached', extra={'user_id': request.user.id, 'token': token, 'path': request.path})
         try:
             invitation = get_invitation_by_token(token)
             result = accept_invitation(invitation=invitation, user=request.user)
         except InvitationFlowError as exc:
+            logger.warning('Invitation accept failed', extra={'user_id': request.user.id, 'token': token, 'code': exc.code, 'path': request.path})
             return _invitation_error_response(exc)
 
-        settings_obj, _ = UserProjectSettings.objects.get_or_create(user=request.user)
-        if settings_obj.default_project_id is None:
-            settings_obj.default_project = result.invitation.project
-        settings_obj.last_project = result.invitation.project
-        settings_obj.save()
+        project_payload = _apply_invitation_project_settings(user=request.user, project=result.invitation.project)
+        clear_pending_invitation_token(session=request.session)
 
         return Response(
             {
                 'code': result.code,
                 'detail': result.message,
                 'project_id': result.invitation.project_id if result.invitation else None,
+                'project': project_payload,
             }
         )
 
@@ -1844,7 +1892,34 @@ class AcceptProjectInvitationView(APIView):
         serializer = InvitationTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         token = serializer.validated_data['token']
+        logger.info('Invitation accept body endpoint reached', extra={'user_id': request.user.id, 'token': token, 'path': request.path})
         return AcceptProjectInvitationByTokenView().post(request, token)
+
+
+class AcceptPendingProjectInvitationView(APIView):
+    """Accept the invitation token currently stored in the session."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        logger.info('Pending invitation accept endpoint reached', extra={'user_id': request.user.id, 'path': request.path})
+        try:
+            result = accept_pending_invitation_from_session(session=request.session, user=request.user)
+        except InvitationFlowError as exc:
+            logger.warning('Pending invitation accept failed', extra={'user_id': request.user.id, 'code': exc.code, 'path': request.path})
+            return _invitation_error_response(exc)
+
+        project_payload = _apply_invitation_project_settings(user=request.user, project=result.invitation.project)
+        clear_pending_invitation_token(session=request.session)
+
+        return Response(
+            {
+                'code': result.code,
+                'detail': result.message,
+                'project_id': result.invitation.project_id if result.invitation else None,
+                'project': project_payload,
+            }
+        )
 
 
 class RevokeProjectInvitationView(APIView):
