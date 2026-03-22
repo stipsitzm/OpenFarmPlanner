@@ -177,6 +177,7 @@ export interface PlantingPlan {
   // Read-only, computed.
   harvest_end_date?: string;
   quantity?: number;
+  plants_count?: number | null;
   area_usage_sqm?: number;
   // Write-only input used on create/update.
   area_input_value?: number;

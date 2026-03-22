@@ -14,35 +14,31 @@ describe('buildSeedlingTaskGroups', () => {
 
   it('builds tooltip details only for available values', () => {
     const details = buildSeedlingTooltipDetails({
-      plantingPlanId: 12,
       targetLocationName: 'Hof',
       targetFieldName: 'Nordfeld',
       targetBedName: 'Beet A',
       propagationStartDate: new Date(2026, 3, 15),
       transplantDate: new Date(2026, 4, 10),
       propagationDurationDays: 25,
-      quantity: 40,
-      seedRequirementSummary: '0.045 / m²',
-      notes: 'Warm kultivieren',
+      targetAreaUsage: 8.5,
+      plantsCount: 40,
     });
 
     expect(details).toEqual([
-      { labelKey: 'plan', value: '#12' },
-      { labelKey: 'location', value: 'Hof / Nordfeld / Beet A' },
+      { labelKey: 'location', value: 'Hof / Nordfeld' },
+      { labelKey: 'bed', value: 'Beet A' },
       { labelKey: 'propagationStart', value: '15.4.2026' },
       { labelKey: 'transplantDate', value: '10.5.2026' },
       { labelKey: 'propagationDuration', value: '25' },
-      { labelKey: 'quantity', value: '40' },
-      { labelKey: 'seedRequirement', value: '0.045 / m²' },
-      { labelKey: 'notes', value: 'Warm kultivieren' },
+      { labelKey: 'areaUsage', value: '8.50 m²' },
+      { labelKey: 'plantsCount', value: '40' },
     ]);
 
     const reducedDetails = buildSeedlingTooltipDetails({
-      plantingPlanId: 12,
-      notes: '   ',
+      targetFieldName: 'Nordfeld',
     });
 
-    expect(reducedDetails).toEqual([{ labelKey: 'plan', value: '#12' }]);
+    expect(reducedDetails).toEqual([{ labelKey: 'location', value: 'Nordfeld' }]);
   });
 
   it('builds propagation windows grouped by culture', () => {
@@ -83,6 +79,7 @@ describe('buildSeedlingTaskGroups', () => {
     expect(groups[0].tasks[0].targetBedName).toBe('Beet A');
     expect(groups[0].tasks[0].targetFieldName).toBe('Nordfeld');
     expect(groups[0].tasks[0].targetLocationName).toBe('Hof');
+    expect(groups[0].tasks[0].plantsCount).toBeNull();
   });
 
 

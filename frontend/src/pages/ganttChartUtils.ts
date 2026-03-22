@@ -12,9 +12,6 @@ export interface GanttTask {
   cultureName?: string;
   cultureVariety?: string;
   areaUsage?: number;
-  quantity?: number;
-  seedRequirementSummary?: string;
-  notes?: string;
   harvestStartDate?: Date;
   harvestEndDate?: Date;
   propagationStartDate?: Date;
@@ -24,6 +21,7 @@ export interface GanttTask {
   targetFieldName?: string;
   targetLocationName?: string;
   targetAreaUsage?: number;
+  plantsCount?: number | null;
 }
 
 export interface GanttTaskGroup {
@@ -50,7 +48,7 @@ interface BuildTaskGroupsArgs {
 }
 
 interface SeedlingTooltipDetail {
-  labelKey: 'plan' | 'location' | 'propagationStart' | 'transplantDate' | 'propagationDuration' | 'quantity' | 'seedRequirement' | 'notes';
+  labelKey: 'location' | 'bed' | 'propagationStart' | 'transplantDate' | 'propagationDuration' | 'areaUsage' | 'plantsCount';
   value: string;
 }
 
@@ -109,6 +107,18 @@ export function formatSeedlingTooltipTitle(task: Pick<GanttTask, 'cultureName' |
   return formatCultureDisplayLabel(task.cultureName || task.name, task.cultureVariety);
 }
 
+export function formatGanttDate(value: Date): string {
+  return value.toLocaleDateString('de-DE');
+}
+
+export function formatAreaSquareMeters(value: number): string {
+  return `${value.toFixed(2)} m²`;
+}
+
+export function formatPlantCount(value: number): string {
+  return new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(value);
+}
+
 function formatCultureLabel(culture?: Culture, fallbackName?: string): string {
   if (!culture) {
     return fallbackName || 'Unbekannte Kultur';
@@ -116,21 +126,8 @@ function formatCultureLabel(culture?: Culture, fallbackName?: string): string {
   return formatCultureDisplayLabel(culture.name, culture.variety);
 }
 
-function formatSeedRequirement(culture?: Culture): string | undefined {
-  if (!culture?.seeding_requirement) {
-    return undefined;
-  }
-  if (culture.seeding_requirement_type === 'per_sqm') {
-    return `${culture.seeding_requirement} / m²`;
-  }
-  if (culture.seeding_requirement_type === 'per_plant') {
-    return `${culture.seeding_requirement} / Pflanze`;
-  }
-  return `${culture.seeding_requirement}`;
-}
-
-export function formatSeedlingLocationReference(task: Pick<GanttTask, 'targetLocationName' | 'targetFieldName' | 'targetBedName'>): string | undefined {
-  const parts = [task.targetLocationName, task.targetFieldName, task.targetBedName]
+export function formatSeedlingLocationReference(task: Pick<GanttTask, 'targetLocationName' | 'targetFieldName'>): string | undefined {
+  const parts = [task.targetLocationName, task.targetFieldName]
     .map((value) => value?.trim())
     .filter(Boolean);
   return parts.length > 0 ? parts.join(' / ') : undefined;
@@ -138,39 +135,38 @@ export function formatSeedlingLocationReference(task: Pick<GanttTask, 'targetLoc
 
 export function buildSeedlingTooltipDetails(task: Pick<
   GanttTask,
-  'plantingPlanId'
   | 'targetLocationName'
   | 'targetFieldName'
   | 'targetBedName'
   | 'propagationStartDate'
   | 'transplantDate'
   | 'propagationDurationDays'
-  | 'quantity'
-  | 'seedRequirementSummary'
-  | 'notes'
+  | 'targetAreaUsage'
+  | 'plantsCount'
 >): SeedlingTooltipDetail[] {
+  const locationReference = formatSeedlingLocationReference(task);
+  const bedReference = task.targetBedName?.trim();
   const details: Array<SeedlingTooltipDetail | null> = [
-    task.plantingPlanId ? { labelKey: 'plan', value: `#${task.plantingPlanId}` } : null,
-    formatSeedlingLocationReference(task)
-      ? { labelKey: 'location', value: formatSeedlingLocationReference(task)! }
+    locationReference
+      ? { labelKey: 'location', value: locationReference }
+      : null,
+    bedReference
+      ? { labelKey: 'bed', value: bedReference }
       : null,
     task.propagationStartDate
-      ? { labelKey: 'propagationStart', value: task.propagationStartDate.toLocaleDateString('de-DE') }
+      ? { labelKey: 'propagationStart', value: formatGanttDate(task.propagationStartDate) }
       : null,
     task.transplantDate
-      ? { labelKey: 'transplantDate', value: task.transplantDate.toLocaleDateString('de-DE') }
+      ? { labelKey: 'transplantDate', value: formatGanttDate(task.transplantDate) }
       : null,
     typeof task.propagationDurationDays === 'number'
       ? { labelKey: 'propagationDuration', value: `${task.propagationDurationDays}` }
       : null,
-    typeof task.quantity === 'number' && task.quantity > 0
-      ? { labelKey: 'quantity', value: `${task.quantity}` }
+    typeof task.targetAreaUsage === 'number'
+      ? { labelKey: 'areaUsage', value: formatAreaSquareMeters(task.targetAreaUsage) }
       : null,
-    task.seedRequirementSummary
-      ? { labelKey: 'seedRequirement', value: task.seedRequirementSummary }
-      : null,
-    task.notes?.trim()
-      ? { labelKey: 'notes', value: task.notes.trim() }
+    typeof task.plantsCount === 'number' && task.plantsCount > 0
+      ? { labelKey: 'plantsCount', value: formatPlantCount(task.plantsCount) }
       : null,
   ];
 
@@ -404,9 +400,7 @@ export function buildSeedlingTaskGroups({
       targetLocationName: location?.name,
       targetAreaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
       areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
-      quantity: plan.quantity,
-      seedRequirementSummary: formatSeedRequirement(culture),
-      notes: plan.notes,
+      plantsCount: plan.plants_count ?? null,
     });
 
     groupsByCulture.set(groupId, group);

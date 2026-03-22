@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommandProvider } from '../commands/CommandProvider';
 import GanttChartPage from '../pages/GanttChart';
@@ -28,12 +29,17 @@ vi.mock('../api/api', async () => {
 
 vi.mock('react-modern-gantt', () => ({
   __esModule: true,
-  default: ({ tasks }: { tasks: Array<{ name: string; tasks: Array<{ name: string }> }> }) => (
+  default: ({ tasks, renderTooltip }: { tasks: Array<{ name: string; tasks: Array<Record<string, unknown> & { id: string; name: string }> }>; renderTooltip?: ({ task }: { task: Record<string, unknown> }) => ReactNode }) => (
     <div data-testid="mock-gantt">
       {tasks.map((group) => (
         <div key={group.name}>
           <span>{group.name}</span>
           {group.tasks.map((task) => <span key={`${group.name}-${task.name}`}>{task.name}</span>)}
+          {group.tasks[0] && renderTooltip ? (
+            <div data-testid={`mock-tooltip-${group.name}`}>
+              {renderTooltip({ task: group.tasks[0] })}
+            </div>
+          ) : null}
         </div>
       ))}
     </div>
@@ -92,6 +98,7 @@ describe('GanttChartPage', () => {
             planting_date: '2026-05-10',
             cultivation_type: 'pre_cultivation',
             area_usage_sqm: 8,
+            plants_count: 24,
           },
         ],
       },
@@ -119,7 +126,14 @@ describe('GanttChartPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Jungpflanzen' }));
 
     await waitFor(() => expect(screen.getAllByText('Tomate').length).toBeGreaterThan(0));
-    expect(screen.queryByText('Plan #11')).not.toBeInTheDocument();
+    expect(screen.getByText('Standort: Hof / Feld')).toBeInTheDocument();
+    expect(screen.getByText('Beet: Beet 1')).toBeInTheDocument();
+    expect(screen.getByText('Anzuchtbeginn: 19.4.2026')).toBeInTheDocument();
+    expect(screen.getByText('Auspflanzung: 10.5.2026')).toBeInTheDocument();
+    expect(screen.getByText('Anzuchtdauer: 21 Tage')).toBeInTheDocument();
+    expect(screen.getByText('Fläche: 8.00 m²')).toBeInTheDocument();
+    expect(screen.getByText('Pflanzenanzahl: 24')).toBeInTheDocument();
+    expect(screen.queryByText(/Anbauplan/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   });
 });
