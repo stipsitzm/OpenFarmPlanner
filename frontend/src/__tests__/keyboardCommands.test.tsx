@@ -12,6 +12,12 @@ describe('useKeyboardShortcuts helpers', () => {
     expect(matchesShortcut(event, { alt: true, key: 'd' })).toBe(false);
   });
 
+  it('matches ctrl/shift shortcut combinations exactly', () => {
+    const event = new KeyboardEvent('keydown', { key: 'ArrowRight', ctrlKey: true, shiftKey: true });
+    expect(matchesShortcut(event, { ctrl: true, shift: true, key: 'ArrowRight' })).toBe(true);
+    expect(matchesShortcut(event, { shift: true, key: 'ArrowRight' })).toBe(false);
+  });
+
   it('ignores typing focus for editable elements', () => {
     const input = document.createElement('input');
     expect(isTypingInEditableElement(input)).toBe(true);
@@ -43,7 +49,7 @@ describe('useKeyboardShortcuts context guard', () => {
     render(
       <ShortcutHarness
         contexts={['global']}
-        shortcut={{ id: 'a', label: 'A', keys: { alt: true, key: 'e' }, contexts: ['cultureDetail'], action }}
+        shortcut={{ id: 'a', title: 'A', keys: { alt: true, key: 'e' }, contexts: ['cultureDetail'], action }}
       />,
     );
 
@@ -58,7 +64,7 @@ describe('command palette', () => {
     const commands: CommandSpec[] = [
       {
         id: 'culture.edit',
-        label: 'Kultur bearbeiten (Alt+E)',
+        label: 'Kultur bearbeiten',
         group: 'navigation',
         keywords: ['kultur', 'bearbeiten'],
         shortcutHint: 'Alt+E',
@@ -77,5 +83,23 @@ describe('command palette', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(action).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows shortcut hints in the result list', () => {
+    const commands: CommandSpec[] = [
+      {
+        id: 'help.palette',
+        label: 'Aktionssuche (Alt+K)',
+        group: 'help',
+        keywords: ['palette'],
+        shortcutHint: 'Alt+K',
+        contextTags: ['global'],
+        action: vi.fn(),
+      },
+    ];
+
+    render(<CommandPalette open commands={commands} onClose={vi.fn()} />);
+
+    expect(screen.getByText('Alt+K')).toBeInTheDocument();
   });
 });

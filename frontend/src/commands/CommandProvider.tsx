@@ -121,24 +121,8 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
         action: () => { void command.action(); },
       }));
 
-    return [
-      {
-        id: 'command-palette.open',
-        title: 'Aktionssuche',
-        keys: { alt: true, key: 'k' },
-        contexts: [],
-        action: openPalette,
-      },
-      {
-        id: 'shortcuts-help.open',
-        title: 'Tastenkürzelhilfe',
-        keys: { alt: true, key: 'h' },
-        contexts: [],
-        action: () => setHelpOpen(true),
-      },
-      ...commandShortcuts,
-    ];
-  }, [activeCommands, openPalette]);
+    return commandShortcuts;
+  }, [activeCommands]);
 
   useKeyboardShortcuts(shortcutSpecs, !paletteOpen, { currentContexts: currentContextTags });
 

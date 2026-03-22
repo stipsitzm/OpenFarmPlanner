@@ -5,7 +5,6 @@ export interface RootCommandFactoryOptions {
   activeProjectId: number | null;
   isProjectAdmin: boolean;
   memberships: { project_id: number; project_name: string }[];
-  navigationItems: { to: string; label: string; keywords: string[] }[];
   onNextPage: () => void;
   onPreviousPage: () => void;
   onOpenProjectSettings: () => void;
@@ -15,7 +14,8 @@ export interface RootCommandFactoryOptions {
   onOpenAccountSettings: () => void;
   onOpenVersionHistory: () => void | Promise<void>;
   onLogout: () => void | Promise<void>;
-  onNavigate: (path: string) => void;
+  onOpenPalette: () => void;
+  onOpenShortcuts: () => void;
   labels: {
     nextPage: string;
     previousPage: string;
@@ -26,6 +26,8 @@ export interface RootCommandFactoryOptions {
     openAccountSettings: string;
     openVersionHistory: string;
     logout: string;
+    openPalette: string;
+    openShortcuts: string;
   };
 }
 
@@ -115,6 +117,7 @@ export function createRootCommands(options: RootCommandFactoryOptions): CommandS
       keywords: ['seite', 'nächste', 'navigation', 'weiter'],
       group: 'navigation',
       shortcutHint: 'Ctrl+Shift+→',
+      keys: { ctrl: true, shift: true, key: 'ArrowRight' },
       contextTags: ['global'],
       action: options.onNextPage,
     },
@@ -124,19 +127,34 @@ export function createRootCommands(options: RootCommandFactoryOptions): CommandS
       keywords: ['seite', 'vorherige', 'navigation', 'zurück'],
       group: 'navigation',
       shortcutHint: 'Ctrl+Shift+←',
+      keys: { ctrl: true, shift: true, key: 'ArrowLeft' },
       contextTags: ['global'],
       action: options.onPreviousPage,
     },
-    ...options.navigationItems.map<CommandSpec>((item) => ({
-      id: `navigation.page.${item.to}`,
-      label: item.label,
-      keywords: item.keywords,
-      group: 'navigation',
-      contextTags: ['global'],
-      isVisible: () => item.to !== options.currentPath,
-      action: () => options.onNavigate(item.to),
-    })),
   ];
 
-  return [...projectCommands, ...accountCommands, ...navigationCommands];
+  const helpCommands: CommandSpec[] = [
+    {
+      id: 'help.openPalette',
+      label: options.labels.openPalette,
+      keywords: ['aktionssuche', 'palette', 'befehl', 'hilfe'],
+      group: 'help',
+      shortcutHint: 'Alt+K',
+      keys: { alt: true, key: 'k' },
+      contextTags: ['global'],
+      action: options.onOpenPalette,
+    },
+    {
+      id: 'help.openShortcuts',
+      label: options.labels.openShortcuts,
+      keywords: ['tastenkürzel', 'shortcuts', 'hilfe'],
+      group: 'help',
+      shortcutHint: 'Alt+H',
+      keys: { alt: true, key: 'h' },
+      contextTags: ['global'],
+      action: options.onOpenShortcuts,
+    },
+  ];
+
+  return [...projectCommands, ...accountCommands, ...navigationCommands, ...helpCommands];
 }
