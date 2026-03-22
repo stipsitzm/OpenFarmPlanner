@@ -91,10 +91,11 @@ function GanttChartPage(): React.ReactElement {
   const calendarCommands = useMemo<CommandSpec[]>(() => [
     {
       id: 'calendar.toggleEdit',
-      label: editMode ? 'Bearbeiten deaktivieren' : 'Bearbeiten aktivieren',
+      label: editMode ? 'Bearbeitungsmodus deaktivieren' : 'Bearbeitungsmodus aktivieren',
       group: 'navigation',
       keywords: ['kalender', 'bearbeiten', 'toggle'],
-      shortcutHint: '—',
+      shortcutHint: 'Alt+E',
+      keys: { alt: true, key: 'e' },
       contextTags: ['calendar'],
       isEnabled: () => calendarMode === 'occupancy',
       action: () => setEditMode((value) => !value),
@@ -307,11 +308,6 @@ function GanttChartPage(): React.ReactElement {
           <Tab label={t('ganttChart:modes.occupancy')} value="occupancy" />
           <Tab label={t('ganttChart:modes.seedlings')} value="seedlings" />
         </Tabs>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          {calendarMode === 'occupancy'
-            ? t('ganttChart:modeDescriptions.occupancy')
-            : t('ganttChart:modeDescriptions.seedlings')}
-        </Typography>
       </Box>
 
       {calendarMode === 'occupancy' ? (

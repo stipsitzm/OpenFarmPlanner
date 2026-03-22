@@ -44,12 +44,16 @@ export function getRunnableCommands(commands: CommandSpec[]): CommandSpec[] {
 }
 
 export function createRootCommands(options: RootCommandFactoryOptions): CommandSpec[] {
+  const switchableMemberships = options.memberships.filter((membership) => membership.project_id !== options.activeProjectId);
+
   const projectCommands: CommandSpec[] = [
     {
       id: 'project.settings',
       label: options.labels.openProjectSettings,
       keywords: ['projekt', 'einstellungen', 'verwaltung'],
       group: 'project',
+      shortcutHint: 'Alt+Shift+P',
+      keys: { alt: true, shift: true, key: 'p' },
       contextTags: ['global'],
       isVisible: () => options.activeProjectId !== null,
       action: options.onOpenProjectSettings,
@@ -59,6 +63,8 @@ export function createRootCommands(options: RootCommandFactoryOptions): CommandS
       label: options.labels.openProjectMembers,
       keywords: ['projekt', 'mitglieder', 'verwaltung', 'team'],
       group: 'project',
+      shortcutHint: 'Alt+Shift+M',
+      keys: { alt: true, shift: true, key: 'm' },
       contextTags: ['global'],
       isVisible: () => options.activeProjectId !== null && options.isProjectAdmin,
       action: options.onOpenProjectMembers,
@@ -68,16 +74,21 @@ export function createRootCommands(options: RootCommandFactoryOptions): CommandS
       label: options.labels.createProject,
       keywords: ['projekt', 'neu', 'erstellen'],
       group: 'project',
+      shortcutHint: 'Alt+Shift+N',
+      keys: { alt: true, shift: true, key: 'n' },
       contextTags: ['global'],
       action: options.onOpenCreateProject,
     },
-    ...options.memberships.map<CommandSpec>((membership) => ({
+    ...switchableMemberships.map<CommandSpec>((membership, index) => ({
       id: `project.switch.${membership.project_id}`,
       label: `${options.labels.switchProjectPrefix}: ${membership.project_name}`,
       keywords: ['projekt', 'wechseln', 'umschalten', membership.project_name],
       group: 'project',
+      shortcutHint: index < 9 ? `Alt+${index + 1}` : undefined,
+      keys: index < 9
+        ? { alt: true, key: `${index + 1}` }
+        : undefined,
       contextTags: ['global'],
-      isVisible: () => membership.project_id !== options.activeProjectId,
       action: () => options.onSwitchProject(membership.project_id),
     })),
   ];
@@ -88,6 +99,8 @@ export function createRootCommands(options: RootCommandFactoryOptions): CommandS
       label: options.labels.openAccountSettings,
       keywords: ['konto', 'account', 'einstellungen'],
       group: 'account',
+      shortcutHint: 'Alt+Shift+A',
+      keys: { alt: true, shift: true, key: 'a' },
       contextTags: ['global'],
       action: options.onOpenAccountSettings,
     },
@@ -96,6 +109,8 @@ export function createRootCommands(options: RootCommandFactoryOptions): CommandS
       label: options.labels.openVersionHistory,
       keywords: ['versionen', 'verlauf', 'historie', 'projekt'],
       group: 'account',
+      shortcutHint: 'Alt+Shift+V',
+      keys: { alt: true, shift: true, key: 'v' },
       contextTags: ['global'],
       isVisible: () => options.activeProjectId !== null,
       action: options.onOpenVersionHistory,
@@ -105,6 +120,8 @@ export function createRootCommands(options: RootCommandFactoryOptions): CommandS
       label: options.labels.logout,
       keywords: ['logout', 'abmelden', 'konto'],
       group: 'account',
+      shortcutHint: 'Alt+Shift+L',
+      keys: { alt: true, shift: true, key: 'l' },
       contextTags: ['global'],
       action: options.onLogout,
     },

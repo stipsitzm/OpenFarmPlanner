@@ -82,6 +82,7 @@ describe('GanttChartPage', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Feldbelegung')).toBeInTheDocument());
+    expect(screen.queryByText(/Belegung von Schlägen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
     expect(screen.getByRole('switch')).toBeInTheDocument();
     expect(screen.getByText('Beet 1')).toBeInTheDocument();
   });
@@ -135,5 +136,36 @@ describe('GanttChartPage', () => {
     expect(screen.getByText('Pflanzenanzahl: 24')).toBeInTheDocument();
     expect(screen.queryByText(/Anbauplan/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+  });
+
+  it('toggles occupancy edit mode with Alt+E', async () => {
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-01',
+            harvest_date: '2026-05-01',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    render(
+      <CommandProvider>
+        <GanttChartPage />
+      </CommandProvider>,
+    );
+
+    const editSwitch = await screen.findByRole('switch');
+    expect(editSwitch).not.toBeChecked();
+
+    fireEvent.keyDown(window, { key: 'e', altKey: true });
+
+    await waitFor(() => expect(editSwitch).toBeChecked());
   });
 });
