@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 export interface ShortcutKeys {
   alt?: boolean;
+  ctrl?: boolean;
   shift?: boolean;
   key: string;
 }
@@ -25,12 +26,13 @@ const normalizeKey = (key: string): string => {
 
 const hasModifierMismatch = (event: KeyboardEvent, keys: ShortcutKeys): boolean => {
   const expectedAlt = Boolean(keys.alt);
+  const expectedCtrl = Boolean(keys.ctrl);
   const expectedShift = Boolean(keys.shift);
 
   return (
     event.altKey !== expectedAlt ||
+    event.ctrlKey !== expectedCtrl ||
     event.shiftKey !== expectedShift ||
-    event.ctrlKey ||
     event.metaKey
   );
 };

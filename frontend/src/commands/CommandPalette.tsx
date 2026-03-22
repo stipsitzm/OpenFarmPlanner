@@ -107,7 +107,17 @@ export function CommandPalette({ open, commands, onClose }: CommandPaletteProps)
   let flatIndex = -1;
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      slotProps={{
+        backdrop: {
+          sx: { backgroundColor: 'rgba(10, 18, 30, 0.22)' },
+        },
+      }}
+    >
       <DialogContent>
         <TextField
           autoFocus

@@ -197,7 +197,6 @@ export default function Suppliers(): React.ReactElement {
               <TableRow>
                 <TableCell>{t('name')}</TableCell>
                 <TableCell>{t('homepage')}</TableCell>
-                <TableCell>{t('allowedDomains')}</TableCell>
                 <TableCell align="right">{t('actions')}</TableCell>
               </TableRow>
             </TableHead>
@@ -211,11 +210,6 @@ export default function Suppliers(): React.ReactElement {
                         {supplier.homepage_url}
                       </Link>
                     ) : null}
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                      {(supplier.allowed_domains || []).map((domain) => <Chip key={domain} size="small" label={domain} />)}
-                    </Stack>
                   </TableCell>
                   <TableCell align="right">
                     <Button size="small" onClick={() => openEdit(supplier)}>{t('editAction')}</Button>

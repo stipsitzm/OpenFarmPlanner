@@ -343,11 +343,9 @@ describe("GraphicalFields", () => {
     });
 
     expect(screen.getByRole("switch")).toBeChecked();
-    expect(
-      screen.getByText(
-        "Editiermodus aktiv – Schläge und Beete können jetzt verschoben werden.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Bearbeitungsmodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+    );
   }, 15000);
 
   it("renders fit-to-view and zoom controls", async () => {
@@ -406,11 +404,9 @@ describe("GraphicalFields", () => {
         "true",
       );
     });
-    expect(
-      screen.getByText(
-        "Editiermodus aktiv – Schläge und Beete können jetzt verschoben werden.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Bearbeitungsmodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+    );
   }, 15000);
 
   it("renders compact overlay zoom controls inside the graphic container", async () => {
@@ -710,11 +706,9 @@ describe("GraphicalFields", () => {
     });
 
     expect(screen.getByRole("switch")).toBeChecked();
-    expect(
-      screen.getByText(
-        "Editiermodus aktiv – Schläge und Beete können jetzt verschoben werden.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Bearbeitungsmodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+    );
 
     const input = document.createElement("input");
     document.body.appendChild(input);

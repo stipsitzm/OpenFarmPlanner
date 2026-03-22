@@ -30,7 +30,8 @@
   "nextYear": "Nächstes Jahr",
   "loading": "Laden...",
   "errors": {
-    "load": "Fehler beim Laden der Daten"
+    "load": "Fehler beim Laden der Daten",
+    "updatePlan": "Fehler beim Aktualisieren des Anbauplans"
   },
   "tooltip": {
     "culture": "Kultur",
@@ -38,7 +39,32 @@
     "harvestDate": "Erntedatum",
     "firstHarvest": "Erste Ernte",
     "lastHarvest": "Letzte Ernte",
-    "areaUsage": "Flächen"
+    "areaUsage": "Fläche",
+    "propagationStart": "Anzuchtbeginn",
+    "transplantDate": "Auspflanzung",
+    "propagationDuration": "Anzuchtdauer",
+    "bed": "Beet",
+    "location": "Standort",
+    "plantsCount": "Pflanzenanzahl",
+    "seedRequirement": "Saatgutbedarf",
+    "notes": "Hinweis"
   },
-  "noData": "Keine Anbaupläne vorhanden"
+  "noData": "Keine Anbaupläne vorhanden",
+  "viewMode": "Ansichtsmodus",
+  "editMode": "Bearbeitungsmodus",
+  "viewSelectorAriaLabel": "Kalenderansicht auswählen",
+  "days": "Tage",
+  "yieldDistributionTitle": "Ertragsverteilung (Wochenbasis)",
+  "noYieldData": "Keine erwarteten Erträge für dieses Jahr vorhanden.",
+  "modes": {
+    "occupancy": "Feldbelegung",
+    "seedlings": "Jungpflanzen"
+  },
+  "modeDescriptions": {
+    "occupancy": "Belegung von Schlägen und Beeten im Jahresverlauf. Diese Ansicht unterstützt weiterhin das Verschieben bestehender Anbaupläne.",
+    "seedlings": "Anzuchtzeiträume für Jungpflanzen nach Kultur. Diese Ansicht ist schreibgeschützt und zeigt nur relevante Voranzuchten im aktuellen Jahr."
+  },
+  "seedlings": {
+    "emptyState": "Keine Jungpflanzen-Anzuchtzeiträume für dieses Jahr vorhanden."
+  }
 }

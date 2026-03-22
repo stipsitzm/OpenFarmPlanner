@@ -32,8 +32,7 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from './i18n';
-import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
-import { useRegisterCommands } from './commands/CommandProvider';
+import { useCommandContext, useRegisterCommands } from './commands/CommandProvider';
 import { createRootCommands } from './commands/commands';
 import { useMemo, useState } from 'react';
 import Locations from './pages/Locations';
@@ -195,14 +194,12 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
  */
 function RootLayout(): React.ReactElement {
   const { t } = useTranslation('navigation');
-  // Re-enable Ctrl+Shift+Arrow route switching
-  useKeyboardNavigation();
-
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
+  const { openPalette } = useCommandContext();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -371,26 +368,37 @@ function RootLayout(): React.ReactElement {
 
   const activeMembershipRole = activeMembership?.role ?? null;
 
+  const normalizeRoutePath = (pathname: string): string => {
+    const normalizedPath = pathname.replace(/\/$/, '') || '/';
+
+    if (normalizedPath === '/planting-plans') {
+      return '/app/anbauplaene';
+    }
+
+    if (normalizedPath.startsWith('/app/')) {
+      return normalizedPath;
+    }
+
+    return normalizedPath === '/' ? '/app/anbauplaene' : `/app${normalizedPath}`;
+  };
+
   const goToNextPage = (): void => {
-    const normalizedPath = location.pathname.replace(/\/$/, '') || '/';
-    const currentIndex = routes.indexOf(normalizedPath);
+    const currentIndex = routes.indexOf(normalizeRoutePath(location.pathname));
     const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % routes.length;
     navigate(routes[nextIndex]);
   };
 
   const goToPreviousPage = (): void => {
-    const normalizedPath = location.pathname.replace(/\/$/, '') || '/';
-    const currentIndex = routes.indexOf(normalizedPath);
-    const previousIndex = currentIndex === -1 ? 0 : (currentIndex - 1 + routes.length) % routes.length;
+    const currentIndex = routes.indexOf(normalizeRoutePath(location.pathname));
+    const previousIndex = currentIndex === -1 ? routes.length - 1 : (currentIndex - 1 + routes.length) % routes.length;
     navigate(routes[previousIndex]);
   };
 
   const globalCommands = useMemo(() => createRootCommands({
-    currentPath: location.pathname.replace(/\/$/, '') || '/',
+    currentPath: normalizeRoutePath(location.pathname),
     activeProjectId,
     isProjectAdmin: activeMembershipRole === 'admin',
     memberships,
-    navigationItems: navItems.map((item) => ({ to: item.to, label: item.label, keywords: item.keywords })),
     onNextPage: goToNextPage,
     onPreviousPage: goToPreviousPage,
     onOpenProjectSettings: handleOpenProjectSettings,
@@ -400,7 +408,8 @@ function RootLayout(): React.ReactElement {
     onOpenAccountSettings: () => navigate('/app/account-settings'),
     onOpenVersionHistory: () => { void handleOpenProjectHistory(); },
     onLogout: () => { void handleLogout(); },
-    onNavigate: (path) => navigate(path),
+    onOpenPalette: openPalette,
+    onOpenShortcuts: () => setShortcutsOpen(true),
     labels: {
       nextPage: t('commandPalette.commands.nextPage'),
       previousPage: t('commandPalette.commands.previousPage'),
@@ -411,8 +420,10 @@ function RootLayout(): React.ReactElement {
       openAccountSettings: t('commandPalette.commands.openAccountSettings'),
       openVersionHistory: t('commandPalette.commands.openVersionHistory'),
       logout: t('commandPalette.commands.logout'),
+      openPalette: t('commandPalette.label'),
+      openShortcuts: t('commandPalette.commands.openShortcuts'),
     },
-  }), [activeMembershipRole, activeProjectId, location.pathname, memberships, navItems, navigate, t]);
+  }), [activeMembershipRole, activeProjectId, location.pathname, memberships, navigate, openPalette, t]);
 
   useRegisterCommands('global-app', globalCommands);
   
