@@ -1,6 +1,6 @@
 import React from "react";
 import { TimelineProps, ViewMode } from "@/types";
-import { format, getWeek, isValid } from "date-fns";
+import { getWeek, isValid } from "date-fns";
 
 /**
  * Timeline Component with hierarchical display for different view modes
@@ -16,12 +16,12 @@ const Timeline: React.FC<TimelineProps> = React.memo(
     unitWidth = 150,
     showTimelineHeader = true,
   }) => {
-    // Get locale object for date-fns
-    const getLocale = () => {
-      if (locale === "default") return undefined;
-      // This would use actual locale imports in a real implementation
-      return undefined;
-    };
+    const resolvedLocale = locale === "default" ? undefined : locale;
+
+    const formatWithIntl = (
+      date: Date,
+      options: Intl.DateTimeFormatOptions,
+    ): string => new Intl.DateTimeFormat(resolvedLocale, options).format(date);
 
     // Format date based on view mode for the main timeline
     const formatDateHeader = (date: Date): string => {
@@ -29,23 +29,29 @@ const Timeline: React.FC<TimelineProps> = React.memo(
 
       switch (viewMode) {
         case ViewMode.MINUTE:
-          return format(date, "HH:mm", { locale: getLocale() });
+          return formatWithIntl(date, {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          });
         case ViewMode.HOUR:
-          return format(date, "HH:00", { locale: getLocale() });
+          return (
+            formatWithIntl(date, { hour: "2-digit", hour12: false }) + ":00"
+          );
         case ViewMode.DAY:
-          return format(date, "d", { locale: getLocale() });
+          return formatWithIntl(date, { day: "numeric" });
         case ViewMode.WEEK:
           const weekNum = getWeek(date);
           return `W${weekNum}`;
         case ViewMode.MONTH:
-          return format(date, "MMM yyyy", { locale: getLocale() });
+          return formatWithIntl(date, { month: "short", year: "numeric" });
         case ViewMode.QUARTER:
           const quarter = Math.floor(date.getMonth() / 3) + 1;
           return `Q${quarter} ${date.getFullYear()}`;
         case ViewMode.YEAR:
           return date.getFullYear().toString();
         default:
-          return format(date, "MMM yyyy", { locale: getLocale() });
+          return formatWithIntl(date, { month: "short", year: "numeric" });
       }
     };
 
@@ -55,12 +61,14 @@ const Timeline: React.FC<TimelineProps> = React.memo(
 
       switch (viewMode) {
         case ViewMode.MINUTE:
-          return format(date, "HH:00", { locale: getLocale() });
+          return (
+            formatWithIntl(date, { hour: "2-digit", hour12: false }) + ":00"
+          );
         case ViewMode.HOUR:
-          return format(date, "MMM d", { locale: getLocale() });
+          return formatWithIntl(date, { month: "short", day: "numeric" });
         case ViewMode.DAY:
         case ViewMode.WEEK:
-          return format(date, "MMM yyyy", { locale: getLocale() });
+          return formatWithIntl(date, { month: "short", year: "numeric" });
         default:
           return "";
       }

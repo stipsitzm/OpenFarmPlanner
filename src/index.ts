@@ -53,6 +53,7 @@ export type {
   HeaderRenderProps,
   TimelineHeaderRenderProps,
   TaskColorProps,
+  GanttLocaleText,
 
   // Utility types
   TaskInteraction,

@@ -6,6 +6,7 @@ interface ViewModeSelectorProps {
   onChange: (mode: ViewMode) => void;
   darkMode: boolean;
   availableModes?: ViewMode[];
+  labels?: Partial<Record<ViewMode, string>>;
 }
 
 /**
@@ -16,6 +17,7 @@ const ViewModeSelector: React.FC<ViewModeSelectorProps> = ({
   onChange,
   darkMode,
   availableModes,
+  labels,
 }) => {
   // All possible view modes
   const allViewModes = [
@@ -58,7 +60,7 @@ const ViewModeSelector: React.FC<ViewModeSelectorProps> = ({
           data-view-mode={mode.id}
           data-active={activeMode === mode.id ? "true" : "false"}
         >
-          {mode.label}
+          {labels?.[mode.id] || mode.label}
         </button>
       ))}
     </div>

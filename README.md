@@ -73,24 +73,24 @@ yarn add react-modern-gantt
 ## 🚀 Quick Start
 
 ```jsx
-import React, { useState } from 'react';
-import GanttChart from 'react-modern-gantt';
+import React, { useState } from "react";
+import GanttChart from "react-modern-gantt";
 // ⚠️ IMPORTANT: Don't forget to import the styles!
-import 'react-modern-gantt/dist/index.css';
+import "react-modern-gantt/dist/index.css";
 
 function App() {
   const [tasks, setTasks] = useState([
     {
-      id: 'team-1',
-      name: 'Engineering',
-      description: 'Development Team',
+      id: "team-1",
+      name: "Engineering",
+      description: "Development Team",
       tasks: [
         {
-          id: 'task-1',
-          name: 'Website Redesign',
+          id: "task-1",
+          name: "Website Redesign",
           startDate: new Date(2023, 0, 1),
           endDate: new Date(2023, 2, 15),
-          color: '#3b82f6',
+          color: "#3b82f6",
           percent: 75,
         },
         // More tasks...
@@ -100,15 +100,17 @@ function App() {
   ]);
 
   const handleTaskUpdate = (groupId, updatedTask) => {
-    setTasks(prevTasks =>
-      prevTasks.map(group =>
+    setTasks((prevTasks) =>
+      prevTasks.map((group) =>
         group.id === groupId
           ? {
               ...group,
-              tasks: group.tasks.map(task => (task.id === updatedTask.id ? updatedTask : task)),
+              tasks: group.tasks.map((task) =>
+                task.id === updatedTask.id ? updatedTask : task,
+              ),
             }
-          : group
-      )
+          : group,
+      ),
     );
   };
 
@@ -140,14 +142,17 @@ The Gantt chart requires CSS styles that are shipped separately from the compone
 
 ```js
 // In your application entry point (e.g., App.js or index.js)
-import 'react-modern-gantt/dist/index.css';
+import "react-modern-gantt/dist/index.css";
 ```
 
 #### Option 2: Reference CSS in HTML
 
 ```html
 <!-- In your HTML file -->
-<link rel="stylesheet" href="https://unpkg.com/react-modern-gantt@0.6.0/dist/index.css" />
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/react-modern-gantt@0.6.0/dist/index.css"
+/>
 ```
 
 ## 🧩 Components
@@ -239,19 +244,19 @@ The **Hour** and **Minute** views are perfect for detailed scheduling:
 // Hourly schedule example
 const hourlyTasks = [
   {
-    id: 'today',
+    id: "today",
     name: "Today's Schedule",
     tasks: [
       {
-        id: 'meeting-1',
-        name: 'Team Standup',
+        id: "meeting-1",
+        name: "Team Standup",
         startDate: new Date(2024, 0, 15, 9, 0), // 9:00 AM
         endDate: new Date(2024, 0, 15, 9, 30), // 9:30 AM
         percent: 100,
       },
       {
-        id: 'meeting-2',
-        name: 'Client Meeting',
+        id: "meeting-2",
+        name: "Client Meeting",
         startDate: new Date(2024, 0, 15, 14, 0), // 2:00 PM
         endDate: new Date(2024, 0, 15, 15, 30), // 3:30 PM
         percent: 50,
@@ -286,19 +291,19 @@ When `editMode={true}` and `showProgress={true}`, each task displays a progress 
 ### Usage Example
 
 ```jsx
-import React, { useState } from 'react';
-import GanttChart from 'react-modern-gantt';
-import 'react-modern-gantt/dist/index.css';
+import React, { useState } from "react";
+import GanttChart from "react-modern-gantt";
+import "react-modern-gantt/dist/index.css";
 
 function App() {
   const [tasks, setTasks] = useState([
     {
-      id: 'team-1',
-      name: 'Development',
+      id: "team-1",
+      name: "Development",
       tasks: [
         {
-          id: 'task-1',
-          name: 'Feature Implementation',
+          id: "task-1",
+          name: "Feature Implementation",
           startDate: new Date(2024, 0, 1),
           endDate: new Date(2024, 0, 15),
           percent: 65, // Initial progress
@@ -308,19 +313,23 @@ function App() {
   ]);
 
   const handleTaskUpdate = (groupId, updatedTask) => {
-    setTasks(prevTasks =>
-      prevTasks.map(group =>
+    setTasks((prevTasks) =>
+      prevTasks.map((group) =>
         group.id === groupId
           ? {
               ...group,
-              tasks: group.tasks.map(task => (task.id === updatedTask.id ? updatedTask : task)),
+              tasks: group.tasks.map((task) =>
+                task.id === updatedTask.id ? updatedTask : task,
+              ),
             }
-          : group
-      )
+          : group,
+      ),
     );
 
     // Log progress updates
-    console.log(`Progress updated: ${updatedTask.name} - ${updatedTask.percent}%`);
+    console.log(
+      `Progress updated: ${updatedTask.name} - ${updatedTask.percent}%`,
+    );
   };
 
   return (
@@ -532,16 +541,16 @@ By default (`focusMode={true}`), the timeline automatically centers on the curre
 ### Usage Example
 
 ```jsx
-import React from 'react';
-import GanttChart, { ViewMode } from 'react-modern-gantt';
-import 'react-modern-gantt/dist/index.css';
+import React from "react";
+import GanttChart, { ViewMode } from "react-modern-gantt";
+import "react-modern-gantt/dist/index.css";
 
 function App() {
   return (
     <GanttChart
       tasks={tasks}
       viewMode={ViewMode.HOUR}
-      focusMode={true}  // Enable auto-scroll to "now"
+      focusMode={true} // Enable auto-scroll to "now"
       showCurrentDateMarker={true}
       todayLabel="Now"
       viewModes={[
@@ -565,22 +574,25 @@ function App() {
 
 ### Props
 
-| Prop                      | Type      | Default | Description                                          |
-| ------------------------- | --------- | ------- | ---------------------------------------------------- |
-| `focusMode`               | `boolean` | `true`  | Auto-scroll to current time when switching view modes |
-| `showCurrentDateMarker`   | `boolean` | `true`  | Show/hide the current time indicator line            |
-| `todayLabel`              | `string`  | `"Today"` | Label for the current time marker                  |
+| Prop                    | Type              | Default              | Description                                                                          |
+| ----------------------- | ----------------- | -------------------- | ------------------------------------------------------------------------------------ |
+| `focusMode`             | `boolean`         | `true`               | Auto-scroll to current time when switching view modes                                |
+| `showCurrentDateMarker` | `boolean`         | `true`               | Show/hide the current time indicator line                                            |
+| `todayLabel`            | `string`          | `"Today"`            | Label for the current time marker; overrides `localeText.today`                      |
+| `headerLabel`           | `string`          | `"Resources"`        | Left column header; overrides `localeText.resources`                                 |
+| `title`                 | `string`          | `"Project Timeline"` | Header title; overrides `localeText.title`                                           |
+| `localeText`            | `GanttLocaleText` | `{}`                 | Optional UI translations/overrides for title, resources, today, and view mode labels |
 
 ### Programmatic Scrolling
 
 You can also manually scroll to the current time using the ref API:
 
 ```jsx
-import React, { useRef } from 'react';
-import GanttChart, { GanttChartRef } from 'react-modern-gantt';
+import React, { useRef } from "react";
+import GanttChart, { GanttChartRef } from "react-modern-gantt";
 
 function App() {
-  const ganttRef = useRef<GanttChartRef>(null);
+  const ganttRef = useRef < GanttChartRef > null;
 
   const handleScrollToNow = () => {
     // Manually scroll to current time
@@ -593,7 +605,7 @@ function App() {
       <GanttChart
         ref={ganttRef}
         tasks={tasks}
-        focusMode={false}  // Disable auto-scroll, using manual control instead
+        focusMode={false} // Disable auto-scroll, using manual control instead
       />
     </>
   );
@@ -675,7 +687,7 @@ function App() {
 
 ```jsx
 const handleExportPng = async () => {
-  await exportAsPng('gantt-chart'); // filename (without extension)
+  await exportAsPng("gantt-chart"); // filename (without extension)
 };
 ```
 
@@ -683,7 +695,7 @@ const handleExportPng = async () => {
 
 ```jsx
 const handleExportJpeg = async () => {
-  await exportAsJpeg('gantt-chart', 0.95); // filename, quality (0-1)
+  await exportAsJpeg("gantt-chart", 0.95); // filename, quality (0-1)
 };
 ```
 
@@ -691,7 +703,7 @@ const handleExportJpeg = async () => {
 
 ```jsx
 const handleExportPdf = async () => {
-  await exportAsPdf('gantt-chart'); // filename (without extension)
+  await exportAsPdf("gantt-chart"); // filename (without extension)
 };
 ```
 
@@ -700,11 +712,11 @@ const handleExportPdf = async () => {
 ```jsx
 const handleCustomExport = async () => {
   await exportChart({
-    format: 'png',                    // 'png', 'jpeg', or 'pdf'
-    filename: 'custom-export',        // filename without extension
-    quality: 0.95,                    // image quality (0-1)
-    scale: 2,                         // scale factor for higher resolution
-    backgroundColor: '#ffffff',       // background color
+    format: "png", // 'png', 'jpeg', or 'pdf'
+    filename: "custom-export", // filename without extension
+    quality: 0.95, // image quality (0-1)
+    scale: 2, // scale factor for higher resolution
+    backgroundColor: "#ffffff", // background color
   });
 };
 ```
@@ -713,7 +725,7 @@ const handleCustomExport = async () => {
 
 ```jsx
 const handleGetDataUrl = async () => {
-  const dataUrl = await getDataUrl('png'); // 'png' or 'jpeg'
+  const dataUrl = await getDataUrl("png"); // 'png' or 'jpeg'
 
   // Use the data URL (e.g., display in an img tag)
   console.log(dataUrl);
@@ -727,7 +739,7 @@ const handleCopyToClipboard = async () => {
   const result = await copyToClipboard();
 
   if (result.success) {
-    alert('Chart copied to clipboard!');
+    alert("Chart copied to clipboard!");
   } else {
     alert(`Error: ${result.error}`);
   }
@@ -739,8 +751,8 @@ const handleCopyToClipboard = async () => {
 You can check if the required export dependencies are installed:
 
 ```jsx
-import React, { useEffect, useState } from 'react';
-import { useGanttExport } from 'react-modern-gantt';
+import React, { useEffect, useState } from "react";
+import { useGanttExport } from "react-modern-gantt";
 
 function ExportComponent() {
   const { checkDependencies } = useGanttExport();
@@ -758,8 +770,8 @@ function ExportComponent() {
     <div>
       {deps && (
         <div>
-          <p>html2canvas: {deps.html2canvas ? '✓ Installed' : '✗ Missing'}</p>
-          <p>jsPDF: {deps.jspdf ? '✓ Installed' : '✗ Missing'}</p>
+          <p>html2canvas: {deps.html2canvas ? "✓ Installed" : "✗ Missing"}</p>
+          <p>jsPDF: {deps.jspdf ? "✓ Installed" : "✗ Missing"}</p>
         </div>
       )}
     </div>
@@ -769,13 +781,13 @@ function ExportComponent() {
 
 ### Export Options
 
-| Option            | Type     | Default     | Description                                      |
-| ----------------- | -------- | ----------- | ------------------------------------------------ |
-| `format`          | `string` | `'png'`     | Export format: `'png'`, `'jpeg'`, or `'pdf'`     |
-| `filename`        | `string` | `'gantt'`   | Filename without extension                       |
-| `quality`         | `number` | `0.92`      | Image quality (0-1, only for JPEG)               |
-| `scale`           | `number` | `1`         | Scale factor for higher resolution               |
-| `backgroundColor` | `string` | `'#ffffff'` | Background color (CSS color value)               |
+| Option            | Type     | Default     | Description                                  |
+| ----------------- | -------- | ----------- | -------------------------------------------- |
+| `format`          | `string` | `'png'`     | Export format: `'png'`, `'jpeg'`, or `'pdf'` |
+| `filename`        | `string` | `'gantt'`   | Filename without extension                   |
+| `quality`         | `number` | `0.92`      | Image quality (0-1, only for JPEG)           |
+| `scale`           | `number` | `1`         | Scale factor for higher resolution           |
+| `backgroundColor` | `string` | `'#ffffff'` | Background color (CSS color value)           |
 
 ### Best Practices
 
@@ -943,13 +955,13 @@ The easiest way to customize the appearance is by overriding CSS variables:
 <GanttChart
   tasks={tasks}
   styles={{
-    container: 'my-gantt-container',
-    title: 'my-gantt-title',
-    taskList: 'my-task-list',
-    timeline: 'my-timeline',
-    todayMarker: 'my-today-marker',
-    taskRow: 'my-task-row',
-    tooltip: 'my-tooltip',
+    container: "my-gantt-container",
+    title: "my-gantt-title",
+    taskList: "my-task-list",
+    timeline: "my-timeline",
+    todayMarker: "my-today-marker",
+    taskRow: "my-task-row",
+    tooltip: "my-tooltip",
   }}
   onTaskUpdate={handleTaskUpdate}
 />
@@ -960,20 +972,32 @@ The easiest way to customize the appearance is by overriding CSS variables:
 ```jsx
 <GanttChart
   tasks={tasks}
-  renderTask={({ task, leftPx, widthPx, topPx, isHovered, isDragging, showProgress }) => (
+  renderTask={({
+    task,
+    leftPx,
+    widthPx,
+    topPx,
+    isHovered,
+    isDragging,
+    showProgress,
+  }) => (
     <div
       className="my-custom-task"
       style={{
-        position: 'absolute',
+        position: "absolute",
         left: `${leftPx}px`,
         width: `${widthPx}px`,
         top: `${topPx}px`,
-        backgroundColor: task.color || '#3182ce',
-      }}>
+        backgroundColor: task.color || "#3182ce",
+      }}
+    >
       <div className="my-task-label">{task.name}</div>
       {showProgress && (
         <div className="my-progress-bar">
-          <div className="my-progress-fill" style={{ width: `${task.percent || 0}%` }} />
+          <div
+            className="my-progress-fill"
+            style={{ width: `${task.percent || 0}%` }}
+          />
         </div>
       )}
     </div>
@@ -1002,11 +1026,11 @@ Handle various interactions with the Gantt chart:
     console.log(`Task ${task.id} selection state: ${isSelected}`);
     // Handle selection state changes
   }}
-  onGroupClick={group => {
+  onGroupClick={(group) => {
     console.log(`Group ${group.id} clicked`);
     // Do something when a group is clicked
   }}
-  onViewModeChange={viewMode => {
+  onViewModeChange={(viewMode) => {
     console.log(`View mode changed to: ${viewMode}`);
     // Handle view mode changes
   }}
@@ -1032,32 +1056,32 @@ Dark mode is built-in and easy to enable:
     // Task is complete
     if (task.percent === 100) {
       return {
-        backgroundColor: '#22c55e', // Green
-        borderColor: '#166534',
-        textColor: '#ffffff',
+        backgroundColor: "#22c55e", // Green
+        borderColor: "#166534",
+        textColor: "#ffffff",
       };
     }
 
     // Task has dependencies
     if (task.dependencies?.length > 0) {
       return {
-        backgroundColor: '#f59e0b', // Orange
-        textColor: '#ffffff',
+        backgroundColor: "#f59e0b", // Orange
+        textColor: "#ffffff",
       };
     }
 
     // High priority task
-    if (task.priority === 'high') {
+    if (task.priority === "high") {
       return {
-        backgroundColor: '#ef4444', // Red
-        textColor: '#ffffff',
+        backgroundColor: "#ef4444", // Red
+        textColor: "#ffffff",
       };
     }
 
     // Default color
     return {
-      backgroundColor: '#3b82f6', // Blue
-      textColor: '#ffffff',
+      backgroundColor: "#3b82f6", // Blue
+      textColor: "#ffffff",
     };
   }}
 />
@@ -1072,20 +1096,29 @@ Dark mode is built-in and easy to enable:
     <div className="custom-tooltip">
       <h3>{task.name}</h3>
 
-      {dragType && <div className="drag-indicator">{dragType === 'move' ? 'Moving task...' : 'Resizing task...'}</div>}
+      {dragType && (
+        <div className="drag-indicator">
+          {dragType === "move" ? "Moving task..." : "Resizing task..."}
+        </div>
+      )}
 
       <div className="date-range">
-        {format(startDate, 'MMM d, yyyy')} - {format(endDate, 'MMM d, yyyy')}
+        {format(startDate, "MMM d, yyyy")} - {format(endDate, "MMM d, yyyy")}
       </div>
 
       <div className="progress-section">
         <div className="progress-label">Progress: {task.percent || 0}%</div>
         <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${task.percent || 0}%` }} />
+          <div
+            className="progress-fill"
+            style={{ width: `${task.percent || 0}%` }}
+          />
         </div>
       </div>
 
-      {task.assignee && <div className="assignee">Assigned to: {task.assignee}</div>}
+      {task.assignee && (
+        <div className="assignee">Assigned to: {task.assignee}</div>
+      )}
     </div>
   )}
 />
@@ -1111,21 +1144,46 @@ Yes, you can use the `locale` prop to change the date formatting:
 />
 ```
 
+You can also localize built-in UI labels (or replace them for your own domain, e.g. Open Farm Planner):
+
+```jsx
+<GanttChart
+  tasks={tasks}
+  locale="de-DE"
+  localeText={{
+    title: "Feldplanung",
+    resources: "Beete",
+    today: "Heute",
+    viewModes: {
+      [ViewMode.DAY]: "Tag",
+      [ViewMode.WEEK]: "Woche",
+      [ViewMode.MONTH]: "Monat",
+      [ViewMode.QUARTER]: "Quartal",
+      [ViewMode.YEAR]: "Jahr",
+    },
+  }}
+/>
+```
+
+If you want to override only the title or resource label for a specific screen, you can still pass `title`, `headerLabel`, or `todayLabel` directly; those explicit props take precedence over `localeText`.
+
 ### How do I handle updates to tasks?
 
 The Gantt chart is a controlled component, so updates are handled through the `onTaskUpdate` callback:
 
 ```jsx
 const handleTaskUpdate = (groupId, updatedTask) => {
-  setTasks(prevTasks =>
-    prevTasks.map(group =>
+  setTasks((prevTasks) =>
+    prevTasks.map((group) =>
       group.id === groupId
         ? {
             ...group,
-            tasks: group.tasks.map(task => (task.id === updatedTask.id ? updatedTask : task)),
+            tasks: group.tasks.map((task) =>
+              task.id === updatedTask.id ? updatedTask : task,
+            ),
           }
-        : group
-    )
+        : group,
+    ),
   );
 };
 ```
@@ -1229,8 +1287,8 @@ Yes, use the `getTaskColor` function:
 <GanttChart
   tasks={tasks}
   getTaskColor={({ task }) => ({
-    backgroundColor: task.isUrgent ? '#ef4444' : '#3b82f6',
-    textColor: 'white',
+    backgroundColor: task.isUrgent ? "#ef4444" : "#3b82f6",
+    textColor: "white",
   })}
 />
 ```
@@ -1240,7 +1298,7 @@ Yes, use the `getTaskColor` function:
 If your Gantt chart appears without styling, make sure you've imported the CSS file:
 
 ```js
-import 'react-modern-gantt/dist/index.css';
+import "react-modern-gantt/dist/index.css";
 ```
 
 This import should be included in your application's entry point or in the component where you use the Gantt chart.

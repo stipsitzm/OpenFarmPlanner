@@ -29,11 +29,19 @@ export interface TooltipRenderProps {
   viewMode: ViewMode;
 }
 
+export interface GanttLocaleText {
+  title?: string;
+  resources?: string;
+  today?: string;
+  viewModes?: Partial<Record<ViewMode, string>>;
+}
+
 export interface ViewModeSelectorRenderProps {
   activeMode: ViewMode;
   onChange: (mode: ViewMode) => void;
   darkMode: boolean;
   availableModes?: ViewMode[];
+  labels?: Partial<Record<ViewMode, string>>;
 }
 
 export interface HeaderRenderProps {
@@ -75,6 +83,7 @@ export interface GanttChartProps {
   showProgress?: boolean;
   darkMode?: boolean;
   locale?: string;
+  localeText?: GanttLocaleText;
   styles?: GanttStyles;
   viewMode?: ViewMode;
 
