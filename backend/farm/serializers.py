@@ -644,6 +644,11 @@ class CultureSerializer(serializers.ModelSerializer):
 
 class PlantingPlanSerializer(serializers.ModelSerializer):
     culture_name = serializers.CharField(source='culture.name', read_only=True)
+    culture_variety = serializers.CharField(source='culture.variety', read_only=True, allow_blank=True)
+    culture_display_color = serializers.CharField(source='culture.display_color', read_only=True, allow_blank=True)
+    culture_propagation_duration_days = serializers.IntegerField(source='culture.propagation_duration_days', read_only=True, allow_null=True)
+    culture_cultivation_type = serializers.CharField(source='culture.cultivation_type', read_only=True, allow_blank=True)
+    culture_cultivation_types = serializers.ListField(source='culture.cultivation_types', child=serializers.CharField(), read_only=True)
     bed_name = serializers.CharField(source='bed.name', read_only=True)
     plants_count = serializers.SerializerMethodField(read_only=True)
     note_attachment_count = serializers.IntegerField(read_only=True)

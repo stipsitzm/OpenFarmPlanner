@@ -164,6 +164,11 @@ export interface PlantingPlan {
   culture: number;
   cultivation_type?: CultivationType | '';
   culture_name?: string;
+  culture_variety?: string;
+  culture_display_color?: string;
+  culture_propagation_duration_days?: number | null;
+  culture_cultivation_type?: CultivationType | '';
+  culture_cultivation_types?: CultivationType[];
   bed: number;
   bed_name?: string;
   planting_date: string;

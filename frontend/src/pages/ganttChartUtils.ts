@@ -70,9 +70,14 @@ export function getDefaultCultureColor(cultureName: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
-function getCultureColor(cultures: Culture[], cultureId: number, cultureName: string): string {
+function getCultureColor(
+  cultures: Culture[],
+  cultureId: number,
+  cultureName: string,
+  fallbackColor?: string,
+): string {
   const culture = cultures.find((entry) => entry.id === cultureId);
-  return culture?.display_color || getDefaultCultureColor(cultureName);
+  return culture?.display_color || fallbackColor || getDefaultCultureColor(cultureName);
 }
 
 function getVisibleYearInterval(displayYear: number): { start: Date; end: Date } {
@@ -158,7 +163,7 @@ export function buildFieldOccupancyTaskGroups({
         bedPlans.forEach((plan) => {
           const plantingDate = parseDateString(plan.planting_date);
           const harvestStartDate = parseDateString(plan.harvest_date!);
-          const baseColor = getCultureColor(cultures, plan.culture, plan.culture_name || '');
+          const baseColor = getCultureColor(cultures, plan.culture, plan.culture_name || '', plan.culture_display_color);
           const harvestEndDate = plan.harvest_end_date
             ? parseDateString(plan.harvest_end_date)
             : harvestStartDate;
@@ -221,7 +226,7 @@ export function buildSeedlingTaskGroups({
   cultures,
   displayYear,
 }: BuildTaskGroupsArgs): GanttTaskGroup[] {
-  if (!plantingPlans.length || !cultures.length) {
+  if (!plantingPlans.length) {
     return [];
   }
 
@@ -262,19 +267,19 @@ export function buildSeedlingTaskGroups({
     }
 
     const culture = cultureById.get(plan.culture);
-    if (!culture) {
-      return;
-    }
-
-    const propagationDurationDays = culture.propagation_duration_days;
+    const propagationDurationDays = culture?.propagation_duration_days
+      ?? plan.culture_propagation_duration_days
+      ?? undefined;
     if (!propagationDurationDays || propagationDurationDays <= 0) {
       return;
     }
 
+    const cultureCultivationType = culture?.cultivation_type || plan.culture_cultivation_type || '';
+    const cultureCultivationTypes = culture?.cultivation_types || plan.culture_cultivation_types || [];
     const isPreCultivation = plan.cultivation_type === 'pre_cultivation'
       || (!plan.cultivation_type && (
-        culture.cultivation_type === 'pre_cultivation'
-        || culture.cultivation_types?.includes('pre_cultivation')
+        cultureCultivationType === 'pre_cultivation'
+        || cultureCultivationTypes.includes('pre_cultivation')
       ));
 
     if (!isPreCultivation) {
@@ -292,7 +297,7 @@ export function buildSeedlingTaskGroups({
     const bed = bedById.get(plan.bed);
     const field = bed ? fieldById.get(bed.field) : undefined;
     const location = field ? locationById.get(field.location) : undefined;
-    const cultureLabel = formatCultureLabel(culture, plan.culture_name);
+    const cultureLabel = formatCultureLabel(culture || { name: plan.culture_name || `Kultur ${plan.culture}`, variety: plan.culture_variety } as Culture, plan.culture_name);
     const groupId = `culture-${plan.culture}`;
     const group = groupsByCulture.get(groupId) ?? {
       id: groupId,
@@ -306,7 +311,7 @@ export function buildSeedlingTaskGroups({
       name: `Plan #${plan.id}`,
       startDate: propagationStartDate,
       endDate: transplantDate,
-      color: getCultureColor(cultures, plan.culture, cultureLabel),
+      color: getCultureColor(cultures, plan.culture, cultureLabel, plan.culture_display_color),
       percent: 100,
       plantingPlanId: plan.id,
       cultureName: cultureLabel,

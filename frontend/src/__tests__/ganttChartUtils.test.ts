@@ -46,6 +46,37 @@ describe('buildSeedlingTaskGroups', () => {
     expect(groups[0].tasks[0].targetLocationName).toBe('Hof');
   });
 
+
+
+  it('falls back to planting plan payload when the culture list is incomplete', () => {
+    const groups = buildSeedlingTaskGroups({
+      locations,
+      fields,
+      beds,
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [
+        {
+          id: 9,
+          culture: 77,
+          culture_name: 'Salat',
+          culture_variety: 'Bijella',
+          culture_display_color: '#00aa44',
+          culture_propagation_duration_days: 25,
+          culture_cultivation_types: ['pre_cultivation', 'direct_sowing'],
+          bed: 100,
+          bed_name: 'Beet A',
+          planting_date: '2026-05-10',
+        },
+      ],
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].name).toBe('Salat (Bijella)');
+    expect(groups[0].tasks[0].color).toBe('#00aa44');
+    expect(groups[0].tasks[0].startDate.toISOString()).toContain('2026-04-15');
+  });
+
   it('ignores direct sowings and incomplete propagation data', () => {
     const groups = buildSeedlingTaskGroups({
       locations,
