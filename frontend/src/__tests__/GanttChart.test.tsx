@@ -118,8 +118,8 @@ describe('GanttChartPage', () => {
     await waitFor(() => expect(screen.getByText('Jungpflanzen')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('tab', { name: 'Jungpflanzen' }));
 
-    await waitFor(() => expect(screen.getByText('Tomate')).toBeInTheDocument());
-    expect(screen.getByText('Plan #11')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText('Tomate').length).toBeGreaterThan(0));
+    expect(screen.queryByText('Plan #11')).not.toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   });
 });

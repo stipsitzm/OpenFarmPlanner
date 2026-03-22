@@ -42,6 +42,8 @@ import type { CommandSpec } from '../commands/types';
 import {
   buildFieldOccupancyTaskGroups,
   buildSeedlingTaskGroups,
+  buildSeedlingTooltipDetails,
+  formatSeedlingTooltipTitle,
   parseDateString,
   type GanttTask,
   type GanttTaskGroup,
@@ -68,10 +70,6 @@ function formatDateToAPI(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-function formatDateForTooltip(date: Date): string {
-  return date.toLocaleDateString('de-DE');
 }
 
 function GanttChartPage(): React.ReactElement {
@@ -335,39 +333,61 @@ function GanttChartPage(): React.ReactElement {
             showProgress={false}
             darkMode={false}
             onTaskUpdate={calendarMode === 'occupancy' ? handleTaskUpdate : undefined}
-            renderTooltip={calendarMode === 'seedlings'
-              ? ({ task }: { task: GanttTask }) => (
-                  <Box sx={{ p: 1 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                      {task.cultureName || task.name}
-                    </Typography>
-                    <Typography variant="body2">{t('ganttChart:tooltip.plan')}: #{task.plantingPlanId}</Typography>
-                    {task.propagationStartDate ? (
-                      <Typography variant="body2">
-                        {t('ganttChart:tooltip.propagationStart')}: {formatDateForTooltip(task.propagationStartDate)}
+            renderTask={calendarMode === 'seedlings'
+              ? ({ task, leftPx, widthPx, topPx }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
+                  <Tooltip
+                    title={(
+                      <Box sx={{ p: 0.5 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.75 }}>
+                          {formatSeedlingTooltipTitle(task)}
+                        </Typography>
+                        {buildSeedlingTooltipDetails(task).map((detail) => (
+                          <Typography key={`${task.id}-${detail.labelKey}`} variant="body2" sx={{ display: 'block' }}>
+                            {t(`ganttChart:tooltip.${detail.labelKey}`)}: {detail.labelKey === 'propagationDuration'
+                              ? `${detail.value} ${t('ganttChart:days')}`
+                              : detail.value}
+                          </Typography>
+                        ))}
+                        {typeof task.targetAreaUsage === 'number' ? (
+                          <Typography variant="body2" sx={{ display: 'block' }}>
+                            {t('ganttChart:tooltip.areaUsage')}: {task.targetAreaUsage} m²
+                          </Typography>
+                        ) : null}
+                      </Box>
+                    )}
+                    slotProps={{
+                      popper: {
+                        disablePortal: false,
+                        sx: { zIndex: 2000 },
+                      },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        left: `${leftPx}px`,
+                        top: `${topPx}px`,
+                        width: `${widthPx}px`,
+                        minWidth: `${widthPx}px`,
+                        height: 26,
+                        px: 1,
+                        borderRadius: 1,
+                        backgroundColor: task.color || '#3b82f6',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        textOverflow: 'ellipsis',
+                        boxSizing: 'border-box',
+                        cursor: 'default',
+                      }}
+                    >
+                      <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {task.name}
                       </Typography>
-                    ) : null}
-                    {task.transplantDate ? (
-                      <Typography variant="body2">
-                        {t('ganttChart:tooltip.transplantDate')}: {formatDateForTooltip(task.transplantDate)}
-                      </Typography>
-                    ) : null}
-                    {typeof task.propagationDurationDays === 'number' ? (
-                      <Typography variant="body2">
-                        {t('ganttChart:tooltip.propagationDuration')}: {task.propagationDurationDays} {t('ganttChart:days')}
-                      </Typography>
-                    ) : null}
-                    {task.targetBedName ? (
-                      <Typography variant="body2">
-                        {t('ganttChart:tooltip.targetBed')}: {task.targetBedName}
-                      </Typography>
-                    ) : null}
-                    {typeof task.targetAreaUsage === 'number' ? (
-                      <Typography variant="body2">
-                        {t('ganttChart:tooltip.areaUsage')}: {task.targetAreaUsage} m²
-                      </Typography>
-                    ) : null}
-                  </Box>
+                    </Box>
+                  </Tooltip>
                 )
               : undefined}
           />

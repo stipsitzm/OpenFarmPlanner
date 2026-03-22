@@ -1,11 +1,50 @@
 import { describe, expect, it } from 'vitest';
-import { buildSeedlingTaskGroups } from '../pages/ganttChartUtils';
+import { buildSeedlingTaskGroups, buildSeedlingTooltipDetails, formatCultureDisplayLabel } from '../pages/ganttChartUtils';
 
 const locations = [{ id: 1, name: 'Hof' }];
 const fields = [{ id: 10, name: 'Nordfeld', location: 1 }];
 const beds = [{ id: 100, name: 'Beet A', field: 10 }];
 
 describe('buildSeedlingTaskGroups', () => {
+
+  it('formats the visible label as culture and variety', () => {
+    expect(formatCultureDisplayLabel('Tomate', 'Resibella')).toBe('Tomate (Resibella)');
+    expect(formatCultureDisplayLabel('Tomate', '')).toBe('Tomate');
+  });
+
+  it('builds tooltip details only for available values', () => {
+    const details = buildSeedlingTooltipDetails({
+      plantingPlanId: 12,
+      targetLocationName: 'Hof',
+      targetFieldName: 'Nordfeld',
+      targetBedName: 'Beet A',
+      propagationStartDate: new Date(2026, 3, 15),
+      transplantDate: new Date(2026, 4, 10),
+      propagationDurationDays: 25,
+      quantity: 40,
+      seedRequirementSummary: '0.045 / m²',
+      notes: 'Warm kultivieren',
+    });
+
+    expect(details).toEqual([
+      { labelKey: 'plan', value: '#12' },
+      { labelKey: 'location', value: 'Hof / Nordfeld / Beet A' },
+      { labelKey: 'propagationStart', value: '15.4.2026' },
+      { labelKey: 'transplantDate', value: '10.5.2026' },
+      { labelKey: 'propagationDuration', value: '25' },
+      { labelKey: 'quantity', value: '40' },
+      { labelKey: 'seedRequirement', value: '0.045 / m²' },
+      { labelKey: 'notes', value: 'Warm kultivieren' },
+    ]);
+
+    const reducedDetails = buildSeedlingTooltipDetails({
+      plantingPlanId: 12,
+      notes: '   ',
+    });
+
+    expect(reducedDetails).toEqual([{ labelKey: 'plan', value: '#12' }]);
+  });
+
   it('builds propagation windows grouped by culture', () => {
     const groups = buildSeedlingTaskGroups({
       locations,

@@ -42,9 +42,13 @@
     "areaUsage": "Flächen",
     "plan": "Anbauplan",
     "propagationStart": "Anzuchtbeginn",
-    "transplantDate": "Pflanzdatum",
+    "transplantDate": "Auspflanzung",
     "propagationDuration": "Anzuchtdauer",
-    "targetBed": "Zielbeet"
+    "targetBed": "Zielbeet",
+    "location": "Standort",
+    "quantity": "Menge",
+    "seedRequirement": "Saatgutbedarf",
+    "notes": "Hinweis"
   },
   "noData": "Keine Anbaupläne vorhanden",
   "viewMode": "Ansichtsmodus",
