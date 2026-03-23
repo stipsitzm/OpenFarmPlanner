@@ -53,8 +53,13 @@
   "viewMode": "Ansichtsmodus",
   "editMode": "Bearbeitungsmodus",
   "viewSelectorAriaLabel": "Kalenderansicht auswählen",
+  "chartLocaleText": {
+    "title": "Feldplanung",
+    "resources": "Beete",
+    "resourcesSeedlings": "Kulturen"
+  },
   "days": "Tage",
-  "yieldDistributionTitle": "Ertragsverteilung (Wochenbasis)",
+  "yieldDistributionTitle": "Ertragsverteilung",
   "noYieldData": "Keine erwarteten Erträge für dieses Jahr vorhanden.",
   "modes": {
     "occupancy": "Feldbelegung",

@@ -335,6 +335,13 @@ function GanttChartPage(): React.ReactElement {
         ) : (
           <GanttChart
             tasks={activeTaskGroups}
+            locale="de-DE"
+            localeText={{
+              resources: calendarMode === 'seedlings'
+                ? t('ganttChart:chartLocaleText.resourcesSeedlings')
+                : t('ganttChart:chartLocaleText.resources'),
+            }}
+            title={t('ganttChart:chartLocaleText.title')}
             viewMode={ViewMode.MONTH}
             startDate={startDate}
             endDate={endDate}
