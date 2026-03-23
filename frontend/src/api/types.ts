@@ -29,6 +29,10 @@ export interface SeedRateByCultivationEntry {
 export type SeedRateByCultivation = Partial<Record<CultivationType, SeedRateByCultivationEntry>>;
 
 export interface Culture {
+  source_public_culture?: number | null;
+  source_public_version?: number | null;
+  origin_type?: 'manual' | 'imported';
+  is_modified_from_source?: boolean;
   thousand_kernel_weight_g?: number;
   package_size_g?: number; // deprecated, replaced by seed_packages
   seeding_requirement?: number;
@@ -75,6 +79,56 @@ export interface Culture {
   updated_at?: string;
 }
 
+
+
+
+export interface PublicCulture {
+  id: number;
+  status: 'published';
+  name: string;
+  variety?: string;
+  notes?: string;
+  seed_supplier?: string;
+  supplier_name?: string;
+  crop_family?: string;
+  nutrient_demand?: 'low' | 'medium' | 'high' | '';
+  cultivation_type?: CultivationType | '';
+  cultivation_types?: CultivationType[];
+  growth_duration_days?: number | null;
+  harvest_duration_days?: number | null;
+  propagation_duration_days?: number | null;
+  harvest_method?: 'per_plant' | 'per_sqm' | '';
+  expected_yield?: number | null;
+  allow_deviation_delivery_weeks?: boolean;
+  distance_within_row_m?: number | null;
+  row_spacing_m?: number | null;
+  sowing_depth_m?: number | null;
+  seed_rate_value?: number | null;
+  seed_rate_unit?: SeedRateUnit | null;
+  seed_rate_by_cultivation?: SeedRateByCultivation | null;
+  sowing_calculation_safety_percent?: number | null;
+  thousand_kernel_weight_g?: number | null;
+  seeding_requirement?: number | null;
+  seeding_requirement_type?: 'per_sqm' | 'per_plant' | '';
+  display_color?: string;
+  seed_packages?: SeedPackage[];
+  version: number;
+  published_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  created_by_label?: string;
+  source_project_culture?: number | null;
+  source_project?: number | null;
+}
+
+export interface PublicCultureDuplicateCandidate {
+  id: number;
+  name: string;
+  variety?: string;
+  version: number;
+  published_at?: string | null;
+  created_by_label?: string;
+}
 
 export interface SeedDemand {
   culture_id: number;

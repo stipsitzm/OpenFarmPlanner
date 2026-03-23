@@ -11,10 +11,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n';
-import { cultureAPI, type Culture, type EnrichmentResult } from '../api/api';
-import type { CultivationType } from '../api/types';
+import { cultureAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
+import type { CultivationType, PublicCulture } from '../api/types';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
+import { PublicCultureLibraryDialog } from '../cultures/PublicCultureLibraryDialog';
 import {
   normalizeCultivationType,
   normalizeHarvestMethod,
@@ -50,6 +51,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
+import PublicIcon from '@mui/icons-material/Public';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
@@ -133,6 +135,12 @@ function Cultures(): React.ReactElement {
   const enrichmentLoadingRef = useRef(false);
   const enrichmentAbortControllerRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [publicLibraryOpen, setPublicLibraryOpen] = useState(false);
+  const [publicLibraryLoading, setPublicLibraryLoading] = useState(false);
+  const [publicLibraryError, setPublicLibraryError] = useState<string | null>(null);
+  const [publicCultures, setPublicCultures] = useState<PublicCulture[]>([]);
+  const [publicLibraryImportingId, setPublicLibraryImportingId] = useState<number | null>(null);
+  const [publishingCultureId, setPublishingCultureId] = useState<number | null>(null);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error' | 'info') => {
     setSnackbar({ open: true, message, severity });
@@ -335,6 +343,67 @@ function Cultures(): React.ReactElement {
     setImportSuccess(null);
     setImportPreviewResults([]);
     setImportFailedEntries([]);
+  };
+
+  const fetchPublicCultures = useCallback(async (query = '') => {
+    try {
+      setPublicLibraryLoading(true);
+      setPublicLibraryError(null);
+      const response = await publicCultureAPI.list(query ? { q: query } : undefined);
+      setPublicCultures(response.data.results);
+    } catch (error) {
+      console.error('Error fetching public cultures:', error);
+      setPublicLibraryError(t('library.loadError'));
+    } finally {
+      setPublicLibraryLoading(false);
+    }
+  }, [t]);
+
+  const handleOpenPublicLibrary = async () => {
+    handleImportMenuClose();
+    setPublicLibraryOpen(true);
+    await fetchPublicCultures();
+  };
+
+  const handleImportPublicCulture = async (publicCulture: PublicCulture) => {
+    try {
+      setPublicLibraryImportingId(publicCulture.id);
+      const response = await publicCultureAPI.importToProject(publicCulture.id);
+      await fetchCultures();
+      updateSelectedCultureId(response.data.id, 'internal');
+      setPublicLibraryOpen(false);
+      showSnackbar(t('library.importSuccess', { name: publicCulture.name }), 'success');
+    } catch (error) {
+      console.error('Error importing public culture:', error);
+      setPublicLibraryError(extractApiErrorMessage(error, t, t('library.importError')));
+    } finally {
+      setPublicLibraryImportingId(null);
+    }
+  };
+
+  const handlePublishCurrentCulture = async () => {
+    if (!selectedCulture?.id) {
+      return;
+    }
+
+    try {
+      setPublishingCultureId(selectedCulture.id);
+      const response = await cultureAPI.publishPublic(selectedCulture.id);
+      const duplicates = response.data.duplicates || [];
+      if (duplicates.length > 0) {
+        const duplicateNames = duplicates
+          .map((entry) => entry.variety ? `${entry.name} (${entry.variety})` : entry.name)
+          .join(', ');
+        showSnackbar(t('library.publishSuccessWithDuplicates', { name: selectedCulture.name, duplicates: duplicateNames }), 'info');
+      } else {
+        showSnackbar(t('library.publishSuccess', { name: selectedCulture.name }), 'success');
+      }
+    } catch (error) {
+      console.error('Error publishing culture:', error);
+      showSnackbar(extractApiErrorMessage(error, t, t('library.publishError')), 'error');
+    } finally {
+      setPublishingCultureId(null);
+    }
   };
 
   const handleImportFileTrigger = () => {
@@ -858,6 +927,9 @@ function Cultures(): React.ReactElement {
           <MenuItem aria-label="JSON importieren (Alt+I)" onClick={handleImportFileTrigger}>
             JSON importieren (Alt+I)
           </MenuItem>
+          <MenuItem aria-label={t('library.openButton')} onClick={() => void handleOpenPublicLibrary()}>
+            {t('library.openButton')}
+          </MenuItem>
         </Menu>
         <input
           ref={fileInputRef}
@@ -976,6 +1048,14 @@ function Cultures(): React.ReactElement {
               </Button>
             </span>
           </Tooltip>
+          <Button
+            variant="outlined"
+            startIcon={<PublicIcon />}
+            onClick={() => void handlePublishCurrentCulture()}
+            disabled={!selectedCulture || publishingCultureId === selectedCulture?.id}
+          >
+            {publishingCultureId === selectedCulture?.id ? t('library.publishing') : t('library.publishButton')}
+          </Button>
           <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
             Versionen
           </Button>
@@ -995,6 +1075,21 @@ function Cultures(): React.ReactElement {
           </Tooltip>
           <Box sx={{ flexGrow: 1 }} />
       </Box>
+
+      <PublicCultureLibraryDialog
+        open={publicLibraryOpen}
+        loading={publicLibraryLoading}
+        error={publicLibraryError}
+        cultures={publicCultures}
+        importingId={publicLibraryImportingId}
+        onClose={() => setPublicLibraryOpen(false)}
+        onSearch={(query) => {
+          void fetchPublicCultures(query);
+        }}
+        onImport={(culture) => {
+          void handleImportPublicCulture(culture);
+        }}
+      />
 
       <Dialog open={Boolean(deleteDialogCulture)} onClose={() => setDeleteDialogCulture(null)}>
         <DialogTitle>{t('buttons.delete')}</DialogTitle>

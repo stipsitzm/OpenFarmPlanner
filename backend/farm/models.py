@@ -500,6 +500,12 @@ class ActiveCultureManager(models.Manager):
 
 class Culture(TimestampedModel):
     """A crop or plant type with growth, harvest, and planning metadata."""
+    ORIGIN_MANUAL = 'manual'
+    ORIGIN_IMPORTED = 'imported'
+    ORIGIN_TYPE_CHOICES = [
+        (ORIGIN_MANUAL, 'Manual'),
+        (ORIGIN_IMPORTED, 'Imported'),
+    ]
     NUTRIENT_DEMAND_CHOICES = [
         ('low', 'Low'),
         ('medium', 'Medium'),
@@ -548,6 +554,10 @@ class Culture(TimestampedModel):
     )
     supplier_product_url = models.URLField(null=True, blank=True, help_text='Supplier product page URL for enrichment')
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='cultures', null=True, blank=True)
+    source_public_culture = models.ForeignKey('PublicCulture', null=True, blank=True, on_delete=models.SET_NULL, related_name='imported_cultures')
+    source_public_version = models.IntegerField(null=True, blank=True)
+    origin_type = models.CharField(max_length=20, choices=ORIGIN_TYPE_CHOICES, default=ORIGIN_MANUAL)
+    is_modified_from_source = models.BooleanField(default=False)
     
     # Normalized fields for matching and deduplication.
     name_normalized = models.CharField(
@@ -773,6 +783,18 @@ class Culture(TimestampedModel):
         if self.pk:
             previous = Culture.all_objects.filter(pk=self.pk).values().first()
 
+        if previous and previous.get('source_public_culture_id') and not previous.get('is_modified_from_source'):
+            tracked_fields = {
+                'name', 'variety', 'notes', 'seed_supplier', 'crop_family', 'nutrient_demand', 'cultivation_types',
+                'cultivation_type', 'growth_duration_days', 'harvest_duration_days', 'propagation_duration_days',
+                'harvest_method', 'expected_yield', 'allow_deviation_delivery_weeks', 'distance_within_row_m',
+                'row_spacing_m', 'sowing_depth_m', 'seed_rate_value', 'seed_rate_unit', 'seed_rate_by_cultivation',
+                'sowing_calculation_safety_percent', 'thousand_kernel_weight_g', 'seeding_requirement',
+                'seeding_requirement_type', 'display_color', 'supplier_id', 'supplier_product_url', 'image_file_id',
+            }
+            if any(previous.get(field) != getattr(self, field) for field in tracked_fields):
+                self.is_modified_from_source = True
+
         # Generate display color on creation if not set.
         if not self.pk and not self.display_color:
             self.display_color = self._generate_display_color()
@@ -899,6 +921,66 @@ class Culture(TimestampedModel):
                 )
             )
         ]
+
+
+class PublicCulture(TimestampedModel):
+    """Published culture template in the shared public library."""
+
+    STATUS_PUBLISHED = 'published'
+    STATUS_CHOICES = [
+        (STATUS_PUBLISHED, 'Published'),
+    ]
+
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='public_cultures')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PUBLISHED)
+    name = models.CharField(max_length=200)
+    variety = models.CharField(max_length=200, blank=True)
+    notes = models.TextField(blank=True)
+    seed_supplier = models.CharField(max_length=200, blank=True)
+    supplier_name = models.CharField(max_length=200, blank=True)
+    source_project_culture = models.ForeignKey('Culture', null=True, blank=True, on_delete=models.SET_NULL, related_name='published_public_cultures')
+    source_project = models.ForeignKey(Project, null=True, blank=True, on_delete=models.SET_NULL, related_name='published_cultures')
+    version = models.IntegerField(default=1)
+    published_at = models.DateTimeField(null=True, blank=True)
+    name_normalized = models.CharField(max_length=200, db_index=True, editable=False)
+    variety_normalized = models.CharField(max_length=200, blank=True, db_index=True, editable=False)
+    crop_family = models.CharField(max_length=200, blank=True)
+    nutrient_demand = models.CharField(max_length=20, choices=Culture.NUTRIENT_DEMAND_CHOICES, blank=True)
+    cultivation_types = models.JSONField(default=list, blank=True)
+    cultivation_type = models.CharField(max_length=30, choices=Culture.CULTIVATION_TYPE_CHOICES, blank=True)
+    growth_duration_days = models.IntegerField(null=True, blank=True)
+    harvest_duration_days = models.IntegerField(null=True, blank=True)
+    propagation_duration_days = models.IntegerField(null=True, blank=True)
+    harvest_method = models.CharField(max_length=20, choices=Culture.HARVEST_METHOD_CHOICES, blank=True)
+    expected_yield = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    allow_deviation_delivery_weeks = models.BooleanField(default=False)
+    distance_within_row_m = models.FloatField(null=True, blank=True)
+    row_spacing_m = models.FloatField(null=True, blank=True)
+    sowing_depth_m = models.FloatField(null=True, blank=True)
+    seed_rate_value = models.FloatField(null=True, blank=True)
+    seed_rate_unit = models.CharField(max_length=30, null=True, blank=True)
+    seed_rate_by_cultivation = models.JSONField(null=True, blank=True)
+    sowing_calculation_safety_percent = models.FloatField(null=True, blank=True)
+    thousand_kernel_weight_g = models.FloatField(null=True, blank=True)
+    seeding_requirement = models.FloatField(null=True, blank=True)
+    seeding_requirement_type = models.CharField(max_length=30, blank=True)
+    display_color = models.CharField(max_length=7, blank=True)
+    seed_packages = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        ordering = ['name', 'variety']
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        from .utils import normalize_text
+
+        self.name_normalized = normalize_text(self.name) or ''
+        self.variety_normalized = normalize_text(self.variety) or ''
+        if self.status == self.STATUS_PUBLISHED and self.published_at is None:
+            self.published_at = timezone.now()
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.variety})" if self.variety else self.name
 
 
 class EnrichmentAccountingRun(models.Model):

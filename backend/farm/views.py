@@ -28,7 +28,7 @@ from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 from django.utils.dateparse import parse_date
 from django.utils.translation import gettext as _
-from .models import Location, Field, Bed, BedLayout, FieldLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
+from .models import Location, Field, Bed, BedLayout, FieldLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, PublicCulture, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
 from .project_context import get_active_project_or_400, require_project_admin, resolve_project_for_user
 from .serializers import (
     LocationSerializer,
@@ -41,6 +41,7 @@ from .serializers import (
     TaskSerializer,
     SupplierSerializer,
     SeedDemandSerializer,
+    PublicCultureSerializer,
     NoteAttachmentSerializer,
     CultureHistoryEntrySerializer,
     CultureRestoreSerializer,
@@ -75,6 +76,7 @@ from .image_processing import (
 )
 from .services.enrichment import enrich_culture, EnrichmentError
 from .services.seed_packages import PackageOption, compute_seed_package_suggestion
+from .services.public_cultures import import_public_culture_into_project, publish_culture_to_public_library
 
 
 logger = logging.getLogger(__name__)
@@ -1051,6 +1053,29 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
         self.create_project_revision(f"Culture restored #{culture.pk}")
         return Response(self.get_serializer(culture).data, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['post'], url_path='publish-public')
+    def publish_public(self, request, pk=None):
+        culture = self.get_object()
+        if not culture.name.strip():
+            return Response({'detail': 'Name is required for publishing.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        public_culture, duplicates = publish_culture_to_public_library(culture=culture, user=request.user)
+        serializer = PublicCultureSerializer(public_culture)
+        return Response({
+            'public_culture': serializer.data,
+            'duplicates': [
+                {
+                    'id': item.id,
+                    'name': item.name,
+                    'variety': item.variety,
+                    'version': item.version,
+                    'published_at': item.published_at,
+                    'created_by_label': item.created_by_label,
+                }
+                for item in duplicates
+            ],
+        }, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=['post'], url_path='enrich')
     def enrich(self, request, pk=None):
         """Create AI suggestions for one culture."""
@@ -1176,6 +1201,36 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
         }, status=status.HTTP_200_OK)
 
 
+
+
+class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only public library for published cultures with project import action."""
+
+    queryset = PublicCulture.objects.filter(status=PublicCulture.STATUS_PUBLISHED).order_by('name', 'variety')
+    serializer_class = PublicCultureSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        query = (self.request.query_params.get('q') or '').strip()
+        name = (self.request.query_params.get('name') or '').strip()
+        variety = (self.request.query_params.get('variety') or '').strip()
+
+        if query:
+            queryset = queryset.filter(Q(name__icontains=query) | Q(variety__icontains=query))
+        if name:
+            queryset = queryset.filter(name__icontains=name)
+        if variety:
+            queryset = queryset.filter(variety__icontains=variety)
+        return queryset
+
+    @action(detail=True, methods=['post'], url_path='import')
+    def import_to_project(self, request, pk=None):
+        public_culture = self.get_object()
+        request.active_project = get_active_project_or_400(request)
+        imported = import_public_culture_into_project(public_culture=public_culture, project=request.active_project)
+        serializer = CultureSerializer(imported)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class SeedPackageViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
@@ -1602,8 +1657,9 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
         culture_ids = [row['culture_id'] for row in rows]
         package_map: dict[int, list[SeedPackage]] = defaultdict(list)
         for package in SeedPackage.objects.filter(
-            project=request.active_project,
             culture_id__in=culture_ids,
+        ).filter(
+            Q(project=request.active_project) | Q(project__isnull=True),
         ).order_by('size_unit', 'size_value'):
             package_map[package.culture_id].append(package)
 
