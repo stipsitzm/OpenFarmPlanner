@@ -16,7 +16,8 @@
     "mutation:test": "stryker run",
     "mutation:report": "open mutation-report/index.html",
     "lint:circular": "madge --circular src",
-    "quality:frontend": "npm run lint && npm run lint:circular"
+    "quality:frontend": "npm run lint && npm run lint:circular",
+    "postinstall": "if [ ! -f node_modules/react-modern-gantt/dist/index.css ]; then npm --prefix node_modules/react-modern-gantt install --no-audit --no-fund && npm --prefix node_modules/react-modern-gantt run build; fi"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -32,7 +33,7 @@
     "react-i18next": "^16.4.0",
     "react-konva": "^19.2.3",
     "react-markdown": "^10.1.0",
-    "react-modern-gantt": "^0.6.1",
+    "react-modern-gantt": "https://codeload.github.com/stipsitzm/React-Modern-Gantt/tar.gz/refs/heads/master",
     "react-router-dom": "^7.9.6",
     "remark-gfm": "^4.0.1"
   },

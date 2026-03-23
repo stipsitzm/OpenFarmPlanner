@@ -12,6 +12,7 @@ export interface GanttTask {
   cultureName?: string;
   cultureVariety?: string;
   areaUsage?: number;
+  notes?: string;
   harvestStartDate?: Date;
   harvestEndDate?: Date;
   propagationStartDate?: Date;
