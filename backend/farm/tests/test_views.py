@@ -369,6 +369,36 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(len(response.data['seed_packages']), 1)
         self.assertEqual(response.data['seed_packages'][0]['size_unit'], 'g')
         self.assertEqual(float(response.data['seed_packages'][0]['size_value']), 25.0)
+        self.assertEqual(SeedPackage.objects.get(culture=culture).project, self.project)
+
+    def test_seed_demand_uses_seed_packages_without_project_for_existing_cultures(self):
+        """Legacy seed packages without a project should still appear in seed demand."""
+        culture = Culture.objects.create(
+            name='Legacy Bean',
+            variety='Classic',
+            growth_duration_days=70,
+            harvest_duration_days=14,
+            harvest_method='per_plant',
+            seed_rate_value=5,
+            seed_rate_unit='g_per_m2',
+            project=self.project,
+        )
+        SeedPackage.objects.create(culture=culture, size_value='25.0', size_unit='g', project=None)
+        PlantingPlan.objects.create(
+            culture=culture,
+            bed=self.bed,
+            planting_date=date(2025, 3, 1),
+            area_usage_sqm=5,
+            project=self.project,
+        )
+
+        response = self.client.get('/openfarmplanner/api/seed-demand/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        row = next(item for item in response.data['results'] if item['culture_name'] == 'Legacy Bean')
+        self.assertEqual(row['seed_packages'], [{'size_value': 25.0, 'size_unit': 'g'}])
+        self.assertEqual(row['package_suggestion']['pack_count'], 1)
+
 
     def test_bed_list(self):
         response = self.client.get('/openfarmplanner/api/beds/')

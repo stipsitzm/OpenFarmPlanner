@@ -451,6 +451,7 @@ class CultureSerializer(serializers.ModelSerializer):
                 if isinstance(package_data, dict):
                     package_data = dict(package_data)
                     package_data.pop('culture', None)
+                    package_data.setdefault('project', culture.project)
                     SeedPackage.objects.create(culture=culture, **package_data)
         return culture
 
@@ -464,6 +465,7 @@ class CultureSerializer(serializers.ModelSerializer):
                     if isinstance(package_data, dict):
                         package_data = dict(package_data)
                         package_data.pop('culture', None)
+                        package_data.setdefault('project', culture.project)
                         SeedPackage.objects.create(culture=culture, **package_data)
         return culture
 

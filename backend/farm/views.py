@@ -1602,8 +1602,9 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
         culture_ids = [row['culture_id'] for row in rows]
         package_map: dict[int, list[SeedPackage]] = defaultdict(list)
         for package in SeedPackage.objects.filter(
-            project=request.active_project,
             culture_id__in=culture_ids,
+        ).filter(
+            Q(project=request.active_project) | Q(project__isnull=True),
         ).order_by('size_unit', 'size_value'):
             package_map[package.culture_id].append(package)
 
