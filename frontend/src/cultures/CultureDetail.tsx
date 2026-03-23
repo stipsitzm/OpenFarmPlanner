@@ -119,7 +119,7 @@ export function CultureDetail({
             {/* Header with crop name and badge */}
             <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                <Box>
+                <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="h4" component="h2">
                     {selectedCulture.name}
                   </Typography>
@@ -128,6 +128,16 @@ export function CultureDetail({
                       {selectedCulture.variety}
                     </Typography>
                   )}
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                    <Chip
+                      size="small"
+                      color={selectedCulture.origin_type === 'imported' ? 'secondary' : 'default'}
+                      label={selectedCulture.origin_type === 'imported' ? t('library.badges.imported') : t('library.badges.local')}
+                    />
+                    {selectedCulture.is_modified_from_source ? (
+                      <Chip size="small" color="warning" label={t('library.badges.modified')} />
+                    ) : null}
+                  </Box>
                 </Box>
                 {selectedCulture.display_color && (
                   <Box

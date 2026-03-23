@@ -26,6 +26,7 @@ from .views import (
     ProjectMembersView,
     ProjectInvitationView,
     PublicProjectInvitationView,
+    PublicCultureViewSet,
     PendingProjectInvitationView,
     AcceptProjectInvitationView,
     AcceptProjectInvitationByTokenView,
@@ -39,6 +40,7 @@ router.register(r'suppliers', SupplierViewSet)
 router.register(r'fields', FieldViewSet)
 router.register(r'beds', BedViewSet)
 router.register(r'cultures', CultureViewSet)
+router.register(r'public-cultures', PublicCultureViewSet, basename='public-cultures')
 router.register(r'seed-packages', SeedPackageViewSet)
 router.register(r'planting-plans', PlantingPlanViewSet)
 router.register(r'tasks', TaskViewSet)
