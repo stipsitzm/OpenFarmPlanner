@@ -1442,15 +1442,18 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         import_response = self.client.post(f'/openfarmplanner/api/public-cultures/{public_culture.id}/import/', {}, format='json')
         imported_id = import_response.data['id']
 
+        detail_response = self.client.get(f'/openfarmplanner/api/cultures/{imported_id}/')
+        payload = dict(detail_response.data)
+        payload['growth_duration_days'] = 120
+        payload['cultivation_types'] = ['pre_cultivation']
+        payload['cultivation_type'] = 'pre_cultivation'
+        payload['supplier'] = None
+        payload['supplier_id'] = None
+        payload.pop('image_file', None)
+
         update_response = self.client.put(
             f'/openfarmplanner/api/cultures/{imported_id}/',
-            {
-                'name': 'Carrot',
-                'variety': 'Mokum',
-                'growth_duration_days': 120,
-                'harvest_duration_days': 14,
-                'origin_type': 'imported',
-            },
+            payload,
             format='json',
         )
 
@@ -1459,6 +1462,36 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         imported = Culture.objects.get(id=imported_id)
         self.assertEqual(public_culture.growth_duration_days, 90)
         self.assertEqual(imported.growth_duration_days, 120)
+        self.assertEqual(imported.origin_type, Culture.ORIGIN_IMPORTED)
+        self.assertTrue(imported.is_modified_from_source)
+
+    def test_editing_imported_culture_normalizes_long_origin_type_without_db_error(self):
+        public_culture = PublicCulture.objects.create(
+            name='Pepper',
+            variety='Red Flame',
+            status='published',
+            created_by=self.user,
+            growth_duration_days=85,
+            harvest_duration_days=20,
+        )
+        import_response = self.client.post(f'/openfarmplanner/api/public-cultures/{public_culture.id}/import/', {}, format='json')
+        imported_id = import_response.data['id']
+
+        detail_response = self.client.get(f'/openfarmplanner/api/cultures/{imported_id}/')
+        payload = dict(detail_response.data)
+        payload['notes'] = 'Changed locally'
+        payload['cultivation_types'] = ['pre_cultivation']
+        payload['cultivation_type'] = 'pre_cultivation'
+        payload['origin_type'] = 'imported_from_public_library_template'
+        payload['supplier'] = None
+        payload['supplier_id'] = None
+        payload.pop('image_file', None)
+
+        update_response = self.client.put(f'/openfarmplanner/api/cultures/{imported_id}/', payload, format='json')
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        imported = Culture.objects.get(id=imported_id)
+        self.assertEqual(imported.origin_type, Culture.ORIGIN_IMPORTED)
         self.assertTrue(imported.is_modified_from_source)
 
     def test_public_library_list_requires_authentication(self):

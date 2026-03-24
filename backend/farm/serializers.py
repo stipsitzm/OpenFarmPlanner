@@ -402,6 +402,7 @@ class CultureSerializer(serializers.ModelSerializer):
         help_text='Supplier name for get-or-create (alternative to supplier_id)'
     )
 
+    origin_type = serializers.CharField(required=False, allow_blank=True)
     seed_rate_value = serializers.FloatField(
         required=False,
         allow_null=True,
@@ -522,6 +523,19 @@ class CultureSerializer(serializers.ModelSerializer):
                         package_data.setdefault('project', culture.project)
                         SeedPackage.objects.create(culture=culture, **package_data)
         return culture
+
+    def validate_origin_type(self, value):
+        if value in {None, ''}:
+            if self.instance and self.instance.source_public_culture_id:
+                return Culture.ORIGIN_IMPORTED
+            return Culture.ORIGIN_MANUAL
+
+        normalized = str(value).strip().lower()
+        if normalized == Culture.ORIGIN_MANUAL:
+            return Culture.ORIGIN_MANUAL
+        if normalized == Culture.ORIGIN_IMPORTED or normalized.startswith('import'):
+            return Culture.ORIGIN_IMPORTED
+        return Culture.ORIGIN_MANUAL
 
     def validate_seed_rate_unit(self, value):
         """Normalize legacy seed rate unit values and validate supported units."""

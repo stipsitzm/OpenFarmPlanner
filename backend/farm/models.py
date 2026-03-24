@@ -556,7 +556,7 @@ class Culture(TimestampedModel):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='cultures', null=True, blank=True)
     source_public_culture = models.ForeignKey('PublicCulture', null=True, blank=True, on_delete=models.SET_NULL, related_name='imported_cultures')
     source_public_version = models.IntegerField(null=True, blank=True)
-    origin_type = models.CharField(max_length=20, choices=ORIGIN_TYPE_CHOICES, default=ORIGIN_MANUAL)
+    origin_type = models.CharField(max_length=50, choices=ORIGIN_TYPE_CHOICES, default=ORIGIN_MANUAL)
     is_modified_from_source = models.BooleanField(default=False)
     
     # Normalized fields for matching and deduplication.
@@ -932,7 +932,7 @@ class PublicCulture(TimestampedModel):
     ]
 
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='public_cultures')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PUBLISHED)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default=STATUS_PUBLISHED)
     name = models.CharField(max_length=200)
     variety = models.CharField(max_length=200, blank=True)
     notes = models.TextField(blank=True)
