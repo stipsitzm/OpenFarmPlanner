@@ -20,6 +20,7 @@ from .models import (
     Supplier,
     Task,
     SeedPackage,
+    PublicCulture,
     Project,
     ProjectMembership,
     ProjectInvitation,
@@ -295,6 +296,59 @@ class SeedPackageSerializer(serializers.ModelSerializer):
         return attrs
 
 
+
+
+class PublicCultureSerializer(serializers.ModelSerializer):
+    created_by_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PublicCulture
+        fields = [
+            'id',
+            'status',
+            'name',
+            'variety',
+            'notes',
+            'seed_supplier',
+            'supplier_name',
+            'crop_family',
+            'nutrient_demand',
+            'cultivation_types',
+            'cultivation_type',
+            'growth_duration_days',
+            'harvest_duration_days',
+            'propagation_duration_days',
+            'harvest_method',
+            'expected_yield',
+            'allow_deviation_delivery_weeks',
+            'distance_within_row_m',
+            'row_spacing_m',
+            'sowing_depth_m',
+            'seed_rate_value',
+            'seed_rate_unit',
+            'seed_rate_by_cultivation',
+            'sowing_calculation_safety_percent',
+            'thousand_kernel_weight_g',
+            'seeding_requirement',
+            'seeding_requirement_type',
+            'display_color',
+            'seed_packages',
+            'version',
+            'published_at',
+            'created_at',
+            'updated_at',
+            'created_by_label',
+            'source_project_culture',
+            'source_project',
+        ]
+        read_only_fields = fields
+
+    def get_created_by_label(self, obj: PublicCulture) -> str:
+        if not obj.created_by:
+            return ''
+        return obj.created_by.get_full_name().strip() or obj.created_by.username or obj.created_by.email or ''
+
+
 class CultureSerializer(serializers.ModelSerializer):
     """Serializer for culture data with unit conversion and supplier helpers."""
     variety = serializers.CharField(
@@ -348,6 +402,7 @@ class CultureSerializer(serializers.ModelSerializer):
         help_text='Supplier name for get-or-create (alternative to supplier_id)'
     )
 
+    origin_type = serializers.CharField(required=False, allow_blank=True)
     seed_rate_value = serializers.FloatField(
         required=False,
         allow_null=True,
@@ -451,6 +506,7 @@ class CultureSerializer(serializers.ModelSerializer):
                 if isinstance(package_data, dict):
                     package_data = dict(package_data)
                     package_data.pop('culture', None)
+                    package_data.setdefault('project', culture.project)
                     SeedPackage.objects.create(culture=culture, **package_data)
         return culture
 
@@ -464,8 +520,22 @@ class CultureSerializer(serializers.ModelSerializer):
                     if isinstance(package_data, dict):
                         package_data = dict(package_data)
                         package_data.pop('culture', None)
+                        package_data.setdefault('project', culture.project)
                         SeedPackage.objects.create(culture=culture, **package_data)
         return culture
+
+    def validate_origin_type(self, value):
+        if value in {None, ''}:
+            if self.instance and self.instance.source_public_culture_id:
+                return Culture.ORIGIN_IMPORTED
+            return Culture.ORIGIN_MANUAL
+
+        normalized = str(value).strip().lower()
+        if normalized == Culture.ORIGIN_MANUAL:
+            return Culture.ORIGIN_MANUAL
+        if normalized == Culture.ORIGIN_IMPORTED or normalized.startswith('import'):
+            return Culture.ORIGIN_IMPORTED
+        return Culture.ORIGIN_MANUAL
 
     def validate_seed_rate_unit(self, value):
         """Normalize legacy seed rate unit values and validate supported units."""

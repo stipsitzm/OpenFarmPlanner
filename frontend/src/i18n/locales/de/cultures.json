@@ -209,5 +209,29 @@
       "network": "Netzwerkfehler beim Import.",
       "someFailures": "{{failed}} Einträge konnten nicht importiert werden."
     }
+  },
+  "library": {
+    "openButton": "Öffentliche Kulturbibliothek",
+    "dialogTitle": "Öffentliche Kulturbibliothek",
+    "searchLabel": "Öffentliche Kulturen durchsuchen",
+    "selectPrompt": "Wählen Sie eine öffentliche Kultur aus, um Details und Import anzuzeigen.",
+    "empty": "Keine öffentlichen Kulturen gefunden.",
+    "importButton": "In Projekt importieren",
+    "importing": "Importiere…",
+    "importSuccess": "„{{name}}“ wurde in dieses Projekt importiert.",
+    "importError": "Die öffentliche Kultur konnte nicht importiert werden.",
+    "publishButton": "Öffentlich veröffentlichen",
+    "publishing": "Veröffentliche…",
+    "publishSuccess": "„{{name}}“ wurde in die öffentliche Bibliothek veröffentlicht.",
+    "publishSuccessWithDuplicates": "„{{name}}“ wurde veröffentlicht. Ähnliche öffentliche Einträge: {{duplicates}}",
+    "publishError": "Die Kultur konnte nicht veröffentlicht werden.",
+    "loadError": "Die öffentliche Kulturbibliothek konnte nicht geladen werden.",
+    "versionLabel": "Version",
+    "createdByLabel": "Von",
+    "badges": {
+      "local": "Lokal",
+      "imported": "Importiert",
+      "modified": "Lokal geändert"
+    }
   }
 }

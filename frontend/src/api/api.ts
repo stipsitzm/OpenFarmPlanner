@@ -12,6 +12,8 @@ import type {
   NoteAttachment,
   CultureHistoryEntry,
   MediaFileRef,
+  PublicCulture,
+  PublicCultureDuplicateCandidate,
   RemainingAreaResponse,
   EnrichmentResult,
   EnrichmentBatchResult,
@@ -60,6 +62,14 @@ export const cultureAPI = {
       mode: 'complete_all',
       ...data,
     }, { signal }),
+  publishPublic: (id: number) => http.post<{ public_culture: PublicCulture; duplicates: PublicCultureDuplicateCandidate[] }>(`/cultures/${id}/publish-public/`, {}),
+};
+
+
+export const publicCultureAPI = {
+  list: (params?: { q?: string }) => http.get<PaginatedResponse<PublicCulture>>('/public-cultures/', { params }),
+  get: (id: number) => http.get<PublicCulture>(`/public-cultures/${id}/`),
+  importToProject: (id: number) => http.post<Culture>(`/public-cultures/${id}/import/`, {}),
 };
 
 export const supplierAPI = {
@@ -243,6 +253,8 @@ export type {
   NoteAttachment,
   CultureHistoryEntry,
   MediaFileRef,
+  PublicCulture,
+  PublicCultureDuplicateCandidate,
   RemainingAreaResponse,
   EnrichmentResult,
   EnrichmentBatchResult,
@@ -253,6 +265,7 @@ export type {
 
 export default {
   cultures: cultureAPI,
+  publicCultures: publicCultureAPI,
   suppliers: supplierAPI,
   beds: bedAPI,
   plantingPlans: plantingPlanAPI,

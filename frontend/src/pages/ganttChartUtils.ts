@@ -53,6 +53,11 @@ interface SeedlingTooltipDetail {
   value: string;
 }
 
+export interface OccupancyTooltipDetail {
+  labelKey: 'plantingDate' | 'harvestDate' | 'firstHarvest' | 'lastHarvest' | 'areaUsage' | 'notes';
+  value: string;
+}
+
 export function parseDateString(dateStr: string): Date {
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day);
@@ -132,6 +137,42 @@ export function formatSeedlingLocationReference(task: Pick<GanttTask, 'targetLoc
     .map((value) => value?.trim())
     .filter(Boolean);
   return parts.length > 0 ? parts.join(' / ') : undefined;
+}
+
+
+export function buildOccupancyTooltipDetails(task: Pick<
+  GanttTask,
+  'id' | 'startDate' | 'harvestStartDate' | 'harvestEndDate' | 'areaUsage' | 'notes'
+>): OccupancyTooltipDetail[] {
+  const isHarvestTask = task.id.endsWith('-harvest');
+  const hasHarvestRange = Boolean(
+    task.harvestStartDate
+    && task.harvestEndDate
+    && task.harvestEndDate.getTime() > task.harvestStartDate.getTime(),
+  );
+
+  const details: Array<OccupancyTooltipDetail | null> = [
+    !isHarvestTask
+      ? { labelKey: 'plantingDate', value: formatGanttDate(task.startDate) }
+      : null,
+    task.harvestStartDate && !hasHarvestRange
+      ? { labelKey: 'harvestDate', value: formatGanttDate(task.harvestStartDate) }
+      : null,
+    task.harvestStartDate && hasHarvestRange
+      ? { labelKey: 'firstHarvest', value: formatGanttDate(task.harvestStartDate) }
+      : null,
+    task.harvestEndDate && hasHarvestRange
+      ? { labelKey: 'lastHarvest', value: formatGanttDate(task.harvestEndDate) }
+      : null,
+    typeof task.areaUsage === 'number'
+      ? { labelKey: 'areaUsage', value: formatAreaSquareMeters(task.areaUsage) }
+      : null,
+    task.notes?.trim()
+      ? { labelKey: 'notes', value: task.notes.trim() }
+      : null,
+  ];
+
+  return details.filter((detail): detail is OccupancyTooltipDetail => detail !== null);
 }
 
 export function buildSeedlingTooltipDetails(task: Pick<

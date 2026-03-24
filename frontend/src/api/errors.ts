@@ -78,6 +78,12 @@ export function extractApiErrorMessage(
     const data = axiosError.response?.data;
 
     if (typeof data === 'string') {
+      const trimmed = data.trim();
+      const contentType = axiosError.response?.headers?.['content-type'];
+      const looksLikeHtml = trimmed.startsWith('<!DOCTYPE html') || trimmed.startsWith('<html');
+      if (looksLikeHtml || (typeof contentType === 'string' && contentType.includes('text/html'))) {
+        return fallbackMessage;
+      }
       return status === 503 ? formatServiceError(data, t, fallbackMessage) : data;
     }
 

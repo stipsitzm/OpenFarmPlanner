@@ -196,3 +196,25 @@ def test_seed_demand_is_limited_to_active_project(api_client: APIClient, bed: Be
     assert response.status_code == 200
     rows = response.json()['results']
     assert [row['culture_name'] for row in rows] == ['Lettuce']
+
+
+@pytest.mark.django_db
+def test_seed_demand_uses_legacy_seed_packages_without_project(api_client: APIClient, bed: Bed):
+    culture = Culture.objects.create(
+        name='Bean',
+        variety='Legacy',
+        growth_duration_days=70,
+        harvest_duration_days=14,
+        seed_rate_value=5,
+        seed_rate_unit='g_per_m2',
+        project=bed.project,
+    )
+    _create_plan(culture, bed, 5)
+    SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g', project=None)
+
+    response = api_client.get('/openfarmplanner/api/seed-demand/')
+
+    assert response.status_code == 200
+    row = next(item for item in response.json()['results'] if item['culture_name'] == 'Bean')
+    assert row['seed_packages'] == [{'size_value': 25.0, 'size_unit': 'g'}]
+    assert row['package_suggestion']['pack_count'] == 1
