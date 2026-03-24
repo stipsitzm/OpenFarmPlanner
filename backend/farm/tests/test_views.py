@@ -1494,6 +1494,33 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.assertEqual(imported.origin_type, Culture.ORIGIN_IMPORTED)
         self.assertTrue(imported.is_modified_from_source)
 
+    def test_editing_imported_culture_with_supplier_name_and_null_supplier_id_keeps_supplier_null(self):
+        public_culture = PublicCulture.objects.create(
+            name='Lettuce',
+            variety='Bijella',
+            status='published',
+            created_by=self.user,
+            seed_supplier='Reinsaat',
+        )
+        import_response = self.client.post(f'/openfarmplanner/api/public-cultures/{public_culture.id}/import/', {}, format='json')
+        imported_id = import_response.data['id']
+
+        detail_response = self.client.get(f'/openfarmplanner/api/cultures/{imported_id}/')
+        payload = dict(detail_response.data)
+        payload['notes'] = 'Local edit'
+        payload['supplier_id'] = None
+        payload['supplier_name'] = 'Reinsaat'
+        payload['cultivation_types'] = ['pre_cultivation']
+        payload['cultivation_type'] = 'pre_cultivation'
+        payload.pop('image_file', None)
+
+        update_response = self.client.put(f'/openfarmplanner/api/cultures/{imported_id}/', payload, format='json')
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        imported = Culture.objects.get(id=imported_id)
+        self.assertIsNone(imported.supplier_id)
+        self.assertEqual(imported.seed_supplier, 'Reinsaat')
+
     def test_public_library_list_requires_authentication(self):
         self.client.force_authenticate(user=None)
         response = self.client.get('/openfarmplanner/api/public-cultures/')

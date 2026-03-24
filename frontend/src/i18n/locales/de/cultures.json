@@ -39,6 +39,7 @@
     "supplierPlaceholder": "z.B. Bingenheimer",
     "supplierRequired": "Saatgutlieferant ist erforderlich",
     "supplierHelp": "Tippen zum Suchen oder neue Lieferanten anlegen",
+    "supplierHomepage": "Lieferanten-Homepage",
     "cropFamily": "Pflanzenfamilie",
     "cropFamilyPlaceholder": "z.B. Solanaceae",
     "nutrientDemand": "Nährstoffbedarf",
