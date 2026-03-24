@@ -646,8 +646,11 @@ class CultureSerializer(serializers.ModelSerializer):
                         attrs['seed_rate_unit'] = primary.get('unit')
 
         # Handle supplier_name via get-or-create to keep imports ergonomic.
+        # If supplier_id was explicitly provided (including null), respect it and
+        # do not implicitly override from supplier_name.
         supplier_name = attrs.pop('supplier_name', None)
-        if supplier_name and not attrs.get('supplier'):
+        supplier_explicitly_set = 'supplier' in attrs
+        if supplier_name and not supplier_explicitly_set and not attrs.get('supplier'):
             from .utils import normalize_supplier_name
             supplier, created = Supplier.objects.get_or_create(
                 name_normalized=normalize_supplier_name(supplier_name) or '',
