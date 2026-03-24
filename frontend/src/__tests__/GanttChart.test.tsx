@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   cultureList: vi.fn(),
   yieldList: vi.fn(),
   planUpdate: vi.fn(),
+  ganttProps: vi.fn(),
 }));
 
 vi.mock('../api/api', async () => {
@@ -29,22 +30,38 @@ vi.mock('../api/api', async () => {
 
 vi.mock('react-modern-gantt', () => ({
   __esModule: true,
-  default: ({ tasks, renderTooltip }: { tasks: Array<{ name: string; tasks: Array<Record<string, unknown> & { id: string; name: string }> }>; renderTooltip?: ({ task }: { task: Record<string, unknown> }) => ReactNode }) => (
-    <div data-testid="mock-gantt">
-      {tasks.map((group) => (
+  default: (props: {
+    tasks: Array<{ name: string; tasks: Array<Record<string, unknown> & { id: string; name: string }> }>;
+    renderTooltip?: ({ task }: { task: Record<string, unknown> }) => ReactNode;
+    locale?: string;
+    localeText?: Record<string, unknown>;
+  }) => {
+    mocks.ganttProps(props);
+    return (
+      <div data-testid="mock-gantt">
+        {props.tasks.map((group) => (
         <div key={group.name}>
           <span>{group.name}</span>
           {group.tasks.map((task) => <span key={`${group.name}-${task.name}`}>{task.name}</span>)}
-          {group.tasks[0] && renderTooltip ? (
+          {group.tasks[0] && props.renderTooltip ? (
             <div data-testid={`mock-tooltip-${group.name}`}>
-              {renderTooltip({ task: group.tasks[0] })}
+              {props.renderTooltip({ task: group.tasks[0] })}
             </div>
           ) : null}
         </div>
-      ))}
-    </div>
-  ),
-  ViewMode: { MONTH: 'month' },
+        ))}
+      </div>
+    );
+  },
+  ViewMode: {
+    MINUTE: 'minute',
+    HOUR: 'hour',
+    DAY: 'day',
+    WEEK: 'week',
+    MONTH: 'month',
+    QUARTER: 'quarter',
+    YEAR: 'year',
+  },
 }));
 
 beforeEach(() => {
@@ -85,6 +102,14 @@ describe('GanttChartPage', () => {
     expect(screen.queryByText(/Belegung von Schlägen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
     expect(screen.getByRole('switch')).toBeInTheDocument();
     expect(screen.getByText('Beet 1')).toBeInTheDocument();
+    expect(mocks.ganttProps).toHaveBeenCalled();
+    const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
+    expect(latestProps?.locale).toBe('de-DE');
+    expect(latestProps?.localeText).toMatchObject({
+      title: 'Feldplanung',
+      resources: 'Beete',
+      today: 'Heute',
+    });
   });
 
   it('switches to the seedling view and shows the seedling rows', async () => {

@@ -74,7 +74,7 @@ function formatDateToAPI(date: Date): string {
 }
 
 function GanttChartPage(): React.ReactElement {
-  const { t } = useTranslation(['ganttChart', 'common']);
+  const { t, i18n } = useTranslation(['ganttChart', 'common']);
   useCommandContextTag('calendar');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -218,6 +218,32 @@ function GanttChartPage(): React.ReactElement {
 
   const startDate = useMemo(() => new Date(displayYear, 0, 1), [displayYear]);
   const endDate = useMemo(() => new Date(displayYear, 11, 31), [displayYear]);
+  const resolvedLocale = useMemo(() => {
+    const language = i18n.resolvedLanguage || i18n.language || 'de';
+    if (language === 'de') {
+      return 'de-DE';
+    }
+    if (language === 'en') {
+      return 'en-US';
+    }
+    return language;
+  }, [i18n.language, i18n.resolvedLanguage]);
+  const ganttLocaleText = useMemo(() => ({
+    title: t('ganttChart:chartLocaleText.title'),
+    resources: calendarMode === 'seedlings'
+      ? t('ganttChart:chartLocaleText.resourcesSeedlings')
+      : t('ganttChart:chartLocaleText.resources'),
+    today: t('ganttChart:chartLocaleText.today'),
+    viewModes: {
+      [ViewMode.MINUTE]: t('ganttChart:chartLocaleText.viewModes.minute'),
+      [ViewMode.HOUR]: t('ganttChart:chartLocaleText.viewModes.hour'),
+      [ViewMode.DAY]: t('ganttChart:chartLocaleText.viewModes.day'),
+      [ViewMode.WEEK]: t('ganttChart:chartLocaleText.viewModes.week'),
+      [ViewMode.MONTH]: t('ganttChart:chartLocaleText.viewModes.month'),
+      [ViewMode.QUARTER]: t('ganttChart:chartLocaleText.viewModes.quarter'),
+      [ViewMode.YEAR]: t('ganttChart:chartLocaleText.viewModes.year'),
+    },
+  }), [calendarMode, t]);
 
   const activeTaskGroups = calendarMode === 'occupancy' ? occupancyTaskGroups : seedlingTaskGroups;
 
@@ -349,13 +375,8 @@ function GanttChartPage(): React.ReactElement {
         ) : (
           <GanttChart
             tasks={activeTaskGroups}
-            locale="de-DE"
-            localeText={{
-              resources: calendarMode === 'seedlings'
-                ? t('ganttChart:chartLocaleText.resourcesSeedlings')
-                : t('ganttChart:chartLocaleText.resources'),
-            }}
-            title={t('ganttChart:chartLocaleText.title')}
+            locale={resolvedLocale}
+            localeText={ganttLocaleText}
             viewMode={ViewMode.MONTH}
             startDate={startDate}
             endDate={endDate}
