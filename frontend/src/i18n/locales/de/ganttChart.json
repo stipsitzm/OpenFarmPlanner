@@ -56,7 +56,17 @@
   "chartLocaleText": {
     "title": "Feldplanung",
     "resources": "Beete",
-    "resourcesSeedlings": "Kulturen"
+    "resourcesSeedlings": "Kulturen",
+    "today": "Heute",
+    "viewModes": {
+      "minute": "Minute",
+      "hour": "Stunde",
+      "day": "Tag",
+      "week": "Woche",
+      "month": "Monat",
+      "quarter": "Quartal",
+      "year": "Jahr"
+    }
   },
   "days": "Tage",
   "yieldDistributionTitle": "Ertragsverteilung",

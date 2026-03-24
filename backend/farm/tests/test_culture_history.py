@@ -26,6 +26,10 @@ class CultureHistoryTests(TestCase):
         response = self.client.get(f'/openfarmplanner/api/cultures/{self.culture.id}/history/')
         self.assertEqual(response.status_code, 200)
         self.assertGreaterEqual(len(response.json()), 2)
+        entry = response.json()[0]
+        self.assertEqual(entry.get('object_type'), 'culture')
+        self.assertIn('object_display_name', entry)
+        self.assertIn('action', entry)
 
     def test_restore_endpoint(self):
         original_revision = self.culture.revisions.first()
@@ -96,6 +100,10 @@ class CultureHistoryTests(TestCase):
         response = self.client.get('/openfarmplanner/api/history/project/')
         self.assertEqual(response.status_code, 200)
         self.assertGreaterEqual(len(response.json()), 1)
+        entry = response.json()[0]
+        self.assertIn('object_type', entry)
+        self.assertIn('action', entry)
+        self.assertNotIn('#', entry.get('object_display_name') or '')
 
     def test_project_restore_restores_previous_project_state(self):
         self.client.put(

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildSeedlingTaskGroups, buildSeedlingTooltipDetails, formatCultureDisplayLabel } from '../pages/ganttChartUtils';
+import {
+  buildFieldOccupancyTaskGroups,
+  buildSeedlingTaskGroups,
+  buildSeedlingTooltipDetails,
+  formatCultureDisplayLabel,
+} from '../pages/ganttChartUtils';
 
 const locations = [{ id: 1, name: 'Hof' }];
 const fields = [{ id: 10, name: 'Nordfeld', location: 1 }];
@@ -154,5 +159,56 @@ describe('buildSeedlingTaskGroups', () => {
     });
 
     expect(groups).toEqual([]);
+  });
+
+  it('shows variety in occupancy task labels', () => {
+    const groups = buildFieldOccupancyTaskGroups({
+      locations,
+      fields,
+      beds,
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [
+        {
+          id: 21,
+          culture: 42,
+          culture_name: 'Salat',
+          culture_variety: 'Bijella',
+          bed: 100,
+          planting_date: '2026-03-01',
+          harvest_date: '2026-04-15',
+        },
+      ],
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].tasks).toHaveLength(1);
+    expect(groups[0].tasks[0].name).toBe('Salat (Bijella)');
+  });
+
+  it('shows variety in occupancy harvest labels', () => {
+    const groups = buildFieldOccupancyTaskGroups({
+      locations,
+      fields,
+      beds,
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [
+        {
+          id: 22,
+          culture: 42,
+          culture_name: 'Salat',
+          culture_variety: 'Bijella',
+          bed: 100,
+          planting_date: '2026-03-01',
+          harvest_date: '2026-04-15',
+          harvest_end_date: '2026-04-30',
+        },
+      ],
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].tasks).toHaveLength(2);
+    expect(groups[0].tasks[1].name).toBe('Salat (Bijella) (Ernte)');
   });
 });

@@ -282,19 +282,24 @@ export function buildFieldOccupancyTaskGroups({
           const plantingDate = parseDateString(plan.planting_date);
           const harvestStartDate = parseDateString(plan.harvest_date!);
           const baseColor = getCultureColor(cultures, plan.culture, plan.culture_name || '', plan.culture_display_color);
+          const cultureLabel = formatCultureDisplayLabel(
+            plan.culture_name || `Culture ${plan.culture}`,
+            plan.culture_variety,
+          );
           const harvestEndDate = plan.harvest_end_date
             ? parseDateString(plan.harvest_end_date)
             : harvestStartDate;
 
           tasks.push({
             id: `plan-${plan.id}-growth`,
-            name: plan.culture_name || `Culture ${plan.culture}`,
+            name: cultureLabel,
             startDate: plantingDate,
             endDate: harvestStartDate,
             color: baseColor,
             percent: 100,
             plantingPlanId: plan.id,
             cultureName: plan.culture_name,
+            cultureVariety: plan.culture_variety,
             areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
             notes: plan.notes,
             harvestStartDate,
@@ -304,13 +309,14 @@ export function buildFieldOccupancyTaskGroups({
           if (harvestEndDate > harvestStartDate) {
             tasks.push({
               id: `plan-${plan.id}-harvest`,
-              name: `${plan.culture_name || `Culture ${plan.culture}`} (Ernte)`,
+              name: `${cultureLabel} (Ernte)`,
               startDate: harvestStartDate,
               endDate: harvestEndDate,
               color: baseColor.startsWith('#') ? `${baseColor}CC` : baseColor,
               percent: 100,
               plantingPlanId: plan.id,
               cultureName: plan.culture_name,
+              cultureVariety: plan.culture_variety,
               areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
               notes: `Erntezeitraum: ${plan.notes || ''}`.trim(),
               harvestStartDate,

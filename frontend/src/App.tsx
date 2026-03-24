@@ -64,6 +64,7 @@ import AccountSettingsPage from './pages/AccountSettingsPage';
 import ProjectSettingsPage from './pages/ProjectSettingsPage';
 import InvitationAcceptPage from './pages/InvitationAcceptPage';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
+import { getHistoryEntryMeta, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 
 interface SnackbarState {
   open: boolean;
@@ -193,7 +194,8 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
  * Wraps all routes with the persistent navigation bar.
  */
 function RootLayout(): React.ReactElement {
-  const { t } = useTranslation('navigation');
+  const { t, i18n } = useTranslation('navigation');
+  const tCultures = useMemo(() => i18n.getFixedT(i18n.resolvedLanguage, 'cultures'), [i18n]);
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -559,8 +561,8 @@ function RootLayout(): React.ReactElement {
                   }
                 >
                   <ListItemText
-                    primary={new Date(item.history_date).toLocaleString()}
-                    secondary={`${item.summary}${item.culture_id ? ` (Kultur #${item.culture_id})` : ''}`}
+                    primary={getHistoryEntryTitle(item, tCultures)}
+                    secondary={getHistoryEntryMeta(item, tCultures)}
                   />
                 </ListItem>
               );

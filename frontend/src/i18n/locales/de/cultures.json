@@ -39,6 +39,7 @@
     "supplierPlaceholder": "z.B. Bingenheimer",
     "supplierRequired": "Saatgutlieferant ist erforderlich",
     "supplierHelp": "Tippen zum Suchen oder neue Lieferanten anlegen",
+    "supplierHomepage": "Lieferanten-Homepage",
     "cropFamily": "Pflanzenfamilie",
     "cropFamilyPlaceholder": "z.B. Solanaceae",
     "nutrientDemand": "Nährstoffbedarf",
@@ -123,6 +124,41 @@
     "unsavedChanges": "Ungespeicherte Änderungen",
     "fixErrors": "Bitte beheben Sie die Validierungsfehler",
     "exportSuccess": "JSON exportiert"
+  },
+  "history": {
+    "titles": {
+      "culture": "Versionen",
+      "global": "Globaler Verlauf",
+      "project": "Projekt-Snapshots"
+    },
+    "restoreButton": "Diese Version wiederherstellen",
+    "closeButton": "Schließen",
+    "unknownUser": "Unbekannter Nutzer",
+    "meta": "von {{actor}} · {{timestamp}}",
+    "title": {
+      "withName": "{{objectType}} „{{objectName}}“ {{action}}",
+      "withoutName": "{{objectType}} {{action}}"
+    },
+    "actions": {
+      "created": "erstellt",
+      "updated": "bearbeitet",
+      "deleted": "gelöscht",
+      "restored": "wiederhergestellt"
+    },
+    "objectTypes": {
+      "culture": "Kultur",
+      "plantingPlan": "Anbauplan",
+      "location": "Standort",
+      "field": "Schlag",
+      "bed": "Beet",
+      "supplier": "Lieferant",
+      "task": "Aufgabe",
+      "noteAttachment": "Notiz-Anhang",
+      "mediaFile": "Medium",
+      "seedPackage": "Saatgutpackung",
+      "project": "Projekt",
+      "fallback": "Eintrag"
+    }
   },
   "export": {
     "current": "Aktuelle Kultur als JSON herunterladen",

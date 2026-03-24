@@ -12,7 +12,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
-import type { CultivationType, PublicCulture } from '../api/types';
+import type { CultivationType, CultureHistoryEntry, PublicCulture } from '../api/types';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
 import { PublicCultureLibraryDialog } from '../cultures/PublicCultureLibraryDialog';
@@ -86,6 +86,7 @@ import { analyzeCultureImportJson, readFileAsText } from './culturesImportUtils'
 import { createCulturesCommandSpecs } from './culturesCommandSpecs';
 import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
+import { getHistoryEntryMeta, getHistoryEntryTitle } from './culturesHistoryUtils';
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
 
@@ -119,7 +120,7 @@ function Cultures(): React.ReactElement {
   const [confirmUpdates, setConfirmUpdates] = useState(false);
   const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [historyItems, setHistoryItems] = useState<Array<{ history_id: number; history_date: string; summary: string; culture_id?: number }>>([]);
+  const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [historyScope, setHistoryScope] = useState<'culture' | 'global' | 'project'>('culture');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [aiMenuAnchor, setAiMenuAnchor] = useState<null | HTMLElement>(null);
@@ -1366,23 +1367,29 @@ function Cultures(): React.ReactElement {
       {/* Snackbar for notifications */}
 
       <Dialog open={historyOpen} onClose={() => setHistoryOpen(false)} fullWidth maxWidth="sm"> 
-        <DialogTitle>{historyScope === "project" ? "Projekt-Snapshots" : historyScope === "global" ? "Globaler Kultur-Verlauf" : "Versionen"}</DialogTitle>
+        <DialogTitle>
+          {historyScope === 'project'
+            ? t('history.titles.project')
+            : historyScope === 'global'
+              ? t('history.titles.global')
+              : t('history.titles.culture')}
+        </DialogTitle>
         <DialogContent>
           <List>
             {historyItems.map((item) => (
               <ListItem key={item.history_id} secondaryAction={
-                <Button onClick={() => handleRestoreVersion(item.history_id)}>Restore this version</Button>
+                <Button onClick={() => handleRestoreVersion(item.history_id)}>{t('history.restoreButton')}</Button>
               }>
                 <ListItemText
-                  primary={new Date(item.history_date).toLocaleString()}
-                  secondary={historyScope === 'culture' ? item.summary : `${item.summary}${item.culture_id ? ` (Kultur #${item.culture_id})` : ''}`}
+                  primary={getHistoryEntryTitle(item, t)}
+                  secondary={getHistoryEntryMeta(item, t)}
                 />
               </ListItem>
             ))}
           </List>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setHistoryOpen(false)}>Close</Button>
+          <Button onClick={() => setHistoryOpen(false)}>{t('history.closeButton')}</Button>
         </DialogActions>
       </Dialog>
 
