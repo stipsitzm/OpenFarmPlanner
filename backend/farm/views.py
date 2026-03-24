@@ -10,6 +10,7 @@ import logging
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import json
+import re
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -197,6 +198,144 @@ def _serialize_project_state() -> dict[str, list[dict]]:
 def _create_project_revision(summary: str) -> None:
     snapshot = json.loads(json.dumps(_serialize_project_state(), cls=DjangoJSONEncoder))
     ProjectRevision.objects.create(snapshot=snapshot, summary=summary)
+
+
+_PROJECT_SUMMARY_PATTERN = re.compile(
+    r'^(?P<object>[A-Za-z]+)\s+(?P<action>created|updated|deleted|soft-deleted|undeleted|restored|uploaded|used)\s+#(?P<object_id>\d+)$'
+)
+_PROJECT_RESTORE_PATTERN = re.compile(r'^Project restored from snapshot #(?P<object_id>\d+)$')
+
+
+def _format_culture_display_name(name: str | None, variety: str | None) -> str | None:
+    normalized_name = (name or '').strip()
+    normalized_variety = (variety or '').strip()
+    if normalized_name and normalized_variety:
+        return f'{normalized_name} ({normalized_variety})'
+    if normalized_name:
+        return normalized_name
+    if normalized_variety:
+        return normalized_variety
+    return None
+
+
+def _find_snapshot_row(snapshot: dict, key: str, object_id: int) -> dict | None:
+    rows = snapshot.get(key, [])
+    if not isinstance(rows, list):
+        return None
+    for row in rows:
+        if isinstance(row, dict) and row.get('id') == object_id:
+            return row
+    return None
+
+
+def _build_planting_plan_label(snapshot: dict, row: dict | None) -> str | None:
+    if not row:
+        return None
+
+    culture_name = None
+    culture_variety = None
+    culture_id = row.get('culture_id')
+    if isinstance(culture_id, int):
+        culture_row = _find_snapshot_row(snapshot, 'cultures', culture_id)
+        if culture_row:
+            culture_name = culture_row.get('name')
+            culture_variety = culture_row.get('variety')
+    culture_label = _format_culture_display_name(culture_name, culture_variety)
+
+    bed_label = None
+    bed_id = row.get('bed_id')
+    if isinstance(bed_id, int):
+        bed_row = _find_snapshot_row(snapshot, 'beds', bed_id)
+        if bed_row:
+            bed_label = bed_row.get('name')
+
+    start = row.get('planting_date')
+    end = row.get('harvest_end_date') or row.get('harvest_date')
+    date_label = None
+    if start and end:
+        date_label = f'{start}–{end}'
+    elif start:
+        date_label = str(start)
+
+    parts = [part for part in [culture_label, bed_label, date_label] if part]
+    if not parts:
+        return None
+    return ' / '.join(parts)
+
+
+def _parse_project_summary(summary: str) -> tuple[str, str, int | None]:
+    normalized_summary = (summary or '').strip()
+    restore_match = _PROJECT_RESTORE_PATTERN.match(normalized_summary)
+    if restore_match:
+        return 'project', 'restored', int(restore_match.group('object_id'))
+
+    match = _PROJECT_SUMMARY_PATTERN.match(normalized_summary)
+    if not match:
+        return 'project', 'updated', None
+
+    object_type_raw = match.group('object').lower()
+    action_raw = match.group('action').lower()
+    object_id = int(match.group('object_id'))
+
+    object_type_map = {
+        'culture': 'culture',
+        'plantingplan': 'planting_plan',
+        'location': 'location',
+        'field': 'field',
+        'bed': 'bed',
+        'supplier': 'supplier',
+        'task': 'task',
+        'noteattachment': 'note_attachment',
+        'media': 'media_file',
+        'seed': 'seed_package',
+        'project': 'project',
+    }
+    action_map = {
+        'created': 'created',
+        'updated': 'updated',
+        'deleted': 'deleted',
+        'soft-deleted': 'deleted',
+        'undeleted': 'restored',
+        'restored': 'restored',
+        'uploaded': 'created',
+        'used': 'updated',
+    }
+    return object_type_map.get(object_type_raw, object_type_raw), action_map.get(action_raw, 'updated'), object_id
+
+
+def _resolve_project_object_display_name(snapshot: dict, object_type: str, object_id: int | None) -> str | None:
+    if object_id is None:
+        return None
+
+    if object_type == 'culture':
+        row = _find_snapshot_row(snapshot, 'cultures', object_id)
+        if row:
+            return _format_culture_display_name(row.get('name'), row.get('variety'))
+        return None
+    if object_type == 'planting_plan':
+        row = _find_snapshot_row(snapshot, 'planting_plans', object_id)
+        return _build_planting_plan_label(snapshot, row)
+    if object_type == 'location':
+        row = _find_snapshot_row(snapshot, 'locations', object_id)
+        return row.get('name') if row else None
+    if object_type == 'field':
+        row = _find_snapshot_row(snapshot, 'fields', object_id)
+        return row.get('name') if row else None
+    if object_type == 'bed':
+        row = _find_snapshot_row(snapshot, 'beds', object_id)
+        return row.get('name') if row else None
+    if object_type == 'supplier':
+        row = _find_snapshot_row(snapshot, 'suppliers', object_id)
+        return row.get('name') if row else None
+    if object_type == 'task':
+        row = _find_snapshot_row(snapshot, 'tasks', object_id)
+        return row.get('title') if row else None
+    if object_type == 'note_attachment':
+        row = _find_snapshot_row(snapshot, 'note_attachments', object_id)
+        if row:
+            return row.get('title') or row.get('kind')
+        return None
+    return None
 
 
 def _restore_project_state(snapshot: dict[str, list[dict]]) -> None:
@@ -692,9 +831,31 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
     queryset = Culture.objects.all()
     serializer_class = CultureSerializer
 
+    def _current_actor_label(self) -> str:
+        user = getattr(self.request, 'user', None)
+        if not user or not getattr(user, 'is_authenticated', False):
+            return ''
+        display_name = (getattr(user, 'display_name', '') or '').strip()
+        if display_name:
+            return display_name
+        full_name = (user.get_full_name() or '').strip()
+        if full_name:
+            return full_name
+        return user.email or user.username or ''
+
+    def _set_latest_revision_actor(self, culture: Culture) -> None:
+        actor_label = self._current_actor_label()
+        if not actor_label:
+            return
+        latest_revision = culture.revisions.order_by('-id').first()
+        if latest_revision and not latest_revision.user_name:
+            latest_revision.user_name = actor_label[:150]
+            latest_revision.save(update_fields=['user_name'])
+
     
     def perform_create(self, serializer):
         instance = serializer.save(project=self.request.active_project)
+        self._set_latest_revision_actor(instance)
         self.create_project_revision(f"Culture created #{instance.pk}")
 
     def get_queryset(self):
@@ -986,6 +1147,7 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
 
         culture.deleted_at = timezone.now()
         culture.save()
+        self._set_latest_revision_actor(culture)
 
         if culture.image_file_id:
             MediaFile.objects.filter(id=culture.image_file_id, orphaned_at__isnull=True).update(orphaned_at=timezone.now())
@@ -998,6 +1160,7 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
         culture = self.get_object()
         culture.deleted_at = None
         culture.save()
+        self._set_latest_revision_actor(culture)
         if culture.image_file_id:
             MediaFile.objects.filter(id=culture.image_file_id).update(orphaned_at=None)
         self.create_project_revision(f"Culture undeleted #{culture.pk}")
@@ -1007,6 +1170,7 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
         instance = self.get_object()
         previous_media_id = instance.image_file_id
         updated = serializer.save()
+        self._set_latest_revision_actor(updated)
         if previous_media_id and previous_media_id != updated.image_file_id:
             MediaFile.objects.filter(id=previous_media_id, orphaned_at__isnull=True).update(orphaned_at=timezone.now())
         if updated.image_file_id:
@@ -1026,6 +1190,13 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
                 'history_type': 'snapshot',
                 'history_user': row.user_name or None,
                 'summary': ', '.join(row.changed_fields[:5]) if row.changed_fields else 'snapshot',
+                'object_type': 'culture',
+                'object_display_name': _format_culture_display_name(
+                    row.snapshot.get('name') if isinstance(row.snapshot, dict) else None,
+                    row.snapshot.get('variety') if isinstance(row.snapshot, dict) else None,
+                ),
+                'action': 'created' if isinstance(row.changed_fields, list) and 'created' in row.changed_fields else 'updated',
+                'actor_label': row.user_name or None,
             }
             for row in rows
         ]
@@ -1049,6 +1220,7 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
                     setattr(culture, key, value)
             culture.deleted_at = None
             culture.save()
+        self._set_latest_revision_actor(culture)
 
         self.create_project_revision(f"Culture restored #{culture.pk}")
         return Response(self.get_serializer(culture).data, status=status.HTTP_200_OK)
@@ -1397,16 +1569,20 @@ class ProjectHistoryListView(APIView):
     def get(self, request):
         since = timezone.now() - timedelta(days=30)
         rows = ProjectRevision.objects.filter(created_at__gte=since).order_by('-created_at')
-        payload = [
-            {
+        payload = []
+        for row in rows:
+            object_type, action, object_id = _parse_project_summary(row.summary or '')
+            payload.append({
                 'history_id': row.id,
                 'history_date': row.created_at,
                 'history_type': 'project_snapshot',
                 'history_user': None,
-                'summary': row.summary or f"Project snapshot #{row.id}",
-            }
-            for row in rows
-        ]
+                'summary': row.summary or 'Project snapshot',
+                'object_type': object_type,
+                'object_display_name': _resolve_project_object_display_name(row.snapshot or {}, object_type, object_id),
+                'action': action,
+                'actor_label': None,
+            })
         return Response(CultureHistoryEntrySerializer(payload, many=True).data)
 
 
@@ -1444,6 +1620,13 @@ class GlobalHistoryListView(APIView):
                 'history_type': 'snapshot',
                 'history_user': row.user_name or None,
                 'summary': f"Culture #{row.culture_id}: " + (', '.join(row.changed_fields[:5]) if row.changed_fields else 'snapshot'),
+                'object_type': 'culture',
+                'object_display_name': _format_culture_display_name(
+                    row.snapshot.get('name') if isinstance(row.snapshot, dict) else None,
+                    row.snapshot.get('variety') if isinstance(row.snapshot, dict) else None,
+                ),
+                'action': 'created' if isinstance(row.changed_fields, list) and 'created' in row.changed_fields else 'updated',
+                'actor_label': row.user_name or None,
             }
             for row in rows
         ]

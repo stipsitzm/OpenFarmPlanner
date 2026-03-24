@@ -976,6 +976,10 @@ class CultureHistoryEntrySerializer(serializers.Serializer):
     history_type = serializers.CharField()
     history_user = serializers.CharField(allow_null=True)
     summary = serializers.CharField()
+    object_type = serializers.CharField(required=False, allow_blank=True)
+    object_display_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    action = serializers.CharField(required=False, allow_blank=True)
+    actor_label = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 
 class CultureRestoreSerializer(serializers.Serializer):

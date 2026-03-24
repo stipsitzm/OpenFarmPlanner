@@ -303,6 +303,10 @@ export interface CultureHistoryEntry {
   history_type: string;
   history_user: string | null;
   summary: string;
+  object_type?: string;
+  object_display_name?: string | null;
+  action?: string;
+  actor_label?: string | null;
 }
 
 export interface EnrichmentUsage {
