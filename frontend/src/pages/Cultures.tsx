@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
 import type { CultivationType, CultureHistoryEntry, PublicCulture } from '../api/types';
@@ -43,6 +43,8 @@ import {
   Typography,
   CircularProgress,
   LinearProgress,
+  Link,
+  Stack,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -86,7 +88,7 @@ import { analyzeCultureImportJson, readFileAsText } from './culturesImportUtils'
 import { createCulturesCommandSpecs } from './culturesCommandSpecs';
 import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
-import { getHistoryEntryMeta, getHistoryEntryTitle } from './culturesHistoryUtils';
+import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './culturesHistoryUtils';
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
 
@@ -1376,16 +1378,35 @@ function Cultures(): React.ReactElement {
         </DialogTitle>
         <DialogContent>
           <List>
-            {historyItems.map((item) => (
-              <ListItem key={item.history_id} secondaryAction={
-                <Button onClick={() => handleRestoreVersion(item.history_id)}>{t('history.restoreButton')}</Button>
-              }>
-                <ListItemText
-                  primary={getHistoryEntryTitle(item, t)}
-                  secondary={getHistoryEntryMeta(item, t)}
-                />
-              </ListItem>
-            ))}
+            {historyItems.map((item) => {
+              const historyTarget = getHistoryEntryTarget(item);
+              return (
+                <ListItem key={item.history_id} disableGutters>
+                  <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
+                    <ListItemText
+                      sx={{ mr: 1 }}
+                      primary={(
+                        <>
+                          {getHistoryEntryTitle(item, t)}
+                          {historyTarget ? (
+                            <>
+                              {' · '}
+                              <Link component={RouterLink} to={historyTarget} underline="hover" onClick={() => setHistoryOpen(false)}>
+                                {item.object_type === 'culture' ? t('history.objectTypes.culture') : t('history.objectTypes.plantingPlan')}
+                              </Link>
+                            </>
+                          ) : null}
+                        </>
+                      )}
+                      secondary={getHistoryEntryMeta(item, t)}
+                    />
+                    <Button onClick={() => handleRestoreVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {t('history.restoreButton')}
+                    </Button>
+                  </Stack>
+                </ListItem>
+              );
+            })}
           </List>
         </DialogContent>
         <DialogActions>

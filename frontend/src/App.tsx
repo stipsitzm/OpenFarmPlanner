@@ -8,7 +8,7 @@
  * @returns The main App component with routing
  */
 
-import { createBrowserRouter, RouterProvider, Outlet, NavLink, redirect, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, NavLink, Link as RouterLink, redirect, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -19,6 +19,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  Link,
   List,
   ListItem,
   ListItemText,
@@ -64,7 +65,7 @@ import AccountSettingsPage from './pages/AccountSettingsPage';
 import ProjectSettingsPage from './pages/ProjectSettingsPage';
 import InvitationAcceptPage from './pages/InvitationAcceptPage';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
-import { getHistoryEntryMeta, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
+import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 
 interface SnackbarState {
   open: boolean;
@@ -550,20 +551,40 @@ function RootLayout(): React.ReactElement {
           <List>
             {historyItems.map((item, index) => {
               const isCurrentVersion = index === 0;
+              const historyTarget = getHistoryEntryTarget(item);
 
               return (
                 <ListItem
                   key={item.history_id}
-                  secondaryAction={
-                    isCurrentVersion
-                      ? <Chip label={t('commandPalette.currentVersion')} size="small" color="success" variant="outlined" />
-                      : <Button onClick={() => void handleRestoreProjectVersion(item.history_id)}>{t('commandPalette.restoreVersion')}</Button>
-                  }
+                  disableGutters
                 >
-                  <ListItemText
-                    primary={getHistoryEntryTitle(item, tCultures)}
-                    secondary={getHistoryEntryMeta(item, tCultures)}
-                  />
+                  <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
+                    <ListItemText
+                      sx={{ mr: 1 }}
+                      primary={(
+                        <>
+                          {getHistoryEntryTitle(item, tCultures)}
+                          {historyTarget ? (
+                            <>
+                              {' · '}
+                              <Link
+                                component={RouterLink}
+                                to={historyTarget}
+                                underline="hover"
+                                onClick={() => setProjectHistoryOpen(false)}
+                              >
+                                {item.object_type === 'culture' ? t('navigation:cultures') : t('navigation:plantingPlans')}
+                              </Link>
+                            </>
+                          ) : null}
+                        </>
+                      )}
+                      secondary={getHistoryEntryMeta(item, tCultures)}
+                    />
+                    {isCurrentVersion
+                      ? <Chip label={t('commandPalette.currentVersion')} size="small" color="success" variant="outlined" />
+                      : <Button onClick={() => void handleRestoreProjectVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{t('commandPalette.restoreVersion')}</Button>}
+                  </Stack>
                 </ListItem>
               );
             })}
