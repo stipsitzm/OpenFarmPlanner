@@ -14,7 +14,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from '../i18n';
 import { locationAPI, type Location } from '../api/api';
 import { EditableDataGrid, type EditableDataGridCommandApi, type EditableRow, type DataGridAPI } from '../components/data-grid';
-import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
+import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
 
 interface LocationRow extends Location, EditableRow {

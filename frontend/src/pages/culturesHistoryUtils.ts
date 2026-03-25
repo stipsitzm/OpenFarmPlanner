@@ -66,3 +66,29 @@ export function getHistoryEntryMeta(entry: CultureHistoryEntry, t: TFunction<'cu
   const timestamp = new Date(entry.history_date).toLocaleString();
   return t('history.meta', { actor: actorLabel, timestamp });
 }
+
+function extractObjectIdFromSummary(summary: string): number | null {
+  const match = summary.match(/#(\d+)/);
+  if (!match) {
+    return null;
+  }
+
+  const objectId = Number.parseInt(match[1], 10);
+  return Number.isFinite(objectId) ? objectId : null;
+}
+
+export function getHistoryEntryTarget(entry: CultureHistoryEntry): string | null {
+  if (entry.object_type === 'culture') {
+    const cultureId = entry.culture_id ?? extractObjectIdFromSummary(entry.summary);
+    if (cultureId) {
+      return `/app/cultures?cultureId=${cultureId}`;
+    }
+    return '/app/cultures';
+  }
+
+  if (entry.object_type === 'planting_plan') {
+    return '/app/anbauplaene';
+  }
+
+  return null;
+}

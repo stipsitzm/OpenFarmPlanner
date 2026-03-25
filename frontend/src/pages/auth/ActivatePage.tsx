@@ -2,7 +2,7 @@ import { Alert, Button, Container, Stack, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { projectAPI } from '../../api/api';
-import { useAuth } from '../../auth/AuthContext';
+import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
 import { buildInvitationAcceptPath, getStoredInvitationNext, getStoredInvitationToken } from '../invitationAcceptance';
 
@@ -21,13 +21,17 @@ export default function ActivatePage(): React.ReactElement {
     const token = searchParams.get('token');
 
     if (!uid || !token) {
-      setStatus('error');
-      setMessage(t('auth:activate.incompleteLink'));
+      queueMicrotask(() => {
+        setStatus('error');
+        setMessage(t('auth:activate.incompleteLink'));
+      });
       return;
     }
 
     void (async () => {
-      setStatus('loading');
+      queueMicrotask(() => {
+        setStatus('loading');
+      });
       try {
         await activate(uid, token);
 

@@ -17,7 +17,7 @@ function LocationEcho(): React.ReactElement {
   return <div>{`${location.pathname}${location.search}`}</div>;
 }
 
-vi.mock("../auth/AuthContext", () => ({
+vi.mock("../auth/useAuth", () => ({
   useAuth: () => ({
     user: mockAuthState.user,
     isLoading: mockAuthState.isLoading,

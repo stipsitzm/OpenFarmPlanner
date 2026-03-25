@@ -1,7 +1,7 @@
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { projectAPI, type ProjectInvitationPayload, type ProjectMemberPayload } from '../api/api';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
 
 interface InviteFeedback {
@@ -69,11 +69,15 @@ export default function ProjectSettingsPage(): React.ReactElement {
   }, [activeMembership, t]);
 
   useEffect(() => {
-    void loadMembers();
+    window.setTimeout(() => {
+      void loadMembers();
+    }, 0);
   }, [loadMembers]);
 
   useEffect(() => {
-    void loadInvitations();
+    window.setTimeout(() => {
+      void loadInvitations();
+    }, 0);
   }, [loadInvitations]);
 
   if (!activeMembership) {

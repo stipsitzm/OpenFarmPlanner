@@ -10,7 +10,7 @@ describe('data-grid handlers', () => {
     });
 
     handleEditableCellClick(
-      { id: 1, field: 'name', isEditable: true } as any,
+      { id: 1, field: 'name', isEditable: true } as unknown,
       {},
       setRowModesModel,
     );
@@ -22,7 +22,7 @@ describe('data-grid handlers', () => {
     const setRowModesModel = vi.fn();
 
     handleEditableCellClick(
-      { id: 1, field: 'name', isEditable: false } as any,
+      { id: 1, field: 'name', isEditable: false } as unknown,
       {},
       setRowModesModel,
     );
@@ -32,19 +32,19 @@ describe('data-grid handlers', () => {
 
   it('prevents escape-stop but allows blur/tab/enter for autosave flow', () => {
     const escapeEvent = { defaultMuiPrevented: false };
-    handleRowEditStop({ reason: GridRowEditStopReasons.escapeKeyDown } as any, escapeEvent as any);
+    handleRowEditStop({ reason: GridRowEditStopReasons.escapeKeyDown } as unknown, escapeEvent as unknown);
     expect(escapeEvent.defaultMuiPrevented).toBe(true);
 
     const blurEvent = { defaultMuiPrevented: false };
-    handleRowEditStop({ reason: GridRowEditStopReasons.rowFocusOut } as any, blurEvent as any);
+    handleRowEditStop({ reason: GridRowEditStopReasons.rowFocusOut } as unknown, blurEvent as unknown);
     expect(blurEvent.defaultMuiPrevented).toBe(false);
 
     const enterEvent = { defaultMuiPrevented: false };
-    handleRowEditStop({ reason: GridRowEditStopReasons.enterKeyDown } as any, enterEvent as any);
+    handleRowEditStop({ reason: GridRowEditStopReasons.enterKeyDown } as unknown, enterEvent as unknown);
     expect(enterEvent.defaultMuiPrevented).toBe(false);
 
     const tabEvent = { defaultMuiPrevented: false };
-    handleRowEditStop({ reason: GridRowEditStopReasons.tabKeyDown } as any, tabEvent as any);
+    handleRowEditStop({ reason: GridRowEditStopReasons.tabKeyDown } as unknown, tabEvent as unknown);
     expect(tabEvent.defaultMuiPrevented).toBe(false);
   });
 });

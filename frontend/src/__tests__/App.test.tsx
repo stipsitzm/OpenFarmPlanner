@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import App, { resolveRouterBasename } from '../App';
+import App from '../App';
+import { resolveRouterBasename } from '../routerBasename';
 import { CommandProvider } from '../commands/CommandProvider';
 import translations from '@/test-utils/translations';
 import type { AuthUser } from '../auth/types';
@@ -21,7 +22,7 @@ const authState = {
   switchActiveProject: vi.fn(async () => {}),
 };
 
-vi.mock('../auth/AuthContext', () => ({
+vi.mock('../auth/useAuth', () => ({
   useAuth: () => authState,
 }));
 

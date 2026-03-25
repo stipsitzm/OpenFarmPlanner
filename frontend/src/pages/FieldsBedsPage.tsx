@@ -2,7 +2,7 @@ import { FormControlLabel, Switch } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
-import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
+import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';

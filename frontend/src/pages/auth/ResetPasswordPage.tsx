@@ -2,7 +2,7 @@ import { Alert, Box, Button, Container, Stack, TextField, Typography } from '@mu
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../../auth/AuthContext';
+import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
 
 export default function ResetPasswordPage(): React.ReactElement {

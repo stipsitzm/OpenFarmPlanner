@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import { cultureAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
 import type { CultivationType, CultureHistoryEntry, PublicCulture } from '../api/types';
@@ -33,6 +33,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   List,
   ListItem,
   ListItemText,
@@ -43,6 +44,8 @@ import {
   Typography,
   CircularProgress,
   LinearProgress,
+  Link,
+  Stack,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -52,6 +55,7 @@ import AgricultureIcon from '@mui/icons-material/Agriculture';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PublicIcon from '@mui/icons-material/Public';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
@@ -63,7 +67,7 @@ import {
   buildSingleCultureFilename,
   downloadJsonFile,
 } from '../cultures/exportUtils';
-import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
+import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
 import {
@@ -86,7 +90,7 @@ import { analyzeCultureImportJson, readFileAsText } from './culturesImportUtils'
 import { createCulturesCommandSpecs } from './culturesCommandSpecs';
 import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
-import { getHistoryEntryMeta, getHistoryEntryTitle } from './culturesHistoryUtils';
+import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './culturesHistoryUtils';
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
 
@@ -894,24 +898,33 @@ function Cultures(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          flexWrap: 'wrap',
+          gap: 1.5,
+          mb: 2,
+        }}
+      >
         <h1>{t('title')}</h1>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <ButtonGroup variant="contained" aria-label={t('buttons.addNew')}>
-            <Button startIcon={<AddIcon />} onClick={handleAddNew}>
-              {t('buttons.addNew')}
-            </Button>
-            <Button
-              size="small"
-              aria-label={t('import.menuLabel')}
-              aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
-              aria-haspopup="true"
-              onClick={handleImportMenuOpen}
-              sx={{ minWidth: 32, px: 0.5 }}
-            >
-              <ArrowDropDownIcon />
-            </Button>
-          </ButtonGroup>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 'auto' }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNew}>
+            {t('buttons.addNew')}
+          </Button>
+          <Button variant="outlined" startIcon={<PublicIcon />} onClick={() => void handleOpenPublicLibrary()}>
+            {t('library.openButton')}
+          </Button>
+          <IconButton
+            size="small"
+            aria-label={t('import.menuLabel')}
+            aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
+            aria-haspopup="true"
+            onClick={handleImportMenuOpen}
+          >
+            <MoreVertIcon />
+          </IconButton>
         </Box>
         <Menu
           id="culture-import-menu"
@@ -927,9 +940,6 @@ function Cultures(): React.ReactElement {
           </MenuItem>
           <MenuItem aria-label="JSON importieren (Alt+I)" onClick={handleImportFileTrigger}>
             JSON importieren (Alt+I)
-          </MenuItem>
-          <MenuItem aria-label={t('library.openButton')} onClick={() => void handleOpenPublicLibrary()}>
-            {t('library.openButton')}
           </MenuItem>
         </Menu>
         <input
@@ -1376,16 +1386,35 @@ function Cultures(): React.ReactElement {
         </DialogTitle>
         <DialogContent>
           <List>
-            {historyItems.map((item) => (
-              <ListItem key={item.history_id} secondaryAction={
-                <Button onClick={() => handleRestoreVersion(item.history_id)}>{t('history.restoreButton')}</Button>
-              }>
-                <ListItemText
-                  primary={getHistoryEntryTitle(item, t)}
-                  secondary={getHistoryEntryMeta(item, t)}
-                />
-              </ListItem>
-            ))}
+            {historyItems.map((item) => {
+              const historyTarget = getHistoryEntryTarget(item);
+              return (
+                <ListItem key={item.history_id} disableGutters>
+                  <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
+                    <ListItemText
+                      sx={{ mr: 1 }}
+                      primary={(
+                        <>
+                          {getHistoryEntryTitle(item, t)}
+                          {historyTarget ? (
+                            <>
+                              {' · '}
+                              <Link component={RouterLink} to={historyTarget} underline="hover" onClick={() => setHistoryOpen(false)}>
+                                {item.object_type === 'culture' ? t('history.objectTypes.culture') : t('history.objectTypes.plantingPlan')}
+                              </Link>
+                            </>
+                          ) : null}
+                        </>
+                      )}
+                      secondary={getHistoryEntryMeta(item, t)}
+                    />
+                    <Button onClick={() => handleRestoreVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {t('history.restoreButton')}
+                    </Button>
+                  </Stack>
+                </ListItem>
+              );
+            })}
           </List>
         </DialogContent>
         <DialogActions>

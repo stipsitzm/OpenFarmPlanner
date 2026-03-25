@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useMemo } from 'react';
-import { CommandProvider, useCommandContext, useRegisterCommands } from '../commands/CommandProvider';
+import { CommandProvider } from '../commands/CommandProvider';
+import { useCommandContext, useRegisterCommands } from '../commands/useCommandContext';
 import { createRootCommands } from '../commands/commands';
 import type { CommandSpec } from '../commands/types';
 

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { useAutosizeSidebarWidth } from '../hooks/useAutosizeSidebarWidth';
 import type { RefObject } from 'react';
 
@@ -18,7 +18,7 @@ describe('useAutosizeSidebarWidth', () => {
     containerRef = { current: container };
 
     // Mock ResizeObserver
-    global.ResizeObserver = vi.fn().mockImplementation((callback) => ({
+    global.ResizeObserver = vi.fn().mockImplementation(() => ({
       observe: vi.fn(),
       unobserve: vi.fn(),
       disconnect: vi.fn(),
@@ -232,12 +232,9 @@ describe('useAutosizeSidebarWidth', () => {
       { initialProps: deps }
     );
 
-    const initialValue = container.style.getPropertyValue('--gantt-sidebar-width');
-
     rerender([2]);
 
     // Should have re-measured (cssValue should exist)
     expect(container.style.getPropertyValue('--gantt-sidebar-width')).toBeTruthy();
   });
 });
-

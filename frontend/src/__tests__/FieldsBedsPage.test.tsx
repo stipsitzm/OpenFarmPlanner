@@ -10,7 +10,7 @@ vi.mock('../pages/GraphicalFields', () => ({
   default: () => <div>Editiermodus</div>,
 }));
 
-vi.mock('../commands/CommandProvider', () => ({
+vi.mock('../commands/useCommandContext', () => ({
   useCommandContextTag: vi.fn(),
   useRegisterCommands: vi.fn(),
 }));

@@ -1,6 +1,6 @@
 import { Button, List, ListItem, ListItemText, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 
 export default function ProjectSelectionPage(): React.ReactElement {
   const { user } = useAuth();

@@ -34,7 +34,7 @@ import {
 import {
   useCommandContextTag,
   useRegisterCommands,
-} from "../commands/CommandProvider";
+} from "../commands/useCommandContext";
 import type { CommandSpec } from "../commands/types";
 
 /**
@@ -593,6 +593,7 @@ function PlantingPlans(): React.ReactElement {
       cultureOptions,
       cultures,
       dynamicWidths,
+      areaWarning,
       t,
     ],
   );

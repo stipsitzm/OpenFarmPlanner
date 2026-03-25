@@ -29,7 +29,7 @@ const authState = {
   },
 };
 
-vi.mock('../auth/AuthContext', () => ({
+vi.mock('../auth/useAuth', () => ({
   useAuth: () => authState,
 }));
 

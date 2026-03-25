@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { useTranslation } from '../i18n';
 import type { CommandSpec } from './types';
+import { filterCommands } from './commandPaletteUtils';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -21,18 +22,6 @@ interface CommandPaletteProps {
 interface GroupedCommands {
   group: string;
   commands: CommandSpec[];
-}
-
-export function filterCommands(commands: CommandSpec[], query: string): CommandSpec[] {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return commands;
-  }
-
-  return commands.filter((command) => {
-    const haystacks = [command.label, command.group, ...command.keywords].map((value) => value.toLowerCase());
-    return haystacks.some((value) => value.includes(normalized));
-  });
 }
 
 function groupCommands(commands: CommandSpec[]): GroupedCommands[] {
@@ -52,20 +41,35 @@ export function CommandPalette({ open, commands, onClose }: CommandPaletteProps)
 
   const filteredCommands = useMemo(() => filterCommands(commands, query), [commands, query]);
   const groupedCommands = useMemo(() => groupCommands(filteredCommands), [filteredCommands]);
+  const groupedWithOffsets = useMemo(
+    () => groupedCommands.map((group, index) => ({
+      ...group,
+      startIndex: groupedCommands
+        .slice(0, index)
+        .reduce((sum, previousGroup) => sum + previousGroup.commands.length, 0),
+    })),
+    [groupedCommands],
+  );
 
   useEffect(() => {
     if (!open) {
-      setQuery('');
-      setSelectedIndex(0);
+      queueMicrotask(() => {
+        setQuery('');
+        setSelectedIndex(0);
+      });
       return;
     }
 
-    setSelectedIndex(0);
+    queueMicrotask(() => {
+      setSelectedIndex(0);
+    });
   }, [open]);
 
   useEffect(() => {
     if (selectedIndex > Math.max(filteredCommands.length - 1, 0)) {
-      setSelectedIndex(0);
+      queueMicrotask(() => {
+        setSelectedIndex(0);
+      });
     }
   }, [filteredCommands.length, selectedIndex]);
 
@@ -104,8 +108,6 @@ export function CommandPalette({ open, commands, onClose }: CommandPaletteProps)
     }
   };
 
-  let flatIndex = -1;
-
   return (
     <Dialog
       open={open}
@@ -139,14 +141,14 @@ export function CommandPalette({ open, commands, onClose }: CommandPaletteProps)
           </Box>
         ) : (
           <List>
-            {groupedCommands.map((group) => (
+            {groupedWithOffsets.map((group) => (
               <li key={group.group}>
                 <ul style={{ padding: 0 }}>
                   <ListSubheader disableSticky sx={{ px: 0, bgcolor: 'transparent', lineHeight: 2.5 }}>
                     {t(`commandGroups.${group.group}`)}
                   </ListSubheader>
-                  {group.commands.map((command) => {
-                    flatIndex += 1;
+                  {group.commands.map((command, indexInGroup) => {
+                    const flatIndex = group.startIndex + indexInGroup;
                     return (
                       <ListItemButton
                         key={command.id}

@@ -363,8 +363,10 @@ export default function GraphicalFields({
   }, []);
 
   useEffect(() => {
-    resetTransientInteractionState();
-    stopKonvaDragging();
+    queueMicrotask(() => {
+      resetTransientInteractionState();
+      stopKonvaDragging();
+    });
   }, [interactionMode]);
 
   useKeyboardShortcuts(
@@ -529,20 +531,22 @@ export default function GraphicalFields({
   };
 
   useEffect(() => {
-    setViewportByLocation((prev) => {
-      const next = { ...prev };
-      locationLayouts.forEach((layout) => {
-        const locationId = layout.location.id;
-        if (!locationId || next[locationId]) {
-          return;
-        }
-        next[locationId] = fitContentToStage(
-          { width: layout.contentWidth, height: layout.contentHeight },
-          { width: stageWidth, height: stageHeight },
-          VIEWPORT_PADDING,
-        );
+    queueMicrotask(() => {
+      setViewportByLocation((prev) => {
+        const next = { ...prev };
+        locationLayouts.forEach((layout) => {
+          const locationId = layout.location.id;
+          if (!locationId || next[locationId]) {
+            return;
+          }
+          next[locationId] = fitContentToStage(
+            { width: layout.contentWidth, height: layout.contentHeight },
+            { width: stageWidth, height: stageHeight },
+            VIEWPORT_PADDING,
+          );
+        });
+        return next;
       });
-      return next;
     });
   }, [locationLayouts, stageHeight, stageWidth]);
 
@@ -591,25 +595,32 @@ export default function GraphicalFields({
   };
 
   const handleStageDragStart = (
-    _locationId: number,
-    _viewport: ViewportState,
+    locationId: number,
+    viewport: ViewportState,
   ): void => {
+    void locationId;
+    void viewport;
     return;
   };
 
   const handleStageDragMove = (
-    _locationId: number,
-    _viewport: ViewportState,
-    _event: KonvaEventObject<DragEvent>,
+    locationId: number,
+    viewport: ViewportState,
+    event: KonvaEventObject<DragEvent>,
   ): void => {
+    void locationId;
+    void viewport;
+    void event;
     return;
   };
 
   const handleStageDragEnd = (
     locationId: number,
-    _viewport: ViewportState,
-    _event: KonvaEventObject<DragEvent>,
+    viewport: ViewportState,
+    event: KonvaEventObject<DragEvent>,
   ): void => {
+    void viewport;
+    void event;
     panSessionRef.current[locationId] = null;
   };
 
