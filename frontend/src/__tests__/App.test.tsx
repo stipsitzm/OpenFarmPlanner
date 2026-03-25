@@ -26,6 +26,18 @@ vi.mock('../auth/useAuth', () => ({
   useAuth: () => authState,
 }));
 
+vi.mock('../commands/useCommandContext', () => ({
+  useCommandContext: () => ({
+    openPalette: vi.fn(),
+    closePalette: vi.fn(),
+    registerCommands: vi.fn(() => () => {}),
+    setContextTag: vi.fn(),
+    currentContextTags: ['global'],
+  }),
+  useCommandContextTag: vi.fn(),
+  useRegisterCommands: vi.fn(),
+}));
+
 describe('App', () => {
   beforeEach(() => {
     authState.user = null;
