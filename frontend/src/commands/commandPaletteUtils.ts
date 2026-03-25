@@ -11,3 +11,23 @@ export function filterCommands(commands: CommandSpec[], query: string): CommandS
     return haystacks.some((value) => value.includes(normalized));
   });
 }
+
+export interface CommandGroupWithOffset {
+  group: string;
+  commands: CommandSpec[];
+  startIndex: number;
+}
+
+export function addGroupOffsets(groups: Array<{ group: string; commands: CommandSpec[] }>): CommandGroupWithOffset[] {
+  return groups.reduce<CommandGroupWithOffset[]>((accumulator, group) => {
+    const startIndex = accumulator.length === 0
+      ? 0
+      : accumulator[accumulator.length - 1].startIndex + accumulator[accumulator.length - 1].commands.length;
+
+    accumulator.push({
+      ...group,
+      startIndex,
+    });
+    return accumulator;
+  }, []);
+}

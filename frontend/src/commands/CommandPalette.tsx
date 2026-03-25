@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { useTranslation } from '../i18n';
 import type { CommandSpec } from './types';
-import { filterCommands } from './commandPaletteUtils';
+import { addGroupOffsets, filterCommands } from './commandPaletteUtils';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -41,15 +41,7 @@ export function CommandPalette({ open, commands, onClose }: CommandPaletteProps)
 
   const filteredCommands = useMemo(() => filterCommands(commands, query), [commands, query]);
   const groupedCommands = useMemo(() => groupCommands(filteredCommands), [filteredCommands]);
-  const groupedWithOffsets = useMemo(
-    () => groupedCommands.map((group, index) => ({
-      ...group,
-      startIndex: groupedCommands
-        .slice(0, index)
-        .reduce((sum, previousGroup) => sum + previousGroup.commands.length, 0),
-    })),
-    [groupedCommands],
-  );
+  const groupedWithOffsets = useMemo(() => addGroupOffsets(groupedCommands), [groupedCommands]);
 
   useEffect(() => {
     if (!open) {
