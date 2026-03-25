@@ -203,6 +203,7 @@ function RootLayout(): React.ReactElement {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
+  const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
   const { openPalette } = useCommandContext();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
@@ -580,7 +581,7 @@ function RootLayout(): React.ReactElement {
                           ) : null}
                         </>
                       )}
-                      secondary={getHistoryEntryMeta(item, tCultures)}
+                      secondary={getHistoryEntryMeta(item, tCultures, fallbackHistoryActorLabel)}
                     />
                     {isCurrentVersion
                       ? <Chip label={t('commandPalette.currentVersion')} size="small" color="success" variant="outlined" />

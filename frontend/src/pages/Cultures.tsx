@@ -93,6 +93,7 @@ import { buildCultureSavePayload } from './culturesSaveUtils';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './culturesHistoryUtils';
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
+import { useAuth } from '../auth/useAuth';
 
 const ENRICHMENT_LOADING_STEPS = [
   { key: 'request', startSeconds: 0 },
@@ -104,7 +105,9 @@ const ENRICHMENT_EXPECTED_SECONDS = 75;
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { selectedCultureId, updateSelectedCultureId } = useSelectedCultureSync();
+  const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
 
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -1406,7 +1409,7 @@ function Cultures(): React.ReactElement {
                           ) : null}
                         </>
                       )}
-                      secondary={getHistoryEntryMeta(item, t)}
+                      secondary={getHistoryEntryMeta(item, t, fallbackHistoryActorLabel)}
                     />
                     <Button onClick={() => handleRestoreVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
                       {t('history.restoreButton')}

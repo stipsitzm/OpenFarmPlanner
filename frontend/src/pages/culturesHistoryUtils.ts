@@ -55,14 +55,23 @@ export function getHistoryEntryTitle(entry: CultureHistoryEntry, t: TFunction<'c
   });
 }
 
-export function getHistoryActorLabel(entry: CultureHistoryEntry, t: TFunction<'cultures'>): string {
+export function getHistoryActorLabel(
+  entry: CultureHistoryEntry,
+  t: TFunction<'cultures'>,
+  fallbackActorLabel?: string,
+): string {
   return entry.actor_label?.trim()
     || entry.history_user?.trim()
+    || fallbackActorLabel?.trim()
     || t('history.unknownUser');
 }
 
-export function getHistoryEntryMeta(entry: CultureHistoryEntry, t: TFunction<'cultures'>): string {
-  const actorLabel = getHistoryActorLabel(entry, t);
+export function getHistoryEntryMeta(
+  entry: CultureHistoryEntry,
+  t: TFunction<'cultures'>,
+  fallbackActorLabel?: string,
+): string {
+  const actorLabel = getHistoryActorLabel(entry, t, fallbackActorLabel);
   const timestamp = new Date(entry.history_date).toLocaleString();
   return t('history.meta', { actor: actorLabel, timestamp });
 }

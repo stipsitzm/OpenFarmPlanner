@@ -50,6 +50,7 @@ describe('culturesHistoryUtils', () => {
     expect(getHistoryActorLabel(withActor, t)).toBe('Martin Stipsitz');
     expect(getHistoryActorLabel(withHistoryUser, t)).toBe('user@example.com');
     expect(getHistoryActorLabel(withoutActor, t)).toBe('Unbekannter Nutzer');
+    expect(getHistoryActorLabel(withoutActor, t, 'Fallback User')).toBe('Fallback User');
   });
 
   it('builds metadata line with actor and timestamp', () => {
