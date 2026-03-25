@@ -32,6 +32,7 @@ export interface Culture {
   source_public_culture?: number | null;
   source_public_version?: number | null;
   origin_type?: 'manual' | 'imported';
+  owned_public_culture_id?: number | null;
   is_modified_from_source?: boolean;
   thousand_kernel_weight_g?: number;
   package_size_g?: number; // deprecated, replaced by seed_packages
@@ -139,6 +140,12 @@ export interface PublishPublicCultureDuplicateError {
     variety: string;
     seed_supplier: string;
   };
+}
+
+export interface PublishPublicCultureResponse {
+  operation: 'created' | 'updated';
+  public_culture: PublicCulture;
+  duplicates: PublicCultureDuplicateCandidate[];
 }
 
 export interface SeedDemand {

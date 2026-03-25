@@ -435,8 +435,12 @@ function Cultures(): React.ReactElement {
 
     try {
       setPublishingCultureId(selectedCulture.id);
-      await cultureAPI.publishPublic(selectedCulture.id);
-      showSnackbar(t('library.publishSuccess', { name: selectedCulture.name }), 'success');
+      const response = await cultureAPI.publishPublic(selectedCulture.id);
+      if (response.data.operation === 'updated') {
+        showSnackbar(t('library.updateSuccess', { name: selectedCulture.name }), 'success');
+      } else {
+        showSnackbar(t('library.publishSuccess', { name: selectedCulture.name }), 'success');
+      }
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 409) {
         const duplicateError = error.response.data as PublishPublicCultureDuplicateError | undefined;
@@ -589,6 +593,7 @@ function Cultures(): React.ReactElement {
   };
 
   const selectedCulture = cultures.find(c => c.id === selectedCultureId);
+  const isUpdatingOwnPublicCulture = Boolean(selectedCulture?.owned_public_culture_id);
   const dialogCostInfo = getDialogCostInfo(enrichmentResult);
 
   useCommandContextTag('cultures');
@@ -1111,7 +1116,9 @@ function Cultures(): React.ReactElement {
             onClick={() => void handlePublishCurrentCulture()}
             disabled={!selectedCulture || publishingCultureId === selectedCulture?.id}
           >
-            {publishingCultureId === selectedCulture?.id ? t('library.publishing') : t('library.publishButton')}
+            {publishingCultureId === selectedCulture?.id
+              ? (isUpdatingOwnPublicCulture ? t('library.updating') : t('library.publishing'))
+              : (isUpdatingOwnPublicCulture ? t('library.updateButton') : t('library.publishButton'))}
           </Button>
           <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
             Versionen

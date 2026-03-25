@@ -82,6 +82,7 @@ describe('Cultures action area', () => {
     });
     publishPublicMock.mockResolvedValue({
       data: {
+        operation: 'created',
         public_culture: { id: 99, name: 'Tomate', version: 1, status: 'published' },
         duplicates: [],
       },
@@ -171,5 +172,25 @@ describe('Cultures action area', () => {
       expect(screen.getByText('Salat (Bijella)')).toBeInTheDocument();
     });
     expect(screen.getAllByText('Salat (Bijella)')).toHaveLength(1);
+  });
+
+  it('shows update label for cultures linked to an owned public culture', async () => {
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          { id: 1, name: 'Tomate', growth_duration_days: 1, harvest_duration_days: 1, owned_public_culture_id: 77 },
+        ],
+      },
+    });
+
+    renderCultures('/cultures?cultureId=1');
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Öffentliche Version aktualisieren' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: 'Öffentlich veröffentlichen' })).not.toBeInTheDocument();
   });
 });

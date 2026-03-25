@@ -1236,7 +1236,7 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
             return Response({'detail': 'Name is required for publishing.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            public_culture, duplicates = publish_culture_to_public_library(culture=culture, user=request.user)
+            public_culture, duplicates, operation = publish_culture_to_public_library(culture=culture, user=request.user)
         except DuplicatePublicCultureError as error:
             return Response({
                 'code': 'duplicate_public_culture',
@@ -1256,6 +1256,7 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
             }, status=status.HTTP_409_CONFLICT)
         serializer = PublicCultureSerializer(public_culture)
         return Response({
+            'operation': operation,
             'public_culture': serializer.data,
             'duplicates': [
                 {

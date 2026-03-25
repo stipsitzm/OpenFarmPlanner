@@ -1381,6 +1381,7 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['operation'], 'created')
         self.assertEqual(PublicCulture.objects.count(), 1)
         public_culture = PublicCulture.objects.get()
         self.assertEqual(public_culture.name, self.culture.name)
@@ -1412,6 +1413,75 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.assertEqual(response.data['normalized_identity']['name'], 'lettuce')
         self.assertEqual(response.data['normalized_identity']['variety'], 'bijella')
         self.assertEqual(response.data['normalized_identity']['seed_supplier'], 'reinsaat')
+        self.assertEqual(PublicCulture.objects.count(), 1)
+
+    def test_second_publish_updates_own_linked_public_culture_and_increments_version(self):
+        first_publish = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+        self.assertEqual(first_publish.status_code, status.HTTP_201_CREATED)
+        public_culture_id = first_publish.data['public_culture']['id']
+
+        self.culture.notes = 'Updated local notes'
+        self.culture.save()
+
+        second_publish = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+
+        self.assertEqual(second_publish.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_publish.data['operation'], 'updated')
+        self.assertEqual(second_publish.data['public_culture']['id'], public_culture_id)
+        self.assertEqual(PublicCulture.objects.count(), 1)
+
+        updated_public = PublicCulture.objects.get(id=public_culture_id)
+        self.assertEqual(updated_public.version, 2)
+        self.assertEqual(updated_public.notes, 'Updated local notes')
+
+    def test_publish_updates_own_imported_public_culture(self):
+        own_public = PublicCulture.objects.create(
+            name='Carrot',
+            variety='Mokum',
+            status='published',
+            created_by=self.user,
+            source_project=self.project,
+            version=3,
+        )
+        self.culture.source_public_culture = own_public
+        self.culture.name = 'Carrot'
+        self.culture.variety = 'Mokum'
+        self.culture.notes = 'Refined owner notes'
+        self.culture.seed_supplier = 'Reinsaat'
+        self.culture.save()
+
+        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['operation'], 'updated')
+        self.assertEqual(response.data['public_culture']['id'], own_public.id)
+
+        own_public.refresh_from_db()
+        self.assertEqual(own_public.version, 4)
+        self.assertEqual(own_public.notes, 'Refined owner notes')
+
+    def test_publish_does_not_update_foreign_source_public_culture(self):
+        other_user = User.objects.create_user(username='other-owner', email='other@example.com', password='testpass', is_active=True)
+        foreign_public = PublicCulture.objects.create(
+            name='Lettuce',
+            variety='Bijella',
+            status='published',
+            created_by=other_user,
+            source_project=self.project,
+            source_project_culture=self.culture,
+            version=5,
+            supplier_name='Reinsaat',
+        )
+        self.culture.source_public_culture = foreign_public
+        self.culture.seed_supplier = 'Reinsaat'
+        self.culture.save()
+
+        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data['code'], 'duplicate_public_culture')
+        foreign_public.refresh_from_db()
+        self.assertEqual(foreign_public.version, 5)
         self.assertEqual(PublicCulture.objects.count(), 1)
 
     def test_publish_rejects_duplicates_using_normalized_fields(self):

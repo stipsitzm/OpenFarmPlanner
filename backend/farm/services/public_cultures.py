@@ -142,8 +142,46 @@ def detect_public_culture_duplicates(culture: Culture) -> list[DuplicateCandidat
     return candidates
 
 
-def publish_culture_to_public_library(*, culture: Culture, user: User | None) -> tuple[PublicCulture, list[DuplicateCandidate]]:
+def find_owned_public_culture_for_update(*, culture: Culture, user: User | None) -> PublicCulture | None:
+    """Return the public culture that this user is allowed to update for the given culture."""
+    if user is None:
+        return None
+
+    if culture.source_public_culture_id:
+        source_public = PublicCulture.objects.filter(
+            id=culture.source_public_culture_id,
+            status=PublicCulture.STATUS_PUBLISHED,
+        ).first()
+        if source_public and source_public.created_by_id == user.id:
+            return source_public
+        if source_public and source_public.created_by_id != user.id:
+            return None
+
+    return PublicCulture.objects.filter(
+        source_project_culture=culture,
+        created_by=user,
+        status=PublicCulture.STATUS_PUBLISHED,
+    ).order_by('-updated_at', '-id').first()
+
+
+def _update_public_culture_from_project_culture(*, public_culture: PublicCulture, culture: Culture) -> PublicCulture:
+    payload = build_public_culture_payload(culture)
+    payload.pop('published_at', None)
+    for field, value in payload.items():
+        setattr(public_culture, field, value)
+    public_culture.version = max(public_culture.version, 1) + 1
+    public_culture.save()
+    return public_culture
+
+
+def publish_culture_to_public_library(*, culture: Culture, user: User | None) -> tuple[PublicCulture, list[DuplicateCandidate], str]:
+    update_target = find_owned_public_culture_for_update(culture=culture, user=user)
     duplicates = detect_public_culture_duplicates(culture)
+    if update_target:
+        updated_public_culture = _update_public_culture_from_project_culture(public_culture=update_target, culture=culture)
+        non_target_duplicates = [item for item in duplicates if item.id != update_target.id]
+        return updated_public_culture, non_target_duplicates, 'updated'
+
     if duplicates:
         raise DuplicatePublicCultureError(
             duplicates=duplicates,
@@ -159,7 +197,7 @@ def publish_culture_to_public_library(*, culture: Culture, user: User | None) ->
         version=1,
         **build_public_culture_payload(culture),
     )
-    return public_culture, duplicates
+    return public_culture, duplicates, 'created'
 
 
 def import_public_culture_into_project(*, public_culture: PublicCulture, project: Project) -> Culture:
