@@ -28,11 +28,11 @@ import {
   Alert,
   Box,
   Button,
-  ButtonGroup,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   List,
   ListItem,
   ListItemText,
@@ -47,13 +47,13 @@ import {
   Stack,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PublicIcon from '@mui/icons-material/Public';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
@@ -896,24 +896,33 @@ function Cultures(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          flexWrap: 'wrap',
+          gap: 1.5,
+          mb: 2,
+        }}
+      >
         <h1>{t('title')}</h1>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <ButtonGroup variant="contained" aria-label={t('buttons.addNew')}>
-            <Button startIcon={<AddIcon />} onClick={handleAddNew}>
-              {t('buttons.addNew')}
-            </Button>
-            <Button
-              size="small"
-              aria-label={t('import.menuLabel')}
-              aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
-              aria-haspopup="true"
-              onClick={handleImportMenuOpen}
-              sx={{ minWidth: 32, px: 0.5 }}
-            >
-              <ArrowDropDownIcon />
-            </Button>
-          </ButtonGroup>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 'auto' }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNew}>
+            {t('buttons.addNew')}
+          </Button>
+          <Button variant="outlined" startIcon={<PublicIcon />} onClick={() => void handleOpenPublicLibrary()}>
+            {t('library.openButton')}
+          </Button>
+          <IconButton
+            size="small"
+            aria-label={t('import.menuLabel')}
+            aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
+            aria-haspopup="true"
+            onClick={handleImportMenuOpen}
+          >
+            <MoreVertIcon />
+          </IconButton>
         </Box>
         <Menu
           id="culture-import-menu"
@@ -929,9 +938,6 @@ function Cultures(): React.ReactElement {
           </MenuItem>
           <MenuItem aria-label="JSON importieren (Alt+I)" onClick={handleImportFileTrigger}>
             JSON importieren (Alt+I)
-          </MenuItem>
-          <MenuItem aria-label={t('library.openButton')} onClick={() => void handleOpenPublicLibrary()}>
-            {t('library.openButton')}
           </MenuItem>
         </Menu>
         <input
