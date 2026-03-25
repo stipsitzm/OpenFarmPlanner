@@ -1389,7 +1389,7 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.assertEqual(public_culture.seed_packages[0]['size_value'], 25.0)
         self.assertEqual(response.data['duplicates'], [])
 
-    def test_publish_returns_duplicate_candidates_without_blocking(self):
+    def test_publish_rejects_duplicates_with_conflict_response(self):
         PublicCulture.objects.create(
             name='Lettuce',
             variety='Bijella',
@@ -1397,13 +1397,60 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
             created_by=self.user,
             source_project=self.project,
             source_project_culture=self.culture,
+            supplier_name='Reinsaat',
         )
+        self.culture.seed_supplier = 'Reinsaat'
+        self.culture.save(update_fields=['seed_supplier', 'name_normalized', 'variety_normalized', 'updated_at'])
+
+        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data['code'], 'duplicate_public_culture')
+        self.assertEqual(response.data['detail'], 'A similar public culture already exists.')
+        self.assertEqual(len(response.data['duplicates']), 1)
+        self.assertEqual(response.data['duplicates'][0]['name'], 'Lettuce')
+        self.assertEqual(response.data['normalized_identity']['name'], 'lettuce')
+        self.assertEqual(response.data['normalized_identity']['variety'], 'bijella')
+        self.assertEqual(response.data['normalized_identity']['seed_supplier'], 'reinsaat')
+        self.assertEqual(PublicCulture.objects.count(), 1)
+
+    def test_publish_rejects_duplicates_using_normalized_fields(self):
+        PublicCulture.objects.create(
+            name=' Lettuce ',
+            variety='BIJELLA',
+            status='published',
+            created_by=self.user,
+            source_project=self.project,
+            supplier_name='  Rein  saat  ',
+        )
+        self.culture.name = '  lettuce'
+        self.culture.variety = 'bijella  '
+        self.culture.seed_supplier = 'reinsaat'
+        self.culture.save()
+
+        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(len(response.data['duplicates']), 1)
+        self.assertEqual(PublicCulture.objects.count(), 1)
+
+    def test_publish_allows_new_public_culture_for_different_normalized_identity(self):
+        PublicCulture.objects.create(
+            name='Lettuce',
+            variety='Bijella',
+            status='published',
+            created_by=self.user,
+            source_project=self.project,
+            source_project_culture=self.culture,
+            supplier_name='Reinsaat',
+        )
+        self.culture.variety = 'Other Variety'
+        self.culture.seed_supplier = 'Reinsaat'
+        self.culture.save()
 
         response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(len(response.data['duplicates']), 1)
-        self.assertEqual(response.data['duplicates'][0]['name'], 'Lettuce')
         self.assertEqual(PublicCulture.objects.count(), 2)
 
     def test_import_public_culture_creates_project_local_copy(self):

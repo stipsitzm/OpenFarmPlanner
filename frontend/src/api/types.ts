@@ -130,6 +130,17 @@ export interface PublicCultureDuplicateCandidate {
   created_by_label?: string;
 }
 
+export interface PublishPublicCultureDuplicateError {
+  code: 'duplicate_public_culture';
+  detail: string;
+  duplicates: PublicCultureDuplicateCandidate[];
+  normalized_identity?: {
+    name: string;
+    variety: string;
+    seed_supplier: string;
+  };
+}
+
 export interface SeedDemand {
   culture_id: number;
   culture_name: string;

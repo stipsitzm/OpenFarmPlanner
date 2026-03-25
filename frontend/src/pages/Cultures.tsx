@@ -10,9 +10,15 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useTranslation } from '../i18n';
 import { cultureAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
-import type { CultivationType, CultureHistoryEntry, PublicCulture } from '../api/types';
+import type {
+  CultivationType,
+  CultureHistoryEntry,
+  PublicCulture,
+  PublishPublicCultureDuplicateError,
+} from '../api/types';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
 import { PublicCultureLibraryDialog } from '../cultures/PublicCultureLibraryDialog';
@@ -102,6 +108,39 @@ const ENRICHMENT_LOADING_STEPS = [
   { key: 'results', startSeconds: 52 },
 ] as const;
 const ENRICHMENT_EXPECTED_SECONDS = 75;
+
+function normalizePublicCultureIdentityValue(value: string | undefined | null): string {
+  return (value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function getPublicCultureSupplierLabel(culture: PublicCulture): string {
+  return culture.supplier_name || culture.seed_supplier || '';
+}
+
+function dedupePublicCultures(cultures: PublicCulture[]): PublicCulture[] {
+  const byIdentity = new Map<string, PublicCulture>();
+  for (const item of cultures) {
+    const identity = [
+      normalizePublicCultureIdentityValue(item.name),
+      normalizePublicCultureIdentityValue(item.variety),
+      normalizePublicCultureIdentityValue(getPublicCultureSupplierLabel(item)),
+    ].join('||');
+
+    const existing = byIdentity.get(identity);
+    if (!existing) {
+      byIdentity.set(identity, item);
+      continue;
+    }
+
+    const itemPublishedAt = item.published_at ? new Date(item.published_at).getTime() : 0;
+    const existingPublishedAt = existing.published_at ? new Date(existing.published_at).getTime() : 0;
+    if (itemPublishedAt > existingPublishedAt || (itemPublishedAt === existingPublishedAt && item.id > existing.id)) {
+      byIdentity.set(identity, item);
+    }
+  }
+  return Array.from(byIdentity.values());
+}
+
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
   const navigate = useNavigate();
@@ -358,7 +397,7 @@ function Cultures(): React.ReactElement {
       setPublicLibraryLoading(true);
       setPublicLibraryError(null);
       const response = await publicCultureAPI.list(query ? { q: query } : undefined);
-      setPublicCultures(response.data.results);
+      setPublicCultures(dedupePublicCultures(response.data.results));
     } catch (error) {
       console.error('Error fetching public cultures:', error);
       setPublicLibraryError(t('library.loadError'));
@@ -396,17 +435,21 @@ function Cultures(): React.ReactElement {
 
     try {
       setPublishingCultureId(selectedCulture.id);
-      const response = await cultureAPI.publishPublic(selectedCulture.id);
-      const duplicates = response.data.duplicates || [];
-      if (duplicates.length > 0) {
-        const duplicateNames = duplicates
+      await cultureAPI.publishPublic(selectedCulture.id);
+      showSnackbar(t('library.publishSuccess', { name: selectedCulture.name }), 'success');
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 409) {
+        const duplicateError = error.response.data as PublishPublicCultureDuplicateError | undefined;
+        const duplicateNames = (duplicateError?.duplicates || [])
           .map((entry) => entry.variety ? `${entry.name} (${entry.variety})` : entry.name)
           .join(', ');
-        showSnackbar(t('library.publishSuccessWithDuplicates', { name: selectedCulture.name, duplicates: duplicateNames }), 'info');
-      } else {
-        showSnackbar(t('library.publishSuccess', { name: selectedCulture.name }), 'success');
+        if (duplicateNames) {
+          showSnackbar(t('library.publishDuplicateErrorWithCandidates', { duplicates: duplicateNames }), 'info');
+        } else {
+          showSnackbar(t('library.publishDuplicateError'), 'info');
+        }
+        return;
       }
-    } catch (error) {
       console.error('Error publishing culture:', error);
       showSnackbar(extractApiErrorMessage(error, t, t('library.publishError')), 'error');
     } finally {
