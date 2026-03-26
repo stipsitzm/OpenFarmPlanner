@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ActivatePage from '../pages/auth/ActivatePage';
@@ -95,5 +96,28 @@ describe('ActivatePage', () => {
       expect(screen.getByText('Accept route')).toBeInTheDocument();
     });
     expect(acceptPendingInvitationMock).not.toHaveBeenCalled();
+  });
+
+  it('submits activation only once in strict mode for the same activation link', async () => {
+    activateMock.mockResolvedValue(undefined);
+    acceptPendingInvitationMock.mockResolvedValue({ data: { code: 'no_pending_invitation' } });
+
+    render(
+      <StrictMode>
+        <MemoryRouter initialEntries={['/activate?uid=MTA&token=abc123']}>
+          <Routes>
+            <Route path="/activate" element={<ActivatePage />} />
+            <Route path="/app" element={<div>App</div>} />
+          </Routes>
+        </MemoryRouter>
+      </StrictMode>,
+    );
+
+    await waitFor(() => {
+      expect(activateMock).toHaveBeenCalledWith('MTA', 'abc123');
+    });
+    await waitFor(() => {
+      expect(activateMock).toHaveBeenCalledTimes(1);
+    });
   });
 });

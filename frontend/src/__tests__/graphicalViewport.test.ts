@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  clampViewportToStage,
   fitContentToStage,
   getVisibleElements,
   panViewport,
@@ -70,5 +71,25 @@ describe('graphicalViewport helpers', () => {
       y: 60,
       scale: 2.25,
     });
+  });
+
+  it('clamps viewport so content cannot be panned beyond stage edges', () => {
+    const clamped = clampViewportToStage(
+      { x: 120, y: -900, scale: 1.5 },
+      { width: 1000, height: 900 },
+      { width: 600, height: 400 },
+    );
+    expect(clamped.x).toBe(0);
+    expect(clamped.y).toBe(-900);
+  });
+
+  it('centers content when scaled content is smaller than stage', () => {
+    const centered = clampViewportToStage(
+      { x: -100, y: -50, scale: 0.5 },
+      { width: 600, height: 400 },
+      { width: 800, height: 600 },
+    );
+    expect(centered.x).toBe(250);
+    expect(centered.y).toBe(200);
   });
 });

@@ -23,6 +23,10 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import FitScreenIcon from "@mui/icons-material/FitScreen";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
+import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import { Group, Layer, Rect, Stage, Text } from "react-konva";
 import type Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
@@ -42,6 +46,7 @@ import {
   type RectSize,
 } from "./graphicalLayoutUtils";
 import {
+  clampViewportToStage,
   fitContentToStage,
   getVisibleElements,
   shouldShowBedLabel,
@@ -114,6 +119,8 @@ const DEFAULT_STAGE_HEIGHT = 420;
 const MIN_STAGE_HEIGHT = 320;
 const MAX_STAGE_HEIGHT = 560;
 const ZOOM_STEP = 1.2;
+const PAN_STEP = 80;
+const PAN_FAST_STEP = 180;
 
 const snapToNeighbors = (
   currentId: number,
@@ -255,6 +262,9 @@ export default function GraphicalFields({
   >({});
   const [selectedElement, setSelectedElement] =
     useState<SelectedElement | null>(null);
+  const [activePanLocationId, setActivePanLocationId] = useState<number | null>(
+    null,
+  );
   const containerRef = useRef<HTMLDivElement | null>(null);
   const stageRefs = useRef<Record<number, Konva.Stage | null>>({});
   const saveTimers = useRef<Record<string, number>>({});
@@ -530,6 +540,19 @@ export default function GraphicalFields({
     }));
   };
 
+  const contentSizeByLocation = useMemo(() => {
+    const map = new Map<number, { width: number; height: number }>();
+    locationLayouts.forEach((layout) => {
+      if (layout.location.id) {
+        map.set(layout.location.id, {
+          width: layout.contentWidth,
+          height: layout.contentHeight,
+        });
+      }
+    });
+    return map;
+  }, [locationLayouts]);
+
   useEffect(() => {
     queueMicrotask(() => {
       setViewportByLocation((prev) => {
@@ -562,7 +585,18 @@ export default function GraphicalFields({
           { width: stageWidth, height: stageHeight },
           VIEWPORT_PADDING,
         );
-      return { ...prev, [locationId]: updater(current) };
+      const nextRaw = updater(current);
+      const contentSize =
+        contentSizeByLocation.get(locationId) ?? {
+          width: stageWidth,
+          height: stageHeight,
+        };
+      const nextClamped = clampViewportToStage(
+        nextRaw,
+        contentSize,
+        { width: stageWidth, height: stageHeight },
+      );
+      return { ...prev, [locationId]: nextClamped };
     });
   };
 
@@ -573,6 +607,18 @@ export default function GraphicalFields({
         y: stageHeight / 2,
       }),
     );
+  };
+
+  const handlePanByOffset = (
+    locationId: number,
+    deltaX: number,
+    deltaY: number,
+  ): void => {
+    updateViewport(locationId, (current) => ({
+      ...current,
+      x: current.x + deltaX,
+      y: current.y + deltaY,
+    }));
   };
 
   const handleStageWheel = (
@@ -878,6 +924,66 @@ export default function GraphicalFields({
     pinchStateRef.current[locationId] = null;
   };
 
+  useEffect(() => {
+    if (locationLayouts.length === 0) {
+      setActivePanLocationId(null);
+      return;
+    }
+    if (
+      activePanLocationId !== null &&
+      locationLayouts.some((layout) => layout.location.id === activePanLocationId)
+    ) {
+      return;
+    }
+    const fallbackLocationId = locationLayouts[0].location.id ?? null;
+    setActivePanLocationId(fallbackLocationId);
+  }, [activePanLocationId, locationLayouts]);
+
+  useEffect(() => {
+    const isTypingElement = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+      const tagName = target.tagName.toLowerCase();
+      return (
+        target.isContentEditable ||
+        tagName === "input" ||
+        tagName === "textarea" ||
+        tagName === "select"
+      );
+    };
+
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (isTypingElement(event.target) || activePanLocationId === null) {
+        return;
+      }
+      const step = event.shiftKey ? PAN_FAST_STEP : PAN_STEP;
+      switch (event.key) {
+        case "ArrowUp":
+          event.preventDefault();
+          handlePanByOffset(activePanLocationId, 0, step);
+          break;
+        case "ArrowDown":
+          event.preventDefault();
+          handlePanByOffset(activePanLocationId, 0, -step);
+          break;
+        case "ArrowLeft":
+          event.preventDefault();
+          handlePanByOffset(activePanLocationId, step, 0);
+          break;
+        case "ArrowRight":
+          event.preventDefault();
+          handlePanByOffset(activePanLocationId, -step, 0);
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activePanLocationId]);
+
   if (loading) {
     return (
       <Box p={3}>
@@ -1002,6 +1108,77 @@ export default function GraphicalFields({
                     }}
                   >
                     <Stack spacing={0} alignItems="stretch">
+                      <Tooltip title={t("fields:graphical.panUp")} placement="left">
+                        <IconButton
+                          size="small"
+                          onClick={() => handlePanByOffset(locationId, 0, PAN_STEP)}
+                          aria-label={t("fields:graphical.panUp")}
+                          sx={{ borderRadius: 0, p: 1.25 }}
+                        >
+                          <KeyboardArrowUpIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Stack direction="row" spacing={0}>
+                        <Tooltip
+                          title={t("fields:graphical.panLeft")}
+                          placement="left"
+                        >
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              handlePanByOffset(locationId, PAN_STEP, 0)
+                            }
+                            aria-label={t("fields:graphical.panLeft")}
+                            sx={{
+                              borderRadius: 0,
+                              p: 1.25,
+                              borderTop: "1px solid",
+                              borderColor: "divider",
+                              borderRight: "1px solid",
+                            }}
+                          >
+                            <KeyboardArrowLeftIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip
+                          title={t("fields:graphical.panRight")}
+                          placement="left"
+                        >
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              handlePanByOffset(locationId, -PAN_STEP, 0)
+                            }
+                            aria-label={t("fields:graphical.panRight")}
+                            sx={{
+                              borderRadius: 0,
+                              p: 1.25,
+                              borderTop: "1px solid",
+                              borderColor: "divider",
+                            }}
+                          >
+                            <KeyboardArrowRightIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                      <Tooltip
+                        title={t("fields:graphical.panDown")}
+                        placement="left"
+                      >
+                        <IconButton
+                          size="small"
+                          onClick={() => handlePanByOffset(locationId, 0, -PAN_STEP)}
+                          aria-label={t("fields:graphical.panDown")}
+                          sx={{
+                            borderRadius: 0,
+                            p: 1.25,
+                            borderTop: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
+                          <KeyboardArrowDownIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip
                         title={t("fields:graphical.zoomIn")}
                         placement="left"
@@ -1097,6 +1274,8 @@ export default function GraphicalFields({
                       handleStageTouchMove(locationId, event)
                     }
                     onTouchEnd={() => handleStageTouchEnd(locationId)}
+                    onMouseEnter={() => setActivePanLocationId(locationId)}
+                    onPointerDown={() => setActivePanLocationId(locationId)}
                     ref={(node) => {
                       stageRefs.current[locationId] = node;
                     }}
