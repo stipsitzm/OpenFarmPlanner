@@ -95,6 +95,44 @@ export function zoomAroundPoint(viewport: ViewportState, nextScale: number, anch
   };
 }
 
+export function clampViewportToStage(
+  viewport: ViewportState,
+  contentSize: RectSize,
+  stageSize: RectSize,
+): ViewportState {
+  const safeContentWidth = Math.max(contentSize.width, 1);
+  const safeContentHeight = Math.max(contentSize.height, 1);
+  const scaledWidth = safeContentWidth * viewport.scale;
+  const scaledHeight = safeContentHeight * viewport.scale;
+
+  if (scaledWidth <= stageSize.width) {
+    const centeredX = (stageSize.width - scaledWidth) / 2;
+    return {
+      ...viewport,
+      x: centeredX,
+      y:
+        scaledHeight <= stageSize.height
+          ? (stageSize.height - scaledHeight) / 2
+          : Math.min(0, Math.max(stageSize.height - scaledHeight, viewport.y)),
+    };
+  }
+
+  if (scaledHeight <= stageSize.height) {
+    const centeredY = (stageSize.height - scaledHeight) / 2;
+    return {
+      ...viewport,
+      x: Math.min(0, Math.max(stageSize.width - scaledWidth, viewport.x)),
+      y: centeredY,
+    };
+  }
+
+  return {
+    ...viewport,
+    x: Math.min(0, Math.max(stageSize.width - scaledWidth, viewport.x)),
+    y: Math.min(0, Math.max(stageSize.height - scaledHeight, viewport.y)),
+  };
+}
+
 export function startPanSession(viewport: ViewportState, pointer: { x: number; y: number }): PanSession {
   return {
     startPointerX: pointer.x,

@@ -379,6 +379,11 @@ describe("GraphicalFields", () => {
     });
 
     const stage = screen.getByTestId("konva-stage");
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+      fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+      fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+    });
     const startX = Number(stage.getAttribute("data-x"));
     const startY = Number(stage.getAttribute("data-y"));
 

@@ -46,6 +46,7 @@ import {
   type RectSize,
 } from "./graphicalLayoutUtils";
 import {
+  clampViewportToStage,
   fitContentToStage,
   getVisibleElements,
   shouldShowBedLabel,
@@ -539,6 +540,19 @@ export default function GraphicalFields({
     }));
   };
 
+  const contentSizeByLocation = useMemo(() => {
+    const map = new Map<number, { width: number; height: number }>();
+    locationLayouts.forEach((layout) => {
+      if (layout.location.id) {
+        map.set(layout.location.id, {
+          width: layout.contentWidth,
+          height: layout.contentHeight,
+        });
+      }
+    });
+    return map;
+  }, [locationLayouts]);
+
   useEffect(() => {
     queueMicrotask(() => {
       setViewportByLocation((prev) => {
@@ -571,7 +585,18 @@ export default function GraphicalFields({
           { width: stageWidth, height: stageHeight },
           VIEWPORT_PADDING,
         );
-      return { ...prev, [locationId]: updater(current) };
+      const nextRaw = updater(current);
+      const contentSize =
+        contentSizeByLocation.get(locationId) ?? {
+          width: stageWidth,
+          height: stageHeight,
+        };
+      const nextClamped = clampViewportToStage(
+        nextRaw,
+        contentSize,
+        { width: stageWidth, height: stageHeight },
+      );
+      return { ...prev, [locationId]: nextClamped };
     });
   };
 
