@@ -723,12 +723,24 @@ export default function GraphicalFields({
       draggable: true,
       onDragMove: (event: KonvaEventObject<Event>) => {
         const raw = { x: event.target.x(), y: event.target.y() };
-        const clamped = clampInsideParent(
+        const clampedRaw = clampInsideParent(
           raw,
           { width: baseRect.width, height: baseRect.height },
           contentBounds,
         );
-        event.target.position(clamped);
+        const snapped = snapToNeighbors(
+          fieldId,
+          clampedRaw,
+          { width: baseRect.width, height: baseRect.height },
+          fieldViewModels,
+          FIELD_SNAP_THRESHOLD,
+        );
+        const finalClamped = clampInsideParent(
+          { x: snapped.x, y: snapped.y },
+          { width: baseRect.width, height: baseRect.height },
+          contentBounds,
+        );
+        event.target.position(finalClamped);
       },
       onDragEnd: (event: KonvaEventObject<Event>) => {
         const next = clampInsideParent(
@@ -803,14 +815,25 @@ export default function GraphicalFields({
           x: event.target.x() - (currentFieldRect.x + FIELD_INNER_OFFSET_X),
           y: event.target.y() - (currentFieldRect.y + FIELD_INNER_OFFSET_Y),
         };
-        const clamped = clampInsideParent(
+        const clampedRaw = clampInsideParent(
           raw,
           { width: bedVm.width, height: bedVm.height },
           fieldInnerSize,
         );
+        const snapped = snapToNeighbors(
+          bedVm.id,
+          clampedRaw,
+          { width: bedVm.width, height: bedVm.height },
+          bedViewModels,
+        );
+        const finalClamped = clampInsideParent(
+          { x: snapped.x, y: snapped.y },
+          { width: bedVm.width, height: bedVm.height },
+          fieldInnerSize,
+        );
         event.target.position({
-          x: currentFieldRect.x + FIELD_INNER_OFFSET_X + clamped.x,
-          y: currentFieldRect.y + FIELD_INNER_OFFSET_Y + clamped.y,
+          x: currentFieldRect.x + FIELD_INNER_OFFSET_X + finalClamped.x,
+          y: currentFieldRect.y + FIELD_INNER_OFFSET_Y + finalClamped.y,
         });
       },
       onDragEnd: (event: KonvaEventObject<Event>) => {
