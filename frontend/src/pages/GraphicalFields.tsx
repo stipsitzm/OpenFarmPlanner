@@ -247,7 +247,9 @@ export default function GraphicalFields({
       Math.min(MAX_STAGE_HEIGHT, Math.round(window.innerHeight * 0.45)),
     ),
   );
-  const [activeGuides, setActiveGuides] = useState<GuideLine[]>([]);
+  const [activeGuidesByLocation, setActiveGuidesByLocation] = useState<
+    Record<number, GuideLine[]>
+  >({});
   const [interactionMode, setInteractionMode] =
     useState<InteractionMode>("view");
   const isEditMode = interactionMode === "edit";
@@ -265,7 +267,7 @@ export default function GraphicalFields({
     Record<number, { distance: number; center: Point } | null>
   >({});
   const resetTransientInteractionState = (): void => {
-    setActiveGuides([]);
+    setActiveGuidesByLocation({});
     Object.keys(panSessionRef.current).forEach((key) => {
       panSessionRef.current[Number(key)] = null;
     });
@@ -721,25 +723,12 @@ export default function GraphicalFields({
       draggable: true,
       onDragMove: (event: KonvaEventObject<Event>) => {
         const raw = { x: event.target.x(), y: event.target.y() };
-        const clampedRaw = clampInsideParent(
+        const clamped = clampInsideParent(
           raw,
           { width: baseRect.width, height: baseRect.height },
           contentBounds,
         );
-        const snapped = snapToNeighbors(
-          fieldId,
-          clampedRaw,
-          { width: baseRect.width, height: baseRect.height },
-          fieldViewModels,
-          FIELD_SNAP_THRESHOLD,
-        );
-        const finalClamped = clampInsideParent(
-          { x: snapped.x, y: snapped.y },
-          { width: baseRect.width, height: baseRect.height },
-          contentBounds,
-        );
-        event.target.position(finalClamped);
-        setActiveGuides(snapped.guides);
+        event.target.position(clamped);
       },
       onDragEnd: (event: KonvaEventObject<Event>) => {
         const next = clampInsideParent(
@@ -767,7 +756,7 @@ export default function GraphicalFields({
           y: finalClamped.y,
           version: 1,
         };
-        setActiveGuides([]);
+        setActiveGuidesByLocation((prev) => ({ ...prev, [locationId]: [] }));
         setLayoutsByField((prev) => ({ ...prev, [fieldId]: nextLayout }));
         saveFieldLayout(locationId, nextLayout);
       },
@@ -814,43 +803,15 @@ export default function GraphicalFields({
           x: event.target.x() - (currentFieldRect.x + FIELD_INNER_OFFSET_X),
           y: event.target.y() - (currentFieldRect.y + FIELD_INNER_OFFSET_Y),
         };
-        const clampedRaw = clampInsideParent(
+        const clamped = clampInsideParent(
           raw,
           { width: bedVm.width, height: bedVm.height },
           fieldInnerSize,
         );
-        const snapped = snapToNeighbors(
-          bedVm.id,
-          clampedRaw,
-          { width: bedVm.width, height: bedVm.height },
-          bedViewModels,
-        );
-        const finalClamped = clampInsideParent(
-          { x: snapped.x, y: snapped.y },
-          { width: bedVm.width, height: bedVm.height },
-          fieldInnerSize,
-        );
         event.target.position({
-          x: currentFieldRect.x + FIELD_INNER_OFFSET_X + finalClamped.x,
-          y: currentFieldRect.y + FIELD_INNER_OFFSET_Y + finalClamped.y,
+          x: currentFieldRect.x + FIELD_INNER_OFFSET_X + clamped.x,
+          y: currentFieldRect.y + FIELD_INNER_OFFSET_Y + clamped.y,
         });
-        setActiveGuides(
-          snapped.guides.map((guide) => ({
-            ...guide,
-            value:
-              guide.orientation === "vertical"
-                ? currentFieldRect.x + FIELD_INNER_OFFSET_X + guide.value
-                : currentFieldRect.y + FIELD_INNER_OFFSET_Y + guide.value,
-            start:
-              guide.orientation === "vertical"
-                ? currentFieldRect.y + FIELD_INNER_OFFSET_Y + guide.start
-                : currentFieldRect.x + FIELD_INNER_OFFSET_X + guide.start,
-            end:
-              guide.orientation === "vertical"
-                ? currentFieldRect.y + FIELD_INNER_OFFSET_Y + guide.end
-                : currentFieldRect.x + FIELD_INNER_OFFSET_X + guide.end,
-          })),
-        );
       },
       onDragEnd: (event: KonvaEventObject<Event>) => {
         const next = {
@@ -884,7 +845,7 @@ export default function GraphicalFields({
           y: finalClamped.y,
           version: 1,
         };
-        setActiveGuides([]);
+        setActiveGuidesByLocation((prev) => ({ ...prev, [locationId]: [] }));
         setLayoutsByBed((prev) => ({ ...prev, [bedVm.id]: nextLayout }));
         saveBedLayout(locationId, nextLayout);
       },
@@ -1298,7 +1259,8 @@ export default function GraphicalFields({
                         );
                       })}
 
-                      {activeGuides.map((guide, index) => (
+                      {(activeGuidesByLocation[locationId] ?? []).map(
+                        (guide, index) => (
                         <Rect
                           key={`${guide.orientation}-${guide.value}-${index}`}
                           x={
@@ -1324,7 +1286,8 @@ export default function GraphicalFields({
                           fill="#e53e3e"
                           opacity={0.8}
                         />
-                      ))}
+                      ),
+                      )}
                     </Layer>
                   </Stage>
                 </Box>
