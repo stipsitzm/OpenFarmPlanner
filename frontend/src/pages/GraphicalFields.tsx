@@ -116,6 +116,7 @@ const DEFAULT_STAGE_HEIGHT = 420;
 const MIN_STAGE_HEIGHT = 320;
 const MAX_STAGE_HEIGHT = 560;
 const ZOOM_STEP = 1.2;
+const ENABLE_VIEWPORT_PANNING = false;
 
 const snapToNeighbors = (
   currentId: number,
@@ -630,7 +631,7 @@ export default function GraphicalFields({
     locationId: number,
     viewport: ViewportState,
   ): void => {
-    if (!isViewMode) {
+    if (!ENABLE_VIEWPORT_PANNING || !isViewMode) {
       return;
     }
     const pointer = stageRefs.current[locationId]?.getPointerPosition();
@@ -645,7 +646,7 @@ export default function GraphicalFields({
     viewport: ViewportState,
     event: KonvaEventObject<DragEvent>,
   ): void => {
-    if (!isViewMode) {
+    if (!ENABLE_VIEWPORT_PANNING || !isViewMode) {
       event.target.position({ x: viewport.x, y: viewport.y });
       return;
     }
@@ -1105,7 +1106,7 @@ export default function GraphicalFields({
                     key={`stage-${locationId}-${interactionMode}`}
                     width={stageWidth}
                     height={stageHeight}
-                    draggable={isViewMode}
+                    draggable={ENABLE_VIEWPORT_PANNING && isViewMode}
                     x={viewport.x}
                     y={viewport.y}
                     scaleX={viewport.scale}
