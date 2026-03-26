@@ -197,7 +197,10 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
  */
 function RootLayout(): React.ReactElement {
   const { t, i18n } = useTranslation('navigation');
-  const tCultures = useMemo(() => i18n.getFixedT(i18n.resolvedLanguage, 'cultures'), [i18n]);
+  const tCultures = useMemo(
+    () => i18n.getFixedT(i18n.resolvedLanguage ?? i18n.language ?? 'de', 'cultures'),
+    [i18n],
+  );
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
