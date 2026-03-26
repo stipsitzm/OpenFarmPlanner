@@ -124,6 +124,19 @@ const snapToNeighbors = (
   neighbors: RectViewModel[],
   threshold: number = SNAP_THRESHOLD,
 ): SnapResult => {
+  const overlapsAnyNeighbor = (candidateX: number, candidateY: number): boolean =>
+    neighbors
+      .filter((neighbor) => neighbor.id !== currentId)
+      .some((neighbor) => {
+        const overlapX =
+          candidateX < neighbor.x + neighbor.width &&
+          candidateX + size.width > neighbor.x;
+        const overlapY =
+          candidateY < neighbor.y + neighbor.height &&
+          candidateY + size.height > neighbor.y;
+        return overlapX && overlapY;
+      });
+
   let snappedX = position.x;
   let snappedY = position.y;
   let bestXDelta = threshold + 1;
@@ -159,9 +172,14 @@ const snapToNeighbors = (
         neighborXPoints.forEach((neighborPoint) => {
           const delta = neighborPoint.value - currentPoint.value;
           const absDelta = Math.abs(delta);
-          if (absDelta <= threshold && absDelta < bestXDelta) {
+          const candidateX = position.x + delta;
+          if (
+            absDelta <= threshold &&
+            absDelta < bestXDelta &&
+            !overlapsAnyNeighbor(candidateX, position.y)
+          ) {
             bestXDelta = absDelta;
-            snappedX = position.x + delta;
+            snappedX = candidateX;
             guides.push({
               orientation: "vertical",
               value: neighborPoint.value,
@@ -179,9 +197,14 @@ const snapToNeighbors = (
         neighborYPoints.forEach((neighborPoint) => {
           const delta = neighborPoint.value - currentPoint.value;
           const absDelta = Math.abs(delta);
-          if (absDelta <= threshold && absDelta < bestYDelta) {
+          const candidateY = position.y + delta;
+          if (
+            absDelta <= threshold &&
+            absDelta < bestYDelta &&
+            !overlapsAnyNeighbor(position.x, candidateY)
+          ) {
             bestYDelta = absDelta;
-            snappedY = position.y + delta;
+            snappedY = candidateY;
             guides.push({
               orientation: "horizontal",
               value: neighborPoint.value,
@@ -202,6 +225,11 @@ const snapToNeighbors = (
   const latestHorizontalGuide = [...guides]
     .reverse()
     .find((guide) => guide.orientation === "horizontal");
+
+  if (overlapsAnyNeighbor(snappedX, snappedY)) {
+    snappedX = position.x;
+    snappedY = position.y;
+  }
 
   return {
     x: snappedX,
