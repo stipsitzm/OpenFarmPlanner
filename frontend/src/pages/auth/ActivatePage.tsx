@@ -1,5 +1,5 @@
 import { Alert, Button, Container, Stack, Typography } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { projectAPI } from '../../api/api';
 import { useAuth } from '../../auth/useAuth';
@@ -15,6 +15,7 @@ export default function ActivatePage(): React.ReactElement {
   const navigate = useNavigate();
   const [status, setStatus] = useState<ActivateStatus>('idle');
   const [message, setMessage] = useState<string>('');
+  const processedActivationRef = useRef<string | null>(null);
 
   useEffect(() => {
     const uid = searchParams.get('uid');
@@ -27,6 +28,11 @@ export default function ActivatePage(): React.ReactElement {
       });
       return;
     }
+    const activationKey = `${uid}:${token}`;
+    if (processedActivationRef.current === activationKey) {
+      return;
+    }
+    processedActivationRef.current = activationKey;
 
     void (async () => {
       queueMicrotask(() => {
