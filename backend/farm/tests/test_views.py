@@ -1391,13 +1391,18 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.assertEqual(response.data['duplicates'], [])
 
     def test_publish_rejects_duplicates_with_conflict_response(self):
+        other_culture = Culture.objects.create(
+            name='Lettuce',
+            variety='Bijella',
+            project=self.project,
+        )
         PublicCulture.objects.create(
             name='Lettuce',
             variety='Bijella',
             status='published',
             created_by=self.user,
             source_project=self.project,
-            source_project_culture=self.culture,
+            source_project_culture=other_culture,
             supplier_name='Reinsaat',
         )
         self.culture.seed_supplier = 'Reinsaat'
@@ -1491,11 +1496,11 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
             status='published',
             created_by=self.user,
             source_project=self.project,
-            supplier_name='  Rein  saat  ',
+            supplier_name='  Rein   Saat  ',
         )
         self.culture.name = '  lettuce'
         self.culture.variety = 'bijella  '
-        self.culture.seed_supplier = 'reinsaat'
+        self.culture.seed_supplier = 'rein saat'
         self.culture.save()
 
         response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
@@ -1505,13 +1510,18 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.assertEqual(PublicCulture.objects.count(), 1)
 
     def test_publish_allows_new_public_culture_for_different_normalized_identity(self):
+        other_culture = Culture.objects.create(
+            name='Lettuce',
+            variety='Bijella',
+            project=self.project,
+        )
         PublicCulture.objects.create(
             name='Lettuce',
             variety='Bijella',
             status='published',
             created_by=self.user,
             source_project=self.project,
-            source_project_culture=self.culture,
+            source_project_culture=other_culture,
             supplier_name='Reinsaat',
         )
         self.culture.variety = 'Other Variety'
