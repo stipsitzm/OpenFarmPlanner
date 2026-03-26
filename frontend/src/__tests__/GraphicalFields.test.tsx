@@ -370,6 +370,42 @@ describe("GraphicalFields", () => {
     ).toBeInTheDocument();
   }, 15000);
 
+  it("supports viewport movement via pan buttons and arrow keys", async () => {
+    render(<GraphicalFields />);
+    act(() => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+      );
+    });
+
+    const stage = screen.getByTestId("konva-stage");
+    const startX = Number(stage.getAttribute("data-x"));
+    const startY = Number(stage.getAttribute("data-y"));
+
+    act(() => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Nach links verschieben" }),
+      );
+    });
+    const afterPanLeftX = Number(
+      screen.getByTestId("konva-stage").getAttribute("data-x"),
+    );
+    expect(afterPanLeftX).toBeGreaterThan(startX);
+
+    act(() => {
+      fireEvent.keyDown(window, { key: "ArrowRight" });
+    });
+    const afterArrowRightX = Number(
+      screen.getByTestId("konva-stage").getAttribute("data-x"),
+    );
+    expect(afterArrowRightX).toBeLessThan(afterPanLeftX);
+
+    act(() => {
+      fireEvent.keyDown(window, { key: "ArrowUp" });
+    });
+    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-y"))).toBeGreaterThan(startY);
+  }, 15000);
+
   it("keeps UI hint and interaction state consistent with the edit mode switch", async () => {
     render(<GraphicalFields />);
     act(() => {
