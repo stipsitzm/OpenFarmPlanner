@@ -77,7 +77,11 @@ from .image_processing import (
 )
 from .services.enrichment import enrich_culture, EnrichmentError
 from .services.seed_packages import PackageOption, compute_seed_package_suggestion
-from .services.public_cultures import import_public_culture_into_project, publish_culture_to_public_library
+from .services.public_cultures import (
+    DuplicatePublicCultureError,
+    import_public_culture_into_project,
+    publish_culture_to_public_library,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -1231,9 +1235,28 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
         if not culture.name.strip():
             return Response({'detail': 'Name is required for publishing.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        public_culture, duplicates = publish_culture_to_public_library(culture=culture, user=request.user)
+        try:
+            public_culture, duplicates, operation = publish_culture_to_public_library(culture=culture, user=request.user)
+        except DuplicatePublicCultureError as error:
+            return Response({
+                'code': 'duplicate_public_culture',
+                'detail': 'A similar public culture already exists.',
+                'duplicates': [
+                    {
+                        'id': item.id,
+                        'name': item.name,
+                        'variety': item.variety,
+                        'version': item.version,
+                        'published_at': item.published_at,
+                        'created_by_label': item.created_by_label,
+                    }
+                    for item in error.duplicates
+                ],
+                'normalized_identity': error.normalized_identity,
+            }, status=status.HTTP_409_CONFLICT)
         serializer = PublicCultureSerializer(public_culture)
         return Response({
+            'operation': operation,
             'public_culture': serializer.data,
             'duplicates': [
                 {

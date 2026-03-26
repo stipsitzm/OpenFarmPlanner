@@ -2,7 +2,7 @@ import { Alert, Button, Container, Stack, Typography } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { projectAPI } from "../api/api";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/useAuth";
 import { useTranslation } from "../i18n";
 import {
   buildInvitationAcceptPath,
@@ -34,8 +34,10 @@ export default function InvitationAcceptPage(): React.ReactElement {
     });
 
     if (!token) {
-      setStatus("error");
-      setMessage(t("result.invalid_token"));
+      queueMicrotask(() => {
+        setStatus("error");
+        setMessage(t("result.invalid_token"));
+      });
       return;
     }
 
@@ -44,8 +46,10 @@ export default function InvitationAcceptPage(): React.ReactElement {
     storeInvitationRedirect(nextPath, token);
 
     if (isLoading) {
-      setStatus("loading");
-      setMessage(t("acceptPage.accepting"));
+      queueMicrotask(() => {
+        setStatus("loading");
+        setMessage(t("acceptPage.accepting"));
+      });
       return;
     }
 

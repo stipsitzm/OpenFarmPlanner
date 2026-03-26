@@ -1,0 +1,33 @@
+import { createContext } from "react";
+import type { AuthUser } from "./types";
+
+export interface AuthContextValue {
+  user: AuthUser | null;
+  isLoading: boolean;
+  activeProjectId: number | null;
+  login: (email: string, password: string) => Promise<AuthUser>;
+  logout: () => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    passwordConfirm: string,
+    displayName?: string,
+  ) => Promise<string>;
+  activate: (uid: string, token: string) => Promise<void>;
+  resendActivation: (email: string) => Promise<string>;
+  requestPasswordReset: (email: string) => Promise<string>;
+  confirmPasswordReset: (
+    uid: string,
+    token: string,
+    password: string,
+    passwordConfirm: string,
+  ) => Promise<string>;
+  requestAccountDeletion: (
+    password: string,
+  ) => Promise<{ detail: string; scheduled_deletion_at: string }>;
+  restoreAccount: (email: string, password: string) => Promise<AuthUser>;
+  switchActiveProject: (projectId: number) => Promise<void>;
+  refreshUser: () => Promise<AuthUser | null>;
+}
+
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);

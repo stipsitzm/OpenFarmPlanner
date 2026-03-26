@@ -2,7 +2,7 @@ import { Alert, Box, Button, CircularProgress, Container, Stack, Typography } fr
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { projectAPI, type InvitationPublicStatus } from '../api/api';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
 
 type InvitationViewStatus = 'loading' | 'ready' | 'accepting' | 'success' | 'error';
@@ -58,8 +58,10 @@ export default function InvitationPage(): React.ReactElement {
 
   useEffect(() => {
     if (!token) {
-      setStatus('error');
-      setErrorCode('invalid_token');
+      queueMicrotask(() => {
+        setStatus('error');
+        setErrorCode('invalid_token');
+      });
       return;
     }
 
@@ -83,7 +85,9 @@ export default function InvitationPage(): React.ReactElement {
     }
 
     autoAcceptStartedRef.current = true;
-    void handleAccept();
+    window.setTimeout(() => {
+      void handleAccept();
+    }, 0);
   }, [publicState, status, user]);
 
   const handleLoginWithDifferentAccount = async (): Promise<void> => {

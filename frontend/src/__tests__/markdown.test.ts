@@ -12,7 +12,7 @@ describe('stripMarkdown', () => {
   });
 
   it('should return empty string for undefined input', () => {
-    expect(stripMarkdown(undefined as any)).toBe('');
+    expect(stripMarkdown(undefined as unknown)).toBe('');
   });
 
   it('should return empty string for empty input', () => {
@@ -125,8 +125,8 @@ describe('stripMarkdown', () => {
   });
 
   it('should preserve normal content without markdown', () => {
-    const input = 'This is plain text without any markdown syntax.';
-    expect(stripMarkdown(input)).toBe('This is plain text without any markdown syntax.');
+    const input = 'This is plain text without unknown markdown syntax.';
+    expect(stripMarkdown(input)).toBe('This is plain text without unknown markdown syntax.');
   });
 });
 
@@ -137,7 +137,7 @@ describe('getPlainExcerpt', () => {
   });
 
   it('should return empty string for undefined input', () => {
-    expect(getPlainExcerpt(undefined as any)).toBe('');
+    expect(getPlainExcerpt(undefined as unknown)).toBe('');
   });
 
   it('should return empty string for empty input', () => {

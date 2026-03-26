@@ -175,7 +175,7 @@ describe('SearchableSelect', () => {
     it('should display selected value correctly', async () => {
       const selectedOption = mockOptions[0];
 
-      const { rerender } = render(
+      render(
         <SearchableSelect
           options={mockOptions}
           value={selectedOption}
@@ -200,7 +200,6 @@ describe('SearchableSelect', () => {
     });
 
     it('should use isOptionEqualToValue to compare options by value property', async () => {
-      const user = userEvent.setup();
       const selectedOption = { value: 1, label: 'Option 1' };
 
       render(
@@ -279,9 +278,7 @@ describe('SearchableSelect', () => {
     });
 
     it('should handle controlled inputValue prop', async () => {
-      const user = userEvent.setup();
-
-      const { rerender } = render(
+      render(
         <SearchableSelect
           options={mockOptions}
           value={null}
@@ -442,8 +439,6 @@ describe('SearchableSelect', () => {
 
       // After escape, options should not be visible
       await waitFor(() => {
-        const optionElements = screen.queryAllByText(/Option [123]/);
-        // The options should still exist in DOM but dropdown is closed
         expect(input.getAttribute('aria-expanded')).not.toBe('true');
       });
     });
@@ -504,7 +499,7 @@ describe('SearchableSelect', () => {
     it('should handle complete selection workflow', async () => {
       const user = userEvent.setup();
 
-      const { rerender } = render(
+      render(
         <SearchableSelect
           options={mockOptions}
           value={null}
@@ -535,7 +530,7 @@ describe('SearchableSelect', () => {
     it('should allow changing selection', async () => {
       const user = userEvent.setup();
 
-      const { rerender } = render(
+      render(
         <SearchableSelect
           options={mockOptions}
           value={mockOptions[0]}

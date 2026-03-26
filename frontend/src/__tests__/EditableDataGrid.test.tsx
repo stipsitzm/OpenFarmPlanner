@@ -34,7 +34,7 @@ vi.mock('@mui/x-data-grid', async () => {
     onCellClick,
     onRowEditStop,
     slots,
-  }: any) => {
+  }: unknown) => {
     const commit = async (row: TestGridRow, reason: string) => {
       try {
         await processRowUpdate(row);
@@ -53,7 +53,7 @@ vi.mock('@mui/x-data-grid', async () => {
               if (typeof col.getActions === 'function') {
                 return (
                   <div key={`${row.id}-${col.field}`}>
-                    {col.getActions({ id: row.id, row } as any)}
+                    {col.getActions({ id: row.id, row } as unknown)}
                   </div>
                 );
               }

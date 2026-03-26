@@ -16,7 +16,7 @@ vi.mock('../api/api', () => ({
 vi.mock('@mui/material', async () => {
   const actual = await vi.importActual<typeof import('@mui/material')>('@mui/material');
 
-  const MockAutocomplete = (props: Record<string, any>) => (
+  const MockAutocomplete = (props: Record<string, unknown>) => (
     <div>
       {props.renderInput ? props.renderInput({} as never) : null}
       <input
@@ -58,10 +58,10 @@ const mockI18n = {
     if (typeof options?.defaultValue === 'string') return options.defaultValue;
     return key;
   },
-  $TFunctionBrand: undefined as any,
+  $TFunctionBrand: undefined as unknown,
 };
 
-const t = mockI18n.t as any;
+const t = mockI18n.t as unknown;
 
 describe('BasicInfoSection', () => {
   beforeEach(() => {

@@ -46,8 +46,10 @@ export function PublicCultureLibraryDialog({
 
   useEffect(() => {
     if (!open) {
-      setQuery('');
-      setSelectedId(null);
+      queueMicrotask(() => {
+        setQuery('');
+        setSelectedId(null);
+      });
     }
   }, [open]);
 

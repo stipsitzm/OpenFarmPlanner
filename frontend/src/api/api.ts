@@ -14,6 +14,7 @@ import type {
   MediaFileRef,
   PublicCulture,
   PublicCultureDuplicateCandidate,
+  PublishPublicCultureResponse,
   RemainingAreaResponse,
   EnrichmentResult,
   EnrichmentBatchResult,
@@ -62,7 +63,7 @@ export const cultureAPI = {
       mode: 'complete_all',
       ...data,
     }, { signal }),
-  publishPublic: (id: number) => http.post<{ public_culture: PublicCulture; duplicates: PublicCultureDuplicateCandidate[] }>(`/cultures/${id}/publish-public/`, {}),
+  publishPublic: (id: number) => http.post<PublishPublicCultureResponse>(`/cultures/${id}/publish-public/`, {}),
 };
 
 

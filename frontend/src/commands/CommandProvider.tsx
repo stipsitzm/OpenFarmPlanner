@@ -9,20 +9,13 @@ import {
   Snackbar,
   Typography,
 } from '@mui/material';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CommandPalette } from './CommandPalette';
 import { getRunnableCommands, getVisibleCommands } from './commands';
 import type { CommandContextTag, CommandSpec } from './types';
 import type { ShortcutSpec } from '../hooks/useKeyboardShortcuts';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-
-interface CommandContextValue {
-  registerCommands: (scope: string, commands: CommandSpec[]) => () => void;
-  setContextTag: (tag: CommandContextTag, active: boolean) => void;
-  openPalette: () => void;
-  closePalette: () => void;
-  currentContextTags: CommandContextTag[];
-}
+import { CommandContext } from './commandContextShared';
 
 const CONTEXT_TITLES: Record<CommandContextTag, string> = {
   global: 'Global',
@@ -35,8 +28,6 @@ const CONTEXT_TITLES: Record<CommandContextTag, string> = {
 };
 
 const SHORTCUT_HINT_KEY = 'ofp.shortcutHintSeen';
-
-const CommandContext = createContext<CommandContextValue | null>(null);
 
 export function CommandProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -191,30 +182,4 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
       </Snackbar>
     </CommandContext.Provider>
   );
-}
-
-export function useCommandContext(): CommandContextValue {
-  const context = useContext(CommandContext);
-  if (!context) {
-    throw new Error('useCommandContext must be used within CommandProvider');
-  }
-
-  return context;
-}
-
-export function useCommandContextTag(tag: CommandContextTag): void {
-  const { setContextTag } = useCommandContext();
-
-  useEffect(() => {
-    setContextTag(tag, true);
-    return () => setContextTag(tag, false);
-  }, [setContextTag, tag]);
-}
-
-export function useRegisterCommands(scope: string, commands: CommandSpec[]): void {
-  const { registerCommands } = useCommandContext();
-
-  useEffect(() => {
-    return registerCommands(scope, commands);
-  }, [commands, registerCommands, scope]);
 }

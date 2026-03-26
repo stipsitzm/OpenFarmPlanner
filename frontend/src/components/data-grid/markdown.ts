@@ -36,7 +36,7 @@ export function stripMarkdown(markdown: string): string {
   text = text.replace(/!\[([^\]]*)\]\([^)]+\)/g, '');
   
   // Remove horizontal rules (---, ***, ___)
-  text = text.replace(/^[\-*_]{3,}\s*$/gm, '');
+  text = text.replace(/^[-*_]{3,}\s*$/gm, '');
   
   // Remove list markers (-, *, +, numbers)
   text = text.replace(/^\s*[-*+]\s+/gm, '');

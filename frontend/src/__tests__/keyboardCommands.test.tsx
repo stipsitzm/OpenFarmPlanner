@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { matchesShortcut, isTypingInEditableElement, useKeyboardShortcuts, type ShortcutSpec } from '../hooks/useKeyboardShortcuts';
-import { CommandPalette, filterCommands } from '../commands/CommandPalette';
+import { CommandPalette } from '../commands/CommandPalette';
+import { filterCommands } from '../commands/commandPaletteUtils';
 import type { CommandSpec } from '../commands/types';
 
 describe('useKeyboardShortcuts helpers', () => {

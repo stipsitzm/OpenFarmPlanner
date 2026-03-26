@@ -9,10 +9,16 @@
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useTranslation } from '../i18n';
 import { cultureAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
-import type { CultivationType, CultureHistoryEntry, PublicCulture } from '../api/types';
+import type {
+  CultivationType,
+  CultureHistoryEntry,
+  PublicCulture,
+  PublishPublicCultureDuplicateError,
+} from '../api/types';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
 import { PublicCultureLibraryDialog } from '../cultures/PublicCultureLibraryDialog';
@@ -33,6 +39,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   List,
   ListItem,
   ListItemText,
@@ -43,6 +50,8 @@ import {
   Typography,
   CircularProgress,
   LinearProgress,
+  Link,
+  Stack,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -52,6 +61,7 @@ import AgricultureIcon from '@mui/icons-material/Agriculture';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PublicIcon from '@mui/icons-material/Public';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
@@ -63,7 +73,7 @@ import {
   buildSingleCultureFilename,
   downloadJsonFile,
 } from '../cultures/exportUtils';
-import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
+import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
 import {
@@ -86,9 +96,10 @@ import { analyzeCultureImportJson, readFileAsText } from './culturesImportUtils'
 import { createCulturesCommandSpecs } from './culturesCommandSpecs';
 import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
-import { getHistoryEntryMeta, getHistoryEntryTitle } from './culturesHistoryUtils';
+import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './culturesHistoryUtils';
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
+import { useAuth } from '../auth/useAuth';
 
 const ENRICHMENT_LOADING_STEPS = [
   { key: 'request', startSeconds: 0 },
@@ -97,10 +108,45 @@ const ENRICHMENT_LOADING_STEPS = [
   { key: 'results', startSeconds: 52 },
 ] as const;
 const ENRICHMENT_EXPECTED_SECONDS = 75;
+
+function normalizePublicCultureIdentityValue(value: string | undefined | null): string {
+  return (value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function getPublicCultureSupplierLabel(culture: PublicCulture): string {
+  return culture.supplier_name || culture.seed_supplier || '';
+}
+
+function dedupePublicCultures(cultures: PublicCulture[]): PublicCulture[] {
+  const byIdentity = new Map<string, PublicCulture>();
+  for (const item of cultures) {
+    const identity = [
+      normalizePublicCultureIdentityValue(item.name),
+      normalizePublicCultureIdentityValue(item.variety),
+      normalizePublicCultureIdentityValue(getPublicCultureSupplierLabel(item)),
+    ].join('||');
+
+    const existing = byIdentity.get(identity);
+    if (!existing) {
+      byIdentity.set(identity, item);
+      continue;
+    }
+
+    const itemPublishedAt = item.published_at ? new Date(item.published_at).getTime() : 0;
+    const existingPublishedAt = existing.published_at ? new Date(existing.published_at).getTime() : 0;
+    if (itemPublishedAt > existingPublishedAt || (itemPublishedAt === existingPublishedAt && item.id > existing.id)) {
+      byIdentity.set(identity, item);
+    }
+  }
+  return Array.from(byIdentity.values());
+}
+
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { selectedCultureId, updateSelectedCultureId } = useSelectedCultureSync();
+  const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
 
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -351,7 +397,7 @@ function Cultures(): React.ReactElement {
       setPublicLibraryLoading(true);
       setPublicLibraryError(null);
       const response = await publicCultureAPI.list(query ? { q: query } : undefined);
-      setPublicCultures(response.data.results);
+      setPublicCultures(dedupePublicCultures(response.data.results));
     } catch (error) {
       console.error('Error fetching public cultures:', error);
       setPublicLibraryError(t('library.loadError'));
@@ -390,16 +436,24 @@ function Cultures(): React.ReactElement {
     try {
       setPublishingCultureId(selectedCulture.id);
       const response = await cultureAPI.publishPublic(selectedCulture.id);
-      const duplicates = response.data.duplicates || [];
-      if (duplicates.length > 0) {
-        const duplicateNames = duplicates
-          .map((entry) => entry.variety ? `${entry.name} (${entry.variety})` : entry.name)
-          .join(', ');
-        showSnackbar(t('library.publishSuccessWithDuplicates', { name: selectedCulture.name, duplicates: duplicateNames }), 'info');
+      if (response.data.operation === 'updated') {
+        showSnackbar(t('library.updateSuccess', { name: selectedCulture.name }), 'success');
       } else {
         showSnackbar(t('library.publishSuccess', { name: selectedCulture.name }), 'success');
       }
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 409) {
+        const duplicateError = error.response.data as PublishPublicCultureDuplicateError | undefined;
+        const duplicateNames = (duplicateError?.duplicates || [])
+          .map((entry) => entry.variety ? `${entry.name} (${entry.variety})` : entry.name)
+          .join(', ');
+        if (duplicateNames) {
+          showSnackbar(t('library.publishDuplicateErrorWithCandidates', { duplicates: duplicateNames }), 'info');
+        } else {
+          showSnackbar(t('library.publishDuplicateError'), 'info');
+        }
+        return;
+      }
       console.error('Error publishing culture:', error);
       showSnackbar(extractApiErrorMessage(error, t, t('library.publishError')), 'error');
     } finally {
@@ -539,6 +593,7 @@ function Cultures(): React.ReactElement {
   };
 
   const selectedCulture = cultures.find(c => c.id === selectedCultureId);
+  const isUpdatingOwnPublicCulture = Boolean(selectedCulture?.owned_public_culture_id);
   const dialogCostInfo = getDialogCostInfo(enrichmentResult);
 
   useCommandContextTag('cultures');
@@ -894,24 +949,33 @@ function Cultures(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          flexWrap: 'wrap',
+          gap: 1.5,
+          mb: 2,
+        }}
+      >
         <h1>{t('title')}</h1>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <ButtonGroup variant="contained" aria-label={t('buttons.addNew')}>
-            <Button startIcon={<AddIcon />} onClick={handleAddNew}>
-              {t('buttons.addNew')}
-            </Button>
-            <Button
-              size="small"
-              aria-label={t('import.menuLabel')}
-              aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
-              aria-haspopup="true"
-              onClick={handleImportMenuOpen}
-              sx={{ minWidth: 32, px: 0.5 }}
-            >
-              <ArrowDropDownIcon />
-            </Button>
-          </ButtonGroup>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 'auto' }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNew}>
+            {t('buttons.addNew')}
+          </Button>
+          <Button variant="outlined" startIcon={<PublicIcon />} onClick={() => void handleOpenPublicLibrary()}>
+            {t('library.openButton')}
+          </Button>
+          <IconButton
+            size="small"
+            aria-label={t('import.menuLabel')}
+            aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
+            aria-haspopup="true"
+            onClick={handleImportMenuOpen}
+          >
+            <MoreVertIcon />
+          </IconButton>
         </Box>
         <Menu
           id="culture-import-menu"
@@ -927,9 +991,6 @@ function Cultures(): React.ReactElement {
           </MenuItem>
           <MenuItem aria-label="JSON importieren (Alt+I)" onClick={handleImportFileTrigger}>
             JSON importieren (Alt+I)
-          </MenuItem>
-          <MenuItem aria-label={t('library.openButton')} onClick={() => void handleOpenPublicLibrary()}>
-            {t('library.openButton')}
           </MenuItem>
         </Menu>
         <input
@@ -1055,7 +1116,9 @@ function Cultures(): React.ReactElement {
             onClick={() => void handlePublishCurrentCulture()}
             disabled={!selectedCulture || publishingCultureId === selectedCulture?.id}
           >
-            {publishingCultureId === selectedCulture?.id ? t('library.publishing') : t('library.publishButton')}
+            {publishingCultureId === selectedCulture?.id
+              ? (isUpdatingOwnPublicCulture ? t('library.updating') : t('library.publishing'))
+              : (isUpdatingOwnPublicCulture ? t('library.updateButton') : t('library.publishButton'))}
           </Button>
           <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
             Versionen
@@ -1376,16 +1439,35 @@ function Cultures(): React.ReactElement {
         </DialogTitle>
         <DialogContent>
           <List>
-            {historyItems.map((item) => (
-              <ListItem key={item.history_id} secondaryAction={
-                <Button onClick={() => handleRestoreVersion(item.history_id)}>{t('history.restoreButton')}</Button>
-              }>
-                <ListItemText
-                  primary={getHistoryEntryTitle(item, t)}
-                  secondary={getHistoryEntryMeta(item, t)}
-                />
-              </ListItem>
-            ))}
+            {historyItems.map((item) => {
+              const historyTarget = getHistoryEntryTarget(item);
+              return (
+                <ListItem key={item.history_id} disableGutters>
+                  <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
+                    <ListItemText
+                      sx={{ mr: 1 }}
+                      primary={(
+                        <>
+                          {getHistoryEntryTitle(item, t)}
+                          {historyTarget ? (
+                            <>
+                              {' · '}
+                              <Link component={RouterLink} to={historyTarget} underline="hover" onClick={() => setHistoryOpen(false)}>
+                                {item.object_type === 'culture' ? t('history.objectTypes.culture') : t('history.objectTypes.plantingPlan')}
+                              </Link>
+                            </>
+                          ) : null}
+                        </>
+                      )}
+                      secondary={getHistoryEntryMeta(item, t, fallbackHistoryActorLabel)}
+                    />
+                    <Button onClick={() => handleRestoreVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {t('history.restoreButton')}
+                    </Button>
+                  </Stack>
+                </ListItem>
+              );
+            })}
           </List>
         </DialogContent>
         <DialogActions>

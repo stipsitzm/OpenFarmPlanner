@@ -37,7 +37,7 @@ import {
 import GanttChart, { ViewMode } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
-import { useCommandContextTag, useRegisterCommands } from '../commands/CommandProvider';
+import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
 import {
   buildFieldOccupancyTaskGroups,

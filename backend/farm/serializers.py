@@ -448,6 +448,7 @@ class CultureSerializer(serializers.ModelSerializer):
         read_only=True,
         help_text='Calculated plants per square meter based on spacing (read-only)'
     )
+    owned_public_culture_id = serializers.SerializerMethodField()
     
     def get_image_file(self, obj):
         if not obj.image_file_id:
@@ -461,6 +462,24 @@ class CultureSerializer(serializers.ModelSerializer):
         model = Culture
         fields = '__all__'
     
+    def get_owned_public_culture_id(self, obj: Culture) -> int | None:
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return None
+
+        if obj.source_public_culture_id:
+            if obj.source_public_culture and obj.source_public_culture.created_by_id == user.id:
+                return obj.source_public_culture_id
+            return None
+
+        linked_public = PublicCulture.objects.filter(
+            source_project_culture=obj,
+            created_by=user,
+            status=PublicCulture.STATUS_PUBLISHED,
+        ).order_by('-updated_at', '-id').values_list('id', flat=True).first()
+        return linked_public
+
 
 
     def validate_seed_packages(self, value):

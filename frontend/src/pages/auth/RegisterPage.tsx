@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, Navigate, useLocation } from 'react-router-dom';
 import { projectAPI, type InvitationPublicStatus } from '../../api/api';
-import { useAuth } from '../../auth/AuthContext';
+import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
 import { getNextFromSearch, getTokenFromNextPath, storeInvitationRedirect } from '../invitationAcceptance';
 

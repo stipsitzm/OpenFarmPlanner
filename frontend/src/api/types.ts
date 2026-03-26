@@ -32,6 +32,7 @@ export interface Culture {
   source_public_culture?: number | null;
   source_public_version?: number | null;
   origin_type?: 'manual' | 'imported';
+  owned_public_culture_id?: number | null;
   is_modified_from_source?: boolean;
   thousand_kernel_weight_g?: number;
   package_size_g?: number; // deprecated, replaced by seed_packages
@@ -128,6 +129,23 @@ export interface PublicCultureDuplicateCandidate {
   version: number;
   published_at?: string | null;
   created_by_label?: string;
+}
+
+export interface PublishPublicCultureDuplicateError {
+  code: 'duplicate_public_culture';
+  detail: string;
+  duplicates: PublicCultureDuplicateCandidate[];
+  normalized_identity?: {
+    name: string;
+    variety: string;
+    seed_supplier: string;
+  };
+}
+
+export interface PublishPublicCultureResponse {
+  operation: 'created' | 'updated';
+  public_culture: PublicCulture;
+  duplicates: PublicCultureDuplicateCandidate[];
 }
 
 export interface SeedDemand {

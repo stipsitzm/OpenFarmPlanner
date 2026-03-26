@@ -40,7 +40,7 @@ interface NameCellCallbacks {
   onCreatePlantingPlan: (bedId: number) => void;
 }
 
-function ActionIconButton({
+function renderActionIconButton({
   label,
   color,
   onClick,
@@ -74,31 +74,29 @@ function renderInlineActions(
   t: TFunction
 ): ReactElement | null {
   if (row.type === 'location') {
-    return (
-      <ActionIconButton
-        label={t('hierarchy:addField')}
-        color="primary"
-        onClick={() => callbacks.onAddField(row.locationId)}
-        icon={<AddIcon fontSize="small" />}
-      />
-    );
+    return renderActionIconButton({
+      label: t('hierarchy:addField'),
+      color: 'primary',
+      onClick: () => callbacks.onAddField(row.locationId),
+      icon: <AddIcon fontSize="small" />,
+    });
   }
 
   if (row.type === 'field') {
     return (
       <>
-        <ActionIconButton
-          label={t('hierarchy:addBed')}
-          color="primary"
-          onClick={() => callbacks.onAddBed(row.fieldId!)}
-          icon={<AddIcon fontSize="small" />}
-        />
-        <ActionIconButton
-          label={t('common:actions.delete')}
-          color="error"
-          onClick={() => callbacks.onDeleteField(row.fieldId!)}
-          icon={<DeleteIcon fontSize="small" />}
-        />
+        {renderActionIconButton({
+          label: t('hierarchy:addBed'),
+          color: 'primary',
+          onClick: () => callbacks.onAddBed(row.fieldId!),
+          icon: <AddIcon fontSize="small" />,
+        })}
+        {renderActionIconButton({
+          label: t('common:actions.delete'),
+          color: 'error',
+          onClick: () => callbacks.onDeleteField(row.fieldId!),
+          icon: <DeleteIcon fontSize="small" />,
+        })}
       </>
     );
   }
@@ -106,18 +104,18 @@ function renderInlineActions(
   if (row.type === 'bed') {
     return (
       <>
-        <ActionIconButton
-          label={t('hierarchy:createPlantingPlan')}
-          color="primary"
-          onClick={() => callbacks.onCreatePlantingPlan(row.bedId!)}
-          icon={<AgricultureIcon fontSize="small" />}
-        />
-        <ActionIconButton
-          label={t('common:actions.delete')}
-          color="error"
-          onClick={() => callbacks.onDeleteBed(row.bedId!)}
-          icon={<DeleteIcon fontSize="small" />}
-        />
+        {renderActionIconButton({
+          label: t('hierarchy:createPlantingPlan'),
+          color: 'primary',
+          onClick: () => callbacks.onCreatePlantingPlan(row.bedId!),
+          icon: <AgricultureIcon fontSize="small" />,
+        })}
+        {renderActionIconButton({
+          label: t('common:actions.delete'),
+          color: 'error',
+          onClick: () => callbacks.onDeleteBed(row.bedId!),
+          icon: <DeleteIcon fontSize="small" />,
+        })}
       </>
     );
   }

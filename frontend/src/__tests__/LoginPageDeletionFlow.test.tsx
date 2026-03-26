@@ -7,7 +7,7 @@ import { AuthApiError } from '../auth/authApi';
 const loginMock = vi.fn();
 const restoreMock = vi.fn();
 
-vi.mock('../auth/AuthContext', () => ({
+vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({
     user: null,
     login: loginMock,

@@ -45,7 +45,7 @@ import type { HierarchyRow } from "../components/hierarchy/utils/types";
 import {
   useCommandContextTag,
   useRegisterCommands,
-} from "../commands/CommandProvider";
+} from "../commands/useCommandContext";
 import type { CommandSpec } from "../commands/types";
 import { isTypingInEditableElement } from "../hooks/useKeyboardShortcuts";
 

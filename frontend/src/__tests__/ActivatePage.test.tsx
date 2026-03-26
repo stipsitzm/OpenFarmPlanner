@@ -7,7 +7,7 @@ const activateMock = vi.fn();
 const switchActiveProjectMock = vi.fn(async () => {});
 const acceptPendingInvitationMock = vi.fn();
 
-vi.mock('../auth/AuthContext', () => ({
+vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({
     activate: activateMock,
     switchActiveProject: switchActiveProjectMock,

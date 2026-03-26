@@ -15,7 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import { seedDemandAPI, type SeedDemand } from '../api/api';
-import { useCommandContextTag } from '../commands/CommandProvider';
+import { useCommandContextTag } from '../commands/useCommandContext';
 
 const formatPackageSelection = (row: SeedDemand): string => {
   if (!row.package_suggestion || row.package_suggestion.selection.length === 0) {

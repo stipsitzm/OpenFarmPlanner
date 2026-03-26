@@ -25,7 +25,7 @@ const authState = {
   user: { id: 1, email: 'invitee@example.com' },
 };
 
-vi.mock('../auth/AuthContext', () => ({
+vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({
     user: authState.user,
     logout: logoutMock,

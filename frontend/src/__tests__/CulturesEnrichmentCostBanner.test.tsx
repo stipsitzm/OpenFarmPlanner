@@ -50,6 +50,12 @@ vi.mock('../cultures/CultureDetail', () => ({
   ),
 }));
 
+vi.mock('../auth/useAuth', () => ({
+  useAuth: () => ({
+    user: { id: 1, email: 'tester@example.com', display_name: 'Tester' },
+  }),
+}));
+
 describe('Cultures enrichment cost banner', () => {
   beforeEach(() => {
     vi.clearAllMocks();

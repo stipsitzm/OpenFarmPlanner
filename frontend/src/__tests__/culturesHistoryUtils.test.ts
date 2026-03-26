@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getHistoryActorLabel, getHistoryEntryMeta, getHistoryEntryTitle } from '../pages/culturesHistoryUtils';
+import {
+  getHistoryActorLabel,
+  getHistoryEntryMeta,
+  getHistoryEntryTarget,
+  getHistoryEntryTitle,
+} from '../pages/culturesHistoryUtils';
 import i18n from '../i18n';
 import type { CultureHistoryEntry } from '../api/types';
 
@@ -45,6 +50,7 @@ describe('culturesHistoryUtils', () => {
     expect(getHistoryActorLabel(withActor, t)).toBe('Martin Stipsitz');
     expect(getHistoryActorLabel(withHistoryUser, t)).toBe('user@example.com');
     expect(getHistoryActorLabel(withoutActor, t)).toBe('Unbekannter Nutzer');
+    expect(getHistoryActorLabel(withoutActor, t, 'Fallback User')).toBe('Fallback User');
   });
 
   it('builds metadata line with actor and timestamp', () => {
@@ -55,5 +61,34 @@ describe('culturesHistoryUtils', () => {
 
     const meta = getHistoryEntryMeta(entry, t);
     expect(meta).toContain('von Martin Stipsitz ·');
+  });
+
+  it('builds culture links from culture_id and summary fallback', () => {
+    const withCultureId = buildEntry({
+      object_type: 'culture',
+      culture_id: 42,
+      summary: 'Culture #42 updated',
+    });
+    const withSummaryId = buildEntry({
+      object_type: 'culture',
+      summary: 'Culture #7 updated',
+    });
+
+    expect(getHistoryEntryTarget(withCultureId)).toBe('/app/cultures?cultureId=42');
+    expect(getHistoryEntryTarget(withSummaryId)).toBe('/app/cultures?cultureId=7');
+  });
+
+  it('builds planting plan link and returns null for unsupported types', () => {
+    const plantingPlanEntry = buildEntry({
+      object_type: 'planting_plan',
+      summary: 'PlantingPlan #3 created',
+    });
+    const unsupportedEntry = buildEntry({
+      object_type: 'field',
+      summary: 'Field #2 updated',
+    });
+
+    expect(getHistoryEntryTarget(plantingPlanEntry)).toBe('/app/anbauplaene');
+    expect(getHistoryEntryTarget(unsupportedEntry)).toBeNull();
   });
 });

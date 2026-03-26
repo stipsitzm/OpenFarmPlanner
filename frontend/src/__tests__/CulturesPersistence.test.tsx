@@ -42,6 +42,12 @@ vi.mock('../cultures/CultureDetail', () => ({
   },
 }));
 
+vi.mock('../auth/useAuth', () => ({
+  useAuth: () => ({
+    user: { id: 1, email: 'tester@example.com', display_name: 'Tester' },
+  }),
+}));
+
 function SearchIndicator(): ReactElement {
   const location = useLocation();
   return <span data-testid="location-search">{location.search}</span>;

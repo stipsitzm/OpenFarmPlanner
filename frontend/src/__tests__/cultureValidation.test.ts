@@ -18,20 +18,20 @@ describe('validateCulture', () => {
 
   it('validates seed rate value/unit dependencies and positive amount', () => {
     const missingUnit = validateCulture(
-      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as any, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 1 },
+      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as unknown, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 1 },
       t
     );
     expect(missingUnit.errors.seed_rate_unit).toBe('form.seedRateUnitRequired');
 
     const nonPositive = validateCulture(
-      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as any, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 0, seed_rate_unit: 'g_per_m2' },
+      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as unknown, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 0, seed_rate_unit: 'g_per_m2' },
       t
     );
     expect(nonPositive.errors.seed_rate_value).toBe('form.seedRateValueRequired');
     
     // Einheit ohne Menge ist erlaubt
     const unitWithoutValue = validateCulture(
-      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as any, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_unit: 'g_per_m2' },
+      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as unknown, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_unit: 'g_per_m2' },
       t
     );
     expect(unitWithoutValue.errors.seed_rate_value).toBeUndefined();
@@ -42,7 +42,7 @@ describe('validateCulture', () => {
       {
         name: 'Radies',
         variety: 'Saxa',
-        supplier: { id: 1, name: 'Test' } as any,
+        supplier: { id: 1, name: 'Test' } as unknown,
         cultivation_type: 'direct_sowing',
         growth_duration_days: 20,
         harvest_duration_days: 10,
@@ -58,7 +58,7 @@ describe('validateCulture', () => {
       {
         name: 'Tomate',
         variety: 'Harzfeuer',
-        supplier: { id: 1, name: 'Test' } as any,
+        supplier: { id: 1, name: 'Test' } as unknown,
         cultivation_type: 'pre_cultivation',
         growth_duration_days: '-1' as never,
         harvest_duration_days: -2,
@@ -87,7 +87,7 @@ describe('validateCulture', () => {
       {
         name: 'Salat',
         variety: 'Lollo Rosso',
-        supplier: { id: 1, name: 'Test' } as any,
+        supplier: { id: 1, name: 'Test' } as unknown,
         cultivation_type: 'pre_cultivation',
         growth_duration_days: 15,
         harvest_duration_days: 8,
@@ -102,7 +102,7 @@ describe('validateCulture', () => {
       {
         name: 'Salat',
         variety: 'Lollo Rosso',
-        supplier: { id: 1, name: 'Test' } as any,
+        supplier: { id: 1, name: 'Test' } as unknown,
         cultivation_type: 'pre_cultivation',
         growth_duration_days: 15,
         harvest_duration_days: 8,
@@ -117,7 +117,7 @@ describe('validateCulture', () => {
       {
         name: 'Salat',
         variety: 'Lollo Rosso',
-        supplier: { id: 1, name: 'Test' } as any,
+        supplier: { id: 1, name: 'Test' } as unknown,
         cultivation_type: 'pre_cultivation',
         growth_duration_days: 15,
         harvest_duration_days: 8,
@@ -137,7 +137,7 @@ describe('validateCulture', () => {
       {
         name: 'Fenchel',
         variety: 'Fino',
-        supplier: { id: 1, name: 'Test' } as any,
+        supplier: { id: 1, name: 'Test' } as unknown,
         cultivation_type: 'pre_cultivation',
         growth_duration_days: '12' as never,
         harvest_duration_days: '7' as never,
@@ -156,10 +156,10 @@ describe('validateCulture', () => {
       {
         name: 'Möhre',
         variety: 'Rodelika',
-        supplier: { id: 1, name: 'Test' } as any,
+        supplier: { id: 1, name: 'Test' } as unknown,
         seed_packages: [
-          { size_value: '0.2', size_unit: 'g' } as any,
-          { size_value: '4,6', size_unit: 'g' } as any,
+          { size_value: '0.2', size_unit: 'g' } as unknown,
+          { size_value: '4,6', size_unit: 'g' } as unknown,
         ],
       },
       t

@@ -53,6 +53,12 @@ vi.mock('../cultures/CultureForm', () => ({
   ),
 }));
 
+vi.mock('../auth/useAuth', () => ({
+  useAuth: () => ({
+    user: { id: 1, email: 'tester@example.com', display_name: 'Tester' },
+  }),
+}));
+
 describe('Cultures save payload', () => {
   beforeEach(() => {
     vi.clearAllMocks();

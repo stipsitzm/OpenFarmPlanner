@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   activate as activateRequest,
   getMe,
@@ -13,37 +13,7 @@ import {
   switchActiveProject as switchActiveProjectRequest,
 } from "./authApi";
 import type { AuthUser } from "./types";
-
-interface AuthContextValue {
-  user: AuthUser | null;
-  isLoading: boolean;
-  activeProjectId: number | null;
-  login: (email: string, password: string) => Promise<AuthUser>;
-  logout: () => Promise<void>;
-  register: (
-    email: string,
-    password: string,
-    passwordConfirm: string,
-    displayName?: string,
-  ) => Promise<string>;
-  activate: (uid: string, token: string) => Promise<void>;
-  resendActivation: (email: string) => Promise<string>;
-  requestPasswordReset: (email: string) => Promise<string>;
-  confirmPasswordReset: (
-    uid: string,
-    token: string,
-    password: string,
-    passwordConfirm: string,
-  ) => Promise<string>;
-  requestAccountDeletion: (
-    password: string,
-  ) => Promise<{ detail: string; scheduled_deletion_at: string }>;
-  restoreAccount: (email: string, password: string) => Promise<AuthUser>;
-  switchActiveProject: (projectId: number) => Promise<void>;
-  refreshUser: () => Promise<AuthUser | null>;
-}
-
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+import { AuthContext, type AuthContextValue } from "./authContextShared";
 
 function clearStoredProjectId(): void {
   window.localStorage.removeItem("activeProjectId");
@@ -190,12 +160,4 @@ export function AuthProvider({
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return context;
 }
