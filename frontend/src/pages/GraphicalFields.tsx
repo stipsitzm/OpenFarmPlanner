@@ -44,6 +44,8 @@ import {
 import {
   fitContentToStage,
   getVisibleElements,
+  panViewport,
+  startPanSession,
   shouldShowBedLabel,
   shouldShowFieldLabel,
   type PanSession,
@@ -598,9 +600,14 @@ export default function GraphicalFields({
     locationId: number,
     viewport: ViewportState,
   ): void => {
-    void locationId;
-    void viewport;
-    return;
+    if (!isViewMode) {
+      return;
+    }
+    const pointer = stageRefs.current[locationId]?.getPointerPosition();
+    if (!pointer) {
+      return;
+    }
+    panSessionRef.current[locationId] = startPanSession(viewport, pointer);
   };
 
   const handleStageDragMove = (
@@ -608,10 +615,20 @@ export default function GraphicalFields({
     viewport: ViewportState,
     event: KonvaEventObject<DragEvent>,
   ): void => {
-    void locationId;
-    void viewport;
-    void event;
-    return;
+    if (!isViewMode) {
+      event.target.position({ x: viewport.x, y: viewport.y });
+      return;
+    }
+
+    const pointer = stageRefs.current[locationId]?.getPointerPosition();
+    const panSession = panSessionRef.current[locationId];
+    if (!pointer || !panSession) {
+      return;
+    }
+
+    const nextViewport = panViewport(panSession, pointer, viewport.scale);
+    event.target.position({ x: nextViewport.x, y: nextViewport.y });
+    updateViewport(locationId, () => nextViewport);
   };
 
   const handleStageDragEnd = (
@@ -1076,7 +1093,7 @@ export default function GraphicalFields({
                     key={`stage-${locationId}-${interactionMode}`}
                     width={stageWidth}
                     height={stageHeight}
-                    draggable={false}
+                    draggable={isViewMode}
                     x={viewport.x}
                     y={viewport.y}
                     scaleX={viewport.scale}

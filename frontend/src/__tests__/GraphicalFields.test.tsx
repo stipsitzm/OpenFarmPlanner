@@ -429,7 +429,7 @@ describe("GraphicalFields", () => {
     ).toBeInTheDocument();
   }, 15000);
 
-  it("does not allow dragging the viewport in view mode", () => {
+  it("allows dragging the viewport in view mode", () => {
     const { rerender } = render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
@@ -440,7 +440,7 @@ describe("GraphicalFields", () => {
     const stage = screen.getByTestId("konva-stage");
     const startX = Number(stage.getAttribute("data-x"));
     const startY = Number(stage.getAttribute("data-y"));
-    expect(stage).toHaveAttribute("draggable", "false");
+    expect(stage).toHaveAttribute("draggable", "true");
 
     act(() => {
       mockStageApi.setPointer(100, 120);
@@ -459,15 +459,15 @@ describe("GraphicalFields", () => {
       });
     });
 
-    const unchangedStage = screen.getByTestId("konva-stage");
-    expect(Number(unchangedStage.getAttribute("data-x"))).toBe(startX);
-    expect(Number(unchangedStage.getAttribute("data-y"))).toBe(startY);
+    const movedStage = screen.getByTestId("konva-stage");
+    expect(Number(movedStage.getAttribute("data-x"))).toBe(startX + 65);
+    expect(Number(movedStage.getAttribute("data-y"))).toBe(startY + 75);
 
     rerender(<GraphicalFields />);
 
     const rerenderedStage = screen.getByTestId("konva-stage");
-    expect(Number(rerenderedStage.getAttribute("data-x"))).toBe(startX);
-    expect(Number(rerenderedStage.getAttribute("data-y"))).toBe(startY);
+    expect(Number(rerenderedStage.getAttribute("data-x"))).toBe(startX + 65);
+    expect(Number(rerenderedStage.getAttribute("data-y"))).toBe(startY + 75);
   }, 15000);
 
   it("changes fit-to-view only on explicit trigger and keeps the viewport when switching modes", () => {
@@ -512,8 +512,8 @@ describe("GraphicalFields", () => {
     });
 
     const movedStage = screen.getByTestId("konva-stage");
-    expect(Number(movedStage.getAttribute("data-x"))).toBe(initialX);
-    expect(Number(movedStage.getAttribute("data-y"))).toBe(initialY);
+    expect(Number(movedStage.getAttribute("data-x"))).toBe(initialX + 45);
+    expect(Number(movedStage.getAttribute("data-y"))).toBe(initialY + 55);
 
     act(() => {
       fireEvent.click(screen.getByRole("switch"));
@@ -521,8 +521,8 @@ describe("GraphicalFields", () => {
     });
 
     const modeToggledStage = screen.getByTestId("konva-stage");
-    expect(Number(modeToggledStage.getAttribute("data-x"))).toBe(initialX);
-    expect(Number(modeToggledStage.getAttribute("data-y"))).toBe(initialY);
+    expect(Number(modeToggledStage.getAttribute("data-x"))).toBe(initialX + 45);
+    expect(Number(modeToggledStage.getAttribute("data-y"))).toBe(initialY + 55);
 
     act(() => {
       fireEvent.click(screen.getByRole("button", { name: "Alles einpassen" }));
