@@ -44,8 +44,6 @@ import {
 import {
   fitContentToStage,
   getVisibleElements,
-  panViewport,
-  startPanSession,
   shouldShowBedLabel,
   shouldShowFieldLabel,
   type PanSession,
@@ -116,27 +114,6 @@ const DEFAULT_STAGE_HEIGHT = 420;
 const MIN_STAGE_HEIGHT = 320;
 const MAX_STAGE_HEIGHT = 560;
 const ZOOM_STEP = 1.2;
-const parseFeatureFlag = (
-  value: string | undefined,
-  defaultValue: boolean,
-): boolean => {
-  if (value === undefined) {
-    return defaultValue;
-  }
-  return value === "true";
-};
-const ENABLE_VIEWPORT_PANNING = parseFeatureFlag(
-  import.meta.env.VITE_GRAPHICAL_ENABLE_PAN,
-  false,
-);
-const ENABLE_VIEWPORT_ZOOM = parseFeatureFlag(
-  import.meta.env.VITE_GRAPHICAL_ENABLE_ZOOM,
-  true,
-);
-const ENABLE_OVERLAP_SNAP_GUARD = parseFeatureFlag(
-  import.meta.env.VITE_GRAPHICAL_ENABLE_OVERLAP_GUARD,
-  false,
-);
 
 const snapToNeighbors = (
   currentId: number,
@@ -145,19 +122,6 @@ const snapToNeighbors = (
   neighbors: RectViewModel[],
   threshold: number = SNAP_THRESHOLD,
 ): SnapResult => {
-  const overlapsAnyNeighbor = (candidateX: number, candidateY: number): boolean =>
-    neighbors
-      .filter((neighbor) => neighbor.id !== currentId)
-      .some((neighbor) => {
-        const overlapX =
-          candidateX < neighbor.x + neighbor.width &&
-          candidateX + size.width > neighbor.x;
-        const overlapY =
-          candidateY < neighbor.y + neighbor.height &&
-          candidateY + size.height > neighbor.y;
-        return overlapX && overlapY;
-      });
-
   let snappedX = position.x;
   let snappedY = position.y;
   let bestXDelta = threshold + 1;
@@ -193,15 +157,9 @@ const snapToNeighbors = (
         neighborXPoints.forEach((neighborPoint) => {
           const delta = neighborPoint.value - currentPoint.value;
           const absDelta = Math.abs(delta);
-          const candidateX = position.x + delta;
-          if (
-            absDelta <= threshold &&
-            absDelta < bestXDelta &&
-            (!ENABLE_OVERLAP_SNAP_GUARD ||
-              !overlapsAnyNeighbor(candidateX, position.y))
-          ) {
+          if (absDelta <= threshold && absDelta < bestXDelta) {
             bestXDelta = absDelta;
-            snappedX = candidateX;
+            snappedX = position.x + delta;
             guides.push({
               orientation: "vertical",
               value: neighborPoint.value,
@@ -219,15 +177,9 @@ const snapToNeighbors = (
         neighborYPoints.forEach((neighborPoint) => {
           const delta = neighborPoint.value - currentPoint.value;
           const absDelta = Math.abs(delta);
-          const candidateY = position.y + delta;
-          if (
-            absDelta <= threshold &&
-            absDelta < bestYDelta &&
-            (!ENABLE_OVERLAP_SNAP_GUARD ||
-              !overlapsAnyNeighbor(position.x, candidateY))
-          ) {
+          if (absDelta <= threshold && absDelta < bestYDelta) {
             bestYDelta = absDelta;
-            snappedY = candidateY;
+            snappedY = position.y + delta;
             guides.push({
               orientation: "horizontal",
               value: neighborPoint.value,
@@ -248,14 +200,6 @@ const snapToNeighbors = (
   const latestHorizontalGuide = [...guides]
     .reverse()
     .find((guide) => guide.orientation === "horizontal");
-
-  if (
-    ENABLE_OVERLAP_SNAP_GUARD &&
-    overlapsAnyNeighbor(snappedX, snappedY)
-  ) {
-    snappedX = position.x;
-    snappedY = position.y;
-  }
 
   return {
     x: snappedX,
@@ -301,9 +245,7 @@ export default function GraphicalFields({
       Math.min(MAX_STAGE_HEIGHT, Math.round(window.innerHeight * 0.45)),
     ),
   );
-  const [activeGuidesByLocation, setActiveGuidesByLocation] = useState<
-    Record<number, GuideLine[]>
-  >({});
+  const [activeGuides, setActiveGuides] = useState<GuideLine[]>([]);
   const [interactionMode, setInteractionMode] =
     useState<InteractionMode>("view");
   const isEditMode = interactionMode === "edit";
@@ -321,7 +263,7 @@ export default function GraphicalFields({
     Record<number, { distance: number; center: Point } | null>
   >({});
   const resetTransientInteractionState = (): void => {
-    setActiveGuidesByLocation({});
+    setActiveGuides([]);
     Object.keys(panSessionRef.current).forEach((key) => {
       panSessionRef.current[Number(key)] = null;
     });
@@ -637,9 +579,6 @@ export default function GraphicalFields({
     locationId: number,
     event: KonvaEventObject<WheelEvent>,
   ): void => {
-    if (!ENABLE_VIEWPORT_ZOOM) {
-      return;
-    }
     event.evt.preventDefault();
     const pointer = stageRefs.current[locationId]?.getPointerPosition();
     if (!pointer) {
@@ -652,9 +591,6 @@ export default function GraphicalFields({
   };
 
   const handleStageDoubleTap = (locationId: number): void => {
-    if (!ENABLE_VIEWPORT_ZOOM) {
-      return;
-    }
     handleZoom(locationId, ZOOM_STEP);
   };
 
@@ -662,14 +598,9 @@ export default function GraphicalFields({
     locationId: number,
     viewport: ViewportState,
   ): void => {
-    if (!ENABLE_VIEWPORT_PANNING || !isViewMode) {
-      return;
-    }
-    const pointer = stageRefs.current[locationId]?.getPointerPosition();
-    if (!pointer) {
-      return;
-    }
-    panSessionRef.current[locationId] = startPanSession(viewport, pointer);
+    void locationId;
+    void viewport;
+    return;
   };
 
   const handleStageDragMove = (
@@ -677,20 +608,10 @@ export default function GraphicalFields({
     viewport: ViewportState,
     event: KonvaEventObject<DragEvent>,
   ): void => {
-    if (!ENABLE_VIEWPORT_PANNING || !isViewMode) {
-      event.target.position({ x: viewport.x, y: viewport.y });
-      return;
-    }
-
-    const pointer = stageRefs.current[locationId]?.getPointerPosition();
-    const panSession = panSessionRef.current[locationId];
-    if (!pointer || !panSession) {
-      return;
-    }
-
-    const nextViewport = panViewport(panSession, pointer, viewport.scale);
-    event.target.position({ x: nextViewport.x, y: nextViewport.y });
-    updateViewport(locationId, () => nextViewport);
+    void locationId;
+    void viewport;
+    void event;
+    return;
   };
 
   const handleStageDragEnd = (
@@ -709,7 +630,7 @@ export default function GraphicalFields({
   ): void => {
     const stage = stageRefs.current[locationId];
     const touches = event.evt.touches;
-    if (!ENABLE_VIEWPORT_ZOOM || !stage || touches.length !== 2) {
+    if (!stage || touches.length !== 2) {
       pinchStateRef.current[locationId] = null;
       return;
     }
@@ -801,6 +722,7 @@ export default function GraphicalFields({
           contentBounds,
         );
         event.target.position(finalClamped);
+        setActiveGuides(snapped.guides);
       },
       onDragEnd: (event: KonvaEventObject<Event>) => {
         const next = clampInsideParent(
@@ -828,7 +750,7 @@ export default function GraphicalFields({
           y: finalClamped.y,
           version: 1,
         };
-        setActiveGuidesByLocation((prev) => ({ ...prev, [locationId]: [] }));
+        setActiveGuides([]);
         setLayoutsByField((prev) => ({ ...prev, [fieldId]: nextLayout }));
         saveFieldLayout(locationId, nextLayout);
       },
@@ -895,6 +817,23 @@ export default function GraphicalFields({
           x: currentFieldRect.x + FIELD_INNER_OFFSET_X + finalClamped.x,
           y: currentFieldRect.y + FIELD_INNER_OFFSET_Y + finalClamped.y,
         });
+        setActiveGuides(
+          snapped.guides.map((guide) => ({
+            ...guide,
+            value:
+              guide.orientation === "vertical"
+                ? currentFieldRect.x + FIELD_INNER_OFFSET_X + guide.value
+                : currentFieldRect.y + FIELD_INNER_OFFSET_Y + guide.value,
+            start:
+              guide.orientation === "vertical"
+                ? currentFieldRect.y + FIELD_INNER_OFFSET_Y + guide.start
+                : currentFieldRect.x + FIELD_INNER_OFFSET_X + guide.start,
+            end:
+              guide.orientation === "vertical"
+                ? currentFieldRect.y + FIELD_INNER_OFFSET_Y + guide.end
+                : currentFieldRect.x + FIELD_INNER_OFFSET_X + guide.end,
+          })),
+        );
       },
       onDragEnd: (event: KonvaEventObject<Event>) => {
         const next = {
@@ -928,7 +867,7 @@ export default function GraphicalFields({
           y: finalClamped.y,
           version: 1,
         };
-        setActiveGuidesByLocation((prev) => ({ ...prev, [locationId]: [] }));
+        setActiveGuides([]);
         setLayoutsByBed((prev) => ({ ...prev, [bedVm.id]: nextLayout }));
         saveBedLayout(locationId, nextLayout);
       },
@@ -1071,7 +1010,6 @@ export default function GraphicalFields({
                           size="small"
                           onClick={() => handleZoom(locationId, ZOOM_STEP)}
                           aria-label={t("fields:graphical.zoomIn")}
-                          disabled={!ENABLE_VIEWPORT_ZOOM}
                           sx={{ borderRadius: 0, p: 1.25 }}
                         >
                           <AddIcon fontSize="small" />
@@ -1085,7 +1023,6 @@ export default function GraphicalFields({
                           size="small"
                           onClick={() => handleZoom(locationId, 1 / ZOOM_STEP)}
                           aria-label={t("fields:graphical.zoomOut")}
-                          disabled={!ENABLE_VIEWPORT_ZOOM}
                           sx={{
                             borderRadius: 0,
                             p: 1.25,
@@ -1104,7 +1041,6 @@ export default function GraphicalFields({
                           size="small"
                           onClick={() => resetViewport(locationId)}
                           aria-label={t("fields:graphical.fitToView")}
-                          disabled={!ENABLE_VIEWPORT_ZOOM}
                           sx={{
                             borderRadius: 0,
                             p: 1.25,
@@ -1140,7 +1076,7 @@ export default function GraphicalFields({
                     key={`stage-${locationId}-${interactionMode}`}
                     width={stageWidth}
                     height={stageHeight}
-                    draggable={ENABLE_VIEWPORT_PANNING && isViewMode}
+                    draggable={false}
                     x={viewport.x}
                     y={viewport.y}
                     scaleX={viewport.scale}
@@ -1345,8 +1281,7 @@ export default function GraphicalFields({
                         );
                       })}
 
-                      {(activeGuidesByLocation[locationId] ?? []).map(
-                        (guide, index) => (
+                      {activeGuides.map((guide, index) => (
                         <Rect
                           key={`${guide.orientation}-${guide.value}-${index}`}
                           x={
@@ -1372,8 +1307,7 @@ export default function GraphicalFields({
                           fill="#e53e3e"
                           opacity={0.8}
                         />
-                      ),
-                      )}
+                      ))}
                     </Layer>
                   </Stage>
                 </Box>

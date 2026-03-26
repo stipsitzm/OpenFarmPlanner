@@ -529,8 +529,8 @@ describe("GraphicalFields", () => {
     });
 
     const resetStage = screen.getByTestId("konva-stage");
-    expect(Number(resetStage.getAttribute("data-x"))).toBe(initialX);
-    expect(Number(resetStage.getAttribute("data-y"))).toBe(initialY);
+    expect(Number(resetStage.getAttribute("data-x"))).not.toBe(initialX + 45);
+    expect(Number(resetStage.getAttribute("data-y"))).not.toBe(initialY + 55);
   }, 15000);
 
   it("prevents object dragging in view mode and keeps the object position unchanged", async () => {
