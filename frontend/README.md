@@ -71,3 +71,14 @@ export default defineConfig([
   },
 ])
 ```
+
+## Graphical fields debug flags
+
+The graphical fields page supports optional Vite flags for interaction debugging:
+
+- `VITE_GRAPHICAL_ENABLE_PAN` (`true`/`false`, default `false`)
+  - Enables viewport drag-to-pan in view mode.
+- `VITE_GRAPHICAL_ENABLE_ZOOM` (`true`/`false`, default `true`)
+  - Enables zoom via buttons, wheel, and touch pinch.
+- `VITE_GRAPHICAL_ENABLE_OVERLAP_GUARD` (`true`/`false`, default `false`)
+  - Prevents snap candidates that would overlap existing rectangles.

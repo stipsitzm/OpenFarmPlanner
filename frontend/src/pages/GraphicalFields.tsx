@@ -116,7 +116,27 @@ const DEFAULT_STAGE_HEIGHT = 420;
 const MIN_STAGE_HEIGHT = 320;
 const MAX_STAGE_HEIGHT = 560;
 const ZOOM_STEP = 1.2;
-const ENABLE_VIEWPORT_PANNING = false;
+const parseFeatureFlag = (
+  value: string | undefined,
+  defaultValue: boolean,
+): boolean => {
+  if (value === undefined) {
+    return defaultValue;
+  }
+  return value === "true";
+};
+const ENABLE_VIEWPORT_PANNING = parseFeatureFlag(
+  import.meta.env.VITE_GRAPHICAL_ENABLE_PAN,
+  false,
+);
+const ENABLE_VIEWPORT_ZOOM = parseFeatureFlag(
+  import.meta.env.VITE_GRAPHICAL_ENABLE_ZOOM,
+  true,
+);
+const ENABLE_OVERLAP_SNAP_GUARD = parseFeatureFlag(
+  import.meta.env.VITE_GRAPHICAL_ENABLE_OVERLAP_GUARD,
+  false,
+);
 
 const snapToNeighbors = (
   currentId: number,
@@ -177,7 +197,8 @@ const snapToNeighbors = (
           if (
             absDelta <= threshold &&
             absDelta < bestXDelta &&
-            !overlapsAnyNeighbor(candidateX, position.y)
+            (!ENABLE_OVERLAP_SNAP_GUARD ||
+              !overlapsAnyNeighbor(candidateX, position.y))
           ) {
             bestXDelta = absDelta;
             snappedX = candidateX;
@@ -202,7 +223,8 @@ const snapToNeighbors = (
           if (
             absDelta <= threshold &&
             absDelta < bestYDelta &&
-            !overlapsAnyNeighbor(position.x, candidateY)
+            (!ENABLE_OVERLAP_SNAP_GUARD ||
+              !overlapsAnyNeighbor(position.x, candidateY))
           ) {
             bestYDelta = absDelta;
             snappedY = candidateY;
@@ -227,7 +249,10 @@ const snapToNeighbors = (
     .reverse()
     .find((guide) => guide.orientation === "horizontal");
 
-  if (overlapsAnyNeighbor(snappedX, snappedY)) {
+  if (
+    ENABLE_OVERLAP_SNAP_GUARD &&
+    overlapsAnyNeighbor(snappedX, snappedY)
+  ) {
     snappedX = position.x;
     snappedY = position.y;
   }
@@ -612,6 +637,9 @@ export default function GraphicalFields({
     locationId: number,
     event: KonvaEventObject<WheelEvent>,
   ): void => {
+    if (!ENABLE_VIEWPORT_ZOOM) {
+      return;
+    }
     event.evt.preventDefault();
     const pointer = stageRefs.current[locationId]?.getPointerPosition();
     if (!pointer) {
@@ -624,6 +652,9 @@ export default function GraphicalFields({
   };
 
   const handleStageDoubleTap = (locationId: number): void => {
+    if (!ENABLE_VIEWPORT_ZOOM) {
+      return;
+    }
     handleZoom(locationId, ZOOM_STEP);
   };
 
@@ -678,7 +709,7 @@ export default function GraphicalFields({
   ): void => {
     const stage = stageRefs.current[locationId];
     const touches = event.evt.touches;
-    if (!stage || touches.length !== 2) {
+    if (!ENABLE_VIEWPORT_ZOOM || !stage || touches.length !== 2) {
       pinchStateRef.current[locationId] = null;
       return;
     }
@@ -1040,6 +1071,7 @@ export default function GraphicalFields({
                           size="small"
                           onClick={() => handleZoom(locationId, ZOOM_STEP)}
                           aria-label={t("fields:graphical.zoomIn")}
+                          disabled={!ENABLE_VIEWPORT_ZOOM}
                           sx={{ borderRadius: 0, p: 1.25 }}
                         >
                           <AddIcon fontSize="small" />
@@ -1053,6 +1085,7 @@ export default function GraphicalFields({
                           size="small"
                           onClick={() => handleZoom(locationId, 1 / ZOOM_STEP)}
                           aria-label={t("fields:graphical.zoomOut")}
+                          disabled={!ENABLE_VIEWPORT_ZOOM}
                           sx={{
                             borderRadius: 0,
                             p: 1.25,
@@ -1071,6 +1104,7 @@ export default function GraphicalFields({
                           size="small"
                           onClick={() => resetViewport(locationId)}
                           aria-label={t("fields:graphical.fitToView")}
+                          disabled={!ENABLE_VIEWPORT_ZOOM}
                           sx={{
                             borderRadius: 0,
                             p: 1.25,
