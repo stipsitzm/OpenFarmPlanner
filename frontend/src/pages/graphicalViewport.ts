@@ -1,10 +1,11 @@
 import type { RectSize } from './graphicalLayoutUtils';
 
-export const GRAPHICAL_MIN_SCALE = 0.55;
+export const GRAPHICAL_MIN_SCALE = 0.1;
 export const GRAPHICAL_MAX_SCALE = 3;
 export const ZOOM_LEVEL_OVERVIEW = 0.9;
 export const ZOOM_LEVEL_MEDIUM = 1.25;
 export const ZOOM_LEVEL_DETAIL = 1.8;
+export const FIELD_LABEL_MIN_SCALE = 0.55;
 export const FIELD_LABEL_MIN_WIDTH = 110;
 export const FIELD_LABEL_MIN_HEIGHT = 48;
 export const BED_LABEL_MIN_WIDTH = 88;
@@ -58,7 +59,7 @@ export function getVisibleElements(scale: number): VisibilityState {
 }
 
 export function shouldShowFieldLabel(size: RectSize, scale: number): boolean {
-  return size.width >= FIELD_LABEL_MIN_WIDTH && size.height >= FIELD_LABEL_MIN_HEIGHT && scale >= GRAPHICAL_MIN_SCALE;
+  return size.width >= FIELD_LABEL_MIN_WIDTH && size.height >= FIELD_LABEL_MIN_HEIGHT && scale >= FIELD_LABEL_MIN_SCALE;
 }
 
 export function shouldShowBedLabel(size: RectSize, scale: number): boolean {
