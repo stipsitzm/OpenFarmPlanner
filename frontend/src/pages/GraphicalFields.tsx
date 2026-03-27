@@ -502,9 +502,7 @@ export default function GraphicalFields({
       if (!location.id) return [];
       const locationFields = fieldsByLocation.get(location.id) ?? [];
       const padding = 20;
-      let fieldY = padding;
-
-      const defaultFieldRects = locationFields.map((field) => {
+      const sizedFields = locationFields.map((field) => {
         const fieldPxPerMeter = Math.max(
           12,
           Math.min(30, (stageWidth - 2 * padding) / 40),
@@ -516,15 +514,28 @@ export default function GraphicalFields({
           minHeight: 220,
           scaleFactor: 12,
         });
-        const y = fieldY;
-        fieldY += size.height + 24;
         return {
           field,
           width: size.width,
           height: size.height,
+        };
+      });
+      const totalFieldsHeight =
+        sizedFields.reduce((sum, entry) => sum + entry.height, 0) +
+        Math.max(0, sizedFields.length - 1) * 24;
+      let fieldY = Math.max(
+        padding,
+        Math.round(WORKSPACE_MIN_HEIGHT / 2 - totalFieldsHeight / 2),
+      );
+
+      const defaultFieldRects = sizedFields.map((entry) => {
+        const y = fieldY;
+        fieldY += entry.height + 24;
+        return {
+          ...entry,
           defaultX: Math.max(
             padding,
-            Math.round(WORKSPACE_MIN_WIDTH / 2 - size.width / 2),
+            Math.round(WORKSPACE_MIN_WIDTH / 2 - entry.width / 2),
           ),
           defaultY: y,
         };

@@ -657,7 +657,7 @@ describe("GraphicalFields", () => {
     });
   }, 15000);
 
-  it("supports wide horizontal placement without early workspace boundary clipping", async () => {
+  it("supports large horizontal and vertical placement range without early boundary clipping", async () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
@@ -681,6 +681,7 @@ describe("GraphicalFields", () => {
     await waitFor(() => {
       const moved = screen.getByTestId("field-rect-10");
       expect(Number(moved.getAttribute("data-x"))).toBeGreaterThan(9000);
+      expect(Number(moved.getAttribute("data-y"))).toBeLessThan(1000);
     });
   }, 15000);
 
