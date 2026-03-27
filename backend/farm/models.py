@@ -1174,7 +1174,10 @@ class PlantingPlan(TimestampedModel):
         overlapping_used_area = overlapping_plans.aggregate(
             total=Coalesce(Sum('area_usage_sqm'), Decimal('0.00'))
         )['total'] or Decimal('0.00')
-        total_area_with_current = overlapping_used_area + self.area_usage_sqm
+        current_area = self.area_usage_sqm
+        if not isinstance(current_area, Decimal):
+            current_area = Decimal(str(current_area))
+        total_area_with_current = overlapping_used_area + current_area
 
         if total_area_with_current > bed_area:
             raise ValidationError({
@@ -1182,7 +1185,7 @@ class PlantingPlan(TimestampedModel):
                     'Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten. '
                     f'Beetfläche: {bed_area:.2f} m², '
                     f'bereits belegt: {overlapping_used_area:.2f} m², '
-                    f'angefragt: {self.area_usage_sqm:.2f} m².'
+                    f'angefragt: {current_area:.2f} m².'
                 )
             })
 
