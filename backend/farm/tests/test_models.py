@@ -453,9 +453,8 @@ class PlantingPlanModelTest(TestCase):
             planting_date=date(2024, 3, 1),
             area_usage_sqm=25.0  # Exceeds 20 sqm capacity
         )
-        plan.clean()
-        plan.save()
-        self.assertEqual(plan.area_usage_sqm, 25.0)
+        with self.assertRaises(ValidationError):
+            plan.clean()
 
     def test_area_usage_total_exceeds_with_multiple_plans(self):
         """Test that total area of multiple plans cannot exceed bed capacity"""
@@ -473,12 +472,11 @@ class PlantingPlanModelTest(TestCase):
         plan2 = PlantingPlan(
             culture=self.culture,
             bed=self.bed,
-            planting_date=date(2024, 4, 1),
+            planting_date=date(2024, 3, 3),
             area_usage_sqm=10.0
         )
-        plan2.clean()
-        plan2.save()
-        self.assertEqual(plan2.area_usage_sqm, 10.0)
+        with self.assertRaises(ValidationError):
+            plan2.clean()
 
     def test_area_usage_no_bed_dimensions(self):
         """Test that validation is skipped when bed has no dimensions"""

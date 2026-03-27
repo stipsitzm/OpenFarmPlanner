@@ -507,7 +507,7 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertIn('area_sqm', response.data)
 
     def test_planting_plan_area_validation_success(self):
-        """Test API allows planting plan within bed capacity"""
+        """Test API allows a single planting plan within bed capacity."""
         data = {
             'culture': self.culture.id,
             'bed': self.bed.id,
@@ -519,7 +519,7 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(float(response.data['area_usage_sqm']), 15.0)
 
     def test_planting_plan_area_validation_failure(self):
-        """Test API rejects planting plan exceeding bed capacity"""
+        """Test API rejects a single planting plan that exceeds bed capacity."""
         data = {
             'culture': self.culture.id,
             'bed': self.bed.id,
@@ -527,10 +527,11 @@ class ApiEndpointsTest(DRFAPITestCase):
             'area_usage_sqm': 25.0  # Exceeds 20 sqm capacity
         }
         response = self.client.post('/openfarmplanner/api/planting-plans/', data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_usage_sqm', response.data)
 
-    def test_planting_plan_area_validation_multiple_plans(self):
-        """Test API validates total area of multiple plans"""
+    def test_planting_plan_area_validation_multiple_overlapping_plans(self):
+        """Test API rejects overlapping plans that exceed bed capacity."""
         # Create first plan using 12 sqm
         data1 = {
             'culture': self.culture.id,
@@ -541,14 +542,99 @@ class ApiEndpointsTest(DRFAPITestCase):
         response1 = self.client.post('/openfarmplanner/api/planting-plans/', data1)
         self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
         
-        # Try to create second plan using 10 sqm (total would be 22 sqm > 20 sqm)
+        # Overlaps first plan (2024-03-03 to 2024-03-12), total would be 22 sqm > 20 sqm.
         data2 = {
             'culture': self.culture.id,
             'bed': self.bed.id,
-            'planting_date': '2024-04-01',
+            'planting_date': '2024-03-03',
             'area_usage_sqm': 10.0
         }
         response2 = self.client.post('/openfarmplanner/api/planting-plans/', data2)
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_usage_sqm', response2.data)
+        self.assertIn(
+            'Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten.',
+            response2.data['area_usage_sqm'][0],
+        )
+
+    def test_planting_plan_area_validation_non_overlapping_plans_allowed(self):
+        """Test API allows non-overlapping plans even when their total sum is above bed capacity."""
+        response1 = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 20.0,
+        })
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
+
+        response2 = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-04-01',
+            'area_usage_sqm': 20.0,
+        })
+        self.assertEqual(response2.status_code, status.HTTP_201_CREATED)
+
+    def test_planting_plan_area_validation_overlapping_plans_on_different_beds_allowed(self):
+        """Test API allows overlapping plans on different beds."""
+        other_bed = Bed.objects.create(
+            name='Second Test Bed',
+            field=self.field,
+            area_sqm=20.0,
+            project=self.project,
+        )
+
+        response1 = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 15.0,
+        })
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
+
+        response2 = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': other_bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 20.0,
+        })
+        self.assertEqual(response2.status_code, status.HTTP_201_CREATED)
+
+    def test_planting_plan_area_validation_update_excludes_current_plan(self):
+        """Test API update does not count current plan twice."""
+        create_response = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 10.0,
+        })
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        plan_id = create_response.data['id']
+
+        update_response = self.client.patch(
+            f'/openfarmplanner/api/planting-plans/{plan_id}/',
+            {'area_usage_sqm': 12.0},
+            format='json',
+        )
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(float(update_response.data['area_usage_sqm']), 12.0)
+
+    def test_planting_plan_area_validation_boundary_equal_bed_area_allowed(self):
+        """Test API allows overlapping plans whose summed area equals bed capacity."""
+        response1 = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 12.0,
+        })
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
+
+        response2 = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-03',
+            'area_usage_sqm': 8.0,
+        })
         self.assertEqual(response2.status_code, status.HTTP_201_CREATED)
 
 

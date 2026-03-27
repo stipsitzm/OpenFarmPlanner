@@ -1,7 +1,7 @@
 import json
 import re
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 from urllib.parse import urlparse
@@ -1121,32 +1121,69 @@ class PlantingPlan(TimestampedModel):
     )
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='planting_plans')
 
+    def _get_active_period(self) -> tuple[date, date] | None:
+        """Return inclusive active period used for overlap validations."""
+        if self.planting_date is None:
+            return None
+
+        active_start = self.planting_date
+        active_end = self.harvest_end_date or self.harvest_date
+
+        if active_end is None and self.culture_id:
+            if self.culture.growth_duration_days:
+                harvest_date = active_start + timedelta(days=self.culture.growth_duration_days)
+            else:
+                harvest_date = active_start
+
+            if self.culture.growth_duration_days and self.culture.harvest_duration_days:
+                active_end = harvest_date + timedelta(days=self.culture.harvest_duration_days)
+            else:
+                active_end = harvest_date
+
+        if active_end is None:
+            active_end = active_start
+
+        return active_start, active_end
+
     def clean(self) -> None:
         """Validate total area usage against the bed area when available."""
         super().clean()
-        
-        # Only validate if area_usage_sqm is set and bed has dimensions.
-        if self.area_usage_sqm and self.bed:
-            bed_area = self.bed.get_total_area()
-            
-            if bed_area is not None:
-                # Calculate total area used by other planting plans for this bed.
-                existing_plans = PlantingPlan.objects.filter(bed=self.bed).exclude(pk=self.pk)
-                total_used_area = sum(
-                    float(plan.area_usage_sqm) 
-                    for plan in existing_plans 
-                    if plan.area_usage_sqm
+        if self.area_usage_sqm is None or not self.bed_id:
+            return
+
+        bed_area = self.bed.area_sqm
+        if bed_area is None:
+            return
+
+        active_period = self._get_active_period()
+        if active_period is None:
+            return
+        active_start, active_end = active_period
+
+        overlapping_plans = PlantingPlan.objects.filter(
+            bed_id=self.bed_id,
+            planting_date__lte=active_end,
+            harvest_end_date__gte=active_start,
+        )
+        if self.project_id:
+            overlapping_plans = overlapping_plans.filter(project_id=self.project_id)
+        if self.pk:
+            overlapping_plans = overlapping_plans.exclude(pk=self.pk)
+
+        overlapping_used_area = overlapping_plans.aggregate(
+            total=Coalesce(Sum('area_usage_sqm'), Decimal('0.00'))
+        )['total'] or Decimal('0.00')
+        total_area_with_current = overlapping_used_area + self.area_usage_sqm
+
+        if total_area_with_current > bed_area:
+            raise ValidationError({
+                'area_usage_sqm': (
+                    'Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten. '
+                    f'Beetfläche: {bed_area:.2f} m², '
+                    f'bereits belegt: {overlapping_used_area:.2f} m², '
+                    f'angefragt: {self.area_usage_sqm:.2f} m².'
                 )
-                
-                # Add current plan's area usage.
-                _ = total_used_area + float(self.area_usage_sqm)
-                
-                # if total_area_with_current > bed_area:
-                #     raise ValidationError({
-                #         'area_usage_sqm': f'Total area usage ({total_area_with_current:.2f} sqm) '
-                #                          f'exceeds bed area ({bed_area:.2f} sqm). '
-                #                          f'Available: {bed_area - total_used_area:.2f} sqm.'
-                #     })
+            })
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the plan and auto-calculate harvest dates if needed."""
