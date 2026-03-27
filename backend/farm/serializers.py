@@ -852,20 +852,24 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
                 # Calculate area in m²: plants / (plants_per_m2)
                 attrs['area_usage_sqm'] = area_input_value / plants_per_m2
         
-        # Only run clean() validation if we have valid foreign keys
-        # DRF converts the IDs to objects during validation
-        culture = attrs.get('culture')
-        bed = attrs.get('bed')
-        
-        # Skip model validation if foreign keys are not properly set
-        if not culture or not bed:
-            return attrs
-            
-        # Create a temporary instance for validation
-        instance = PlantingPlan(**attrs)
+        model_field_names = {field.name for field in PlantingPlan._meta.fields}
         if self.instance:
+            validation_attrs = {}
+            for field_name in model_field_names:
+                if field_name in attrs:
+                    validation_attrs[field_name] = attrs[field_name]
+                elif hasattr(self.instance, field_name):
+                    validation_attrs[field_name] = getattr(self.instance, field_name)
+            instance = PlantingPlan(
+                **{name: value for name, value in validation_attrs.items() if name in model_field_names}
+            )
             instance.pk = self.instance.pk
-        
+        else:
+            instance = PlantingPlan(**{name: value for name, value in attrs.items() if name in model_field_names})
+
+        if not instance.culture_id or not instance.bed_id:
+            return attrs
+
         try:
             instance.clean()
         except ValidationError as e:
