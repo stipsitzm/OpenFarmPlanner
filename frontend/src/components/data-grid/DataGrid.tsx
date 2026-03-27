@@ -349,16 +349,21 @@ export function EditableDataGrid<T extends EditableRow>({
       const errorMessage = extractApiErrorMessage(err, t, saveErrorMessage);
       setError(errorMessage);
       console.error('Error saving data:', err);
-      throw err;
+      throw new Error(errorMessage);
     }
   };
 
   /**
    * Handle row update errors
    */
-  const handleProcessRowUpdateError = (error: Error): void => {
+  const handleProcessRowUpdateError = (error: unknown): void => {
     console.error('Row update error:', error);
-    setError(error.message || saveErrorMessage);
+    if (error instanceof Error && error.message) {
+      setError(error.message);
+      return;
+    }
+    const errorMessage = extractApiErrorMessage(error, t, saveErrorMessage);
+    setError(errorMessage);
   };
 
   /**

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { GridColDef } from '@mui/x-data-grid';
+import { AxiosError } from 'axios';
 import { EditableDataGrid } from '../components/data-grid/DataGrid';
 import { createGridApiMock, createGridRow, type TestGridRow } from './helpers/factories';
 import { mockT } from './helpers/testI18n';
@@ -159,6 +160,34 @@ describe('EditableDataGrid', () => {
 
     await user.click(screen.getByLabelText('Löschen'));
     await waitFor(() => expect(deleteSpy).toHaveBeenCalledWith(1));
+  });
+
+  it('shows backend validation message instead of generic axios status text', async () => {
+    const props = baseProps(() => null);
+    const axiosError = new AxiosError('Request failed with status code 400', 'ERR_BAD_REQUEST');
+    axiosError.response = {
+      status: 400,
+      statusText: 'Bad Request',
+      headers: {},
+      config: {} as never,
+      data: {
+        area_usage_sqm: ['Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten.'],
+      },
+    };
+    vi.spyOn(props.api, 'update').mockRejectedValue(axiosError);
+
+    render(<EditableDataGrid {...props} showDeleteAction={false} />);
+
+    await waitFor(() => expect(screen.getByText('Zelle 1-name')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /Tab speichern 1/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'area_usage_sqm: Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten.',
+        ),
+      ).toBeInTheDocument();
+    });
   });
 
   it('blocks navigation when cell enters edit mode', async () => {
