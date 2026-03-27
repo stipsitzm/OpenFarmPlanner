@@ -726,6 +726,7 @@ function PlantingPlans(): React.ReactElement {
 
             // Determine which field to send based on last edit
             const source = lastEditedFieldRef.current || "area_m2";
+            const selectedBed = beds.find((bed) => bed.id === bedId);
 
             console.log("[DEBUG] mapToApiData source:", source);
             console.log("[DEBUG] mapToApiData row.area_m2:", row.area_m2);
@@ -751,6 +752,18 @@ function PlantingPlans(): React.ReactElement {
               apiData.area_input_unit = "PLANTS";
               console.log(
                 "[DEBUG] mapToApiData sending plants count as PLANTS:",
+                apiData.area_input_value,
+              );
+            }
+
+            if (
+              apiData.area_input_value === undefined &&
+              typeof selectedBed?.area_sqm === "number"
+            ) {
+              apiData.area_input_value = selectedBed.area_sqm;
+              apiData.area_input_unit = "M2";
+              console.log(
+                "[DEBUG] mapToApiData fallback area from selected bed:",
                 apiData.area_input_value,
               );
             }

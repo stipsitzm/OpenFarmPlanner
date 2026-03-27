@@ -1137,7 +1137,7 @@ export default function GraphicalFields({
               </AccordionSummary>
               <AccordionDetails>
                 <Box
-                  ref={(node) => {
+                  ref={(node: HTMLDivElement | null) => {
                     locationCanvasRefs.current[locationId] = node;
                   }}
                   sx={{
