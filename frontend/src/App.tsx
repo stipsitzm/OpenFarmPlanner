@@ -35,7 +35,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from './i18n';
 import { useCommandContext, useRegisterCommands } from './commands/useCommandContext';
 import { createRootCommands } from './commands/commands';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Locations from './pages/Locations';
 import FieldsBedsPage from './pages/FieldsBedsPage';
 import Cultures from './pages/Cultures';
@@ -49,7 +49,7 @@ import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
-import { cultureAPI, projectAPI } from './api/api';
+import { cultureAPI, projectAPI, versionAPI } from './api/api';
 import type { CultureHistoryEntry } from './api/types';
 import './App.css';
 import { useAuth } from './auth/useAuth';
@@ -256,6 +256,28 @@ function RootLayout(): React.ReactElement {
     message: '',
     severity: 'success',
   });
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadVersion = async (): Promise<void> => {
+      try {
+        const response = await versionAPI.get();
+        if (isMounted) {
+          setAppVersion(response.data.version);
+        }
+      } catch (error) {
+        console.error('Error loading app version:', error);
+      }
+    };
+
+    void loadVersion();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
@@ -661,6 +683,7 @@ function RootLayout(): React.ReactElement {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      <div className="app-version-footer">{`${t('appVersionLabel')} ${appVersion ?? '…'}`}</div>
     </div>
   );
 }

@@ -317,6 +317,44 @@ npm run build
 
 The built files will be in `frontend/dist/`
 
+## Releases
+
+We use Semantic Versioning:
+
+`MAJOR.MINOR.PATCH`
+
+- `MAJOR`: breaking changes
+- `MINOR`: new features
+- `PATCH`: bug fixes
+
+### Current version source of truth
+
+- Central version file: `backend/version.py`
+- Backend API endpoint: `GET /openfarmplanner/api/version/`
+- Frontend displays the version in the app footer (bottom-right)
+
+### Version management scripts
+
+Read the current version:
+
+```bash
+python scripts/get_version.py
+```
+
+Bump the version:
+
+```bash
+python scripts/bump_version.py patch
+python scripts/bump_version.py minor
+python scripts/bump_version.py major
+```
+
+Optional release tag:
+
+```bash
+git tag v$(python scripts/get_version.py)
+```
+
 ## License
 
 This project is open source and available for use.

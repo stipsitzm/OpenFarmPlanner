@@ -9,6 +9,7 @@
   "seedDemand": "Seed demand",
   "graphicalFields": "Graphical view",
   "accountSettings": "Account settings",
+  "appVersionLabel": "Version",
   "project": {
     "settings": "Project settings",
     "members": "Manage members",

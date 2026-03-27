@@ -212,6 +212,10 @@ export interface InvitationAcceptResponse {
   };
 }
 
+export interface VersionResponse {
+  version: string;
+}
+
 export const projectAPI = {
   create: (data: { name: string; description?: string }) =>
     http.post<ProjectPayload>('/projects/', data),
@@ -239,6 +243,10 @@ export const projectAPI = {
     http.post<InvitationAcceptResponse>(`/project-invitations/${token}/accept/`),
   acceptInvitation: (token: string) =>
     http.post<InvitationAcceptResponse>('/invitations/accept/', { token }),
+};
+
+export const versionAPI = {
+  get: () => http.get<VersionResponse>('/version/'),
 };
 
 export type {
