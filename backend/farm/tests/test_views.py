@@ -507,7 +507,7 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertIn('area_sqm', response.data)
 
     def test_planting_plan_area_validation_success(self):
-        """Test API allows planting plan within bed capacity"""
+        """Test API allows a single planting plan within bed capacity."""
         data = {
             'culture': self.culture.id,
             'bed': self.bed.id,
@@ -519,7 +519,7 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(float(response.data['area_usage_sqm']), 15.0)
 
     def test_planting_plan_area_validation_failure(self):
-        """Test API rejects planting plan exceeding bed capacity"""
+        """Test API rejects a single planting plan that exceeds bed capacity."""
         data = {
             'culture': self.culture.id,
             'bed': self.bed.id,
@@ -527,10 +527,11 @@ class ApiEndpointsTest(DRFAPITestCase):
             'area_usage_sqm': 25.0  # Exceeds 20 sqm capacity
         }
         response = self.client.post('/openfarmplanner/api/planting-plans/', data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_usage_sqm', response.data)
 
-    def test_planting_plan_area_validation_multiple_plans(self):
-        """Test API validates total area of multiple plans"""
+    def test_planting_plan_area_validation_multiple_overlapping_plans(self):
+        """Test API rejects overlapping plans that exceed bed capacity."""
         # Create first plan using 12 sqm
         data1 = {
             'culture': self.culture.id,
@@ -541,14 +542,125 @@ class ApiEndpointsTest(DRFAPITestCase):
         response1 = self.client.post('/openfarmplanner/api/planting-plans/', data1)
         self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
         
-        # Try to create second plan using 10 sqm (total would be 22 sqm > 20 sqm)
+        # Overlaps first plan (2024-03-03 to 2024-03-12), total would be 22 sqm > 20 sqm.
         data2 = {
             'culture': self.culture.id,
             'bed': self.bed.id,
-            'planting_date': '2024-04-01',
+            'planting_date': '2024-03-03',
             'area_usage_sqm': 10.0
         }
         response2 = self.client.post('/openfarmplanner/api/planting-plans/', data2)
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_usage_sqm', response2.data)
+        self.assertIn(
+            'Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten.',
+            response2.data['area_usage_sqm'][0],
+        )
+
+    def test_planting_plan_area_validation_non_overlapping_plans_allowed(self):
+        """Test API allows non-overlapping plans even when their total sum is above bed capacity."""
+        response1 = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 20.0,
+        })
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
+
+        response2 = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-04-01',
+            'area_usage_sqm': 20.0,
+        })
+        self.assertEqual(response2.status_code, status.HTTP_201_CREATED)
+
+    def test_planting_plan_area_validation_overlapping_plans_on_different_beds_allowed(self):
+        """Test API allows overlapping plans on different beds."""
+        other_bed = Bed.objects.create(
+            name='Second Test Bed',
+            field=self.field,
+            area_sqm=20.0,
+            project=self.project,
+        )
+
+        response1 = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 15.0,
+        })
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
+
+        response2 = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': other_bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 20.0,
+        })
+        self.assertEqual(response2.status_code, status.HTTP_201_CREATED)
+
+    def test_planting_plan_area_validation_update_excludes_current_plan(self):
+        """Test API update does not count current plan twice."""
+        create_response = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 10.0,
+        })
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        plan_id = create_response.data['id']
+
+        update_response = self.client.patch(
+            f'/openfarmplanner/api/planting-plans/{plan_id}/',
+            {'area_usage_sqm': 12.0},
+            format='json',
+        )
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(float(update_response.data['area_usage_sqm']), 12.0)
+
+    def test_planting_plan_area_validation_update_partial_rejects_overlap_excess(self):
+        """Test partial update validates overlap sums against bed capacity."""
+        plan_one_response = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 12.0,
+        })
+        self.assertEqual(plan_one_response.status_code, status.HTTP_201_CREATED)
+
+        plan_two_response = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-03',
+            'area_usage_sqm': 4.0,
+        })
+        self.assertEqual(plan_two_response.status_code, status.HTTP_201_CREATED)
+
+        update_response = self.client.patch(
+            f"/openfarmplanner/api/planting-plans/{plan_two_response.data['id']}/",
+            {'area_usage_sqm': 9.0},
+            format='json',
+        )
+        self.assertEqual(update_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('area_usage_sqm', update_response.data)
+
+    def test_planting_plan_area_validation_boundary_equal_bed_area_allowed(self):
+        """Test API allows overlapping plans whose summed area equals bed capacity."""
+        response1 = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-01',
+            'area_usage_sqm': 12.0,
+        })
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
+
+        response2 = self.client.post('/openfarmplanner/api/planting-plans/', {
+            'culture': self.culture.id,
+            'bed': self.bed.id,
+            'planting_date': '2024-03-03',
+            'area_usage_sqm': 8.0,
+        })
         self.assertEqual(response2.status_code, status.HTTP_201_CREATED)
 
 
@@ -960,6 +1072,35 @@ class PlantingPlanAreaInputTest(DRFAPITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertAlmostEqual(float(response.data['area_usage_sqm']), 3.0, places=2)
+
+    def test_area_input_m2_put_update_does_not_return_server_error(self):
+        """Test full PUT update with M2 input does not crash and updates area."""
+        plan = PlantingPlan.objects.create(
+            culture=self.culture_with_spacing,
+            bed=self.bed,
+            planting_date=date(2026, 1, 1),
+            area_usage_sqm=1.0,
+            project=self.project,
+            cultivation_type='pre_cultivation',
+        )
+
+        response = self.client.put(
+            f'/openfarmplanner/api/planting-plans/{plan.id}/',
+            {
+                'culture': self.culture_with_spacing.id,
+                'bed': self.bed.id,
+                'planting_date': '2026-01-01',
+                'quantity': None,
+                'notes': '',
+                'cultivation_type': 'pre_cultivation',
+                'area_input_value': 3,
+                'area_input_unit': 'M2',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(float(response.data['area_usage_sqm']), 3.0)
 
 
 class NoteAttachmentApiTest(DRFAPITestCase):

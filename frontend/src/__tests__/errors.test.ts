@@ -142,7 +142,7 @@ describe('extractApiErrorMessage', () => {
 
     const result = extractApiErrorMessage(error, t, fallbackMessage);
 
-    expect(result).toBe('non_field_errors: Unbekannter Validierungsfehler');
+    expect(result).toBe('Fehler: Unbekannter Validierungsfehler');
   });
   it('uses generic error translation for non_field_errors and raw field as final fallback', () => {
     const t = createT({
@@ -157,8 +157,23 @@ describe('extractApiErrorMessage', () => {
     const result = extractApiErrorMessage(error, t, fallbackMessage);
 
     expect(result).toBe([
-      'Allgemeiner Fehler: Kombination ist nicht erlaubt',
+      'Fehler: Kombination ist nicht erlaubt',
       'unknown_field: Ungültiger Wert',
+    ].join('\n'));
+  });
+
+  it('uses German fallback labels for known backend fields', () => {
+    const t = createT({});
+    const error = createAxiosError(400, {
+      area_usage_sqm: ['Zu groß'],
+      planting_date: ['Ungültiges Datum'],
+    });
+
+    const result = extractApiErrorMessage(error, t, fallbackMessage);
+
+    expect(result).toBe([
+      'Fläche (m²): Zu groß',
+      'Pflanzdatum: Ungültiges Datum',
     ].join('\n'));
   });
 });

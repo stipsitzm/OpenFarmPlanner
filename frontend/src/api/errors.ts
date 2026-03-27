@@ -12,6 +12,21 @@ import axios, { AxiosError } from 'axios';
  */
 type TFunction = (key: string, options?: Record<string, unknown>) => string;
 
+const fieldLabelFallbacks: Record<string, string> = {
+  area_usage_sqm: 'Fläche (m²)',
+  area_sqm: 'Fläche (m²)',
+  planting_date: 'Pflanzdatum',
+  harvest_date: 'Erntebeginn',
+  harvest_end_date: 'Ernteende',
+  quantity: 'Pflanzen',
+  cultivation_type: 'Anbauart',
+  culture: 'Kultur',
+  bed: 'Beet',
+  field: 'Schlag',
+  location: 'Standort',
+  non_field_errors: 'Fehler',
+};
+
 function translatedOrFallback(t: TFunction, key: string, fallback: string): string {
   const translated = t(key);
   return translated === key ? fallback : translated;
@@ -107,14 +122,8 @@ export function extractApiErrorMessage(
           if (fieldName === `columns.${field}`) {
             fieldName = t(field);
           }
-          if (fieldName === field) {
-            // Special case for non_field_errors
-            if (field === 'non_field_errors') {
-              fieldName = t('messages.error');
-            }
-          }
           if (!fieldName || fieldName === field) {
-            fieldName = field;
+            fieldName = fieldLabelFallbacks[field] ?? field;
           }
           if (Array.isArray(value)) {
             value.forEach((msg: string) => {

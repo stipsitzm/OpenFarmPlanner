@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from django.test import TestCase
 from django.utils import timezone
 
-from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier, Task, is_supplier_domain
+from farm.models import Bed, Culture, Field, Location, PlantingPlan, Project, Supplier, Task, is_supplier_domain
 
 class SupplierModelTest(TestCase):
     def test_supplier_creation(self):
@@ -329,17 +329,20 @@ class CultureModelTest(TestCase):
 
 class PlantingPlanModelTest(TestCase):
     def setUp(self):
-        self.location = Location.objects.create(name="Test Location")
-        self.field = Field.objects.create(name="Test Field", location=self.location)
+        self.project = Project.objects.create(name='Planting Plan Test Project', slug='planting-plan-test-project')
+        self.location = Location.objects.create(name="Test Location", project=self.project)
+        self.field = Field.objects.create(name="Test Field", location=self.location, project=self.project)
         self.bed = Bed.objects.create(
-            name="Test Bed", 
+            name="Test Bed",
             field=self.field,
-            area_sqm=20.0  # Total area: 20 sqm
+            area_sqm=20.0,  # Total area: 20 sqm
+            project=self.project,
         )
         self.culture = Culture.objects.create(
             name="Carrot",
             growth_duration_days=70,
-            harvest_duration_days=3
+            harvest_duration_days=3,
+            project=self.project,
         )
 
     def test_auto_harvest_date(self):
@@ -348,7 +351,8 @@ class PlantingPlanModelTest(TestCase):
             culture=self.culture,
             bed=self.bed,
             planting_date=planting_date,
-            quantity=100
+            quantity=100,
+            project=self.project,
         )
         expected_harvest = planting_date + timedelta(days=70)
         self.assertEqual(plan.harvest_date, expected_harvest)
@@ -360,7 +364,8 @@ class PlantingPlanModelTest(TestCase):
             culture=self.culture,
             bed=self.bed,
             planting_date=planting_date,
-            quantity=100
+            quantity=100,
+            project=self.project,
         )
         expected_harvest = planting_date + timedelta(days=70)
         self.assertEqual(plan.harvest_date, expected_harvest)
@@ -381,13 +386,19 @@ class PlantingPlanModelTest(TestCase):
             culture=self.culture,
             bed=self.bed,
             planting_date=planting_date,
-            quantity=100
+            quantity=100,
+            project=self.project,
         )
         expected_harvest = planting_date + timedelta(days=70)
         self.assertEqual(plan.harvest_date, expected_harvest)
         
         # Create new culture with different harvest days
-        new_culture = Culture.objects.create(name="Tomato", growth_duration_days=90, harvest_duration_days=2)
+        new_culture = Culture.objects.create(
+            name="Tomato",
+            growth_duration_days=90,
+            harvest_duration_days=2,
+            project=self.project,
+        )
         plan.culture = new_culture
         plan.save()
         
@@ -400,14 +411,16 @@ class PlantingPlanModelTest(TestCase):
         culture_with_median = Culture.objects.create(
             name="Broccoli",
             growth_duration_days=65,
-            harvest_duration_days=25
+            harvest_duration_days=25,
+            project=self.project,
         )
         planting_date = date(2024, 3, 1)
         plan = PlantingPlan.objects.create(
             culture=culture_with_median,
             bed=self.bed,
             planting_date=planting_date,
-            quantity=100
+            quantity=100,
+            project=self.project,
         )
         
         expected_harvest_start = planting_date + timedelta(days=65)
@@ -423,7 +436,8 @@ class PlantingPlanModelTest(TestCase):
             culture=self.culture,
             bed=self.bed,
             planting_date=planting_date,
-            quantity=100
+            quantity=100,
+            project=self.project,
         )
         
         self.assertEqual(plan.harvest_end_date, plan.harvest_date + timedelta(days=3))
@@ -436,7 +450,8 @@ class PlantingPlanModelTest(TestCase):
             culture=self.culture,
             bed=self.bed,
             planting_date=date(2024, 3, 1),
-            area_usage_sqm=15.0  # Within 20 sqm capacity
+            area_usage_sqm=15.0,  # Within 20 sqm capacity
+            project=self.project,
         )
         # Should not raise ValidationError
         plan.clean()
@@ -451,11 +466,11 @@ class PlantingPlanModelTest(TestCase):
             culture=self.culture,
             bed=self.bed,
             planting_date=date(2024, 3, 1),
-            area_usage_sqm=25.0  # Exceeds 20 sqm capacity
+            area_usage_sqm=25.0,  # Exceeds 20 sqm capacity
+            project=self.project,
         )
-        plan.clean()
-        plan.save()
-        self.assertEqual(plan.area_usage_sqm, 25.0)
+        with self.assertRaises(ValidationError):
+            plan.clean()
 
     def test_area_usage_total_exceeds_with_multiple_plans(self):
         """Test that total area of multiple plans cannot exceed bed capacity"""
@@ -466,30 +481,32 @@ class PlantingPlanModelTest(TestCase):
             culture=self.culture,
             bed=self.bed,
             planting_date=date(2024, 3, 1),
-            area_usage_sqm=12.0
+            area_usage_sqm=12.0,
+            project=self.project,
         )
         
         # Try to create second plan using 10 sqm (total would be 22 sqm > 20 sqm)
         plan2 = PlantingPlan(
             culture=self.culture,
             bed=self.bed,
-            planting_date=date(2024, 4, 1),
-            area_usage_sqm=10.0
+            planting_date=date(2024, 3, 3),
+            area_usage_sqm=10.0,
+            project=self.project,
         )
-        plan2.clean()
-        plan2.save()
-        self.assertEqual(plan2.area_usage_sqm, 10.0)
+        with self.assertRaises(ValidationError):
+            plan2.clean()
 
     def test_area_usage_no_bed_dimensions(self):
         """Test that validation is skipped when bed has no dimensions"""
         from django.core.exceptions import ValidationError
         
-        bed_no_dims = Bed.objects.create(name="No Dims Bed", field=self.field)
+        bed_no_dims = Bed.objects.create(name="No Dims Bed", field=self.field, project=self.project)
         plan = PlantingPlan(
             culture=self.culture,
             bed=bed_no_dims,
             planting_date=date(2024, 3, 1),
-            area_usage_sqm=100.0  # Large value, but should be allowed
+            area_usage_sqm=100.0,  # Large value, but should be allowed
+            project=self.project,
         )
         # Should not raise ValidationError since bed has no dimensions
         plan.clean()
