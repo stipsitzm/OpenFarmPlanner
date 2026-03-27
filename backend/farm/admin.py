@@ -6,7 +6,34 @@ providing customized list displays, filters, and search capabilities.
 
 from django.contrib import admin
 
-from .models import Bed, Culture, Field, Location, PlantingPlan, Supplier, Task
+from .models import Bed, Culture, Field, Location, PlantingPlan, Project, ProjectInvitation, ProjectMembership, Supplier, Task
+
+
+@admin.register(Project)
+class ProjectAdmin(admin.ModelAdmin):
+    """Admin interface configuration for Project model."""
+
+    list_display = ['name', 'slug', 'is_active', 'created_at']
+    list_filter = ['is_active']
+    search_fields = ['name', 'slug']
+
+
+@admin.register(ProjectMembership)
+class ProjectMembershipAdmin(admin.ModelAdmin):
+    """Admin interface configuration for ProjectMembership model."""
+
+    list_display = ['user', 'project', 'role', 'created_at']
+    list_filter = ['role', 'project']
+    search_fields = ['user__email', 'user__username', 'project__name', 'project__slug']
+
+
+@admin.register(ProjectInvitation)
+class ProjectInvitationAdmin(admin.ModelAdmin):
+    """Admin interface configuration for ProjectInvitation model."""
+
+    list_display = ['email', 'project', 'role', 'status', 'invited_by', 'expires_at', 'created_at']
+    list_filter = ['status', 'role', 'project']
+    search_fields = ['email', 'email_normalized', 'project__name', 'project__slug']
 
 
 @admin.register(Supplier)
