@@ -23,6 +23,8 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import FitScreenIcon from "@mui/icons-material/FitScreen";
+import FullscreenIcon from "@mui/icons-material/Fullscreen";
+import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
@@ -47,11 +49,15 @@ import {
 } from "./graphicalLayoutUtils";
 import {
   clampViewportToStage,
-  fitContentToStage,
+  fitBoundsToStage,
+  getContentBoundsFromRects,
   getVisibleElements,
   shouldShowBedLabel,
   shouldShowFieldLabel,
+  toContentBounds,
+  type ContentBounds,
   type PanSession,
+  type ViewportPadding,
   type ViewportState,
   zoomAroundPoint,
 } from "./graphicalViewport";
@@ -108,6 +114,13 @@ interface GraphicalFieldsProps {
 type InteractionMode = "view" | "edit";
 
 const VIEWPORT_PADDING = 24;
+const VIEWPORT_CONTROL_SAFE_AREA_RIGHT = 120;
+const FIT_VIEWPORT_PADDING: ViewportPadding = {
+  top: VIEWPORT_PADDING,
+  right: VIEWPORT_PADDING + VIEWPORT_CONTROL_SAFE_AREA_RIGHT,
+  bottom: VIEWPORT_PADDING,
+  left: VIEWPORT_PADDING,
+};
 const FIELD_INNER_OFFSET_X = 10;
 const FIELD_LABEL_HEIGHT = 24;
 const FIELD_INNER_OFFSET_Y = FIELD_INNER_OFFSET_X + FIELD_LABEL_HEIGHT;
@@ -121,7 +134,8 @@ const MAX_STAGE_HEIGHT = 560;
 const ZOOM_STEP = 1.2;
 const PAN_STEP = 80;
 const PAN_FAST_STEP = 180;
-
+const WORKSPACE_MIN_WIDTH = 20000;
+const WORKSPACE_MIN_HEIGHT = 20000;
 const snapToNeighbors = (
   currentId: number,
   position: Point,
@@ -269,9 +283,11 @@ export default function GraphicalFields({
   const stageRefs = useRef<Record<number, Konva.Stage | null>>({});
   const saveTimers = useRef<Record<string, number>>({});
   const panSessionRef = useRef<Record<number, PanSession | null>>({});
+  const locationCanvasRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const pinchStateRef = useRef<
     Record<number, { distance: number; center: Point } | null>
   >({});
+  const [fullscreenLocationId, setFullscreenLocationId] = useState<number | null>(null);
   const resetTransientInteractionState = (): void => {
     setActiveGuides([]);
     Object.keys(panSessionRef.current).forEach((key) => {
@@ -294,20 +310,50 @@ export default function GraphicalFields({
 
   useEffect(() => {
     const handleResize = (): void => {
+      const fullscreenContainer =
+        fullscreenLocationId !== null
+          ? locationCanvasRefs.current[fullscreenLocationId]
+          : null;
       const containerWidth =
-        containerRef.current?.clientWidth ?? window.innerWidth;
+        fullscreenContainer?.clientWidth ??
+        containerRef.current?.clientWidth ??
+        window.innerWidth;
       setStageWidth(Math.max(320, Math.round(containerWidth - 8)));
-      setStageHeight(
-        Math.max(
-          MIN_STAGE_HEIGHT,
-          Math.min(MAX_STAGE_HEIGHT, Math.round(window.innerHeight * 0.45)),
-        ),
-      );
+      if (fullscreenContainer) {
+        setStageHeight(
+          Math.max(MIN_STAGE_HEIGHT, Math.round(fullscreenContainer.clientHeight - 8)),
+        );
+      } else {
+        setStageHeight(
+          Math.max(
+            MIN_STAGE_HEIGHT,
+            Math.min(MAX_STAGE_HEIGHT, Math.round(window.innerHeight * 0.45)),
+          ),
+        );
+      }
     };
 
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, [fullscreenLocationId]);
+
+  useEffect(() => {
+    const handleFullscreenChange = (): void => {
+      const element = document.fullscreenElement;
+      if (!element) {
+        setFullscreenLocationId(null);
+        return;
+      }
+      const matchingLocationId = Object.entries(locationCanvasRefs.current).find(
+        ([, node]) => node === element,
+      )?.[0];
+      setFullscreenLocationId(matchingLocationId ? Number(matchingLocationId) : null);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   useEffect(() => {
@@ -455,9 +501,7 @@ export default function GraphicalFields({
       if (!location.id) return [];
       const locationFields = fieldsByLocation.get(location.id) ?? [];
       const padding = 20;
-      let fieldY = padding;
-
-      const defaultFieldRects = locationFields.map((field) => {
+      const sizedFields = locationFields.map((field) => {
         const fieldPxPerMeter = Math.max(
           12,
           Math.min(30, (stageWidth - 2 * padding) / 40),
@@ -469,19 +513,40 @@ export default function GraphicalFields({
           minHeight: 220,
           scaleFactor: 12,
         });
-        const y = fieldY;
-        fieldY += size.height + 24;
         return {
           field,
           width: size.width,
           height: size.height,
-          defaultX: padding,
+        };
+      });
+      const totalFieldsHeight =
+        sizedFields.reduce((sum, entry) => sum + entry.height, 0) +
+        Math.max(0, sizedFields.length - 1) * 24;
+      let fieldY = Math.max(
+        padding,
+        Math.round(WORKSPACE_MIN_HEIGHT / 2 - totalFieldsHeight / 2),
+      );
+
+      const defaultFieldRects = sizedFields.map((entry) => {
+        const y = fieldY;
+        fieldY += entry.height + 24;
+        return {
+          ...entry,
+          defaultX: Math.max(
+            padding,
+            Math.round(WORKSPACE_MIN_WIDTH / 2 - entry.width / 2),
+          ),
           defaultY: y,
         };
       });
 
-      const contentHeight = Math.max(DEFAULT_STAGE_HEIGHT, fieldY + 20);
+      const contentHeight = Math.max(
+        WORKSPACE_MIN_HEIGHT,
+        DEFAULT_STAGE_HEIGHT,
+        fieldY + 20,
+      );
       const contentWidth = Math.max(
+        WORKSPACE_MIN_WIDTH,
         stageWidth,
         ...defaultFieldRects.map(
           (rect) => rect.width + rect.defaultX + padding,
@@ -522,78 +587,53 @@ export default function GraphicalFields({
     });
   }, [fieldsByLocation, layoutsByField, locations, stageWidth]);
 
-  const resetViewport = (locationId: number): void => {
-    const layout = locationLayouts.find(
-      (item) => item.location.id === locationId,
-    );
+  const getContentBoundsForLocation = (locationId: number): ContentBounds => {
+    const layout = locationLayouts.find((item) => item.location.id === locationId);
     if (!layout) {
-      return;
+      return toContentBounds({ width: stageWidth, height: stageHeight });
     }
 
-    setViewportByLocation((prev) => ({
-      ...prev,
-      [locationId]: fitContentToStage(
-        { width: layout.contentWidth, height: layout.contentHeight },
-        { width: stageWidth, height: stageHeight },
-        VIEWPORT_PADDING,
-      ),
-    }));
+    const fieldBounds = getContentBoundsFromRects(layout.fieldViewModels);
+    return (
+      fieldBounds ??
+      toContentBounds({
+        width: layout.contentWidth,
+        height: layout.contentHeight,
+      })
+    );
   };
 
-  const contentSizeByLocation = useMemo(() => {
-    const map = new Map<number, { width: number; height: number }>();
-    locationLayouts.forEach((layout) => {
-      if (layout.location.id) {
-        map.set(layout.location.id, {
-          width: layout.contentWidth,
-          height: layout.contentHeight,
-        });
-      }
+  const resetViewport = (locationId: number): void => {
+    setViewportByLocation((prev) => {
+      const contentBounds = getContentBoundsForLocation(locationId);
+      return {
+        ...prev,
+        [locationId]: fitBoundsToStage(
+          contentBounds,
+          { width: stageWidth, height: stageHeight },
+          FIT_VIEWPORT_PADDING,
+        ),
+      };
     });
-    return map;
-  }, [locationLayouts]);
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      setViewportByLocation((prev) => {
-        const next = { ...prev };
-        locationLayouts.forEach((layout) => {
-          const locationId = layout.location.id;
-          if (!locationId || next[locationId]) {
-            return;
-          }
-          next[locationId] = fitContentToStage(
-            { width: layout.contentWidth, height: layout.contentHeight },
-            { width: stageWidth, height: stageHeight },
-            VIEWPORT_PADDING,
-          );
-        });
-        return next;
-      });
-    });
-  }, [locationLayouts, stageHeight, stageWidth]);
+  };
 
   const updateViewport = (
     locationId: number,
     updater: (current: ViewportState) => ViewportState,
   ): void => {
     setViewportByLocation((prev) => {
+      const contentBounds = getContentBoundsForLocation(locationId);
       const current =
         prev[locationId] ??
-        fitContentToStage(
+        fitBoundsToStage(
+          contentBounds,
           { width: stageWidth, height: stageHeight },
-          { width: stageWidth, height: stageHeight },
-          VIEWPORT_PADDING,
+          FIT_VIEWPORT_PADDING,
         );
       const nextRaw = updater(current);
-      const contentSize =
-        contentSizeByLocation.get(locationId) ?? {
-          width: stageWidth,
-          height: stageHeight,
-        };
       const nextClamped = clampViewportToStage(
         nextRaw,
-        contentSize,
+        contentBounds,
         { width: stageWidth, height: stageHeight },
       );
       return { ...prev, [locationId]: nextClamped };
@@ -638,6 +678,26 @@ export default function GraphicalFields({
 
   const handleStageDoubleTap = (locationId: number): void => {
     handleZoom(locationId, ZOOM_STEP);
+  };
+
+  const toggleFullscreen = async (locationId: number): Promise<void> => {
+    const target = locationCanvasRefs.current[locationId];
+    if (!target) {
+      return;
+    }
+
+    try {
+      if (document.fullscreenElement === target) {
+        await document.exitFullscreen();
+        return;
+      }
+
+      if (!document.fullscreenElement && target.requestFullscreen) {
+        await target.requestFullscreen();
+      }
+    } catch (fullscreenError) {
+      console.error("Failed to toggle fullscreen", fullscreenError);
+    }
   };
 
   const handleStageDragStart = (
@@ -723,7 +783,9 @@ export default function GraphicalFields({
     fieldViewModels: RectViewModel[],
     locationName: string,
     locationId: number,
+    viewport: ViewportState,
   ) => {
+    const currentFieldRect = fieldViewModels.find((item) => item.id === fieldId);
     if (isViewMode) {
       return {
         draggable: false,
@@ -924,20 +986,11 @@ export default function GraphicalFields({
     pinchStateRef.current[locationId] = null;
   };
 
-  useEffect(() => {
-    if (locationLayouts.length === 0) {
-      setActivePanLocationId(null);
-      return;
-    }
-    if (
-      activePanLocationId !== null &&
-      locationLayouts.some((layout) => layout.location.id === activePanLocationId)
-    ) {
-      return;
-    }
-    const fallbackLocationId = locationLayouts[0].location.id ?? null;
-    setActivePanLocationId(fallbackLocationId);
-  }, [activePanLocationId, locationLayouts]);
+  const effectiveActivePanLocationId =
+    activePanLocationId !== null &&
+    locationLayouts.some((layout) => layout.location.id === activePanLocationId)
+      ? activePanLocationId
+      : (locationLayouts[0]?.location.id ?? null);
 
   useEffect(() => {
     const isTypingElement = (target: EventTarget | null): boolean => {
@@ -954,26 +1007,26 @@ export default function GraphicalFields({
     };
 
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (isTypingElement(event.target) || activePanLocationId === null) {
+      if (isTypingElement(event.target) || effectiveActivePanLocationId === null) {
         return;
       }
       const step = event.shiftKey ? PAN_FAST_STEP : PAN_STEP;
       switch (event.key) {
         case "ArrowUp":
           event.preventDefault();
-          handlePanByOffset(activePanLocationId, 0, step);
+          handlePanByOffset(effectiveActivePanLocationId, 0, step);
           break;
         case "ArrowDown":
           event.preventDefault();
-          handlePanByOffset(activePanLocationId, 0, -step);
+          handlePanByOffset(effectiveActivePanLocationId, 0, -step);
           break;
         case "ArrowLeft":
           event.preventDefault();
-          handlePanByOffset(activePanLocationId, step, 0);
+          handlePanByOffset(effectiveActivePanLocationId, step, 0);
           break;
         case "ArrowRight":
           event.preventDefault();
-          handlePanByOffset(activePanLocationId, -step, 0);
+          handlePanByOffset(effectiveActivePanLocationId, -step, 0);
           break;
         default:
           break;
@@ -982,7 +1035,7 @@ export default function GraphicalFields({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activePanLocationId]);
+  }, [effectiveActivePanLocationId, handlePanByOffset]);
 
   if (loading) {
     return (
@@ -1060,12 +1113,13 @@ export default function GraphicalFields({
           }
 
           const locationId = location.id;
+          const contentBounds = getContentBoundsForLocation(locationId);
           const viewport =
             viewportByLocation[locationId] ??
-            fitContentToStage(
-              { width: contentWidth, height: contentHeight },
+            fitBoundsToStage(
+              contentBounds,
               { width: stageWidth, height: stageHeight },
-              VIEWPORT_PADDING,
+              FIT_VIEWPORT_PADDING,
             );
           const visibility = getVisibleElements(viewport.scale);
 
@@ -1084,6 +1138,9 @@ export default function GraphicalFields({
               </AccordionSummary>
               <AccordionDetails>
                 <Box
+                  ref={(node: HTMLDivElement | null) => {
+                    locationCanvasRefs.current[locationId] = node;
+                  }}
                   sx={{
                     width: "100%",
                     overflow: "hidden",
@@ -1093,6 +1150,10 @@ export default function GraphicalFields({
                     touchAction: "none",
                     position: "relative",
                     bgcolor: "background.paper",
+                    height:
+                      fullscreenLocationId === locationId
+                        ? "100vh"
+                        : undefined,
                   }}
                 >
                   <Paper
@@ -1226,6 +1287,38 @@ export default function GraphicalFields({
                           }}
                         >
                           <FitScreenIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip
+                        title={
+                          fullscreenLocationId === locationId
+                            ? t("fields:graphical.exitFullscreen")
+                            : t("fields:graphical.enterFullscreen")
+                        }
+                        placement="left"
+                      >
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            void toggleFullscreen(locationId);
+                          }}
+                          aria-label={
+                            fullscreenLocationId === locationId
+                              ? t("fields:graphical.exitFullscreen")
+                              : t("fields:graphical.enterFullscreen")
+                          }
+                          sx={{
+                            borderRadius: 0,
+                            p: 1.25,
+                            borderTop: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
+                          {fullscreenLocationId === locationId ? (
+                            <FullscreenExitIcon fontSize="small" />
+                          ) : (
+                            <FullscreenIcon fontSize="small" />
+                          )}
                         </IconButton>
                       </Tooltip>
                     </Stack>
@@ -1369,6 +1462,7 @@ export default function GraphicalFields({
                                 fieldViewModels,
                                 location.name,
                                 locationId,
+                                viewport,
                               )}
                             />
                             {shouldShowFieldLabel(

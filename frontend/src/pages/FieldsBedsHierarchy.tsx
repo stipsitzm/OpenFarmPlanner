@@ -237,7 +237,7 @@ function FieldsBedsHierarchy({
 
   const handleCreatePlantingPlan = useCallback(
     (bedId: number): void => {
-      navigate(`/planting-plans?bedId=${bedId}`);
+      navigate(`/app/planting-plans?bedId=${bedId}`);
     },
     [navigate],
   );

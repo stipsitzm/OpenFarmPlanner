@@ -42,3 +42,6 @@ media/*
 
 # Quality reports
 reports/
+
+# Local data sync backups
+/backups/

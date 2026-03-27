@@ -368,6 +368,9 @@ describe("GraphicalFields", () => {
     expect(
       screen.getByRole("button", { name: "Alles einpassen" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Vollbild öffnen" }),
+    ).toBeInTheDocument();
   }, 15000);
 
   it("supports viewport movement via pan buttons and arrow keys", async () => {
@@ -380,9 +383,9 @@ describe("GraphicalFields", () => {
 
     const stage = screen.getByTestId("konva-stage");
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
-      fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
-      fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+      Array.from({ length: 6 }).forEach(() => {
+        fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+      });
     });
     const startX = Number(stage.getAttribute("data-x"));
     const startY = Number(stage.getAttribute("data-y"));
@@ -651,6 +654,34 @@ describe("GraphicalFields", () => {
       const moved = screen.getByTestId("field-rect-10");
       expect(Number(moved.getAttribute("data-x"))).not.toBe(startPosition.x);
       expect(Number(moved.getAttribute("data-y"))).not.toBe(startPosition.y);
+    });
+  }, 15000);
+
+  it("supports large horizontal and vertical placement range without early boundary clipping", async () => {
+    render(<GraphicalFields />);
+    act(() => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+      );
+      fireEvent.click(screen.getByRole("switch"));
+    });
+
+    const node = mockKonvaNodes["field-rect-10"];
+    const dragTargetRef = {
+      current: { x: 10000, y: 120 },
+    };
+
+    act(() => {
+      node.handlers.onDragEnd?.({
+        evt: new Event("dragend"),
+        target: createKonvaTarget(dragTargetRef),
+      });
+    });
+
+    await waitFor(() => {
+      const moved = screen.getByTestId("field-rect-10");
+      expect(Number(moved.getAttribute("data-x"))).toBeGreaterThan(9000);
+      expect(Number(moved.getAttribute("data-y"))).toBeLessThan(1000);
     });
   }, 15000);
 

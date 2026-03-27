@@ -23,8 +23,13 @@
     "name": "Name",
     "address": "Adresse",
     "notes": "Notizen",
-    "description": "Beschreibung"
+    "description": "Beschreibung",
+    "project": "Projekt"
   },
+  "columns": {
+    "project": "Projekt"
+  },
+  "project": "Projekt",
   "notes": {
     "empty": "Keine Notizen",
     "editEmpty": "Notiz hinzufügen",

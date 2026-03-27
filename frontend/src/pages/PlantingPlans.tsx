@@ -682,12 +682,6 @@ function PlantingPlans(): React.ReactElement {
             };
           }}
           mapToApiData={(row) => {
-            console.log("[DEBUG] mapToApiData called with row:", row);
-            console.log(
-              "[DEBUG] mapToApiData lastEditedField:",
-              lastEditedFieldRef.current,
-            );
-
             const plantingDate = toIsoDateString(row.planting_date) ?? "";
 
             // Ensure culture and bed are numeric IDs, not label strings
@@ -726,22 +720,12 @@ function PlantingPlans(): React.ReactElement {
 
             // Determine which field to send based on last edit
             const source = lastEditedFieldRef.current || "area_m2";
-
-            console.log("[DEBUG] mapToApiData source:", source);
-            console.log("[DEBUG] mapToApiData row.area_m2:", row.area_m2);
-            console.log(
-              "[DEBUG] mapToApiData row.plants_count:",
-              row.plants_count,
-            );
+            const selectedBed = beds.find((bed) => bed.id === bedId);
 
             if (source === "area_m2" && typeof row.area_m2 === "number") {
               // User edited area directly - send as M2
               apiData.area_input_value = row.area_m2;
               apiData.area_input_unit = "M2";
-              console.log(
-                "[DEBUG] mapToApiData sending area as M2:",
-                apiData.area_input_value,
-              );
             } else if (
               source === "plants_count" &&
               typeof row.plants_count === "number"
@@ -749,16 +733,19 @@ function PlantingPlans(): React.ReactElement {
               // User edited plants count - send as PLANTS
               apiData.area_input_value = row.plants_count;
               apiData.area_input_unit = "PLANTS";
-              console.log(
-                "[DEBUG] mapToApiData sending plants count as PLANTS:",
-                apiData.area_input_value,
-              );
+            }
+
+            if (
+              apiData.area_input_value === undefined &&
+              typeof selectedBed?.area_sqm === "number"
+            ) {
+              apiData.area_input_value = selectedBed.area_sqm;
+              apiData.area_input_unit = "M2";
             }
 
             // Clear last edited field after use
             lastEditedFieldRef.current = null;
 
-            console.log("[DEBUG] mapToApiData final payload:", apiData);
             return apiData;
           }}
           validateRow={(row) => {
