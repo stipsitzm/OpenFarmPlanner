@@ -789,7 +789,7 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = PlantingPlan
         fields = '__all__'
-        read_only_fields = ['harvest_date', 'harvest_end_date', 'created_by', 'updated_by']
+        read_only_fields = ['project', 'harvest_date', 'harvest_end_date', 'created_by', 'updated_by']
     
     def get_plants_count(self, obj):
         """Compute plant count from area and culture spacing."""
