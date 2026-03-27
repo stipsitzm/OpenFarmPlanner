@@ -671,9 +671,25 @@ class CultureSerializer(serializers.ModelSerializer):
         supplier_explicitly_set = 'supplier' in attrs
         if supplier_name and not supplier_explicitly_set and not attrs.get('supplier'):
             from .utils import normalize_supplier_name
+            project = None
+            if self.instance is not None:
+                project = self.instance.project
+            if project is None:
+                request = self.context.get('request')
+                project = getattr(request, 'active_project', None)
+            if project is None:
+                project, _ = Project.objects.get_or_create(
+                    slug='gelawi-zwiebelzopf',
+                    defaults={'name': 'Gelawi Zwiebelzopf', 'description': '', 'is_active': True},
+                )
             supplier, created = Supplier.objects.get_or_create(
                 name_normalized=normalize_supplier_name(supplier_name) or '',
-                defaults={'name': supplier_name}
+                project=project,
+                defaults={
+                    'name': supplier_name,
+                    'homepage_url': 'https://example.invalid',
+                    'project': project,
+                },
             )
             attrs['supplier'] = supplier
 

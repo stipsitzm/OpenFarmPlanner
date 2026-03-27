@@ -205,7 +205,7 @@ class Supplier(TimestampedModel):
         editable=False,
         help_text="Normalized name for deduplication"
     )
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='suppliers', null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='suppliers')
 
     @staticmethod
     def _normalize_domain(hostname: str) -> str:
@@ -334,7 +334,7 @@ class Location(TimestampedModel):
     name = models.CharField(max_length=200)
     address = models.TextField(blank=True)
     notes = models.TextField(blank=True)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='locations', null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='locations')
 
     def __str__(self) -> str:
         """Return the location name."""
@@ -357,7 +357,7 @@ class Field(TimestampedModel):
     length_m = models.FloatField(null=True, blank=True)
     width_m = models.FloatField(null=True, blank=True)
     notes = models.TextField(blank=True)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='fields', null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='fields')
 
     def clean(self) -> None:
         """Validate area and optional field dimensions."""
@@ -404,7 +404,7 @@ class Bed(TimestampedModel):
     length_m = models.FloatField(null=True, blank=True)
     width_m = models.FloatField(null=True, blank=True)
     notes = models.TextField(blank=True)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='beds', null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='beds')
 
     def clean(self) -> None:
         """Validate area and optional bed dimensions."""
@@ -446,7 +446,7 @@ class BedLayout(TimestampedModel):
 
     bed = models.OneToOneField(Bed, on_delete=models.CASCADE, related_name='layout')
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='bed_layouts')
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='bed_layouts', null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='bed_layouts')
     x = models.FloatField(default=0.0)
     y = models.FloatField(default=0.0)
     version = models.PositiveIntegerField(default=1)
@@ -471,7 +471,7 @@ class FieldLayout(TimestampedModel):
 
     field = models.OneToOneField(Field, on_delete=models.CASCADE, related_name='layout')
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='field_layouts')
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='field_layouts', null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='field_layouts')
     x = models.FloatField(default=0.0)
     y = models.FloatField(default=0.0)
     version = models.PositiveIntegerField(default=1)
@@ -553,7 +553,7 @@ class Culture(TimestampedModel):
         help_text="Seed supplier (preferred over seed_supplier text field)"
     )
     supplier_product_url = models.URLField(null=True, blank=True, help_text='Supplier product page URL for enrichment')
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='cultures', null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='cultures')
     source_public_culture = models.ForeignKey('PublicCulture', null=True, blank=True, on_delete=models.SET_NULL, related_name='imported_cultures')
     source_public_version = models.IntegerField(null=True, blank=True)
     origin_type = models.CharField(max_length=50, choices=ORIGIN_TYPE_CHOICES, default=ORIGIN_MANUAL)
@@ -1031,7 +1031,7 @@ class ProjectRevision(models.Model):
     snapshot = models.JSONField()
     summary = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='project_revisions', null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='project_revisions')
 
     class Meta:
         ordering = ['-created_at']
@@ -1047,7 +1047,7 @@ class SeedPackage(TimestampedModel):
     ]
 
     culture = models.ForeignKey('Culture', on_delete=models.CASCADE, related_name='seed_packages')
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='seed_packages', null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='seed_packages')
     size_value = models.DecimalField(max_digits=10, decimal_places=1)
     size_unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default=UNIT_GRAMS)
     evidence_text = models.CharField(max_length=200, blank=True)
@@ -1119,7 +1119,7 @@ class PlantingPlan(TimestampedModel):
         on_delete=models.SET_NULL,
         related_name='updated_planting_plans',
     )
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='planting_plans', null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='planting_plans')
 
     def clean(self) -> None:
         """Validate total area usage against the bed area when available."""
@@ -1219,7 +1219,7 @@ class Task(TimestampedModel):
     )
     due_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks', null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
 
     def __str__(self) -> str:
         """Return a string combining task title and status."""
@@ -1259,7 +1259,7 @@ class NoteAttachment(models.Model):
     height = models.PositiveIntegerField(null=True, blank=True)
     size_bytes = models.PositiveIntegerField(null=True, blank=True)
     mime_type = models.CharField(max_length=100, blank=True)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='note_attachments', null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='note_attachments')
 
     class Meta:
         ordering = ['-created_at']

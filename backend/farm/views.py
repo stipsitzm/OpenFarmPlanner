@@ -86,6 +86,9 @@ from .services.public_cultures import (
 
 logger = logging.getLogger(__name__)
 
+BOOTSTRAP_PROJECT_NAME = 'Gelawi Zwiebelzopf'
+BOOTSTRAP_PROJECT_SLUG = 'gelawi-zwiebelzopf'
+
 
 def _invitation_error_response(exc: InvitationFlowError) -> Response:
     """Build a consistent error response for invitation domain errors."""
@@ -199,9 +202,19 @@ def _serialize_project_state() -> dict[str, list[dict]]:
     }
 
 
-def _create_project_revision(summary: str) -> None:
+def _get_bootstrap_project() -> Project:
+    """Return the bootstrap project, creating it when missing."""
+    project, _ = Project.objects.get_or_create(
+        slug=BOOTSTRAP_PROJECT_SLUG,
+        defaults={'name': BOOTSTRAP_PROJECT_NAME, 'description': '', 'is_active': True},
+    )
+    return project
+
+
+def _create_project_revision(summary: str, project: Project | None = None) -> None:
     snapshot = json.loads(json.dumps(_serialize_project_state(), cls=DjangoJSONEncoder))
-    ProjectRevision.objects.create(snapshot=snapshot, summary=summary)
+    target_project = project or _get_bootstrap_project()
+    ProjectRevision.objects.create(snapshot=snapshot, summary=summary, project=target_project)
 
 
 _PROJECT_SUMMARY_PATTERN = re.compile(
@@ -582,7 +595,7 @@ class ProjectRevisionMixin:
     """Create a project snapshot after mutating operations."""
 
     def create_project_revision(self, summary: str) -> None:
-        _create_project_revision(summary)
+        _create_project_revision(summary, project=getattr(self.request, 'active_project', None))
 
 
 
@@ -889,7 +902,12 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
             if normalized:
                 supplier, _ = Supplier.objects.get_or_create(
                     name_normalized=normalized,
-                    defaults={'name': supplier_name}
+                    project=self.request.active_project,
+                    defaults={
+                        'name': supplier_name,
+                        'homepage_url': 'https://example.invalid',
+                        'project': self.request.active_project,
+                    },
                 )
                 return supplier
         
@@ -1582,7 +1600,7 @@ class CultureUndeleteView(APIView):
         culture.save()
         if culture.image_file_id:
             MediaFile.objects.filter(id=culture.image_file_id).update(orphaned_at=None)
-        _create_project_revision(f"Culture undeleted #{culture.pk}")
+        _create_project_revision(f"Culture undeleted #{culture.pk}", project=culture.project)
         return Response(CultureSerializer(culture).data, status=status.HTTP_200_OK)
 
 
@@ -1619,7 +1637,7 @@ class ProjectHistoryRestoreView(APIView):
 
         revision = get_object_or_404(ProjectRevision.objects.all(), id=revision_id)
         _restore_project_state(revision.snapshot)
-        _create_project_revision(f"Project restored from snapshot #{revision_id}")
+        _create_project_revision(f"Project restored from snapshot #{revision_id}", project=revision.project)
 
         return Response({'detail': 'Project restored successfully.'}, status=status.HTTP_200_OK)
 
@@ -1676,7 +1694,7 @@ class GlobalHistoryRestoreView(APIView):
             culture.deleted_at = None
             culture.save()
 
-        _create_project_revision(f"Culture undeleted #{culture.pk}")
+        _create_project_revision(f"Culture undeleted #{culture.pk}", project=culture.project)
         return Response(CultureSerializer(culture).data, status=status.HTTP_200_OK)
 
 
@@ -1691,7 +1709,7 @@ class MediaFileUploadView(APIView):
         rel_path = culture_media_upload_path(None, upload.name)
         saved_path = default_storage.save(rel_path, upload)
         media = MediaFile.objects.create(storage_path=saved_path)
-        _create_project_revision(f"Media uploaded #{media.pk}")
+        _create_project_revision(f"Media uploaded #{media.pk}", project=_get_bootstrap_project())
         return Response({'id': media.id, 'storage_path': media.storage_path, 'uploaded_at': media.uploaded_at}, status=status.HTTP_201_CREATED)
 
 class NoteAttachmentListCreateView(APIView):
@@ -1729,6 +1747,7 @@ class NoteAttachmentListCreateView(APIView):
             caption=caption,
             created_by=request.user if request.user.is_authenticated else None,
             updated_by=request.user if request.user.is_authenticated else None,
+            project=plan.project,
             width=metadata['width'],
             height=metadata['height'],
             size_bytes=metadata['size_bytes'],
@@ -1738,7 +1757,7 @@ class NoteAttachmentListCreateView(APIView):
         attachment.save()
 
         serializer = NoteAttachmentSerializer(attachment, context={'request': request})
-        _create_project_revision(f"NoteAttachment created #{attachment.pk}")
+        _create_project_revision(f"NoteAttachment created #{attachment.pk}", project=attachment.project)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -1748,9 +1767,10 @@ class NoteAttachmentDeleteView(APIView):
     def delete(self, request, attachment_id: int):
         attachment = get_object_or_404(NoteAttachment, pk=attachment_id)
         attachment_id = attachment.pk
+        attachment_project = attachment.project
         attachment.image.delete(save=False)
         attachment.delete()
-        _create_project_revision(f"NoteAttachment deleted #{attachment_id}")
+        _create_project_revision(f"NoteAttachment deleted #{attachment_id}", project=attachment_project)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
