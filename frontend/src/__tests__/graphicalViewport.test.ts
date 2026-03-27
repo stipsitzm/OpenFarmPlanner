@@ -103,6 +103,22 @@ describe('graphicalViewport helpers', () => {
     expect(persistedViewport.y).not.toBe(initialViewport.y);
   });
 
+  it('honors asymmetric fit padding (for right-side overlay controls)', () => {
+    const bounds = getContentBoundsFromRects([
+      { x: 0, y: 0, width: 600, height: 300 },
+    ]);
+    expect(bounds).not.toBeNull();
+    const symmetricViewport = fitBoundsToStage(bounds!, { width: 1000, height: 700 }, 24);
+    const asymmetricViewport = fitBoundsToStage(bounds!, { width: 1000, height: 700 }, {
+      top: 24,
+      right: 120,
+      bottom: 24,
+      left: 24,
+    });
+    expect(asymmetricViewport.scale).toBeLessThan(symmetricViewport.scale);
+    expect(asymmetricViewport.x + 600 * asymmetricViewport.scale).toBeLessThanOrEqual(880.1);
+  });
+
   it('keeps panning stable across multiple move events', () => {
     const initialViewport = { x: 120, y: 80, scale: 1.6 };
     const panSession = startPanSession(initialViewport, { x: 300, y: 200 });

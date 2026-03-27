@@ -55,6 +55,7 @@ import {
   toContentBounds,
   type ContentBounds,
   type PanSession,
+  type ViewportPadding,
   type ViewportState,
   zoomAroundPoint,
 } from "./graphicalViewport";
@@ -111,6 +112,13 @@ interface GraphicalFieldsProps {
 type InteractionMode = "view" | "edit";
 
 const VIEWPORT_PADDING = 24;
+const VIEWPORT_CONTROL_SAFE_AREA_RIGHT = 84;
+const FIT_VIEWPORT_PADDING: ViewportPadding = {
+  top: VIEWPORT_PADDING,
+  right: VIEWPORT_PADDING + VIEWPORT_CONTROL_SAFE_AREA_RIGHT,
+  bottom: VIEWPORT_PADDING,
+  left: VIEWPORT_PADDING,
+};
 const FIELD_INNER_OFFSET_X = 10;
 const FIELD_LABEL_HEIGHT = 24;
 const FIELD_INNER_OFFSET_Y = FIELD_INNER_OFFSET_X + FIELD_LABEL_HEIGHT;
@@ -549,7 +557,7 @@ export default function GraphicalFields({
         [locationId]: fitBoundsToStage(
           contentBounds,
           { width: stageWidth, height: stageHeight },
-          VIEWPORT_PADDING,
+          FIT_VIEWPORT_PADDING,
         ),
       };
     });
@@ -566,7 +574,7 @@ export default function GraphicalFields({
         fitBoundsToStage(
           contentBounds,
           { width: stageWidth, height: stageHeight },
-          VIEWPORT_PADDING,
+          FIT_VIEWPORT_PADDING,
         );
       const nextRaw = updater(current);
       const nextClamped = clampViewportToStage(
@@ -1035,7 +1043,7 @@ export default function GraphicalFields({
             fitBoundsToStage(
               contentBounds,
               { width: stageWidth, height: stageHeight },
-              VIEWPORT_PADDING,
+              FIT_VIEWPORT_PADDING,
             );
           const visibility = getVisibleElements(viewport.scale);
 

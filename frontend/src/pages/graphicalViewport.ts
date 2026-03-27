@@ -39,6 +39,25 @@ export interface ContentBounds {
   maxY: number;
 }
 
+export interface ViewportPadding {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+function normalizePadding(padding: number | ViewportPadding): ViewportPadding {
+  if (typeof padding === 'number') {
+    return {
+      top: padding,
+      right: padding,
+      bottom: padding,
+      left: padding,
+    };
+  }
+  return padding;
+}
+
 export function toContentBounds(contentSize: RectSize): ContentBounds {
   return {
     minX: 0,
@@ -121,24 +140,33 @@ export function shouldShowBedLabel(size: RectSize, scale: number): boolean {
 export function fitBoundsToStage(
   contentBounds: ContentBounds,
   stageSize: RectSize,
-  padding = 24,
+  padding: number | ViewportPadding = 24,
 ): ViewportState {
+  const normalizedPadding = normalizePadding(padding);
   const safeWidth = Math.max(contentBounds.maxX - contentBounds.minX, 1);
   const safeHeight = Math.max(contentBounds.maxY - contentBounds.minY, 1);
-  const scaleX = Math.max(0.01, (stageSize.width - padding * 2) / safeWidth);
-  const scaleY = Math.max(0.01, (stageSize.height - padding * 2) / safeHeight);
+  const availableWidth = Math.max(1, stageSize.width - normalizedPadding.left - normalizedPadding.right);
+  const availableHeight = Math.max(1, stageSize.height - normalizedPadding.top - normalizedPadding.bottom);
+  const scaleX = Math.max(0.01, availableWidth / safeWidth);
+  const scaleY = Math.max(0.01, availableHeight / safeHeight);
   const scale = clampScale(Math.min(scaleX, scaleY), GRAPHICAL_FIT_MIN_SCALE);
   const contentCenterX = (contentBounds.minX + contentBounds.maxX) / 2;
   const contentCenterY = (contentBounds.minY + contentBounds.maxY) / 2;
+  const viewportCenterX = normalizedPadding.left + availableWidth / 2;
+  const viewportCenterY = normalizedPadding.top + availableHeight / 2;
 
   return {
     scale,
-    x: stageSize.width / 2 - contentCenterX * scale,
-    y: stageSize.height / 2 - contentCenterY * scale,
+    x: viewportCenterX - contentCenterX * scale,
+    y: viewportCenterY - contentCenterY * scale,
   };
 }
 
-export function fitContentToStage(contentSize: RectSize, stageSize: RectSize, padding = 24): ViewportState {
+export function fitContentToStage(
+  contentSize: RectSize,
+  stageSize: RectSize,
+  padding: number | ViewportPadding = 24,
+): ViewportState {
   return fitBoundsToStage(toContentBounds(contentSize), stageSize, padding);
 }
 
