@@ -132,6 +132,8 @@ const MAX_STAGE_HEIGHT = 560;
 const ZOOM_STEP = 1.2;
 const PAN_STEP = 80;
 const PAN_FAST_STEP = 180;
+const WORKSPACE_MIN_WIDTH = 20000;
+const WORKSPACE_MIN_HEIGHT = 20000;
 
 const snapToNeighbors = (
   currentId: number,
@@ -491,8 +493,13 @@ export default function GraphicalFields({
         };
       });
 
-      const contentHeight = Math.max(DEFAULT_STAGE_HEIGHT, fieldY + 20);
+      const contentHeight = Math.max(
+        WORKSPACE_MIN_HEIGHT,
+        DEFAULT_STAGE_HEIGHT,
+        fieldY + 20,
+      );
       const contentWidth = Math.max(
+        WORKSPACE_MIN_WIDTH,
         stageWidth,
         ...defaultFieldRects.map(
           (rect) => rect.width + rect.defaultX + padding,

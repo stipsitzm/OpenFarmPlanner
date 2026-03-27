@@ -654,6 +654,33 @@ describe("GraphicalFields", () => {
     });
   }, 15000);
 
+  it("supports wide horizontal placement without early workspace boundary clipping", async () => {
+    render(<GraphicalFields />);
+    act(() => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+      );
+      fireEvent.click(screen.getByRole("switch"));
+    });
+
+    const node = mockKonvaNodes["field-rect-10"];
+    const dragTargetRef = {
+      current: { x: 10000, y: 120 },
+    };
+
+    act(() => {
+      node.handlers.onDragEnd?.({
+        evt: new Event("dragend"),
+        target: createKonvaTarget(dragTargetRef),
+      });
+    });
+
+    await waitFor(() => {
+      const moved = screen.getByTestId("field-rect-10");
+      expect(Number(moved.getAttribute("data-x"))).toBeGreaterThan(9000);
+    });
+  }, 15000);
+
   it("persists layout changes only in edit mode", async () => {
     render(<GraphicalFields />);
     act(() => {
