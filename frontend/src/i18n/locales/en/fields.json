@@ -33,6 +33,8 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "fitToView": "Fit all",
+    "enterFullscreen": "Enter fullscreen",
+    "exitFullscreen": "Exit fullscreen",
     "zoomLevel": "Zoom: {{value}}×",
     "locationTitle": "Location: {{name}}",
     "details": {

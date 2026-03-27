@@ -368,6 +368,9 @@ describe("GraphicalFields", () => {
     expect(
       screen.getByRole("button", { name: "Alles einpassen" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Vollbild öffnen" }),
+    ).toBeInTheDocument();
   }, 15000);
 
   it("supports viewport movement via pan buttons and arrow keys", async () => {

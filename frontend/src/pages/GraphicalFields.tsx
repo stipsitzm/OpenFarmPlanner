@@ -23,6 +23,8 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import FitScreenIcon from "@mui/icons-material/FitScreen";
+import FullscreenIcon from "@mui/icons-material/Fullscreen";
+import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
@@ -282,9 +284,11 @@ export default function GraphicalFields({
   const stageRefs = useRef<Record<number, Konva.Stage | null>>({});
   const saveTimers = useRef<Record<string, number>>({});
   const panSessionRef = useRef<Record<number, PanSession | null>>({});
+  const locationCanvasRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const pinchStateRef = useRef<
     Record<number, { distance: number; center: Point } | null>
   >({});
+  const [fullscreenLocationId, setFullscreenLocationId] = useState<number | null>(null);
   const resetTransientInteractionState = (): void => {
     setActiveGuides([]);
     Object.keys(panSessionRef.current).forEach((key) => {
@@ -307,20 +311,50 @@ export default function GraphicalFields({
 
   useEffect(() => {
     const handleResize = (): void => {
+      const fullscreenContainer =
+        fullscreenLocationId !== null
+          ? locationCanvasRefs.current[fullscreenLocationId]
+          : null;
       const containerWidth =
-        containerRef.current?.clientWidth ?? window.innerWidth;
+        fullscreenContainer?.clientWidth ??
+        containerRef.current?.clientWidth ??
+        window.innerWidth;
       setStageWidth(Math.max(320, Math.round(containerWidth - 8)));
-      setStageHeight(
-        Math.max(
-          MIN_STAGE_HEIGHT,
-          Math.min(MAX_STAGE_HEIGHT, Math.round(window.innerHeight * 0.45)),
-        ),
-      );
+      if (fullscreenContainer) {
+        setStageHeight(
+          Math.max(MIN_STAGE_HEIGHT, Math.round(fullscreenContainer.clientHeight - 8)),
+        );
+      } else {
+        setStageHeight(
+          Math.max(
+            MIN_STAGE_HEIGHT,
+            Math.min(MAX_STAGE_HEIGHT, Math.round(window.innerHeight * 0.45)),
+          ),
+        );
+      }
     };
 
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, [fullscreenLocationId]);
+
+  useEffect(() => {
+    const handleFullscreenChange = (): void => {
+      const element = document.fullscreenElement;
+      if (!element) {
+        setFullscreenLocationId(null);
+        return;
+      }
+      const matchingLocationId = Object.entries(locationCanvasRefs.current).find(
+        ([, node]) => node === element,
+      )?.[0];
+      setFullscreenLocationId(matchingLocationId ? Number(matchingLocationId) : null);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   useEffect(() => {
@@ -488,7 +522,10 @@ export default function GraphicalFields({
           field,
           width: size.width,
           height: size.height,
-          defaultX: padding,
+          defaultX: Math.max(
+            padding,
+            Math.round(WORKSPACE_MIN_WIDTH / 2 - size.width / 2),
+          ),
           defaultY: y,
         };
       });
@@ -631,6 +668,26 @@ export default function GraphicalFields({
 
   const handleStageDoubleTap = (locationId: number): void => {
     handleZoom(locationId, ZOOM_STEP);
+  };
+
+  const toggleFullscreen = async (locationId: number): Promise<void> => {
+    const target = locationCanvasRefs.current[locationId];
+    if (!target) {
+      return;
+    }
+
+    try {
+      if (document.fullscreenElement === target) {
+        await document.exitFullscreen();
+        return;
+      }
+
+      if (!document.fullscreenElement && target.requestFullscreen) {
+        await target.requestFullscreen();
+      }
+    } catch (fullscreenError) {
+      console.error("Failed to toggle fullscreen", fullscreenError);
+    }
   };
 
   const handleStageDragStart = (
@@ -1069,6 +1126,9 @@ export default function GraphicalFields({
               </AccordionSummary>
               <AccordionDetails>
                 <Box
+                  ref={(node) => {
+                    locationCanvasRefs.current[locationId] = node;
+                  }}
                   sx={{
                     width: "100%",
                     overflow: "hidden",
@@ -1078,6 +1138,10 @@ export default function GraphicalFields({
                     touchAction: "none",
                     position: "relative",
                     bgcolor: "background.paper",
+                    height:
+                      fullscreenLocationId === locationId
+                        ? "100vh"
+                        : undefined,
                   }}
                 >
                   <Paper
@@ -1211,6 +1275,38 @@ export default function GraphicalFields({
                           }}
                         >
                           <FitScreenIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip
+                        title={
+                          fullscreenLocationId === locationId
+                            ? t("fields:graphical.exitFullscreen")
+                            : t("fields:graphical.enterFullscreen")
+                        }
+                        placement="left"
+                      >
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            void toggleFullscreen(locationId);
+                          }}
+                          aria-label={
+                            fullscreenLocationId === locationId
+                              ? t("fields:graphical.exitFullscreen")
+                              : t("fields:graphical.enterFullscreen")
+                          }
+                          sx={{
+                            borderRadius: 0,
+                            p: 1.25,
+                            borderTop: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
+                          {fullscreenLocationId === locationId ? (
+                            <FullscreenExitIcon fontSize="small" />
+                          ) : (
+                            <FullscreenIcon fontSize="small" />
+                          )}
                         </IconButton>
                       </Tooltip>
                     </Stack>

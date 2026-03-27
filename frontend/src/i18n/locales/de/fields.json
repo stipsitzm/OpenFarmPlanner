@@ -37,6 +37,8 @@
     "panLeft": "Nach links verschieben",
     "panRight": "Nach rechts verschieben",
     "fitToView": "Alles einpassen",
+    "enterFullscreen": "Vollbild öffnen",
+    "exitFullscreen": "Vollbild schließen",
     "zoomLevel": "Zoom: {{value}}×",
     "locationTitle": "Standort: {{name}}",
     "details": {
