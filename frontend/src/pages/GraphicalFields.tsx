@@ -136,7 +136,6 @@ const PAN_STEP = 80;
 const PAN_FAST_STEP = 180;
 const WORKSPACE_MIN_WIDTH = 20000;
 const WORKSPACE_MIN_HEIGHT = 20000;
-
 const snapToNeighbors = (
   currentId: number,
   position: Point,
@@ -784,7 +783,9 @@ export default function GraphicalFields({
     fieldViewModels: RectViewModel[],
     locationName: string,
     locationId: number,
+    viewport: ViewportState,
   ) => {
+    const currentFieldRect = fieldViewModels.find((item) => item.id === fieldId);
     if (isViewMode) {
       return {
         draggable: false,
@@ -1461,6 +1462,7 @@ export default function GraphicalFields({
                                 fieldViewModels,
                                 location.name,
                                 locationId,
+                                viewport,
                               )}
                             />
                             {shouldShowFieldLabel(
