@@ -525,11 +525,25 @@ export default function GraphicalFields({
     });
   }, [fieldsByLocation, layoutsByField, locations, stageWidth]);
 
+  const getContentBoundsForLocation = (locationId: number): ContentBounds => {
+    const layout = locationLayouts.find((item) => item.location.id === locationId);
+    if (!layout) {
+      return toContentBounds({ width: stageWidth, height: stageHeight });
+    }
+
+    const fieldBounds = getContentBoundsFromRects(layout.fieldViewModels);
+    return (
+      fieldBounds ??
+      toContentBounds({
+        width: layout.contentWidth,
+        height: layout.contentHeight,
+      })
+    );
+  };
+
   const resetViewport = (locationId: number): void => {
     setViewportByLocation((prev) => {
-      const contentBounds =
-        contentBoundsByLocation.get(locationId) ??
-        toContentBounds({ width: stageWidth, height: stageHeight });
+      const contentBounds = getContentBoundsForLocation(locationId);
       return {
         ...prev,
         [locationId]: fitBoundsToStage(
@@ -541,33 +555,12 @@ export default function GraphicalFields({
     });
   };
 
-  const contentBoundsByLocation = useMemo(() => {
-    const map = new Map<number, ContentBounds>();
-    locationLayouts.forEach((layout) => {
-      const locationId = layout.location.id;
-      if (!locationId) return;
-
-      const fieldBounds = getContentBoundsFromRects(layout.fieldViewModels);
-      map.set(
-        locationId,
-        fieldBounds ??
-          toContentBounds({
-            width: layout.contentWidth,
-            height: layout.contentHeight,
-          }),
-      );
-    });
-    return map;
-  }, [locationLayouts]);
-
   const updateViewport = (
     locationId: number,
     updater: (current: ViewportState) => ViewportState,
   ): void => {
     setViewportByLocation((prev) => {
-      const contentBounds =
-        contentBoundsByLocation.get(locationId) ??
-        toContentBounds({ width: stageWidth, height: stageHeight });
+      const contentBounds = getContentBoundsForLocation(locationId);
       const current =
         prev[locationId] ??
         fitBoundsToStage(
@@ -909,20 +902,11 @@ export default function GraphicalFields({
     pinchStateRef.current[locationId] = null;
   };
 
-  useEffect(() => {
-    if (locationLayouts.length === 0) {
-      setActivePanLocationId(null);
-      return;
-    }
-    if (
-      activePanLocationId !== null &&
-      locationLayouts.some((layout) => layout.location.id === activePanLocationId)
-    ) {
-      return;
-    }
-    const fallbackLocationId = locationLayouts[0].location.id ?? null;
-    setActivePanLocationId(fallbackLocationId);
-  }, [activePanLocationId, locationLayouts]);
+  const effectiveActivePanLocationId =
+    activePanLocationId !== null &&
+    locationLayouts.some((layout) => layout.location.id === activePanLocationId)
+      ? activePanLocationId
+      : (locationLayouts[0]?.location.id ?? null);
 
   useEffect(() => {
     const isTypingElement = (target: EventTarget | null): boolean => {
@@ -939,26 +923,26 @@ export default function GraphicalFields({
     };
 
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (isTypingElement(event.target) || activePanLocationId === null) {
+      if (isTypingElement(event.target) || effectiveActivePanLocationId === null) {
         return;
       }
       const step = event.shiftKey ? PAN_FAST_STEP : PAN_STEP;
       switch (event.key) {
         case "ArrowUp":
           event.preventDefault();
-          handlePanByOffset(activePanLocationId, 0, step);
+          handlePanByOffset(effectiveActivePanLocationId, 0, step);
           break;
         case "ArrowDown":
           event.preventDefault();
-          handlePanByOffset(activePanLocationId, 0, -step);
+          handlePanByOffset(effectiveActivePanLocationId, 0, -step);
           break;
         case "ArrowLeft":
           event.preventDefault();
-          handlePanByOffset(activePanLocationId, step, 0);
+          handlePanByOffset(effectiveActivePanLocationId, step, 0);
           break;
         case "ArrowRight":
           event.preventDefault();
-          handlePanByOffset(activePanLocationId, -step, 0);
+          handlePanByOffset(effectiveActivePanLocationId, -step, 0);
           break;
         default:
           break;
@@ -967,7 +951,7 @@ export default function GraphicalFields({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activePanLocationId]);
+  }, [effectiveActivePanLocationId, handlePanByOffset]);
 
   if (loading) {
     return (
@@ -1045,9 +1029,7 @@ export default function GraphicalFields({
           }
 
           const locationId = location.id;
-          const contentBounds =
-            contentBoundsByLocation.get(locationId) ??
-            toContentBounds({ width: contentWidth, height: contentHeight });
+          const contentBounds = getContentBoundsForLocation(locationId);
           const viewport =
             viewportByLocation[locationId] ??
             fitBoundsToStage(
