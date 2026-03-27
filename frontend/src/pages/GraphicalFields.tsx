@@ -47,10 +47,13 @@ import {
 } from "./graphicalLayoutUtils";
 import {
   clampViewportToStage,
-  fitContentToStage,
+  fitBoundsToStage,
+  getContentBoundsFromRects,
   getVisibleElements,
   shouldShowBedLabel,
   shouldShowFieldLabel,
+  toContentBounds,
+  type ContentBounds,
   type PanSession,
   type ViewportState,
   zoomAroundPoint,
@@ -523,77 +526,59 @@ export default function GraphicalFields({
   }, [fieldsByLocation, layoutsByField, locations, stageWidth]);
 
   const resetViewport = (locationId: number): void => {
-    const layout = locationLayouts.find(
-      (item) => item.location.id === locationId,
-    );
-    if (!layout) {
-      return;
-    }
-
-    setViewportByLocation((prev) => ({
-      ...prev,
-      [locationId]: fitContentToStage(
-        { width: layout.contentWidth, height: layout.contentHeight },
-        { width: stageWidth, height: stageHeight },
-        VIEWPORT_PADDING,
-      ),
-    }));
+    setViewportByLocation((prev) => {
+      const contentBounds =
+        contentBoundsByLocation.get(locationId) ??
+        toContentBounds({ width: stageWidth, height: stageHeight });
+      return {
+        ...prev,
+        [locationId]: fitBoundsToStage(
+          contentBounds,
+          { width: stageWidth, height: stageHeight },
+          VIEWPORT_PADDING,
+        ),
+      };
+    });
   };
 
-  const contentSizeByLocation = useMemo(() => {
-    const map = new Map<number, { width: number; height: number }>();
+  const contentBoundsByLocation = useMemo(() => {
+    const map = new Map<number, ContentBounds>();
     locationLayouts.forEach((layout) => {
-      if (layout.location.id) {
-        map.set(layout.location.id, {
-          width: layout.contentWidth,
-          height: layout.contentHeight,
-        });
-      }
+      const locationId = layout.location.id;
+      if (!locationId) return;
+
+      const fieldBounds = getContentBoundsFromRects(layout.fieldViewModels);
+      map.set(
+        locationId,
+        fieldBounds ??
+          toContentBounds({
+            width: layout.contentWidth,
+            height: layout.contentHeight,
+          }),
+      );
     });
     return map;
   }, [locationLayouts]);
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      setViewportByLocation((prev) => {
-        const next = { ...prev };
-        locationLayouts.forEach((layout) => {
-          const locationId = layout.location.id;
-          if (!locationId || next[locationId]) {
-            return;
-          }
-          next[locationId] = fitContentToStage(
-            { width: layout.contentWidth, height: layout.contentHeight },
-            { width: stageWidth, height: stageHeight },
-            VIEWPORT_PADDING,
-          );
-        });
-        return next;
-      });
-    });
-  }, [locationLayouts, stageHeight, stageWidth]);
 
   const updateViewport = (
     locationId: number,
     updater: (current: ViewportState) => ViewportState,
   ): void => {
     setViewportByLocation((prev) => {
+      const contentBounds =
+        contentBoundsByLocation.get(locationId) ??
+        toContentBounds({ width: stageWidth, height: stageHeight });
       const current =
         prev[locationId] ??
-        fitContentToStage(
-          { width: stageWidth, height: stageHeight },
+        fitBoundsToStage(
+          contentBounds,
           { width: stageWidth, height: stageHeight },
           VIEWPORT_PADDING,
         );
       const nextRaw = updater(current);
-      const contentSize =
-        contentSizeByLocation.get(locationId) ?? {
-          width: stageWidth,
-          height: stageHeight,
-        };
       const nextClamped = clampViewportToStage(
         nextRaw,
-        contentSize,
+        contentBounds,
         { width: stageWidth, height: stageHeight },
       );
       return { ...prev, [locationId]: nextClamped };
@@ -1060,10 +1045,13 @@ export default function GraphicalFields({
           }
 
           const locationId = location.id;
+          const contentBounds =
+            contentBoundsByLocation.get(locationId) ??
+            toContentBounds({ width: contentWidth, height: contentHeight });
           const viewport =
             viewportByLocation[locationId] ??
-            fitContentToStage(
-              { width: contentWidth, height: contentHeight },
+            fitBoundsToStage(
+              contentBounds,
               { width: stageWidth, height: stageHeight },
               VIEWPORT_PADDING,
             );
