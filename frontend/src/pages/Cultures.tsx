@@ -349,7 +349,7 @@ function Cultures(): React.ReactElement {
 
   const handleCreatePlantingPlan = () => {
     if (selectedCultureId) {
-      navigate(`/planting-plans?cultureId=${selectedCultureId}`);
+      navigate(`/app/planting-plans?cultureId=${selectedCultureId}`);
     }
   };
 
