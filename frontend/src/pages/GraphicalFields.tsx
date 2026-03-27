@@ -112,7 +112,7 @@ interface GraphicalFieldsProps {
 type InteractionMode = "view" | "edit";
 
 const VIEWPORT_PADDING = 24;
-const VIEWPORT_CONTROL_SAFE_AREA_RIGHT = 84;
+const VIEWPORT_CONTROL_SAFE_AREA_RIGHT = 120;
 const FIT_VIEWPORT_PADDING: ViewportPadding = {
   top: VIEWPORT_PADDING,
   right: VIEWPORT_PADDING + VIEWPORT_CONTROL_SAFE_AREA_RIGHT,
