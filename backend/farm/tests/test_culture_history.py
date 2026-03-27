@@ -85,7 +85,7 @@ class CultureHistoryTests(TestCase):
 
 
     def test_project_history_snapshot_created_on_mutation(self):
-        self.client.put(
+        mutation_response = self.client.patch(
             f'/openfarmplanner/api/cultures/{self.culture.id}/',
             data={
                 'name': 'Snapshot Trigger',
@@ -96,6 +96,7 @@ class CultureHistoryTests(TestCase):
             },
             content_type='application/json',
         )
+        self.assertEqual(mutation_response.status_code, 200)
 
         response = self.client.get('/openfarmplanner/api/history/project/')
         self.assertEqual(response.status_code, 200)
@@ -106,7 +107,7 @@ class CultureHistoryTests(TestCase):
         self.assertNotIn('#', entry.get('object_display_name') or '')
 
     def test_project_restore_restores_previous_project_state(self):
-        self.client.put(
+        first_update_response = self.client.patch(
             f'/openfarmplanner/api/cultures/{self.culture.id}/',
             data={
                 'name': 'Carrot',
@@ -117,10 +118,11 @@ class CultureHistoryTests(TestCase):
             },
             content_type='application/json',
         )
+        self.assertEqual(first_update_response.status_code, 200)
         before = self.client.get('/openfarmplanner/api/history/project/')
         first_revision_id = before.json()[0]['history_id']
 
-        self.client.put(
+        second_update_response = self.client.patch(
             f'/openfarmplanner/api/cultures/{self.culture.id}/',
             data={
                 'name': 'Changed Name',
@@ -131,6 +133,7 @@ class CultureHistoryTests(TestCase):
             },
             content_type='application/json',
         )
+        self.assertEqual(second_update_response.status_code, 200)
 
         restore_response = self.client.post(
             '/openfarmplanner/api/history/project/restore/',
