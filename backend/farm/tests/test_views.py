@@ -1073,6 +1073,35 @@ class PlantingPlanAreaInputTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertAlmostEqual(float(response.data['area_usage_sqm']), 3.0, places=2)
 
+    def test_area_input_m2_put_update_does_not_return_server_error(self):
+        """Test full PUT update with M2 input does not crash and updates area."""
+        plan = PlantingPlan.objects.create(
+            culture=self.culture_with_spacing,
+            bed=self.bed,
+            planting_date=date(2026, 1, 1),
+            area_usage_sqm=1.0,
+            project=self.project,
+            cultivation_type='pre_cultivation',
+        )
+
+        response = self.client.put(
+            f'/openfarmplanner/api/planting-plans/{plan.id}/',
+            {
+                'culture': self.culture_with_spacing.id,
+                'bed': self.bed.id,
+                'planting_date': '2026-01-01',
+                'quantity': None,
+                'notes': '',
+                'cultivation_type': 'pre_cultivation',
+                'area_input_value': 3,
+                'area_input_unit': 'M2',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(float(response.data['area_usage_sqm']), 3.0)
+
 
 class NoteAttachmentApiTest(DRFAPITestCase):
     def setUp(self):
