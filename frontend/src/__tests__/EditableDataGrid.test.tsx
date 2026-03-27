@@ -184,7 +184,7 @@ describe('EditableDataGrid', () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          'area_usage_sqm: Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten.',
+          'Fläche (m²): Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten.',
         ),
       ).toBeInTheDocument();
     });
