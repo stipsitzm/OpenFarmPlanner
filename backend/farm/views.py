@@ -454,6 +454,7 @@ class BedLayoutByLocationView(APIView):
                     bed=bed,
                     defaults={
                         'location': location,
+                        'project': location.project,
                         'x': float(item.get('x', 0.0)),
                         'y': float(item.get('y', 0.0)),
                         'scale': item.get('scale'),
@@ -477,6 +478,7 @@ class BedLayoutByLocationView(APIView):
                     field=field,
                     defaults={
                         'location': location,
+                        'project': location.project,
                         'x': float(item.get('x', 0.0)),
                         'y': float(item.get('y', 0.0)),
                         'scale': item.get('scale'),

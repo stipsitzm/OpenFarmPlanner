@@ -1129,11 +1129,22 @@ class PlantingPlanAreaInputTest(DRFAPITestCase):
 
 class NoteAttachmentApiTest(DRFAPITestCase):
     def setUp(self):
-        self.location = Location.objects.create(name="Attachment Location")
-        self.field = Field.objects.create(name="Attachment Field", location=self.location)
-        self.bed = Bed.objects.create(name="Attachment Bed", field=self.field)
-        self.culture = Culture.objects.create(name="Attachment Culture", growth_duration_days=7, harvest_duration_days=2)
-        self.plan = PlantingPlan.objects.create(culture=self.culture, bed=self.bed, planting_date=date(2024, 3, 1))
+        self.project = Project.objects.create(name='Attachment API Project', slug='attachment-api-project')
+        self.location = Location.objects.create(name="Attachment Location", project=self.project)
+        self.field = Field.objects.create(name="Attachment Field", location=self.location, project=self.project)
+        self.bed = Bed.objects.create(name="Attachment Bed", field=self.field, project=self.project)
+        self.culture = Culture.objects.create(
+            name="Attachment Culture",
+            growth_duration_days=7,
+            harvest_duration_days=2,
+            project=self.project,
+        )
+        self.plan = PlantingPlan.objects.create(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=date(2024, 3, 1),
+            project=self.project,
+        )
 
     @patch('farm.views.process_note_image')
     def test_upload_list_delete_attachment(self, mock_process):
@@ -1220,6 +1231,7 @@ class PlantingPlanAttachmentCountApiTest(DRFAPITestCase):
             width=100,
             height=100,
             size_bytes=1000,
+            project=self.project,
         )
         NoteAttachment.objects.create(
             planting_plan=self.plan_with_attachments,
@@ -1228,6 +1240,7 @@ class PlantingPlanAttachmentCountApiTest(DRFAPITestCase):
             width=100,
             height=100,
             size_bytes=1000,
+            project=self.project,
         )
 
     def test_planting_plan_list_contains_attachment_count(self):
@@ -1270,18 +1283,21 @@ class PlantingPlanRemainingAreaApiTest(DRFAPITestCase):
             bed=self.bed,
             planting_date=date(2024, 3, 1),
             area_usage_sqm=6,
+            project=self.project,
         )
         self.plan_two = PlantingPlan.objects.create(
             culture=self.culture,
             bed=self.bed,
             planting_date=date(2024, 3, 15),
             area_usage_sqm=4,
+            project=self.project,
         )
         PlantingPlan.objects.create(
             culture=self.culture,
             bed=self.other_bed,
             planting_date=date(2024, 3, 10),
             area_usage_sqm=8,
+            project=self.project,
         )
 
     def test_remaining_area_returns_overlap_sum(self):
@@ -1467,9 +1483,9 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_layouts_get_and_put(self):
-        location = Location.objects.create(name='Layout test location')
-        field = Field.objects.create(name='Layout test field', location=location)
-        bed = Bed.objects.create(name='Layout test bed', field=field, area_sqm=5)
+        location = Location.objects.create(name='Layout test location', project=self.project)
+        field = Field.objects.create(name='Layout test field', location=location, project=self.project)
+        bed = Bed.objects.create(name='Layout test bed', field=field, area_sqm=5, project=self.project)
 
         payload = {
             'bed_layouts': [
@@ -1496,10 +1512,10 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
         self.assertEqual(get_response.data['field_layouts'][0]['x'], 66.0)
 
     def test_layouts_reject_bed_from_other_location(self):
-        location = Location.objects.create(name='Layout test source location')
-        other_location = Location.objects.create(name='Secondary location')
-        other_field = Field.objects.create(name='Secondary field', location=other_location)
-        other_bed = Bed.objects.create(name='Secondary bed', field=other_field, area_sqm=5)
+        location = Location.objects.create(name='Layout test source location', project=self.project)
+        other_location = Location.objects.create(name='Secondary location', project=self.project)
+        other_field = Field.objects.create(name='Secondary field', location=other_location, project=self.project)
+        other_bed = Bed.objects.create(name='Secondary bed', field=other_field, area_sqm=5, project=self.project)
 
         response = self.client.put(
             f'/openfarmplanner/api/locations/{location.id}/layouts/',
@@ -1511,9 +1527,9 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
         self.assertFalse(BedLayout.objects.filter(bed=other_bed).exists())
 
     def test_layouts_reject_field_from_other_location(self):
-        location = Location.objects.create(name='Layout test source location')
-        other_location = Location.objects.create(name='Secondary location')
-        other_field = Field.objects.create(name='Secondary field', location=other_location)
+        location = Location.objects.create(name='Layout test source location', project=self.project)
+        other_location = Location.objects.create(name='Secondary location', project=self.project)
+        other_field = Field.objects.create(name='Secondary field', location=other_location, project=self.project)
 
         response = self.client.put(
             f'/openfarmplanner/api/locations/{location.id}/layouts/',
