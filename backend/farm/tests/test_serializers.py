@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.test import TestCase
 from rest_framework import serializers
 
-from farm.models import Bed, Culture, Field, Location, PlantingPlan, Supplier
+from farm.models import Bed, Culture, Field, Location, PlantingPlan, Project, Supplier
 from farm.serializers import BedSerializer, CentimetersField, CultureSerializer, FieldSerializer, PlantingPlanSerializer
 from farm.utils.normalization import normalize_supplier_name, normalize_text
 
@@ -23,9 +23,10 @@ class NormalizationUtilsTest(TestCase):
 
 class SerializerBranchCoverageTest(TestCase):
     def setUp(self):
-        self.location = Location.objects.create(name='Standort A')
-        self.field = Field.objects.create(name='Feld A', location=self.location, area_sqm=200)
-        self.bed = Bed.objects.create(name='Beet A', field=self.field, area_sqm=30)
+        self.project = Project.objects.create(name='Serializer Test Project', slug='serializer-test-project')
+        self.location = Location.objects.create(name='Standort A', project=self.project)
+        self.field = Field.objects.create(name='Feld A', location=self.location, area_sqm=200, project=self.project)
+        self.bed = Bed.objects.create(name='Beet A', field=self.field, area_sqm=30, project=self.project)
 
     def test_centimeters_field_conversion(self):
         field = CentimetersField()
@@ -42,6 +43,7 @@ class SerializerBranchCoverageTest(TestCase):
                 'harvest_duration_days': 2,
                 'harvest_method': 'per_sqm',
                 'supplier_name': '  ACME Seeds GmbH ',
+                'project': self.project.id,
             }
         )
 
@@ -60,6 +62,7 @@ class SerializerBranchCoverageTest(TestCase):
                 'variety': 'Türkis',
                 'growth_duration_days': 90,
                 'harvest_duration_days': 21,
+                'project': self.project.id,
             }
         )
 
@@ -71,6 +74,7 @@ class SerializerBranchCoverageTest(TestCase):
                 'name': 'Kohl',
                 'variety': 'X',
                 'cultivation_types': ['invalid'],
+                'project': self.project.id,
             }
         )
         self.assertFalse(serializer.is_valid())
@@ -86,6 +90,7 @@ class SerializerBranchCoverageTest(TestCase):
                     'pre_cultivation': {'value': 2, 'unit': 'seeds_per_plant'},
                     'direct_sowing': {'value': 3, 'unit': 'seeds/m'},
                 },
+                'project': self.project.id,
             }
         )
         self.assertFalse(serializer.is_valid())
@@ -100,6 +105,7 @@ class SerializerBranchCoverageTest(TestCase):
                 'seed_rate_by_cultivation': {
                     'direct_sowing': {'value': 3, 'unit': 'seeds/m'},
                 },
+                'project': self.project.id,
             }
         )
         self.assertFalse(serializer.is_valid())
@@ -115,6 +121,7 @@ class SerializerBranchCoverageTest(TestCase):
                     'pre_cultivation': {'value': 0.045, 'unit': 'g_per_m2'},
                     'direct_sowing': {'value': 0.09, 'unit': 'g_per_m2'},
                 },
+                'project': self.project.id,
             }
         )
 
@@ -126,6 +133,7 @@ class SerializerBranchCoverageTest(TestCase):
                 'name': 'Kohl',
                 'variety': 'X',
                 'notes': '## Hinweise\n- abc',
+                'project': self.project.id,
             }
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -148,6 +156,7 @@ class SerializerBranchCoverageTest(TestCase):
             harvest_duration_days=3,
             distance_within_row_m=0.2,
             row_spacing_m=0.5,
+            project=self.project,
         )
 
         serializer = PlantingPlanSerializer()
@@ -169,6 +178,7 @@ class SerializerBranchCoverageTest(TestCase):
             bed=self.bed,
             planting_date=date(2024, 4, 1),
             area_usage_sqm=attrs['area_usage_sqm'],
+            project=self.project,
         )
         self.assertIsNotNone(serializer.get_plants_count(plan))
 
@@ -179,6 +189,7 @@ class SerializerBranchCoverageTest(TestCase):
                 'name': 'Beet B',
                 'field': self.field.id,
                 'area_sqm': '12.34',
+                'project': self.project.id,
             }
         )
 
@@ -191,6 +202,7 @@ class SerializerBranchCoverageTest(TestCase):
                 'name': 'Beet B',
                 'field': self.field.id,
                 'area_sqm': '12.3',
+                'project': self.project.id,
             }
         )
 
@@ -203,6 +215,7 @@ class SerializerBranchCoverageTest(TestCase):
                 'name': 'Schlag B',
                 'location': self.location.id,
                 'area_sqm': '12.34',
+                'project': self.project.id,
             }
         )
 
@@ -215,6 +228,7 @@ class SerializerBranchCoverageTest(TestCase):
                 'name': 'Schlag B',
                 'location': self.location.id,
                 'area_sqm': '12.3',
+                'project': self.project.id,
             }
         )
 

@@ -6,46 +6,54 @@ from django.utils import timezone
 from farm.models import Bed, Culture, Field, Location, PlantingPlan, Project, Supplier, Task, is_supplier_domain
 
 class SupplierModelTest(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(name='Supplier Test Project', slug='supplier-test-project')
+
+    def _create_supplier(self, **kwargs) -> Supplier:
+        defaults = {'project': self.project}
+        defaults.update(kwargs)
+        return Supplier.objects.create(**defaults)
+
     def test_supplier_creation(self):
         """Test creating a supplier"""
-        supplier = Supplier.objects.create(name="Green Seeds Co.", homepage_url="https://green.example")
+        supplier = self._create_supplier(name="Green Seeds Co.", homepage_url="https://green.example")
         self.assertEqual(str(supplier), "Green Seeds Co.")
         self.assertEqual(supplier.name, "Green Seeds Co.")
 
     def test_supplier_name_normalization(self):
         """Test that supplier names are normalized (lowercased, stripped)"""
-        supplier = Supplier.objects.create(name="  ACME Seeds  ", homepage_url="https://acme.example")
+        supplier = self._create_supplier(name="  ACME Seeds  ", homepage_url="https://acme.example")
         self.assertEqual(supplier.name_normalized, "acme seeds")
 
     def test_supplier_normalization_removes_legal_suffixes(self):
         """Test that legal suffixes are removed from normalized names"""
-        supplier1 = Supplier.objects.create(name="Green Inc.", homepage_url="https://green-inc.example")
+        supplier1 = self._create_supplier(name="Green Inc.", homepage_url="https://green-inc.example")
         self.assertEqual(supplier1.name_normalized, "green")
         
-        supplier2 = Supplier.objects.create(name="Farm Ltd", homepage_url="https://farm.example")
+        supplier2 = self._create_supplier(name="Farm Ltd", homepage_url="https://farm.example")
         self.assertEqual(supplier2.name_normalized, "farm")
         
-        supplier3 = Supplier.objects.create(name="Seeds GmbH", homepage_url="https://seeds.example")
+        supplier3 = self._create_supplier(name="Seeds GmbH", homepage_url="https://seeds.example")
         self.assertEqual(supplier3.name_normalized, "seeds")
 
     def test_supplier_normalization_deduplication(self):
         """Test that suppliers with same normalized name cannot be created"""
         from django.db import IntegrityError
         
-        Supplier.objects.create(name="ACME Seeds", homepage_url="https://acme.example")
+        self._create_supplier(name="ACME Seeds", homepage_url="https://acme.example")
         
         # Try to create another with same normalized name
         with self.assertRaises(IntegrityError):
-            Supplier.objects.create(name="acme seeds", homepage_url="https://acme-2.example")
+            self._create_supplier(name="acme seeds", homepage_url="https://acme-2.example")
 
 
     def test_supplier_slug_and_allowed_domains_derived_from_homepage(self):
-        supplier = Supplier.objects.create(name="ReinSaat GmbH", homepage_url="https://www.reinsaat.at")
+        supplier = self._create_supplier(name="ReinSaat GmbH", homepage_url="https://www.reinsaat.at")
         self.assertEqual(supplier.slug, 'reinsaat')
         self.assertEqual(supplier.allowed_domains, ['reinsaat.at', 'www.reinsaat.at'])
 
     def test_supplier_allowed_domains_can_be_set_and_normalized(self):
-        supplier = Supplier.objects.create(
+        supplier = self._create_supplier(
             name="Domain Supplier",
             homepage_url="https://example.org",
             allowed_domains=['HTTP://Shop.Example.ORG/path']
@@ -53,15 +61,19 @@ class SupplierModelTest(TestCase):
         self.assertEqual(supplier.allowed_domains, ['shop.example.org', 'www.shop.example.org'])
 
     def test_is_supplier_domain_helper(self):
-        supplier = Supplier.objects.create(name="Demo Supplier", homepage_url="https://www.reinsaat.at")
+        supplier = self._create_supplier(name="Demo Supplier", homepage_url="https://www.reinsaat.at")
         self.assertTrue(is_supplier_domain('https://shop.reinsaat.at/product', supplier))
         self.assertFalse(is_supplier_domain('https://other.example/product', supplier))
 
 class LocationModelTest(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(name='Location Test Project', slug='location-test-project')
+
     def test_location_creation(self):
         location = Location.objects.create(
             name="Main Farm",
-            address="123 Farm Road"
+            address="123 Farm Road",
+            project=self.project,
         )
         self.assertEqual(str(location), "Main Farm")
         self.assertEqual(location.name, "Main Farm")
@@ -69,13 +81,15 @@ class LocationModelTest(TestCase):
 
 class FieldModelTest(TestCase):
     def setUp(self):
-        self.location = Location.objects.create(name="Test Location")
+        self.project = Project.objects.create(name='Field Test Project', slug='field-test-project')
+        self.location = Location.objects.create(name="Test Location", project=self.project)
 
     def test_field_creation(self):
         field = Field.objects.create(
             name="North Field",
             location=self.location,
-            area_sqm=1000.50
+            area_sqm=1000.50,
+            project=self.project,
         )
         self.assertEqual(str(field), "Test Location - North Field")
     
@@ -106,7 +120,8 @@ class FieldModelTest(TestCase):
         field_min = Field.objects.create(
             name="Min Field",
             location=self.location,
-            area_sqm=0.01
+            area_sqm=0.01,
+            project=self.project,
         )
         self.assertEqual(field_min.area_sqm, 0.01)
         
@@ -114,21 +129,24 @@ class FieldModelTest(TestCase):
         field_large = Field.objects.create(
             name="Large Field",
             location=self.location,
-            area_sqm=12345678.90
+            area_sqm=12345678.90,
+            project=self.project,
         )
         self.assertEqual(field_large.area_sqm, 12345678.90)
 
 
 class BedModelTest(TestCase):
     def setUp(self):
-        self.location = Location.objects.create(name="Test Location")
-        self.field = Field.objects.create(name="Test Field", location=self.location)
+        self.project = Project.objects.create(name='Bed Test Project', slug='bed-test-project')
+        self.location = Location.objects.create(name="Test Location", project=self.project)
+        self.field = Field.objects.create(name="Test Field", location=self.location, project=self.project)
 
     def test_bed_creation(self):
         bed = Bed.objects.create(
             name="Bed A",
             field=self.field,
-            area_sqm=12.0
+            area_sqm=12.0,
+            project=self.project,
         )
         self.assertEqual(str(bed), "Test Field - Bed A")
     
@@ -157,7 +175,8 @@ class BedModelTest(TestCase):
         bed_min = Bed.objects.create(
             name="Min Bed",
             field=self.field,
-            area_sqm=0.01
+            area_sqm=0.01,
+            project=self.project,
         )
         self.assertEqual(bed_min.area_sqm, 0.01)
         
@@ -165,7 +184,8 @@ class BedModelTest(TestCase):
         bed_large = Bed.objects.create(
             name="Large Bed",
             field=self.field,
-            area_sqm=9999.99
+            area_sqm=9999.99,
+            project=self.project,
         )
         self.assertEqual(bed_large.area_sqm, 9999.99)
 
@@ -173,14 +193,16 @@ class BedModelTest(TestCase):
         bed = Bed.objects.create(
             name="Bed B",
             field=self.field,
-            area_sqm=15.0
+            area_sqm=15.0,
+            project=self.project,
         )
         self.assertEqual(bed.get_total_area(), 15.0)
 
     def test_bed_get_total_area_no_dimensions(self):
         bed = Bed.objects.create(
             name="Bed C",
-            field=self.field
+            field=self.field,
+            project=self.project,
         )
         self.assertIsNone(bed.get_total_area())
 
@@ -188,12 +210,16 @@ class BedModelTest(TestCase):
 
 
 class CultureModelTest(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(name='Culture Test Project', slug='culture-test-project')
+
     def test_culture_creation_with_variety(self):
         culture = Culture.objects.create(
             name="Tomato",
             variety="Cherry",
             growth_duration_days=8,
-            harvest_duration_days=4
+            harvest_duration_days=4,
+            project=self.project,
         )
         self.assertEqual(str(culture), "Tomato (Cherry)")
     
@@ -202,7 +228,8 @@ class CultureModelTest(TestCase):
         culture = Culture.objects.create(
             name="Lettuce",
             growth_duration_days=4,
-            harvest_duration_days=2
+            harvest_duration_days=2,
+            project=self.project,
         )
         self.assertEqual(str(culture), "Lettuce")
     
@@ -224,6 +251,7 @@ class CultureModelTest(TestCase):
             distance_within_row_m=0.40,  # 40 cm = 0.40 m
             row_spacing_m=0.60,  # 60 cm = 0.60 m
             sowing_depth_m=0.015,  # 1.5 cm = 0.015 m
+            project=self.project,
         )
         self.assertEqual(culture.name, "Broccoli")
         self.assertEqual(culture.crop_family, "Brassicaceae")
@@ -244,7 +272,8 @@ class CultureModelTest(TestCase):
         culture = Culture.objects.create(
             name="Carrot",
             growth_duration_days=10,
-            harvest_duration_days=3
+            harvest_duration_days=3,
+            project=self.project,
         )
         self.assertIsNotNone(culture.display_color)
         self.assertTrue(culture.display_color.startswith('#'))
@@ -257,7 +286,8 @@ class CultureModelTest(TestCase):
             name="Lettuce",
             growth_duration_days=4,
             harvest_duration_days=2,
-            display_color=custom_color
+            display_color=custom_color,
+            project=self.project,
         )
         self.assertEqual(culture.display_color, custom_color)
     
@@ -268,7 +298,8 @@ class CultureModelTest(TestCase):
             culture = Culture.objects.create(
                 name=f"Culture {i}",
                 growth_duration_days=4,
-                harvest_duration_days=2
+                harvest_duration_days=2,
+                project=self.project,
             )
             colors.add(culture.display_color)
         
@@ -515,11 +546,15 @@ class PlantingPlanModelTest(TestCase):
 
 
 class TaskModelTest(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(name='Task Test Project', slug='task-test-project')
+
     def test_task_creation(self):
         task = Task.objects.create(
             title="Water plants",
             description="Water all beds in field A",
-            status="pending"
+            status="pending",
+            project=self.project,
         )
         self.assertEqual(str(task), "Water plants (pending)")
         self.assertEqual(task.status, "pending")
@@ -527,6 +562,8 @@ class TaskModelTest(TestCase):
 
 class CultureNormalizedFieldsTest(TestCase):
     """Tests for Culture model normalized fields."""
+    def setUp(self):
+        self.project = Project.objects.create(name='Culture Normalization Project', slug='culture-normalization-project')
     
     def test_culture_normalized_fields_populated(self):
         """Test that normalized fields are populated on save."""
@@ -534,7 +571,8 @@ class CultureNormalizedFieldsTest(TestCase):
             name="  Tomato  ",
             variety="  Cherry  ",
             growth_duration_days=60,
-            harvest_duration_days=30
+            harvest_duration_days=30,
+            project=self.project,
         )
         
         self.assertEqual(culture.name_normalized, "tomato")
@@ -546,7 +584,8 @@ class CultureNormalizedFieldsTest(TestCase):
             name="Carrot",
             variety="",
             growth_duration_days=60,
-            harvest_duration_days=30
+            harvest_duration_days=30,
+            project=self.project,
         )
         
         self.assertEqual(culture.name_normalized, "carrot")
@@ -556,14 +595,15 @@ class CultureNormalizedFieldsTest(TestCase):
         """Test unique constraint on normalized fields."""
         from django.db import IntegrityError
         
-        supplier = Supplier.objects.create(name="Test Supplier")
+        supplier = Supplier.objects.create(name="Test Supplier", project=self.project)
         
         Culture.objects.create(
             name="Tomato",
             variety="Cherry",
             supplier=supplier,
             growth_duration_days=60,
-            harvest_duration_days=30
+            harvest_duration_days=30,
+            project=self.project,
         )
         
         # Try to create duplicate with same normalized values
@@ -573,20 +613,22 @@ class CultureNormalizedFieldsTest(TestCase):
                 variety="cherry",  # Different case
                 supplier=supplier,
                 growth_duration_days=60,
-                harvest_duration_days=30
+                harvest_duration_days=30,
+                project=self.project,
             )
     
     def test_culture_unique_constraint_different_supplier(self):
         """Test that same culture with different supplier is allowed."""
-        supplier1 = Supplier.objects.create(name="Supplier 1")
-        supplier2 = Supplier.objects.create(name="Supplier 2")
+        supplier1 = Supplier.objects.create(name="Supplier 1", project=self.project)
+        supplier2 = Supplier.objects.create(name="Supplier 2", project=self.project)
         
         culture1 = Culture.objects.create(
             name="Tomato",
             variety="Cherry",
             supplier=supplier1,
             growth_duration_days=60,
-            harvest_duration_days=30
+            harvest_duration_days=30,
+            project=self.project,
         )
         
         culture2 = Culture.objects.create(
@@ -594,7 +636,8 @@ class CultureNormalizedFieldsTest(TestCase):
             variety="Cherry",
             supplier=supplier2,
             growth_duration_days=60,
-            harvest_duration_days=30
+            harvest_duration_days=30,
+            project=self.project,
         )
         
         self.assertNotEqual(culture1.id, culture2.id)

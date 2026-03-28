@@ -32,6 +32,7 @@ from .views import (
     AcceptProjectInvitationByTokenView,
     AcceptPendingProjectInvitationView,
     RevokeProjectInvitationView,
+    VersionView,
 )
 
 router = DefaultRouter()
@@ -47,6 +48,7 @@ router.register(r'tasks', TaskViewSet)
 router.register(r'projects', ProjectViewSet, basename='projects')
 
 urlpatterns = [
+    path('version/', VersionView.as_view(), name='api-version'),
     path('history/project/', ProjectHistoryListView.as_view(), name='project-history-list'),
     path('history/project/restore/', ProjectHistoryRestoreView.as_view(), name='project-history-restore'),
     path('cultures/<int:pk>/undelete/', CultureUndeleteView.as_view(), name='culture-undelete'),

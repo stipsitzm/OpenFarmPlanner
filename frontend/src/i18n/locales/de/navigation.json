@@ -9,6 +9,7 @@
   "seedDemand": "Saatgutbedarf",
   "graphicalFields": "Grafische Ansicht",
   "accountSettings": "Kontoeinstellungen",
+  "appVersionLabel": "Version",
   "project": {
     "settings": "Projekteinstellungen",
     "members": "Mitglieder verwalten",

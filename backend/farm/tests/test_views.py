@@ -43,7 +43,7 @@ class ApiEndpointsTest(DRFAPITestCase):
 
     def test_supplier_list_with_search(self):
         """Test searching suppliers"""
-        Supplier.objects.create(name="Another Supplier", homepage_url='https://another-supplier.example')
+        Supplier.objects.create(name="Another Supplier", homepage_url='https://another-supplier.example', project=self.project)
         response = self.client.get('/openfarmplanner/api/suppliers/?q=Test Supplier')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data['results']), 1)
@@ -165,6 +165,7 @@ class ApiEndpointsTest(DRFAPITestCase):
                 'length_m': 30.0,
                 'width_m': 4.0,
                 'notes': '',
+                'project': self.project.id,
             },
             format='json',
         )
@@ -184,6 +185,7 @@ class ApiEndpointsTest(DRFAPITestCase):
                 'length_m': 25.0,
                 'width_m': None,
                 'notes': '',
+                'project': self.project.id,
             },
             format='json',
         )
@@ -203,6 +205,7 @@ class ApiEndpointsTest(DRFAPITestCase):
                 'length_m': 5.0,
                 'width_m': 3.0,
                 'notes': '',
+                'project': self.project.id,
             },
             format='json',
         )
@@ -222,6 +225,7 @@ class ApiEndpointsTest(DRFAPITestCase):
                 'length_m': 7.0,
                 'width_m': None,
                 'notes': '',
+                'project': self.project.id,
             },
             format='json',
         )
@@ -237,7 +241,8 @@ class ApiEndpointsTest(DRFAPITestCase):
             'growth_duration_days': 8,
             'harvest_duration_days': 3,
             'harvest_method': 'per_plant',
-            'supplier_name': self.supplier.name
+            'supplier_name': self.supplier.name,
+            'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -255,6 +260,7 @@ class ApiEndpointsTest(DRFAPITestCase):
             'growth_duration_days': 6,
             'harvest_duration_days': 2,
             'harvest_method': 'per_plant',
+            'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -282,7 +288,8 @@ class ApiEndpointsTest(DRFAPITestCase):
             'row_spacing_cm': 60.0,
             'sowing_depth_cm': 1.5,
             'thousand_kernel_weight_g': 472.02,
-            'display_color': '#FF5733'
+            'display_color': '#FF5733',
+            'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -298,6 +305,7 @@ class ApiEndpointsTest(DRFAPITestCase):
             'name': 'Culture Without Durations',
             'variety': 'Optional Timing',
             'supplier_name': self.supplier.name,
+            'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -311,7 +319,8 @@ class ApiEndpointsTest(DRFAPITestCase):
             'growth_duration_days': 6,
             'harvest_duration_days': 2,
             'harvest_method': 'per_plant',
-            'display_color': 'invalid'  # Not hex format
+            'display_color': 'invalid',  # Not hex format
+            'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -325,7 +334,8 @@ class ApiEndpointsTest(DRFAPITestCase):
             'harvest_duration_days': 3,
             'harvest_method': 'per_plant',
             'crop_family': 'Updated Family',
-            'nutrient_demand': 'medium'
+            'nutrient_demand': 'medium',
+            'project': self.project.id,
         }
         response = self.client.put(f'/openfarmplanner/api/cultures/{self.culture.id}/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -354,6 +364,7 @@ class ApiEndpointsTest(DRFAPITestCase):
             'growth_duration_days': culture.growth_duration_days,
             'harvest_duration_days': culture.harvest_duration_days,
             'harvest_method': culture.harvest_method,
+            'project': self.project.id,
             'seed_packages': [
                 {
                     'id': package.id,
@@ -371,8 +382,8 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(float(response.data['seed_packages'][0]['size_value']), 25.0)
         self.assertEqual(SeedPackage.objects.get(culture=culture).project, self.project)
 
-    def test_seed_demand_uses_seed_packages_without_project_for_existing_cultures(self):
-        """Legacy seed packages without a project should still appear in seed demand."""
+    def test_seed_demand_uses_seed_packages_for_existing_cultures(self):
+        """Project seed packages should appear in seed demand for existing cultures."""
         culture = Culture.objects.create(
             name='Legacy Bean',
             variety='Classic',
@@ -383,7 +394,7 @@ class ApiEndpointsTest(DRFAPITestCase):
             seed_rate_unit='g_per_m2',
             project=self.project,
         )
-        SeedPackage.objects.create(culture=culture, size_value='25.0', size_unit='g', project=None)
+        SeedPackage.objects.create(culture=culture, size_value='25.0', size_unit='g', project=self.project)
         PlantingPlan.objects.create(
             culture=culture,
             bed=self.bed,
@@ -420,7 +431,8 @@ class ApiEndpointsTest(DRFAPITestCase):
         data = {
             'name': 'Valid Field',
             'location': self.location.id,
-            'area_sqm': 500.50
+            'area_sqm': 500.50,
+            'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/fields/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -435,6 +447,7 @@ class ApiEndpointsTest(DRFAPITestCase):
             'growth_duration_days': 8,
             'harvest_duration_days': 3,
             'harvest_method': 'per_plant',
+            'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -460,7 +473,8 @@ class ApiEndpointsTest(DRFAPITestCase):
         data = {
             'name': 'Too Small Field',
             'location': self.location.id,
-            'area_sqm': 0.001
+            'area_sqm': 0.001,
+            'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/fields/', data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -470,7 +484,8 @@ class ApiEndpointsTest(DRFAPITestCase):
         data = {
             'name': 'Too Large Field',
             'location': self.location.id,
-            'area_sqm': 2000000  # Greater than MAX_AREA_SQM (1,000,000)
+            'area_sqm': 2000000,  # Greater than MAX_AREA_SQM (1,000,000)
+            'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/fields/', data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -480,7 +495,8 @@ class ApiEndpointsTest(DRFAPITestCase):
         data = {
             'name': 'Valid Bed',
             'field': self.field.id,
-            'area_sqm': 50.2
+            'area_sqm': 50.2,
+            'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/beds/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -490,7 +506,8 @@ class ApiEndpointsTest(DRFAPITestCase):
         data = {
             'name': 'Too Small Bed',
             'field': self.field.id,
-            'area_sqm': 0.001
+            'area_sqm': 0.001,
+            'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/beds/', data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -500,7 +517,8 @@ class ApiEndpointsTest(DRFAPITestCase):
         data = {
             'name': 'Too Large Bed',
             'field': self.field.id,
-            'area_sqm': 20000
+            'area_sqm': 20000,
+            'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/beds/', data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -784,6 +802,7 @@ class CultureImportAPITest(DRFAPITestCase):
                 'harvest_duration_days': 30,
                 'harvest_method': 'per_plant',
                 'notes': 'After import',
+                'project': self.project.id,
             }],
             'confirm_updates': True,
         }
@@ -806,6 +825,7 @@ class CultureImportAPITest(DRFAPITestCase):
                 'growth_duration_days': 50,
                 'harvest_duration_days': 20,
                 'harvest_method': 'per_plant',
+                'project': self.project.id,
             }],
             'confirm_updates': False
         }
@@ -829,7 +849,8 @@ class CultureImportAPITest(DRFAPITestCase):
                 'supplier_id': self.supplier.id,
                 'growth_duration_days': 65,
                 'harvest_duration_days': 30,
-                'notes': 'Updated notes'
+                'notes': 'Updated notes',
+                'project': self.project.id,
             }],
             'confirm_updates': False
         }
@@ -856,7 +877,8 @@ class CultureImportAPITest(DRFAPITestCase):
                 'growth_duration_days': 65,
                 'harvest_duration_days': 30,
                 'harvest_method': 'per_plant',
-                'notes': 'Updated notes'
+                'notes': 'Updated notes',
+                'project': self.project.id,
             }],
             'confirm_updates': True
         }
@@ -883,6 +905,7 @@ class CultureImportAPITest(DRFAPITestCase):
                     'growth_duration_days': 50,
                     'harvest_duration_days': 20,
                     'harvest_method': 'per_plant',
+                    'project': self.project.id,
                 },
                 {
                     'name': 'Tomato',
@@ -891,6 +914,7 @@ class CultureImportAPITest(DRFAPITestCase):
                     'growth_duration_days': 65,
                     'harvest_duration_days': 30,
                     'harvest_method': 'per_plant',
+                    'project': self.project.id,
                 }
             ],
             'confirm_updates': True
@@ -1105,11 +1129,22 @@ class PlantingPlanAreaInputTest(DRFAPITestCase):
 
 class NoteAttachmentApiTest(DRFAPITestCase):
     def setUp(self):
-        self.location = Location.objects.create(name="Attachment Location")
-        self.field = Field.objects.create(name="Attachment Field", location=self.location)
-        self.bed = Bed.objects.create(name="Attachment Bed", field=self.field)
-        self.culture = Culture.objects.create(name="Attachment Culture", growth_duration_days=7, harvest_duration_days=2)
-        self.plan = PlantingPlan.objects.create(culture=self.culture, bed=self.bed, planting_date=date(2024, 3, 1))
+        self.project = Project.objects.create(name='Attachment API Project', slug='attachment-api-project')
+        self.location = Location.objects.create(name="Attachment Location", project=self.project)
+        self.field = Field.objects.create(name="Attachment Field", location=self.location, project=self.project)
+        self.bed = Bed.objects.create(name="Attachment Bed", field=self.field, project=self.project)
+        self.culture = Culture.objects.create(
+            name="Attachment Culture",
+            growth_duration_days=7,
+            harvest_duration_days=2,
+            project=self.project,
+        )
+        self.plan = PlantingPlan.objects.create(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=date(2024, 3, 1),
+            project=self.project,
+        )
 
     @patch('farm.views.process_note_image')
     def test_upload_list_delete_attachment(self, mock_process):
@@ -1196,6 +1231,7 @@ class PlantingPlanAttachmentCountApiTest(DRFAPITestCase):
             width=100,
             height=100,
             size_bytes=1000,
+            project=self.project,
         )
         NoteAttachment.objects.create(
             planting_plan=self.plan_with_attachments,
@@ -1204,6 +1240,7 @@ class PlantingPlanAttachmentCountApiTest(DRFAPITestCase):
             width=100,
             height=100,
             size_bytes=1000,
+            project=self.project,
         )
 
     def test_planting_plan_list_contains_attachment_count(self):
@@ -1246,18 +1283,21 @@ class PlantingPlanRemainingAreaApiTest(DRFAPITestCase):
             bed=self.bed,
             planting_date=date(2024, 3, 1),
             area_usage_sqm=6,
+            project=self.project,
         )
         self.plan_two = PlantingPlan.objects.create(
             culture=self.culture,
             bed=self.bed,
             planting_date=date(2024, 3, 15),
             area_usage_sqm=4,
+            project=self.project,
         )
         PlantingPlan.objects.create(
             culture=self.culture,
             bed=self.other_bed,
             planting_date=date(2024, 3, 10),
             area_usage_sqm=8,
+            project=self.project,
         )
 
     def test_remaining_area_returns_overlap_sum(self):
@@ -1443,9 +1483,9 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_layouts_get_and_put(self):
-        location = Location.objects.create(name='Layout test location')
-        field = Field.objects.create(name='Layout test field', location=location)
-        bed = Bed.objects.create(name='Layout test bed', field=field, area_sqm=5)
+        location = Location.objects.create(name='Layout test location', project=self.project)
+        field = Field.objects.create(name='Layout test field', location=location, project=self.project)
+        bed = Bed.objects.create(name='Layout test bed', field=field, area_sqm=5, project=self.project)
 
         payload = {
             'bed_layouts': [
@@ -1472,10 +1512,10 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
         self.assertEqual(get_response.data['field_layouts'][0]['x'], 66.0)
 
     def test_layouts_reject_bed_from_other_location(self):
-        location = Location.objects.create(name='Layout test source location')
-        other_location = Location.objects.create(name='Secondary location')
-        other_field = Field.objects.create(name='Secondary field', location=other_location)
-        other_bed = Bed.objects.create(name='Secondary bed', field=other_field, area_sqm=5)
+        location = Location.objects.create(name='Layout test source location', project=self.project)
+        other_location = Location.objects.create(name='Secondary location', project=self.project)
+        other_field = Field.objects.create(name='Secondary field', location=other_location, project=self.project)
+        other_bed = Bed.objects.create(name='Secondary bed', field=other_field, area_sqm=5, project=self.project)
 
         response = self.client.put(
             f'/openfarmplanner/api/locations/{location.id}/layouts/',
@@ -1487,9 +1527,9 @@ class CultureEnrichmentApiTest(DRFAPITestCase):
         self.assertFalse(BedLayout.objects.filter(bed=other_bed).exists())
 
     def test_layouts_reject_field_from_other_location(self):
-        location = Location.objects.create(name='Layout test source location')
-        other_location = Location.objects.create(name='Secondary location')
-        other_field = Field.objects.create(name='Secondary field', location=other_location)
+        location = Location.objects.create(name='Layout test source location', project=self.project)
+        other_location = Location.objects.create(name='Secondary location', project=self.project)
+        other_field = Field.objects.create(name='Secondary field', location=other_location, project=self.project)
 
         response = self.client.put(
             f'/openfarmplanner/api/locations/{location.id}/layouts/',

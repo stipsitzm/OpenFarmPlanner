@@ -82,6 +82,7 @@ from .services.public_cultures import (
     import_public_culture_into_project,
     publish_culture_to_public_library,
 )
+from config.version import get_version
 
 
 logger = logging.getLogger(__name__)
@@ -146,6 +147,15 @@ def _coerce_request_string(value, default='') -> str:
             return first.strip()
         return str(first).strip()
     return default
+
+
+class VersionView(APIView):
+    """Return the current backend/API version."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):  # noqa: ANN001, ARG002
+        return Response({'version': get_version()})
 
 
 def _apply_invitation_project_settings(*, user, project: Project) -> dict[str, int | str]:
@@ -444,6 +454,7 @@ class BedLayoutByLocationView(APIView):
                     bed=bed,
                     defaults={
                         'location': location,
+                        'project': location.project,
                         'x': float(item.get('x', 0.0)),
                         'y': float(item.get('y', 0.0)),
                         'scale': item.get('scale'),
@@ -467,6 +478,7 @@ class BedLayoutByLocationView(APIView):
                     field=field,
                     defaults={
                         'location': location,
+                        'project': location.project,
                         'x': float(item.get('x', 0.0)),
                         'y': float(item.get('y', 0.0)),
                         'scale': item.get('scale'),

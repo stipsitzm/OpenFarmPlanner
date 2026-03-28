@@ -38,6 +38,16 @@ vi.mock('../commands/useCommandContext', () => ({
   useRegisterCommands: vi.fn(),
 }));
 
+vi.mock('../api/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../api/api')>();
+  return {
+    ...actual,
+    versionAPI: {
+      get: vi.fn(async () => ({ data: { version: '0.1.0' } })),
+    },
+  };
+});
+
 describe('App', () => {
   beforeEach(() => {
     authState.user = null;
@@ -77,6 +87,7 @@ describe('App', () => {
     expect(screen.getByText(translations.navigation.cultures)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: translations.navigation.plantingPlans })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Aktives Projekt wechseln' })).toBeInTheDocument();
+    expect(await screen.findByText('Version 0.1.0')).toBeInTheDocument();
   });
 
   it('shows account settings in three-dot menu without project settings', async () => {
