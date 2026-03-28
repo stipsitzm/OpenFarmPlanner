@@ -93,7 +93,7 @@ def test_seed_demand_rounds_packages_up(api_client: APIClient, bed: Bed):
 
 
 @pytest.mark.django_db
-def test_seed_rate_unit_legacy_value_is_normalized(api_client: APIClient):
+def test_seed_rate_unit_legacy_value_is_normalized(api_client: APIClient, project_context):
     payload = {
         'name': 'Bean',
         'variety': 'Runner',
@@ -103,6 +103,7 @@ def test_seed_rate_unit_legacy_value_is_normalized(api_client: APIClient):
         'seed_rate_value': 2,
         'seed_rate_unit': 'pcs_per_plant',
         'supplier_name': 'Test Supplier',
+        'project': project_context[1].id,
     }
 
     response = api_client.post('/openfarmplanner/api/cultures/', payload, format='json')
@@ -114,7 +115,7 @@ def test_seed_rate_unit_legacy_value_is_normalized(api_client: APIClient):
 
 
 @pytest.mark.django_db
-def test_seed_rate_unit_text_variant_is_normalized_to_g_per_m2(api_client: APIClient):
+def test_seed_rate_unit_text_variant_is_normalized_to_g_per_m2(api_client: APIClient, project_context):
     payload = {
         'name': 'Spinach',
         'variety': 'Matador',
@@ -124,6 +125,7 @@ def test_seed_rate_unit_text_variant_is_normalized_to_g_per_m2(api_client: APICl
         'seed_rate_value': 2,
         'seed_rate_unit': 'Gramm pro 100 Quadratmeter',
         'supplier_name': 'Test Supplier',
+        'project': project_context[1].id,
     }
 
     response = api_client.post('/openfarmplanner/api/cultures/', payload, format='json')
@@ -199,7 +201,7 @@ def test_seed_demand_is_limited_to_active_project(api_client: APIClient, bed: Be
 
 
 @pytest.mark.django_db
-def test_seed_demand_uses_legacy_seed_packages_without_project(api_client: APIClient, bed: Bed):
+def test_seed_demand_uses_project_seed_packages(api_client: APIClient, bed: Bed):
     culture = Culture.objects.create(
         name='Bean',
         variety='Legacy',
@@ -210,7 +212,7 @@ def test_seed_demand_uses_legacy_seed_packages_without_project(api_client: APICl
         project=bed.project,
     )
     _create_plan(culture, bed, 5)
-    SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g', project=None)
+    SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g', project=bed.project)
 
     response = api_client.get('/openfarmplanner/api/seed-demand/')
 
