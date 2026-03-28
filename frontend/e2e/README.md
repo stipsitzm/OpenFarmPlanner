@@ -1,12 +1,19 @@
-# E2E tests
+# Frontend E2E Tests
 
-This directory contains Playwright end-to-end tests for the invitation flow.
+Playwright end-to-end tests for OpenFarmPlanner frontend flows.
 
-## Run locally
+## Run
 
 ```bash
+cd frontend
 npm run test:e2e
 ```
 
-The Playwright config starts both the Django backend and the Vite frontend automatically.
-A debug-only backend fixture endpoint is enabled only when `DEBUG=True` and `E2E_TEST_TOKEN` is configured by the Playwright web server environment.
+## Notes
+
+- The Playwright configuration starts the backend and frontend web servers automatically.
+- A debug-only backend fixture endpoint is available only when:
+  - `DEBUG=True`
+  - `E2E_TEST_TOKEN` is set for the backend process started by Playwright
+
+See `frontend/playwright.config.ts` for exact runtime settings.
