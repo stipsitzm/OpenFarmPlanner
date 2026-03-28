@@ -5,7 +5,7 @@ import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
 
 interface InviteFeedback {
-  severity: 'success' | 'error';
+  severity: 'success' | 'warning' | 'error';
   text: string;
 }
 
@@ -105,7 +105,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
         setFeedback({ severity: 'success', text: t('inviteSent') });
       }
       if (!data.mail_sent && data.invite_link) {
-        setFeedback({ severity: 'success', text: `${t('inviteSentNoMail')} ${data.invite_link}` });
+        setFeedback({ severity: 'warning', text: `${t('inviteSentNoMail')} ${data.invite_link}` });
       }
       setEmail('');
       setRole('member');

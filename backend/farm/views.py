@@ -11,6 +11,7 @@ from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import json
 import re
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -97,9 +98,36 @@ def _invitation_error_response(exc: InvitationFlowError) -> Response:
     return Response({'code': exc.code, 'detail': exc.message}, status=status_code)
 
 
-def _send_project_invitation_email(*, invitation: ProjectInvitation, project_name: str, invited_by: object) -> tuple[bool, str]:
+def _is_local_hostname(hostname: str | None) -> bool:
+    if hostname is None:
+        return False
+    normalized = hostname.lower()
+    return normalized in {'localhost', '127.0.0.1', '::1', 'testserver'}
+
+
+def _get_frontend_base_url(request=None) -> str:
+    configured_frontend_url = settings.FRONTEND_URL.rstrip('/')
+    if not getattr(settings, 'FRONTEND_URL_IS_DEFAULT', False):
+        return configured_frontend_url
+    if request is None:
+        return configured_frontend_url
+
+    origin = request.headers.get('Origin')
+    if origin:
+        parsed_origin = urlparse(origin)
+        if parsed_origin.scheme and parsed_origin.netloc and not _is_local_hostname(parsed_origin.hostname):
+            return f'{parsed_origin.scheme}://{parsed_origin.netloc}/openfarmplanner'
+
+    parsed_request = urlparse(request.build_absolute_uri('/'))
+    if parsed_request.scheme and parsed_request.netloc and not _is_local_hostname(parsed_request.hostname):
+        return f'{parsed_request.scheme}://{parsed_request.netloc}/openfarmplanner'
+
+    return configured_frontend_url
+
+
+def _send_project_invitation_email(*, invitation: ProjectInvitation, project_name: str, invited_by: object, request=None) -> tuple[bool, str]:
     """Send invitation email and return delivery result plus diagnostic message."""
-    invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/accept?token={invitation.token}"
+    invite_link = f"{_get_frontend_base_url(request).rstrip('/')}/invite/accept?token={invitation.token}"
     with translation.override('de'):
         subject = _('Einladung zu OpenFarmPlanner: %(project)s') % {'project': project_name}
         body = render_to_string('accounts/emails/project_invitation_email.txt', {
@@ -2091,11 +2119,12 @@ class ProjectInvitationView(APIView):
         if invitation is None:
             return Response({'code': 'invitation_error', 'detail': 'Invitation could not be created.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/accept?token={invitation.token}"
+        invite_link = f"{_get_frontend_base_url(request).rstrip('/')}/invite/accept?token={invitation.token}"
         mail_sent, mail_error = _send_project_invitation_email(
             invitation=invitation,
             project_name=project.name,
             invited_by=request.user,
+            request=request,
         )
 
         payload = ProjectInvitationSerializer(invitation).data

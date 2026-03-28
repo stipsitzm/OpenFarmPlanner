@@ -127,4 +127,25 @@ describe('ProjectSettingsPage', () => {
 
     expect(await screen.findByText('Einladungen konnten nicht geladen werden.')).toBeInTheDocument();
   });
+
+  it('shows a warning alert when invitation mail delivery fails', async () => {
+    inviteMock.mockResolvedValueOnce({
+      data: {
+        code: 'invitation_sent',
+        mail_sent: false,
+        invite_link: 'https://example.org/openfarmplanner/invite/accept?token=test-token',
+      },
+    });
+
+    render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+    await waitFor(() => expect(listMock).toHaveBeenCalledWith(1));
+
+    fireEvent.change(screen.getByLabelText('E-Mail'), { target: { value: 'invitee@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einladung senden' }));
+
+    const warningMessage = await screen.findByText(/Einladung erstellt, aber E-Mail konnte nicht zugestellt werden\./);
+    const alertElement = warningMessage.closest('.MuiAlert-root');
+    expect(alertElement).not.toBeNull();
+    expect(alertElement?.className).toContain('MuiAlert-colorWarning');
+  });
 });

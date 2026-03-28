@@ -141,6 +141,22 @@ class ProjectsApiTests(APITestCase):
         self.assertIn('invite_link', response.data)
         self.assertIn('/invite/accept?token=', response.data['invite_link'])
 
+    @override_settings(
+        EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend',
+        FRONTEND_URL='http://localhost:5173/openfarmplanner',
+        FRONTEND_URL_IS_DEFAULT=True,
+    )
+    def test_invitation_link_uses_request_origin_when_frontend_url_is_default(self) -> None:
+        response = self.client.post(
+            f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
+            {'email': 'invitee@example.com', 'role': 'member'},
+            format='json',
+            HTTP_ORIGIN='https://app.example.org',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data['invite_link'].startswith('https://app.example.org/openfarmplanner/invite/accept?token='))
+
 
     def test_accept_invitation_invalid_token(self) -> None:
         response = self.client.post('/openfarmplanner/api/project-invitations/not-a-real-token/accept/')

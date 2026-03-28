@@ -196,7 +196,9 @@ MEDIA_ROOT = Path(os.getenv('MEDIA_ROOT', PROJECT_ROOT / 'media'))
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Frontend base URL used for links in account emails.
-FRONTEND_URL = _env_str('FRONTEND_URL', 'http://localhost:5173/openfarmplanner')
+_frontend_url_from_env = _env_str('FRONTEND_URL', '')
+FRONTEND_URL = _frontend_url_from_env or 'http://localhost:5173/openfarmplanner'
+FRONTEND_URL_IS_DEFAULT = _frontend_url_from_env == ''
 
 PROJECT_INVITATION_EXPIRY_DAYS = int(_env_str('PROJECT_INVITATION_EXPIRY_DAYS', '14') or '14')
 
