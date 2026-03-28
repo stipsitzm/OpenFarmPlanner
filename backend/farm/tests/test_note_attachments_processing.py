@@ -9,7 +9,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from farm.image_processing import MAX_IMAGE_SIDE
-from farm.models import Location, Field, Bed, Culture, PlantingPlan, NoteAttachment
+from farm.models import Location, Field, Bed, Culture, PlantingPlan, NoteAttachment, Project
 
 try:
     from PIL import Image
@@ -21,11 +21,22 @@ except Exception:
 @skipUnless(PIL_AVAILABLE, 'Pillow is required for image processing tests')
 class NoteAttachmentProcessingApiTest(APITestCase):
     def setUp(self):
-        self.location = Location.objects.create(name='Attachment Location')
-        self.field = Field.objects.create(name='Attachment Field', location=self.location)
-        self.bed = Bed.objects.create(name='Attachment Bed', field=self.field)
-        self.culture = Culture.objects.create(name='Attachment Culture', growth_duration_days=7, harvest_duration_days=2)
-        self.plan = PlantingPlan.objects.create(culture=self.culture, bed=self.bed, planting_date=date(2024, 3, 1))
+        self.project = Project.objects.create(name='Attachment Project', slug='attachment-project')
+        self.location = Location.objects.create(name='Attachment Location', project=self.project)
+        self.field = Field.objects.create(name='Attachment Field', location=self.location, project=self.project)
+        self.bed = Bed.objects.create(name='Attachment Bed', field=self.field, project=self.project)
+        self.culture = Culture.objects.create(
+            name='Attachment Culture',
+            growth_duration_days=7,
+            harvest_duration_days=2,
+            project=self.project,
+        )
+        self.plan = PlantingPlan.objects.create(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=date(2024, 3, 1),
+            project=self.project,
+        )
 
     def _image_file(self, width: int, height: int, file_name: str = 'test.jpg') -> SimpleUploadedFile:
         image = Image.new('RGB', (width, height), color=(120, 50, 90))
