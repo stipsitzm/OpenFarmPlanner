@@ -4,7 +4,7 @@
 
 This project uses Conventional Commits for automated versioning and releases.
 
-All **commit messages** and **PR titles** must follow:
+All **commit messages** and **PR titles** must use Conventional Commits.
 
 `type(scope): description`
 
@@ -18,28 +18,59 @@ Examples:
 
 ### Allowed types
 
-- `feat` – new user-visible feature
-- `fix` – bug fix affecting behavior
-- `refactor` – refactoring without behavior change
-- `perf` – performance improvement
-- `docs` – documentation only
-- `style` – formatting, no logic change
-- `test` – tests only
-- `build` – build system or dependencies
-- `ci` – CI-related changes
-- `chore` – maintenance tasks
-- `revert` – revert previous commit
+Valid prefixes for this repository are:
+
+- `feat`
+- `fix`
+- `docs`
+- `refactor`
+- `test`
+- `chore`
+- `ci`
+- `build`
+- `perf`
+
+Do not use free-form prefixes such as:
+
+- `Invitation`
+- `Update`
+- `Improvement`
+- `Changes`
+- `Misc`
+- `Work in progress`
+
+PR titles are validated by GitHub Actions and must follow the same Conventional Commit format as commit messages.
 
 ### How to choose the correct type
 
-- Use `feat:` only for new user-visible functionality, new API endpoints, or UI features.
-- Use `fix:` only for bug fixes, regressions, or incorrect behavior.
-- Use `refactor:` for internal restructuring, renaming, or cleanup without behavior change.
-- Use `docs:` for documentation-only changes.
-- Use `test:` for test-only changes.
-- Use `chore:`, `ci:`, `build:`, `style:`, `perf:` for maintenance, tooling, formatting, or performance-only work.
+Choose the type based on the intended user-visible impact:
+
+- `feat:` only for new user-visible functionality
+- `fix:` only for bug fixes or corrected behavior
+- `refactor:` for internal restructuring without intended behavior change
+- `docs:` for documentation-only changes
+- `test:` for test-only changes
+- `ci:`, `build:`, `chore:` for tooling, infrastructure, dependencies, or maintenance
+- `perf:` for performance improvements
 
 Important: do not use `feat:` or `fix:` unless the change should trigger a release.
+
+### PR title examples
+
+Valid PR titles:
+
+- `feat(auth): add email-based registration`
+- `fix(api): show mail failures as warning`
+- `refactor(frontend): simplify version endpoint usage`
+- `docs: update release workflow documentation`
+- `chore(ci): align release workflow permissions`
+
+Invalid PR titles:
+
+- `Invitation: show mail failures as warning`
+- `Update frontend origin handling`
+- `Changes for release workflow`
+- `Misc fixes`
 
 ### Breaking changes
 
@@ -60,6 +91,12 @@ or include in the body:
 
 ## AI-assisted commits (Codex/Copilot)
 
-When creating commits with AI assistance, ensure each commit message follows Conventional Commits.
+When creating commits or PR titles with AI assistance, always use Conventional Commits.
 
-Only correctly formatted commit messages can drive automated semantic releases.
+Before creating a commit or PR title:
+
+1. Classify the change type correctly.
+2. Use a valid Conventional Commit prefix.
+3. Ensure the title starts with `type:` or `type(scope):`.
+4. Do not use arbitrary prefixes.
+5. Use `feat` and `fix` only when a release should be triggered.
