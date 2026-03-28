@@ -1,45 +1,62 @@
 # Contributing
 
-## Commit message format (required)
+## Conventional Commits
 
-This repository uses **Conventional Commits**.
+This project uses Conventional Commits for automated versioning and releases.
 
-Use one of these prefixes:
+All **commit messages** and **PR titles** must follow:
 
-- `feat:`
-- `fix:`
-- `docs:`
-- `refactor:`
-- `test:`
-- `chore:`
-
-Additional accepted technical types in CI:
-
-- `ci:`
-- `build:`
-- `perf:`
-
-### Release impact
-
-- `fix:` -> **patch** release
-- `feat:` -> **minor** release
-- `feat!:` or any commit body containing `BREAKING CHANGE:` -> **major** release
-- `docs:`, `refactor:`, `test:`, `chore:`, `ci:`, `build:` -> no release by default
+`type(scope): description`
 
 Examples:
 
-- `feat: add crop sharing between projects`
-- `fix: restore field rendering after coordinate regression`
-- `docs: document deployment workflow`
-- `feat!: change planting plan API contract`
+- `feat(crop-planner): add crop filtering by planting date`
+- `fix(api): correct timezone conversion for harvest dates`
+- `docs: update setup instructions for PDM`
+- `refactor(frontend): extract useCrops hook`
+- `test(backend): add tests for yield calculation`
 
-Breaking change in body example:
+### Allowed types
 
-```text
-feat: require project context for cultivation plans
+- `feat` – new user-visible feature
+- `fix` – bug fix affecting behavior
+- `refactor` – refactoring without behavior change
+- `perf` – performance improvement
+- `docs` – documentation only
+- `style` – formatting, no logic change
+- `test` – tests only
+- `build` – build system or dependencies
+- `ci` – CI-related changes
+- `chore` – maintenance tasks
+- `revert` – revert previous commit
 
-BREAKING CHANGE: cultivation plan responses now require project context
-```
+### How to choose the correct type
+
+- Use `feat:` only for new user-visible functionality, new API endpoints, or UI features.
+- Use `fix:` only for bug fixes, regressions, or incorrect behavior.
+- Use `refactor:` for internal restructuring, renaming, or cleanup without behavior change.
+- Use `docs:` for documentation-only changes.
+- Use `test:` for test-only changes.
+- Use `chore:`, `ci:`, `build:`, `style:`, `perf:` for maintenance, tooling, formatting, or performance-only work.
+
+Important: do not use `feat:` or `fix:` unless the change should trigger a release.
+
+### Breaking changes
+
+Use either:
+
+- `feat!: change API contract`
+
+or include in the body:
+
+- `BREAKING CHANGE: description`
+
+### Release behavior
+
+- `fix:` -> patch release
+- `feat:` -> minor release
+- `type!:` or `BREAKING CHANGE:` -> major release
+- `docs`, `refactor`, `test`, `chore`, `ci`, `build`, `style`, `perf` -> no release
 
 ## AI-assisted commits (Codex/Copilot)
 

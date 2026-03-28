@@ -24,42 +24,32 @@ For specific coding rules, see:
 - Always create a new migration for every follow-up schema change.
 - If a previous migration needs correction, add a new fix migration instead of editing the old one.
 
-## Commit Messages (Conventional Commits)
+## AI commit instructions
 
+When generating commits or PR titles:
 
-Commit messages must always be written in English.
-
-Always use the format:
-
-`type(scope): short description`
-
-Common types:
-
-- feat – new feature
-- fix – bug fix
-- refactor – refactoring without behavior change
-- perf – performance improvement
-- docs – documentation only
-- style – formatting, no logic change
-- test – tests only
-- build – build system, tooling, dependencies
-- ci – CI-related changes
-- chore – maintenance, housekeeping
-- revert – revert previous commit
+- Always use Conventional Commits.
+- Use `type(scope): description` (scope optional).
+- Commit messages and PR titles must always be in English.
 
 Examples:
 
-- `feat(crop-planner): add crop filtering by planting date`
-- `fix(api): correct timezone conversion for harvest dates`
-- `docs: update setup instructions for PDM`
-- `refactor(frontend): extract useCrops hook`
-- `test(backend): add tests for yield calculation`
+- `feat: add crop sharing`
+- `fix: prevent duplicate entries`
+- `refactor: simplify version endpoint`
+- `docs: update deployment instructions`
 
-If a breaking change is introduced, include a `BREAKING CHANGE:` note in the commit body or footer, explaining what changed and required follow-up actions.
+Rules:
 
-Release automation depends on commit type:
+- Use `feat:` only for user-visible features.
+- Use `fix:` only for bug fixes.
+- Use `refactor:` for internal changes without behavior changes.
+- Do not use `feat:` or `fix:` unless a release should be triggered.
+- PR titles must follow the same format.
+
+Release automation mapping:
 
 - `fix:` -> patch release
 - `feat:` -> minor release
 - `type!:` or `BREAKING CHANGE:` -> major release
-- `docs:`, `refactor:`, `test:`, `chore:` -> no release by default
+- `docs:`, `refactor:`, `test:`, `chore:`, `ci:`, `build:`, `style:`, `perf:` -> no release by default
