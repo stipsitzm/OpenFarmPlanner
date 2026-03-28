@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
 
-from farm.models import Culture, EnrichmentAccountingRun, SeedPackage, Supplier
+from farm.models import Culture, EnrichmentAccountingRun, Project, SeedPackage, Supplier
 from scripts.trace_enrichment_run import TraceState, enrichment_trace_hooks
 from farm.services.enrichment import (
     EnrichmentError,
@@ -19,12 +19,20 @@ from farm.services.enrichment import (
 
 class OpenAIResponsesProviderParsingTest(TestCase):
     def setUp(self):
+        self.project = Project.objects.create(name='Enrichment Project', slug='enrichment-project')
         self.supplier = Supplier.objects.create(
             name='ReinSaat',
             homepage_url='https://example.com',
             allowed_domains=['example.com', 'reinsaat.at', 'reinsaat.example'],
+            project=self.project,
         )
-        self.culture = Culture.objects.create(name='Bohne', variety='Test', supplier=self.supplier, supplier_product_url='https://example.com/product')
+        self.culture = Culture.objects.create(
+            name='Bohne',
+            variety='Test',
+            supplier=self.supplier,
+            supplier_product_url='https://example.com/product',
+            project=self.project,
+        )
 
     @patch('farm.services.enrichment.requests.post')
     def test_parses_output_text_json(self, post_mock):
@@ -246,7 +254,7 @@ class OpenAIResponsesProviderParsingTest(TestCase):
         self.culture.harvest_method = 'per_sqm'
         self.culture.expected_yield = 1.5
         self.culture.save(update_fields=['growth_duration_days', 'harvest_duration_days', 'harvest_method', 'expected_yield'])
-        SeedPackage.objects.create(culture=self.culture, size_value=500, size_unit='g')
+        SeedPackage.objects.create(culture=self.culture, project=self.project, size_value=500, size_unit='g')
 
         response = Mock()
         response.status_code = 200
@@ -624,12 +632,20 @@ class OpenAIResponsesProviderParsingTest(TestCase):
 
 class EnrichmentConfigBehaviorTest(TestCase):
     def setUp(self):
+        self.project = Project.objects.create(name='Enrichment Config Project', slug='enrichment-config-project')
         self.supplier = Supplier.objects.create(
             name='ReinSaat',
             homepage_url='https://example.com',
             allowed_domains=['example.com', 'reinsaat.at', 'reinsaat.example'],
+            project=self.project,
         )
-        self.culture = Culture.objects.create(name='Möhre', variety='Nantes', supplier=self.supplier, supplier_product_url='https://example.com/moehre')
+        self.culture = Culture.objects.create(
+            name='Möhre',
+            variety='Nantes',
+            supplier=self.supplier,
+            supplier_product_url='https://example.com/moehre',
+            project=self.project,
+        )
 
     @override_settings(AI_ENRICHMENT_ENABLED=False)
     def test_enrich_culture_rejects_when_disabled(self):
@@ -1078,12 +1094,14 @@ class EnrichmentCostEstimateTest(TestCase):
 
 class EnrichmentDomainEnforcementTest(TestCase):
     def setUp(self):
+        self.project = Project.objects.create(name='Enrichment Domain Project', slug='enrichment-domain-project')
         self.supplier = Supplier.objects.create(
             name='ReinSaat',
             homepage_url='https://www.reinsaat.at',
             allowed_domains=['reinsaat.at', 'www.reinsaat.at'],
+            project=self.project,
         )
-        self.culture = Culture.objects.create(name='Salat', variety='Bijella', supplier=self.supplier)
+        self.culture = Culture.objects.create(name='Salat', variety='Bijella', supplier=self.supplier, project=self.project)
 
     @override_settings(AI_ENRICHMENT_ENABLED=True)
     @patch('farm.services.enrichment.get_enrichment_provider')
@@ -1153,12 +1171,14 @@ class NumericNormalizationTest(TestCase):
     @override_settings(AI_ENRICHMENT_ENABLED=True)
     @patch('farm.services.enrichment.get_enrichment_provider')
     def test_enrich_culture_normalizes_range_string_seed_rate_and_warns(self, provider_mock):
+        project = Project.objects.create(name='Numeric Normalization Project A', slug='numeric-normalization-project-a')
         supplier = Supplier.objects.create(
             name='ReinSaat',
             homepage_url='https://www.reinsaat.at',
             allowed_domains=['reinsaat.at'],
+            project=project,
         )
-        culture = Culture.objects.create(name='Salat', variety='Bijella', supplier=supplier)
+        culture = Culture.objects.create(name='Salat', variety='Bijella', supplier=supplier, project=project)
 
         provider = Mock()
         provider.provider_name = 'fallback'
@@ -1202,12 +1222,14 @@ class NumericNormalizationTest(TestCase):
     @override_settings(AI_ENRICHMENT_ENABLED=True)
     @patch('farm.services.enrichment.get_enrichment_provider')
     def test_parses_method_specific_seed_rates_from_legacy_text(self, provider_mock):
+        project = Project.objects.create(name='Numeric Normalization Project B', slug='numeric-normalization-project-b')
         supplier = Supplier.objects.create(
             name='ReinSaat',
             homepage_url='https://www.reinsaat.at',
             allowed_domains=['reinsaat.at'],
+            project=project,
         )
-        culture = Culture.objects.create(name='Möhre', variety='Nantaise', supplier=supplier)
+        culture = Culture.objects.create(name='Möhre', variety='Nantaise', supplier=supplier, project=project)
 
         provider = Mock()
         provider.provider_name = 'fallback'
@@ -1261,12 +1283,14 @@ class NumericNormalizationTest(TestCase):
     @override_settings(AI_ENRICHMENT_ENABLED=True)
     @patch('farm.services.enrichment.get_enrichment_provider')
     def test_preserves_method_units_from_value_payload_unit_field(self, provider_mock):
+        project = Project.objects.create(name='Numeric Normalization Project C', slug='numeric-normalization-project-c')
         supplier = Supplier.objects.create(
             name='ReinSaat',
             homepage_url='https://www.reinsaat.at',
             allowed_domains=['reinsaat.at'],
+            project=project,
         )
-        culture = Culture.objects.create(name='Salat', variety='Bijella', supplier=supplier)
+        culture = Culture.objects.create(name='Salat', variety='Bijella', supplier=supplier, project=project)
 
         provider = Mock()
         provider.provider_name = 'openai_responses'
@@ -1333,12 +1357,14 @@ class NumericNormalizationTest(TestCase):
     @override_settings(AI_ENRICHMENT_ENABLED=True)
     @patch('farm.services.enrichment.get_enrichment_provider')
     def test_removes_stale_supplier_only_drop_warning_after_field_recovery(self, provider_mock):
+        project = Project.objects.create(name='Numeric Normalization Project D', slug='numeric-normalization-project-d')
         supplier = Supplier.objects.create(
             name='ReinSaat',
             homepage_url='https://www.reinsaat.at',
             allowed_domains=['reinsaat.at'],
+            project=project,
         )
-        culture = Culture.objects.create(name='Salat', variety='Bijella', supplier=supplier)
+        culture = Culture.objects.create(name='Salat', variety='Bijella', supplier=supplier, project=project)
 
         provider = Mock()
         provider.provider_name = 'openai_responses'
