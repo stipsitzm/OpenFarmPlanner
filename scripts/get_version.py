@@ -2,18 +2,18 @@
 """Print the current OpenFarmPlanner version."""
 
 from pathlib import Path
-import re
+import sys
 
-VERSION_FILE = Path(__file__).resolve().parents[1] / 'backend' / 'version.py'
-VERSION_PATTERN = re.compile(r'^VERSION\s*=\s*"(?P<version>\d+\.\d+\.\d+)"\s*$')
+
+BACKEND_DIR = Path(__file__).resolve().parents[1] / 'backend'
 
 
 def read_version() -> str:
-    for line in VERSION_FILE.read_text(encoding='utf-8').splitlines():
-        match = VERSION_PATTERN.match(line.strip())
-        if match:
-            return match.group('version')
-    raise RuntimeError(f'Could not find VERSION in {VERSION_FILE}')
+    """Read version from the backend central version module."""
+    sys.path.insert(0, str(BACKEND_DIR))
+    from config.version import get_version  # pylint: disable=import-outside-toplevel
+
+    return get_version()
 
 
 if __name__ == '__main__':

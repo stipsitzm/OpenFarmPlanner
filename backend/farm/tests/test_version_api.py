@@ -3,7 +3,7 @@ import re
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from version import get_version
+from config.version import get_version
 
 
 class VersionAPITest(TestCase):
@@ -24,3 +24,7 @@ class VersionAPITest(TestCase):
 
         version_value = response.json()['version']
         self.assertRegex(version_value, semver_pattern)
+
+    def test_version_helper_returns_semver(self):
+        semver_pattern = re.compile(r'^\d+\.\d+\.\d+$')
+        self.assertRegex(get_version(), semver_pattern)

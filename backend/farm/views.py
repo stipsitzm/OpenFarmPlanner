@@ -82,7 +82,7 @@ from .services.public_cultures import (
     import_public_culture_into_project,
     publish_culture_to_public_library,
 )
-from version import get_version
+from config.version import get_version
 
 
 logger = logging.getLogger(__name__)

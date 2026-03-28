@@ -56,3 +56,10 @@ Examples:
 - `test(backend): add tests for yield calculation`
 
 If a breaking change is introduced, include a `BREAKING CHANGE:` note in the commit body or footer, explaining what changed and required follow-up actions.
+
+Release automation depends on commit type:
+
+- `fix:` -> patch release
+- `feat:` -> minor release
+- `type!:` or `BREAKING CHANGE:` -> major release
+- `docs:`, `refactor:`, `test:`, `chore:` -> no release by default

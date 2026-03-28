@@ -319,9 +319,7 @@ The built files will be in `frontend/dist/`
 
 ## Releases
 
-We use Semantic Versioning:
-
-`MAJOR.MINOR.PATCH`
+We use Semantic Versioning (`MAJOR.MINOR.PATCH`) with **automatic** release management based on Conventional Commits.
 
 - `MAJOR`: breaking changes
 - `MINOR`: new features
@@ -329,30 +327,63 @@ We use Semantic Versioning:
 
 ### Current version source of truth
 
-- Central version file: `backend/version.py`
+- Central version file: `backend/config/version.py`
 - Backend API endpoint: `GET /openfarmplanner/api/version/`
 - Frontend displays the version in the app footer (bottom-right)
 
-### Version management scripts
+### Commit message format (Conventional Commits)
 
-Read the current version:
+Use commit prefixes such as:
+
+- `feat:`
+- `fix:`
+- `docs:`
+- `refactor:`
+- `test:`
+- `chore:`
+
+Release behavior:
+
+- `fix:` -> patch release
+- `feat:` -> minor release
+- `type!:` or `BREAKING CHANGE:` -> major release
+- `docs:`, `refactor:`, `test:`, `chore:` -> no release by default
+
+Examples:
+
+```text
+feat: add public culture database import
+fix: prevent duplicate publication entries
+docs: update installation instructions
+refactor: simplify version endpoint
+feat!: change API response for cultivation plans
+```
+
+Breaking change body example:
+
+```text
+feat: require project context for cultivation plans
+
+BREAKING CHANGE: cultivation plan responses now require project context
+```
+
+### Automatic release process
+
+On push to `main`, GitHub Actions runs Python Semantic Release and:
+
+- analyzes commits since the last tag,
+- calculates the next semantic version,
+- updates version files,
+- creates a git tag,
+- creates a GitHub Release,
+- generates changelog/release notes.
+
+No manual version bump, tag creation, or release drafting is required in normal flow.
+
+### Utility script
 
 ```bash
 python scripts/get_version.py
-```
-
-Bump the version:
-
-```bash
-python scripts/bump_version.py patch
-python scripts/bump_version.py minor
-python scripts/bump_version.py major
-```
-
-Optional release tag:
-
-```bash
-git tag v$(python scripts/get_version.py)
 ```
 
 ## License
