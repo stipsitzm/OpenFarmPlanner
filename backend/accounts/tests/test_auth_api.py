@@ -65,6 +65,37 @@ class AuthApiTest(APITestCase):
         )
         self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_registration_validation_errors_are_localized_to_german(self) -> None:
+        response = self.client.post(
+            '/openfarmplanner/api/auth/register/',
+            {
+                'email': 'invalid-email',
+                'password': '123',
+                'password_confirm': '123',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', response.data)
+        self.assertIn('password', response.data)
+        email_error = ' '.join(response.data['email'])
+        password_error = ' '.join(response.data['password'])
+        self.assertNotIn('Enter a valid email address', email_error)
+        self.assertNotIn('This password is too common', password_error)
+        self.assertIn('gültige', email_error.lower())
+        self.assertIn('passwort', password_error.lower())
+
+    def test_login_required_field_error_is_localized_to_german(self) -> None:
+        response = self.client.post(
+            '/openfarmplanner/api/auth/login/',
+            {'email': 'demo@example.com'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('password', response.data)
+        self.assertIn('erforderlich', ' '.join(response.data['password']).lower())
+
     def test_activation_success_and_invalid_token(self) -> None:
         register_response = self.client.post(
             '/openfarmplanner/api/auth/register/',

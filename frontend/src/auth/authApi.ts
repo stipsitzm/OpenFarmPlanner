@@ -1,4 +1,5 @@
 import type { AccountDeleteResponse, AuthUser, ProjectSwitchResponse } from './types';
+import i18n from '../i18n';
 
 const API_BASE = import.meta.env.PROD
   ? '/openfarmplanner/api'
@@ -18,15 +19,110 @@ export class AuthApiError extends Error {
 function extractError(raw: string): AuthApiError {
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const detail = typeof parsed.detail === 'string'
-      ? parsed.detail
-      : Object.entries(parsed).map(([field, value]) => `${field}: ${String(value)}`).join(' | ');
+    const detail = toUserFriendlyErrorMessage(parsed);
     const code = typeof parsed.code === 'string' ? parsed.code : undefined;
     const scheduledDeletionAt = typeof parsed.scheduled_deletion_at === 'string' ? parsed.scheduled_deletion_at : undefined;
     return new AuthApiError(detail || 'Request failed.', code, scheduledDeletionAt);
   } catch {
     return new AuthApiError(raw || 'Request failed.');
   }
+}
+
+const authFieldLabelFallbacks: Record<string, string> = {
+  email: 'E-Mail',
+  password: 'Passwort',
+  password_confirm: 'Passwort bestätigen',
+  uid: 'Benutzerkennung',
+  token: 'Token',
+  display_name: 'Anzeigename',
+  detail: 'Fehler',
+  non_field_errors: 'Fehler',
+};
+
+const knownValidationMessageKeys: Record<string, string> = {
+  'This field is required.': 'required',
+  'Enter a valid email address.': 'invalidEmail',
+  'This password is too common.': 'passwordTooCommon',
+  'This password is too short.': 'passwordTooShort',
+  'This password is entirely numeric.': 'passwordEntirelyNumeric',
+  'Unable to log in with provided credentials.': 'invalidCredentials',
+};
+
+function translateOrFallback(key: string, fallback: string, options?: Record<string, unknown>): string {
+  const translated = i18n.t(key, options);
+  return translated === key ? fallback : translated;
+}
+
+function localizeBackendMessage(message: string): string {
+  const trimmed = message.trim();
+  const mappedKey = knownValidationMessageKeys[trimmed];
+  if (mappedKey) {
+    return translateOrFallback(`auth:error.messages.${mappedKey}`, trimmed);
+  }
+
+  const minLengthMatch = /^Ensure this field has at least (\d+) characters\.$/.exec(trimmed);
+  if (minLengthMatch) {
+    return translateOrFallback('auth:error.messages.minLength', trimmed, { count: Number(minLengthMatch[1]) });
+  }
+
+  const maxLengthMatch = /^Ensure this field has no more than (\d+) characters\.$/.exec(trimmed);
+  if (maxLengthMatch) {
+    return translateOrFallback('auth:error.messages.maxLength', trimmed, { count: Number(maxLengthMatch[1]) });
+  }
+
+  return trimmed;
+}
+
+function flattenErrorStrings(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => flattenErrorStrings(entry));
+  }
+  if (typeof value === 'string') {
+    return [value];
+  }
+  if (value && typeof value === 'object' && 'message' in value && typeof value.message === 'string') {
+    return [value.message];
+  }
+  return [];
+}
+
+function resolveFieldLabel(field: string): string {
+  const translated = i18n.t(`auth:error.fields.${field}`);
+  if (translated !== `auth:error.fields.${field}`) {
+    return translated;
+  }
+  return authFieldLabelFallbacks[field] ?? field;
+}
+
+function toUserFriendlyErrorMessage(payload: Record<string, unknown>): string {
+  const explicitDetail = typeof payload.detail === 'string' ? localizeBackendMessage(payload.detail) : '';
+  const formattedErrors: string[] = [];
+
+  for (const [field, value] of Object.entries(payload)) {
+    if (field === 'code' || field === 'scheduled_deletion_at' || field === 'detail') {
+      continue;
+    }
+    const localizedMessages = flattenErrorStrings(value).map((message) => localizeBackendMessage(message));
+    if (localizedMessages.length === 0) {
+      continue;
+    }
+
+    if (field === 'non_field_errors') {
+      formattedErrors.push(...localizedMessages);
+      continue;
+    }
+
+    const fieldLabel = resolveFieldLabel(field);
+    formattedErrors.push(...localizedMessages.map((message) => `${fieldLabel}: ${message}`));
+  }
+
+  if (formattedErrors.length > 0) {
+    return formattedErrors.join('\n');
+  }
+  if (explicitDetail) {
+    return explicitDetail;
+  }
+  return translateOrFallback('auth:error.requestFailed', 'Anfrage fehlgeschlagen.');
 }
 
 function getCookie(name: string): string | null {
