@@ -27,11 +27,10 @@ class AgentLoginTests(TestCase):
         self.project = Project.objects.create(name='Project One', slug='project-one')
         self.other_project = Project.objects.create(name='Project Two', slug='project-two')
 
-    def test_valid_token_logs_in_and_sets_agent_session(self) -> None:
+    def test_valid_token_without_expiry_logs_in_and_sets_agent_session(self) -> None:
         _, raw_token = AgentLoginToken.create_token(
             created_by=self.superuser,
             project=self.project,
-            expires_at=timezone.now() + timedelta(minutes=30),
         )
 
         response = self.client.get(f'/openfarmplanner/agent-login/{raw_token}/')
@@ -45,7 +44,7 @@ class AgentLoginTests(TestCase):
         self.assertEqual(self.client.session.get('agent_project_id'), self.project.id)
         self.assertEqual(str(self.client.session.get('_auth_user_id')), str(self.superuser.id))
 
-    def test_expired_token_is_rejected(self) -> None:
+    def test_expired_token_is_rejected_only_when_expiry_is_set(self) -> None:
         _, raw_token = AgentLoginToken.create_token(
             created_by=self.superuser,
             project=self.project,
@@ -57,11 +56,24 @@ class AgentLoginTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('Token expired.', response.content.decode())
 
+    def test_non_used_token_without_expiry_stays_valid_until_first_use(self) -> None:
+        _, raw_token = AgentLoginToken.create_token(
+            created_by=self.superuser,
+            project=self.project,
+        )
+
+        token_obj = AgentLoginToken.objects.get(project=self.project)
+        self.assertIsNone(token_obj.expires_at)
+        self.assertIsNone(token_obj.used_at)
+        self.assertTrue(token_obj.is_usable)
+
+        response = self.client.get(f'/openfarmplanner/agent-login/{raw_token}/')
+        self.assertEqual(response.status_code, 302)
+
     def test_used_token_is_rejected(self) -> None:
         token_obj, raw_token = AgentLoginToken.create_token(
             created_by=self.superuser,
             project=self.project,
-            expires_at=timezone.now() + timedelta(minutes=30),
         )
         token_obj.used_at = timezone.now()
         token_obj.save(update_fields=['used_at'])
@@ -86,7 +98,6 @@ class AgentLoginTests(TestCase):
         _, raw_token = AgentLoginToken.create_token(
             created_by=self.superuser,
             project=self.project,
-            expires_at=timezone.now() + timedelta(minutes=30),
         )
         self.client.get(f'/openfarmplanner/agent-login/{raw_token}/')
 
@@ -97,3 +108,20 @@ class AgentLoginTests(TestCase):
 
         denied_response = self.client.get('/openfarmplanner/api/locations/', HTTP_X_PROJECT_ID=str(self.other_project.id))
         self.assertEqual(denied_response.status_code, 403)
+
+    def test_agent_session_remains_usable_after_token_consumption(self) -> None:
+        Location.objects.create(name='Session Location', project=self.project)
+
+        _, raw_token = AgentLoginToken.create_token(
+            created_by=self.superuser,
+            project=self.project,
+        )
+        consume_response = self.client.get(f'/openfarmplanner/agent-login/{raw_token}/')
+        self.assertEqual(consume_response.status_code, 302)
+
+        first_api_response = self.client.get('/openfarmplanner/api/locations/')
+        second_api_response = self.client.get('/openfarmplanner/api/locations/')
+        self.assertEqual(first_api_response.status_code, 200)
+        self.assertEqual(second_api_response.status_code, 200)
+        self.assertEqual(first_api_response.data['count'], 1)
+        self.assertEqual(second_api_response.data['count'], 1)

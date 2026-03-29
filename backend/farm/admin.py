@@ -4,13 +4,10 @@ This module configures the Django admin interface for all farm models,
 providing customized list displays, filters, and search capabilities.
 """
 
-from datetime import timedelta
-
 from django.conf import settings
 from django.contrib import admin
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse
-from django.utils import timezone
 
 from .models import (
     AgentLoginToken,
@@ -271,11 +268,10 @@ class AgentLoginTokenAdmin(admin.ModelAdmin):
             super().save_model(request, obj, form, change)
             return
 
-        expires_at = obj.expires_at or (timezone.now() + timedelta(minutes=30))
         token_obj, raw_token = AgentLoginToken.create_token(
             created_by=request.user,
             project=obj.project,
-            expires_at=expires_at,
+            expires_at=obj.expires_at,
         )
         obj.pk = token_obj.pk
         obj.created_by = token_obj.created_by

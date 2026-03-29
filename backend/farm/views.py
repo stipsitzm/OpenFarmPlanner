@@ -172,7 +172,7 @@ def agent_login_consume_view(request, token: str):  # noqa: ANN001
         return HttpResponseBadRequest('Invalid token.')
     if link.used_at is not None:
         return HttpResponseBadRequest('Token already used.')
-    if timezone.now() >= link.expires_at:
+    if link.expires_at is not None and timezone.now() >= link.expires_at:
         return HttpResponseBadRequest('Token expired.')
     if not link.created_by.is_active or not link.created_by.is_superuser:
         return HttpResponseForbidden('Token creator is not allowed.')

@@ -206,7 +206,7 @@ class AgentLoginToken(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='agent_login_tokens')
     token_hash = models.CharField(max_length=64, unique=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField(db_index=True)
+    expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
     used_at = models.DateTimeField(null=True, blank=True, db_index=True)
     used_by_ip = models.GenericIPAddressField(null=True, blank=True)
     used_user_agent = models.CharField(max_length=512, blank=True)
@@ -220,7 +220,13 @@ class AgentLoginToken(models.Model):
         return hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
 
     @classmethod
-    def create_token(cls, *, created_by, project: Project, expires_at) -> tuple['AgentLoginToken', str]:
+    def create_token(
+        cls,
+        *,
+        created_by,
+        project: Project,
+        expires_at=None,
+    ) -> tuple['AgentLoginToken', str]:
         """Create and persist a new one-time token for superusers."""
         if not getattr(created_by, 'is_superuser', False):
             raise PermissionError('Only superusers can create agent login tokens.')
@@ -237,7 +243,11 @@ class AgentLoginToken(models.Model):
     @property
     def is_usable(self) -> bool:
         """Return True when token has not been used and has not expired."""
-        return self.used_at is None and timezone.now() < self.expires_at
+        if self.used_at is not None:
+            return False
+        if self.expires_at is None:
+            return True
+        return timezone.now() < self.expires_at
 
 
 class Supplier(TimestampedModel):
