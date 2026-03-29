@@ -1,468 +1,157 @@
-## Environment Variables (.env)
-
-### Backend
-
-Die Django-Konfiguration nutzt eine .env-Datei im Verzeichnis backend/.env, um sensible Einstellungen und Umgebungs-spezifische Werte zu verwalten. Diese Datei sollte nicht ins Repository eingecheckt werden (siehe .gitignore).
-
-**Beispiel:** Siehe [backend/.env.example](backend/.env.example)
-
-**Wichtige Variablen:**
-
-- `DEBUG` – Debug-Modus (True/False)
-- `SECRET_KEY` – Django Secret Key (unbedingt in Produktion ändern!)
-- `ALLOWED_HOSTS` – Erlaubte Hostnamen (kommagetrennt)
-- `CORS_ALLOWED_ORIGINS` – Erlaubte Ursprünge für CORS (kommagetrennt)
-- `CSRF_TRUSTED_ORIGINS` – Vertrauenswürdige Ursprünge für CSRF (kommagetrennt)
-- `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` – Datenbankverbindung
-
-Kopiere backend/.env.example nach backend/.env und passe die Werte an deine Umgebung an.
-
 # OpenFarmPlanner
 
-A full-stack web application for managing CSA (Community Supported Agriculture) farm operations. The application helps manage cultures (crops), beds, fields, planting plans, and tasks with an intuitive interface and automatic harvest date calculations.
+OpenFarmPlanner is a full-stack web application for planning and managing market-garden or CSA farm operations.
+It combines a Django REST backend and a React frontend in one repository, with project-based workflows, planting planning, and operational farm data management.
 
-## Features
+> Deployment and infrastructure are maintained in a separate repository: **[OpenFarmPlanner-ops](https://github.com/stipsitzm/OpenFarmPlanner-ops)**.
 
-- **Culture Management**: Track different crop varieties with their growing characteristics
-- **Farm Organization**: Organize your farm into locations, fields, and beds
-- **Planting Plans**: Schedule plantings with automatic harvest date calculation based on crop characteristics
-- **RESTful API**: Full CRUD operations for all resources
-- **Admin Interface**: Django admin panel for easy data management
-- **Responsive UI**: Modern React interface for managing farm operations
+## Main Features
+
+- Farm structure management (locations, fields, beds)
+- Culture management with agronomic details and history/restore support
+- Planting plans, task planning, and Gantt/yield-oriented views
+- Seed demand and supplier workflows
+- Multi-project support with project switching and invitations
+- Session-based authentication (registration, activation, login/logout, password reset, account deletion/restore)
+- Notes and media attachments
+
+## High-Level Architecture
+
+- **Backend (`backend/`)**: Django + Django REST Framework API, authentication, business logic, data persistence, media handling.
+- **Frontend (`frontend/`)**: React + TypeScript SPA (Vite), UI workflows, routing, i18n resources, and API integration.
+- **Operations (`OpenFarmPlanner-ops`)**: deployment, runtime environment, and operational automation (separate repository).
+
+## Repository Structure
+
+```text
+.
+├── backend/                  # Django backend application
+├── frontend/                 # React frontend application
+│   └── e2e/                  # Playwright end-to-end tests
+├── docs/                     # Additional design/technical notes
+├── scripts/                  # Shared utility and quality scripts
+├── CONTRIBUTING.md           # Commit and contribution conventions
+└── README.md                 # Canonical repository entry point
+```
 
 ## Tech Stack
 
-### Backend
-- **Django 5.2.9**: Web framework
-- **Django REST Framework 3.16**: API framework
-- **django-cors-headers**: CORS support for frontend integration
-- **SQLite**: Database (development)
-- **Python 3.12+**: Programming language
-- **PDM**: Modern Python package manager
+**Backend**
+- Python 3.12+
+- Django 5.2
+- Django REST Framework
+- PDM for dependency and script management
+- SQLite by default (PostgreSQL supported via env configuration)
 
-### Frontend
-- **Vite**: Build tool
-- **React 19**: UI library
-- **TypeScript**: Type-safe JavaScript
-- **React Router**: Client-side routing
-- **Axios**: HTTP client
-- **Vitest**: Testing framework
+**Frontend**
+- React 19 + TypeScript
+- Vite
+- Material UI
+- React Router
+- Axios
+- Vitest + Testing Library
+- Playwright (E2E)
 
-## Project Structure
-
-```
-OpenFarmPlanner/
-├── backend/              # Django backend
-│   ├── config/          # Django project settings
-│   ├── farm/            # Main farm app
-│   │   ├── models.py    # Data models
-│   │   ├── serializers.py # DRF serializers
-│   │   ├── views.py     # API views
-│   │   ├── admin.py     # Admin configuration
-│   │   ├── urls.py      # URL routing
-│   │   └── tests.py     # Tests
-│   ├── manage.py        # Django management script
-│   ├── pyproject.toml   # PDM project configuration
-│   └── .venv/           # Virtual environment (auto-generated)
-└── frontend/            # React frontend
-    ├── src/
-    │   ├── api/         # API client
-    │   ├── pages/       # Page components
-    │   ├── __tests__/   # Test files
-    │   └── App.tsx      # Main app component
-    ├── package.json     # Node dependencies
-    └── vite.config.ts   # Vite configuration
-```
-
-## Setup Instructions
+## Quick Start (Local Development)
 
 ### Prerequisites
-- Python 3.12 or higher
-- PDM (Python Dependency Manager)
-- Node.js 20 or higher
-- npm 10 or higher
 
-### Installing PDM
+- Python 3.12+
+- [PDM](https://pdm-project.org/)
+- Node.js 20+
+- npm 10+
 
-If you don't have PDM installed:
+### 1) Backend setup
 
-```bash
-pip install --user pdm
-```
-
-Or using pipx (recommended):
-
-```bash
-pipx install pdm
-```
-
-### Backend Setup
-
-1. Navigate to the backend directory:
 ```bash
 cd backend
-```
-
-2. Install dependencies with PDM:
-```bash
+cp .env.example .env
 pdm install
-```
-
-This will automatically create a virtual environment and install all dependencies.
-
-3. Run migrations:
-```bash
 pdm run migrate
-```
-
-4. Create a superuser (optional, for admin access):
-```bash
-pdm run createsuperuser
-```
-
-5. Run the development server:
-```bash
 pdm run runserver
 ```
 
-The API will be available at `http://localhost:8000/api/`
+Backend API base path: `http://localhost:8000/openfarmplanner/api/`
 
-### Frontend Setup
+### 2) Frontend setup
 
-1. Navigate to the frontend directory:
+In a new terminal:
+
 ```bash
 cd frontend
-```
-
-2. Install dependencies:
-```bash
+cp .env.example .env
 npm install
-```
-
-3. Start the development server:
-```bash
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:5173/`
+Frontend dev server: `http://localhost:5173/openfarmplanner`
 
-## Running Tests
+## Backend / Frontend Overview
 
-### Backend Tests
+- The frontend sends credentialed requests to `/openfarmplanner/api/` and includes CSRF headers for write operations.
+- The backend enforces authenticated access for API endpoints by default and supports project scoping via `X-Project-Id`.
+- Public flows (registration, activation, login, password reset, invitation acceptance) are exposed through dedicated auth/invitation endpoints.
+
+## Authentication Overview
+
+OpenFarmPlanner uses Django session authentication with CSRF protection:
+
+- Register account
+- Activate account by email link
+- Login / logout
+- Password reset request and confirmation
+- Account deletion request with grace period and restoration flow
+
+Authentication endpoints are available under:
+
+- `/openfarmplanner/api/auth/*`
+
+## Testing Overview
+
+### Backend
+
 ```bash
 cd backend
 pdm run test
 ```
 
-### Frontend Tests
+### Frontend unit/integration tests
+
 ```bash
 cd frontend
-npm test
+npm run test
 ```
 
-## Running tests locally
+### Frontend end-to-end tests
 
-### Frontend
 ```bash
 cd frontend
-npm ci
-npm run test:coverage
+npm run test:e2e
 ```
 
-### Backend
-```bash
-cd backend
-pytest
-```
+## Documentation Map
 
-## Database Migrations
+- `backend/README.md` – backend-specific development details
+- `frontend/README.md` – frontend-specific development details
+- `frontend/e2e/README.md` – E2E testing notes
+- `CONTRIBUTING.md` – commit conventions and contribution expectations
 
-When you make changes to the Django models in `backend/farm/models.py`, you need to create and apply database migrations.
+## Deployment / Operations
 
-### Creating Migrations
+Deployment and runtime operations are intentionally separated from this repository.
+Use the ops repository for deployment guides, infrastructure configuration, and environment-specific operational steps:
 
-After modifying models, generate migration files:
+- **https://github.com/stipsitzm/OpenFarmPlanner-ops**
 
-```bash
-cd backend
-pdm run python manage.py makemigrations
-```
+## Contributing
 
-This will create a new migration file in `backend/farm/migrations/` with the detected changes.
+Pull requests are welcome.
 
-### Applying Migrations
+For larger changes, please open an issue first to align on scope and approach.
+Keep contributions focused, incremental, and consistent with the existing project structure and style.
 
-To apply pending migrations to the database:
-
-```bash
-pdm run python manage.py migrate
-```
-
-Or use the shortcut:
-
-```bash
-pdm run migrate
-```
-
-### Checking Migration Status
-
-To see which migrations have been applied:
-
-```bash
-pdm run python manage.py showmigrations
-```
-
-### Rolling Back Migrations
-
-To revert to a specific migration:
-
-```bash
-pdm run python manage.py migrate farm <migration_name>
-```
-
-For example, to revert to migration 0021:
-```bash
-pdm run python manage.py migrate farm 0021
-```
-
-### Best Practices
-
-- Always review generated migration files before committing
-- Test migrations on a copy of production data before deploying
-- Never edit migration files that have already been applied in production
-- Use meaningful names for data migrations with `--name` flag:
-  ```bash
-  pdm run python manage.py makemigrations --name add_default_suppliers farm
-  ```
-
-## API Endpoints
-
-The backend provides the following REST API endpoints:
-
-- `/api/locations/` - Location management
-- `/api/fields/` - Field management
-- `/api/beds/` - Bed management
-- `/api/cultures/` - Culture (crop) management
-- `/api/planting-plans/` - Planting plan management
-- `/api/tasks/` - Task management
-
-Each endpoint supports:
-- `GET` - List all items
-- `POST` - Create new item
-- `GET /<id>/` - Retrieve specific item
-- `PUT /<id>/` - Update specific item
-- `DELETE /<id>/` - Delete specific item
-
-## Data Models
-
-### Location
-Physical location where farming occurs
-- name, address, notes
-
-### Field
-A field within a location
-- name, location (FK), area_sqm, notes
-
-### Bed
-A bed within a field
-- name, field (FK), length_m, width_m, notes
-
-### Culture
-A crop or plant type
-- name, variety, days_to_harvest, notes
-
-### PlantingPlan
-Plan for planting a specific culture in a bed
-- culture (FK), bed (FK), planting_date, harvest_date (auto-calculated), quantity, notes
-
-### Task
-Farm management tasks
-- title, description, planting_plan (FK, optional), due_date, status
-
-## Key Features
-
-### Automatic Harvest Date Calculation
-When creating a planting plan, the harvest date is automatically calculated by adding the culture's `days_to_harvest` to the `planting_date`. This can be overridden manually if needed.
-
-### Admin Interface
-Access the Django admin at `http://localhost:8000/admin/` to manage all data through a user-friendly interface.
-
-## Development
-
-### Backend Development
-- Models are defined in `backend/farm/models.py`
-- API views use Django REST Framework's ViewSets in `backend/farm/views.py`
-- Admin interface is configured in `backend/farm/admin.py`
-
-### Frontend Development
-- Pages are in `frontend/src/pages/`
-- API client is in `frontend/src/api/client.ts`
-- Tests are in `frontend/src/__tests__/`
-
-## Building for Production
-
-### Backend
-```bash
-cd backend
-source venv/bin/activate
-python manage.py collectstatic
-# Configure production settings (SECRET_KEY, DEBUG=False, etc.)
-```
-
-### Frontend
-```bash
-cd frontend
-npm run build
-```
-
-The built files will be in `frontend/dist/`
-
-## Releases
-
-We use Semantic Versioning (`MAJOR.MINOR.PATCH`) with **automatic** release management based on Conventional Commits.
-
-- `MAJOR`: breaking changes
-- `MINOR`: new features
-- `PATCH`: bug fixes
-
-### Current version source of truth
-
-- Central version file: `backend/config/version.py`
-- Backend API endpoint: `GET /openfarmplanner/api/version/`
-- Frontend displays the version in the app footer (bottom-right)
-
-### Commit message format (Conventional Commits)
-
-Use commit prefixes such as:
-
-- `feat:`
-- `fix:`
-- `docs:`
-- `refactor:`
-- `test:`
-- `chore:`
-
-Release behavior:
-
-- `fix:` -> patch release
-- `feat:` -> minor release
-- `type!:` or `BREAKING CHANGE:` -> major release
-- `docs:`, `refactor:`, `test:`, `chore:` -> no release by default
-
-Examples:
-
-```text
-feat: add public culture database import
-fix: prevent duplicate publication entries
-docs: update installation instructions
-refactor: simplify version endpoint
-feat!: change API response for cultivation plans
-```
-
-Breaking change body example:
-
-```text
-feat: require project context for cultivation plans
-
-BREAKING CHANGE: cultivation plan responses now require project context
-```
-
-### Automatic release process
-
-On push to `main`, GitHub Actions runs Python Semantic Release and:
-
-- analyzes commits since the last tag,
-- calculates the next semantic version,
-- updates version files,
-- creates a git tag,
-- creates a GitHub Release,
-- generates changelog/release notes.
-
-No manual version bump, tag creation, or release drafting is required in normal flow.
-
-### Utility script
-
-```bash
-python scripts/get_version.py
-```
+See `CONTRIBUTING.md` for commit format requirements.
 
 ## License
 
-This project is open source and available for use.
-
-## Keyboard shortcuts and Command Palette
-
-OpenFarmPlanner supports browser-safe keyboard shortcuts that are discoverable in:
-- the Command Palette (`Alt+K`)
-- the shortcuts help dialog (`Alt+H`)
-- action button tooltips on the Cultures page
-
-### Global page navigation
-
-- `Ctrl+Shift+←` / `Ctrl+Shift+→`: previous/next main page (cyclic)
-- `Alt+H`: Tastenkürzel-Hilfe öffnen (aus dem Command-Registry generiert)
-### Culture detail shortcuts
-
-- `Alt+E`: Kultur bearbeiten
-- `Alt+Shift+D`: Kultur löschen (öffnet nur den Bestätigungsdialog)
-- `Alt+J`: JSON exportieren (aktuelle Kultur)
-- `Alt+Shift+J`: Alle Kulturen exportieren
-- `Alt+I`: JSON importieren (öffnet Import-Flow)
-- `Alt+P`: Anbauplan erstellen
-- `Alt+Shift+←`: Vorherige Kultur
-- `Alt+Shift+→`: Nächste Kultur
-
-### User hint in the UI
-
-Best practice for end users: show a short helper text in onboarding/release notes such as:
-> „Drücke `Alt+K` für die Command Palette oder nutze die Shortcut-Hinweise in den Menüs und Tooltips.“
-
-### Adding new commands
-
-Commands are defined via `CommandSpec` and registered in page components using `useRegisterCommands`.
-Each command can provide:
-- `title`, `keywords`, `shortcutHint`
-- `contextTags` and `isAvailable()` for context-aware availability
-- `run()` action
-- optional keyboard `keys` mapping (Alt/Shift only)
-
-Keyboard handling is centralized in `useKeyboardShortcuts` and only calls `preventDefault()` on exact, context-allowed matches.
-
-
-## Note Attachments
-
-Planting plan notes support photo attachments through `/openfarmplanner/api/notes/{noteId}/attachments/` (list + multipart upload) and `/openfarmplanner/api/attachments/{attachmentId}/` (delete). Uploaded images are validated and transformed server-side into a processed image (max side 2560px, EXIF orientation applied, metadata stripped, re-encoded), and only the processed file is stored.
-
-The notes drawer UI includes photo upload, an optional crop/zoom step before upload, thumbnail gallery, full-size preview dialog, and delete actions. The browser additionally resizes/re-encodes before upload to reduce traffic, while the backend remains the source of truth for final validation and processing.
-
-## Quality Gate (one command)
-
-Run all backend and frontend static-analysis checks and write readable reports:
-
-```bash
-make quality
-```
-
-This command runs `scripts/quality.sh`, which:
-
-- creates `reports/latest/` with the newest reports;
-- creates an archived timestamped folder in `reports/<YYYYmmdd-HHMMSS>/`;
-- runs backend checks:
-  - **Ruff** for Python linting (rules: E, F, I, UP, B, C90)
-  - **Radon** for cyclomatic complexity summary
-  - **Pytest + coverage** (when pytest is configured)
-- runs frontend checks:
-  - **ESLint** for TypeScript/React linting
-  - **Madge** for circular dependency detection under `frontend/src`
-
-Reports are plain-text files to make them easy to feed into Codex for planning and refactoring.
-
-### Report locations
-
-- Latest run: `reports/latest/`
-- Archived runs: `reports/<timestamp>/`
-
-### Notes
-
-- The quality script does **not fail on findings** (lint violations, circular dependencies, test failures).
-- The quality script **fails only on setup/tooling problems** (missing tool/config or tool crash).
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
