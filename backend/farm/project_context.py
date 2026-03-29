@@ -37,6 +37,20 @@ def resolve_project_for_user(user) -> tuple[Project | None, bool]:
 
 def get_active_project_or_400(request: Request) -> Project:
     """Resolve and validate active project from request header for authenticated users."""
+    agent_mode = bool(request.session.get('agent_mode'))
+    agent_project_id = request.session.get('agent_project_id')
+
+    if agent_mode and agent_project_id is not None:
+        try:
+            bound_project_id = int(agent_project_id)
+        except (TypeError, ValueError) as exc:
+            raise exceptions.PermissionDenied('Invalid agent project binding.') from exc
+
+        requested_header = request.META.get(PROJECT_HEADER)
+        if requested_header and str(requested_header) != str(bound_project_id):
+            raise exceptions.PermissionDenied('Agent session is restricted to a single project.')
+        return get_object_or_404(Project, id=bound_project_id, is_active=True)
+
     raw = request.META.get(PROJECT_HEADER)
     if not raw:
         raise exceptions.ValidationError({'project': 'Missing X-Project-Id header.'})

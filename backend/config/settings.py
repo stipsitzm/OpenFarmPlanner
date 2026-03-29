@@ -211,6 +211,7 @@ if not DEBUG:
         raise ImproperlyConfigured('PUBLIC_FRONTEND_URL must not point to localhost when DEBUG is False.')
 
 PROJECT_INVITATION_EXPIRY_DAYS = int(_env_str('PROJECT_INVITATION_EXPIRY_DAYS', '14') or '14')
+AGENT_LOGIN_ENABLED = _env_str('AGENT_LOGIN_ENABLED', 'False').lower() in ('true', '1', 'yes')
 
 # Email configuration (Uberspace SMTP in production, console backend in local development by default).
 EMAIL_BACKEND = _env_str(

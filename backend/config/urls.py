@@ -18,11 +18,13 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from farm.views import agent_login_consume_view
 
 urlpatterns = [
     path('openfarmplanner/admin/', admin.site.urls),
     path('openfarmplanner/api/auth/', include('accounts.urls')),
     path('openfarmplanner/api/', include('farm.urls')),
+    path('openfarmplanner/agent-login/<str:token>/', agent_login_consume_view, name='agent-login-consume'),
 ]
 
 if getattr(settings, 'DEBUG', False) and getattr(settings, 'E2E_TEST_TOKEN', ''):

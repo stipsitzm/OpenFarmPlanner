@@ -13,23 +13,25 @@ import json
 import re
 
 from django.conf import settings
+from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q, Count
 from django.db.models.functions import Coalesce, Ceil, Cast
+from django.http import HttpResponseBadRequest, HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect
 from rest_framework import viewsets, status, generics, parsers, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.core.files.storage import default_storage
-from django.shortcuts import get_object_or_404
 from django.utils import timezone, translation
 from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 from django.utils.dateparse import parse_date
 from django.utils.translation import gettext as _
-from .models import Location, Field, Bed, BedLayout, FieldLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, PublicCulture, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
+from .models import AgentLoginToken, Location, Field, Bed, BedLayout, FieldLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, PublicCulture, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
 from .project_context import get_active_project_or_400, require_project_admin, resolve_project_for_user
 from .serializers import (
     LocationSerializer,
@@ -157,6 +159,35 @@ class VersionView(APIView):
 
     def get(self, request, *args, **kwargs):  # noqa: ANN001, ARG002
         return Response({'version': get_version()})
+
+
+def agent_login_consume_view(request, token: str):  # noqa: ANN001
+    """Consume an agent login token, establish session, and redirect to frontend."""
+    if not getattr(settings, 'AGENT_LOGIN_ENABLED', False):
+        return HttpResponseForbidden('Agent login is disabled.')
+
+    token_hash = AgentLoginToken.hash_token(token)
+    link = AgentLoginToken.objects.select_related('created_by', 'project').filter(token_hash=token_hash).first()
+    if link is None:
+        return HttpResponseBadRequest('Invalid token.')
+    if link.used_at is not None:
+        return HttpResponseBadRequest('Token already used.')
+    if timezone.now() >= link.expires_at:
+        return HttpResponseBadRequest('Token expired.')
+    if not link.created_by.is_active or not link.created_by.is_superuser:
+        return HttpResponseForbidden('Token creator is not allowed.')
+
+    login(request, link.created_by)
+    link.used_at = timezone.now()
+    link.used_by_ip = request.META.get('REMOTE_ADDR')
+    link.used_user_agent = (request.META.get('HTTP_USER_AGENT', '') or '')[:512]
+    link.save(update_fields=['used_at', 'used_by_ip', 'used_user_agent'])
+
+    request.session['agent_mode'] = True
+    request.session['agent_project_id'] = link.project_id
+    request.session.modified = True
+
+    return redirect(build_public_frontend_url('/app/cultures'))
 
 
 def _apply_invitation_project_settings(*, user, project: Project) -> dict[str, int | str]:

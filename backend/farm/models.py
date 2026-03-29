@@ -1,5 +1,7 @@
 import json
+import hashlib
 import re
+import secrets
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal
@@ -191,6 +193,51 @@ class ProjectInvitation(models.Model):
         self.email_normalized = self.normalize_email(self.email)
         self.email = self.email_normalized
         super().save(*args, **kwargs)
+
+
+class AgentLoginToken(models.Model):
+    """Single-use project-bound login token for superuser-only agent sessions."""
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='agent_login_tokens_created',
+    )
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='agent_login_tokens')
+    token_hash = models.CharField(max_length=64, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(db_index=True)
+    used_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    used_by_ip = models.GenericIPAddressField(null=True, blank=True)
+    used_user_agent = models.CharField(max_length=512, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    @staticmethod
+    def hash_token(raw_token: str) -> str:
+        """Return SHA256 hash for opaque token storage."""
+        return hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
+
+    @classmethod
+    def create_token(cls, *, created_by, project: Project, expires_at) -> tuple['AgentLoginToken', str]:
+        """Create and persist a new one-time token for superusers."""
+        if not getattr(created_by, 'is_superuser', False):
+            raise PermissionError('Only superusers can create agent login tokens.')
+
+        raw_token = secrets.token_urlsafe(48)
+        token = cls.objects.create(
+            created_by=created_by,
+            project=project,
+            token_hash=cls.hash_token(raw_token),
+            expires_at=expires_at,
+        )
+        return token, raw_token
+
+    @property
+    def is_usable(self) -> bool:
+        """Return True when token has not been used and has not expired."""
+        return self.used_at is None and timezone.now() < self.expires_at
 
 
 class Supplier(TimestampedModel):
