@@ -19,6 +19,7 @@ from rest_framework import permissions, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from config.frontend_urls import build_public_frontend_url
 
 from .models import AccountDeletionRequest, PendingActivation
 from .serializers import (
@@ -84,10 +85,7 @@ def _clear_activation_expiry(user: User) -> None:
 
 
 def _build_frontend_link(path_with_query: str) -> str:
-    base_url = settings.FRONTEND_URL.rstrip('/')
-    if not path_with_query.startswith('/'):
-        path_with_query = f'/{path_with_query}'
-    return f'{base_url}{path_with_query}'
+    return build_public_frontend_url(path_with_query)
 
 
 def _logout_all_user_sessions(user_id: int) -> None:
@@ -139,6 +137,12 @@ def _decode_uid(uid: str) -> int | None:
         return None
 
 
+def _validate_serializer_in_german(serializer) -> None:
+    """Run DRF serializer validation with German locale activated."""
+    with translation.override('de'):
+        serializer.is_valid(raise_exception=True)
+
+
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class CsrfTokenView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -152,7 +156,7 @@ class RegisterView(APIView):
 
     def post(self, request: Request) -> Response:
         serializer = RegisterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        _validate_serializer_in_german(serializer)
         user = serializer.save()
         _set_activation_expiry(user)
         _send_activation_email(user)
@@ -164,7 +168,7 @@ class ActivateView(APIView):
 
     def post(self, request: Request) -> Response:
         serializer = ActivateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        _validate_serializer_in_german(serializer)
         uid = _decode_uid(serializer.validated_data['uid'])
         if uid is None:
             return Response({'detail': _de(_('Invalid activation link.'))}, status=status.HTTP_400_BAD_REQUEST)
@@ -191,7 +195,7 @@ class LoginView(APIView):
 
     def post(self, request: Request) -> Response:
         serializer = LoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        _validate_serializer_in_german(serializer)
 
         email = _normalize_email(serializer.validated_data['email'])
         password = serializer.validated_data['password']
@@ -238,7 +242,7 @@ class AccountDeleteRequestView(APIView):
 
     def post(self, request: Request) -> Response:
         serializer = AccountDeleteRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        _validate_serializer_in_german(serializer)
 
         user = request.user
         if not user.check_password(serializer.validated_data['password']):
@@ -273,7 +277,7 @@ class AccountRestoreView(APIView):
 
     def post(self, request: Request) -> Response:
         serializer = AccountRestoreSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        _validate_serializer_in_german(serializer)
         email = _normalize_email(serializer.validated_data['email'])
         password = serializer.validated_data['password']
 
@@ -315,7 +319,7 @@ class ResendActivationView(APIView):
 
     def post(self, request: Request) -> Response:
         serializer = ResendActivationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        _validate_serializer_in_german(serializer)
         email = _normalize_email(serializer.validated_data['email'])
 
         user = User.objects.filter(email__iexact=email).first()
@@ -331,7 +335,7 @@ class PasswordResetRequestView(APIView):
 
     def post(self, request: Request) -> Response:
         serializer = PasswordResetRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        _validate_serializer_in_german(serializer)
         email = _normalize_email(serializer.validated_data['email'])
 
         user = User.objects.filter(email__iexact=email, is_active=True).first()
@@ -346,7 +350,7 @@ class PasswordResetConfirmView(APIView):
 
     def post(self, request: Request) -> Response:
         serializer = PasswordResetConfirmSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        _validate_serializer_in_german(serializer)
         uid = _decode_uid(serializer.validated_data['uid'])
         if uid is None:
             return Response({'detail': _de(_('Invalid reset link.'))}, status=status.HTTP_400_BAD_REQUEST)

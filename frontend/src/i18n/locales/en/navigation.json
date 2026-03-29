@@ -30,6 +30,10 @@
     "createSubmit": "Create project",
     "createError": "Project could not be created."
   },
+  "projectRoles": {
+    "admin": "Admin",
+    "member": "Member"
+  },
   "commandGroups": {
     "project": "Project",
     "account": "Account",

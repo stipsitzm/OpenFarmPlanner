@@ -83,6 +83,7 @@ from .services.public_cultures import (
     publish_culture_to_public_library,
 )
 from config.version import get_version
+from config.frontend_urls import build_public_frontend_url
 
 
 logger = logging.getLogger(__name__)
@@ -99,7 +100,7 @@ def _invitation_error_response(exc: InvitationFlowError) -> Response:
 
 def _send_project_invitation_email(*, invitation: ProjectInvitation, project_name: str, invited_by: object) -> tuple[bool, str]:
     """Send invitation email and return delivery result plus diagnostic message."""
-    invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/accept?token={invitation.token}"
+    invite_link = build_public_frontend_url(f'/invite/accept?token={invitation.token}')
     with translation.override('de'):
         subject = _('Einladung zu OpenFarmPlanner: %(project)s') % {'project': project_name}
         body = render_to_string('accounts/emails/project_invitation_email.txt', {
@@ -2091,7 +2092,7 @@ class ProjectInvitationView(APIView):
         if invitation is None:
             return Response({'code': 'invitation_error', 'detail': 'Invitation could not be created.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        invite_link = f"{settings.FRONTEND_URL.rstrip('/')}/invite/accept?token={invitation.token}"
+        invite_link = build_public_frontend_url(f'/invite/accept?token={invitation.token}')
         mail_sent, mail_error = _send_project_invitation_email(
             invitation=invitation,
             project_name=project.name,

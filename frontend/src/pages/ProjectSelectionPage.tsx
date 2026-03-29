@@ -1,10 +1,12 @@
 import { Button, List, ListItem, ListItemText, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import { useTranslation } from '../i18n';
 
 export default function ProjectSelectionPage(): React.ReactElement {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation('navigation');
 
   return (
     <div style={{ padding: 24 }}>
@@ -25,7 +27,10 @@ export default function ProjectSelectionPage(): React.ReactElement {
               </Button>
             }
           >
-            <ListItemText primary={membership.project_name} secondary={membership.role} />
+            <ListItemText
+              primary={membership.project_name}
+              secondary={t(`projectRoles.${membership.role}`)}
+            />
           </ListItem>
         ))}
       </List>

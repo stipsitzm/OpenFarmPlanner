@@ -12,7 +12,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
+from django.core.exceptions import ImproperlyConfigured
 from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
 
@@ -196,7 +198,17 @@ MEDIA_ROOT = Path(os.getenv('MEDIA_ROOT', PROJECT_ROOT / 'media'))
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Frontend base URL used for links in account emails.
-FRONTEND_URL = _env_str('FRONTEND_URL', 'http://localhost:5173/openfarmplanner')
+_frontend_url_from_env = _env_str('FRONTEND_URL', '')
+FRONTEND_URL = _frontend_url_from_env or 'http://localhost:5173/openfarmplanner'
+_public_frontend_url_from_env = _env_str('PUBLIC_FRONTEND_URL', '')
+PUBLIC_FRONTEND_URL = _public_frontend_url_from_env or FRONTEND_URL
+
+if not DEBUG:
+    parsed_public_frontend_url = urlparse(PUBLIC_FRONTEND_URL)
+    if not parsed_public_frontend_url.scheme or not parsed_public_frontend_url.netloc:
+        raise ImproperlyConfigured('PUBLIC_FRONTEND_URL must be an absolute URL when DEBUG is False.')
+    if (parsed_public_frontend_url.hostname or '').lower() in {'localhost', '127.0.0.1', '::1'}:
+        raise ImproperlyConfigured('PUBLIC_FRONTEND_URL must not point to localhost when DEBUG is False.')
 
 PROJECT_INVITATION_EXPIRY_DAYS = int(_env_str('PROJECT_INVITATION_EXPIRY_DAYS', '14') or '14')
 

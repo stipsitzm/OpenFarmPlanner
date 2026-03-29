@@ -12,6 +12,7 @@ from rest_framework import permissions, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from config.frontend_urls import build_public_frontend_url
 
 from farm.models import Project, ProjectInvitation, ProjectMembership
 
@@ -74,7 +75,6 @@ class E2EInvitationFixtureView(APIView):
     def _setup(self, request: Request, scenario: str) -> dict[str, object]:
         self._reset(scenario)
         invitation_state = str(request.data.get('invitation_state', 'pending')).strip().lower() or 'pending'
-        frontend_base = settings.FRONTEND_URL.rstrip('/')
         project = Project.objects.create(name=f'E2E Project {scenario}', slug=scenario)
 
         admin = User.objects.create_user(
@@ -121,7 +121,7 @@ class E2EInvitationFixtureView(APIView):
             'projectName': project.name,
             'projectSlug': project.slug,
             'inviteToken': invitation.token,
-            'inviteUrl': f'{frontend_base}/invite/accept?token={invitation.token}',
+            'inviteUrl': build_public_frontend_url(f'/invite/accept?token={invitation.token}'),
             'invitee': {'email': invitee.email, 'password': E2E_PASSWORD},
             'outsider': {'email': outsider.email, 'password': E2E_PASSWORD},
             'admin': {'email': admin.email, 'password': E2E_PASSWORD},

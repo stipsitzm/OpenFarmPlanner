@@ -217,7 +217,8 @@ For production, configure these environment variables:
 - `DEBUG` - Set to `False` in production
 - `ALLOWED_HOSTS` - Comma-separated list of allowed hosts
 - `EMAIL_HOST_PASSWORD` - SMTP password for `noreply@zwiebelzopf.at`
-- `FRONTEND_URL` - Frontend origin used in activation and reset emails
+- `PUBLIC_FRONTEND_URL` - Public frontend base URL used in activation, password reset, and invitation links
+- `FRONTEND_URL` - Optional local/development fallback for frontend links
 
 ### SMTP configuration for Uberspace (production)
 
@@ -231,7 +232,7 @@ EMAIL_USE_TLS=True
 EMAIL_HOST_USER=noreply@zwiebelzopf.at
 EMAIL_HOST_PASSWORD=<your-secret-password>
 DEFAULT_FROM_EMAIL=OpenFarmPlanner <noreply@zwiebelzopf.at>
-FRONTEND_URL=https://your-frontend-domain.tld
+PUBLIC_FRONTEND_URL=https://your-frontend-domain.tld/openfarmplanner
 ```
 
 For local development you can keep email output in the terminal:
