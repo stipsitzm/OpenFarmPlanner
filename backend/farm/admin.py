@@ -6,7 +6,9 @@ providing customized list displays, filters, and search capabilities.
 
 from django.conf import settings
 from django.contrib import admin
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.utils.html import format_html
 from django.urls import reverse
 
 from .models import (
@@ -246,6 +248,9 @@ class AgentLoginTokenAdmin(admin.ModelAdmin):
     readonly_fields = ['token_hash', 'created_by', 'created_at', 'used_at', 'used_by_ip', 'used_user_agent']
     fields = ['project', 'expires_at', 'token_hash', 'created_by', 'created_at', 'used_at', 'used_by_ip', 'used_user_agent']
 
+    _admin_request_link_attr = '_agent_login_absolute_link'
+    _admin_request_token_attr = '_agent_login_plain_token'
+
     def has_module_permission(self, request):  # noqa: ANN001
         return bool(getattr(settings, 'AGENT_LOGIN_ENABLED', False) and request.user.is_superuser)
 
@@ -282,4 +287,23 @@ class AgentLoginTokenAdmin(admin.ModelAdmin):
 
         consume_path = reverse('agent-login-consume', kwargs={'token': raw_token})
         absolute_link = request.build_absolute_uri(consume_path)
-        self.message_user(request, f'Agent login link (single-use): {absolute_link}', level='warning')
+        setattr(request, self._admin_request_link_attr, absolute_link)
+        setattr(request, self._admin_request_token_attr, raw_token)
+
+    def response_add(self, request, obj, post_url_continue=None):  # noqa: ANN001
+        plain_link = getattr(request, self._admin_request_link_attr, '')
+        plain_token = getattr(request, self._admin_request_token_attr, '')
+        if plain_link and plain_token:
+            self.message_user(
+                request,
+                format_html(
+                    'Agent login link (single-use): <code>{}</code><br>'
+                    'Plain token: <code>{}</code><br>'
+                    '<strong>This is the only time the plain token is shown.</strong> '
+                    'Later only the hash is stored, and the hash cannot be used for login.',
+                    plain_link,
+                    plain_token,
+                ),
+                level=messages.SUCCESS,
+            )
+        return super().response_add(request, obj, post_url_continue)
