@@ -65,6 +65,23 @@ class AuthApiTest(APITestCase):
         )
         self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @override_settings(PUBLIC_FRONTEND_URL='https://zwiebelzopf.at/openfarmplanner')
+    def test_activation_email_uses_public_frontend_url(self) -> None:
+        response = self.client.post(
+            '/openfarmplanner/api/auth/register/',
+            {
+                'email': 'mail-link@example.com',
+                'password': 'new-safe-password-123',
+                'password_confirm': 'new-safe-password-123',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(mail.outbox), 1)
+        activation_email_body = mail.outbox[-1].body
+        self.assertIn('https://zwiebelzopf.at/openfarmplanner/activate?uid=', activation_email_body)
+        self.assertNotIn('http://localhost:5173/', activation_email_body)
+
     def test_registration_validation_errors_are_localized_to_german(self) -> None:
         response = self.client.post(
             '/openfarmplanner/api/auth/register/',
@@ -185,6 +202,15 @@ class AuthApiTest(APITestCase):
             format='json',
         )
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+
+    @override_settings(PUBLIC_FRONTEND_URL='https://zwiebelzopf.at/openfarmplanner')
+    def test_password_reset_email_uses_public_frontend_url(self) -> None:
+        response = self.client.post('/openfarmplanner/api/auth/password-reset/', {'email': self.user.email}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 1)
+        reset_email_body = mail.outbox[-1].body
+        self.assertIn('https://zwiebelzopf.at/openfarmplanner/reset-password?uid=', reset_email_body)
+        self.assertNotIn('http://localhost:5173/', reset_email_body)
 
     def test_resend_activation_does_not_leak_user_existence(self) -> None:
         inactive = User.objects.create_user(

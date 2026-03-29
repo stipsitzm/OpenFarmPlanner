@@ -144,9 +144,9 @@ class ProjectsApiTests(APITestCase):
     @override_settings(
         EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend',
         FRONTEND_URL='http://localhost:5173/openfarmplanner',
-        FRONTEND_URL_IS_DEFAULT=True,
+        PUBLIC_FRONTEND_URL='https://zwiebelzopf.at/openfarmplanner',
     )
-    def test_invitation_link_uses_request_origin_when_frontend_url_is_default(self) -> None:
+    def test_invitation_link_uses_public_frontend_url_setting(self) -> None:
         response = self.client.post(
             f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
             {'email': 'invitee@example.com', 'role': 'member'},
@@ -155,25 +155,7 @@ class ProjectsApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data['invite_link'].startswith('https://app.example.org/openfarmplanner/invite/accept?token='))
-
-    @override_settings(
-        EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend',
-        FRONTEND_URL='http://localhost:5173/openfarmplanner',
-        FRONTEND_URL_IS_DEFAULT=True,
-        ALLOWED_HOSTS=['api.example.org'],
-    )
-    def test_invitation_link_uses_request_host_when_origin_is_missing(self) -> None:
-        response = self.client.post(
-            f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
-            {'email': 'invitee@example.com', 'role': 'member'},
-            format='json',
-            HTTP_HOST='api.example.org',
-            secure=True,
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data['invite_link'].startswith('https://api.example.org/openfarmplanner/invite/accept?token='))
+        self.assertTrue(response.data['invite_link'].startswith('https://zwiebelzopf.at/openfarmplanner/invite/accept?token='))
 
 
     def test_accept_invitation_invalid_token(self) -> None:

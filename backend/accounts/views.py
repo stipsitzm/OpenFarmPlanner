@@ -19,6 +19,7 @@ from rest_framework import permissions, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from config.frontend_urls import build_public_frontend_url
 
 from .models import AccountDeletionRequest, PendingActivation
 from .serializers import (
@@ -84,10 +85,7 @@ def _clear_activation_expiry(user: User) -> None:
 
 
 def _build_frontend_link(path_with_query: str) -> str:
-    base_url = settings.FRONTEND_URL.rstrip('/')
-    if not path_with_query.startswith('/'):
-        path_with_query = f'/{path_with_query}'
-    return f'{base_url}{path_with_query}'
+    return build_public_frontend_url(path_with_query)
 
 
 def _logout_all_user_sessions(user_id: int) -> None:
