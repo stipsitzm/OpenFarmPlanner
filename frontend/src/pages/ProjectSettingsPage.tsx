@@ -5,7 +5,7 @@ import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
 
 interface InviteFeedback {
-  severity: 'success' | 'error';
+  severity: 'success' | 'warning' | 'error';
   text: string;
 }
 
@@ -105,7 +105,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
         setFeedback({ severity: 'success', text: t('inviteSent') });
       }
       if (!data.mail_sent && data.invite_link) {
-        setFeedback({ severity: 'success', text: `${t('inviteSentNoMail')} ${data.invite_link}` });
+        setFeedback({ severity: 'warning', text: `${t('inviteSentNoMail')} ${data.invite_link}` });
       }
       setEmail('');
       setRole('member');
@@ -179,6 +179,16 @@ export default function ProjectSettingsPage(): React.ReactElement {
     }
     return null;
   })();
+
+  const sortedInvitations = useMemo(() => (
+    [...invitations].sort((left, right) => {
+      const expiryDelta = new Date(right.expires_at).getTime() - new Date(left.expires_at).getTime();
+      if (expiryDelta !== 0) {
+        return expiryDelta;
+      }
+      return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+    })
+  ), [invitations]);
 
   return (
     <Box sx={{ p: 3, maxWidth: 760, mx: 'auto' }}>
@@ -267,7 +277,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
 
       <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>{t('listTitle')}</Typography>
       <Stack spacing={1.5}>
-        {canManageMembers && !invitationLoadError ? invitations.map((invitation) => (
+        {canManageMembers && !invitationLoadError ? sortedInvitations.map((invitation) => (
           <Box key={invitation.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
               <Box>

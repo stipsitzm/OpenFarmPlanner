@@ -18,6 +18,7 @@ describe('ProjectSelectionPage', () => {
   it('renders projects and open action', () => {
     render(<MemoryRouter><ProjectSelectionPage /></MemoryRouter>);
     expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.getByText('Mitglied')).toBeInTheDocument();
     expect(screen.getAllByText('Öffnen').length).toBeGreaterThan(0);
   });
 });

@@ -127,4 +127,64 @@ describe('ProjectSettingsPage', () => {
 
     expect(await screen.findByText('Einladungen konnten nicht geladen werden.')).toBeInTheDocument();
   });
+
+  it('shows a warning alert when invitation mail delivery fails', async () => {
+    inviteMock.mockResolvedValueOnce({
+      data: {
+        code: 'invitation_sent',
+        mail_sent: false,
+        invite_link: 'https://example.org/openfarmplanner/invite/accept?token=test-token',
+      },
+    });
+
+    render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+    await waitFor(() => expect(listMock).toHaveBeenCalledWith(1));
+
+    fireEvent.change(screen.getByLabelText('E-Mail'), { target: { value: 'invitee@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einladung senden' }));
+
+    const warningMessage = await screen.findByText(/Einladung erstellt, aber E-Mail konnte nicht zugestellt werden\./);
+    const alertElement = warningMessage.closest('.MuiAlert-root');
+    expect(alertElement).not.toBeNull();
+    expect(alertElement?.className).toContain('MuiAlert-colorWarning');
+  });
+
+  it('sorts invitations by expiry date descending', async () => {
+    listMock.mockResolvedValueOnce({
+      data: [
+        {
+          id: 2,
+          email: 'older@example.com',
+          role: 'member',
+          token: 'older-token',
+          status: 'pending',
+          resolved_status: 'pending',
+          expires_at: '2026-04-11T13:07:30Z',
+          accepted_at: null,
+          revoked_at: null,
+          created_at: '2026-03-28T13:07:30Z',
+        },
+        {
+          id: 1,
+          email: 'newer@example.com',
+          role: 'member',
+          token: 'newer-token',
+          status: 'pending',
+          resolved_status: 'pending',
+          expires_at: '2026-04-12T08:58:52Z',
+          accepted_at: null,
+          revoked_at: null,
+          created_at: '2026-03-29T08:58:52Z',
+        },
+      ],
+    });
+
+    render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+
+    const newerInvitation = await screen.findByText('newer@example.com');
+    const olderInvitation = screen.getByText('older@example.com');
+    expect(
+      newerInvitation.compareDocumentPosition(olderInvitation) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+  });
 });

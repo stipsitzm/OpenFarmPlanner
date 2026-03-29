@@ -33,6 +33,74 @@ pdm run test
 pdm run createsuperuser
 ```
 
+### Making Model Changes
+1. Edit models in `farm/models.py`
+2. Create migrations:
+   ```bash
+   pdm run makemigrations
+   ```
+3. Apply migrations:
+   ```bash
+   pdm run migrate
+   ```
+
+### Accessing Admin Interface
+1. Create a superuser (if not already done):
+   ```bash
+   pdm run createsuperuser
+   ```
+2. Start the server:
+   ```bash
+   pdm run runserver
+   ```
+3. Visit `http://localhost:8000/admin/`
+
+## Environment Variables
+
+For production, configure these environment variables:
+- `SECRET_KEY` - Django secret key
+- `DEBUG` - Set to `False` in production
+- `ALLOWED_HOSTS` - Comma-separated list of allowed hosts
+- `EMAIL_HOST_PASSWORD` - SMTP password for `noreply@zwiebelzopf.at`
+- `PUBLIC_FRONTEND_URL` - Public frontend base URL used in activation, password reset, and invitation links
+- `FRONTEND_URL` - Optional local/development fallback for frontend links
+
+### SMTP configuration for Uberspace (production)
+
+Use these settings in your environment:
+
+```env
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=mail.uberspace.de
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=noreply@zwiebelzopf.at
+EMAIL_HOST_PASSWORD=<your-secret-password>
+DEFAULT_FROM_EMAIL=OpenFarmPlanner <noreply@zwiebelzopf.at>
+PUBLIC_FRONTEND_URL=https://your-frontend-domain.tld/openfarmplanner
+```
+
+For local development you can keep email output in the terminal:
+
+```env
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+```
+
+### Authentication endpoints
+
+Auth endpoints are available under `/openfarmplanner/api/auth/`:
+
+- `GET csrf/`
+- `POST register/`
+- `POST activate/`
+- `POST login/`
+- `POST logout/`
+- `GET me/`
+- `POST resend-activation/`
+- `POST password-reset/`
+- `POST password-reset-confirm/`
+
+### DNS recommendations for deliverability
 ## Authentication and API Notes
 
 - Auth endpoints: `/openfarmplanner/api/auth/*`
