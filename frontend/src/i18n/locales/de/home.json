@@ -1,14 +1,80 @@
 {
-  "welcome": "Willkommen bei OpenFarmPlanner",
-  "quickAccess": "Schnellzugriff",
-  "manageLocations": "Standorte verwalten",
-  "manageFields": "Schläge verwalten",
-  "manageBeds": "Beete verwalten",
-  "manageCultures": "Kulturen verwalten",
-  "managePlantingPlans": "Anbaupläne verwalten",
-  "features": "Funktionen",
-  "feature1": "Verwalten Sie Ihre Kulturen und Pflanzensorten",
-  "feature2": "Organisieren Sie Ihr Hoflayout (Standorte, Schläge, Beete)",
-  "feature3": "Planen Sie Ihren Anbauzeitplan mit automatischer Erntedatumsberechnung",
-  "feature4": "Behalten Sie Erntezeiträume im Anbaukalender im Blick"
+  "landing": {
+    "title": "OpenFarmPlanner",
+    "betaBadge": "Beta",
+    "subtitle": "Einfache Anbauplanung für Gemüsebau, CSA und kleine landwirtschaftliche Betriebe.",
+    "description": "OpenFarmPlanner hilft dabei, Kulturen, Anbauflächen und Anbauzeiträume übersichtlich zu verwalten. So bleiben Anbaupläne, Flächen und wichtige Informationen an einem Ort organisiert.",
+    "actions": {
+      "openApp": "App öffnen",
+      "login": "Anmelden",
+      "register": "Registrieren"
+    }
+  },
+  "featureOverview": {
+    "title": "Funktionsübersicht",
+    "items": {
+      "cultureManagement": "Kulturen zentral verwalten",
+      "fieldOrganization": "Beete und Anbauflächen organisieren",
+      "planningPeriods": "Anbauzeiträume planen",
+      "structuredDocumentation": "Anbauinformationen strukturiert dokumentieren",
+      "projectCollaboration": "Projektbezogen zusammenarbeiten"
+    }
+  },
+  "audiences": {
+    "title": "Geeignet für",
+    "items": {
+      "smallVegetableFarms": "kleine Gemüsebaubetriebe",
+      "csaOperations": "CSA / solidarische Landwirtschaft",
+      "digitalPlanningProjects": "Projekte, die ihre Anbauplanung digital organisieren möchten"
+    }
+  },
+  "statusNote": "OpenFarmPlanner befindet sich aktuell in der Beta-Phase und wird laufend weiterentwickelt.",
+  "footer": {
+    "imprint": "Impressum",
+    "privacy": "Datenschutzerklärung",
+    "contactLabel": "Kontakt: {{email}}",
+    "contactEmail": "info@openfarmplanner.org"
+  },
+  "legal": {
+    "imprint": {
+      "title": "Impressum",
+      "disclaimer": "Dies ist eine Entwurfsseite. Bitte ergänze hier die finalen Pflichtangaben vor der Veröffentlichung.",
+      "sections": {
+        "provider": {
+          "title": "Angaben gemäß § 5 TMG",
+          "content": "Platzhalter: Name und ladungsfähige Anschrift der verantwortlichen Person oder Organisation eintragen."
+        },
+        "contact": {
+          "title": "Kontakt",
+          "content": "Platzhalter: Verbindliche Kontaktinformationen ergänzen. Aktuell erreichbar unter info@openfarmplanner.org."
+        },
+        "responsibility": {
+          "title": "Verantwortlich für den Inhalt",
+          "content": "Platzhalter: Verantwortliche Person gemäß gesetzlicher Anforderungen ergänzen."
+        }
+      }
+    },
+    "privacy": {
+      "title": "Datenschutzerklärung",
+      "disclaimer": "Dies ist eine Entwurfsseite. Bitte hinterlege vor der Veröffentlichung eine rechtlich geprüfte Datenschutzerklärung.",
+      "sections": {
+        "controller": {
+          "title": "Verantwortliche Stelle",
+          "content": "Platzhalter: Angaben zur verantwortlichen Stelle und Kontaktwegen ergänzen."
+        },
+        "processingOverview": {
+          "title": "Überblick der Verarbeitung",
+          "content": "Platzhalter: Zweck, Rechtsgrundlagen und Speicherdauer der verarbeiteten Daten beschreiben."
+        },
+        "dataSubjects": {
+          "title": "Rechte betroffener Personen",
+          "content": "Platzhalter: Informationen zu Auskunft, Berichtigung, Löschung, Widerspruch und Beschwerderecht ergänzen."
+        },
+        "contact": {
+          "title": "Datenschutz-Kontakt",
+          "content": "Platzhalter: Kontaktadresse für Datenschutzanfragen ergänzen, z. B. info@openfarmplanner.org."
+        }
+      }
+    }
+  }
 }

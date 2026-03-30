@@ -55,6 +55,8 @@ import './App.css';
 import { useAuth } from './auth/useAuth';
 import ProtectedRoute from './auth/ProtectedRoute';
 import HomePage from './pages/public/HomePage';
+import ImprintPage from './pages/public/ImprintPage';
+import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import ActivatePage from './pages/auth/ActivatePage';
@@ -711,6 +713,14 @@ function createAppRouter(basename: string) {
     {
       path: '/',
       element: <HomePage />,
+    },
+    {
+      path: '/impressum',
+      element: <ImprintPage />,
+    },
+    {
+      path: '/datenschutz',
+      element: <PrivacyPolicyPage />,
     },
     {
       path: '/login',

@@ -1,0 +1,80 @@
+{
+  "landing": {
+    "title": "OpenFarmPlanner",
+    "betaBadge": "Beta",
+    "subtitle": "Simple crop planning for vegetable production, CSA, and small farms.",
+    "description": "OpenFarmPlanner helps manage crops, growing areas, and cultivation periods in a clear way. Keep plans, fields, and key information organized in one place.",
+    "actions": {
+      "openApp": "Open app",
+      "login": "Log in",
+      "register": "Register"
+    }
+  },
+  "featureOverview": {
+    "title": "Feature overview",
+    "items": {
+      "cultureManagement": "Manage crops centrally",
+      "fieldOrganization": "Organize beds and growing areas",
+      "planningPeriods": "Plan cultivation periods",
+      "structuredDocumentation": "Document cultivation data in a structured way",
+      "projectCollaboration": "Collaborate across projects"
+    }
+  },
+  "audiences": {
+    "title": "Suitable for",
+    "items": {
+      "smallVegetableFarms": "small vegetable farms",
+      "csaOperations": "CSA / community-supported agriculture",
+      "digitalPlanningProjects": "projects that want to organize cultivation planning digitally"
+    }
+  },
+  "statusNote": "OpenFarmPlanner is currently in beta and is being continuously improved.",
+  "footer": {
+    "imprint": "Imprint",
+    "privacy": "Privacy policy",
+    "contactLabel": "Contact: {{email}}",
+    "contactEmail": "info@openfarmplanner.org"
+  },
+  "legal": {
+    "imprint": {
+      "title": "Imprint",
+      "disclaimer": "This is a draft page. Please add final legal information before publishing.",
+      "sections": {
+        "provider": {
+          "title": "Provider information",
+          "content": "Placeholder: Add legal name and full address of the responsible person or organization."
+        },
+        "contact": {
+          "title": "Contact",
+          "content": "Placeholder: Add complete contact details. Currently reachable at info@openfarmplanner.org."
+        },
+        "responsibility": {
+          "title": "Responsible for content",
+          "content": "Placeholder: Add responsible person according to applicable regulations."
+        }
+      }
+    },
+    "privacy": {
+      "title": "Privacy policy",
+      "disclaimer": "This is a draft page. Please provide a legally reviewed privacy policy before publishing.",
+      "sections": {
+        "controller": {
+          "title": "Controller",
+          "content": "Placeholder: Add details about the data controller and contact channels."
+        },
+        "processingOverview": {
+          "title": "Processing overview",
+          "content": "Placeholder: Describe purpose, legal basis, and storage duration of processed data."
+        },
+        "dataSubjects": {
+          "title": "Data subject rights",
+          "content": "Placeholder: Add information on access, rectification, deletion, objection, and complaint rights."
+        },
+        "contact": {
+          "title": "Privacy contact",
+          "content": "Placeholder: Add privacy inquiry contact details, e.g. info@openfarmplanner.org."
+        }
+      }
+    }
+  }
+}

@@ -14,6 +14,7 @@ import commonDE from './locales/de/common.json';
 import navigationDE from './locales/de/navigation.json';
 import navigationEN from './locales/en/navigation.json';
 import homeDE from './locales/de/home.json';
+import homeEN from './locales/en/home.json';
 import locationsDE from './locales/de/locations.json';
 import culturesDE from './locales/de/cultures.json';
 import plantingPlansDE from './locales/de/plantingPlans.json';
@@ -63,6 +64,7 @@ i18n
       },
       en: {
         navigation: navigationEN,
+        home: homeEN,
         fields: fieldsEN,
         projectInvitations: projectInvitationsEN,
       },
