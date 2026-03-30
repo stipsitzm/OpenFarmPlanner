@@ -129,6 +129,52 @@ cd frontend
 npm run test:e2e
 ```
 
+## Version Bumping
+
+Project version is defined in `backend/config/version.py` as a semantic version (`MAJOR.MINOR.PATCH`).
+
+Use the provided script via Make:
+
+```bash
+make bump-version TYPE=fix
+```
+
+Supported change types:
+
+- `TYPE=feat` → bumps **minor** (`x.Y.z`) and resets patch to `0`
+- `TYPE=fix` → bumps **patch** (`x.y.Z`)
+- `TYPE=breaking` → bumps **major** (`X.y.z`) and resets minor/patch to `0`
+
+The update is validated and applied safely:
+
+- exactly one `VERSION = "..."` definition must exist,
+- version format must be valid semver,
+- file writes are done via atomic replace.
+
+## Automatic Release Labels (Pull Requests)
+
+This repository uses a GitHub Action (`.github/workflows/auto-release-label.yml`) to auto-assign one release label on pull requests:
+
+- `release:major`
+- `release:minor`
+- `release:patch`
+
+Trigger events:
+
+- `pull_request` with types: `opened`, `edited`, `synchronize`
+
+Decision rules:
+
+- `release:major` if PR content includes `BREAKING CHANGE` or `breaking`
+- `release:minor` for feature keywords: `add`, `feature`, `implement`, `new`
+- `release:patch` for maintenance keywords: `fix`, `bug`, `refactor`, `docs`, `localize`, `translation`, `ui`
+- fallback defaults to `release:patch` if no keyword matches
+
+Safety behavior:
+
+- if any release label is already present, the workflow logs and skips reassignment,
+- if none exists, it ensures labels exist at repository level, removes any release labels from the PR (defensive cleanup), and assigns exactly one.
+
 ## Documentation Map
 
 - `backend/README.md` – backend-specific development details

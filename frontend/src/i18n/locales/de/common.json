@@ -6,6 +6,7 @@
     "delete": "Löschen",
     "save": "Speichern",
     "cancel": "Abbrechen",
+    "reset": "Zurücksetzen",
     "search": "Suchen",
     "close": "Schließen",
     "actions": "Aktionen"
@@ -34,5 +35,19 @@
     "empty": "Keine Notizen",
     "editEmpty": "Notiz hinzufügen",
     "editWithContent": "Notiz bearbeiten"
+  },
+  "notesDrawer": {
+    "takePhoto": "Foto aufnehmen",
+    "selectFromGallery": "Aus Galerie wählen",
+    "uploading": "Wird hochgeladen…",
+    "attachmentAlt": "Anhang",
+    "markdownPlaceholder": "Notizen in Markdown…",
+    "imageDialogTitle": "Foto",
+    "attachmentPreviewAlt": "Anhangsvorschau",
+    "cropDialogTitle": "Zuschneiden",
+    "cropInstructions": "Zeichne, verschiebe und skaliere den Zuschneidebereich. Der Außenbereich ist abgedunkelt.",
+    "cropSourceAlt": "Zuschneidequelle",
+    "backendUnavailable": "Bildverarbeitung ist auf dem Server derzeit nicht verfügbar. Bitte installiere Pillow und starte das Backend neu.",
+    "uploadFailed": "Hochladen fehlgeschlagen. Bitte versuche es erneut."
   }
 }

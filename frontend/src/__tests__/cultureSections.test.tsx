@@ -102,7 +102,7 @@ describe('culture form UI sections', () => {
     fireEvent.change(thousandKernelWeightInput, { target: { value: '472.02' } });
     expect(onChange).toHaveBeenCalledWith('thousand_kernel_weight_g', 472.02);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add pack' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Packung hinzufügen' }));
     expect(onChange).toHaveBeenCalledWith('seed_packages', [{ size_value: 0, size_unit: 'g' }]);
 
 

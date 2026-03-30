@@ -249,13 +249,15 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
         </Tooltip>
       </Box>
 
-      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Seed packages</Typography>
+      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
+        {t('form.seedPackagesLabel', { defaultValue: 'Saatgut-Packungsgrößen' })}
+      </Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {packages.map((pkg, index) => (
           <Box key={index} sx={{ display: 'grid', gridTemplateColumns: '180px 40px', gap: 1, alignItems: 'center' }}>
             <TextField
               type="number"
-              label="Size (g)"
+              label={t('form.packageSizeLabel', { defaultValue: 'Packungsgröße (g)' })}
               value={pkg.size_value}
               onChange={(e) => updatePackage(index, { size_value: parseSizeValue(e.target.value), size_unit: 'g' })}
               error={Boolean(errors[`seed_packages.${index}.size_value`] || errors.seed_packages)}
@@ -273,7 +275,9 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
         ))}
         {errors.seed_packages && <Typography variant="caption" color="error">{errors.seed_packages}</Typography>}
         <Box>
-          <Button type="button" onClick={addPackage} variant="outlined" size="small">Add pack</Button>
+          <Button type="button" onClick={addPackage} variant="outlined" size="small">
+            {t('form.addSeedPackage', { defaultValue: 'Packung hinzufügen' })}
+          </Button>
         </Box>
       </Box>
     </>
