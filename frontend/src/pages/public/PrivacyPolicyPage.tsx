@@ -1,32 +1,70 @@
 import { Box, Container, Stack, Typography } from '@mui/material';
 import { useTranslation } from '../../i18n';
 
-const sectionKeys = [
+const privacySections = [
   'controller',
-  'processingOverview',
-  'dataSubjects',
-  'contact',
+  'generalNotice',
+  'hosting',
+  'registration',
+  'projectData',
+  'emailCommunication',
+  'logFiles',
+  'cookies',
+  'dataSharing',
+  'storageDuration',
+  'rights',
+  'complaint',
+  'changes',
 ] as const;
 
+const privacySectionBulletKeys: Partial<Record<(typeof privacySections)[number], readonly string[]>> = {
+  hosting: ['ipAddress', 'requestTime', 'browser', 'operatingSystem', 'referrerUrl'],
+  registration: ['emailAddress', 'nameOptional', 'encryptedPassword'],
+  projectData: ['projectData', 'cultureData', 'cultivationPlanning', 'fieldData', 'tasks'],
+  emailCommunication: ['registration', 'accountActivation', 'passwordReset', 'projectInvitations', 'systemNotifications'],
+  logFiles: ['ipAddress', 'errorMessages', 'accessData', 'timestamps'],
+  cookies: ['sessionCookies', 'securityCookies'],
+  rights: ['access', 'rectification', 'deletion', 'restriction', 'portability', 'objection'],
+} as const;
+
 export default function PrivacyPolicyPage(): React.ReactElement {
-  const { t } = useTranslation('home');
+  const { t, i18n } = useTranslation('home');
 
   return (
     <Container maxWidth="md" sx={{ py: { xs: 6, md: 9 } }}>
       <Stack spacing={3}>
-        <Typography variant="h3" component="h1">{t('legal.privacy.title')}</Typography>
-        <Typography color="text.secondary">{t('legal.privacy.disclaimer')}</Typography>
+        <Typography variant="h3" component="h1">
+          {t('legal.privacy.title')}
+        </Typography>
 
-        {sectionKeys.map((sectionKey) => (
-          <Box key={sectionKey}>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              {t(`legal.privacy.sections.${sectionKey}.title`)}
-            </Typography>
-            <Typography color="text.secondary">
-              {t(`legal.privacy.sections.${sectionKey}.content`)}
-            </Typography>
-          </Box>
-        ))}
+        {privacySections.map((sectionKey, index) => {
+          const bulletKeys = privacySectionBulletKeys[sectionKey];
+          return (
+            <Stack key={sectionKey} spacing={1}>
+              <Typography variant="h6">{`${index + 1}. ${t(`legal.privacy.sections.${sectionKey}.title`)}`}</Typography>
+              <Typography color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
+                {t(`legal.privacy.sections.${sectionKey}.content`)}
+              </Typography>
+              {bulletKeys ? (
+                <Box component="ul" sx={{ mt: 0, mb: 0, pl: 3, color: 'text.secondary' }}>
+                  {bulletKeys.map((bulletKey) => (
+                    <li key={bulletKey}>{t(`legal.privacy.sections.${sectionKey}.bullets.${bulletKey}`)}</li>
+                  ))}
+                </Box>
+              ) : null}
+              {i18n.exists(`home:legal.privacy.sections.${sectionKey}.legalBasis`) ? (
+                <Typography color="text.secondary" sx={{ fontWeight: 500 }}>
+                  {t(`legal.privacy.sections.${sectionKey}.legalBasis`)}
+                </Typography>
+              ) : null}
+              {i18n.exists(`home:legal.privacy.sections.${sectionKey}.contact`) ? (
+                <Typography color="text.secondary">{t(`legal.privacy.sections.${sectionKey}.contact`)}</Typography>
+              ) : null}
+            </Stack>
+          );
+        })}
+
+        <Typography color="text.secondary">{t('legal.privacy.version')}</Typography>
       </Stack>
     </Container>
   );
