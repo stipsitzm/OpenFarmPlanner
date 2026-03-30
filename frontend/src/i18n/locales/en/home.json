@@ -1,0 +1,167 @@
+{
+  "landing": {
+    "title": "OpenFarmPlanner",
+    "betaBadge": "Beta",
+    "subtitle": "Simple crop planning for vegetable production, CSA, and small farms.",
+    "description": "OpenFarmPlanner helps manage crops, growing areas, and cultivation periods in a clear way. Keep plans, fields, and key information organized in one place.",
+    "actions": {
+      "openApp": "Open app",
+      "login": "Log in",
+      "register": "Register"
+    }
+  },
+  "featureOverview": {
+    "title": "Feature overview",
+    "items": {
+      "cultureManagement": "Manage crops centrally",
+      "fieldOrganization": "Organize beds and growing areas",
+      "planningPeriods": "Plan cultivation periods",
+      "structuredDocumentation": "Document cultivation data in a structured way",
+      "projectCollaboration": "Collaborate across projects"
+    }
+  },
+  "audiences": {
+    "title": "Suitable for",
+    "items": {
+      "smallVegetableFarms": "small vegetable farms",
+      "csaOperations": "CSA / community-supported agriculture",
+      "digitalPlanningProjects": "projects that want to organize cultivation planning digitally"
+    }
+  },
+  "statusNote": "OpenFarmPlanner is currently in beta and is being continuously improved.",
+  "footer": {
+    "imprint": "Imprint",
+    "privacy": "Privacy policy",
+    "contactLabel": "Contact: {{email}}",
+    "contactEmail": "info@openfarmplanner.org"
+  },
+  "legal": {
+    "imprint": {
+      "title": "Imprint",
+      "disclaimer": "These details are based on the current draft status (March 2026). Please complete legal review before going live.",
+      "sections": {
+        "provider": {
+          "title": "Provider information",
+          "content": "Martin Stipsitz\nBurgenlandstraße 44A / 9\n9500 Villach\nAustria"
+        },
+        "contact": {
+          "title": "Contact",
+          "content": "Email: info@openfarmplanner.org"
+        },
+        "responsiblePerson": {
+          "title": "Responsible for content",
+          "content": "Martin Stipsitz\nBurgenlandstraße 44A / 9\n9500 Villach\nAustria"
+        }
+      }
+    },
+    "privacy": {
+      "title": "Privacy policy",
+      "version": "Status: March 2026",
+      "sections": {
+        "controller": {
+          "title": "Controller",
+          "content": "Responsible for data processing on this website:\n\nMartin Stipsitz\nBurgenlandstraße 44A / 9\n9500 Villach\nAustria\n\nEmail: info@openfarmplanner.org"
+        },
+        "generalNotice": {
+          "title": "General information on data processing",
+          "content": "We take the protection of your personal data seriously. We process your data confidentially and in accordance with applicable data protection laws and this privacy policy.\n\nUsing OpenFarmPlanner is generally possible without providing personal data. If personal data is collected (for example during registration), this is done on a voluntary basis."
+        },
+        "hosting": {
+          "title": "Hosting",
+          "content": "This website is hosted by:\n\nUberspace GmbH\nKaiserstraße 15\n55116 Mainz\nGermany\n\nWhen you visit the website, the server automatically records:",
+          "bullets": {
+            "ipAddress": "IP address",
+            "requestTime": "Date and time of the request",
+            "browser": "Browser type and version",
+            "operatingSystem": "Operating system",
+            "referrerUrl": "Referrer URL"
+          },
+          "legalBasis": "Legal basis: Art. 6(1)(f) GDPR (legitimate interest)"
+        },
+        "registration": {
+          "title": "Registration and user account",
+          "content": "To use OpenFarmPlanner, you can create a user account. The following data may be processed:",
+          "bullets": {
+            "emailAddress": "Email address",
+            "nameOptional": "Name (optional)",
+            "encryptedPassword": "Password (stored in encrypted form)"
+          },
+          "legalBasis": "Legal basis: Art. 6(1)(b) GDPR (performance of a contract)"
+        },
+        "projectData": {
+          "title": "Project and application data",
+          "content": "Within the application, users can store the following data:",
+          "bullets": {
+            "projectData": "Project data",
+            "cultureData": "Crop data",
+            "cultivationPlanning": "Cultivation planning",
+            "fieldData": "Field and area data",
+            "tasks": "Tasks"
+          },
+          "legalBasis": "Legal basis: Art. 6(1)(b) GDPR"
+        },
+        "emailCommunication": {
+          "title": "Email communication",
+          "content": "We use your email address for:",
+          "bullets": {
+            "registration": "Registration",
+            "accountActivation": "Account activation",
+            "passwordReset": "Password reset",
+            "projectInvitations": "Project invitations",
+            "systemNotifications": "System notifications"
+          },
+          "legalBasis": "Legal basis: Art. 6(1)(b) GDPR"
+        },
+        "logFiles": {
+          "title": "Log files",
+          "content": "Technical log files are stored to ensure reliable operation. These may include:",
+          "bullets": {
+            "ipAddress": "IP address",
+            "errorMessages": "Error messages",
+            "accessData": "Access data",
+            "timestamps": "Timestamps"
+          },
+          "legalBasis": "Legal basis: Art. 6(1)(f) GDPR"
+        },
+        "cookies": {
+          "title": "Cookies",
+          "content": "OpenFarmPlanner uses technically necessary cookies to ensure core functionality.",
+          "bullets": {
+            "sessionCookies": "Session cookies for login",
+            "securityCookies": "Security cookies (CSRF protection)"
+          },
+          "legalBasis": "Legal basis: Art. 6(1)(f) GDPR"
+        },
+        "dataSharing": {
+          "title": "Data sharing",
+          "content": "Your data is not shared with third parties, except where necessary for contractual performance or where legally required."
+        },
+        "storageDuration": {
+          "title": "Storage duration",
+          "content": "Your data is stored as long as your user account exists. You can request account deletion at any time."
+        },
+        "rights": {
+          "title": "Your rights",
+          "content": "You have the following rights:",
+          "bullets": {
+            "access": "Access to stored data",
+            "rectification": "Correction of incorrect data",
+            "deletion": "Deletion of your data",
+            "restriction": "Restriction of processing",
+            "portability": "Data portability",
+            "objection": "Objection to processing"
+          },
+          "contact": "Contact: info@openfarmplanner.org"
+        },
+        "complaint": {
+          "title": "Right to lodge a complaint",
+          "content": "You have the right to lodge a complaint with the data protection authority:\n\nAustrian Data Protection Authority\nBarichgasse 40-42\n1030 Vienna\nhttps://www.dsb.gv.at"
+        },
+        "changes": {
+          "title": "Changes to this privacy policy",
+          "content": "We reserve the right to adjust this privacy policy to reflect new features or legal requirements."
+        }
+      }
+    }
+  }
+}

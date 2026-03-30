@@ -1,14 +1,167 @@
 {
-  "welcome": "Willkommen bei OpenFarmPlanner",
-  "quickAccess": "Schnellzugriff",
-  "manageLocations": "Standorte verwalten",
-  "manageFields": "Schläge verwalten",
-  "manageBeds": "Beete verwalten",
-  "manageCultures": "Kulturen verwalten",
-  "managePlantingPlans": "Anbaupläne verwalten",
-  "features": "Funktionen",
-  "feature1": "Verwalten Sie Ihre Kulturen und Pflanzensorten",
-  "feature2": "Organisieren Sie Ihr Hoflayout (Standorte, Schläge, Beete)",
-  "feature3": "Planen Sie Ihren Anbauzeitplan mit automatischer Erntedatumsberechnung",
-  "feature4": "Behalten Sie Erntezeiträume im Anbaukalender im Blick"
+  "landing": {
+    "title": "OpenFarmPlanner",
+    "betaBadge": "Beta",
+    "subtitle": "Einfache Anbauplanung für Gemüsebau, CSA und kleine landwirtschaftliche Betriebe.",
+    "description": "OpenFarmPlanner hilft dabei, Kulturen, Anbauflächen und Anbauzeiträume übersichtlich zu verwalten. So bleiben Anbaupläne, Flächen und wichtige Informationen an einem Ort organisiert.",
+    "actions": {
+      "openApp": "App öffnen",
+      "login": "Anmelden",
+      "register": "Registrieren"
+    }
+  },
+  "featureOverview": {
+    "title": "Funktionsübersicht",
+    "items": {
+      "cultureManagement": "Kulturen zentral verwalten",
+      "fieldOrganization": "Beete und Anbauflächen organisieren",
+      "planningPeriods": "Anbauzeiträume planen",
+      "structuredDocumentation": "Anbauinformationen strukturiert dokumentieren",
+      "projectCollaboration": "Projektbezogen zusammenarbeiten"
+    }
+  },
+  "audiences": {
+    "title": "Geeignet für",
+    "items": {
+      "smallVegetableFarms": "kleine Gemüsebaubetriebe",
+      "csaOperations": "CSA / solidarische Landwirtschaft",
+      "digitalPlanningProjects": "Projekte, die ihre Anbauplanung digital organisieren möchten"
+    }
+  },
+  "statusNote": "OpenFarmPlanner befindet sich aktuell in der Beta-Phase und wird laufend weiterentwickelt.",
+  "footer": {
+    "imprint": "Impressum",
+    "privacy": "Datenschutzerklärung",
+    "contactLabel": "Kontakt: {{email}}",
+    "contactEmail": "info@openfarmplanner.org"
+  },
+  "legal": {
+    "imprint": {
+      "title": "Impressum",
+      "disclaimer": "Diese Angaben basieren auf dem aktuellen Entwurfsstand (März 2026). Bitte vor Live-Schaltung rechtlich final prüfen.",
+      "sections": {
+        "provider": {
+          "title": "Angaben gemäß § 5 TMG",
+          "content": "Martin Stipsitz\nBurgenlandstraße 44A / 9\n9500 Villach\nÖsterreich"
+        },
+        "contact": {
+          "title": "Kontakt",
+          "content": "E-Mail: info@openfarmplanner.org"
+        },
+        "responsiblePerson": {
+          "title": "Verantwortlich für den Inhalt",
+          "content": "Martin Stipsitz\nBurgenlandstraße 44A / 9\n9500 Villach\nÖsterreich"
+        }
+      }
+    },
+    "privacy": {
+      "title": "Datenschutzerklärung",
+      "version": "Stand: März 2026",
+      "sections": {
+        "controller": {
+          "title": "Verantwortlicher",
+          "content": "Verantwortlich für die Datenverarbeitung auf dieser Website ist:\n\nMartin Stipsitz\nBurgenlandstraße 44A / 9\n9500 Villach\nÖsterreich\n\nE-Mail: info@openfarmplanner.org"
+        },
+        "generalNotice": {
+          "title": "Allgemeine Hinweise zur Datenverarbeitung",
+          "content": "Wir nehmen den Schutz Ihrer persönlichen Daten sehr ernst.\nWir behandeln Ihre personenbezogenen Daten vertraulich und entsprechend der gesetzlichen Datenschutzvorschriften sowie dieser Datenschutzerklärung.\n\nDie Nutzung unserer Webanwendung OpenFarmPlanner ist grundsätzlich möglich, ohne personenbezogene Daten anzugeben.\nSofern innerhalb unserer Anwendung personenbezogene Daten erhoben werden (z. B. im Rahmen einer Registrierung), erfolgt dies stets auf freiwilliger Basis."
+        },
+        "hosting": {
+          "title": "Hosting",
+          "content": "Diese Website wird bei folgendem Anbieter gehostet:\n\nUberspace GmbH\nKaiserstraße 15\n55116 Mainz\nDeutschland\n\nBeim Aufruf der Website werden automatisch Informationen durch den Server erfasst:",
+          "bullets": {
+            "ipAddress": "IP-Adresse",
+            "requestTime": "Datum und Uhrzeit der Anfrage",
+            "browser": "Browsertyp und Version",
+            "operatingSystem": "Betriebssystem",
+            "referrerUrl": "Referrer-URL"
+          },
+          "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse)"
+        },
+        "registration": {
+          "title": "Registrierung und Benutzerkonto",
+          "content": "Für die Nutzung von OpenFarmPlanner können Sie ein Benutzerkonto erstellen. Dabei werden folgende Daten verarbeitet:",
+          "bullets": {
+            "emailAddress": "E-Mail-Adresse",
+            "nameOptional": "Name (optional)",
+            "encryptedPassword": "Passwort (verschlüsselt gespeichert)"
+          },
+          "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung)"
+        },
+        "projectData": {
+          "title": "Projektdaten und Anwendungsdaten",
+          "content": "Innerhalb der Anwendung können Nutzer folgende Daten speichern:",
+          "bullets": {
+            "projectData": "Projektdaten",
+            "cultureData": "Kulturdaten",
+            "cultivationPlanning": "Anbauplanung",
+            "fieldData": "Flächendaten",
+            "tasks": "Aufgaben"
+          },
+          "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO"
+        },
+        "emailCommunication": {
+          "title": "E-Mail-Kommunikation",
+          "content": "Wir verwenden Ihre E-Mail-Adresse für:",
+          "bullets": {
+            "registration": "Registrierung",
+            "accountActivation": "Kontoaktivierung",
+            "passwordReset": "Passwort-Reset",
+            "projectInvitations": "Projekt-Einladungen",
+            "systemNotifications": "Systembenachrichtigungen"
+          },
+          "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO"
+        },
+        "logFiles": {
+          "title": "Log-Dateien",
+          "content": "Zur Sicherstellung des Betriebs werden technische Log-Dateien gespeichert. Diese können enthalten:",
+          "bullets": {
+            "ipAddress": "IP-Adresse",
+            "errorMessages": "Fehlermeldungen",
+            "accessData": "Zugriffsdaten",
+            "timestamps": "Zeitstempel"
+          },
+          "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO"
+        },
+        "cookies": {
+          "title": "Cookies",
+          "content": "OpenFarmPlanner verwendet technisch notwendige Cookies, um die Funktionalität der Anwendung sicherzustellen.",
+          "bullets": {
+            "sessionCookies": "Session-Cookies für die Login-Funktion",
+            "securityCookies": "Sicherheits-Cookies (CSRF-Schutz)"
+          },
+          "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO"
+        },
+        "dataSharing": {
+          "title": "Weitergabe von Daten",
+          "content": "Ihre Daten werden nicht an Dritte weitergegeben, außer wenn dies zur Vertragserfüllung notwendig ist oder wenn eine gesetzliche Verpflichtung besteht."
+        },
+        "storageDuration": {
+          "title": "Speicherdauer",
+          "content": "Ihre Daten werden gespeichert, solange Ihr Benutzerkonto besteht. Sie können Ihr Konto jederzeit löschen lassen."
+        },
+        "rights": {
+          "title": "Ihre Rechte",
+          "content": "Sie haben folgende Rechte:",
+          "bullets": {
+            "access": "Auskunft über gespeicherte Daten",
+            "rectification": "Berichtigung unrichtiger Daten",
+            "deletion": "Löschung Ihrer Daten",
+            "restriction": "Einschränkung der Verarbeitung",
+            "portability": "Datenübertragbarkeit",
+            "objection": "Widerspruch gegen Verarbeitung"
+          },
+          "contact": "Kontakt: info@openfarmplanner.org"
+        },
+        "complaint": {
+          "title": "Beschwerderecht",
+          "content": "Sie haben das Recht, sich bei der Datenschutzbehörde zu beschweren:\n\nÖsterreichische Datenschutzbehörde\nBarichgasse 40-42\n1030 Wien\nhttps://www.dsb.gv.at"
+        },
+        "changes": {
+          "title": "Änderungen der Datenschutzerklärung",
+          "content": "Wir behalten uns vor, diese Datenschutzerklärung anzupassen, um sie an neue Funktionen oder rechtliche Anforderungen anzupassen."
+        }
+      }
+    }
+  }
 }

@@ -61,6 +61,25 @@ describe('App', () => {
 
     expect(await screen.findByText('OpenFarmPlanner')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'App öffnen' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Impressum' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Datenschutzerklärung' })).toBeInTheDocument();
+    expect(screen.getByText('Beta')).toBeInTheDocument();
+  });
+
+  it('renders imprint route', async () => {
+    window.history.pushState({}, '', '/impressum');
+
+    render(<CommandProvider><App /></CommandProvider>);
+
+    expect(await screen.findByRole('heading', { name: 'Impressum' })).toBeInTheDocument();
+  });
+
+  it('renders privacy route', async () => {
+    window.history.pushState({}, '', '/datenschutz');
+
+    render(<CommandProvider><App /></CommandProvider>);
+
+    expect(await screen.findByRole('heading', { name: 'Datenschutzerklärung' })).toBeInTheDocument();
   });
 
   it('renders navigation for authenticated users in /app', async () => {
