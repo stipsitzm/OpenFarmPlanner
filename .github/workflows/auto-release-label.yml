@@ -1,0 +1,109 @@
+name: Auto release label
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  assign-release-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure release labels and assign one label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const releaseLabels = ["release:major", "release:minor", "release:patch"];
+            const labelSpecs = [
+              { name: "release:major", color: "B60205", description: "Triggers major version bump" },
+              { name: "release:minor", color: "1D76DB", description: "Triggers minor version bump" },
+              { name: "release:patch", color: "0E8A16", description: "Triggers patch version bump" },
+            ];
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.payload.pull_request.number;
+            const title = context.payload.pull_request.title || "";
+            const body = context.payload.pull_request.body || "";
+            const content = `${title}\n${body}`.toLowerCase();
+
+            for (const spec of labelSpecs) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name: spec.name });
+                core.info(`Label already exists: ${spec.name}`);
+              } catch (error) {
+                if (error.status === 404) {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name: spec.name,
+                    color: spec.color,
+                    description: spec.description,
+                  });
+                  core.info(`Created label: ${spec.name}`);
+                } else {
+                  throw error;
+                }
+              }
+            }
+
+            const currentLabelsResponse = await github.rest.issues.listLabelsOnIssue({
+              owner,
+              repo,
+              issue_number,
+            });
+            const currentLabels = currentLabelsResponse.data.map((label) => label.name);
+            const existingReleaseLabels = currentLabels.filter((label) => releaseLabels.includes(label));
+
+            if (existingReleaseLabels.length > 0) {
+              core.info(`Release label already present (${existingReleaseLabels.join(", ")}). Skipping automatic reassignment.`);
+              return;
+            }
+
+            const containsWord = (word) => new RegExp(`\\b${word}\\b`, "i").test(content);
+            const containsAnyWord = (words) => words.some((word) => containsWord(word));
+
+            let selectedLabel = "release:patch";
+            let reason = "fallback-default";
+
+            if (containsWord("breaking") || /breaking\s+change/i.test(content)) {
+              selectedLabel = "release:major";
+              reason = "major-keyword";
+            } else if (containsAnyWord(["add", "feature", "implement", "new"])) {
+              selectedLabel = "release:minor";
+              reason = "minor-keyword";
+            } else if (containsAnyWord(["fix", "bug", "refactor", "docs", "localize", "translation", "ui"])) {
+              selectedLabel = "release:patch";
+              reason = "patch-keyword";
+            }
+
+            core.info(`Decision: ${selectedLabel} (${reason}) for PR #${issue_number}`);
+
+            // Keep exactly one release label by cleaning the known release labels first.
+            for (const label of releaseLabels) {
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number,
+                  name: label,
+                });
+                core.info(`Removed existing release label: ${label}`);
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+              }
+            }
+
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number,
+              labels: [selectedLabel],
+            });
+            core.info(`Assigned label: ${selectedLabel}`);
