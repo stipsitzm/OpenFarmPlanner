@@ -129,6 +129,28 @@ cd frontend
 npm run test:e2e
 ```
 
+## Version Bumping
+
+Project version is defined in `backend/config/version.py` as a semantic version (`MAJOR.MINOR.PATCH`).
+
+Use the provided script via Make:
+
+```bash
+make bump-version TYPE=fix
+```
+
+Supported change types:
+
+- `TYPE=feat` → bumps **minor** (`x.Y.z`) and resets patch to `0`
+- `TYPE=fix` → bumps **patch** (`x.y.Z`)
+- `TYPE=breaking` → bumps **major** (`X.y.z`) and resets minor/patch to `0`
+
+The update is validated and applied safely:
+
+- exactly one `VERSION = "..."` definition must exist,
+- version format must be valid semver,
+- file writes are done via atomic replace.
+
 ## Documentation Map
 
 - `backend/README.md` – backend-specific development details
