@@ -24,7 +24,7 @@ def forward_migrate_seed_units(apps, schema_editor):
     Culture = apps.get_model('farm', 'Culture')
     PublicCulture = apps.get_model('farm', 'PublicCulture')
 
-    for culture in Culture.all_objects.all().iterator():
+    for culture in Culture._base_manager.all().iterator():
         changed = False
         normalized_unit = _normalize_seed_rate_unit(culture.seed_rate_unit)
         if normalized_unit != culture.seed_rate_unit:
@@ -79,7 +79,7 @@ def backward_migrate_seed_units(apps, schema_editor):
         'seeds_per_lfm': 'seeds/m',
     }
 
-    for culture in Culture.all_objects.all().iterator():
+    for culture in Culture._base_manager.all().iterator():
         changed = False
         if culture.seed_rate_unit in reverse_map:
             culture.seed_rate_unit = reverse_map[culture.seed_rate_unit]
