@@ -69,8 +69,11 @@ def get_active_project_or_400(request: Request) -> Project:
     return membership.project
 
 
-def require_project_admin(user, project_id: int) -> None:
-    """Raise permission denied when user is not admin in project."""
+def require_project_admin(user, project_id: int, request: Request | None = None) -> None:
+    """Raise permission denied when user lacks project admin permissions."""
+    if request is not None and bool(request.session.get('agent_mode')):
+        raise exceptions.PermissionDenied('Agent sessions are restricted to member permissions.')
+
     is_admin = ProjectMembership.objects.filter(
         user=user,
         project_id=project_id,

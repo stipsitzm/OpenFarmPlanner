@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from farm.models import AgentLoginToken, Location, Project
+from farm.models import AgentLoginToken, Location, Project, ProjectMembership
 
 
 User = get_user_model()
@@ -125,3 +125,41 @@ class AgentLoginTests(TestCase):
         self.assertEqual(second_api_response.status_code, 200)
         self.assertEqual(first_api_response.data['count'], 1)
         self.assertEqual(second_api_response.data['count'], 1)
+
+    def test_agent_session_reports_member_role_in_projects_bootstrap(self) -> None:
+        ProjectMembership.objects.create(
+            user=self.superuser,
+            project=self.project,
+            role=ProjectMembership.ROLE_ADMIN,
+        )
+
+        _, raw_token = AgentLoginToken.create_token(
+            created_by=self.superuser,
+            project=self.project,
+        )
+        consume_response = self.client.get(f'/openfarmplanner/agent-login/{raw_token}/')
+        self.assertEqual(consume_response.status_code, 302)
+
+        response = self.client.get('/openfarmplanner/api/projects-bootstrap/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['project']['id'], self.project.id)
+        self.assertEqual(response.data[0]['role'], ProjectMembership.ROLE_MEMBER)
+
+    def test_agent_session_cannot_use_project_admin_endpoints(self) -> None:
+        ProjectMembership.objects.create(
+            user=self.superuser,
+            project=self.project,
+            role=ProjectMembership.ROLE_ADMIN,
+        )
+
+        _, raw_token = AgentLoginToken.create_token(
+            created_by=self.superuser,
+            project=self.project,
+        )
+        consume_response = self.client.get(f'/openfarmplanner/agent-login/{raw_token}/')
+        self.assertEqual(consume_response.status_code, 302)
+
+        response = self.client.get(f'/openfarmplanner/api/projects/{self.project.id}/invitations/')
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('member permissions', response.data.get('detail', '').lower())
