@@ -260,8 +260,8 @@ export function CultureForm({
           {isDirty && (
             <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
               {isValid
-                ? t('messages.unsavedChanges', { defaultValue: 'Unsaved changes' })
-                : t('messages.fixErrors', { defaultValue: 'Please fix validation errors' })}
+                ? t('messages.unsavedChanges', { defaultValue: 'Ungespeicherte Änderungen' })
+                : t('messages.fixErrors', { defaultValue: 'Bitte beheben Sie die Validierungsfehler' })}
             </Typography>
           )}
           <Button onClick={onCancel} disabled={isSaving}>
@@ -273,7 +273,7 @@ export function CultureForm({
             disabled={isSaving || !isValid}
           >
             {isSaving
-              ? t('messages.saving', { defaultValue: 'Saving...' })
+              ? t('messages.saving', { defaultValue: 'Speichern...' })
               : isEdit ? t('form.save') : t('form.create')}
           </Button>
         </DialogActions>
@@ -285,7 +285,7 @@ export function CultureForm({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert severity="success" onClose={() => setShowSaveSuccess(false)}>
-          {t('messages.updateSuccess', { defaultValue: 'Saved successfully' })}
+          {t('messages.updateSuccess', { defaultValue: 'Erfolgreich gespeichert' })}
         </Alert>
       </Snackbar>
       <Snackbar

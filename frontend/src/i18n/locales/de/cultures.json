@@ -98,6 +98,7 @@
     "thousandKernelWeightHelp": "Gewicht von 1000 Körnern in Gramm.",
     "thousandKernelWeightError": "Tausendkorngewicht muss ≥ 0 sein",
     "packageSizeLabel": "Packungsgröße (g)",
+    "addSeedPackage": "Packung hinzufügen",
     "packageSizeHelp": "Packungsgröße in Gramm.",
     "packageSizeError": "Packungsgröße muss ≥ 0 sein",
     "sowingCalculationSafetyPercentLabel": "Sicherheitszuschlag für Saatgut (%)",

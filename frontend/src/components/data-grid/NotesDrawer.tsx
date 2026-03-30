@@ -26,6 +26,7 @@ import remarkGfm from 'remark-gfm';
 import { MarkdownToolbar, type MarkdownFormat } from './MarkdownToolbar';
 import { noteAttachmentAPI } from '../../api/api';
 import type { NoteAttachment } from '../../api/types';
+import { useTranslation } from '../../i18n';
 
 export interface NotesDrawerProps {
   open: boolean;
@@ -84,6 +85,7 @@ async function renderProcessedFile(file: File, cropRect?: CropRect): Promise<Fil
 }
 
 export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loading = false, noteId, focusAttachments = false, focusRequestId = 0 }: NotesDrawerProps): React.ReactElement {
+  const { t } = useTranslation('common');
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [attachments, setAttachments] = useState<NoteAttachment[]>([]);
   const [uploading, setUploading] = useState<boolean>(false);
@@ -283,8 +285,8 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
           : undefined;
       const backendDetail = response?.data?.detail;
       const message = response?.status === 503
-        ? (backendDetail ?? 'Image processing backend is unavailable on the server. Please install Pillow and restart backend.')
-        : (backendDetail ?? 'Upload failed. Please try again.');
+        ? (backendDetail ?? t('notesDrawer.backendUnavailable'))
+        : (backendDetail ?? t('notesDrawer.uploadFailed'));
       setUploadError(message);
       console.error('Error uploading note attachment:', error);
     } finally {
@@ -332,15 +334,15 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
               if (file) openCropDialog(file);
             }} />
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
-              <Button variant="outlined" onClick={() => cameraInputRef.current?.click()}>Foto aufnehmen</Button>
-              <Button variant="outlined" onClick={() => galleryInputRef.current?.click()}>Aus Galerie wählen</Button>
-              {uploading && <Typography variant="body2">Uploading...</Typography>}
+              <Button variant="outlined" onClick={() => cameraInputRef.current?.click()}>{t('notesDrawer.takePhoto')}</Button>
+              <Button variant="outlined" onClick={() => galleryInputRef.current?.click()}>{t('notesDrawer.selectFromGallery')}</Button>
+              {uploading && <Typography variant="body2">{t('notesDrawer.uploading')}</Typography>}
             </Stack>
             {uploading && <LinearProgress variant="determinate" value={uploadProgress} />}
             <ImageList cols={4} rowHeight={84}>
               {attachments.map((attachment) => (
                 <ImageListItem key={attachment.id}>
-                  <img src={attachment.image_url ?? attachment.image} alt={attachment.caption || 'Attachment'} loading="lazy" style={{ cursor: 'pointer' }} onClick={() => setSelectedImage(attachment.image_url ?? attachment.image)} />
+                  <img src={attachment.image_url ?? attachment.image} alt={attachment.caption || t('notesDrawer.attachmentAlt')} loading="lazy" style={{ cursor: 'pointer' }} onClick={() => setSelectedImage(attachment.image_url ?? attachment.image)} />
                   <IconButton size="small" sx={{ position: 'absolute', right: 2, top: 2, bgcolor: 'rgba(0,0,0,0.4)', color: 'white' }} onClick={async () => {
                     await noteAttachmentAPI.delete(attachment.id);
                     await loadAttachments();
@@ -357,7 +359,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
           {activeTab === 'edit' ? (
             <>
               <MarkdownToolbar onFormat={handleFormat} />
-              <TextField fullWidth multiline minRows={10} maxRows={25} value={value} onChange={(e) => onChange(e.target.value)} placeholder="Notizen in Markdown..." variant="outlined" autoFocus inputRef={textFieldRef} />
+              <TextField fullWidth multiline minRows={10} maxRows={25} value={value} onChange={(e) => onChange(e.target.value)} placeholder={t('notesDrawer.markdownPlaceholder')} variant="outlined" autoFocus inputRef={textFieldRef} />
             </>
           ) : (
             <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1, minHeight: '300px' }}>
@@ -373,15 +375,15 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
       </Box>
 
       <Dialog open={Boolean(selectedImage)} onClose={() => setSelectedImage(null)} maxWidth="lg" fullWidth>
-        <DialogTitle>Foto</DialogTitle>
-        <DialogContent sx={{ display: 'flex', justifyContent: 'center', backgroundColor: '#111' }}>{selectedImage && <img src={selectedImage} style={{ width: '100%', maxHeight: '80vh', objectFit: 'contain' }} alt="Attachment preview" />}</DialogContent>
-        <DialogActions><Button onClick={() => setSelectedImage(null)}>Close</Button></DialogActions>
+        <DialogTitle>{t('notesDrawer.imageDialogTitle')}</DialogTitle>
+        <DialogContent sx={{ display: 'flex', justifyContent: 'center', backgroundColor: '#111' }}>{selectedImage && <img src={selectedImage} style={{ width: '100%', maxHeight: '80vh', objectFit: 'contain' }} alt={t('notesDrawer.attachmentPreviewAlt')} />}</DialogContent>
+        <DialogActions><Button onClick={() => setSelectedImage(null)}>{t('actions.close')}</Button></DialogActions>
       </Dialog>
 
       <Dialog open={Boolean(pendingFile)} onClose={clearPendingSelection} maxWidth="md" fullWidth>
-        <DialogTitle>Crop</DialogTitle>
+        <DialogTitle>{t('notesDrawer.cropDialogTitle')}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" sx={{ mb: 1 }}>Draw, move and resize the crop rectangle. The outside area is dimmed.</Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>{t('notesDrawer.cropInstructions')}</Typography>
           {uploadError && <Alert severity="error" sx={{ mb: 1 }}>{uploadError}</Alert>}
           <Box
             data-testid="crop-stage"
@@ -395,7 +397,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
               <img
                 ref={cropImageRef}
                 src={pendingPreviewUrl}
-                alt="Crop source"
+                alt={t('notesDrawer.cropSourceAlt')}
                 style={{ width: '100%', display: 'block' }}
                 onLoad={(event) => {
                   const img = event.currentTarget;
@@ -431,9 +433,9 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={clearPendingSelection}>Cancel</Button>
-          <Button onClick={resetCrop}>Reset</Button>
-          <Button onClick={() => void handleUpload()} disabled={uploading || !pendingFile} variant="contained">Save</Button>
+          <Button onClick={clearPendingSelection}>{t('actions.cancel')}</Button>
+          <Button onClick={resetCrop}>{t('actions.reset')}</Button>
+          <Button onClick={() => void handleUpload()} disabled={uploading || !pendingFile} variant="contained">{t('actions.save')}</Button>
         </DialogActions>
       </Dialog>
     </Drawer>

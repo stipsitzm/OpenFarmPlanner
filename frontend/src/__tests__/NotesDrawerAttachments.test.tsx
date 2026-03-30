@@ -40,7 +40,7 @@ describe('NotesDrawer attachments', () => {
     const file = new File(['x'], 'crop.jpg', { type: 'image/jpeg' });
     fireEvent.change(galleryInput, { target: { files: [file] } });
 
-    const image = screen.getByAltText('Crop source');
+    const image = screen.getByAltText('Zuschneidequelle');
     Object.defineProperty(image, 'naturalWidth', { value: 2000, configurable: true });
     Object.defineProperty(image, 'naturalHeight', { value: 1200, configurable: true });
     fireEvent.load(image);
