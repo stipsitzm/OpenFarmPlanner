@@ -196,7 +196,7 @@ class ProjectInvitation(models.Model):
 
 
 class AgentLoginToken(models.Model):
-    """Single-use project-bound login token for superuser-only agent sessions."""
+    """Reusable project-bound login token for superuser-only agent sessions."""
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -242,9 +242,7 @@ class AgentLoginToken(models.Model):
 
     @property
     def is_usable(self) -> bool:
-        """Return True when token has not been used and has not expired."""
-        if self.used_at is not None:
-            return False
+        """Return True when token has not expired."""
         if self.expires_at is None:
             return True
         return timezone.now() < self.expires_at

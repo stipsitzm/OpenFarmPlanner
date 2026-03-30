@@ -162,7 +162,7 @@ class VersionView(APIView):
 
 
 def agent_login_consume_view(request, token: str):  # noqa: ANN001
-    """Consume an agent login token, establish session, and redirect to frontend."""
+    """Use an agent login token, establish session, and redirect to frontend."""
     if not getattr(settings, 'AGENT_LOGIN_ENABLED', False):
         return HttpResponseForbidden('Agent login is disabled.')
 
@@ -170,8 +170,6 @@ def agent_login_consume_view(request, token: str):  # noqa: ANN001
     link = AgentLoginToken.objects.select_related('created_by', 'project').filter(token_hash=token_hash).first()
     if link is None:
         return HttpResponseBadRequest('Invalid token.')
-    if link.used_at is not None:
-        return HttpResponseBadRequest('Token already used.')
     if link.expires_at is not None and timezone.now() >= link.expires_at:
         return HttpResponseBadRequest('Token expired.')
     if not link.created_by.is_active or not link.created_by.is_superuser:

@@ -70,7 +70,7 @@ class AgentLoginTests(TestCase):
         response = self.client.get(f'/openfarmplanner/agent-login/{raw_token}/')
         self.assertEqual(response.status_code, 302)
 
-    def test_used_token_is_rejected(self) -> None:
+    def test_previously_used_token_remains_accepted(self) -> None:
         token_obj, raw_token = AgentLoginToken.create_token(
             created_by=self.superuser,
             project=self.project,
@@ -80,8 +80,8 @@ class AgentLoginTests(TestCase):
 
         response = self.client.get(f'/openfarmplanner/agent-login/{raw_token}/')
 
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('Token already used.', response.content.decode())
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, 'https://app.example.test/openfarmplanner/app/cultures')
 
     def test_non_superuser_cannot_create_token(self) -> None:
         with self.assertRaises(PermissionError):
@@ -125,6 +125,20 @@ class AgentLoginTests(TestCase):
         self.assertEqual(second_api_response.status_code, 200)
         self.assertEqual(first_api_response.data['count'], 1)
         self.assertEqual(second_api_response.data['count'], 1)
+
+    def test_same_token_can_be_used_multiple_times(self) -> None:
+        _, raw_token = AgentLoginToken.create_token(
+            created_by=self.superuser,
+            project=self.project,
+        )
+
+        first_response = self.client.get(f'/openfarmplanner/agent-login/{raw_token}/')
+        second_response = self.client.get(f'/openfarmplanner/agent-login/{raw_token}/')
+
+        self.assertEqual(first_response.status_code, 302)
+        self.assertEqual(second_response.status_code, 302)
+        self.assertEqual(first_response.url, 'https://app.example.test/openfarmplanner/app/cultures')
+        self.assertEqual(second_response.url, 'https://app.example.test/openfarmplanner/app/cultures')
 
     def test_agent_session_reports_member_role_in_projects_bootstrap(self) -> None:
         ProjectMembership.objects.create(

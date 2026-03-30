@@ -240,7 +240,7 @@ class NoteAttachmentAdmin(admin.ModelAdmin):
 
 @admin.register(AgentLoginToken)
 class AgentLoginTokenAdmin(admin.ModelAdmin):
-    """Admin interface for generating one-time project-bound agent login links."""
+    """Admin interface for generating reusable project-bound agent login links."""
 
     list_display = ['id', 'project', 'created_by', 'expires_at', 'used_at', 'created_at']
     list_filter = ['project', 'created_by', 'used_at']
@@ -297,7 +297,7 @@ class AgentLoginTokenAdmin(admin.ModelAdmin):
             self.message_user(
                 request,
                 format_html(
-                    'Agent login link (single-use): <code>{}</code><br>'
+                    'Agent login link (reusable until expiry): <code>{}</code><br>'
                     'Plain token: <code>{}</code><br>'
                     '<strong>This is the only time the plain token is shown.</strong> '
                     'Later only the hash is stored, and the hash cannot be used for login.',
