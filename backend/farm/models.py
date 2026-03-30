@@ -16,6 +16,16 @@ from django.db.models import Q, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
+from .seed_units import (
+    SEED_PACKAGE_UNIT_GRAMS,
+    SEED_PACKAGE_UNIT_SEEDS,
+    SEED_RATE_UNIT_G_PER_LFM,
+    SEED_RATE_UNIT_G_PER_M2,
+    SEED_RATE_UNIT_SEEDS_PER_LFM,
+    SEED_RATE_UNIT_SEEDS_PER_M2,
+    SEED_RATE_UNIT_SEEDS_PER_PLANT,
+)
+
 
 def note_attachment_upload_path(instance: 'NoteAttachment', filename: str) -> str:
     """Build a deterministic storage path for note attachments."""
@@ -573,8 +583,19 @@ class Culture(TimestampedModel):
         ('direct_sowing', 'Direct Sowing'),  # Direktsaat
     ]
     CULTIVATION_TYPE_VALUES = {item[0] for item in CULTIVATION_TYPE_CHOICES}
-    DIRECT_SOWING_SEED_RATE_UNITS = {'g_per_m2', 'g_per_lfm', 'seeds/m'}
-    PRE_CULTIVATION_AUTO_SEED_RATE_UNITS = {'g_per_m2', 'g_per_lfm', 'seeds/m'}
+    DIRECT_SOWING_SEED_RATE_UNITS = {
+        SEED_RATE_UNIT_G_PER_M2,
+        SEED_RATE_UNIT_G_PER_LFM,
+        SEED_RATE_UNIT_SEEDS_PER_M2,
+        SEED_RATE_UNIT_SEEDS_PER_LFM,
+    }
+    PRE_CULTIVATION_AUTO_SEED_RATE_UNITS = {
+        SEED_RATE_UNIT_G_PER_M2,
+        SEED_RATE_UNIT_G_PER_LFM,
+        SEED_RATE_UNIT_SEEDS_PER_M2,
+        SEED_RATE_UNIT_SEEDS_PER_LFM,
+        SEED_RATE_UNIT_SEEDS_PER_PLANT,
+    }
     
     HARVEST_METHOD_CHOICES = [
         ('per_plant', 'Per Plant'),
@@ -805,9 +826,9 @@ class Culture(TimestampedModel):
                     if not isinstance(value, (int, float)) or float(value) <= 0:
                         errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation values must be positive numbers.'
                     if method == 'pre_cultivation' and unit not in self.PRE_CULTIVATION_AUTO_SEED_RATE_UNITS:
-                        errors['seed_rate_by_cultivation'] = 'Pre-cultivation unit must be g_per_m2, g_per_lfm, or seeds/m.'
+                        errors['seed_rate_by_cultivation'] = 'Pre-cultivation unit is unsupported.'
                     if method == 'direct_sowing' and unit not in self.DIRECT_SOWING_SEED_RATE_UNITS:
-                        errors['seed_rate_by_cultivation'] = 'Direct-sowing unit must be g_per_m2, g_per_lfm, or seeds/m.'
+                        errors['seed_rate_by_cultivation'] = 'Direct-sowing unit is unsupported.'
 
         if self.distance_within_row_m is not None and self.distance_within_row_m < 0:
             errors['distance_within_row_m'] = 'Distance within row must be non-negative.'
@@ -818,8 +839,14 @@ class Culture(TimestampedModel):
         if self.sowing_depth_m is not None and self.sowing_depth_m < 0:
             errors['sowing_depth_m'] = 'Sowing depth must be non-negative.'
 
-        if self.thousand_kernel_weight_g is not None and self.thousand_kernel_weight_g < 0:
-            errors['thousand_kernel_weight_g'] = 'Thousand kernel weight must be non-negative.'
+        if self.seed_rate_value is not None and self.seed_rate_value <= 0:
+            errors['seed_rate_value'] = 'Seed rate value must be greater than zero.'
+
+        if self.seed_rate_unit and self.seed_rate_unit not in self.PRE_CULTIVATION_AUTO_SEED_RATE_UNITS:
+            errors['seed_rate_unit'] = 'Seed rate unit is unsupported.'
+
+        if self.thousand_kernel_weight_g is not None and self.thousand_kernel_weight_g <= 0:
+            errors['thousand_kernel_weight_g'] = 'Thousand kernel weight must be greater than zero.'
 
         
         # Validate hex color format if provided.
@@ -1097,9 +1124,11 @@ class ProjectRevision(models.Model):
 class SeedPackage(TimestampedModel):
     """Sold package option for a culture."""
 
-    UNIT_GRAMS = 'g'
+    UNIT_GRAMS = SEED_PACKAGE_UNIT_GRAMS
+    UNIT_SEEDS = SEED_PACKAGE_UNIT_SEEDS
     UNIT_CHOICES = [
         (UNIT_GRAMS, 'Grams'),
+        (UNIT_SEEDS, 'Seeds'),
     ]
 
     culture = models.ForeignKey('Culture', on_delete=models.CASCADE, related_name='seed_packages')
@@ -1122,8 +1151,8 @@ class SeedPackage(TimestampedModel):
         super().clean()
         if self.size_value is not None and self.size_value <= 0:
             raise ValidationError({'size_value': 'Package size must be greater than zero.'})
-        if self.size_unit != self.UNIT_GRAMS:
-            raise ValidationError({'size_unit': 'Only grams (g) are supported for package size.'})
+        if self.size_unit not in {self.UNIT_GRAMS, self.UNIT_SEEDS}:
+            raise ValidationError({'size_unit': 'Unsupported package size unit.'})
 
     def __str__(self) -> str:
         return f"{self.culture.name} {self.size_value} {self.size_unit}"

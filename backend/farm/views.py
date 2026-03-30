@@ -79,6 +79,15 @@ from .image_processing import (
 )
 from .services.enrichment import enrich_culture, EnrichmentError
 from .services.seed_packages import PackageOption, compute_seed_package_suggestion
+from .seed_units import (
+    SEED_PACKAGE_UNIT_GRAMS,
+    SEED_PACKAGE_UNIT_SEEDS,
+    SEED_RATE_UNIT_G_PER_LFM,
+    SEED_RATE_UNIT_G_PER_M2,
+    SEED_RATE_UNIT_SEEDS_PER_LFM,
+    SEED_RATE_UNIT_SEEDS_PER_M2,
+    SEED_RATE_UNIT_SEEDS_PER_PLANT,
+)
 from .services.public_cultures import (
     DuplicatePublicCultureError,
     import_public_culture_into_project,
@@ -1817,161 +1826,194 @@ class NoteAttachmentDeleteView(APIView):
 
 
 class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
-    """Read-only endpoint returning gram-based seed demand aggregated by culture."""
+    """Read-only endpoint returning typed seed demand aggregated by culture."""
 
     serializer_class = SeedDemandSerializer
 
-    def get_queryset(self):
-        total_area_expr = Coalesce(Sum('area_usage_sqm'), Value(0.0), output_field=FloatField())
-        total_quantity_expr = Coalesce(Sum('quantity'), Value(0.0), output_field=FloatField())
+    @staticmethod
+    def _select_seed_rate(culture: Culture, cultivation_type: str | None) -> tuple[Decimal | None, str | None]:
+        if cultivation_type and isinstance(culture.seed_rate_by_cultivation, dict):
+            payload = culture.seed_rate_by_cultivation.get(cultivation_type)
+            if isinstance(payload, dict):
+                value = payload.get('value')
+                unit = payload.get('unit')
+                if isinstance(value, (int, float, str)) and unit:
+                    return Decimal(str(value)), str(unit)
+        if culture.seed_rate_value is None or not culture.seed_rate_unit:
+            return None, None
+        return Decimal(str(culture.seed_rate_value)), culture.seed_rate_unit
 
-        return (
-            PlantingPlan.objects
-            .filter(project=self.request.active_project)
-            .values(
-                'culture_id',
-                culture_name=F('culture__name'),
-                variety=F('culture__variety'),
-                supplier=Coalesce(
-                    F('culture__supplier__name'),
-                    F('culture__seed_supplier'),
-                    Value('', output_field=CharField()),
-                ),
-                seed_rate_value=F('culture__seed_rate_value'),
-                seed_rate_unit=F('culture__seed_rate_unit'),
-                thousand_kernel_weight_g=F('culture__thousand_kernel_weight_g'),
-                safety_margin_percent=Coalesce(F('culture__sowing_calculation_safety_percent'), Value(0.0), output_field=FloatField()),
-                row_spacing_m=F('culture__row_spacing_m'),
-            )
-            .annotate(
-                total_area_sqm=total_area_expr,
-                total_quantity=total_quantity_expr,
-            )
-            .annotate(
-                base_grams=Case(
-                    When(
-                        Q(seed_rate_unit='g_per_m2') & Q(seed_rate_value__isnull=False) & Q(total_area_sqm__gt=0),
-                        then=ExpressionWrapper(F('total_area_sqm') * F('seed_rate_value'), output_field=FloatField()),
-                    ),
-                    When(
-                        Q(seed_rate_unit='seeds/m')
-                        & Q(seed_rate_value__isnull=False)
-                        & Q(thousand_kernel_weight_g__isnull=False)
-                        & Q(row_spacing_m__gt=0)
-                        & Q(total_area_sqm__gt=0),
-                        then=ExpressionWrapper(
-                            (F('total_area_sqm') / F('row_spacing_m'))
-                            * F('seed_rate_value')
-                            * (F('thousand_kernel_weight_g') / Value(1000.0)),
-                            output_field=FloatField(),
-                        ),
-                    ),
-                    When(
-                        Q(seed_rate_unit='g_per_lfm')
-                        & Q(seed_rate_value__isnull=False)
-                        & Q(row_spacing_m__gt=0)
-                        & Q(total_area_sqm__gt=0),
-                        then=ExpressionWrapper(
-                            (F('total_area_sqm') / F('row_spacing_m'))
-                            * F('seed_rate_value'),
-                            output_field=FloatField(),
-                        ),
-                    ),
-                    When(
-                        Q(seed_rate_unit__in=['seeds_per_plant', 'pcs_per_plant'])
-                        & Q(seed_rate_value__isnull=False)
-                        & Q(thousand_kernel_weight_g__isnull=False)
-                        & Q(total_quantity__gt=0),
-                        then=ExpressionWrapper(
-                            F('total_quantity')
-                            * F('seed_rate_value')
-                            * (F('thousand_kernel_weight_g') / Value(1000.0)),
-                            output_field=FloatField(),
-                        ),
-                    ),
-                    default=Value(None, output_field=FloatField()),
-                ),
-            )
-            .annotate(
-                total_grams=Case(
-                    When(
-                        base_grams__isnull=False,
-                        then=ExpressionWrapper(
-                            F('base_grams') * (Value(1.0) + (F('safety_margin_percent') / Value(100.0))),
-                            output_field=FloatField(),
-                        ),
-                    ),
-                    default=Value(None, output_field=FloatField()),
-                ),
-                warning=Case(
-                    When(Q(seed_rate_unit__isnull=True) | Q(seed_rate_unit=''), then=Value('Missing seed rate unit.')),
-                    When(seed_rate_value__isnull=True, then=Value('Missing seed rate value.')),
-                    When(Q(seed_rate_unit='g_per_m2') & Q(total_area_sqm__lte=0), then=Value('Missing area usage for gram conversion.')),
-                    When(Q(seed_rate_unit='seeds/m') & Q(thousand_kernel_weight_g__isnull=True), then=Value('Missing thousand-kernel weight for conversion to grams.')),
-                    When(Q(seed_rate_unit='seeds/m') & (Q(row_spacing_m__isnull=True) | Q(row_spacing_m__lte=0)), then=Value('Missing row spacing for conversion from seeds/m to grams.')),
-                    When(Q(seed_rate_unit='seeds/m') & Q(total_area_sqm__lte=0), then=Value('Missing area usage for conversion from seeds/m to grams.')),
-                    When(Q(seed_rate_unit='g_per_lfm') & (Q(row_spacing_m__isnull=True) | Q(row_spacing_m__lte=0)), then=Value('Missing row spacing for conversion from g/lfm to grams.')),
-                    When(Q(seed_rate_unit='g_per_lfm') & Q(total_area_sqm__lte=0), then=Value('Missing area usage for conversion from g/lfm to grams.')),
-                    When(Q(seed_rate_unit__in=['seeds_per_plant', 'pcs_per_plant']) & Q(thousand_kernel_weight_g__isnull=True), then=Value('Missing thousand-kernel weight for conversion to grams.')),
-                    When(Q(seed_rate_unit__in=['seeds_per_plant', 'pcs_per_plant']) & Q(total_quantity__lte=0), then=Value('Missing plant quantity for conversion from seeds per plant to grams.')),
-                    default=Value(None, output_field=CharField()),
-                ),
-            )
-            .order_by('culture_name', 'variety')
-        )
+    @staticmethod
+    def _convert_requirement_to_unit(*, requirement_value: Decimal, requirement_unit: str, target_unit: str, tkg: Decimal | None) -> tuple[Decimal | None, str | None]:
+        if requirement_unit == target_unit:
+            return requirement_value, None
+        if not tkg or tkg <= 0:
+            return None, 'Missing thousand-kernel weight for unit conversion.'
+        if requirement_unit == SEED_PACKAGE_UNIT_SEEDS and target_unit == SEED_PACKAGE_UNIT_GRAMS:
+            return (requirement_value * tkg) / Decimal('1000'), None
+        if requirement_unit == SEED_PACKAGE_UNIT_GRAMS and target_unit == SEED_PACKAGE_UNIT_SEEDS:
+            return (requirement_value / tkg) * Decimal('1000'), None
+        return None, 'Cannot convert between required amount and package unit.'
+
+    def _compute_plan_requirement(self, plan: PlantingPlan) -> tuple[Decimal | None, str | None]:
+        value, unit = self._select_seed_rate(plan.culture, plan.cultivation_type)
+        if value is None or not unit or value <= 0:
+            return None, 'Missing seed rate value or unit.'
+
+        area = Decimal(str(plan.area_usage_sqm or 0))
+        quantity = Decimal(str(plan.quantity or 0))
+        row_spacing = Decimal(str(plan.culture.row_spacing_m or 0))
+
+        if unit in {SEED_RATE_UNIT_G_PER_M2, SEED_RATE_UNIT_SEEDS_PER_M2}:
+            if area <= 0:
+                return None, 'Missing area usage for m²-based seed requirement.'
+            amount_unit = SEED_PACKAGE_UNIT_GRAMS if unit == SEED_RATE_UNIT_G_PER_M2 else SEED_PACKAGE_UNIT_SEEDS
+            return area * value, amount_unit
+
+        if unit in {SEED_RATE_UNIT_G_PER_LFM, SEED_RATE_UNIT_SEEDS_PER_LFM}:
+            if row_spacing <= 0:
+                return None, 'Missing row spacing for lfm-based seed requirement.'
+            if area <= 0:
+                return None, 'Missing area usage for lfm-based seed requirement.'
+            lfm = area / row_spacing
+            amount_unit = SEED_PACKAGE_UNIT_GRAMS if unit == SEED_RATE_UNIT_G_PER_LFM else SEED_PACKAGE_UNIT_SEEDS
+            return lfm * value, amount_unit
+
+        if unit == SEED_RATE_UNIT_SEEDS_PER_PLANT:
+            if quantity <= 0:
+                return None, 'Missing plant quantity for seeds-per-plant requirement.'
+            return quantity * value, 'seeds'
+
+        return None, 'Unsupported seed rate unit.'
 
     def list(self, request, *args, **kwargs):
-        rows = list(self.get_queryset())
-        culture_ids = [row['culture_id'] for row in rows]
+        plans = (
+            PlantingPlan.objects
+            .filter(project=request.active_project)
+            .select_related('culture', 'culture__supplier')
+            .order_by('culture__name', 'culture__variety')
+        )
+        grouped: dict[int, dict] = {}
+        for plan in plans:
+            culture = plan.culture
+            entry = grouped.setdefault(
+                culture.id,
+                {
+                    'culture_id': culture.id,
+                    'culture_name': culture.name,
+                    'variety': culture.variety,
+                    'supplier': culture.supplier.name if culture.supplier else (culture.seed_supplier or ''),
+                    'required_amount_value': Decimal('0'),
+                    'required_amount_unit': None,
+                    'warning': None,
+                    'safety_margin_percent': Decimal(str(culture.sowing_calculation_safety_percent or 0)),
+                    'tkg': Decimal(str(culture.thousand_kernel_weight_g)) if culture.thousand_kernel_weight_g else None,
+                },
+            )
+            if entry['warning']:
+                continue
+            requirement_value, requirement_unit = self._compute_plan_requirement(plan)
+            if requirement_value is None or not requirement_unit:
+                entry['warning'] = requirement_unit or 'Seed requirement could not be calculated.'
+                continue
+            if entry['required_amount_unit'] is None:
+                entry['required_amount_unit'] = requirement_unit
+            elif entry['required_amount_unit'] != requirement_unit:
+                converted, conversion_warning = self._convert_requirement_to_unit(
+                    requirement_value=requirement_value,
+                    requirement_unit=requirement_unit,
+                    target_unit=entry['required_amount_unit'],
+                    tkg=entry['tkg'],
+                )
+                if converted is None:
+                    entry['warning'] = conversion_warning or 'Cannot aggregate mixed seed requirement units.'
+                    continue
+                requirement_value = converted
+            entry['required_amount_value'] += requirement_value
+
+        culture_ids = list(grouped.keys())
         package_map: dict[int, list[SeedPackage]] = defaultdict(list)
-        for package in SeedPackage.objects.filter(
-            culture_id__in=culture_ids,
-        ).filter(
+        for package in SeedPackage.objects.filter(culture_id__in=culture_ids).filter(
             Q(project=request.active_project) | Q(project__isnull=True),
         ).order_by('size_unit', 'size_value'):
             package_map[package.culture_id].append(package)
 
-        for row in rows:
-            total_grams = row.get('total_grams')
-            packages = package_map.get(row['culture_id'], [])
-            row['seed_packages'] = [
-                {
-                    'size_value': float(pkg.size_value),
-                    'size_unit': pkg.size_unit,
-                }
-                for pkg in packages
-            ]
+        rows: list[dict] = []
+        for culture_id, entry in grouped.items():
+            safety_factor = Decimal('1') + (entry['safety_margin_percent'] / Decimal('100'))
+            required_amount = entry['required_amount_value'] * safety_factor
+            required_unit = entry['required_amount_unit']
+            warning = entry['warning']
+            packages = package_map.get(culture_id, [])
+            row = {
+                'culture_id': entry['culture_id'],
+                'culture_name': entry['culture_name'],
+                'variety': entry['variety'],
+                'supplier': entry['supplier'],
+                'required_amount_value': float(required_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)) if required_unit else None,
+                'required_amount_unit': required_unit,
+                'total_grams': None,
+                'seed_packages': [
+                    {
+                        'size_value': float(pkg.size_value),
+                        'size_unit': pkg.size_unit,
+                    }
+                    for pkg in packages
+                ],
+                'package_suggestion': None,
+                'packages_needed': None,
+                'warning': warning,
+            }
+            if required_unit == SEED_PACKAGE_UNIT_GRAMS:
+                row['total_grams'] = row['required_amount_value']
 
-            if total_grams is None:
-                row['package_suggestion'] = None
-                row['packages_needed'] = None
+            if warning or required_unit is None:
+                rows.append(row)
                 continue
+
+            same_unit_packages = [pkg for pkg in packages if pkg.size_unit == required_unit]
+            target_unit = required_unit
+            target_amount = required_amount
+            if not same_unit_packages and packages:
+                preferred_unit = packages[0].size_unit
+                converted, conversion_warning = self._convert_requirement_to_unit(
+                    requirement_value=required_amount,
+                    requirement_unit=required_unit,
+                    target_unit=preferred_unit,
+                    tkg=entry['tkg'],
+                )
+                if converted is None:
+                    row['warning'] = conversion_warning or 'Cannot convert required amount to package units.'
+                    rows.append(row)
+                    continue
+                target_amount = converted
+                target_unit = preferred_unit
+                same_unit_packages = [pkg for pkg in packages if pkg.size_unit == target_unit]
 
             suggestion = compute_seed_package_suggestion(
-                required_amount=Decimal(str(total_grams)),
-                packages=[PackageOption(size_value=pkg.size_value, size_unit=pkg.size_unit) for pkg in packages],
-                unit='g',
+                required_amount=target_amount,
+                packages=[PackageOption(size_value=pkg.size_value, size_unit=pkg.size_unit) for pkg in same_unit_packages],
+                unit=target_unit,
             )
-            if suggestion.pack_count == 0:
-                row['package_suggestion'] = None
-                row['packages_needed'] = None
-                continue
+            if suggestion.pack_count > 0:
+                row['package_suggestion'] = {
+                    'selection': [
+                        {
+                            'size_value': float(item.size_value),
+                            'size_unit': item.size_unit,
+                            'count': item.count,
+                        }
+                        for item in suggestion.selection
+                    ],
+                    'total_amount': float(suggestion.total_amount),
+                    'overage': float(suggestion.overage),
+                    'pack_count': suggestion.pack_count,
+                    'unit': target_unit,
+                }
+                row['packages_needed'] = suggestion.pack_count
+            rows.append(row)
 
-            row['package_suggestion'] = {
-                'selection': [
-                    {
-                        'size_value': float(item.size_value),
-                        'size_unit': item.size_unit,
-                        'count': item.count,
-                    }
-                    for item in suggestion.selection
-                ],
-                'total_amount': float(suggestion.total_amount),
-                'overage': float(suggestion.overage),
-                'pack_count': suggestion.pack_count,
-            }
-            row['packages_needed'] = suggestion.pack_count
-
+        rows.sort(key=lambda item: (item['culture_name'] or '', item['variety'] or ''))
         serializer = self.get_serializer(rows, many=True)
         return Response({'count': len(rows), 'next': None, 'previous': None, 'results': serializer.data})
 

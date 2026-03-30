@@ -35,6 +35,8 @@ describe('SeedDemandPage', () => {
             culture_name: 'Bohne',
             variety: 'Canadian Wonder',
             supplier: 'Reinsaat',
+            required_amount_value: 184.2,
+            required_amount_unit: 'g',
             total_grams: 184.2,
             package_suggestion: {
               selection: [{ size_value: 25, size_unit: 'g', count: 8 }],
@@ -81,6 +83,8 @@ describe('SeedDemandPage', () => {
             culture_id: 2,
             culture_name: 'Salat',
             supplier: 'Reinsaat',
+            required_amount_value: 0.25,
+            required_amount_unit: 'g',
             total_grams: 0.25,
             package_suggestion: null,
             warning: null,

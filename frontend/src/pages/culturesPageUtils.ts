@@ -59,7 +59,7 @@ export const ENRICHMENT_WARNING_KEY_BY_CODE: Record<string, string> = {
   supplier_product_not_found: 'ai.warningMessages.supplier_product_not_found',
 };
 
-export const ALLOWED_SEED_RATE_UNITS = ['g_per_m2', 'g_per_lfm', 'seeds/m'];
+export const ALLOWED_SEED_RATE_UNITS = ['g_per_m2', 'g_per_lfm', 'seeds_per_m2', 'seeds_per_lfm', 'seeds_per_plant'];
 
 type Translator = (key: string, options?: Record<string, unknown>) => string;
 
