@@ -13,23 +13,25 @@ import json
 import re
 
 from django.conf import settings
+from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q, Count
 from django.db.models.functions import Coalesce, Ceil, Cast
+from django.http import HttpResponseBadRequest, HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect
 from rest_framework import viewsets, status, generics, parsers, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.core.files.storage import default_storage
-from django.shortcuts import get_object_or_404
 from django.utils import timezone, translation
 from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 from django.utils.dateparse import parse_date
 from django.utils.translation import gettext as _
-from .models import Location, Field, Bed, BedLayout, FieldLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, PublicCulture, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
+from .models import AgentLoginToken, Location, Field, Bed, BedLayout, FieldLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, PublicCulture, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
 from .project_context import get_active_project_or_400, require_project_admin, resolve_project_for_user
 from .serializers import (
     LocationSerializer,
@@ -157,6 +159,33 @@ class VersionView(APIView):
 
     def get(self, request, *args, **kwargs):  # noqa: ANN001, ARG002
         return Response({'version': get_version()})
+
+
+def agent_login_consume_view(request, token: str):  # noqa: ANN001
+    """Use an agent login token, establish session, and redirect to frontend."""
+    if not getattr(settings, 'AGENT_LOGIN_ENABLED', False):
+        return HttpResponseForbidden('Agent login is disabled.')
+
+    token_hash = AgentLoginToken.hash_token(token)
+    link = AgentLoginToken.objects.select_related('created_by', 'project').filter(token_hash=token_hash).first()
+    if link is None:
+        return HttpResponseBadRequest('Invalid token.')
+    if link.expires_at is not None and timezone.now() >= link.expires_at:
+        return HttpResponseBadRequest('Token expired.')
+    if not link.created_by.is_active or not link.created_by.is_superuser:
+        return HttpResponseForbidden('Token creator is not allowed.')
+
+    login(request, link.created_by)
+    link.used_at = timezone.now()
+    link.used_by_ip = request.META.get('REMOTE_ADDR')
+    link.used_user_agent = (request.META.get('HTTP_USER_AGENT', '') or '')[:512]
+    link.save(update_fields=['used_at', 'used_by_ip', 'used_user_agent'])
+
+    request.session['agent_mode'] = True
+    request.session['agent_project_id'] = link.project_id
+    request.session.modified = True
+
+    return redirect(build_public_frontend_url('/app/cultures'))
 
 
 def _apply_invitation_project_settings(*, user, project: Project) -> dict[str, int | str]:
@@ -1950,11 +1979,30 @@ class MyProjectsView(APIView):
     """Return all projects for current user with membership metadata."""
 
     def get(self, request):
+        agent_mode = bool(request.session.get('agent_mode'))
+        agent_project_id = request.session.get('agent_project_id')
+        settings_obj, _ = UserProjectSettings.objects.get_or_create(user=request.user)
+
+        if agent_mode and agent_project_id is not None:
+            try:
+                bound_project_id = int(agent_project_id)
+            except (TypeError, ValueError):
+                return Response({'detail': 'Invalid agent project binding.'}, status=status.HTTP_403_FORBIDDEN)
+
+            project = get_object_or_404(Project, id=bound_project_id, is_active=True)
+            return Response([
+                {
+                    'project': ProjectSerializer(project).data,
+                    'role': ProjectMembership.ROLE_MEMBER,
+                    'is_default': settings_obj.default_project_id == project.id,
+                    'is_last': settings_obj.last_project_id == project.id,
+                }
+            ])
+
         memberships = ProjectMembership.objects.select_related('project').filter(
             user=request.user,
             project__is_active=True,
         )
-        settings_obj, _ = UserProjectSettings.objects.get_or_create(user=request.user)
         payload = []
         for membership in memberships:
             project = membership.project
@@ -2034,7 +2082,7 @@ class ProjectMembersView(APIView):
         return Response(ProjectMembershipSerializer(memberships, many=True).data)
 
     def patch(self, request, project_id: int):
-        require_project_admin(request.user, project_id)
+        require_project_admin(request.user, project_id, request=request)
         membership_id = request.data.get('membership_id')
         role = request.data.get('role')
         membership = get_object_or_404(ProjectMembership, id=membership_id, project_id=project_id)
@@ -2051,7 +2099,7 @@ class ProjectMembersView(APIView):
         return Response(ProjectMembershipSerializer(membership).data)
 
     def delete(self, request, project_id: int):
-        require_project_admin(request.user, project_id)
+        require_project_admin(request.user, project_id, request=request)
         membership_id = request.data.get('membership_id')
         membership = get_object_or_404(ProjectMembership, id=membership_id, project_id=project_id)
         if membership.user_id == request.user.id:
@@ -2068,12 +2116,12 @@ class ProjectInvitationView(APIView):
     """Create and list project invitations."""
 
     def get(self, request, project_id: int):
-        require_project_admin(request.user, project_id)
+        require_project_admin(request.user, project_id, request=request)
         invitations = ProjectInvitation.objects.filter(project_id=project_id).order_by('-created_at')
         return Response(ProjectInvitationSerializer(invitations, many=True).data)
 
     def post(self, request, project_id: int):
-        require_project_admin(request.user, project_id)
+        require_project_admin(request.user, project_id, request=request)
         serializer = ProjectInvitationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         project = get_object_or_404(Project, id=project_id, is_active=True)
@@ -2225,7 +2273,7 @@ class RevokeProjectInvitationView(APIView):
     """Revoke open invitations as project admin."""
 
     def post(self, request, project_id: int, invitation_id: int):
-        require_project_admin(request.user, project_id)
+        require_project_admin(request.user, project_id, request=request)
         invitation = get_object_or_404(ProjectInvitation, id=invitation_id, project_id=project_id)
         result = revoke_invitation(invitation=invitation, actor=request.user)
         return Response({'code': result.code, 'detail': result.message})

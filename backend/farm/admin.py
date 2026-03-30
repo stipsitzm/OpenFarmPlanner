@@ -4,9 +4,15 @@ This module configures the Django admin interface for all farm models,
 providing customized list displays, filters, and search capabilities.
 """
 
+from django.conf import settings
 from django.contrib import admin
+from django.contrib import messages
+from django.core.exceptions import PermissionDenied
+from django.utils.html import format_html
+from django.urls import reverse
 
 from .models import (
+    AgentLoginToken,
     Bed,
     BedLayout,
     Culture,
@@ -231,3 +237,73 @@ class NoteAttachmentAdmin(admin.ModelAdmin):
     list_filter = ['project']
     search_fields = ['caption', 'planting_plan__culture__name', 'planting_plan__bed__name', 'project__name', 'project__slug']
 
+
+@admin.register(AgentLoginToken)
+class AgentLoginTokenAdmin(admin.ModelAdmin):
+    """Admin interface for generating reusable project-bound agent login links."""
+
+    list_display = ['id', 'project', 'created_by', 'expires_at', 'used_at', 'created_at']
+    list_filter = ['project', 'created_by', 'used_at']
+    search_fields = ['project__name', 'project__slug', 'created_by__email', 'created_by__username']
+    readonly_fields = ['token_hash', 'created_by', 'created_at', 'used_at', 'used_by_ip', 'used_user_agent']
+    fields = ['project', 'expires_at', 'token_hash', 'created_by', 'created_at', 'used_at', 'used_by_ip', 'used_user_agent']
+
+    _admin_request_link_attr = '_agent_login_absolute_link'
+    _admin_request_token_attr = '_agent_login_plain_token'
+
+    def has_module_permission(self, request):  # noqa: ANN001
+        return bool(getattr(settings, 'AGENT_LOGIN_ENABLED', False) and request.user.is_superuser)
+
+    def has_view_permission(self, request, obj=None):  # noqa: ANN001, ARG002
+        return self.has_module_permission(request)
+
+    def has_add_permission(self, request):  # noqa: ANN001
+        return self.has_module_permission(request)
+
+    def has_change_permission(self, request, obj=None):  # noqa: ANN001, ARG002
+        return self.has_module_permission(request)
+
+    def save_model(self, request, obj, form, change):  # noqa: ANN001
+        if not request.user.is_superuser:
+            raise PermissionDenied('Only superusers can generate agent login links.')
+        if not getattr(settings, 'AGENT_LOGIN_ENABLED', False):
+            raise PermissionDenied('Agent login is disabled.')
+
+        if change:
+            super().save_model(request, obj, form, change)
+            return
+
+        token_obj, raw_token = AgentLoginToken.create_token(
+            created_by=request.user,
+            project=obj.project,
+            expires_at=obj.expires_at,
+        )
+        obj.pk = token_obj.pk
+        obj.created_by = token_obj.created_by
+        obj.token_hash = token_obj.token_hash
+        obj.created_at = token_obj.created_at
+        obj.used_at = token_obj.used_at
+        obj.expires_at = token_obj.expires_at
+
+        consume_path = reverse('agent-login-consume', kwargs={'token': raw_token})
+        absolute_link = request.build_absolute_uri(consume_path)
+        setattr(request, self._admin_request_link_attr, absolute_link)
+        setattr(request, self._admin_request_token_attr, raw_token)
+
+    def response_add(self, request, obj, post_url_continue=None):  # noqa: ANN001
+        plain_link = getattr(request, self._admin_request_link_attr, '')
+        plain_token = getattr(request, self._admin_request_token_attr, '')
+        if plain_link and plain_token:
+            self.message_user(
+                request,
+                format_html(
+                    'Agent login link (reusable until expiry): <code>{}</code><br>'
+                    'Plain token: <code>{}</code><br>'
+                    '<strong>This is the only time the plain token is shown.</strong> '
+                    'Later only the hash is stored, and the hash cannot be used for login.',
+                    plain_link,
+                    plain_token,
+                ),
+                level=messages.SUCCESS,
+            )
+        return super().response_add(request, obj, post_url_continue)

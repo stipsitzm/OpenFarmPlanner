@@ -37,6 +37,20 @@ def resolve_project_for_user(user) -> tuple[Project | None, bool]:
 
 def get_active_project_or_400(request: Request) -> Project:
     """Resolve and validate active project from request header for authenticated users."""
+    agent_mode = bool(request.session.get('agent_mode'))
+    agent_project_id = request.session.get('agent_project_id')
+
+    if agent_mode and agent_project_id is not None:
+        try:
+            bound_project_id = int(agent_project_id)
+        except (TypeError, ValueError) as exc:
+            raise exceptions.PermissionDenied('Invalid agent project binding.') from exc
+
+        requested_header = request.META.get(PROJECT_HEADER)
+        if requested_header and str(requested_header) != str(bound_project_id):
+            raise exceptions.PermissionDenied('Agent session is restricted to a single project.')
+        return get_object_or_404(Project, id=bound_project_id, is_active=True)
+
     raw = request.META.get(PROJECT_HEADER)
     if not raw:
         raise exceptions.ValidationError({'project': 'Missing X-Project-Id header.'})
@@ -55,8 +69,11 @@ def get_active_project_or_400(request: Request) -> Project:
     return membership.project
 
 
-def require_project_admin(user, project_id: int) -> None:
-    """Raise permission denied when user is not admin in project."""
+def require_project_admin(user, project_id: int, request: Request | None = None) -> None:
+    """Raise permission denied when user lacks project admin permissions."""
+    if request is not None and bool(request.session.get('agent_mode')):
+        raise exceptions.PermissionDenied('Agent sessions are restricted to member permissions.')
+
     is_admin = ProjectMembership.objects.filter(
         user=user,
         project_id=project_id,
