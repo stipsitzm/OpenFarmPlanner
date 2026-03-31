@@ -87,6 +87,8 @@ export interface EditableDataGridProps<T extends EditableRow> {
   onSelectedRowChange?: (row: T | null) => void;
   getRowValidationErrors?: (row: T) => Record<string, string>;
   showAddAction?: boolean;
+  showFooterEditControls?: boolean;
+  showRowEditActions?: boolean;
 }
 
 export function EditableDataGrid<T extends EditableRow>({
@@ -111,6 +113,8 @@ export function EditableDataGrid<T extends EditableRow>({
   onSelectedRowChange,
   getRowValidationErrors,
   showAddAction = true,
+  showFooterEditControls = true,
+  showRowEditActions = false,
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -318,6 +322,13 @@ export function EditableDataGrid<T extends EditableRow>({
     });
   }, [rowModesModel]);
 
+  const handleSaveRow = useCallback((rowId: GridRowId): void => {
+    setRowModesModel((oldModel) => ({
+      ...oldModel,
+      [rowId]: { mode: GridRowModes.View },
+    }));
+  }, []);
+
   const handleEditSelectedRow = (): void => {
     const selectedRowId = selectedRowIds[0];
     if (!selectedRowId) {
@@ -485,7 +496,7 @@ export function EditableDataGrid<T extends EditableRow>({
             <AddIcon />
           </IconButton>
         )}
-        {hasUnsavedChanges && (
+        {showFooterEditControls && hasUnsavedChanges && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: showAddAction ? 1 : 0 }}>
             <Button size="small" variant="contained" onClick={handleSaveAllDirtyRows}>
               {t('actions.save')}
@@ -560,34 +571,71 @@ export function EditableDataGrid<T extends EditableRow>({
     });
   }, [columns, notes, notesEditor]);
 
-  /**
-   * Add delete action column if enabled
-   */
-  const columnsWithActions: GridColDef[] = showDeleteAction
-    ? [
-        ...processedColumns,
-        {
-          field: 'actions',
-          type: 'actions',
-          headerName: '',
-          width: 70,
-          cellClassName: 'actions',
-          getActions: ({ id }) => {
-            return [
-              <IconButton
-                key={`delete-${id}`}
-                onClick={handleDeleteClick(id)}
-                size="small"
-                sx={deleteIconButtonSx}
-                aria-label="Löschen"
-              >
-                <CloseIcon />
-              </IconButton>,
-            ];
+  const columnsWithActions: GridColDef[] = [
+    ...processedColumns,
+    ...(showRowEditActions
+      ? [
+          {
+            field: 'rowEditActions',
+            headerName: '',
+            sortable: false,
+            filterable: false,
+            width: 220,
+            align: 'right',
+            renderCell: (params: GridCellParams<T>) => {
+              const rowId = params.id;
+              const rowKey = String(rowId);
+              const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
+              const isDirty = dirtyRowIds.has(rowKey);
+
+              if (!isEditing && !isDirty) {
+                return null;
+              }
+
+              return (
+                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, width: '100%', justifyContent: 'flex-end' }}>
+                  {isDirty && <Chip size="small" color="warning" label={t('messages.rowChanged')} />}
+                  {isEditing && (
+                    <>
+                      <Button size="small" variant="contained" onClick={() => handleSaveRow(rowId)}>
+                        {t('actions.save')}
+                      </Button>
+                      <Button size="small" onClick={() => handleDiscardRowChanges(rowId)}>
+                        {t('actions.cancel')}
+                      </Button>
+                    </>
+                  )}
+                </Box>
+              );
+            },
           },
-        },
-      ]
-    : processedColumns;
+        ]
+      : []),
+    ...(showDeleteAction
+      ? [
+          {
+            field: 'actions',
+            type: 'actions',
+            headerName: '',
+            width: 70,
+            cellClassName: 'actions',
+            getActions: ({ id }) => {
+              return [
+                <IconButton
+                  key={`delete-${id}`}
+                  onClick={handleDeleteClick(id)}
+                  size="small"
+                  sx={deleteIconButtonSx}
+                  aria-label="Löschen"
+                >
+                  <CloseIcon />
+                </IconButton>,
+              ];
+            },
+          },
+        ]
+      : []),
+  ];
 
   const getNotesDrawerTitle = (): string => {
     if (!notesEditor.field || !notes) return 'Notizen';
@@ -653,6 +701,16 @@ export function EditableDataGrid<T extends EditableRow>({
             footer: CustomFooter,
           }}
           sx={{ ...dataGridSx, width: 'auto' }}
+          getRowClassName={(params) => {
+            const rowKey = String(params.id);
+            if (rowModesModel[params.id]?.mode === GridRowModes.Edit) {
+              return 'ofp-row-editing';
+            }
+            if (dirtyRowIds.has(rowKey)) {
+              return 'ofp-row-dirty';
+            }
+            return '';
+          }}
           getCellClassName={(params) => {
             const rowKey = String(params.id);
             const errorText = activeValidationErrors[rowKey]?.[params.field] ?? rowValidationErrors[rowKey]?.[params.field];
@@ -683,7 +741,7 @@ export function EditableDataGrid<T extends EditableRow>({
             }
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
               event.preventDefault();
-              handleSaveAllDirtyRows();
+              handleSaveRow(params.id);
             }
           }}
           />

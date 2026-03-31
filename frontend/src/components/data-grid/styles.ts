@@ -38,6 +38,13 @@ export const dataGridSx = {
   '& .ofp-cell-dirty': {
     backgroundColor: '#fff8e1',
   },
+  '& .ofp-row-editing': {
+    boxShadow: 'inset 3px 0 0 #1976d2',
+    backgroundColor: 'rgba(25, 118, 210, 0.04)',
+  },
+  '& .ofp-row-dirty': {
+    boxShadow: 'inset 3px 0 0 #ed6c02',
+  },
 };
 
 /**
