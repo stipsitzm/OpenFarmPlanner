@@ -1,4 +1,5 @@
 import type { Culture } from '../api/api';
+import type { SeedPackage } from '../api/types';
 import {
   normalizeCultivationType,
   normalizeHarvestMethod,
@@ -14,12 +15,12 @@ export type CultureSavePayload = Culture & {
 };
 
 export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
-  const normalizedSeedPackages = Array.isArray(culture.seed_packages)
+  const normalizedSeedPackages: SeedPackage[] | undefined = Array.isArray(culture.seed_packages)
     ? culture.seed_packages.map((pkg) => ({
         size_value: pkg.size_unit === 'g'
           ? Math.round((Number(pkg.size_value) || 0) * 10) / 10
           : Math.round(Number(pkg.size_value) || 0),
-        size_unit: pkg.size_unit === 'seeds' ? 'seeds' : 'g',
+        size_unit: (pkg.size_unit === 'seeds' ? 'seeds' : 'g') as SeedPackage['size_unit'],
         evidence_text: pkg.evidence_text ?? '',
         last_seen_at: pkg.last_seen_at ?? null,
       }))
@@ -29,6 +30,8 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
     ...culture,
     seed_packages: normalizedSeedPackages,
     seed_rate_unit: normalizeSeedRateUnit(culture.seed_rate_unit),
+    seed_rate_direct_unit: normalizeSeedRateUnit(culture.seed_rate_direct_unit),
+    seed_rate_pre_cultivation_unit: normalizeSeedRateUnit(culture.seed_rate_pre_cultivation_unit),
     harvest_method: normalizeHarvestMethod(culture.harvest_method),
     nutrient_demand: normalizeNutrientDemand(culture.nutrient_demand),
     cultivation_type: normalizeCultivationType(culture.cultivation_type),

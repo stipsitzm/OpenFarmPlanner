@@ -71,6 +71,15 @@ function formatDistance(value: number | null | undefined, t: (key: string) => st
   return rounded.toFixed(decimals);
 }
 
+function formatSeedUnitLabel(unit: string | null | undefined): string {
+  if (unit === 'g_per_m2') return 'g / m²';
+  if (unit === 'g_per_lfm') return 'g / lfm';
+  if (unit === 'seeds_per_m2') return 'Korn / m²';
+  if (unit === 'seeds_per_lfm') return 'Korn / lfm';
+  if (unit === 'seeds_per_plant') return 'Korn / Pflanze';
+  return unit ?? '';
+}
+
 
 export function CultureDetail({
   cultures,
@@ -96,6 +105,94 @@ export function CultureDetail({
   );
 
   const selectedCulture = selectedOption?.data ?? null;
+  const activeCultivationTypes = useMemo(
+    () => (
+      selectedCulture
+        ? (
+          selectedCulture.cultivation_types && selectedCulture.cultivation_types.length > 0
+            ? selectedCulture.cultivation_types
+            : (selectedCulture.cultivation_type ? [selectedCulture.cultivation_type] : [])
+        ).filter((item): item is 'direct_sowing' | 'pre_cultivation' => (
+          item === 'direct_sowing' || item === 'pre_cultivation'
+        ))
+        : []
+    ),
+    [selectedCulture]
+  );
+  const seedRateRows = useMemo(() => {
+    if (!selectedCulture) {
+      return [];
+    }
+    const isDirectActive = activeCultivationTypes.includes('direct_sowing');
+    const isPreCultivationActive = activeCultivationTypes.includes('pre_cultivation');
+
+    const rows: Array<{ method: 'direct_sowing' | 'pre_cultivation'; value: number; unit: string; safety: number | null }> = [];
+    if (
+      isDirectActive
+      && selectedCulture.seed_rate_direct_value !== null
+      && selectedCulture.seed_rate_direct_value !== undefined
+      && selectedCulture.seed_rate_direct_unit
+    ) {
+      rows.push({
+        method: 'direct_sowing',
+        value: selectedCulture.seed_rate_direct_value,
+        unit: selectedCulture.seed_rate_direct_unit,
+        safety: selectedCulture.sowing_calculation_safety_percent_direct ?? null,
+      });
+    }
+    if (
+      isPreCultivationActive
+      && selectedCulture.seed_rate_pre_cultivation_value !== null
+      && selectedCulture.seed_rate_pre_cultivation_value !== undefined
+      && selectedCulture.seed_rate_pre_cultivation_unit
+    ) {
+      rows.push({
+        method: 'pre_cultivation',
+        value: selectedCulture.seed_rate_pre_cultivation_value,
+        unit: selectedCulture.seed_rate_pre_cultivation_unit,
+        safety: selectedCulture.sowing_calculation_safety_percent_pre_cultivation ?? null,
+      });
+    }
+
+    if (rows.length > 0) {
+      return rows;
+    }
+
+    if (selectedCulture.seed_rate_by_cultivation && Object.keys(selectedCulture.seed_rate_by_cultivation).length > 0) {
+      return Object.entries(selectedCulture.seed_rate_by_cultivation)
+        .filter(([method, payload]) => (
+          activeCultivationTypes.includes(method as 'direct_sowing' | 'pre_cultivation')
+          && (
+          (method === 'direct_sowing' || method === 'pre_cultivation')
+          && payload
+          && typeof payload.value === 'number'
+          && typeof payload.unit === 'string'
+          )
+        ))
+        .map(([method, payload]) => ({
+          method: method as 'direct_sowing' | 'pre_cultivation',
+          value: payload.value,
+          unit: payload.unit,
+          safety: null,
+        }));
+    }
+
+    if (
+      activeCultivationTypes.length > 0
+      && selectedCulture.seed_rate_value !== null
+      && selectedCulture.seed_rate_value !== undefined
+      && selectedCulture.seed_rate_unit
+    ) {
+      return [{
+        method: activeCultivationTypes.includes('direct_sowing') ? 'direct_sowing' : 'pre_cultivation',
+        value: selectedCulture.seed_rate_value,
+        unit: selectedCulture.seed_rate_unit,
+        safety: selectedCulture.sowing_calculation_safety_percent ?? null,
+      }];
+    }
+
+    return [];
+  }, [activeCultivationTypes, selectedCulture]);
 
   return (
     <Box sx={{ width: '100%' }}>
@@ -341,7 +438,21 @@ export function CultureDetail({
                   gap: 2,
                 }}
               >
-                {selectedCulture.seed_rate_by_cultivation && Object.keys(selectedCulture.seed_rate_by_cultivation).length > 0 ? (
+                {seedRateRows.length > 0 && activeCultivationTypes.length <= 1 && (
+                  <Box sx={{ gridColumn: '1 / -1' }}>
+                    <Typography variant="body2" color="text.secondary">Menge</Typography>
+                    <Typography variant="body1">
+                      {formatNumber(seedRateRows[0].value, t)} {formatSeedUnitLabel(seedRateRows[0].unit)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      Sicherheitszuschlag Saatgut
+                    </Typography>
+                    <Typography variant="body1">
+                      {seedRateRows[0].safety !== null ? `${formatNumber(seedRateRows[0].safety, t)} %` : '-'}
+                    </Typography>
+                  </Box>
+                )}
+                {seedRateRows.length > 0 && activeCultivationTypes.length > 1 && (
                   <Box sx={{ gridColumn: '1 / -1' }}>
                     <Typography variant="body2" color="text.secondary">Saatgutmenge nach Anbauart</Typography>
                     <Table size="small">
@@ -350,51 +461,23 @@ export function CultureDetail({
                           <TableCell>Methode</TableCell>
                           <TableCell>Menge</TableCell>
                           <TableCell>Einheit</TableCell>
+                          <TableCell>Sicherheitszuschlag (%)</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {Object.entries(selectedCulture.seed_rate_by_cultivation).map(([method, payload]) => (
-                          <TableRow key={method}>
-                            <TableCell>{method === 'pre_cultivation' ? 'Pflanzung' : 'Direktsaat'}</TableCell>
-                            <TableCell>{payload?.value}</TableCell>
-                            <TableCell>
-                              {payload?.unit === 'g_per_m2'
-                                ? 'g / m²'
-                                : payload?.unit === 'g_per_lfm'
-                                  ? 'g / lfm'
-                                  : payload?.unit === 'seeds_per_m2'
-                                    ? 'Korn / m²'
-                                    : payload?.unit === 'seeds_per_lfm'
-                                      ? 'Korn / lfm'
-                                      : payload?.unit === 'seeds_per_plant'
-                                      ? 'Korn / Pflanze'
-                                      : payload?.unit}
-                            </TableCell>
+                        {seedRateRows.map((row) => (
+                          <TableRow key={`${row.method}-${row.unit}-${row.value}`}>
+                            <TableCell>{row.method === 'pre_cultivation' ? 'Pflanzung' : 'Direktsaat'}</TableCell>
+                            <TableCell>{formatNumber(row.value, t)}</TableCell>
+                            <TableCell>{formatSeedUnitLabel(row.unit)}</TableCell>
+                            <TableCell>{row.safety !== null ? `${formatNumber(row.safety, t)} %` : '-'}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </Box>
-                ) : ((selectedCulture.seed_rate_value !== null && selectedCulture.seed_rate_value !== undefined) && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Saatgutmenge
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedCulture.seed_rate_value}
-                      {selectedCulture.seed_rate_unit === 'g_per_m2'
-                        ? ' g/m²'
-                        : selectedCulture.seed_rate_unit === 'seeds_per_m2'
-                          ? ' Korn / m²'
-                          : selectedCulture.seed_rate_unit === 'seeds_per_lfm'
-                            ? ' Korn / lfm'
-                            : selectedCulture.seed_rate_unit === 'seeds_per_plant'
-                            ? ' Korn / Pflanze'
-                            : ''}
-                    </Typography>
-                  </Box>
-                ))}
-                {selectedCulture.sowing_calculation_safety_percent !== undefined && selectedCulture.sowing_calculation_safety_percent !== null && (
+                )}
+                {seedRateRows.length === 0 && selectedCulture.sowing_calculation_safety_percent !== undefined && selectedCulture.sowing_calculation_safety_percent !== null && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
                       Sicherheitszuschlag Saatgut

@@ -127,6 +127,61 @@ class SerializerBranchCoverageTest(TestCase):
 
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
+    def test_validates_only_active_cultivation_seed_fields(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Fenchel',
+                'variety': 'X',
+                'cultivation_types': ['direct_sowing'],
+                'seed_rate_direct_unit': 'g_per_m2',
+                'project': self.project.id,
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('seed_rate_direct_value', serializer.errors)
+        self.assertNotIn('seed_rate_pre_cultivation_value', serializer.errors)
+
+    def test_accepts_pre_cultivation_only_without_direct_fields(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Lauch',
+                'variety': 'X',
+                'cultivation_types': ['pre_cultivation'],
+                'seed_rate_pre_cultivation_value': 1.5,
+                'seed_rate_pre_cultivation_unit': 'g_per_m2',
+                'project': self.project.id,
+            }
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_accepts_direct_sowing_only(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Möhre',
+                'variety': 'X',
+                'cultivation_types': ['direct_sowing'],
+                'seed_rate_direct_value': 2.5,
+                'seed_rate_direct_unit': 'g_per_m2',
+                'project': self.project.id,
+            }
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_accepts_both_cultivation_methods(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Sellerie',
+                'variety': 'X',
+                'cultivation_types': ['direct_sowing', 'pre_cultivation'],
+                'seed_rate_direct_value': 1.2,
+                'seed_rate_direct_unit': 'g_per_m2',
+                'seed_rate_pre_cultivation_value': 0.8,
+                'seed_rate_pre_cultivation_unit': 'g_per_m2',
+                'project': self.project.id,
+            }
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
     def test_notes_without_quellen_section_are_allowed(self):
         serializer = CultureSerializer(
             data={

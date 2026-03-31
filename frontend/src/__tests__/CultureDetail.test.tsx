@@ -152,10 +152,12 @@ describe('CultureDetail Component', () => {
         id: 11,
         name: 'Möhre',
         cultivation_types: ['pre_cultivation', 'direct_sowing'],
-        seed_rate_by_cultivation: {
-          pre_cultivation: { value: 2, unit: 'seeds_per_plant' },
-          direct_sowing: { value: 50, unit: 'seeds_per_lfm' },
-        },
+        seed_rate_direct_value: 50,
+        seed_rate_direct_unit: 'seeds_per_lfm',
+        sowing_calculation_safety_percent_direct: 5,
+        seed_rate_pre_cultivation_value: 2,
+        seed_rate_pre_cultivation_unit: 'seeds_per_plant',
+        sowing_calculation_safety_percent_pre_cultivation: 10,
       },
     ];
 
@@ -172,6 +174,42 @@ describe('CultureDetail Component', () => {
     expect(screen.getByText('Saatgutmenge nach Anbauart')).toBeInTheDocument();
     expect(screen.getByText('Korn / Pflanze')).toBeInTheDocument();
     expect(screen.getByText('Korn / lfm')).toBeInTheDocument();
+    expect(screen.getByText('10 %')).toBeInTheDocument();
+    expect(screen.getByText('5 %')).toBeInTheDocument();
+  });
+
+  it('shows simplified seed view for a single active cultivation method', () => {
+    const mockOnSelect = vi.fn();
+    const cultures: Culture[] = [
+      {
+        id: 21,
+        name: 'Spinat',
+        cultivation_types: ['pre_cultivation'],
+        seed_rate_direct_value: 20,
+        seed_rate_direct_unit: 'seeds_per_lfm',
+        sowing_calculation_safety_percent_direct: 9,
+        seed_rate_pre_cultivation_value: 4,
+        seed_rate_pre_cultivation_unit: 'g_per_m2',
+        sowing_calculation_safety_percent_pre_cultivation: 11,
+      },
+    ];
+
+    render(
+      <CultureDetail
+        cultures={cultures}
+        selectedCultureId={21}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getAllByText('Pflanzung')).toHaveLength(1);
+    expect(screen.queryAllByText('Direktsaat')).toHaveLength(0);
+    expect(screen.queryByText('Saatgutmenge nach Anbauart')).not.toBeInTheDocument();
+    expect(screen.queryByText('Methode')).not.toBeInTheDocument();
+    expect(screen.getByText('Menge')).toBeInTheDocument();
+    expect(screen.getByText('4 g / m²')).toBeInTheDocument();
+    expect(screen.getByText('11 %')).toBeInTheDocument();
+    expect(screen.queryByText('9 %')).not.toBeInTheDocument();
   });
 
 });

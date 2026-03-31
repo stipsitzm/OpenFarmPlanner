@@ -26,6 +26,12 @@ export interface PortableCulture {
   display_color?: string;
   seed_rate_value?: number | null;
   seed_rate_unit?: Culture['seed_rate_unit'];
+  seed_rate_direct_value?: number | null;
+  seed_rate_direct_unit?: Culture['seed_rate_direct_unit'];
+  sowing_calculation_safety_percent_direct?: number | null;
+  seed_rate_pre_cultivation_value?: number | null;
+  seed_rate_pre_cultivation_unit?: Culture['seed_rate_pre_cultivation_unit'];
+  sowing_calculation_safety_percent_pre_cultivation?: number | null;
   sowing_calculation_safety_percent?: number;
   thousand_kernel_weight_g?: number;
   package_size_g?: number;
@@ -78,6 +84,12 @@ export const toPortableCulture = (culture: Culture): PortableCulture => {
     display_color: culture.display_color,
     seed_rate_value: culture.seed_rate_value,
     seed_rate_unit: culture.seed_rate_unit,
+    seed_rate_direct_value: culture.seed_rate_direct_value,
+    seed_rate_direct_unit: culture.seed_rate_direct_unit,
+    sowing_calculation_safety_percent_direct: culture.sowing_calculation_safety_percent_direct,
+    seed_rate_pre_cultivation_value: culture.seed_rate_pre_cultivation_value,
+    seed_rate_pre_cultivation_unit: culture.seed_rate_pre_cultivation_unit,
+    sowing_calculation_safety_percent_pre_cultivation: culture.sowing_calculation_safety_percent_pre_cultivation,
     sowing_calculation_safety_percent: culture.sowing_calculation_safety_percent,
     thousand_kernel_weight_g: culture.thousand_kernel_weight_g,
     package_size_g: culture.package_size_g,

@@ -42,14 +42,36 @@ export function validateCulture(
 ): ValidationResult {
   const errors: Record<string, string> = {};
 
-  // Seed rate validation (custom rule)
-  const hasSeedRateValue = draft.seed_rate_value !== null && draft.seed_rate_value !== undefined;
-  const hasSeedRateUnit = draft.seed_rate_unit !== null && draft.seed_rate_unit !== undefined;
-  if (hasSeedRateValue && !hasSeedRateUnit) {
-    errors.seed_rate_unit = t('form.seedRateUnitRequired');
+  const cultivationTypes = draft.cultivation_types ?? (draft.cultivation_type ? [draft.cultivation_type] : []);
+  const hasDirect = cultivationTypes.includes('direct_sowing');
+  const hasPreCultivation = cultivationTypes.includes('pre_cultivation');
+
+  if (hasDirect) {
+    const hasValue = draft.seed_rate_direct_value !== null && draft.seed_rate_direct_value !== undefined;
+    const hasUnit = draft.seed_rate_direct_unit !== null && draft.seed_rate_direct_unit !== undefined;
+    if (hasValue && !hasUnit) {
+      errors.seed_rate_direct_unit = t('form.seedRateUnitRequired');
+    }
+    if (hasValue && Number(draft.seed_rate_direct_value) <= 0) {
+      errors.seed_rate_direct_value = t('form.seedRateValueRequired');
+    }
+    if (!hasValue && hasUnit) {
+      errors.seed_rate_direct_value = t('form.seedRateValueRequired');
+    }
   }
-  if (hasSeedRateValue && Number(draft.seed_rate_value) <= 0) {
-    errors.seed_rate_value = t('form.seedRateValueRequired');
+
+  if (hasPreCultivation) {
+    const hasValue = draft.seed_rate_pre_cultivation_value !== null && draft.seed_rate_pre_cultivation_value !== undefined;
+    const hasUnit = draft.seed_rate_pre_cultivation_unit !== null && draft.seed_rate_pre_cultivation_unit !== undefined;
+    if (hasValue && !hasUnit) {
+      errors.seed_rate_pre_cultivation_unit = t('form.seedRateUnitRequired');
+    }
+    if (hasValue && Number(draft.seed_rate_pre_cultivation_value) <= 0) {
+      errors.seed_rate_pre_cultivation_value = t('form.seedRateValueRequired');
+    }
+    if (!hasValue && hasUnit) {
+      errors.seed_rate_pre_cultivation_value = t('form.seedRateValueRequired');
+    }
   }
 
   // Required fields: name, variety, supplier
@@ -91,6 +113,8 @@ export function validateCulture(
     'row_spacing_cm',
     'sowing_depth_cm',
     'sowing_calculation_safety_percent',
+    'sowing_calculation_safety_percent_direct',
+    'sowing_calculation_safety_percent_pre_cultivation',
     'thousand_kernel_weight_g',
     'package_size_g',
   ];

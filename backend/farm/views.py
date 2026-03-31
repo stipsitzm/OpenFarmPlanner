@@ -1031,6 +1031,8 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
             'harvest_method', 'expected_yield', 'allow_deviation_delivery_weeks',
             'distance_within_row_cm', 'row_spacing_cm', 'sowing_depth_cm',
             'seed_rate_value', 'seed_rate_unit', 'sowing_calculation_safety_percent',
+            'seed_rate_direct_value', 'seed_rate_direct_unit', 'sowing_calculation_safety_percent_direct',
+            'seed_rate_pre_cultivation_value', 'seed_rate_pre_cultivation_unit', 'sowing_calculation_safety_percent_pre_cultivation',
             'thousand_kernel_weight_g',
             'seeding_requirement', 'seeding_requirement_type', 'display_color'
         ]
@@ -1832,6 +1834,13 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
 
     @staticmethod
     def _select_seed_rate(culture: Culture, cultivation_type: str | None) -> tuple[Decimal | None, str | None]:
+        active_types = set(culture.cultivation_types or [])
+        if cultivation_type and active_types and cultivation_type not in active_types:
+            return None, None
+        if cultivation_type == 'direct_sowing' and culture.seed_rate_direct_value is not None and culture.seed_rate_direct_unit:
+            return Decimal(str(culture.seed_rate_direct_value)), culture.seed_rate_direct_unit
+        if cultivation_type == 'pre_cultivation' and culture.seed_rate_pre_cultivation_value is not None and culture.seed_rate_pre_cultivation_unit:
+            return Decimal(str(culture.seed_rate_pre_cultivation_value)), culture.seed_rate_pre_cultivation_unit
         if cultivation_type and isinstance(culture.seed_rate_by_cultivation, dict):
             payload = culture.seed_rate_by_cultivation.get(cultivation_type)
             if isinstance(payload, dict):
@@ -1842,6 +1851,17 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
         if culture.seed_rate_value is None or not culture.seed_rate_unit:
             return None, None
         return Decimal(str(culture.seed_rate_value)), culture.seed_rate_unit
+
+    @staticmethod
+    def _select_safety_margin_percent(culture: Culture, cultivation_type: str | None) -> Decimal:
+        active_types = set(culture.cultivation_types or [])
+        if cultivation_type and active_types and cultivation_type not in active_types:
+            return Decimal('0')
+        if cultivation_type == 'direct_sowing' and culture.sowing_calculation_safety_percent_direct is not None:
+            return Decimal(str(culture.sowing_calculation_safety_percent_direct))
+        if cultivation_type == 'pre_cultivation' and culture.sowing_calculation_safety_percent_pre_cultivation is not None:
+            return Decimal(str(culture.sowing_calculation_safety_percent_pre_cultivation))
+        return Decimal(str(culture.sowing_calculation_safety_percent or 0))
 
     @staticmethod
     def _convert_requirement_to_unit(*, requirement_value: Decimal, requirement_unit: str, target_unit: str, tkg: Decimal | None) -> tuple[Decimal | None, str | None]:
@@ -1906,7 +1926,6 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                     'required_amount_value': Decimal('0'),
                     'required_amount_unit': None,
                     'warning': None,
-                    'safety_margin_percent': Decimal(str(culture.sowing_calculation_safety_percent or 0)),
                     'tkg': Decimal(str(culture.thousand_kernel_weight_g)) if culture.thousand_kernel_weight_g else None,
                 },
             )
@@ -1929,7 +1948,10 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                     entry['warning'] = conversion_warning or 'Cannot aggregate mixed seed requirement units.'
                     continue
                 requirement_value = converted
-            entry['required_amount_value'] += requirement_value
+            margin_factor = Decimal('1') + (
+                self._select_safety_margin_percent(culture, plan.cultivation_type) / Decimal('100')
+            )
+            entry['required_amount_value'] += requirement_value * margin_factor
 
         culture_ids = list(grouped.keys())
         package_map: dict[int, list[SeedPackage]] = defaultdict(list)
@@ -1940,8 +1962,7 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
 
         rows: list[dict] = []
         for culture_id, entry in grouped.items():
-            safety_factor = Decimal('1') + (entry['safety_margin_percent'] / Decimal('100'))
-            required_amount = entry['required_amount_value'] * safety_factor
+            required_amount = entry['required_amount_value']
             required_unit = entry['required_amount_unit']
             warning = entry['warning']
             packages = package_map.get(culture_id, [])

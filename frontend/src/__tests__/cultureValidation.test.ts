@@ -18,23 +18,23 @@ describe('validateCulture', () => {
 
   it('validates seed rate value/unit dependencies and positive amount', () => {
     const missingUnit = validateCulture(
-      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as unknown, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 1 },
+      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as unknown, cultivation_types: ['direct_sowing'], growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_direct_value: 1 },
       t
     );
-    expect(missingUnit.errors.seed_rate_unit).toBe('form.seedRateUnitRequired');
+    expect(missingUnit.errors.seed_rate_direct_unit).toBe('form.seedRateUnitRequired');
 
     const nonPositive = validateCulture(
-      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as unknown, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_value: 0, seed_rate_unit: 'g_per_m2' },
+      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as unknown, cultivation_types: ['direct_sowing'], growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_direct_value: 0, seed_rate_direct_unit: 'g_per_m2' },
       t
     );
-    expect(nonPositive.errors.seed_rate_value).toBe('form.seedRateValueRequired');
+    expect(nonPositive.errors.seed_rate_direct_value).toBe('form.seedRateValueRequired');
     
     // Einheit ohne Menge ist erlaubt
     const unitWithoutValue = validateCulture(
-      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as unknown, growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_unit: 'g_per_m2' },
+      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as unknown, cultivation_types: ['pre_cultivation'], growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_pre_cultivation_unit: 'g_per_m2' },
       t
     );
-    expect(unitWithoutValue.errors.seed_rate_value).toBeUndefined();
+    expect(unitWithoutValue.errors.seed_rate_pre_cultivation_value).toBe('form.seedRateValueRequired');
   });
 
   it('accepts direct sowing without propagation duration', () => {
@@ -51,6 +51,21 @@ describe('validateCulture', () => {
     );
 
     expect(result.errors.propagation_duration_days).toBeUndefined();
+  });
+
+  it('does not require hidden method fields', () => {
+    const result = validateCulture(
+      {
+        name: 'Spinat',
+        variety: 'Matador',
+        supplier: { id: 1, name: 'Test' } as unknown,
+        cultivation_types: ['direct_sowing'],
+        seed_rate_pre_cultivation_unit: 'g_per_m2',
+      },
+      t
+    );
+
+    expect(result.errors.seed_rate_pre_cultivation_value).toBeUndefined();
   });
 
   it('rejects negative numeric values including string inputs', () => {
