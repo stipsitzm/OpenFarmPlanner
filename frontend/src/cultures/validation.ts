@@ -48,7 +48,7 @@ export function validateCulture(
 
   if (hasDirect) {
     const hasValue = draft.seed_rate_direct_value !== null && draft.seed_rate_direct_value !== undefined;
-    const hasUnit = draft.seed_rate_direct_unit !== null && draft.seed_rate_direct_unit !== undefined && draft.seed_rate_direct_unit !== '';
+    const hasUnit = draft.seed_rate_direct_unit !== null && draft.seed_rate_direct_unit !== undefined;
     if (hasValue && !hasUnit) {
       errors.seed_rate_direct_unit = t('form.seedRateUnitRequired');
     }
@@ -62,7 +62,7 @@ export function validateCulture(
 
   if (hasPreCultivation) {
     const hasValue = draft.seed_rate_pre_cultivation_value !== null && draft.seed_rate_pre_cultivation_value !== undefined;
-    const hasUnit = draft.seed_rate_pre_cultivation_unit !== null && draft.seed_rate_pre_cultivation_unit !== undefined && draft.seed_rate_pre_cultivation_unit !== '';
+    const hasUnit = draft.seed_rate_pre_cultivation_unit !== null && draft.seed_rate_pre_cultivation_unit !== undefined;
     if (hasValue && !hasUnit) {
       errors.seed_rate_pre_cultivation_unit = t('form.seedRateUnitRequired');
     }
