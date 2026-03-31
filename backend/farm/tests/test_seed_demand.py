@@ -128,7 +128,7 @@ def test_seed_demand_returns_warning_when_conversion_missing(api_client: APIClie
         seed_rate_pre_cultivation_unit='seeds_per_plant',
         project=bed.project,
     )
-    _create_plan(culture, bed, 10, quantity=30)
+    _create_plan(culture, bed, 10, quantity=30, cultivation_type='pre_cultivation')
     SeedPackage.objects.create(culture=culture, size_value=5, size_unit='g', project=bed.project)
 
     response = api_client.get('/openfarmplanner/api/seed-demand/')
