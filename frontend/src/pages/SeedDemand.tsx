@@ -23,7 +23,7 @@ const formatPackageSelection = (row: SeedDemand): string => {
   }
 
   return row.package_suggestion.selection
-    .map((item) => `${item.size_value} ${item.size_unit}${item.count > 1 ? ` × ${item.count}` : ''}`)
+    .map((item) => `${item.size_value} ${item.size_unit === 'seeds' ? 'Korn' : 'g'}${item.count > 1 ? ` × ${item.count}` : ''}`)
     .join(' + ');
 };
 
@@ -66,7 +66,7 @@ export default function SeedDemandPage(): React.ReactElement {
               <TableRow>
                 <TableCell>Kultur</TableCell>
                 <TableCell>Lieferant</TableCell>
-                <TableCell align="right">Gesamt (g)</TableCell>
+                <TableCell align="right">Gesamtbedarf</TableCell>
                 <TableCell>Packungsgrößen</TableCell>
               </TableRow>
             </TableHead>
@@ -79,7 +79,7 @@ export default function SeedDemandPage(): React.ReactElement {
                     </Link>
                   </TableCell>
                   <TableCell>{row.supplier || '-'}</TableCell>
-                  <TableCell align="right">{row.total_grams === null ? '-' : row.total_grams.toFixed(2)}</TableCell>
+                  <TableCell align="right">{row.required_amount_value === null || row.required_amount_unit === null ? '-' : `${row.required_amount_value.toFixed(2)} ${row.required_amount_unit === 'seeds' ? 'Korn' : 'g'}`}</TableCell>
                   <TableCell>{formatPackageSelection(row)}</TableCell>
                 </TableRow>
               ))}

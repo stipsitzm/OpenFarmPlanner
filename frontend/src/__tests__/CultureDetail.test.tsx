@@ -154,7 +154,7 @@ describe('CultureDetail Component', () => {
         cultivation_types: ['pre_cultivation', 'direct_sowing'],
         seed_rate_by_cultivation: {
           pre_cultivation: { value: 2, unit: 'seeds_per_plant' },
-          direct_sowing: { value: 50, unit: 'seeds/m' },
+          direct_sowing: { value: 50, unit: 'seeds_per_lfm' },
         },
       },
     ];

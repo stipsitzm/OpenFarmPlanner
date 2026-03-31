@@ -362,9 +362,11 @@ export function CultureDetail({
                                 ? 'g / m²'
                                 : payload?.unit === 'g_per_lfm'
                                   ? 'g / lfm'
-                                  : payload?.unit === 'seeds/m'
-                                    ? 'Korn / lfm'
-                                    : payload?.unit === 'seeds_per_plant'
+                                  : payload?.unit === 'seeds_per_m2'
+                                    ? 'Korn / m²'
+                                    : payload?.unit === 'seeds_per_lfm'
+                                      ? 'Korn / lfm'
+                                      : payload?.unit === 'seeds_per_plant'
                                       ? 'Korn / Pflanze'
                                       : payload?.unit}
                             </TableCell>
@@ -382,9 +384,11 @@ export function CultureDetail({
                       {selectedCulture.seed_rate_value}
                       {selectedCulture.seed_rate_unit === 'g_per_m2'
                         ? ' g/m²'
-                        : selectedCulture.seed_rate_unit === 'seeds/m'
-                          ? ' Korn / lfm'
-                          : selectedCulture.seed_rate_unit === 'seeds_per_plant'
+                        : selectedCulture.seed_rate_unit === 'seeds_per_m2'
+                          ? ' Korn / m²'
+                          : selectedCulture.seed_rate_unit === 'seeds_per_lfm'
+                            ? ' Korn / lfm'
+                            : selectedCulture.seed_rate_unit === 'seeds_per_plant'
                             ? ' Korn / Pflanze'
                             : ''}
                     </Typography>
@@ -417,7 +421,7 @@ export function CultureDetail({
                     </Typography>
                     <Typography variant="body1">
                       {selectedCulture.seed_packages
-                        .map((pkg) => `${formatNumber(pkg.size_value, t)} ${pkg.size_unit}`)
+                        .map((pkg) => `${formatNumber(pkg.size_value, t)} ${pkg.size_unit === 'seeds' ? 'Korn' : 'g'}`)
                         .join(', ')}
                     </Typography>
                   </Box>

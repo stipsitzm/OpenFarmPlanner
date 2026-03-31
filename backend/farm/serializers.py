@@ -6,6 +6,16 @@ from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
 from .enum_normalization import normalize_seed_rate_unit
+from .seed_units import (
+    SEED_PACKAGE_UNIT_GRAMS,
+    SEED_PACKAGE_UNIT_SEEDS,
+    SEED_RATE_UNIT_G_PER_LFM,
+    SEED_RATE_UNIT_G_PER_M2,
+    SEED_RATE_UNIT_SEEDS_PER_LFM,
+    SEED_RATE_UNIT_SEEDS_PER_M2,
+    SEED_RATE_UNIT_SEEDS_PER_PLANT,
+    SEED_RATE_UNITS,
+)
 
 from .models import (
     Bed,
@@ -483,7 +493,7 @@ class CultureSerializer(serializers.ModelSerializer):
 
 
     def validate_seed_packages(self, value):
-        seen: set[Decimal] = set()
+        seen: set[str] = set()
         normalized_packages = []
         quantum = Decimal('0.1')
 
@@ -498,19 +508,22 @@ class CultureSerializer(serializers.ModelSerializer):
 
             if size_value <= 0:
                 raise serializers.ValidationError({idx: 'size_value must be > 0'})
-            if size_unit != SeedPackage.UNIT_GRAMS:
-                raise serializers.ValidationError({idx: 'Only grams (g) are supported for package size.'})
+            if size_unit not in {SEED_PACKAGE_UNIT_GRAMS, SEED_PACKAGE_UNIT_SEEDS}:
+                raise serializers.ValidationError({idx: 'Unsupported package size unit.'})
 
-            normalized_size = size_value.quantize(quantum, rounding=ROUND_HALF_UP)
-            if size_value != normalized_size:
-                raise serializers.ValidationError({idx: 'size_value must have at most one decimal place.'})
+            normalized_size = size_value
+            if size_unit == SEED_PACKAGE_UNIT_GRAMS:
+                normalized_size = size_value.quantize(quantum, rounding=ROUND_HALF_UP)
+                if size_value != normalized_size:
+                    raise serializers.ValidationError({idx: 'Gram package sizes must have at most one decimal place.'})
 
-            if normalized_size in seen:
+            uniqueness_key = f"{size_unit}:{normalized_size}"
+            if uniqueness_key in seen:
                 raise serializers.ValidationError({idx: 'Duplicate package size.'})
-            seen.add(normalized_size)
+            seen.add(uniqueness_key)
 
             normalized_item = dict(item)
-            normalized_item['size_unit'] = SeedPackage.UNIT_GRAMS
+            normalized_item['size_unit'] = size_unit
             normalized_item['size_value'] = normalized_size
             normalized_item.pop('culture', None)
             normalized_packages.append(normalized_item)
@@ -565,7 +578,7 @@ class CultureSerializer(serializers.ModelSerializer):
         if normalized_value:
             value = normalized_value
 
-        allowed_values = {'g_per_m2', 'g_per_lfm', 'seeds/m', 'seeds_per_plant'}
+        allowed_values = SEED_RATE_UNITS
         if value not in allowed_values:
             raise serializers.ValidationError('Unsupported seed rate unit.')
         return value
@@ -646,11 +659,22 @@ class CultureSerializer(serializers.ModelSerializer):
                         if parsed_value <= 0:
                             errors['seed_rate_by_cultivation'] = 'Seed rate values must be positive.'
                             break
-                        if method == 'pre_cultivation' and unit not in {'g_per_m2', 'g_per_lfm', 'seeds/m'}:
-                            errors['seed_rate_by_cultivation'] = 'Pre-cultivation seed rate unit must be g_per_m2, g_per_lfm, or seeds/m.'
+                        if method == 'pre_cultivation' and unit not in {
+                            SEED_RATE_UNIT_G_PER_M2,
+                            SEED_RATE_UNIT_G_PER_LFM,
+                            SEED_RATE_UNIT_SEEDS_PER_M2,
+                            SEED_RATE_UNIT_SEEDS_PER_LFM,
+                            SEED_RATE_UNIT_SEEDS_PER_PLANT,
+                        }:
+                            errors['seed_rate_by_cultivation'] = 'Pre-cultivation seed rate unit is unsupported.'
                             break
-                        if method == 'direct_sowing' and unit not in {'g_per_m2', 'g_per_lfm', 'seeds/m'}:
-                            errors['seed_rate_by_cultivation'] = 'Direct sowing seed rate unit must be g_per_m2, g_per_lfm, or seeds/m.'
+                        if method == 'direct_sowing' and unit not in {
+                            SEED_RATE_UNIT_G_PER_M2,
+                            SEED_RATE_UNIT_G_PER_LFM,
+                            SEED_RATE_UNIT_SEEDS_PER_M2,
+                            SEED_RATE_UNIT_SEEDS_PER_LFM,
+                        }:
+                            errors['seed_rate_by_cultivation'] = 'Direct sowing seed rate unit is unsupported.'
                             break
 
                 if 'seed_rate_by_cultivation' not in errors:
@@ -937,6 +961,7 @@ class SeedDemandPackageSuggestionSerializer(serializers.Serializer):
     total_amount = serializers.FloatField()
     overage = serializers.FloatField()
     pack_count = serializers.IntegerField()
+    unit = serializers.CharField(required=False)
 
 
 class SeedDemandSerializer(serializers.Serializer):
@@ -945,6 +970,8 @@ class SeedDemandSerializer(serializers.Serializer):
     culture_name = serializers.CharField()
     variety = serializers.CharField(allow_blank=True, allow_null=True)
     supplier = serializers.CharField(allow_blank=True, allow_null=True)
+    required_amount_value = serializers.FloatField(allow_null=True)
+    required_amount_unit = serializers.CharField(allow_null=True)
     total_grams = serializers.FloatField(allow_null=True)
     seed_packages = serializers.ListField(child=serializers.DictField(), required=False)
     package_suggestion = SeedDemandPackageSuggestionSerializer(allow_null=True, required=False)

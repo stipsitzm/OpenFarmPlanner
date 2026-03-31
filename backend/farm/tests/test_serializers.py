@@ -87,8 +87,8 @@ class SerializerBranchCoverageTest(TestCase):
                 'variety': 'X',
                 'cultivation_types': ['pre_cultivation', 'direct_sowing'],
                 'seed_rate_by_cultivation': {
-                    'pre_cultivation': {'value': 2, 'unit': 'seeds_per_plant'},
-                    'direct_sowing': {'value': 3, 'unit': 'seeds/m'},
+                    'pre_cultivation': {'value': 2, 'unit': 'invalid_unit'},
+                    'direct_sowing': {'value': 3, 'unit': 'seeds_per_lfm'},
                 },
                 'project': self.project.id,
             }
@@ -103,7 +103,7 @@ class SerializerBranchCoverageTest(TestCase):
                 'variety': 'X',
                 'cultivation_types': ['pre_cultivation'],
                 'seed_rate_by_cultivation': {
-                    'direct_sowing': {'value': 3, 'unit': 'seeds/m'},
+                    'direct_sowing': {'value': 3, 'unit': 'seeds_per_lfm'},
                 },
                 'project': self.project.id,
             }

@@ -90,7 +90,7 @@ describe('culture form UI sections', () => {
       />
     );
 
-    const amountInput = screen.getByLabelText('Menge');
+    const amountInput = screen.getByLabelText('Saatgutmenge');
     fireEvent.change(amountInput, { target: { value: '12.5' } });
     expect(onChange).toHaveBeenCalledWith('seed_rate_value', 12.5);
 

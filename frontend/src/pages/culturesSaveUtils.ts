@@ -16,8 +16,10 @@ export type CultureSavePayload = Culture & {
 export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
   const normalizedSeedPackages = Array.isArray(culture.seed_packages)
     ? culture.seed_packages.map((pkg) => ({
-        size_value: Math.round((Number(pkg.size_value) || 0) * 10) / 10,
-        size_unit: 'g' as const,
+        size_value: pkg.size_unit === 'g'
+          ? Math.round((Number(pkg.size_value) || 0) * 10) / 10
+          : Math.round(Number(pkg.size_value) || 0),
+        size_unit: pkg.size_unit === 'seeds' ? 'seeds' : 'g',
         evidence_text: pkg.evidence_text ?? '',
         last_seen_at: pkg.last_seen_at ?? null,
       }))

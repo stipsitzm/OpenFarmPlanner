@@ -792,12 +792,12 @@ function Cultures(): React.ReactElement {
         const sanitizedByCultivation: Record<string, { value: number; unit: string }> = {};
         const directValue = Number(rawByCultivation.direct_sowing?.value);
         const directUnit = normalizeSeedRateUnit(rawByCultivation.direct_sowing?.unit);
-        if (Number.isFinite(directValue) && directValue > 0 && directUnit && ['g_per_m2', 'g_per_lfm', 'seeds/m'].includes(directUnit)) {
+        if (Number.isFinite(directValue) && directValue > 0 && directUnit && ['g_per_m2', 'g_per_lfm', 'seeds_per_m2', 'seeds_per_lfm', 'seeds_per_plant'].includes(directUnit)) {
           sanitizedByCultivation.direct_sowing = { value: directValue, unit: directUnit };
         }
         const preValue = Number(rawByCultivation.pre_cultivation?.value);
         const preUnit = normalizeSeedRateUnit(rawByCultivation.pre_cultivation?.unit);
-        if (Number.isFinite(preValue) && preValue > 0 && preUnit && ['g_per_m2', 'g_per_lfm', 'seeds/m'].includes(preUnit)) {
+        if (Number.isFinite(preValue) && preValue > 0 && preUnit && ['g_per_m2', 'g_per_lfm', 'seeds_per_m2', 'seeds_per_lfm', 'seeds_per_plant'].includes(preUnit)) {
           sanitizedByCultivation.pre_cultivation = { value: preValue, unit: preUnit };
         }
         if (Object.keys(sanitizedByCultivation).length > 0) {
@@ -823,7 +823,7 @@ function Cultures(): React.ReactElement {
         if (Number.isFinite(directValue) && directValue > 0 && directUnit) {
           byCultivation.direct_sowing = { value: directValue, unit: directUnit };
         }
-        if (Number.isFinite(transplantValue) && transplantValue > 0 && transplantUnit && ['g_per_m2', 'g_per_lfm', 'seeds/m'].includes(transplantUnit)) {
+        if (Number.isFinite(transplantValue) && transplantValue > 0 && transplantUnit && ['g_per_m2', 'g_per_lfm', 'seeds_per_m2', 'seeds_per_lfm', 'seeds_per_plant'].includes(transplantUnit)) {
           byCultivation.pre_cultivation = { value: transplantValue, unit: transplantUnit };
         }
         if (Object.keys(byCultivation).length > 0) {

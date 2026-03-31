@@ -2,7 +2,7 @@ export interface SeedPackage {
   id?: number;
   culture?: number;
   size_value: number;
-  size_unit: 'g';
+  size_unit: 'g' | 'seeds';
   evidence_text?: string;
   last_seen_at?: string | null;
 }
@@ -18,7 +18,7 @@ export interface Supplier {
   created?: boolean;
 }
 
-export type SeedRateUnit = 'g_per_m2' | 'g_per_lfm' | 'seeds/m' | 'seeds_per_plant';
+export type SeedRateUnit = 'g_per_m2' | 'g_per_lfm' | 'seeds_per_m2' | 'seeds_per_lfm' | 'seeds_per_plant';
 export type CultivationType = 'pre_cultivation' | 'direct_sowing';
 
 export interface SeedRateByCultivationEntry {
@@ -154,12 +154,15 @@ export interface SeedDemand {
   variety?: string | null;
   supplier?: string | null;
   total_grams: number | null;
-  seed_packages?: Array<{ size_value: number; size_unit: 'g' }>;
+  required_amount_value: number | null;
+  required_amount_unit: 'g' | 'seeds' | null;
+  seed_packages?: Array<{ size_value: number; size_unit: 'g' | 'seeds' }>;
   package_suggestion?: {
-    selection: Array<{ size_value: number; size_unit: 'g'; count: number }>;
+    selection: Array<{ size_value: number; size_unit: 'g' | 'seeds'; count: number }>;
     total_amount: number;
     overage: number;
     pack_count: number;
+    unit?: 'g' | 'seeds';
   } | null;
   warning: string | null;
 }
