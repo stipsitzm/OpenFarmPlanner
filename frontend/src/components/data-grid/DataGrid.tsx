@@ -590,22 +590,16 @@ export function EditableDataGrid<T extends EditableRow>({
               const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
               const isDirty = dirtyRowIds.has(rowKey);
 
-              if (!isEditing && !isDirty) {
-                return null;
-              }
-
               return (
                 <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, width: '100%', justifyContent: 'flex-end' }}>
-                  {(isEditing || isDirty) && (
-                    <IconButton
-                      size="small"
-                      color="error"
-                      aria-label={t('actions.delete')}
-                      onClick={() => handleDeleteClick(rowId)()}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  )}
+                  <IconButton
+                    size="small"
+                    color="error"
+                    aria-label={t('actions.delete')}
+                    onClick={() => handleDeleteClick(rowId)()}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
                   {isEditing && (
                     <>
                       <IconButton size="small" color="primary" aria-label={t('actions.save')} onClick={() => handleSaveRow(rowId)}>
