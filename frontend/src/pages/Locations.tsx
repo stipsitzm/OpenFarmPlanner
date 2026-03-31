@@ -211,6 +211,8 @@ function Locations(): React.ReactElement {
         tableKey="locations"
         persistSortInUrl={true}
         showAddAction={false}
+        showFooterEditControls={false}
+        showRowEditActions={true}
         commandApiRef={commandApiRef}
         onSelectedRowChange={setSelectedRow}
         notes={{

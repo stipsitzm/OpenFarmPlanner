@@ -271,14 +271,15 @@ describe('EditableDataGrid', () => {
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
-    await waitFor(() => expect(screen.getByText('messages.rowChanged')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'actions.cancel' })).toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'ESC 1' }));
-    await waitFor(() => expect(screen.queryByText('messages.rowChanged')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'actions.cancel' })).not.toBeInTheDocument());
   });
 
   it('clears row dirty indicator after successful save', async () => {
     const user = userEvent.setup();
     const props = baseProps(() => null);
+    const updateSpy = vi.spyOn(props.api, 'update');
     render(
       <EditableDataGrid
         {...props}
@@ -290,8 +291,8 @@ describe('EditableDataGrid', () => {
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
-    await waitFor(() => expect(screen.getByText('messages.rowChanged')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'actions.save' })).toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: /Tab speichern 1/i }));
-    await waitFor(() => expect(screen.queryByText('messages.rowChanged')).not.toBeInTheDocument());
+    await waitFor(() => expect(updateSpy).toHaveBeenCalled());
   });
 });

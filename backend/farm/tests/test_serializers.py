@@ -5,7 +5,7 @@ from django.test import TestCase
 from rest_framework import serializers
 
 from farm.models import Bed, Culture, Field, Location, PlantingPlan, Project, Supplier
-from farm.serializers import BedSerializer, CentimetersField, CultureSerializer, FieldSerializer, PlantingPlanSerializer
+from farm.serializers import BedSerializer, CentimetersField, CultureSerializer, FieldSerializer, LocationSerializer, PlantingPlanSerializer
 from farm.utils.normalization import normalize_supplier_name, normalize_text
 
 
@@ -287,4 +287,37 @@ class SerializerBranchCoverageTest(TestCase):
             }
         )
 
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_location_serializer_does_not_require_project_field(self):
+        serializer = LocationSerializer(data={'name': 'Standort B'})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_field_serializer_does_not_require_project_field(self):
+        serializer = FieldSerializer(
+            data={
+                'name': 'Schlag C',
+                'location': self.location.id,
+                'area_sqm': '10.0',
+            }
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_bed_serializer_does_not_require_project_field(self):
+        serializer = BedSerializer(
+            data={
+                'name': 'Beet C',
+                'field': self.field.id,
+                'area_sqm': '5.0',
+            }
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_culture_serializer_does_not_require_project_field(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Spinat',
+                'variety': 'Matador',
+            }
+        )
         self.assertTrue(serializer.is_valid(), serializer.errors)

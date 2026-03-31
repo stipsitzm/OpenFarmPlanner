@@ -81,6 +81,7 @@ class LocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Location
         fields = '__all__'
+        extra_kwargs = {'project': {'required': False}}
 
 
 class SupplierSerializer(serializers.ModelSerializer):
@@ -126,6 +127,7 @@ class FieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Field
         fields = '__all__'
+        extra_kwargs = {'project': {'required': False}}
     
     def validate_area_sqm(self, value):
         if value is not None:
@@ -166,6 +168,7 @@ class BedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bed
         fields = '__all__'
+        extra_kwargs = {'project': {'required': False}}
 
     def validate_area_sqm(self, value):
         if value is not None:
@@ -477,6 +480,7 @@ class CultureSerializer(serializers.ModelSerializer):
     class Meta:
         model = Culture
         fields = '__all__'
+        extra_kwargs = {'project': {'required': False}}
     
     def get_owned_public_culture_id(self, obj: Culture) -> int | None:
         request = self.context.get('request')
