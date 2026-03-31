@@ -109,6 +109,44 @@ describe('culture form UI sections', () => {
     expect(screen.getByText('Bitte wählen')).toBeInTheDocument();
   });
 
+  it('uses unit-dependent package size constraints and normalizes values on unit changes', () => {
+    const onChange = vi.fn();
+
+    const { rerender } = render(
+      <SeedingSection
+        formData={{ seed_packages: [{ size_value: 10, size_unit: 'seeds' }] }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+
+    const packageSizeInput = screen.getByLabelText('Packungsgröße');
+    expect(packageSizeInput).toHaveAttribute('min', '1');
+    expect(packageSizeInput).toHaveAttribute('step', 'any');
+
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByRole('option', { name: 'g' }));
+    expect(onChange).toHaveBeenCalledWith('seed_packages', [{ size_value: 10, size_unit: 'g' }]);
+
+    rerender(
+      <SeedingSection
+        formData={{ seed_packages: [{ size_value: 10.4, size_unit: 'g' }] }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+
+    const packageSizeInputInGram = screen.getByLabelText('Packungsgröße');
+    expect(packageSizeInputInGram).toHaveAttribute('min', '0.1');
+    expect(packageSizeInputInGram).toHaveAttribute('step', 'any');
+
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByRole('option', { name: 'Korn' }));
+    expect(onChange).toHaveBeenCalledWith('seed_packages', [{ size_value: 10, size_unit: 'seeds' }]);
+  });
+
   it('shows method blocks based on selected cultivation types', () => {
     const onChange = vi.fn();
     const { rerender } = render(

@@ -32,6 +32,13 @@ function parseNumeric(value: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function normalizePackageSizeByUnit(sizeValue: number, sizeUnit: SeedPackage['size_unit']): number {
+  if (sizeUnit === 'seeds') {
+    return Math.round(sizeValue);
+  }
+  return Math.round(sizeValue * 10) / 10;
+}
+
 function SeedRateBlock({
   title,
   valueField,
@@ -190,8 +197,8 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               helperText={errors[`seed_packages.${index}.size_value`]}
               slotProps={{
                 htmlInput: {
-                  min: 0.1,
-                  step: pkg.size_unit === 'seeds' ? 1 : 0.1,
+                  min: pkg.size_unit === 'seeds' ? 1 : 0.1,
+                  step: 'any',
                   ref: index === packages.length - 1 ? lastPackageSizeInputRef : undefined,
                 },
               }}
@@ -201,7 +208,13 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               <Select
                 value={pkg.size_unit}
                 label={t('form.packageUnitLabel', { defaultValue: 'Packungseinheit' })}
-                onChange={(e) => updatePackage(index, { size_unit: e.target.value as SeedPackage['size_unit'] })}
+                onChange={(e) => {
+                  const nextSizeUnit = e.target.value as SeedPackage['size_unit'];
+                  updatePackage(index, {
+                    size_unit: nextSizeUnit,
+                    size_value: normalizePackageSizeByUnit(pkg.size_value, nextSizeUnit),
+                  });
+                }}
               >
                 {packageUnitOptions.map((option) => (
                   <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
