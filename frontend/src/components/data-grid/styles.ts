@@ -32,7 +32,12 @@ export const dataGridSx = {
   '& .MuiDataGrid-columnHeaderTitleContainer': {
     minWidth: 0,
   },
-
+  '& .ofp-cell-error': {
+    boxShadow: 'inset 0 0 0 2px #d32f2f',
+  },
+  '& .ofp-cell-dirty': {
+    backgroundColor: '#fff8e1',
+  },
 };
 
 /**
@@ -42,8 +47,14 @@ export const dataGridFooterSx = {
   p: 1,
   display: 'flex',
   justifyContent: 'center',
+  flexWrap: 'wrap',
+  gap: 1,
   borderTop: '1px solid',
   borderColor: 'divider',
+  position: 'sticky',
+  bottom: 0,
+  backgroundColor: '#fff',
+  zIndex: 2,
 };
 
 /**
