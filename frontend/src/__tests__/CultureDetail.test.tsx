@@ -178,4 +178,34 @@ describe('CultureDetail Component', () => {
     expect(screen.getByText('5 %')).toBeInTheDocument();
   });
 
+  it('hides seed rows for inactive cultivation methods in detail view', () => {
+    const mockOnSelect = vi.fn();
+    const cultures: Culture[] = [
+      {
+        id: 21,
+        name: 'Spinat',
+        cultivation_types: ['pre_cultivation'],
+        seed_rate_direct_value: 20,
+        seed_rate_direct_unit: 'seeds_per_lfm',
+        sowing_calculation_safety_percent_direct: 9,
+        seed_rate_pre_cultivation_value: 4,
+        seed_rate_pre_cultivation_unit: 'g_per_m2',
+        sowing_calculation_safety_percent_pre_cultivation: 11,
+      },
+    ];
+
+    render(
+      <CultureDetail
+        cultures={cultures}
+        selectedCultureId={21}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getAllByText('Pflanzung').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Direktsaat')).toHaveLength(0);
+    expect(screen.getByText('11 %')).toBeInTheDocument();
+    expect(screen.queryByText('9 %')).not.toBeInTheDocument();
+  });
+
 });

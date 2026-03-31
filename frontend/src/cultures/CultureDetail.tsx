@@ -109,9 +109,23 @@ export function CultureDetail({
     if (!selectedCulture) {
       return [];
     }
+    const activeCultivationTypes = (
+      selectedCulture.cultivation_types && selectedCulture.cultivation_types.length > 0
+        ? selectedCulture.cultivation_types
+        : (selectedCulture.cultivation_type ? [selectedCulture.cultivation_type] : [])
+    ).filter((item): item is 'direct_sowing' | 'pre_cultivation' => (
+      item === 'direct_sowing' || item === 'pre_cultivation'
+    ));
+    const isDirectActive = activeCultivationTypes.includes('direct_sowing');
+    const isPreCultivationActive = activeCultivationTypes.includes('pre_cultivation');
 
     const rows: Array<{ method: 'direct_sowing' | 'pre_cultivation'; value: number; unit: string; safety: number | null }> = [];
-    if (selectedCulture.seed_rate_direct_value !== null && selectedCulture.seed_rate_direct_value !== undefined && selectedCulture.seed_rate_direct_unit) {
+    if (
+      isDirectActive
+      && selectedCulture.seed_rate_direct_value !== null
+      && selectedCulture.seed_rate_direct_value !== undefined
+      && selectedCulture.seed_rate_direct_unit
+    ) {
       rows.push({
         method: 'direct_sowing',
         value: selectedCulture.seed_rate_direct_value,
@@ -119,7 +133,12 @@ export function CultureDetail({
         safety: selectedCulture.sowing_calculation_safety_percent_direct ?? null,
       });
     }
-    if (selectedCulture.seed_rate_pre_cultivation_value !== null && selectedCulture.seed_rate_pre_cultivation_value !== undefined && selectedCulture.seed_rate_pre_cultivation_unit) {
+    if (
+      isPreCultivationActive
+      && selectedCulture.seed_rate_pre_cultivation_value !== null
+      && selectedCulture.seed_rate_pre_cultivation_value !== undefined
+      && selectedCulture.seed_rate_pre_cultivation_unit
+    ) {
       rows.push({
         method: 'pre_cultivation',
         value: selectedCulture.seed_rate_pre_cultivation_value,
@@ -135,10 +154,13 @@ export function CultureDetail({
     if (selectedCulture.seed_rate_by_cultivation && Object.keys(selectedCulture.seed_rate_by_cultivation).length > 0) {
       return Object.entries(selectedCulture.seed_rate_by_cultivation)
         .filter(([method, payload]) => (
+          activeCultivationTypes.includes(method as 'direct_sowing' | 'pre_cultivation')
+          && (
           (method === 'direct_sowing' || method === 'pre_cultivation')
           && payload
           && typeof payload.value === 'number'
           && typeof payload.unit === 'string'
+          )
         ))
         .map(([method, payload]) => ({
           method: method as 'direct_sowing' | 'pre_cultivation',
@@ -148,9 +170,14 @@ export function CultureDetail({
         }));
     }
 
-    if (selectedCulture.seed_rate_value !== null && selectedCulture.seed_rate_value !== undefined && selectedCulture.seed_rate_unit) {
+    if (
+      activeCultivationTypes.length > 0
+      && selectedCulture.seed_rate_value !== null
+      && selectedCulture.seed_rate_value !== undefined
+      && selectedCulture.seed_rate_unit
+    ) {
       return [{
-        method: selectedCulture.cultivation_type === 'direct_sowing' ? 'direct_sowing' : 'pre_cultivation',
+        method: activeCultivationTypes.includes('direct_sowing') ? 'direct_sowing' : 'pre_cultivation',
         value: selectedCulture.seed_rate_value,
         unit: selectedCulture.seed_rate_unit,
         safety: selectedCulture.sowing_calculation_safety_percent ?? null,

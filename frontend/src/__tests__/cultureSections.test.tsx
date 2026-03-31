@@ -134,6 +134,61 @@ describe('culture form UI sections', () => {
     expect(screen.getByText('Saatgutbedarf Pflanzung')).toBeInTheDocument();
   });
 
+  it('keeps hidden method values and shows them again after re-activation', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <SeedingSection
+        formData={{
+          cultivation_types: ['direct_sowing', 'pre_cultivation'],
+          seed_rate_direct_value: 7,
+          seed_rate_direct_unit: 'g_per_m2',
+          seed_rate_pre_cultivation_value: 3,
+          seed_rate_pre_cultivation_unit: 'g_per_m2',
+        }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+
+    expect(screen.getByDisplayValue('7')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('3')).toBeInTheDocument();
+
+    rerender(
+      <SeedingSection
+        formData={{
+          cultivation_types: ['pre_cultivation'],
+          seed_rate_direct_value: 7,
+          seed_rate_direct_unit: 'g_per_m2',
+          seed_rate_pre_cultivation_value: 3,
+          seed_rate_pre_cultivation_unit: 'g_per_m2',
+        }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+    expect(screen.queryByDisplayValue('7')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('3')).toBeInTheDocument();
+
+    rerender(
+      <SeedingSection
+        formData={{
+          cultivation_types: ['pre_cultivation', 'direct_sowing'],
+          seed_rate_direct_value: 7,
+          seed_rate_direct_unit: 'g_per_m2',
+          seed_rate_pre_cultivation_value: 3,
+          seed_rate_pre_cultivation_unit: 'g_per_m2',
+        }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+    expect(screen.getByDisplayValue('7')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('3')).toBeInTheDocument();
+  });
+
 
 
   it('renders HarvestSection and parses expected yield input including empty value', () => {

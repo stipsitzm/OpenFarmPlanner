@@ -1834,6 +1834,9 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
 
     @staticmethod
     def _select_seed_rate(culture: Culture, cultivation_type: str | None) -> tuple[Decimal | None, str | None]:
+        active_types = set(culture.cultivation_types or [])
+        if cultivation_type and active_types and cultivation_type not in active_types:
+            return None, None
         if cultivation_type == 'direct_sowing' and culture.seed_rate_direct_value is not None and culture.seed_rate_direct_unit:
             return Decimal(str(culture.seed_rate_direct_value)), culture.seed_rate_direct_unit
         if cultivation_type == 'pre_cultivation' and culture.seed_rate_pre_cultivation_value is not None and culture.seed_rate_pre_cultivation_unit:
@@ -1851,6 +1854,9 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
 
     @staticmethod
     def _select_safety_margin_percent(culture: Culture, cultivation_type: str | None) -> Decimal:
+        active_types = set(culture.cultivation_types or [])
+        if cultivation_type and active_types and cultivation_type not in active_types:
+            return Decimal('0')
         if cultivation_type == 'direct_sowing' and culture.sowing_calculation_safety_percent_direct is not None:
             return Decimal(str(culture.sowing_calculation_safety_percent_direct))
         if cultivation_type == 'pre_cultivation' and culture.sowing_calculation_safety_percent_pre_cultivation is not None:

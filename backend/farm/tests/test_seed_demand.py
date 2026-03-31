@@ -164,6 +164,26 @@ def test_seed_demand_uses_method_specific_seed_rates_for_mixed_cultivation(api_c
 
 
 @pytest.mark.django_db
+def test_seed_demand_ignores_inactive_method_rates(api_client: APIClient, bed: Bed):
+    culture = Culture.objects.create(
+        name='InactiveDirect',
+        growth_duration_days=80,
+        harvest_duration_days=20,
+        cultivation_types=['pre_cultivation'],
+        seed_rate_direct_value=3,
+        seed_rate_direct_unit='g_per_m2',
+        seed_rate_pre_cultivation_value=2,
+        seed_rate_pre_cultivation_unit='g_per_m2',
+        project=bed.project,
+    )
+    _create_plan(culture, bed, 10, cultivation_type='direct_sowing')
+    response = api_client.get('/openfarmplanner/api/seed-demand/')
+    assert response.status_code == 200
+    row = next(item for item in response.json()['results'] if item['culture_name'] == 'InactiveDirect')
+    assert row['warning'] == 'Missing seed rate value or unit.'
+
+
+@pytest.mark.django_db
 def test_seed_rate_unit_legacy_value_is_normalized(api_client: APIClient, project_context):
     payload = {
         'name': 'Bean',
