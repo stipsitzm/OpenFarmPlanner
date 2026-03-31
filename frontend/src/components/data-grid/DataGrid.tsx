@@ -22,7 +22,7 @@ import { DataGrid, GridRowModes } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridCellParams } from '@mui/x-data-grid';
-import { Box, Alert, IconButton, Chip, Button, useMediaQuery } from '@mui/material';
+import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
@@ -592,24 +592,30 @@ export function EditableDataGrid<T extends EditableRow>({
 
               return (
                 <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, width: '100%', justifyContent: 'flex-end' }}>
-                  <IconButton
-                    size="small"
-                    color="error"
-                    aria-label={t('actions.delete')}
-                    onClick={() => handleDeleteClick(rowId)()}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
                   {isEditing && (
                     <>
-                      <IconButton size="small" color="primary" aria-label={t('actions.save')} onClick={() => handleSaveRow(rowId)}>
-                        <CheckIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton size="small" aria-label={t('actions.cancel')} onClick={() => handleDiscardRowChanges(rowId)}>
-                        <CloseIcon fontSize="small" />
-                      </IconButton>
+                      <Tooltip title={t('actions.saveRow')} arrow>
+                        <IconButton size="small" color="primary" aria-label={t('actions.save')} onClick={() => handleSaveRow(rowId)}>
+                          <CheckIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title={t('actions.cancelRowEdit')} arrow>
+                        <IconButton size="small" aria-label={t('actions.cancel')} onClick={() => handleDiscardRowChanges(rowId)}>
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </>
                   )}
+                  <Tooltip title={t('actions.deleteRow')} arrow>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      aria-label={t('actions.delete')}
+                      onClick={() => handleDeleteClick(rowId)()}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
               );
             },
