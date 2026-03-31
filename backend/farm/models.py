@@ -743,6 +743,38 @@ class Culture(TimestampedModel):
         blank=True,
         help_text="Safety margin for seeding calculation in percent (0-100)"
     )
+    seed_rate_direct_value = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Seed rate for direct sowing"
+    )
+    seed_rate_direct_unit = models.CharField(
+        max_length=30,
+        null=True,
+        blank=True,
+        help_text="Unit for direct sowing seed rate"
+    )
+    sowing_calculation_safety_percent_direct = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Safety margin for direct sowing in percent (0-100)"
+    )
+    seed_rate_pre_cultivation_value = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Seed rate for pre-cultivation/transplanting"
+    )
+    seed_rate_pre_cultivation_unit = models.CharField(
+        max_length=30,
+        null=True,
+        blank=True,
+        help_text="Unit for pre-cultivation/transplanting seed rate"
+    )
+    sowing_calculation_safety_percent_pre_cultivation = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Safety margin for pre-cultivation/transplanting in percent (0-100)"
+    )
     thousand_kernel_weight_g = models.FloatField(
         null=True,
         blank=True,
@@ -845,6 +877,27 @@ class Culture(TimestampedModel):
         if self.seed_rate_unit and self.seed_rate_unit not in self.PRE_CULTIVATION_AUTO_SEED_RATE_UNITS:
             errors['seed_rate_unit'] = 'Seed rate unit is unsupported.'
 
+        if self.seed_rate_direct_value is not None and self.seed_rate_direct_value <= 0:
+            errors['seed_rate_direct_value'] = 'Direct sowing seed rate value must be greater than zero.'
+        if self.seed_rate_direct_unit and self.seed_rate_direct_unit not in self.DIRECT_SOWING_SEED_RATE_UNITS:
+            errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is unsupported.'
+        has_direct = 'direct_sowing' in (self.cultivation_types or [])
+        has_pre = 'pre_cultivation' in (self.cultivation_types or [])
+
+        if has_direct and self.seed_rate_direct_value is None and self.seed_rate_direct_unit:
+            errors['seed_rate_direct_value'] = 'Direct sowing seed rate value is required when direct sowing unit is set.'
+        if has_direct and self.seed_rate_direct_value is not None and not self.seed_rate_direct_unit:
+            errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is required when direct sowing value is set.'
+
+        if self.seed_rate_pre_cultivation_value is not None and self.seed_rate_pre_cultivation_value <= 0:
+            errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value must be greater than zero.'
+        if self.seed_rate_pre_cultivation_unit and self.seed_rate_pre_cultivation_unit not in self.PRE_CULTIVATION_AUTO_SEED_RATE_UNITS:
+            errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is unsupported.'
+        if has_pre and self.seed_rate_pre_cultivation_value is None and self.seed_rate_pre_cultivation_unit:
+            errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value is required when pre-cultivation unit is set.'
+        if has_pre and self.seed_rate_pre_cultivation_value is not None and not self.seed_rate_pre_cultivation_unit:
+            errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is required when pre-cultivation value is set.'
+
         if self.thousand_kernel_weight_g is not None and self.thousand_kernel_weight_g <= 0:
             errors['thousand_kernel_weight_g'] = 'Thousand kernel weight must be greater than zero.'
 
@@ -872,7 +925,10 @@ class Culture(TimestampedModel):
                 'cultivation_type', 'growth_duration_days', 'harvest_duration_days', 'propagation_duration_days',
                 'harvest_method', 'expected_yield', 'allow_deviation_delivery_weeks', 'distance_within_row_m',
                 'row_spacing_m', 'sowing_depth_m', 'seed_rate_value', 'seed_rate_unit', 'seed_rate_by_cultivation',
-                'sowing_calculation_safety_percent', 'thousand_kernel_weight_g', 'seeding_requirement',
+                'sowing_calculation_safety_percent', 'seed_rate_direct_value', 'seed_rate_direct_unit',
+                'sowing_calculation_safety_percent_direct', 'seed_rate_pre_cultivation_value',
+                'seed_rate_pre_cultivation_unit', 'sowing_calculation_safety_percent_pre_cultivation',
+                'thousand_kernel_weight_g', 'seeding_requirement',
                 'seeding_requirement_type', 'display_color', 'supplier_id', 'supplier_product_url', 'image_file_id',
             }
             if any(previous.get(field) != getattr(self, field) for field in tracked_fields):

@@ -29,6 +29,8 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
     ...culture,
     seed_packages: normalizedSeedPackages,
     seed_rate_unit: normalizeSeedRateUnit(culture.seed_rate_unit),
+    seed_rate_direct_unit: normalizeSeedRateUnit(culture.seed_rate_direct_unit),
+    seed_rate_pre_cultivation_unit: normalizeSeedRateUnit(culture.seed_rate_pre_cultivation_unit),
     harvest_method: normalizeHarvestMethod(culture.harvest_method),
     nutrient_demand: normalizeNutrientDemand(culture.nutrient_demand),
     cultivation_type: normalizeCultivationType(culture.cultivation_type),

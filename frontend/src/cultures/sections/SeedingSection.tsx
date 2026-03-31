@@ -32,10 +32,86 @@ function parseNumeric(value: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function SeedRateBlock({
+  title,
+  valueField,
+  unitField,
+  safetyField,
+  formData,
+  errors,
+  onChange,
+  t,
+}: {
+  title: string;
+  valueField: 'seed_rate_direct_value' | 'seed_rate_pre_cultivation_value';
+  unitField: 'seed_rate_direct_unit' | 'seed_rate_pre_cultivation_unit';
+  safetyField: 'sowing_calculation_safety_percent_direct' | 'sowing_calculation_safety_percent_pre_cultivation';
+  formData: Partial<Culture>;
+  errors: Record<string, string>;
+  onChange: <K extends keyof Culture>(name: K, value: Culture[K]) => void;
+  t: TFunction;
+}): React.ReactElement {
+  return (
+    <>
+      <Typography variant="subtitle1" sx={{ mt: 2 }}>{title}</Typography>
+      <Box sx={fieldRowSx}>
+        <Tooltip title={t('form.seedRateHelp')} arrow>
+          <TextField
+            sx={fieldSx}
+            type="number"
+            label={t('form.seedAmountLabel', { defaultValue: 'Menge' })}
+            value={formData[valueField] ?? ''}
+            onChange={(e) => onChange(valueField, e.target.value ? parseFloat(e.target.value) : null)}
+            error={Boolean(errors[valueField])}
+            helperText={errors[valueField]}
+            slotProps={{ htmlInput: { min: 0.1, step: 0.1 } }}
+          />
+        </Tooltip>
+
+        <Tooltip title={t('form.seedRateHelp')} arrow>
+          <FormControl sx={fieldSx} error={Boolean(errors[unitField])}>
+            <InputLabel>{t('form.seedUnitLabel', { defaultValue: 'Einheit' })}</InputLabel>
+            <Select
+              value={formData[unitField] ?? ''}
+              label={t('form.seedUnitLabel', { defaultValue: 'Einheit' })}
+              onChange={(e) => onChange(unitField, (e.target.value || null) as Culture[typeof unitField])}
+              fullWidth
+            >
+              <MenuItem value="">-</MenuItem>
+              {seedRateUnitOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+              ))}
+            </Select>
+            {errors[unitField] && (
+              <Typography variant="caption" color="error">{errors[unitField]}</Typography>
+            )}
+          </FormControl>
+        </Tooltip>
+
+        <Tooltip title={t('form.sowingCalculationSafetyPercentHelp', { defaultValue: 'Prozentualer Zuschlag zur berechneten Saatgutmenge.' })} arrow>
+          <TextField
+            sx={{ ...spacingFieldSx, ml: 'auto' }}
+            type="number"
+            label={t('form.sowingCalculationSafetyPercentLabel', { defaultValue: 'Sicherheitszuschlag für Saatgut (%)' })}
+            value={formData[safetyField] ?? ''}
+            onChange={(e) => onChange(safetyField, e.target.value ? parseFloat(e.target.value) : null)}
+            error={Boolean(errors[safetyField])}
+            helperText={errors[safetyField]}
+            slotProps={{ htmlInput: { min: 0, max: 100, step: 1 } }}
+          />
+        </Tooltip>
+      </Box>
+    </>
+  );
+}
+
 export function SeedingSection({ formData, errors, onChange, t }: SeedingSectionProps) {
   const lastPackageSizeInputRef = useRef<HTMLInputElement | null>(null);
   const prevPackageCountRef = useRef<number>(0);
   const packages = formData.seed_packages ?? [];
+  const cultivationTypes = formData.cultivation_types ?? (formData.cultivation_type ? [formData.cultivation_type] : []);
+  const showsDirect = cultivationTypes.includes('direct_sowing');
+  const showsPreCultivation = cultivationTypes.includes('pre_cultivation');
 
   useEffect(() => {
     if (packages.length > prevPackageCountRef.current && lastPackageSizeInputRef.current) {
@@ -56,42 +132,35 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
 
   return (
     <>
-      <Typography variant="h6" sx={{ mt: 2 }}>{t('form.seedRateSectionTitle', { defaultValue: 'Saatgutmenge' })}</Typography>
-      <Box sx={fieldRowSx}>
-        <Tooltip title={t('form.seedRateHelp')} arrow>
-          <TextField
-            sx={fieldSx}
-            type="number"
-            label={t('form.seedRateValue', { defaultValue: 'Saatgutmenge' })}
-            value={formData.seed_rate_value ?? ''}
-            onChange={e => onChange('seed_rate_value', e.target.value ? parseFloat(e.target.value) : null)}
-            onBlur={() => onChange('seed_rate_value', formData.seed_rate_value)}
-            error={Boolean(errors.seed_rate_value)}
-            helperText={errors.seed_rate_value}
-            slotProps={{ htmlInput: { min: 0.1, step: 0.1 } }}
-          />
-        </Tooltip>
+      <Typography variant="h6" sx={{ mt: 2 }}>{t('form.seedRateSectionTitle', { defaultValue: 'Saatgutbedarf' })}</Typography>
 
-        <Tooltip title={t('form.seedRateHelp')} arrow>
-          <FormControl sx={fieldSx} error={Boolean(errors.seed_rate_unit)}>
-            <InputLabel>{t('form.seedRateUnit', { defaultValue: 'Einheit der Saatgutmenge' })}</InputLabel>
-            <Select
-              value={formData.seed_rate_unit ?? ''}
-              label={t('form.seedRateUnit', { defaultValue: 'Einheit der Saatgutmenge' })}
-              onChange={e => onChange('seed_rate_unit', (e.target.value || null) as Culture['seed_rate_unit'])}
-              fullWidth
-            >
-              <MenuItem value="">-</MenuItem>
-              {seedRateUnitOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
-              ))}
-            </Select>
-            {errors.seed_rate_unit && (
-              <Typography variant="caption" color="error">{errors.seed_rate_unit}</Typography>
-            )}
-          </FormControl>
-        </Tooltip>
+      {showsDirect && (
+        <SeedRateBlock
+          title={t('form.seedRateDirectSectionTitle', { defaultValue: 'Saatgutbedarf Direktsaat' })}
+          valueField="seed_rate_direct_value"
+          unitField="seed_rate_direct_unit"
+          safetyField="sowing_calculation_safety_percent_direct"
+          formData={formData}
+          errors={errors}
+          onChange={onChange}
+          t={t}
+        />
+      )}
 
+      {showsPreCultivation && (
+        <SeedRateBlock
+          title={t('form.seedRatePreCultivationSectionTitle', { defaultValue: 'Saatgutbedarf Pflanzung' })}
+          valueField="seed_rate_pre_cultivation_value"
+          unitField="seed_rate_pre_cultivation_unit"
+          safetyField="sowing_calculation_safety_percent_pre_cultivation"
+          formData={formData}
+          errors={errors}
+          onChange={onChange}
+          t={t}
+        />
+      )}
+
+      <Box sx={{ mt: 2 }}>
         <Tooltip title={t('form.thousandKernelWeightHelp', { defaultValue: 'Gewicht von 1000 Körnern in Gramm.' })} arrow>
           <TextField
             sx={fieldSx}
@@ -102,18 +171,6 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
             error={Boolean(errors.thousand_kernel_weight_g)}
             helperText={errors.thousand_kernel_weight_g}
             slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
-          />
-        </Tooltip>
-
-        <Tooltip title={t('form.sowingCalculationSafetyPercentHelp', { defaultValue: 'Prozentualer Zuschlag zur berechneten Saatgutmenge.' })} arrow>
-          <TextField
-            sx={{ ...spacingFieldSx, ml: 'auto' }}
-            type="number"
-            label={t('form.sowingCalculationSafetyPercentLabel', { defaultValue: 'Sicherheitszuschlag für Saatgut (%)' })}
-            value={formData.sowing_calculation_safety_percent ?? ''}
-            onChange={e => onChange('sowing_calculation_safety_percent', e.target.value ? parseFloat(e.target.value) : undefined)}
-            error={Boolean(errors.sowing_calculation_safety_percent)}
-            slotProps={{ htmlInput: { min: 0, max: 100, step: 1 } }}
           />
         </Tooltip>
       </Box>

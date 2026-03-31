@@ -52,9 +52,10 @@ def test_seed_demand_applies_safety_margin(api_client: APIClient, bed: Bed):
         name='Carrot',
         growth_duration_days=90,
         harvest_duration_days=14,
-        seed_rate_value=10,
-        seed_rate_unit='g_per_m2',
-        sowing_calculation_safety_percent=10,
+        cultivation_types=['direct_sowing'],
+        seed_rate_direct_value=10,
+        seed_rate_direct_unit='g_per_m2',
+        sowing_calculation_safety_percent_direct=10,
         project=bed.project,
     )
     _create_plan(culture, bed, 5)
@@ -75,8 +76,9 @@ def test_seed_demand_supports_seed_per_m2_and_seed_packages(api_client: APIClien
         name='Beetroot',
         growth_duration_days=90,
         harvest_duration_days=14,
-        seed_rate_value=9,
-        seed_rate_unit='seeds_per_m2',
+        cultivation_types=['direct_sowing'],
+        seed_rate_direct_value=9,
+        seed_rate_direct_unit='seeds_per_m2',
         project=bed.project,
     )
     _create_plan(culture, bed, 10)
@@ -97,8 +99,9 @@ def test_seed_demand_converts_grams_to_seed_packages_with_tkg(api_client: APICli
         name='Spinach',
         growth_duration_days=55,
         harvest_duration_days=14,
-        seed_rate_value=20,
-        seed_rate_unit='g_per_m2',
+        cultivation_types=['direct_sowing'],
+        seed_rate_direct_value=20,
+        seed_rate_direct_unit='g_per_m2',
         thousand_kernel_weight_g=10,
         project=bed.project,
     )
@@ -120,8 +123,9 @@ def test_seed_demand_returns_warning_when_conversion_missing(api_client: APIClie
         name='Radish',
         growth_duration_days=35,
         harvest_duration_days=10,
-        seed_rate_value=2,
-        seed_rate_unit='seeds_per_plant',
+        cultivation_types=['pre_cultivation'],
+        seed_rate_pre_cultivation_value=2,
+        seed_rate_pre_cultivation_unit='seeds_per_plant',
         project=bed.project,
     )
     _create_plan(culture, bed, 10, quantity=30)
@@ -133,6 +137,30 @@ def test_seed_demand_returns_warning_when_conversion_missing(api_client: APIClie
     row = next(item for item in response.json()['results'] if item['culture_name'] == 'Radish')
     assert row['package_suggestion'] is None
     assert row['warning'] == 'Missing thousand-kernel weight for unit conversion.'
+
+
+@pytest.mark.django_db
+def test_seed_demand_uses_method_specific_seed_rates_for_mixed_cultivation(api_client: APIClient, bed: Bed):
+    culture = Culture.objects.create(
+        name='Mixed',
+        growth_duration_days=80,
+        harvest_duration_days=20,
+        cultivation_types=['pre_cultivation', 'direct_sowing'],
+        seed_rate_direct_value=4,
+        seed_rate_direct_unit='g_per_m2',
+        sowing_calculation_safety_percent_direct=0,
+        seed_rate_pre_cultivation_value=2,
+        seed_rate_pre_cultivation_unit='g_per_m2',
+        sowing_calculation_safety_percent_pre_cultivation=50,
+        project=bed.project,
+    )
+    _create_plan(culture, bed, 10, cultivation_type='direct_sowing')
+    _create_plan(culture, bed, 10, cultivation_type='pre_cultivation')
+    response = api_client.get('/openfarmplanner/api/seed-demand/')
+    assert response.status_code == 200
+    row = next(item for item in response.json()['results'] if item['culture_name'] == 'Mixed')
+    # direct: 40g; transplant with 50% margin: 30g => total 70g
+    assert row['required_amount_value'] == pytest.approx(70.0)
 
 
 @pytest.mark.django_db

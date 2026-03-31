@@ -32,23 +32,21 @@ describe('HarvestSection and SeedingSection', () => {
 
     render(
       <SeedingSection
-        formData={{ seed_rate_unit: 'g_per_m2', seed_rate_value: 3 }}
-        errors={{ seed_rate_value: 'invalid' }}
+        formData={{ cultivation_types: ['direct_sowing'], seed_rate_direct_unit: 'g_per_m2', seed_rate_direct_value: 3 }}
+        errors={{ seed_rate_direct_value: 'invalid' }}
         onChange={onChange}
         t={t}
       />
     );
 
-    const amountInput = screen.getByLabelText('Saatgutmenge');
-    fireEvent.blur(amountInput);
-    expect(onChange).toHaveBeenCalledWith('seed_rate_value', 3);
+    const amountInput = screen.getByLabelText('Menge');
+    fireEvent.change(amountInput, { target: { value: '4' } });
+    expect(onChange).toHaveBeenCalledWith('seed_rate_direct_value', 4);
 
     const unitCombobox = screen.getAllByRole('combobox')[0];
     fireEvent.mouseDown(unitCombobox);
     fireEvent.click(screen.getByRole('option', { name: 'g / lfm' }));
-    expect(onChange).toHaveBeenCalledWith('seed_rate_unit', 'g_per_lfm');
-
-    fireEvent.blur(unitCombobox);
+    expect(onChange).toHaveBeenCalledWith('seed_rate_direct_unit', 'g_per_lfm');
     
     expect(screen.getByText('invalid')).toBeInTheDocument();
   });

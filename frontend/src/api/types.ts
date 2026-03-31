@@ -42,6 +42,12 @@ export interface Culture {
   seed_rate_value?: number | null;
   seed_rate_unit?: SeedRateUnit | null;
   seed_rate_by_cultivation?: SeedRateByCultivation | null;
+  seed_rate_direct_value?: number | null;
+  seed_rate_direct_unit?: SeedRateUnit | null;
+  sowing_calculation_safety_percent_direct?: number | null;
+  seed_rate_pre_cultivation_value?: number | null;
+  seed_rate_pre_cultivation_unit?: SeedRateUnit | null;
+  sowing_calculation_safety_percent_pre_cultivation?: number | null;
   id?: number;
   name: string;
   variety?: string;
@@ -107,6 +113,12 @@ export interface PublicCulture {
   seed_rate_value?: number | null;
   seed_rate_unit?: SeedRateUnit | null;
   seed_rate_by_cultivation?: SeedRateByCultivation | null;
+  seed_rate_direct_value?: number | null;
+  seed_rate_direct_unit?: SeedRateUnit | null;
+  sowing_calculation_safety_percent_direct?: number | null;
+  seed_rate_pre_cultivation_value?: number | null;
+  seed_rate_pre_cultivation_unit?: SeedRateUnit | null;
+  sowing_calculation_safety_percent_pre_cultivation?: number | null;
   sowing_calculation_safety_percent?: number | null;
   thousand_kernel_weight_g?: number | null;
   seeding_requirement?: number | null;

@@ -435,6 +435,12 @@ class CultureSerializer(serializers.ModelSerializer):
         allow_null=True,
         help_text='Safety margin for seeding calculation in percent (0-100)'
     )
+    seed_rate_direct_value = serializers.FloatField(required=False, allow_null=True)
+    seed_rate_direct_unit = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    sowing_calculation_safety_percent_direct = serializers.FloatField(required=False, allow_null=True)
+    seed_rate_pre_cultivation_value = serializers.FloatField(required=False, allow_null=True)
+    seed_rate_pre_cultivation_unit = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    sowing_calculation_safety_percent_pre_cultivation = serializers.FloatField(required=False, allow_null=True)
     thousand_kernel_weight_g = serializers.FloatField(
         required=False,
         allow_null=True,
@@ -687,6 +693,53 @@ class CultureSerializer(serializers.ModelSerializer):
                     if isinstance(primary, dict):
                         attrs['seed_rate_value'] = float(primary.get('value'))
                         attrs['seed_rate_unit'] = primary.get('unit')
+
+        direct_value = attrs.get(
+            'seed_rate_direct_value',
+            getattr(self.instance, 'seed_rate_direct_value', None) if self.instance else None,
+        )
+        direct_unit = attrs.get(
+            'seed_rate_direct_unit',
+            getattr(self.instance, 'seed_rate_direct_unit', None) if self.instance else None,
+        )
+        pre_value = attrs.get(
+            'seed_rate_pre_cultivation_value',
+            getattr(self.instance, 'seed_rate_pre_cultivation_value', None) if self.instance else None,
+        )
+        pre_unit = attrs.get(
+            'seed_rate_pre_cultivation_unit',
+            getattr(self.instance, 'seed_rate_pre_cultivation_unit', None) if self.instance else None,
+        )
+        active_types = set(attrs.get('cultivation_types') or cultivation_types or [])
+
+        if 'direct_sowing' in active_types and direct_value is None and direct_unit:
+            errors['seed_rate_direct_value'] = 'Direct sowing seed rate value is required when direct sowing unit is set.'
+        if 'direct_sowing' in active_types and direct_value is not None and not direct_unit:
+            errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is required when direct sowing value is set.'
+        if direct_value is not None and direct_value <= 0:
+            errors['seed_rate_direct_value'] = 'Direct sowing seed rate value must be greater than zero.'
+        if direct_unit and direct_unit not in {
+            SEED_RATE_UNIT_G_PER_M2,
+            SEED_RATE_UNIT_G_PER_LFM,
+            SEED_RATE_UNIT_SEEDS_PER_M2,
+            SEED_RATE_UNIT_SEEDS_PER_LFM,
+        }:
+            errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is unsupported.'
+
+        if 'pre_cultivation' in active_types and pre_value is None and pre_unit:
+            errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value is required when pre-cultivation unit is set.'
+        if 'pre_cultivation' in active_types and pre_value is not None and not pre_unit:
+            errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is required when pre-cultivation value is set.'
+        if pre_value is not None and pre_value <= 0:
+            errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value must be greater than zero.'
+        if pre_unit and pre_unit not in {
+            SEED_RATE_UNIT_G_PER_M2,
+            SEED_RATE_UNIT_G_PER_LFM,
+            SEED_RATE_UNIT_SEEDS_PER_M2,
+            SEED_RATE_UNIT_SEEDS_PER_LFM,
+            SEED_RATE_UNIT_SEEDS_PER_PLANT,
+        }:
+            errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is unsupported.'
 
         # Handle supplier_name via get-or-create to keep imports ergonomic.
         # If supplier_id was explicitly provided (including null), respect it and

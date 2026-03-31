@@ -63,12 +63,18 @@ const EMPTY_CULTURE: Partial<Culture> = {
   sowing_depth_cm: undefined,
   display_color: '',
   sowing_calculation_safety_percent: 0,
+  sowing_calculation_safety_percent_direct: undefined,
+  sowing_calculation_safety_percent_pre_cultivation: undefined,
   thousand_kernel_weight_g: undefined,
   seeding_requirement: undefined,
   seeding_requirement_type: '',
   seed_rate_value: null,
   seed_rate_unit: null,
   seed_rate_by_cultivation: null,
+  seed_rate_direct_value: null,
+  seed_rate_direct_unit: null,
+  seed_rate_pre_cultivation_value: null,
+  seed_rate_pre_cultivation_unit: null,
   seed_packages: [],
 };
 
@@ -145,10 +151,7 @@ export function CultureForm({
   // Strongly typed change handler
   const handleChange = <K extends keyof Culture>(name: K, value: Culture[K]) => {
     setFormData((prev) => {
-      let updated = { ...prev, [name]: value };
-      if (name === 'seed_rate_unit' && (!value || value === '')) {
-        updated = { ...updated, seed_rate_value: null };
-      }
+      const updated = { ...prev, [name]: value };
       setIsDirty(true);
       validateAndSet(updated);
       return updated;

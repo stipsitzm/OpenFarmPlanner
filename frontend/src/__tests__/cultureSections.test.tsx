@@ -78,25 +78,25 @@ describe('culture form UI sections', () => {
 
   });
 
-  it('renders SeedingSection and handles seed value and safety percent changes', () => {
+  it('renders SeedingSection and handles method-specific seed changes', () => {
     const onChange = vi.fn();
 
     render(
       <SeedingSection
-        formData={{ seed_rate_value: 5, seed_rate_unit: 'g_per_lfm' }}
-        errors={{ seed_rate_unit: 'Bitte wählen' }}
+        formData={{ cultivation_types: ['direct_sowing'], seed_rate_direct_value: 5, seed_rate_direct_unit: 'g_per_lfm' }}
+        errors={{ seed_rate_direct_unit: 'Bitte wählen' }}
         onChange={onChange}
         t={t}
       />
     );
 
-    const amountInput = screen.getByLabelText('Saatgutmenge');
+    const amountInput = screen.getByLabelText('Menge');
     fireEvent.change(amountInput, { target: { value: '12.5' } });
-    expect(onChange).toHaveBeenCalledWith('seed_rate_value', 12.5);
+    expect(onChange).toHaveBeenCalledWith('seed_rate_direct_value', 12.5);
 
     const safetyInput = screen.getByLabelText('Sicherheitszuschlag für Saatgut (%)');
     fireEvent.change(safetyInput, { target: { value: '10' } });
-    expect(onChange).toHaveBeenCalledWith('sowing_calculation_safety_percent', 10);
+    expect(onChange).toHaveBeenCalledWith('sowing_calculation_safety_percent_direct', 10);
 
     const thousandKernelWeightInput = screen.getByLabelText('Tausendkorngewicht (g)');
     fireEvent.change(thousandKernelWeightInput, { target: { value: '472.02' } });
@@ -107,6 +107,31 @@ describe('culture form UI sections', () => {
 
 
     expect(screen.getByText('Bitte wählen')).toBeInTheDocument();
+  });
+
+  it('shows method blocks based on selected cultivation types', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <SeedingSection
+        formData={{ cultivation_types: ['direct_sowing'] }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+    expect(screen.getByText('Saatgutbedarf Direktsaat')).toBeInTheDocument();
+    expect(screen.queryByText('Saatgutbedarf Pflanzung')).not.toBeInTheDocument();
+
+    rerender(
+      <SeedingSection
+        formData={{ cultivation_types: ['pre_cultivation', 'direct_sowing'] }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+    expect(screen.getByText('Saatgutbedarf Direktsaat')).toBeInTheDocument();
+    expect(screen.getByText('Saatgutbedarf Pflanzung')).toBeInTheDocument();
   });
 
 
