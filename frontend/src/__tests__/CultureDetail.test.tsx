@@ -178,7 +178,7 @@ describe('CultureDetail Component', () => {
     expect(screen.getByText('5 %')).toBeInTheDocument();
   });
 
-  it('hides seed rows for inactive cultivation methods in detail view', () => {
+  it('shows simplified seed view for a single active cultivation method', () => {
     const mockOnSelect = vi.fn();
     const cultures: Culture[] = [
       {
@@ -202,8 +202,12 @@ describe('CultureDetail Component', () => {
       />
     );
 
-    expect(screen.getAllByText('Pflanzung').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Pflanzung')).toHaveLength(1);
     expect(screen.queryAllByText('Direktsaat')).toHaveLength(0);
+    expect(screen.queryByText('Saatgutmenge nach Anbauart')).not.toBeInTheDocument();
+    expect(screen.queryByText('Methode')).not.toBeInTheDocument();
+    expect(screen.getByText('Menge')).toBeInTheDocument();
+    expect(screen.getByText('4 g / m²')).toBeInTheDocument();
     expect(screen.getByText('11 %')).toBeInTheDocument();
     expect(screen.queryByText('9 %')).not.toBeInTheDocument();
   });

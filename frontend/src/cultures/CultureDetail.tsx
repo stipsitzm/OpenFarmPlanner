@@ -105,17 +105,24 @@ export function CultureDetail({
   );
 
   const selectedCulture = selectedOption?.data ?? null;
+  const activeCultivationTypes = useMemo(
+    () => (
+      selectedCulture
+        ? (
+          selectedCulture.cultivation_types && selectedCulture.cultivation_types.length > 0
+            ? selectedCulture.cultivation_types
+            : (selectedCulture.cultivation_type ? [selectedCulture.cultivation_type] : [])
+        ).filter((item): item is 'direct_sowing' | 'pre_cultivation' => (
+          item === 'direct_sowing' || item === 'pre_cultivation'
+        ))
+        : []
+    ),
+    [selectedCulture]
+  );
   const seedRateRows = useMemo(() => {
     if (!selectedCulture) {
       return [];
     }
-    const activeCultivationTypes = (
-      selectedCulture.cultivation_types && selectedCulture.cultivation_types.length > 0
-        ? selectedCulture.cultivation_types
-        : (selectedCulture.cultivation_type ? [selectedCulture.cultivation_type] : [])
-    ).filter((item): item is 'direct_sowing' | 'pre_cultivation' => (
-      item === 'direct_sowing' || item === 'pre_cultivation'
-    ));
     const isDirectActive = activeCultivationTypes.includes('direct_sowing');
     const isPreCultivationActive = activeCultivationTypes.includes('pre_cultivation');
 
@@ -185,7 +192,7 @@ export function CultureDetail({
     }
 
     return [];
-  }, [selectedCulture]);
+  }, [activeCultivationTypes, selectedCulture]);
 
   return (
     <Box sx={{ width: '100%' }}>
@@ -431,7 +438,21 @@ export function CultureDetail({
                   gap: 2,
                 }}
               >
-                {seedRateRows.length > 0 && (
+                {seedRateRows.length > 0 && activeCultivationTypes.length <= 1 && (
+                  <Box sx={{ gridColumn: '1 / -1' }}>
+                    <Typography variant="body2" color="text.secondary">Menge</Typography>
+                    <Typography variant="body1">
+                      {formatNumber(seedRateRows[0].value, t)} {formatSeedUnitLabel(seedRateRows[0].unit)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      Sicherheitszuschlag Saatgut
+                    </Typography>
+                    <Typography variant="body1">
+                      {seedRateRows[0].safety !== null ? `${formatNumber(seedRateRows[0].safety, t)} %` : '-'}
+                    </Typography>
+                  </Box>
+                )}
+                {seedRateRows.length > 0 && activeCultivationTypes.length > 1 && (
                   <Box sx={{ gridColumn: '1 / -1' }}>
                     <Typography variant="body2" color="text.secondary">Saatgutmenge nach Anbauart</Typography>
                     <Table size="small">
