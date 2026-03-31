@@ -21,8 +21,8 @@ import { useState, useEffect, useCallback, useRef, useMemo, type MutableRefObjec
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
-import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel } from '@mui/x-data-grid';
-import { Box, Alert, IconButton } from '@mui/material';
+import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridCellParams } from '@mui/x-data-grid';
+import { Box, Alert, IconButton, Chip, Button, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigationBlocker } from '../../hooks/autosave';
@@ -53,6 +53,7 @@ export interface EditableDataGridCommandApi {
   editSelectedRow: () => void;
   deleteSelectedRow: () => void;
   getSelectedRowId: () => GridRowId | null;
+  reload: () => Promise<void>;
 }
 export interface NotesFieldConfig {
   field: string;
@@ -84,6 +85,10 @@ export interface EditableDataGridProps<T extends EditableRow> {
   };
   commandApiRef?: MutableRefObject<EditableDataGridCommandApi | null>;
   onSelectedRowChange?: (row: T | null) => void;
+  getRowValidationErrors?: (row: T) => Record<string, string>;
+  showAddAction?: boolean;
+  showFooterEditControls?: boolean;
+  showRowEditActions?: boolean;
 }
 
 export function EditableDataGrid<T extends EditableRow>({
@@ -106,6 +111,10 @@ export function EditableDataGrid<T extends EditableRow>({
   notes,
   commandApiRef,
   onSelectedRowChange,
+  getRowValidationErrors,
+  showAddAction = true,
+  showFooterEditControls = true,
+  showRowEditActions = false,
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -115,6 +124,10 @@ export function EditableDataGrid<T extends EditableRow>({
   const initialRowProcessedRef = useRef<boolean>(false);
   const initialFetchDoneRef = useRef<boolean>(false);
   const [selectedRowIds, setSelectedRowIds] = useState<GridRowId[]>([]);
+  const [dirtyRowIds, setDirtyRowIds] = useState<Set<string>>(new Set());
+  const [activeValidationErrors, setActiveValidationErrors] = useState<Record<string, Record<string, string>>>({});
+  const rowSnapshotRef = useRef<Map<string, T>>(new Map());
+  const isMobile = useMediaQuery('(max-width:900px)');
   
   const { t } = useTranslation('common');
   const { sortModel, setSortModel } = usePersistentSortModel({
@@ -158,10 +171,10 @@ export function EditableDataGrid<T extends EditableRow>({
     },
   });
 
-  // Check if any row is in edit mode (has unsaved changes)
-  const hasUnsavedChanges = Object.values(rowModesModel).some(
+  const hasRowsInEditMode = Object.values(rowModesModel).some(
     (mode) => mode.mode === GridRowModes.Edit
   );
+  const hasUnsavedChanges = hasRowsInEditMode || dirtyRowIds.size > 0;
 
   // Check if there's a validation error (indicating incomplete/invalid data)
   const hasValidationError = Boolean(error);
@@ -173,7 +186,7 @@ export function EditableDataGrid<T extends EditableRow>({
   }, [rows]);
 
   const hasInvalidRowInEditMode = useMemo(() => {
-    if (!hasUnsavedChanges) return false;
+    if (!hasRowsInEditMode) return false;
     
     // Find rows that are in edit mode
     const editingRowIds = Object.entries(rowModesModel)
@@ -187,16 +200,25 @@ export function EditableDataGrid<T extends EditableRow>({
       const validationError = validateRow(row);
       return validationError !== null;
     });
-  }, [hasUnsavedChanges, rowModesModel, rowsById, validateRow]);
+  }, [hasRowsInEditMode, rowModesModel, rowsById, validateRow]);
 
-  // Block navigation if there are unsaved changes with invalid data OR validation errors showing
-  // This prevents losing incomplete data when required fields are missing
+  // Do not block navigation with modal prompts: invalid/dirty state is visible inline.
   useNavigationBlocker(
-    hasUnsavedChanges || hasValidationError || hasInvalidRowInEditMode,
-    hasValidationError || hasInvalidRowInEditMode
-      ? t('messages.validationErrors')
-      : t('messages.unsavedChanges')
+    false,
+    t('messages.unsavedChanges')
   );
+
+  const rowValidationErrors = useMemo(() => {
+    if (!getRowValidationErrors) return {};
+    const errorsByRow: Record<string, Record<string, string>> = {};
+    for (const row of rows as T[]) {
+      const errors = getRowValidationErrors(row);
+      if (Object.keys(errors).length > 0) {
+        errorsByRow[String(row.id)] = errors;
+      }
+    }
+    return errorsByRow;
+  }, [getRowValidationErrors, rows]);
 
   /**
    * Fetch data from API and populate grid
@@ -259,6 +281,54 @@ export function EditableDataGrid<T extends EditableRow>({
     }));
   };
 
+  const handleDiscardRowChanges = useCallback((rowId: GridRowId): void => {
+    const rowKey = String(rowId);
+    const snapshot = rowSnapshotRef.current.get(rowKey);
+    if (snapshot) {
+      setRows((prevRows) => prevRows.map((row) => (String(row.id) === rowKey ? snapshot : row)));
+    } else if (Number(rowId) < 0) {
+      setRows((prevRows) => prevRows.filter((row) => String(row.id) !== rowKey));
+    }
+
+    setDirtyRowIds((prev) => {
+      const next = new Set(prev);
+      next.delete(rowKey);
+      return next;
+    });
+    setActiveValidationErrors((prev) => {
+      const next = { ...prev };
+      delete next[rowKey];
+      return next;
+    });
+    setRowModesModel((oldModel) => ({
+      ...oldModel,
+      [rowId]: { mode: GridRowModes.View, ignoreModifications: true },
+    }));
+  }, []);
+
+  const handleSaveAllDirtyRows = useCallback((): void => {
+    const editingRowIds = Object.entries(rowModesModel)
+      .filter(([, mode]) => mode.mode === GridRowModes.Edit)
+      .map(([id]) => id);
+    if (editingRowIds.length === 0) {
+      return;
+    }
+    setRowModesModel((oldModel) => {
+      const nextModel = { ...oldModel };
+      for (const rowId of editingRowIds) {
+        nextModel[rowId] = { mode: GridRowModes.View };
+      }
+      return nextModel;
+    });
+  }, [rowModesModel]);
+
+  const handleSaveRow = useCallback((rowId: GridRowId): void => {
+    setRowModesModel((oldModel) => ({
+      ...oldModel,
+      [rowId]: { mode: GridRowModes.View },
+    }));
+  }, []);
+
   const handleEditSelectedRow = (): void => {
     const selectedRowId = selectedRowIds[0];
     if (!selectedRowId) {
@@ -290,12 +360,13 @@ export function EditableDataGrid<T extends EditableRow>({
       editSelectedRow: handleEditSelectedRow,
       deleteSelectedRow: handleDeleteSelectedRow,
       getSelectedRowId: () => selectedRowIds[0] ?? null,
+      reload: fetchData,
     };
 
     return () => {
       commandApiRef.current = null;
     };
-  }, [commandApiRef, handleAddClick, selectedRowIds]);
+  }, [commandApiRef, fetchData, selectedRowIds]);
 
 
   /**
@@ -308,7 +379,16 @@ export function EditableDataGrid<T extends EditableRow>({
     
     // Validate required fields
     const validationError = validateRow(newRow);
+    const rowKey = String(newRow.id);
+    const fieldErrors = getRowValidationErrors?.(newRow) ?? {};
+    setActiveValidationErrors((prev) => ({
+      ...prev,
+      [rowKey]: fieldErrors,
+    }));
     if (validationError) {
+      if (newRow.isNew) {
+        throw new Error(validationError);
+      }
       setError(validationError);
       throw new Error(validationError);
     }
@@ -324,6 +404,7 @@ export function EditableDataGrid<T extends EditableRow>({
         
         // Remove the temporary row and add the saved row
         const savedRow = mapToRow(response.data as T);
+        rowSnapshotRef.current.set(String(savedRow.id), savedRow);
         setRows((prevRows) => {
           // Remove the temporary row with negative ID
           const filteredRows = prevRows.filter(row => row.id !== newRow.id);
@@ -342,6 +423,12 @@ export function EditableDataGrid<T extends EditableRow>({
         // Map the response through mapToRow to ensure all fields are properly formatted
         // This is important for auto-calculated fields like harvest dates
         const mappedRow = mapToRow(response.data as T);
+        rowSnapshotRef.current.set(String(mappedRow.id), mappedRow);
+        setDirtyRowIds((prev) => {
+          const next = new Set(prev);
+          next.delete(rowKey);
+          return next;
+        });
         return mappedRow;
       }
     } catch (err) {
@@ -395,16 +482,41 @@ export function EditableDataGrid<T extends EditableRow>({
    * Custom footer component with add button
    */
   const CustomFooter = (): React.ReactElement => {
+    const hasInvalidCell = hasValidationError || hasInvalidRowInEditMode;
+
     return (
       <Box sx={dataGridFooterSx}>
-        <IconButton
-          onClick={handleAddClick}
-          color="primary"
-          size="small"
-          aria-label={addButtonLabel}
-        >
-          <AddIcon />
-        </IconButton>
+        {showAddAction && (
+          <IconButton
+            onClick={handleAddClick}
+            color="primary"
+            size="small"
+            aria-label={addButtonLabel}
+          >
+            <AddIcon />
+          </IconButton>
+        )}
+        {showFooterEditControls && hasUnsavedChanges && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: showAddAction ? 1 : 0 }}>
+            <Button size="small" variant="contained" onClick={handleSaveAllDirtyRows}>
+              {t('actions.save')}
+            </Button>
+            <Button
+              size="small"
+              onClick={() => {
+                const editIds = Object.entries(rowModesModel)
+                  .filter(([, mode]) => mode.mode === GridRowModes.Edit)
+                  .map(([id]) => id);
+                for (const id of editIds) {
+                  handleDiscardRowChanges(id);
+                }
+              }}
+            >
+              {t('actions.cancel')}
+            </Button>
+            {hasInvalidCell && <Chip size="small" color="error" label={t('messages.validationErrors')} />}
+          </Box>
+        )}
       </Box>
     );
   };
@@ -459,34 +571,71 @@ export function EditableDataGrid<T extends EditableRow>({
     });
   }, [columns, notes, notesEditor]);
 
-  /**
-   * Add delete action column if enabled
-   */
-  const columnsWithActions: GridColDef[] = showDeleteAction
-    ? [
-        ...processedColumns,
-        {
-          field: 'actions',
-          type: 'actions',
-          headerName: '',
-          width: 70,
-          cellClassName: 'actions',
-          getActions: ({ id }) => {
-            return [
-              <IconButton
-                key={`delete-${id}`}
-                onClick={handleDeleteClick(id)}
-                size="small"
-                sx={deleteIconButtonSx}
-                aria-label="Löschen"
-              >
-                <CloseIcon />
-              </IconButton>,
-            ];
+  const columnsWithActions: GridColDef[] = [
+    ...processedColumns,
+    ...(showRowEditActions
+      ? [
+          {
+            field: 'rowEditActions',
+            headerName: '',
+            sortable: false,
+            filterable: false,
+            width: 220,
+            align: 'right',
+            renderCell: (params: GridCellParams<T>) => {
+              const rowId = params.id;
+              const rowKey = String(rowId);
+              const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
+              const isDirty = dirtyRowIds.has(rowKey);
+
+              if (!isEditing && !isDirty) {
+                return null;
+              }
+
+              return (
+                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, width: '100%', justifyContent: 'flex-end' }}>
+                  {isDirty && <Chip size="small" color="warning" label={t('messages.rowChanged')} />}
+                  {isEditing && (
+                    <>
+                      <Button size="small" variant="contained" onClick={() => handleSaveRow(rowId)}>
+                        {t('actions.save')}
+                      </Button>
+                      <Button size="small" onClick={() => handleDiscardRowChanges(rowId)}>
+                        {t('actions.cancel')}
+                      </Button>
+                    </>
+                  )}
+                </Box>
+              );
+            },
           },
-        },
-      ]
-    : processedColumns;
+        ]
+      : []),
+    ...(showDeleteAction
+      ? [
+          {
+            field: 'actions',
+            type: 'actions',
+            headerName: '',
+            width: 70,
+            cellClassName: 'actions',
+            getActions: ({ id }) => {
+              return [
+                <IconButton
+                  key={`delete-${id}`}
+                  onClick={handleDeleteClick(id)}
+                  size="small"
+                  sx={deleteIconButtonSx}
+                  aria-label="Löschen"
+                >
+                  <CloseIcon />
+                </IconButton>,
+              ];
+            },
+          },
+        ]
+      : []),
+  ];
 
   const getNotesDrawerTitle = (): string => {
     if (!notesEditor.field || !notes) return 'Notizen';
@@ -541,8 +690,9 @@ export function EditableDataGrid<T extends EditableRow>({
           onProcessRowUpdateError={handleProcessRowUpdateError}
           loading={loading}
           editMode="row"
+          density={isMobile ? 'standard' : 'compact'}
           autoHeight
-          hideFooter={true}
+          hideFooter={false}
           sortModel={sortModel}
           onSortModelChange={setSortModel}
           rowSelectionModel={{ type: "include", ids: new Set(selectedRowIds) }}
@@ -551,7 +701,49 @@ export function EditableDataGrid<T extends EditableRow>({
             footer: CustomFooter,
           }}
           sx={{ ...dataGridSx, width: 'auto' }}
-          onCellClick={(params) => handleEditableCellClick(params, rowModesModel, setRowModesModel)}
+          getRowClassName={(params) => {
+            const rowKey = String(params.id);
+            if (rowModesModel[params.id]?.mode === GridRowModes.Edit) {
+              return 'ofp-row-editing';
+            }
+            if (dirtyRowIds.has(rowKey)) {
+              return 'ofp-row-dirty';
+            }
+            return '';
+          }}
+          getCellClassName={(params) => {
+            const rowKey = String(params.id);
+            const errorText = activeValidationErrors[rowKey]?.[params.field] ?? rowValidationErrors[rowKey]?.[params.field];
+            if (errorText) {
+              return 'ofp-cell-error';
+            }
+            if (dirtyRowIds.has(rowKey)) {
+              return 'ofp-cell-dirty';
+            }
+            return '';
+          }}
+          onCellClick={(params) => {
+            const rowKey = String(params.id);
+            if (!rowSnapshotRef.current.has(rowKey)) {
+              const row = rowsById.get(rowKey);
+              if (row) {
+                rowSnapshotRef.current.set(rowKey, row as T);
+              }
+            }
+            setDirtyRowIds((prev) => new Set(prev).add(rowKey));
+            handleEditableCellClick(params, rowModesModel, setRowModesModel);
+          }}
+          onCellKeyDown={(params: GridCellParams<T>, event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              handleDiscardRowChanges(params.id);
+              return;
+            }
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+              event.preventDefault();
+              handleSaveRow(params.id);
+            }
+          }}
           />
         </Box>
       </Box>

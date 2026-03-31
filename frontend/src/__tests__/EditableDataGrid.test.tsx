@@ -33,6 +33,7 @@ vi.mock('@mui/x-data-grid', async () => {
     processRowUpdate,
     onProcessRowUpdateError,
     onCellClick,
+    onCellKeyDown,
     onRowEditStop,
     slots,
   }: unknown) => {
@@ -58,6 +59,13 @@ vi.mock('@mui/x-data-grid', async () => {
                   </div>
                 );
               }
+              if (typeof col.renderCell === 'function') {
+                return (
+                  <div key={`${row.id}-${col.field}`}>
+                    {col.renderCell({ id: row.id, row, value: row[col.field as keyof TestGridRow] } as never)}
+                  </div>
+                );
+              }
 
               return (
                 <button
@@ -69,6 +77,14 @@ vi.mock('@mui/x-data-grid', async () => {
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() =>
+                onCellKeyDown?.({ id: row.id, field: 'name' }, { key: 'Escape', preventDefault: vi.fn() })
+              }
+            >
+              ESC {row.id}
+            </button>
             <button type="button" onClick={() => commit(row, GridRowEditStopReasons.rowFocusOut)}>
               Blur speichern {row.id}
             </button>
@@ -134,7 +150,7 @@ describe('EditableDataGrid', () => {
 
     fireEvent.click(screen.getByLabelText('Neu'));
     fireEvent.click(screen.getByRole('button', { name: /Blur speichern -1/i }));
-    expect(screen.getByText('Name ist erforderlich')).toBeInTheDocument();
+    expect(screen.getByText('messages.validationErrors')).toBeInTheDocument();
 
     validateRow.mockReturnValue(null);
     fireEvent.click(screen.getByRole('button', { name: /Enter speichern -1/i }));
@@ -198,7 +214,84 @@ describe('EditableDataGrid', () => {
     await user.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
 
     await waitFor(() => {
-      expect(mockUseNavigationBlocker).toHaveBeenLastCalledWith(true, 'messages.unsavedChanges');
+      expect(mockUseNavigationBlocker).toHaveBeenLastCalledWith(false, 'messages.unsavedChanges');
     });
+  });
+
+  it('keeps draft rows local and exposes save controls until saved', async () => {
+    const props = baseProps((row) => (!row.name ? 'Name ist erforderlich' : null));
+    const createSpy = vi.spyOn(props.api, 'create');
+    render(<EditableDataGrid {...props} showDeleteAction={false} />);
+
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('1'));
+    fireEvent.click(screen.getByLabelText('Neu'));
+    expect(screen.getByRole('button', { name: 'actions.save' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Blur speichern -1/i }));
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('discards draft rows with Escape', async () => {
+    render(<EditableDataGrid {...baseProps()} showDeleteAction={false} />);
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('1'));
+    fireEvent.click(screen.getByLabelText('Neu'));
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('2'));
+    fireEvent.click(screen.getByRole('button', { name: 'ESC -1' }));
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('1'));
+  });
+
+  it('shows row-bound save/cancel actions only while row is being edited', async () => {
+    const user = userEvent.setup();
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        showFooterEditControls={false}
+        showRowEditActions={true}
+      />,
+    );
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'actions.save' })).not.toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'actions.save' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'actions.cancel' })).toBeInTheDocument();
+    });
+  });
+
+  it('clears row dirty indicator after cancel', async () => {
+    const user = userEvent.setup();
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        showFooterEditControls={false}
+        showRowEditActions={true}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
+    await waitFor(() => expect(screen.getByText('messages.rowChanged')).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'ESC 1' }));
+    await waitFor(() => expect(screen.queryByText('messages.rowChanged')).not.toBeInTheDocument());
+  });
+
+  it('clears row dirty indicator after successful save', async () => {
+    const user = userEvent.setup();
+    const props = baseProps(() => null);
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        showFooterEditControls={false}
+        showRowEditActions={true}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
+    await waitFor(() => expect(screen.getByText('messages.rowChanged')).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: /Tab speichern 1/i }));
+    await waitFor(() => expect(screen.queryByText('messages.rowChanged')).not.toBeInTheDocument());
   });
 });

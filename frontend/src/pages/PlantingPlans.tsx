@@ -782,12 +782,30 @@ function PlantingPlans(): React.ReactElement {
 
             return null;
           }}
+          getRowValidationErrors={(row) => {
+            const errors: Record<string, string> = {};
+            if (!row.planting_date) {
+              errors.planting_date = t("plantingPlans:validation.plantingDateRequired");
+            }
+            if (!row.culture || row.culture === 0) {
+              errors.culture = t("plantingPlans:validation.cultureRequired");
+            }
+            if (!row.bed || row.bed === 0) {
+              errors.bed = t("plantingPlans:validation.bedRequired");
+            }
+            if (!row.cultivation_type) {
+              errors.cultivation_type = t("plantingPlans:validation.cultivationTypeRequired");
+            }
+            return errors;
+          }}
           loadErrorMessage={t("plantingPlans:errors.load")}
           saveErrorMessage={t("plantingPlans:errors.save")}
           deleteErrorMessage={t("plantingPlans:errors.delete")}
           deleteConfirmMessage={t("plantingPlans:confirmDelete")}
           addButtonLabel={`${t("plantingPlans:addButton")} (Alt+N)`}
           showDeleteAction={true}
+          showFooterEditControls={false}
+          showRowEditActions={true}
           tableKey="plantingPlans"
           defaultSortModel={[{ field: "planting_date", sort: "asc" }]}
           persistSortInUrl={true}

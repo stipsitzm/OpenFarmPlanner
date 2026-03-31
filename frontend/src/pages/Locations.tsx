@@ -9,7 +9,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import type { GridColDef } from '@mui/x-data-grid';
-import { Box, Button } from '@mui/material';
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from '../i18n';
 import { locationAPI, type Location } from '../api/api';
@@ -26,6 +26,11 @@ function Locations(): React.ReactElement {
   const { t } = useTranslation(['locations', 'common']);
   const commandApiRef = useRef<EditableDataGridCommandApi | null>(null);
   const [selectedRow, setSelectedRow] = useState<LocationRow | null>(null);
+  const [isCreateDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
+  const [newLocationName, setNewLocationName] = useState<string>('');
+  const [newLocationAddress, setNewLocationAddress] = useState<string>('');
+  const [newLocationNotes, setNewLocationNotes] = useState<string>('');
+  const [createError, setCreateError] = useState<string>('');
 
   useCommandContextTag('locations');
 
@@ -39,7 +44,7 @@ function Locations(): React.ReactElement {
       keys: { alt: true, key: 'n' },
       contextTags: ['locations'],
       isEnabled: () => Boolean(commandApiRef.current),
-      action: () => commandApiRef.current?.addRow(),
+      action: () => setCreateDialogOpen(true),
     },
     {
       id: 'locations.edit',
@@ -66,6 +71,33 @@ function Locations(): React.ReactElement {
   ], [selectedRow]);
 
   useRegisterCommands('locations-page', commands);
+
+  const resetCreateDialog = (): void => {
+    setNewLocationName('');
+    setNewLocationAddress('');
+    setNewLocationNotes('');
+    setCreateError('');
+    setCreateDialogOpen(false);
+  };
+
+  const handleCreateLocation = async (): Promise<void> => {
+    if (!newLocationName.trim()) {
+      setCreateError(t('locations:validation.nameRequired'));
+      return;
+    }
+
+    try {
+      await locationAPI.create({
+        name: newLocationName.trim(),
+        address: newLocationAddress.trim(),
+        notes: newLocationNotes.trim(),
+      });
+      resetCreateDialog();
+      await commandApiRef.current?.reload();
+    } catch {
+      setCreateError(t('locations:errors.save'));
+    }
+  };
   
   //Define columns for the Data Grid with inline editing
   const columns: GridColDef[] = [
@@ -102,12 +134,43 @@ function Locations(): React.ReactElement {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => commandApiRef.current?.addRow()}
+            onClick={() => setCreateDialogOpen(true)}
             aria-label={`${t('locations:addButton')} (Alt+N)`}
           >
             {t('locations:addButton')}
           </Button>
         </Box>
+
+        <Dialog open={isCreateDialogOpen} onClose={resetCreateDialog} fullWidth maxWidth="sm">
+          <DialogTitle>{t('locations:addButton')}</DialogTitle>
+          <DialogContent sx={{ display: 'grid', gap: 2, pt: 1 }}>
+            <TextField
+              label={t('common:fields.name')}
+              value={newLocationName}
+              onChange={(event) => setNewLocationName(event.target.value)}
+              error={Boolean(createError)}
+              helperText={createError || ' '}
+              required
+              autoFocus
+            />
+            <TextField
+              label={t('common:fields.address')}
+              value={newLocationAddress}
+              onChange={(event) => setNewLocationAddress(event.target.value)}
+            />
+            <TextField
+              label={t('common:fields.notes')}
+              value={newLocationNotes}
+              onChange={(event) => setNewLocationNotes(event.target.value)}
+              multiline
+              minRows={3}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={resetCreateDialog}>{t('common:actions.cancel')}</Button>
+            <Button onClick={handleCreateLocation} variant="contained">{t('common:actions.save')}</Button>
+          </DialogActions>
+        </Dialog>
 
         <EditableDataGrid<LocationRow>
         columns={columns}
@@ -130,6 +193,9 @@ function Locations(): React.ReactElement {
           name: row.name,
           address: row.address || '',
           notes: row.notes || '',
+          ...((row as LocationRow & { project?: number }).project
+            ? { project: (row as LocationRow & { project?: number }).project }
+            : {}),
         })}
         validateRow={(row) => {
           if (!row.name || row.name.trim() === '') {
@@ -144,6 +210,7 @@ function Locations(): React.ReactElement {
         addButtonLabel={`${t('locations:addButton')} (Alt+N)`}
         tableKey="locations"
         persistSortInUrl={true}
+        showAddAction={false}
         commandApiRef={commandApiRef}
         onSelectedRowChange={setSelectedRow}
         notes={{

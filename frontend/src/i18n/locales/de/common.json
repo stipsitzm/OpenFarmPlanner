@@ -17,6 +17,7 @@
     "error": "Fehler",
     "success": "Erfolgreich",
     "confirmation": "Bestätigung",
+    "rowChanged": "Geändert",
     "unsavedChanges": "Sie haben ungespeicherte Änderungen in der Tabelle. Wenn Sie außerhalb einer Zeile klicken, wird gespeichert. Möchten Sie wirklich fortfahren?",
     "validationErrors": "Es gibt Validierungsfehler, die behoben werden müssen, bevor Sie fortfahren können. Bitte korrigieren Sie die Fehler oder brechen Sie die Bearbeitung ab (Escape-Taste)."
   },
