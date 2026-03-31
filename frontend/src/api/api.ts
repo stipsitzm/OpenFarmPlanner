@@ -23,11 +23,34 @@ import type {
   LocationLayoutsResponse,
 } from './types';
 
+const getActiveProjectId = (): number | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const rawValue = window.localStorage.getItem('activeProjectId');
+  if (!rawValue) {
+    return null;
+  }
+  const parsedValue = Number(rawValue);
+  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : null;
+};
+
+const withActiveProject = <T extends Record<string, unknown>>(data: T): T | (T & { project: number }) => {
+  if (typeof data.project === 'number' && data.project > 0) {
+    return data;
+  }
+  const activeProjectId = getActiveProjectId();
+  if (!activeProjectId) {
+    return data;
+  }
+  return { ...data, project: activeProjectId };
+};
+
 export const cultureAPI = {
   list: (url = '/cultures/') => http.get<PaginatedResponse<Culture>>(url),
   get: (id: number) => http.get<Culture>(`/cultures/${id}/`),
-  create: (data: Culture) => http.post<Culture>('/cultures/', data),
-  update: (id: number, data: Culture) => http.put<Culture>(`/cultures/${id}/`, data),
+  create: (data: Culture) => http.post<Culture>('/cultures/', withActiveProject(data)),
+  update: (id: number, data: Culture) => http.put<Culture>(`/cultures/${id}/`, withActiveProject(data)),
   delete: (id: number) => http.delete(`/cultures/${id}/`),
   history: (id: number) => http.get<CultureHistoryEntry[]>(`/cultures/${id}/history/`),
   restore: (id: number, history_id: number) => http.post<Culture>(`/cultures/${id}/restore/`, { history_id }),
@@ -87,16 +110,16 @@ export const supplierAPI = {
 export const bedAPI = {
   list: () => http.get<PaginatedResponse<Bed>>('/beds/'),
   get: (id: number) => http.get<Bed>(`/beds/${id}/`),
-  create: (data: Bed) => http.post<Bed>('/beds/', data),
-  update: (id: number, data: Bed) => http.put<Bed>(`/beds/${id}/`, data),
+  create: (data: Bed) => http.post<Bed>('/beds/', withActiveProject(data)),
+  update: (id: number, data: Bed) => http.put<Bed>(`/beds/${id}/`, withActiveProject(data)),
   delete: (id: number) => http.delete(`/beds/${id}/`),
 };
 
 export const plantingPlanAPI = {
   list: () => http.get<PaginatedResponse<PlantingPlan>>('/planting-plans/'),
   get: (id: number) => http.get<PlantingPlan>(`/planting-plans/${id}/`),
-  create: (data: PlantingPlan) => http.post<PlantingPlan>('/planting-plans/', data),
-  update: (id: number, data: PlantingPlan) => http.put<PlantingPlan>(`/planting-plans/${id}/`, data),
+  create: (data: PlantingPlan) => http.post<PlantingPlan>('/planting-plans/', withActiveProject(data)),
+  update: (id: number, data: PlantingPlan) => http.put<PlantingPlan>(`/planting-plans/${id}/`, withActiveProject(data)),
   delete: (id: number) => http.delete(`/planting-plans/${id}/`),
   remainingArea: (params: { bed_id: number; start_date: string; end_date: string; exclude_plan_id?: number }) =>
     http.get<RemainingAreaResponse>('/planting-plans/remaining-area/', { params }),
@@ -146,16 +169,16 @@ export const yieldCalendarAPI = {
 export const fieldAPI = {
   list: () => http.get<PaginatedResponse<Field>>('/fields/'),
   get: (id: number) => http.get<Field>(`/fields/${id}/`),
-  create: (data: Field) => http.post<Field>('/fields/', data),
-  update: (id: number, data: Field) => http.put<Field>(`/fields/${id}/`, data),
+  create: (data: Field) => http.post<Field>('/fields/', withActiveProject(data)),
+  update: (id: number, data: Field) => http.put<Field>(`/fields/${id}/`, withActiveProject(data)),
   delete: (id: number) => http.delete(`/fields/${id}/`),
 };
 
 export const locationAPI = {
   list: () => http.get<PaginatedResponse<Location>>('/locations/'),
   get: (id: number) => http.get<Location>(`/locations/${id}/`),
-  create: (data: Location) => http.post<Location>('/locations/', data),
-  update: (id: number, data: Location) => http.put<Location>(`/locations/${id}/`, data),
+  create: (data: Location) => http.post<Location>('/locations/', withActiveProject(data)),
+  update: (id: number, data: Location) => http.put<Location>(`/locations/${id}/`, withActiveProject(data)),
   delete: (id: number) => http.delete(`/locations/${id}/`),
 };
 

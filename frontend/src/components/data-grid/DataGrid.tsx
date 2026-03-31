@@ -25,6 +25,8 @@ import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortMo
 import { Box, Alert, IconButton, Chip, Button, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
+import CheckIcon from '@mui/icons-material/Check';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
 import { useTranslation } from '../../i18n';
@@ -580,7 +582,7 @@ export function EditableDataGrid<T extends EditableRow>({
             headerName: '',
             sortable: false,
             filterable: false,
-            width: 220,
+            width: 128,
             align: 'right',
             renderCell: (params: GridCellParams<T>) => {
               const rowId = params.id;
@@ -593,16 +595,25 @@ export function EditableDataGrid<T extends EditableRow>({
               }
 
               return (
-                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, width: '100%', justifyContent: 'flex-end' }}>
-                  {isDirty && <Chip size="small" color="warning" label={t('messages.rowChanged')} />}
+                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, width: '100%', justifyContent: 'flex-end' }}>
+                  {(isEditing || isDirty) && (
+                    <IconButton
+                      size="small"
+                      color="error"
+                      aria-label={t('actions.delete')}
+                      onClick={() => handleDeleteClick(rowId)()}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  )}
                   {isEditing && (
                     <>
-                      <Button size="small" variant="contained" onClick={() => handleSaveRow(rowId)}>
-                        {t('actions.save')}
-                      </Button>
-                      <Button size="small" onClick={() => handleDiscardRowChanges(rowId)}>
-                        {t('actions.cancel')}
-                      </Button>
+                      <IconButton size="small" color="primary" aria-label={t('actions.save')} onClick={() => handleSaveRow(rowId)}>
+                        <CheckIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" aria-label={t('actions.cancel')} onClick={() => handleDiscardRowChanges(rowId)}>
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
                     </>
                   )}
                 </Box>
@@ -611,7 +622,7 @@ export function EditableDataGrid<T extends EditableRow>({
           },
         ]
       : []),
-    ...(showDeleteAction
+    ...(!showRowEditActions && showDeleteAction
       ? [
           {
             field: 'actions',
@@ -628,7 +639,7 @@ export function EditableDataGrid<T extends EditableRow>({
                   sx={deleteIconButtonSx}
                   aria-label="Löschen"
                 >
-                  <CloseIcon />
+                  <DeleteIcon fontSize="small" />
                 </IconButton>,
               ];
             },
