@@ -198,7 +198,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
               slotProps={{
                 htmlInput: {
                   min: pkg.size_unit === 'seeds' ? 1 : 0.1,
-                  step: pkg.size_unit === 'seeds' ? 1 : 0.1,
+                  step: 'any',
                   ref: index === packages.length - 1 ? lastPackageSizeInputRef : undefined,
                 },
               }}

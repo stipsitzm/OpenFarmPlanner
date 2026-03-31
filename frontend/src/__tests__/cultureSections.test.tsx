@@ -123,7 +123,7 @@ describe('culture form UI sections', () => {
 
     const packageSizeInput = screen.getByLabelText('Packungsgröße');
     expect(packageSizeInput).toHaveAttribute('min', '1');
-    expect(packageSizeInput).toHaveAttribute('step', '1');
+    expect(packageSizeInput).toHaveAttribute('step', 'any');
 
     fireEvent.mouseDown(screen.getByRole('combobox'));
     fireEvent.click(screen.getByRole('option', { name: 'g' }));
@@ -140,7 +140,7 @@ describe('culture form UI sections', () => {
 
     const packageSizeInputInGram = screen.getByLabelText('Packungsgröße');
     expect(packageSizeInputInGram).toHaveAttribute('min', '0.1');
-    expect(packageSizeInputInGram).toHaveAttribute('step', '0.1');
+    expect(packageSizeInputInGram).toHaveAttribute('step', 'any');
 
     fireEvent.mouseDown(screen.getByRole('combobox'));
     fireEvent.click(screen.getByRole('option', { name: 'Korn' }));
