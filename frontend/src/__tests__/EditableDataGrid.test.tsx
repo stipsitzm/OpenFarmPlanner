@@ -211,14 +211,14 @@ describe('EditableDataGrid', () => {
     });
   });
 
-  it('keeps draft rows local and shows unsaved status until saved', async () => {
+  it('keeps draft rows local and exposes save controls until saved', async () => {
     const props = baseProps((row) => (!row.name ? 'Name ist erforderlich' : null));
     const createSpy = vi.spyOn(props.api, 'create');
     render(<EditableDataGrid {...props} showDeleteAction={false} />);
 
     await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('1'));
     fireEvent.click(screen.getByLabelText('Neu'));
-    expect(screen.getByText('● ungespeichert')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'actions.save' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Blur speichern -1/i }));
     expect(createSpy).not.toHaveBeenCalled();
   });

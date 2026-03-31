@@ -88,7 +88,6 @@ function Locations(): React.ReactElement {
 
     try {
       await locationAPI.create({
-        id: 0,
         name: newLocationName.trim(),
         address: newLocationAddress.trim(),
         notes: newLocationNotes.trim(),
@@ -194,6 +193,9 @@ function Locations(): React.ReactElement {
           name: row.name,
           address: row.address || '',
           notes: row.notes || '',
+          ...((row as LocationRow & { project?: number }).project
+            ? { project: (row as LocationRow & { project?: number }).project }
+            : {}),
         })}
         validateRow={(row) => {
           if (!row.name || row.name.trim() === '') {

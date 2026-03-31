@@ -487,7 +487,6 @@ export function EditableDataGrid<T extends EditableRow>({
         )}
         {hasUnsavedChanges && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: showAddAction ? 1 : 0 }}>
-            <Chip size="small" label="● ungespeichert" color="warning" />
             <Button size="small" variant="contained" onClick={handleSaveAllDirtyRows}>
               {t('actions.save')}
             </Button>
