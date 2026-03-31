@@ -1,7 +1,9 @@
+import pytest
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 
 
+@pytest.mark.django_db(transaction=True)
 class TestMethodSpecificSeedRateMigration:
     migrate_from = ('farm', '0055_reapply_seed_unit_normalization')
     migrate_to = ('farm', '0056_culture_method_specific_seed_rates')
