@@ -1,0 +1,322 @@
+diff a/backend/farm/serializers.py b/backend/farm/serializers.py	(rejected hunks)
+@@ -1,33 +1,43 @@
+ """DRF serializers for the farm app API."""
+ 
+ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+ 
+ from django.core.exceptions import ValidationError
+ from rest_framework import serializers
+ 
+ from .enum_normalization import normalize_seed_rate_unit
++from .seed_units import (
++    SEED_PACKAGE_UNIT_GRAMS,
++    SEED_PACKAGE_UNIT_SEEDS,
++    SEED_RATE_UNIT_G_PER_LFM,
++    SEED_RATE_UNIT_G_PER_M2,
++    SEED_RATE_UNIT_SEEDS_PER_LFM,
++    SEED_RATE_UNIT_SEEDS_PER_M2,
++    SEED_RATE_UNIT_SEEDS_PER_PLANT,
++    SEED_RATE_UNITS,
++)
+ 
+ from .models import (
+     Bed,
+     BedLayout,
+     FieldLayout,
+     Culture,
+     Field,
+     Location,
+     MediaFile,
+     NoteAttachment,
+     PlantingPlan,
+     Supplier,
+     Task,
+     SeedPackage,
+     PublicCulture,
+     Project,
+     ProjectMembership,
+     ProjectInvitation,
+     is_supplier_domain,
+ )
+ 
+ 
+ class AuditUserSerializer(serializers.Serializer):
+     id = serializers.IntegerField()
+     email = serializers.EmailField()
+@@ -461,78 +471,81 @@ class CultureSerializer(serializers.ModelSerializer):
+     class Meta:
+         model = Culture
+         fields = '__all__'
+     
+     def get_owned_public_culture_id(self, obj: Culture) -> int | None:
+         request = self.context.get('request')
+         user = getattr(request, 'user', None)
+         if not user or not user.is_authenticated:
+             return None
+ 
+         if obj.source_public_culture_id:
+             if obj.source_public_culture and obj.source_public_culture.created_by_id == user.id:
+                 return obj.source_public_culture_id
+             return None
+ 
+         linked_public = PublicCulture.objects.filter(
+             source_project_culture=obj,
+             created_by=user,
+             status=PublicCulture.STATUS_PUBLISHED,
+         ).order_by('-updated_at', '-id').values_list('id', flat=True).first()
+         return linked_public
+ 
+ 
+ 
+     def validate_seed_packages(self, value):
+-        seen: set[Decimal] = set()
++        seen: set[str] = set()
+         normalized_packages = []
+         quantum = Decimal('0.1')
+ 
+         for idx, item in enumerate(value):
+             raw_size_value = item.get('size_value')
+             size_unit = item.get('size_unit') or SeedPackage.UNIT_GRAMS
+ 
+             try:
+                 size_value = Decimal(str(raw_size_value))
+             except (InvalidOperation, TypeError):
+                 raise serializers.ValidationError({idx: 'size_value must be a valid number.'})
+ 
+             if size_value <= 0:
+                 raise serializers.ValidationError({idx: 'size_value must be > 0'})
+-            if size_unit != SeedPackage.UNIT_GRAMS:
+-                raise serializers.ValidationError({idx: 'Only grams (g) are supported for package size.'})
++            if size_unit not in {SEED_PACKAGE_UNIT_GRAMS, SEED_PACKAGE_UNIT_SEEDS}:
++                raise serializers.ValidationError({idx: 'Unsupported package size unit.'})
+ 
+-            normalized_size = size_value.quantize(quantum, rounding=ROUND_HALF_UP)
+-            if size_value != normalized_size:
+-                raise serializers.ValidationError({idx: 'size_value must have at most one decimal place.'})
++            normalized_size = size_value
++            if size_unit == SEED_PACKAGE_UNIT_GRAMS:
++                normalized_size = size_value.quantize(quantum, rounding=ROUND_HALF_UP)
++                if size_value != normalized_size:
++                    raise serializers.ValidationError({idx: 'Gram package sizes must have at most one decimal place.'})
+ 
+-            if normalized_size in seen:
++            uniqueness_key = f"{size_unit}:{normalized_size}"
++            if uniqueness_key in seen:
+                 raise serializers.ValidationError({idx: 'Duplicate package size.'})
+-            seen.add(normalized_size)
++            seen.add(uniqueness_key)
+ 
+             normalized_item = dict(item)
+-            normalized_item['size_unit'] = SeedPackage.UNIT_GRAMS
++            normalized_item['size_unit'] = size_unit
+             normalized_item['size_value'] = normalized_size
+             normalized_item.pop('culture', None)
+             normalized_packages.append(normalized_item)
+ 
+         return normalized_packages
+ 
+     def create(self, validated_data):
+         seed_packages = validated_data.pop('seed_packages', [])
+         culture = super().create(validated_data)
+         if isinstance(seed_packages, list):
+             for package_data in seed_packages:
+                 if isinstance(package_data, dict):
+                     package_data = dict(package_data)
+                     package_data.pop('culture', None)
+                     package_data.setdefault('project', culture.project)
+                     SeedPackage.objects.create(culture=culture, **package_data)
+         return culture
+ 
+     def update(self, instance, validated_data):
+         seed_packages = validated_data.pop('seed_packages', None)
+         culture = super().update(instance, validated_data)
+         if seed_packages is not None:
+             culture.seed_packages.all().delete()
+             if isinstance(seed_packages, list):
+                 for package_data in seed_packages:
+@@ -543,51 +556,51 @@ class CultureSerializer(serializers.ModelSerializer):
+                         SeedPackage.objects.create(culture=culture, **package_data)
+         return culture
+ 
+     def validate_origin_type(self, value):
+         if value in {None, ''}:
+             if self.instance and self.instance.source_public_culture_id:
+                 return Culture.ORIGIN_IMPORTED
+             return Culture.ORIGIN_MANUAL
+ 
+         normalized = str(value).strip().lower()
+         if normalized == Culture.ORIGIN_MANUAL:
+             return Culture.ORIGIN_MANUAL
+         if normalized == Culture.ORIGIN_IMPORTED or normalized.startswith('import'):
+             return Culture.ORIGIN_IMPORTED
+         return Culture.ORIGIN_MANUAL
+ 
+     def validate_seed_rate_unit(self, value):
+         """Normalize legacy seed rate unit values and validate supported units."""
+         if value is None or value == '':
+             return value
+ 
+         normalized_value = normalize_seed_rate_unit(value)
+         if normalized_value:
+             value = normalized_value
+ 
+-        allowed_values = {'g_per_m2', 'g_per_lfm', 'seeds/m', 'seeds_per_plant'}
++        allowed_values = SEED_RATE_UNITS
+         if value not in allowed_values:
+             raise serializers.ValidationError('Unsupported seed rate unit.')
+         return value
+     def validate_growth_duration_days(self, value):
+         if value is not None and value < 0:
+             raise serializers.ValidationError('Growth duration must be non-negative.')
+         return value
+     
+     def validate_harvest_duration_days(self, value):
+         if value is None:
+             return value
+         if value < 0:
+             raise serializers.ValidationError('Harvest duration must be non-negative.')
+         return value
+     
+     def validate_germination_rate(self, value):
+         if value is not None and (value < 0 or value > 100):
+             raise serializers.ValidationError('Germination rate must be between 0 and 100.')
+         return value
+     
+     def validate_safety_margin(self, value):
+         if value is not None and (value < 0 or value > 100):
+             raise serializers.ValidationError('Safety margin must be between 0 and 100.')
+         return value
+     
+@@ -624,55 +637,66 @@ class CultureSerializer(serializers.ModelSerializer):
+             'seed_rate_by_cultivation',
+             getattr(self.instance, 'seed_rate_by_cultivation', None) if self.instance else None,
+         )
+         if seed_rate_by_cultivation is not None:
+             if not isinstance(seed_rate_by_cultivation, dict):
+                 errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation must be an object.'
+             else:
+                 target_types = set(attrs.get('cultivation_types') or cultivation_types or [])
+                 if not set(seed_rate_by_cultivation.keys()).issubset(target_types):
+                     errors['seed_rate_by_cultivation'] = 'Seed rate keys must be subset of cultivation_types.'
+                 else:
+                     for method, payload in seed_rate_by_cultivation.items():
+                         if not isinstance(payload, dict):
+                             errors['seed_rate_by_cultivation'] = 'Seed rate entries must be objects.'
+                             break
+                         value = payload.get('value')
+                         unit = payload.get('unit')
+                         try:
+                             parsed_value = float(value)
+                         except (TypeError, ValueError):
+                             errors['seed_rate_by_cultivation'] = 'Seed rate values must be numeric.'
+                             break
+                         if parsed_value <= 0:
+                             errors['seed_rate_by_cultivation'] = 'Seed rate values must be positive.'
+                             break
+-                        if method == 'pre_cultivation' and unit not in {'g_per_m2', 'g_per_lfm', 'seeds/m'}:
+-                            errors['seed_rate_by_cultivation'] = 'Pre-cultivation seed rate unit must be g_per_m2, g_per_lfm, or seeds/m.'
++                        if method == 'pre_cultivation' and unit not in {
++                            SEED_RATE_UNIT_G_PER_M2,
++                            SEED_RATE_UNIT_G_PER_LFM,
++                            SEED_RATE_UNIT_SEEDS_PER_M2,
++                            SEED_RATE_UNIT_SEEDS_PER_LFM,
++                            SEED_RATE_UNIT_SEEDS_PER_PLANT,
++                        }:
++                            errors['seed_rate_by_cultivation'] = 'Pre-cultivation seed rate unit is unsupported.'
+                             break
+-                        if method == 'direct_sowing' and unit not in {'g_per_m2', 'g_per_lfm', 'seeds/m'}:
+-                            errors['seed_rate_by_cultivation'] = 'Direct sowing seed rate unit must be g_per_m2, g_per_lfm, or seeds/m.'
++                        if method == 'direct_sowing' and unit not in {
++                            SEED_RATE_UNIT_G_PER_M2,
++                            SEED_RATE_UNIT_G_PER_LFM,
++                            SEED_RATE_UNIT_SEEDS_PER_M2,
++                            SEED_RATE_UNIT_SEEDS_PER_LFM,
++                        }:
++                            errors['seed_rate_by_cultivation'] = 'Direct sowing seed rate unit is unsupported.'
+                             break
+ 
+                 if 'seed_rate_by_cultivation' not in errors:
+                     if 'pre_cultivation' in seed_rate_by_cultivation:
+                         primary = seed_rate_by_cultivation['pre_cultivation']
+                     elif 'direct_sowing' in seed_rate_by_cultivation:
+                         primary = seed_rate_by_cultivation['direct_sowing']
+                     else:
+                         primary = None
+                     if isinstance(primary, dict):
+                         attrs['seed_rate_value'] = float(primary.get('value'))
+                         attrs['seed_rate_unit'] = primary.get('unit')
+ 
+         # Handle supplier_name via get-or-create to keep imports ergonomic.
+         # If supplier_id was explicitly provided (including null), respect it and
+         # do not implicitly override from supplier_name.
+         supplier_name = attrs.pop('supplier_name', None)
+         supplier_explicitly_set = 'supplier' in attrs
+         if supplier_name and not supplier_explicitly_set and not attrs.get('supplier'):
+             from .utils import normalize_supplier_name
+             project = None
+             if self.instance is not None:
+                 project = self.instance.project
+             if project is None:
+                 request = self.context.get('request')
+@@ -915,58 +939,61 @@ class CultureImportPreviewItemSerializer(serializers.Serializer):
+     )
+ 
+ 
+ class CultureImportApplySummarySerializer(serializers.Serializer):
+     """Summary of a culture import apply operation."""
+     created_count = serializers.IntegerField(help_text='Number of cultures created')
+     updated_count = serializers.IntegerField(help_text='Number of cultures updated')
+     skipped_count = serializers.IntegerField(help_text='Number of cultures skipped')
+     errors = serializers.ListField(
+         child=serializers.DictField(),
+         help_text='List of errors encountered during import'
+     )
+ 
+ 
+ class SeedDemandPackageSelectionSerializer(serializers.Serializer):
+     size_value = serializers.FloatField()
+     size_unit = serializers.CharField()
+     count = serializers.IntegerField()
+ 
+ 
+ class SeedDemandPackageSuggestionSerializer(serializers.Serializer):
+     selection = SeedDemandPackageSelectionSerializer(many=True)
+     total_amount = serializers.FloatField()
+     overage = serializers.FloatField()
+     pack_count = serializers.IntegerField()
++    unit = serializers.CharField(required=False)
+ 
+ 
+ class SeedDemandSerializer(serializers.Serializer):
+     """Read-only serializer for aggregated seed demand per culture."""
+     culture_id = serializers.IntegerField()
+     culture_name = serializers.CharField()
+     variety = serializers.CharField(allow_blank=True, allow_null=True)
+     supplier = serializers.CharField(allow_blank=True, allow_null=True)
++    required_amount_value = serializers.FloatField(allow_null=True)
++    required_amount_unit = serializers.CharField(allow_null=True)
+     total_grams = serializers.FloatField(allow_null=True)
+     seed_packages = serializers.ListField(child=serializers.DictField(), required=False)
+     package_suggestion = SeedDemandPackageSuggestionSerializer(allow_null=True, required=False)
+     packages_needed = serializers.IntegerField(allow_null=True, required=False)
+     warning = serializers.CharField(allow_null=True)
+ 
+ 
+ class NoteAttachmentSerializer(serializers.ModelSerializer):
+     """Serializer for note image attachments."""
+ 
+     image_url = serializers.SerializerMethodField()
+     created_by_user = AuditUserSerializer(source='created_by', read_only=True)
+     updated_by_user = AuditUserSerializer(source='updated_by', read_only=True)
+ 
+     def get_image_file(self, obj):
+         if not obj.image_file_id:
+             return None
+         return {
+             'id': obj.image_file_id,
+             'storage_path': obj.image_file.storage_path,
+         }
+ 
+     class Meta:
+         model = NoteAttachment
+         fields = [
