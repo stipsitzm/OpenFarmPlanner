@@ -39,8 +39,8 @@
     "empty": "Keine Notizen",
     "editEmpty": "Notiz hinzufügen",
     "editWithContent": "Notiz bearbeiten",
-    "attachmentsCount": "{{count}} Foto in Notizen",
-    "attachmentsCount_plural": "{{count}} Fotos in Notizen"
+    "attachmentsCount_one": "{{count}} Foto in Notizen",
+    "attachmentsCount_other": "{{count}} Fotos in Notizen"
   },
   "notesDrawer": {
     "takePhoto": "Foto aufnehmen",
