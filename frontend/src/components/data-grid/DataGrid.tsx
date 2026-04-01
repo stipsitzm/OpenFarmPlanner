@@ -91,6 +91,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showAddAction?: boolean;
   showFooterEditControls?: boolean;
   showRowEditActions?: boolean;
+  onRowsStateChange?: (rows: T[]) => void;
 }
 
 export function EditableDataGrid<T extends EditableRow>({
@@ -117,6 +118,7 @@ export function EditableDataGrid<T extends EditableRow>({
   showAddAction = true,
   showFooterEditControls = true,
   showRowEditActions = false,
+  onRowsStateChange,
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -672,6 +674,13 @@ export function EditableDataGrid<T extends EditableRow>({
     // Last resort: use field name itself
     return `${notesEditor.field} – Notizen`;
   };
+
+  useEffect(() => {
+    if (!onRowsStateChange) {
+      return;
+    }
+    onRowsStateChange(rows as T[]);
+  }, [onRowsStateChange, rows]);
 
   useEffect(() => {
     if (!onSelectedRowChange) {

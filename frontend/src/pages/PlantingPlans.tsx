@@ -10,7 +10,26 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { GridColDef, GridCellParams } from "@mui/x-data-grid";
-import { Alert, Box, Button, Tooltip } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Fab,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { useTranslation } from "../i18n";
 import {
@@ -31,6 +50,7 @@ import {
   type SearchableSelectOption,
   type EditableDataGridCommandApi,
 } from "../components/data-grid";
+import { MobileCardList } from "../components/mobile/MobileCardList";
 import {
   useCommandContextTag,
   useRegisterCommands,
@@ -92,6 +112,8 @@ const toIsoDateString = (value: unknown): string | null => {
 
 function PlantingPlans(): React.ReactElement {
   const { t } = useTranslation(["plantingPlans", "common"]);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [searchParams, setSearchParams] = useSearchParams();
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
@@ -101,6 +123,18 @@ function PlantingPlans(): React.ReactElement {
   const [selectedPlan, setSelectedPlan] = useState<PlantingPlanRow | null>(
     null,
   );
+  const [mobileRows, setMobileRows] = useState<PlantingPlanRow[]>([]);
+  const [expandedCardIds, setExpandedCardIds] = useState<Set<number | string>>(
+    new Set(),
+  );
+  const [isMobileCreateOpen, setIsMobileCreateOpen] = useState(false);
+  const [mobileCreateForm, setMobileCreateForm] = useState({
+    culture: "",
+    bed: "",
+    cultivation_type: "pre_cultivation" as CultivationType,
+    planting_date: "",
+  });
+  const [mobileCreateError, setMobileCreateError] = useState("");
 
   useCommandContextTag("plans");
 
@@ -598,6 +632,88 @@ function PlantingPlans(): React.ReactElement {
     ],
   );
 
+  const formatDateForDisplay = (value?: string): string => {
+    if (!value) {
+      return "—";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleDateString("de-DE");
+  };
+
+  const getCultureLabel = (row: PlantingPlanRow): string => {
+    if (row.culture_name) {
+      return row.culture_name;
+    }
+    const fallback = cultureOptions.find((option) => option.value === row.culture);
+    return fallback?.label ?? "—";
+  };
+
+  const getBedLabel = (row: PlantingPlanRow): string => {
+    if (row.bed_name) {
+      return row.bed_name;
+    }
+    const fallback = bedOptions.find((option) => option.value === row.bed);
+    return fallback?.label ?? "—";
+  };
+
+  const toggleCardExpanded = (id: string | number): void => {
+    setExpandedCardIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const openMobileCreateDialog = (): void => {
+    setMobileCreateError("");
+    setMobileCreateForm({
+      culture: "",
+      bed: "",
+      cultivation_type: "pre_cultivation",
+      planting_date: "",
+    });
+    setIsMobileCreateOpen(true);
+  };
+
+  const closeMobileCreateDialog = (): void => {
+    setIsMobileCreateOpen(false);
+    setMobileCreateError("");
+  };
+
+  const handleMobileCreate = async (): Promise<void> => {
+    if (!mobileCreateForm.culture || !mobileCreateForm.bed || !mobileCreateForm.planting_date) {
+      setMobileCreateError(t("plantingPlans:validation.requiredFields", {
+        fields: [
+          t("plantingPlans:columns.culture"),
+          t("plantingPlans:columns.bed"),
+          t("plantingPlans:columns.plantingDate"),
+        ].join(", "),
+      }));
+      return;
+    }
+
+    try {
+      await plantingPlanAPI.create({
+        culture: Number(mobileCreateForm.culture),
+        bed: Number(mobileCreateForm.bed),
+        planting_date: mobileCreateForm.planting_date,
+        cultivation_type: mobileCreateForm.cultivation_type,
+        notes: "",
+      } as PlantingPlan);
+      closeMobileCreateDialog();
+      await gridCommandApiRef.current?.reload();
+    } catch {
+      setMobileCreateError(t("plantingPlans:errors.save"));
+    }
+  };
+
   return (
     <div
       className="page-container"
@@ -610,31 +726,65 @@ function PlantingPlans(): React.ReactElement {
       ) : null}
 
       <Box sx={{ width: "fit-content", maxWidth: "100%" }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 2,
-          }}
-        >
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
           <h1>{t("plantingPlans:title")}</h1>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => gridCommandApiRef.current?.addRow()}
-            aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
-          >
-            {t("plantingPlans:addButton")}
-          </Button>
+          {!isMobile ? (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => gridCommandApiRef.current?.addRow()}
+              aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
+            >
+              {t("plantingPlans:addButton")}
+            </Button>
+          ) : null}
         </Box>
 
-        <EditableDataGrid<PlantingPlanRow>
-          columns={columns}
-          api={plantingPlanAPI as unknown as DataGridAPI<PlantingPlanRow>}
-          commandApiRef={gridCommandApiRef}
-          onSelectedRowChange={setSelectedPlan}
-          createNewRow={() => ({
+        {isMobile ? (
+          <Box sx={{ pb: 10 }}>
+            <MobileCardList
+              items={mobileRows}
+              expandedIds={expandedCardIds}
+              onToggleExpanded={toggleCardExpanded}
+              renderPrimary={(item) => getCultureLabel(item)}
+              renderSecondary={(item) => `${t("plantingPlans:columns.cultivationType")}: ${t(`plantingPlans:cultivationTypes.${item.cultivation_type === "direct_sowing" ? "directSowing" : "preCultivation"}`)}`}
+              renderDetails={(item) => (
+                <Stack spacing={0.75}>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.bed")}:</strong> {getBedLabel(item)}</Typography>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.plantingDate")}:</strong> {formatDateForDisplay(item.planting_date)}</Typography>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.harvestStartDate")}:</strong> {formatDateForDisplay(item.harvest_date)}</Typography>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.harvestEndDate")}:</strong> {formatDateForDisplay(item.harvest_end_date)}</Typography>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.areaM2")}:</strong> {typeof item.area_m2 === "number" ? formatAreaM2(item.area_m2) : "—"}</Typography>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.plantsCount")}:</strong> {typeof item.plants_count === "number" ? `≈ ${Math.round(item.plants_count)}` : "—"}</Typography>
+                </Stack>
+              )}
+              detailsShowLabel={t("plantingPlans:mobile.showDetails")}
+              detailsHideLabel={t("plantingPlans:mobile.hideDetails")}
+              emptyState={(
+                <Box sx={{ p: 2, border: "1px dashed", borderColor: "divider", borderRadius: 2 }}>
+                  <Stack spacing={1.5}>
+                    <Typography variant="subtitle1">{t("plantingPlans:mobile.emptyTitle")}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {t("plantingPlans:mobile.emptyDescription")}
+                    </Typography>
+                    <Button variant="contained" onClick={openMobileCreateDialog}>
+                      {t("plantingPlans:mobile.emptyCta")}
+                    </Button>
+                  </Stack>
+                </Box>
+              )}
+            />
+          </Box>
+        ) : null}
+
+        <Box sx={{ display: isMobile ? "none" : "block" }}>
+          <EditableDataGrid<PlantingPlanRow>
+            columns={columns}
+            api={plantingPlanAPI as unknown as DataGridAPI<PlantingPlanRow>}
+            commandApiRef={gridCommandApiRef}
+            onSelectedRowChange={setSelectedPlan}
+            onRowsStateChange={(rows) => setMobileRows(rows)}
+            createNewRow={() => ({
             id: -Date.now(),
             culture: 0,
             cultivation_type: "pre_cultivation",
@@ -809,18 +959,96 @@ function PlantingPlans(): React.ReactElement {
           tableKey="plantingPlans"
           defaultSortModel={[{ field: "planting_date", sort: "asc" }]}
           persistSortInUrl={true}
-          notes={{
-            fields: [
-              {
-                field: "notes",
-                labelKey: "common:fields.notes",
-                attachmentNoteIdField: "id",
-                attachmentCountField: "note_attachment_count",
-              },
-            ],
-          }}
-        />
+            notes={{
+              fields: [
+                {
+                  field: "notes",
+                  labelKey: "common:fields.notes",
+                  attachmentNoteIdField: "id",
+                  attachmentCountField: "note_attachment_count",
+                },
+              ],
+            }}
+          />
+        </Box>
+
+        {isMobile ? (
+          <Fab
+            color="primary"
+            variant="extended"
+            onClick={openMobileCreateDialog}
+            sx={{ position: "fixed", bottom: 24, right: 16, zIndex: theme.zIndex.fab }}
+            aria-label={t("plantingPlans:mobile.fabAria")}
+          >
+            <AddIcon sx={{ mr: 0.75 }} />
+            {t("plantingPlans:mobile.fabLabel")}
+          </Fab>
+        ) : null}
       </Box>
+
+      <Dialog open={isMobileCreateOpen} onClose={closeMobileCreateDialog} fullWidth maxWidth="sm">
+        <DialogTitle>{t("plantingPlans:mobile.createTitle")}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            {mobileCreateError ? <Alert severity="error">{mobileCreateError}</Alert> : null}
+            <FormControl fullWidth>
+              <InputLabel>{t("plantingPlans:columns.culture")}</InputLabel>
+              <Select
+                value={mobileCreateForm.culture}
+                label={t("plantingPlans:columns.culture")}
+                onChange={(event) =>
+                  setMobileCreateForm((previous) => ({ ...previous, culture: String(event.target.value) }))
+                }
+              >
+                {cultureOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>{t("plantingPlans:columns.bed")}</InputLabel>
+              <Select
+                value={mobileCreateForm.bed}
+                label={t("plantingPlans:columns.bed")}
+                onChange={(event) =>
+                  setMobileCreateForm((previous) => ({ ...previous, bed: String(event.target.value) }))
+                }
+              >
+                {bedOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>{t("plantingPlans:columns.cultivationType")}</InputLabel>
+              <Select
+                value={mobileCreateForm.cultivation_type}
+                label={t("plantingPlans:columns.cultivationType")}
+                onChange={(event) =>
+                  setMobileCreateForm((previous) => ({ ...previous, cultivation_type: event.target.value as CultivationType }))
+                }
+              >
+                {cultivationTypeOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              type="date"
+              label={t("plantingPlans:columns.plantingDate")}
+              InputLabelProps={{ shrink: true }}
+              value={mobileCreateForm.planting_date}
+              onChange={(event) =>
+                setMobileCreateForm((previous) => ({ ...previous, planting_date: event.target.value }))
+              }
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeMobileCreateDialog}>{t("common:actions.cancel")}</Button>
+          <Button onClick={() => void handleMobileCreate()} variant="contained">{t("common:actions.add")}</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
