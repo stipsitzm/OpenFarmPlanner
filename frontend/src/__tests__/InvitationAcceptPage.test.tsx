@@ -117,7 +117,7 @@ describe("InvitationAcceptPage", () => {
         <Routes>
           <Route path="/invite/accept" element={<InvitationAcceptPage />} />
           <Route path="/login" element={<LocationEcho />} />
-          <Route path="/app/anbauplaene" element={<div>Anbaupläne</div>} />
+          <Route path="/app/locations" element={<div>Standorte</div>} />
         </Routes>
       </MemoryRouter>,
     );
@@ -136,7 +136,7 @@ describe("InvitationAcceptPage", () => {
         <Routes>
           <Route path="/invite/accept" element={<InvitationAcceptPage />} />
           <Route path="/login" element={<LocationEcho />} />
-          <Route path="/app/anbauplaene" element={<div>Anbaupläne</div>} />
+          <Route path="/app/locations" element={<div>Standorte</div>} />
         </Routes>
       </MemoryRouter>,
     );
@@ -163,7 +163,7 @@ describe("InvitationAcceptPage", () => {
       <MemoryRouter initialEntries={["/invite/accept?token=used123"]}>
         <Routes>
           <Route path="/invite/accept" element={<InvitationAcceptPage />} />
-          <Route path="/app/anbauplaene" element={<div>Anbaupläne</div>} />
+          <Route path="/app/locations" element={<div>Standorte</div>} />
         </Routes>
       </MemoryRouter>,
     );
@@ -196,7 +196,7 @@ describe("InvitationAcceptPage", () => {
       <MemoryRouter initialEntries={["/invite/accept?token=abc123"]}>
         <Routes>
           <Route path="/invite/accept" element={<InvitationAcceptPage />} />
-          <Route path="/app/anbauplaene" element={<div>Anbaupläne</div>} />
+          <Route path="/app/locations" element={<div>Standorte</div>} />
         </Routes>
       </MemoryRouter>,
     );

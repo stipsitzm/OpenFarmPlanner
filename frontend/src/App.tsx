@@ -372,7 +372,7 @@ function RootLayout(): React.ReactElement {
         description: newProjectDescription.trim(),
       });
       closeCreateProjectDialog();
-      navigate('/app/anbauplaene');
+      navigate('/app/locations');
       await applyProjectContextChange(response.data.id);
     } catch (error) {
       console.error('Error creating project:', error);
@@ -411,7 +411,7 @@ function RootLayout(): React.ReactElement {
       return normalizedPath;
     }
 
-    return normalizedPath === '/' ? '/app/anbauplaene' : `/app${normalizedPath}`;
+    return normalizedPath === '/' ? '/app/locations' : `/app${normalizedPath}`;
   };
 
   const goToNextPage = (): void => {
@@ -764,7 +764,7 @@ function createAppRouter(basename: string) {
           children: [
             {
               index: true,
-              loader: () => redirect('/app/anbauplaene'),
+              loader: () => redirect('/app/locations'),
             },
             { path: 'locations', element: <Locations /> },
             { path: 'fields-beds', element: <FieldsBedsPage /> },

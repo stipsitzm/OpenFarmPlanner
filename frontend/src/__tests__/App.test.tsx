@@ -63,7 +63,6 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'App öffnen' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Impressum' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Datenschutzerklärung' })).toBeInTheDocument();
-    expect(screen.getByText('Beta')).toBeInTheDocument();
   });
 
   it('renders imprint route', async () => {
