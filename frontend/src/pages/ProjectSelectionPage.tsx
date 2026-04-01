@@ -20,7 +20,7 @@ export default function ProjectSelectionPage(): React.ReactElement {
                 variant="contained"
                 onClick={() => {
                   window.localStorage.setItem('activeProjectId', String(membership.project_id));
-                  navigate('/app/anbauplaene');
+                  navigate('/app/locations');
                 }}
               >
                 Öffnen

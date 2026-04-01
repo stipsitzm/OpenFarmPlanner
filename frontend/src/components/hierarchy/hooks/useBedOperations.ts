@@ -4,11 +4,13 @@
 
 import { useState } from 'react';
 import { bedAPI, type Bed } from '../../../api/api';
+import type { TFunction } from 'i18next';
 
 export function useBedOperations(
   _beds: Bed[],
   setBeds: React.Dispatch<React.SetStateAction<Bed[]>>,
-  setError: (error: string) => void
+  setError: (error: string) => void,
+  t: TFunction
 ) {
   const [pendingEditRow, setPendingEditRow] = useState<number | null>(null);
 
@@ -67,14 +69,14 @@ export function useBedOperations(
         return response.data;
       }
     } catch (err) {
-      setError('Fehler beim Speichern des Beets');
+      setError(t('errors.saveBed'));
       console.error('Error saving bed:', err);
       throw err;
     }
   };
 
   const deleteBed = async (bedId: number): Promise<void> => {
-    if (!window.confirm('Möchten Sie dieses Beet wirklich löschen?')) return;
+    if (!window.confirm(t('confirm.deleteBed'))) return;
 
     if (bedId < 0) {
       // Remove unsaved bed from state
@@ -88,7 +90,7 @@ export function useBedOperations(
       setBeds((prevBeds) => prevBeds.filter((bed) => bed.id !== bedId));
       setError('');
     } catch (err) {
-      setError('Fehler beim Löschen des Beets');
+      setError(t('errors.deleteBed'));
       console.error('Error deleting bed:', err);
       throw err;
     }

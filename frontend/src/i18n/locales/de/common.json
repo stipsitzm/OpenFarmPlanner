@@ -38,7 +38,9 @@
   "notes": {
     "empty": "Keine Notizen",
     "editEmpty": "Notiz hinzufügen",
-    "editWithContent": "Notiz bearbeiten"
+    "editWithContent": "Notiz bearbeiten",
+    "attachmentsCount_one": "{{count}} Foto in Notizen",
+    "attachmentsCount_other": "{{count}} Fotos in Notizen"
   },
   "notesDrawer": {
     "takePhoto": "Foto aufnehmen",
@@ -52,6 +54,30 @@
     "cropInstructions": "Zeichne, verschiebe und skaliere den Zuschneidebereich. Der Außenbereich ist abgedunkelt.",
     "cropSourceAlt": "Zuschneidequelle",
     "backendUnavailable": "Bildverarbeitung ist auf dem Server derzeit nicht verfügbar. Bitte installiere Pillow und starte das Backend neu.",
-    "uploadFailed": "Hochladen fehlgeschlagen. Bitte versuche es erneut."
+    "uploadFailed": "Hochladen fehlgeschlagen. Bitte versuche es erneut.",
+    "tabs": {
+      "edit": "Bearbeiten",
+      "preview": "Vorschau"
+    },
+    "defaults": {
+      "bold": "fetter Text",
+      "italic": "kursiver Text",
+      "heading": "Überschrift",
+      "listItem": "Listeneintrag",
+      "linkText": "Linktext",
+      "quote": "Zitat"
+    }
+  },
+  "errors": {
+    "generic": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+    "noPublicCultures": "Es wurden keine öffentlichen Kulturen gefunden.",
+    "bedNotFound": "Das Beet wurde nicht gefunden.",
+    "fileTooLarge": "Die Datei ist zu groß (maximal 10 MB).",
+    "invalidImage": "Die hochgeladene Datei ist kein gültiges Bild."
+  },
+  "validation": {
+    "required": "Dieses Feld ist erforderlich.",
+    "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+    "minLength": "Mindestens {{count}} Zeichen erforderlich."
   }
 }

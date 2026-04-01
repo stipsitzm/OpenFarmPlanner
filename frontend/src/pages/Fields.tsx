@@ -10,6 +10,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { fieldAPI, locationAPI, type Field, type Location } from '../api/api';
+import { useTranslation } from '../i18n';
+import {
+  formatLocalizedNumber,
+  parseLocalizedNumber,
+  resolveLocaleFromLanguage,
+} from '../utils/numberLocalization';
 
 const EMPTY_FIELD_FORM_DATA: Field = {
   name: '',
@@ -18,11 +24,14 @@ const EMPTY_FIELD_FORM_DATA: Field = {
   notes: '',
 };
 
-function parseOptionalNumber(value: string): number | undefined {
-  return value ? Number.parseFloat(value) : undefined;
+function parseOptionalNumber(value: string, locale: string): number | undefined {
+  const parsed = parseLocalizedNumber(value, locale);
+  return parsed ?? undefined;
 }
 
 function Fields(): React.ReactElement {
+  const { i18n } = useTranslation();
+  const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const [fields, setFields] = useState<Field[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [showForm, setShowForm] = useState<boolean>(false);
@@ -133,12 +142,12 @@ function Fields(): React.ReactElement {
             <label htmlFor="area_sqm">Fläche (m²)</label>
             <input
               id="area_sqm"
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={formData.area_sqm || ''}
               onChange={(e) => setFormData({
                 ...formData,
-                area_sqm: parseOptionalNumber(e.target.value),
+                area_sqm: parseOptionalNumber(e.target.value, numberLocale),
               })}
               className="form-input"
             />
@@ -174,7 +183,11 @@ function Fields(): React.ReactElement {
             <tr key={field.id} className="clickable">
               <td>{field.name}</td>
               <td>{field.location_name || '-'}</td>
-              <td>{field.area_sqm || '-'}</td>
+              <td>
+                {typeof field.area_sqm === 'number'
+                  ? formatLocalizedNumber(field.area_sqm, numberLocale)
+                  : '-'}
+              </td>
               <td>{field.notes || '-'}</td>
               <td>
                 <button

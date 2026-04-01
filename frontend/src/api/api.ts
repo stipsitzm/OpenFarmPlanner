@@ -35,8 +35,9 @@ const getActiveProjectId = (): number | null => {
   return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : null;
 };
 
-const withActiveProject = <T extends Record<string, unknown>>(data: T): T | (T & { project: number }) => {
-  if (typeof data.project === 'number' && data.project > 0) {
+const withActiveProject = <T extends object>(data: T): T | (T & { project: number }) => {
+  const payload = data as T & { project?: unknown };
+  if (typeof payload.project === 'number' && payload.project > 0) {
     return data;
   }
   const activeProjectId = getActiveProjectId();

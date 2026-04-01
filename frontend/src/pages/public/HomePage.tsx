@@ -1,7 +1,6 @@
 import {
   Box,
   Button,
-  Chip,
   Container,
   Link,
   Stack,
@@ -32,7 +31,6 @@ export default function HomePage(): React.ReactElement {
       <Container maxWidth="md" sx={{ py: { xs: 7, md: 10 } }}>
         <Stack spacing={{ xs: 6, md: 8 }}>
           <Stack spacing={3} alignItems={{ xs: 'flex-start', sm: 'center' }} textAlign={{ xs: 'left', sm: 'center' }}>
-            <Chip label={t('landing.betaBadge')} color="warning" variant="outlined" size="small" />
             <Stack spacing={1.5}>
               <Typography variant="h2" component="h1" sx={{ fontSize: { xs: '2rem', md: '2.75rem' } }}>
                 {t('landing.title')}

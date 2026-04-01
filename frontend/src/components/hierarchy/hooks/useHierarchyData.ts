@@ -3,9 +3,11 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from '../../../i18n';
 import { locationAPI, fieldAPI, bedAPI, type Location, type Field, type Bed } from '../../../api/api';
 
 export function useHierarchyData() {
+  const { t } = useTranslation('hierarchy');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [locations, setLocations] = useState<Location[]>([]);
@@ -32,12 +34,12 @@ export function useHierarchyData() {
       console.debug('[DEBUG] useHierarchyData.fetchData: fields', flds);
       console.debug('[DEBUG] useHierarchyData.fetchData: beds', bds);
     } catch (err) {
-      setError('Fehler beim Laden der Daten');
+      setError(t('errors.load'));
       console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchData();

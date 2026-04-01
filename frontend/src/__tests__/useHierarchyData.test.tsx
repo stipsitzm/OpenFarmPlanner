@@ -14,6 +14,11 @@ vi.mock('../api/api', () => ({
 }));
 
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
+vi.mock('../i18n', () => {
+  const translate = (key: string) => (key === 'errors.load' ? 'Fehler beim Laden der Daten' : key);
+  return { useTranslation: () => ({ t: translate }) };
+});
+
 
 describe('useHierarchyData', () => {
   beforeEach(() => {
@@ -41,7 +46,7 @@ describe('useHierarchyData', () => {
   it('sets error on failed fetch and supports manual fetchData', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    locationListMock.mockRejectedValue(new Error('boom'));
+    locationListMock.mockRejectedValueOnce(new Error('boom'));
     fieldListMock.mockResolvedValue({ data: { results: [] } });
     bedListMock.mockResolvedValue({ data: { results: [] } });
 

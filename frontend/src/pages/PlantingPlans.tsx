@@ -10,8 +10,28 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { GridColDef, GridCellParams } from "@mui/x-data-grid";
-import { Alert, Box, Button, Tooltip } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Fab,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
 import { useTranslation } from "../i18n";
 import {
   plantingPlanAPI,
@@ -22,6 +42,12 @@ import {
   type Bed,
 } from "../api/api";
 import type { CultivationType } from "../api/types";
+import { extractApiErrorMessage } from "../api/errors";
+import {
+  formatLocalizedNumber,
+  parseLocalizedNumber,
+  resolveLocaleFromLanguage,
+} from "../utils/numberLocalization";
 import { AreaM2EditCell } from "../components/data-grid/AreaM2EditCell";
 import {
   EditableDataGrid,
@@ -31,6 +57,7 @@ import {
   type SearchableSelectOption,
   type EditableDataGridCommandApi,
 } from "../components/data-grid";
+import { MobileCardList } from "../components/mobile/MobileCardList";
 import {
   useCommandContextTag,
   useRegisterCommands,
@@ -75,7 +102,11 @@ const estimateColumnWidth = (
   return Math.max(min, Math.min(max, estimated));
 };
 
-const formatAreaM2 = (value: number): string => `${value.toFixed(2)} m²`;
+const formatAreaM2 = (value: number, locale: string): string =>
+  `${formatLocalizedNumber(value, locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} m²`;
 
 const toIsoDateString = (value: unknown): string | null => {
   if (value instanceof Date) {
@@ -90,8 +121,23 @@ const toIsoDateString = (value: unknown): string | null => {
   return null;
 };
 
+const toNumericValue = (value: unknown): number | null => {
+  if (typeof value === "number") {
+    return Number.isNaN(value) ? null : value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+};
+
 function PlantingPlans(): React.ReactElement {
   const { t } = useTranslation(["plantingPlans", "common"]);
+  const { i18n } = useTranslation();
+  const numberLocale = resolveLocaleFromLanguage(i18n.language);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [searchParams, setSearchParams] = useSearchParams();
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
@@ -101,6 +147,25 @@ function PlantingPlans(): React.ReactElement {
   const [selectedPlan, setSelectedPlan] = useState<PlantingPlanRow | null>(
     null,
   );
+  const [mobileRows, setMobileRows] = useState<PlantingPlanRow[]>([]);
+  const [expandedCardIds, setExpandedCardIds] = useState<Set<number | string>>(
+    new Set(),
+  );
+  const [isMobileCreateOpen, setIsMobileCreateOpen] = useState(false);
+  const [mobileCreateForm, setMobileCreateForm] = useState({
+    culture: "",
+    bed: "",
+    cultivation_type: "pre_cultivation" as CultivationType,
+    planting_date: "",
+    area_m2: "",
+    plants_count: "",
+    notes: "",
+  });
+  const [mobileCreateError, setMobileCreateError] = useState("");
+  const [mobileEditId, setMobileEditId] = useState<number | null>(null);
+  const [mobileLastEditedField, setMobileLastEditedField] = useState<
+    "area_m2" | "plants_count" | null
+  >(null);
 
   useCommandContextTag("plans");
 
@@ -126,7 +191,9 @@ function PlantingPlans(): React.ReactElement {
           const baseName = b.field_name
             ? `${b.field_name} - ${b.name}`
             : b.name;
-          const areaInfo = b.area_sqm ? ` (${b.area_sqm} m²)` : "";
+          const areaInfo = b.area_sqm
+            ? ` (${formatAreaM2(b.area_sqm, numberLocale)})`
+            : "";
           return { value: b.id!, label: `${baseName}${areaInfo}` };
         }),
     [beds],
@@ -190,7 +257,7 @@ function PlantingPlans(): React.ReactElement {
           t("plantingPlans:columns.areaM2"),
           ...beds
             .filter((bed) => typeof bed.area_sqm === "number")
-            .map((bed) => formatAreaM2(bed.area_sqm as number)),
+            .map((bed) => formatAreaM2(bed.area_sqm as number, numberLocale)),
         ],
         112,
         150,
@@ -486,11 +553,14 @@ function PlantingPlans(): React.ReactElement {
         renderEditCell: (params) => {
           const row = params.row as PlantingPlanRow;
           const selectedBed = beds.find((item) => item.id === row.bed);
+          const derivedArea = getDerivedAreaFromRow(row);
 
           return (
             <AreaM2EditCell
               {...params}
               bedAreaSqm={selectedBed?.area_sqm}
+              fallbackValue={derivedArea}
+              locale={numberLocale}
               onLastEditedFieldChange={() => {
                 lastEditedFieldRef.current = "area_m2";
               }}
@@ -520,7 +590,7 @@ function PlantingPlans(): React.ReactElement {
 
                 if (value > remaining) {
                   setAreaWarning(
-                    `Fläche wurde auf Restfläche begrenzt (${remaining.toFixed(2)} m²). Bitte Speichern bestätigen, dann wird der Restwert übernommen.`,
+                    `Fläche wurde auf Restfläche begrenzt (${formatAreaM2(remaining, numberLocale)}). Bitte Speichern bestätigen, dann wird der Restwert übernommen.`,
                   );
                   return remaining;
                 }
@@ -537,7 +607,7 @@ function PlantingPlans(): React.ReactElement {
         valueFormatter: (value) => {
           const numericValue = Number(value);
           if (!Number.isNaN(numericValue)) {
-            return `${numericValue.toFixed(2)} m²`;
+            return formatAreaM2(numericValue, numberLocale);
           }
           return "";
         },
@@ -598,6 +668,258 @@ function PlantingPlans(): React.ReactElement {
     ],
   );
 
+  const formatDateForDisplay = (value?: string): string => {
+    if (!value) {
+      return "—";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleDateString("de-DE");
+  };
+
+  const getCultureLabel = (row: PlantingPlanRow): string => {
+    if (row.culture_name) {
+      return row.culture_name;
+    }
+    const fallback = cultureOptions.find((option) => option.value === row.culture);
+    return fallback?.label ?? "—";
+  };
+
+  const getBedLabel = (row: PlantingPlanRow): string => {
+    if (row.bed_name) {
+      return row.bed_name;
+    }
+    const fallback = bedOptions.find((option) => option.value === row.bed);
+    return fallback?.label ?? "—";
+  };
+
+  const getDisplayArea = (row: PlantingPlanRow): string => {
+    const explicitArea = toNumericValue(row.area_m2);
+    if (explicitArea !== null) {
+      return formatAreaM2(explicitArea, numberLocale);
+    }
+    if (typeof row.plants_count === "number") {
+      const plantsPerSqm = getPlantsPerSqmForCulture(String(row.culture));
+      if (plantsPerSqm) {
+        return formatAreaM2(row.plants_count / plantsPerSqm, numberLocale);
+      }
+    }
+    return "—";
+  };
+
+  const formatNumberForInput = (
+    value: number,
+    options?: Intl.NumberFormatOptions,
+  ): string =>
+    formatLocalizedNumber(value, numberLocale, {
+      useGrouping: false,
+      maximumFractionDigits: 6,
+      ...options,
+    });
+
+  const toggleCardExpanded = (id: string | number): void => {
+    setExpandedCardIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const openMobileCreateDialog = (): void => {
+    setMobileCreateError("");
+    setMobileCreateForm({
+      culture: "",
+      bed: "",
+      cultivation_type: "pre_cultivation",
+      planting_date: "",
+      area_m2: "",
+      plants_count: "",
+      notes: "",
+    });
+    setMobileLastEditedField(null);
+    setIsMobileCreateOpen(true);
+  };
+
+  const closeMobileCreateDialog = (): void => {
+    setIsMobileCreateOpen(false);
+    setMobileCreateError("");
+    setMobileEditId(null);
+    setMobileLastEditedField(null);
+  };
+
+  const getPlantsPerSqmForCulture = (cultureId: string): number | null => {
+    const numericCultureId = Number(cultureId);
+    const culture = cultures.find((item) => item.id === numericCultureId);
+    if (!culture || !culture.plants_per_m2 || culture.plants_per_m2 <= 0) {
+      return null;
+    }
+    return culture.plants_per_m2;
+  };
+
+  const getDerivedAreaFromRow = (row: PlantingPlanRow): number | null => {
+    const explicitArea = toNumericValue(row.area_m2);
+    if (explicitArea !== null) {
+      return explicitArea;
+    }
+    if (typeof row.plants_count !== "number") {
+      return null;
+    }
+    const plantsPerSqm = getPlantsPerSqmForCulture(String(row.culture ?? ""));
+    if (!plantsPerSqm) {
+      return null;
+    }
+    return Number((row.plants_count / plantsPerSqm).toFixed(2));
+  };
+
+  const validateMobileForm = (): boolean => {
+    if (!mobileCreateForm.culture || !mobileCreateForm.bed || !mobileCreateForm.planting_date) {
+      setMobileCreateError(t("plantingPlans:validation.requiredFields", {
+        fields: [
+          t("plantingPlans:columns.culture"),
+          t("plantingPlans:columns.bed"),
+          t("plantingPlans:columns.plantingDate"),
+        ].join(", "),
+      }));
+      return false;
+    }
+    if (
+      mobileCreateForm.area_m2.trim() !== "" &&
+      parseLocalizedNumber(mobileCreateForm.area_m2, numberLocale) === null
+    ) {
+      setMobileCreateError(t("plantingPlans:errors.save"));
+      return false;
+    }
+    if (
+      mobileCreateForm.plants_count.trim() !== "" &&
+      parseLocalizedNumber(mobileCreateForm.plants_count, numberLocale) === null
+    ) {
+      setMobileCreateError(t("plantingPlans:errors.save"));
+      return false;
+    }
+    return true;
+  };
+
+  const handleMobileCreate = async (): Promise<void> => {
+    if (!validateMobileForm()) {
+      return;
+    }
+    const selectedBed = beds.find((bed) => bed.id === Number(mobileCreateForm.bed));
+    const hasAreaInput = mobileCreateForm.area_m2.trim() !== "";
+    const hasPlantsInput = mobileCreateForm.plants_count.trim() !== "";
+    const parsedArea = parseLocalizedNumber(mobileCreateForm.area_m2, numberLocale);
+    const parsedPlants = parseLocalizedNumber(mobileCreateForm.plants_count, numberLocale);
+    const usePlantsInput =
+      mobileLastEditedField === "plants_count" ||
+      (!mobileLastEditedField && !hasAreaInput && hasPlantsInput);
+    const areaPayload =
+      hasAreaInput || hasPlantsInput
+        ? {
+            area_input_value: usePlantsInput
+              ? parsedPlants
+              : parsedArea,
+            area_input_unit: usePlantsInput ? "PLANTS" : "M2",
+          }
+        : typeof selectedBed?.area_sqm === "number"
+          ? {
+              area_input_value: selectedBed.area_sqm,
+              area_input_unit: "M2" as const,
+            }
+          : {};
+
+    try {
+      await plantingPlanAPI.create({
+        culture: Number(mobileCreateForm.culture),
+        bed: Number(mobileCreateForm.bed),
+        planting_date: mobileCreateForm.planting_date,
+        cultivation_type: mobileCreateForm.cultivation_type,
+        notes: mobileCreateForm.notes || "",
+        ...areaPayload,
+      } as PlantingPlan);
+      closeMobileCreateDialog();
+      await gridCommandApiRef.current?.reload();
+    } catch (error) {
+      setMobileCreateError(
+        extractApiErrorMessage(error, t, t("plantingPlans:errors.save")),
+      );
+    }
+  };
+
+  const openMobileEditDialog = (row: PlantingPlanRow): void => {
+    const derivedArea = getDerivedAreaFromRow(row);
+    setMobileCreateError("");
+    setMobileEditId(row.id);
+    setMobileCreateForm({
+      culture: String(row.culture ?? ""),
+      bed: String(row.bed ?? ""),
+      cultivation_type: (row.cultivation_type as CultivationType) || "pre_cultivation",
+      planting_date: row.planting_date || "",
+      area_m2:
+        derivedArea !== null
+          ? formatNumberForInput(derivedArea, { maximumFractionDigits: 2 })
+          : "",
+      plants_count:
+        typeof row.plants_count === "number"
+          ? formatNumberForInput(Math.round(row.plants_count), {
+              maximumFractionDigits: 0,
+            })
+          : "",
+      notes: row.notes || "",
+    });
+    setMobileLastEditedField(null);
+    setIsMobileCreateOpen(true);
+  };
+
+  const handleMobileUpdate = async (): Promise<void> => {
+    if (!mobileEditId || !validateMobileForm()) {
+      return;
+    }
+    const selectedBed = beds.find((bed) => bed.id === Number(mobileCreateForm.bed));
+    const hasAreaInput = mobileCreateForm.area_m2.trim() !== "";
+    const hasPlantsInput = mobileCreateForm.plants_count.trim() !== "";
+    const parsedArea = parseLocalizedNumber(mobileCreateForm.area_m2, numberLocale);
+    const parsedPlants = parseLocalizedNumber(mobileCreateForm.plants_count, numberLocale);
+    const usePlantsInput =
+      mobileLastEditedField === "plants_count" ||
+      (!mobileLastEditedField && !hasAreaInput && hasPlantsInput);
+    const areaPayload =
+      hasAreaInput || hasPlantsInput
+        ? {
+            area_input_value: usePlantsInput
+              ? parsedPlants
+              : parsedArea,
+            area_input_unit: usePlantsInput ? "PLANTS" : "M2",
+          }
+        : typeof selectedBed?.area_sqm === "number"
+          ? {
+              area_input_value: selectedBed.area_sqm,
+              area_input_unit: "M2" as const,
+            }
+          : {};
+
+    try {
+      await plantingPlanAPI.update(mobileEditId, {
+        culture: Number(mobileCreateForm.culture),
+        bed: Number(mobileCreateForm.bed),
+        planting_date: mobileCreateForm.planting_date,
+        cultivation_type: mobileCreateForm.cultivation_type,
+        notes: mobileCreateForm.notes || "",
+        ...areaPayload,
+      } as PlantingPlan);
+      closeMobileCreateDialog();
+      await gridCommandApiRef.current?.reload();
+    } catch (error) {
+      setMobileCreateError(
+        extractApiErrorMessage(error, t, t("plantingPlans:errors.save")),
+      );
+    }
+  };
+
   return (
     <div
       className="page-container"
@@ -609,32 +931,78 @@ function PlantingPlans(): React.ReactElement {
         </Alert>
       ) : null}
 
-      <Box sx={{ width: "fit-content", maxWidth: "100%" }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 2,
-          }}
-        >
+      <Box sx={{ width: "100%", maxWidth: "100%" }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
           <h1>{t("plantingPlans:title")}</h1>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => gridCommandApiRef.current?.addRow()}
-            aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
-          >
-            {t("plantingPlans:addButton")}
-          </Button>
+          {!isMobile ? (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => gridCommandApiRef.current?.addRow()}
+              aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
+            >
+              {t("plantingPlans:addButton")}
+            </Button>
+          ) : null}
         </Box>
 
-        <EditableDataGrid<PlantingPlanRow>
-          columns={columns}
-          api={plantingPlanAPI as unknown as DataGridAPI<PlantingPlanRow>}
-          commandApiRef={gridCommandApiRef}
-          onSelectedRowChange={setSelectedPlan}
-          createNewRow={() => ({
+        {isMobile ? (
+          <Box sx={{ pb: 10 }}>
+            <MobileCardList
+              items={mobileRows}
+              expandedIds={expandedCardIds}
+              onToggleExpanded={toggleCardExpanded}
+              renderPrimary={(item) => getCultureLabel(item)}
+              renderSecondary={(item) => `${t("plantingPlans:columns.cultivationType")}: ${t(`plantingPlans:cultivationTypes.${item.cultivation_type === "direct_sowing" ? "directSowing" : "preCultivation"}`)}`}
+              renderDetails={(item) => (
+                <Stack spacing={0.75}>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.bed")}:</strong> {getBedLabel(item)}</Typography>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.plantingDate")}:</strong> {formatDateForDisplay(item.planting_date)}</Typography>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.harvestStartDate")}:</strong> {formatDateForDisplay(item.harvest_date)}</Typography>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.harvestEndDate")}:</strong> {formatDateForDisplay(item.harvest_end_date)}</Typography>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.areaM2")}:</strong> {getDisplayArea(item)}</Typography>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.plantsCount")}:</strong> {typeof item.plants_count === "number" ? `≈ ${Math.round(item.plants_count)}` : "—"}</Typography>
+                  <Typography variant="body2"><strong>{t("common:fields.notes")}:</strong> {item.notes?.trim() ? item.notes : "—"}</Typography>
+                </Stack>
+              )}
+              renderActions={(item) => (
+                <Button
+                  variant="outlined"
+                  startIcon={<EditIcon />}
+                  size="large"
+                  onClick={() => openMobileEditDialog(item)}
+                  aria-label={t("plantingPlans:mobile.editAria")}
+                >
+                  {t("common:actions.edit")}
+                </Button>
+              )}
+              detailsShowLabel={t("plantingPlans:mobile.showDetails")}
+              detailsHideLabel={t("plantingPlans:mobile.hideDetails")}
+              emptyState={(
+                <Box sx={{ p: 2, border: "1px dashed", borderColor: "divider", borderRadius: 2 }}>
+                  <Stack spacing={1.5}>
+                    <Typography variant="subtitle1">{t("plantingPlans:mobile.emptyTitle")}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {t("plantingPlans:mobile.emptyDescription")}
+                    </Typography>
+                    <Button variant="contained" onClick={openMobileCreateDialog}>
+                      {t("plantingPlans:mobile.emptyCta")}
+                    </Button>
+                  </Stack>
+                </Box>
+              )}
+            />
+          </Box>
+        ) : null}
+
+        <Box sx={{ display: isMobile ? "none" : "block" }}>
+          <EditableDataGrid<PlantingPlanRow>
+            columns={columns}
+            api={plantingPlanAPI as unknown as DataGridAPI<PlantingPlanRow>}
+            commandApiRef={gridCommandApiRef}
+            onSelectedRowChange={setSelectedPlan}
+            onRowsStateChange={(rows) => setMobileRows(rows)}
+            createNewRow={() => ({
             id: -Date.now(),
             culture: 0,
             cultivation_type: "pre_cultivation",
@@ -661,6 +1029,7 @@ function PlantingPlans(): React.ReactElement {
               : undefined
           }
           mapToRow={(plan) => {
+            const areaFromApi = toNumericValue(plan.area_usage_sqm);
             return {
               ...plan,
               id: plan.id!,
@@ -674,7 +1043,7 @@ function PlantingPlans(): React.ReactElement {
               harvest_end_date: plan.harvest_end_date,
               quantity: plan.quantity,
               // Backend field name is area_usage_sqm, map to area_m2 for grid
-              area_m2: plan.area_usage_sqm,
+              area_m2: areaFromApi ?? undefined,
               // plants_count computed by backend serializer
               plants_count: plan.plants_count ?? null,
               notes: plan.notes || "",
@@ -809,18 +1178,156 @@ function PlantingPlans(): React.ReactElement {
           tableKey="plantingPlans"
           defaultSortModel={[{ field: "planting_date", sort: "asc" }]}
           persistSortInUrl={true}
-          notes={{
-            fields: [
-              {
-                field: "notes",
-                labelKey: "common:fields.notes",
-                attachmentNoteIdField: "id",
-                attachmentCountField: "note_attachment_count",
-              },
-            ],
-          }}
-        />
+            notes={{
+              fields: [
+                {
+                  field: "notes",
+                  labelKey: "common:fields.notes",
+                  attachmentNoteIdField: "id",
+                  attachmentCountField: "note_attachment_count",
+                },
+              ],
+            }}
+          />
+        </Box>
+
+        {isMobile ? (
+          <Fab
+            color="primary"
+            variant="extended"
+            onClick={openMobileCreateDialog}
+            sx={{ position: "fixed", bottom: 24, right: 16, zIndex: theme.zIndex.fab }}
+            aria-label={t("plantingPlans:mobile.fabAria")}
+          >
+            <AddIcon sx={{ mr: 0.75 }} />
+            {t("plantingPlans:mobile.fabLabel")}
+          </Fab>
+        ) : null}
       </Box>
+
+      <Dialog open={isMobileCreateOpen} onClose={closeMobileCreateDialog} fullWidth maxWidth="sm">
+        <DialogTitle>
+          {mobileEditId ? t("plantingPlans:mobile.editTitle") : t("plantingPlans:mobile.createTitle")}
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            {mobileCreateError ? <Alert severity="error">{mobileCreateError}</Alert> : null}
+            <FormControl fullWidth>
+              <InputLabel>{t("plantingPlans:columns.culture")}</InputLabel>
+              <Select
+                value={mobileCreateForm.culture}
+                label={t("plantingPlans:columns.culture")}
+                onChange={(event) =>
+                  setMobileCreateForm((previous) => ({ ...previous, culture: String(event.target.value) }))
+                }
+              >
+                {cultureOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>{t("plantingPlans:columns.bed")}</InputLabel>
+              <Select
+                value={mobileCreateForm.bed}
+                label={t("plantingPlans:columns.bed")}
+                onChange={(event) =>
+                  setMobileCreateForm((previous) => ({ ...previous, bed: String(event.target.value) }))
+                }
+              >
+                {bedOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>{t("plantingPlans:columns.cultivationType")}</InputLabel>
+              <Select
+                value={mobileCreateForm.cultivation_type}
+                label={t("plantingPlans:columns.cultivationType")}
+                onChange={(event) =>
+                  setMobileCreateForm((previous) => ({ ...previous, cultivation_type: event.target.value as CultivationType }))
+                }
+              >
+                {cultivationTypeOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              type="date"
+              label={t("plantingPlans:columns.plantingDate")}
+              InputLabelProps={{ shrink: true }}
+              value={mobileCreateForm.planting_date}
+              onChange={(event) =>
+                setMobileCreateForm((previous) => ({ ...previous, planting_date: event.target.value }))
+              }
+            />
+            <TextField
+              type="text"
+              inputMode="decimal"
+              label={t("plantingPlans:columns.areaM2")}
+              value={mobileCreateForm.area_m2}
+              onChange={(event) => {
+                const nextArea = event.target.value;
+                const plantsPerSqm = getPlantsPerSqmForCulture(mobileCreateForm.culture);
+                const parsedArea = parseLocalizedNumber(nextArea, numberLocale);
+                setMobileCreateForm((previous) => ({
+                  ...previous,
+                  area_m2: nextArea,
+                  plants_count:
+                    plantsPerSqm && parsedArea !== null
+                      ? formatNumberForInput(
+                          Math.round(parsedArea * plantsPerSqm),
+                          { maximumFractionDigits: 0 },
+                        )
+                      : previous.plants_count,
+                }));
+                setMobileLastEditedField("area_m2");
+              }}
+              slotProps={{ htmlInput: { inputMode: "decimal" } }}
+            />
+            <TextField
+              type="text"
+              inputMode="numeric"
+              label={t("plantingPlans:columns.plantsCount")}
+              value={mobileCreateForm.plants_count}
+              onChange={(event) => {
+                const nextPlants = event.target.value;
+                const plantsPerSqm = getPlantsPerSqmForCulture(mobileCreateForm.culture);
+                const parsedPlants = parseLocalizedNumber(nextPlants, numberLocale);
+                setMobileCreateForm((previous) => ({
+                  ...previous,
+                  plants_count: nextPlants,
+                  area_m2:
+                    plantsPerSqm && parsedPlants !== null
+                      ? formatNumberForInput(parsedPlants / plantsPerSqm, {
+                          maximumFractionDigits: 2,
+                        })
+                      : previous.area_m2,
+                }));
+                setMobileLastEditedField("plants_count");
+              }}
+              slotProps={{ htmlInput: { inputMode: "numeric" } }}
+            />
+            <TextField
+              label={t("common:fields.notes")}
+              multiline
+              minRows={3}
+              value={mobileCreateForm.notes}
+              onChange={(event) =>
+                setMobileCreateForm((previous) => ({ ...previous, notes: event.target.value }))
+              }
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeMobileCreateDialog}>{t("common:actions.cancel")}</Button>
+          <Button onClick={() => void (mobileEditId ? handleMobileUpdate() : handleMobileCreate())} variant="contained">
+            {mobileEditId ? t("common:actions.save") : t("common:actions.add")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

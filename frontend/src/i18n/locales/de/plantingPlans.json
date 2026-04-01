@@ -36,5 +36,17 @@
   "cultivationTypes": {
     "directSowing": "Direktsaat",
     "preCultivation": "Pflanzung"
+  },
+  "mobile": {
+    "showDetails": "Details anzeigen",
+    "hideDetails": "Details ausblenden",
+    "fabLabel": "Neuer Plan",
+    "fabAria": "Neuen Anbauplan erstellen",
+    "emptyTitle": "Noch keine Anbaupläne vorhanden",
+    "emptyDescription": "Lege deinen ersten Anbauplan an, um Kultur, Anbauart und Zeiträume mobil übersichtlich zu verwalten.",
+    "emptyCta": "Anbauplan erstellen",
+    "createTitle": "Neuen Anbauplan erstellen",
+    "editTitle": "Anbauplan bearbeiten",
+    "editAria": "Anbauplan bearbeiten"
   }
 }

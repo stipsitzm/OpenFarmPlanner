@@ -206,6 +206,8 @@ describe('hierarchy components and behaviors', () => {
 
     expect(screen.getByText('Länge (m)')).toBeInTheDocument();
     expect(screen.getByText('Breite (m)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Länge in Metern')).toBeInTheDocument();
+    expect(screen.getByLabelText('Breite in Metern')).toBeInTheDocument();
     expect(document.querySelectorAll('[data-testid="SwapVertIcon"]').length).toBeGreaterThan(0);
     expect(document.querySelectorAll('[data-testid="SwapHorizIcon"]').length).toBeGreaterThan(0);
   });

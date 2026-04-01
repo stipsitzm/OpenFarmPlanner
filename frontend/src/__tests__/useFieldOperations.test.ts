@@ -1,3 +1,4 @@
+import { mockT } from './helpers/testI18n';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
@@ -31,11 +32,11 @@ describe('useFieldOperations', () => {
     const setError = vi.fn();
     const fetchData = vi.fn();
 
-    const { result } = renderHook(() => useFieldOperations([], setError, fetchData));
+    const { result } = renderHook(() => useFieldOperations([], setError, fetchData, mockT as never));
 
     await result.current.addField();
 
-    expect(setError).toHaveBeenCalledWith('Bitte erstellen Sie zuerst einen Standort');
+    expect(setError).toHaveBeenCalledWith('Bitte erstellen Sie zuerst einen Standort.');
     expect(createFieldMock).not.toHaveBeenCalled();
     expect(fetchData).not.toHaveBeenCalled();
   });
@@ -48,7 +49,7 @@ describe('useFieldOperations', () => {
     createFieldMock.mockResolvedValue({});
 
     const { result } = renderHook(() =>
-      useFieldOperations([{ id: 12, name: 'Farm', area_sqm: 1000, notes: '' }], setError, fetchData)
+      useFieldOperations([{ id: 12, name: 'Farm', area_sqm: 1000, notes: '' }], setError, fetchData, mockT as never)
     );
 
     await result.current.addField();
@@ -71,7 +72,7 @@ describe('useFieldOperations', () => {
     createFieldMock.mockResolvedValue({});
 
     const { result } = renderHook(() =>
-      useFieldOperations([{ id: 1, name: 'Default', area_sqm: 1, notes: '' }], setError, fetchData)
+      useFieldOperations([{ id: 1, name: 'Default', area_sqm: 1, notes: '' }], setError, fetchData, mockT as never)
     );
 
     await result.current.addField(99);
@@ -86,7 +87,7 @@ describe('useFieldOperations', () => {
     const fetchData = vi.fn();
 
     const { result } = renderHook(() =>
-      useFieldOperations([{ id: 5, name: 'A', area_sqm: 20, notes: '' }], setError, fetchData)
+      useFieldOperations([{ id: 5, name: 'A', area_sqm: 20, notes: '' }], setError, fetchData, mockT as never)
     );
 
     window.prompt = vi.fn().mockReturnValue('   ');
@@ -107,7 +108,7 @@ describe('useFieldOperations', () => {
     createFieldMock.mockRejectedValue(new Error('network error'));
 
     const { result } = renderHook(() =>
-      useFieldOperations([{ id: 3, name: 'A', area_sqm: 20, notes: '' }], setError, fetchData)
+      useFieldOperations([{ id: 3, name: 'A', area_sqm: 20, notes: '' }], setError, fetchData, mockT as never)
     );
 
     await result.current.addField();
@@ -123,7 +124,7 @@ describe('useFieldOperations', () => {
     const fetchData = vi.fn().mockResolvedValue(undefined);
     deleteFieldMock.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useFieldOperations([], setError, fetchData));
+    const { result } = renderHook(() => useFieldOperations([], setError, fetchData, mockT as never));
 
     await result.current.deleteField(77);
 
@@ -138,7 +139,7 @@ describe('useFieldOperations', () => {
     const setError = vi.fn();
     const fetchData = vi.fn();
 
-    const { result } = renderHook(() => useFieldOperations([], setError, fetchData));
+    const { result } = renderHook(() => useFieldOperations([], setError, fetchData, mockT as never));
 
     await result.current.deleteField(41);
 
@@ -154,7 +155,7 @@ describe('useFieldOperations', () => {
     const fetchData = vi.fn();
     deleteFieldMock.mockRejectedValue(new Error('delete failed'));
 
-    const { result } = renderHook(() => useFieldOperations([], setError, fetchData));
+    const { result } = renderHook(() => useFieldOperations([], setError, fetchData, mockT as never));
 
     await result.current.deleteField(88);
 

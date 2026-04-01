@@ -10,8 +10,16 @@
 
 import { useEffect, useState } from 'react';
 import { bedAPI, fieldAPI, type Bed, type Field } from '../api/api';
+import { useTranslation } from '../i18n';
+import {
+  formatLocalizedNumber,
+  parseLocalizedNumber,
+  resolveLocaleFromLanguage,
+} from '../utils/numberLocalization';
 
 function Beds(): React.ReactElement {
+  const { i18n } = useTranslation();
+  const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const [beds, setBeds] = useState<Bed[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -116,12 +124,17 @@ function Beds(): React.ReactElement {
             <label htmlFor="area_sqm">Fläche (m²)</label>
             <input
               id="area_sqm"
-              type="number"
-              step="0.01"
-              min="0.01"
-              max="10000"
+              type="text"
+              inputMode="decimal"
               value={formData.area_sqm || ''}
-              onChange={(e) => setFormData({ ...formData, area_sqm: e.target.value ? parseFloat(e.target.value) : undefined })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  area_sqm:
+                    parseLocalizedNumber(e.target.value, numberLocale) ??
+                    undefined,
+                })
+              }
               className="form-input"
             />
           </div>
@@ -154,7 +167,11 @@ function Beds(): React.ReactElement {
             <tr key={bed.id}>
               <td>{bed.name}</td>
               <td>{bed.field_name || '-'}</td>
-              <td>{bed.area_sqm || '-'}</td>
+              <td>
+                {typeof bed.area_sqm === 'number'
+                  ? formatLocalizedNumber(bed.area_sqm, numberLocale)
+                  : '-'}
+              </td>
               <td>{bed.notes || '-'}</td>
               <td>
                 <button onClick={() => handleDelete(bed.id!)} className="delete-btn">

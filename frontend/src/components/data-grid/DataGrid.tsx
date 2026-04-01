@@ -21,7 +21,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, type MutableRefObjec
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
-import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridCellParams } from '@mui/x-data-grid';
+import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridCellParams, GridRowParams } from '@mui/x-data-grid';
 import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -91,6 +91,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showAddAction?: boolean;
   showFooterEditControls?: boolean;
   showRowEditActions?: boolean;
+  onRowsStateChange?: (rows: T[]) => void;
 }
 
 export function EditableDataGrid<T extends EditableRow>({
@@ -117,6 +118,7 @@ export function EditableDataGrid<T extends EditableRow>({
   showAddAction = true,
   showFooterEditControls = true,
   showRowEditActions = false,
+  onRowsStateChange,
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -583,12 +585,10 @@ export function EditableDataGrid<T extends EditableRow>({
             sortable: false,
             filterable: false,
             width: 128,
-            align: 'right',
+            align: 'right' as const,
             renderCell: (params: GridCellParams<T>) => {
               const rowId = params.id;
-              const rowKey = String(rowId);
               const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
-              const isDirty = dirtyRowIds.has(rowKey);
 
               return (
                 <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, width: '100%', justifyContent: 'flex-end' }}>
@@ -626,11 +626,11 @@ export function EditableDataGrid<T extends EditableRow>({
       ? [
           {
             field: 'actions',
-            type: 'actions',
+            type: 'actions' as const,
             headerName: '',
             width: 70,
             cellClassName: 'actions',
-            getActions: ({ id }) => {
+            getActions: ({ id }: GridRowParams<T>) => {
               return [
                 <IconButton
                   key={`delete-${id}`}
@@ -674,6 +674,13 @@ export function EditableDataGrid<T extends EditableRow>({
     // Last resort: use field name itself
     return `${notesEditor.field} – Notizen`;
   };
+
+  useEffect(() => {
+    if (!onRowsStateChange) {
+      return;
+    }
+    onRowsStateChange(rows as T[]);
+  }, [onRowsStateChange, rows]);
 
   useEffect(() => {
     if (!onSelectedRowChange) {

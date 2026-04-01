@@ -67,9 +67,7 @@ export function NotesCell({
   );
 
   const notesAria = hasValue ? t('notes.editWithContent') : t('notes.editEmpty');
-  const attachmentTooltip = attachmentCount === 1
-    ? '1 Foto in Notizen'
-    : `${attachmentCount} Fotos in Notizen`;
+  const attachmentTooltip = t('notes.attachmentsCount', { count: attachmentCount });
 
   return (
     <Tooltip
@@ -77,6 +75,7 @@ export function NotesCell({
       placement="top-start"
       arrow
       enterDelay={500}
+      disableHoverListener={!hasValue}
       slotProps={{
         tooltip: {
           sx: {

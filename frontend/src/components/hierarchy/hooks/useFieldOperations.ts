@@ -3,21 +3,23 @@
  */
 
 import { fieldAPI, type Location } from '../../../api/api';
+import type { TFunction } from 'i18next';
 
 export function useFieldOperations(
   locations: Location[],
   setError: (error: string) => void,
-  fetchData: () => Promise<void>
+  fetchData: () => Promise<void>,
+  t: TFunction
 ) {
   const addField = async (locationId?: number): Promise<void> => {
     // Use first location if not specified
     const targetLocationId = locationId || (locations.length > 0 ? locations[0].id : undefined);
     if (!targetLocationId) {
-      setError('Bitte erstellen Sie zuerst einen Standort');
+      setError(t('messages.createLocationFirst'));
       return;
     }
 
-    const fieldName = window.prompt('Name des neuen Schlags:');
+    const fieldName = window.prompt(t('prompts.newFieldName'));
     if (!fieldName || fieldName.trim() === '') {
       return; // User cancelled or entered empty name
     }
@@ -34,13 +36,13 @@ export function useFieldOperations(
       await fetchData();
       setError('');
     } catch (err) {
-      setError('Fehler beim Erstellen des Schlags');
+      setError(t('errors.createField'));
       console.error('Error creating field:', err);
     }
   };
 
   const deleteField = async (fieldId: number): Promise<void> => {
-    if (!window.confirm('Möchten Sie diesen Schlag wirklich löschen? Alle zugehörigen Beete werden ebenfalls gelöscht.')) {
+    if (!window.confirm(t('confirm.deleteFieldWithBeds'))) {
       return;
     }
 
@@ -49,7 +51,7 @@ export function useFieldOperations(
       await fetchData();
       setError('');
     } catch (err) {
-      setError('Fehler beim Löschen des Schlags');
+      setError(t('errors.deleteField'));
       console.error('Error deleting field:', err);
     }
   };
