@@ -60,9 +60,13 @@ export function SearchableSelect<T = unknown>({
   const [internalInputValue, setInternalInputValue] = useState('');
   const resolvedInputValue = inputValue ?? internalInputValue;
 
-  const handleInputChange = (_: unknown, newInputValue: string) => {
-    setInternalInputValue(newInputValue);
-    onInputChange?.(newInputValue);
+  const handleInputChange = (_: unknown, newInputValue: string, reason: string) => {
+    if (inputValue === undefined) {
+      setInternalInputValue(newInputValue);
+    }
+    if (reason === 'input' || reason === 'clear') {
+      onInputChange?.(newInputValue);
+    }
   };
 
   return (
