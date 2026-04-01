@@ -13,6 +13,7 @@ interface MobileCardListProps<T extends MobileCardListItem> {
   renderPrimary: (item: T) => React.ReactNode;
   renderSecondary?: (item: T) => React.ReactNode;
   renderDetails: (item: T) => React.ReactNode;
+  renderActions?: (item: T) => React.ReactNode;
   emptyState?: React.ReactNode;
   detailsShowLabel: string;
   detailsHideLabel: string;
@@ -25,6 +26,7 @@ export function MobileCardList<T extends MobileCardListItem>({
   renderPrimary,
   renderSecondary,
   renderDetails,
+  renderActions,
   emptyState,
   detailsShowLabel,
   detailsHideLabel,
@@ -65,6 +67,11 @@ export function MobileCardList<T extends MobileCardListItem>({
                 <Collapse in={isExpanded}>
                   <Box sx={{ pt: 0.5 }}>
                     {renderDetails(item)}
+                    {renderActions ? (
+                      <Box sx={{ mt: 1.25 }}>
+                        {renderActions(item)}
+                      </Box>
+                    ) : null}
                   </Box>
                 </Collapse>
               </Stack>

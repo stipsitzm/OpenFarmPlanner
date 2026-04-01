@@ -31,6 +31,7 @@ import {
   useTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
 import { useTranslation } from "../i18n";
 import {
   plantingPlanAPI,
@@ -135,6 +136,7 @@ function PlantingPlans(): React.ReactElement {
     planting_date: "",
   });
   const [mobileCreateError, setMobileCreateError] = useState("");
+  const [mobileEditId, setMobileEditId] = useState<number | null>(null);
 
   useCommandContextTag("plans");
 
@@ -685,9 +687,10 @@ function PlantingPlans(): React.ReactElement {
   const closeMobileCreateDialog = (): void => {
     setIsMobileCreateOpen(false);
     setMobileCreateError("");
+    setMobileEditId(null);
   };
 
-  const handleMobileCreate = async (): Promise<void> => {
+  const validateMobileForm = (): boolean => {
     if (!mobileCreateForm.culture || !mobileCreateForm.bed || !mobileCreateForm.planting_date) {
       setMobileCreateError(t("plantingPlans:validation.requiredFields", {
         fields: [
@@ -696,9 +699,15 @@ function PlantingPlans(): React.ReactElement {
           t("plantingPlans:columns.plantingDate"),
         ].join(", "),
       }));
+      return false;
+    }
+    return true;
+  };
+
+  const handleMobileCreate = async (): Promise<void> => {
+    if (!validateMobileForm()) {
       return;
     }
-
     try {
       await plantingPlanAPI.create({
         culture: Number(mobileCreateForm.culture),
@@ -706,6 +715,36 @@ function PlantingPlans(): React.ReactElement {
         planting_date: mobileCreateForm.planting_date,
         cultivation_type: mobileCreateForm.cultivation_type,
         notes: "",
+      } as PlantingPlan);
+      closeMobileCreateDialog();
+      await gridCommandApiRef.current?.reload();
+    } catch {
+      setMobileCreateError(t("plantingPlans:errors.save"));
+    }
+  };
+
+  const openMobileEditDialog = (row: PlantingPlanRow): void => {
+    setMobileCreateError("");
+    setMobileEditId(row.id);
+    setMobileCreateForm({
+      culture: String(row.culture ?? ""),
+      bed: String(row.bed ?? ""),
+      cultivation_type: (row.cultivation_type as CultivationType) || "pre_cultivation",
+      planting_date: row.planting_date || "",
+    });
+    setIsMobileCreateOpen(true);
+  };
+
+  const handleMobileUpdate = async (): Promise<void> => {
+    if (!mobileEditId || !validateMobileForm()) {
+      return;
+    }
+    try {
+      await plantingPlanAPI.update(mobileEditId, {
+        culture: Number(mobileCreateForm.culture),
+        bed: Number(mobileCreateForm.bed),
+        planting_date: mobileCreateForm.planting_date,
+        cultivation_type: mobileCreateForm.cultivation_type,
       } as PlantingPlan);
       closeMobileCreateDialog();
       await gridCommandApiRef.current?.reload();
@@ -757,6 +796,17 @@ function PlantingPlans(): React.ReactElement {
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.areaM2")}:</strong> {typeof item.area_m2 === "number" ? formatAreaM2(item.area_m2) : "—"}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.plantsCount")}:</strong> {typeof item.plants_count === "number" ? `≈ ${Math.round(item.plants_count)}` : "—"}</Typography>
                 </Stack>
+              )}
+              renderActions={(item) => (
+                <Button
+                  variant="outlined"
+                  startIcon={<EditIcon />}
+                  size="large"
+                  onClick={() => openMobileEditDialog(item)}
+                  aria-label={t("plantingPlans:mobile.editAria")}
+                >
+                  {t("common:actions.edit")}
+                </Button>
               )}
               detailsShowLabel={t("plantingPlans:mobile.showDetails")}
               detailsHideLabel={t("plantingPlans:mobile.hideDetails")}
@@ -987,7 +1037,9 @@ function PlantingPlans(): React.ReactElement {
       </Box>
 
       <Dialog open={isMobileCreateOpen} onClose={closeMobileCreateDialog} fullWidth maxWidth="sm">
-        <DialogTitle>{t("plantingPlans:mobile.createTitle")}</DialogTitle>
+        <DialogTitle>
+          {mobileEditId ? t("plantingPlans:mobile.editTitle") : t("plantingPlans:mobile.createTitle")}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {mobileCreateError ? <Alert severity="error">{mobileCreateError}</Alert> : null}
@@ -1046,7 +1098,9 @@ function PlantingPlans(): React.ReactElement {
         </DialogContent>
         <DialogActions>
           <Button onClick={closeMobileCreateDialog}>{t("common:actions.cancel")}</Button>
-          <Button onClick={() => void handleMobileCreate()} variant="contained">{t("common:actions.add")}</Button>
+          <Button onClick={() => void (mobileEditId ? handleMobileUpdate() : handleMobileCreate())} variant="contained">
+            {mobileEditId ? t("common:actions.save") : t("common:actions.add")}
+          </Button>
         </DialogActions>
       </Dialog>
     </div>

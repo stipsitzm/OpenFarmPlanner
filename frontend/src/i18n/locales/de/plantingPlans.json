@@ -45,6 +45,8 @@
     "emptyTitle": "Noch keine Anbaupläne vorhanden",
     "emptyDescription": "Lege deinen ersten Anbauplan an, um Kultur, Anbauart und Zeiträume mobil übersichtlich zu verwalten.",
     "emptyCta": "Anbauplan erstellen",
-    "createTitle": "Neuen Anbauplan erstellen"
+    "createTitle": "Neuen Anbauplan erstellen",
+    "editTitle": "Anbauplan bearbeiten",
+    "editAria": "Anbauplan bearbeiten"
   }
 }
