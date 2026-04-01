@@ -2,7 +2,7 @@
  * Custom footer for hierarchy grid
  */
 
-import { Box, IconButton, Tooltip } from '@mui/material';
+import { Box, IconButton } from '@mui/material';
 import { useTranslation } from '../../i18n';
 import { dataGridFooterSx } from '../data-grid/styles';
 import type { Location } from '../../api/api';
@@ -23,7 +23,7 @@ export function HierarchyFooter({ locations, onAddField }: HierarchyFooterProps)
       gap: 2,
     }}>
       {!hasMultipleLocations && locations.length > 0 && (
-        <Tooltip title={t('tooltips.addField')}><IconButton
+        <IconButton
           onClick={() => onAddField(locations[0]?.id)}
           color="primary"
           size="small"
@@ -31,7 +31,7 @@ export function HierarchyFooter({ locations, onAddField }: HierarchyFooterProps)
           className="clickable"
         >
           <span style={{ fontSize: '0.875rem', marginRight: '4px' }}>{t('addField')}</span>
-        </IconButton></Tooltip>
+        </IconButton>
       )}
       <span style={{ color: '#666', fontSize: '0.875rem' }}>
         {hasMultipleLocations 

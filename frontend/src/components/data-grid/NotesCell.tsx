@@ -75,6 +75,7 @@ export function NotesCell({
       placement="top-start"
       arrow
       enterDelay={500}
+      disableHoverListener={!hasValue}
       slotProps={{
         tooltip: {
           sx: {
