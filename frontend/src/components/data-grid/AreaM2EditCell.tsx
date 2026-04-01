@@ -29,9 +29,15 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
   } = props;
   const apiRef = useGridApiContext();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const normalizedValue =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && value.trim() !== ''
+        ? Number(value)
+        : null;
   const [inputValue, setInputValue] = useState<string>(
-    typeof value === 'number' && !Number.isNaN(value)
-      ? value.toString()
+    typeof normalizedValue === 'number' && !Number.isNaN(normalizedValue)
+      ? normalizedValue.toString()
       : typeof fallbackValue === 'number' && !Number.isNaN(fallbackValue)
         ? fallbackValue.toString()
         : ''
@@ -55,8 +61,8 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
   }, [hasFocus]);
 
   useEffect(() => {
-    if (typeof value === 'number' && !Number.isNaN(value)) {
-      setInputValue(value.toString());
+    if (typeof normalizedValue === 'number' && !Number.isNaN(normalizedValue)) {
+      setInputValue(normalizedValue.toString());
       return;
     }
     if (typeof fallbackValue === 'number' && !Number.isNaN(fallbackValue)) {
@@ -64,7 +70,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
       return;
     }
     setInputValue('');
-  }, [value, fallbackValue]);
+  }, [normalizedValue, fallbackValue]);
 
   const applyValue = async (nextValue: number | null): Promise<void> => {
     onLastEditedFieldChange('area_m2');
