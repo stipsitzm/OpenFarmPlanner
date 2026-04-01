@@ -8,12 +8,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, TextField } from '@mui/material';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
+import { formatLocalizedNumber, parseLocalizedNumber } from '../../utils/numberLocalization';
 
 export interface AreaM2EditCellProps extends GridRenderEditCellParams {
   bedAreaSqm?: number;
   onLastEditedFieldChange: (field: 'area_m2') => void;
   normalizeAreaOnBlur?: (value: number | null) => Promise<number | null>;
   fallbackValue?: number | null;
+  locale: string;
 }
 
 export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
@@ -26,6 +28,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     onLastEditedFieldChange,
     normalizeAreaOnBlur,
     fallbackValue,
+    locale,
   } = props;
   const apiRef = useGridApiContext();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -37,9 +40,15 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
         : null;
   const [inputValue, setInputValue] = useState<string>(
     typeof normalizedValue === 'number' && !Number.isNaN(normalizedValue)
-      ? normalizedValue.toString()
+      ? formatLocalizedNumber(normalizedValue, locale, {
+          useGrouping: false,
+          maximumFractionDigits: 2,
+        })
       : typeof fallbackValue === 'number' && !Number.isNaN(fallbackValue)
-        ? fallbackValue.toString()
+        ? formatLocalizedNumber(fallbackValue, locale, {
+            useGrouping: false,
+            maximumFractionDigits: 2,
+          })
         : ''
   );
 
@@ -62,15 +71,25 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
 
   useEffect(() => {
     if (typeof normalizedValue === 'number' && !Number.isNaN(normalizedValue)) {
-      setInputValue(normalizedValue.toString());
+      setInputValue(
+        formatLocalizedNumber(normalizedValue, locale, {
+          useGrouping: false,
+          maximumFractionDigits: 2,
+        })
+      );
       return;
     }
     if (typeof fallbackValue === 'number' && !Number.isNaN(fallbackValue)) {
-      setInputValue(fallbackValue.toString());
+      setInputValue(
+        formatLocalizedNumber(fallbackValue, locale, {
+          useGrouping: false,
+          maximumFractionDigits: 2,
+        })
+      );
       return;
     }
     setInputValue('');
-  }, [normalizedValue, fallbackValue]);
+  }, [normalizedValue, fallbackValue, locale]);
 
   const applyValue = async (nextValue: number | null): Promise<void> => {
     onLastEditedFieldChange('area_m2');
@@ -84,16 +103,16 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const val = e.target.value;
     setInputValue(val);
-    const numValue = val === '' ? null : Number.parseFloat(val);
-    await applyValue(Number.isNaN(numValue as number) ? null : numValue);
+    const parsedValue = parseLocalizedNumber(val, locale);
+    await applyValue(parsedValue);
   };
 
   const handleBlur = async (): Promise<void> => {
     if (!normalizeAreaOnBlur) {
       return;
     }
-    const parsedValue = inputValue === '' ? null : Number.parseFloat(inputValue);
-    if (parsedValue !== null && Number.isNaN(parsedValue)) {
+    const parsedValue = parseLocalizedNumber(inputValue, locale);
+    if (inputValue.trim() !== '' && parsedValue === null) {
       return;
     }
     const normalized = await normalizeAreaOnBlur(parsedValue);
@@ -112,7 +131,8 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
       }}
     >
       <TextField
-        type="number"
+        type="text"
+        inputMode="decimal"
         inputRef={inputRef}
         value={inputValue}
         onChange={handleChange}

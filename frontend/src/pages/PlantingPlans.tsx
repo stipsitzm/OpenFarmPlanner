@@ -43,6 +43,11 @@ import {
 } from "../api/api";
 import type { CultivationType } from "../api/types";
 import { extractApiErrorMessage } from "../api/errors";
+import {
+  formatLocalizedNumber,
+  parseLocalizedNumber,
+  resolveLocaleFromLanguage,
+} from "../utils/numberLocalization";
 import { AreaM2EditCell } from "../components/data-grid/AreaM2EditCell";
 import {
   EditableDataGrid,
@@ -97,7 +102,11 @@ const estimateColumnWidth = (
   return Math.max(min, Math.min(max, estimated));
 };
 
-const formatAreaM2 = (value: number): string => `${value.toFixed(2)} m²`;
+const formatAreaM2 = (value: number, locale: string): string =>
+  `${formatLocalizedNumber(value, locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} m²`;
 
 const toIsoDateString = (value: unknown): string | null => {
   if (value instanceof Date) {
@@ -125,6 +134,8 @@ const toNumericValue = (value: unknown): number | null => {
 
 function PlantingPlans(): React.ReactElement {
   const { t } = useTranslation(["plantingPlans", "common"]);
+  const { i18n } = useTranslation();
+  const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [searchParams, setSearchParams] = useSearchParams();
@@ -180,7 +191,9 @@ function PlantingPlans(): React.ReactElement {
           const baseName = b.field_name
             ? `${b.field_name} - ${b.name}`
             : b.name;
-          const areaInfo = b.area_sqm ? ` (${b.area_sqm} m²)` : "";
+          const areaInfo = b.area_sqm
+            ? ` (${formatAreaM2(b.area_sqm, numberLocale)})`
+            : "";
           return { value: b.id!, label: `${baseName}${areaInfo}` };
         }),
     [beds],
@@ -244,7 +257,7 @@ function PlantingPlans(): React.ReactElement {
           t("plantingPlans:columns.areaM2"),
           ...beds
             .filter((bed) => typeof bed.area_sqm === "number")
-            .map((bed) => formatAreaM2(bed.area_sqm as number)),
+            .map((bed) => formatAreaM2(bed.area_sqm as number, numberLocale)),
         ],
         112,
         150,
@@ -547,6 +560,7 @@ function PlantingPlans(): React.ReactElement {
               {...params}
               bedAreaSqm={selectedBed?.area_sqm}
               fallbackValue={derivedArea}
+              locale={numberLocale}
               onLastEditedFieldChange={() => {
                 lastEditedFieldRef.current = "area_m2";
               }}
@@ -576,7 +590,7 @@ function PlantingPlans(): React.ReactElement {
 
                 if (value > remaining) {
                   setAreaWarning(
-                    `Fläche wurde auf Restfläche begrenzt (${remaining.toFixed(2)} m²). Bitte Speichern bestätigen, dann wird der Restwert übernommen.`,
+                    `Fläche wurde auf Restfläche begrenzt (${formatAreaM2(remaining, numberLocale)}). Bitte Speichern bestätigen, dann wird der Restwert übernommen.`,
                   );
                   return remaining;
                 }
@@ -593,7 +607,7 @@ function PlantingPlans(): React.ReactElement {
         valueFormatter: (value) => {
           const numericValue = Number(value);
           if (!Number.isNaN(numericValue)) {
-            return `${numericValue.toFixed(2)} m²`;
+            return formatAreaM2(numericValue, numberLocale);
           }
           return "";
         },
@@ -684,16 +698,26 @@ function PlantingPlans(): React.ReactElement {
   const getDisplayArea = (row: PlantingPlanRow): string => {
     const explicitArea = toNumericValue(row.area_m2);
     if (explicitArea !== null) {
-      return formatAreaM2(explicitArea);
+      return formatAreaM2(explicitArea, numberLocale);
     }
     if (typeof row.plants_count === "number") {
       const plantsPerSqm = getPlantsPerSqmForCulture(String(row.culture));
       if (plantsPerSqm) {
-        return formatAreaM2(row.plants_count / plantsPerSqm);
+        return formatAreaM2(row.plants_count / plantsPerSqm, numberLocale);
       }
     }
     return "—";
   };
+
+  const formatNumberForInput = (
+    value: number,
+    options?: Intl.NumberFormatOptions,
+  ): string =>
+    formatLocalizedNumber(value, numberLocale, {
+      useGrouping: false,
+      maximumFractionDigits: 6,
+      ...options,
+    });
 
   const toggleCardExpanded = (id: string | number): void => {
     setExpandedCardIds((previous) => {
@@ -764,6 +788,20 @@ function PlantingPlans(): React.ReactElement {
       }));
       return false;
     }
+    if (
+      mobileCreateForm.area_m2.trim() !== "" &&
+      parseLocalizedNumber(mobileCreateForm.area_m2, numberLocale) === null
+    ) {
+      setMobileCreateError(t("plantingPlans:errors.save"));
+      return false;
+    }
+    if (
+      mobileCreateForm.plants_count.trim() !== "" &&
+      parseLocalizedNumber(mobileCreateForm.plants_count, numberLocale) === null
+    ) {
+      setMobileCreateError(t("plantingPlans:errors.save"));
+      return false;
+    }
     return true;
   };
 
@@ -774,6 +812,8 @@ function PlantingPlans(): React.ReactElement {
     const selectedBed = beds.find((bed) => bed.id === Number(mobileCreateForm.bed));
     const hasAreaInput = mobileCreateForm.area_m2.trim() !== "";
     const hasPlantsInput = mobileCreateForm.plants_count.trim() !== "";
+    const parsedArea = parseLocalizedNumber(mobileCreateForm.area_m2, numberLocale);
+    const parsedPlants = parseLocalizedNumber(mobileCreateForm.plants_count, numberLocale);
     const usePlantsInput =
       mobileLastEditedField === "plants_count" ||
       (!mobileLastEditedField && !hasAreaInput && hasPlantsInput);
@@ -781,8 +821,8 @@ function PlantingPlans(): React.ReactElement {
       hasAreaInput || hasPlantsInput
         ? {
             area_input_value: usePlantsInput
-              ? Number(mobileCreateForm.plants_count)
-              : Number(mobileCreateForm.area_m2),
+              ? parsedPlants
+              : parsedArea,
             area_input_unit: usePlantsInput ? "PLANTS" : "M2",
           }
         : typeof selectedBed?.area_sqm === "number"
@@ -819,8 +859,16 @@ function PlantingPlans(): React.ReactElement {
       bed: String(row.bed ?? ""),
       cultivation_type: (row.cultivation_type as CultivationType) || "pre_cultivation",
       planting_date: row.planting_date || "",
-      area_m2: derivedArea !== null ? String(derivedArea) : "",
-      plants_count: typeof row.plants_count === "number" ? String(Math.round(row.plants_count)) : "",
+      area_m2:
+        derivedArea !== null
+          ? formatNumberForInput(derivedArea, { maximumFractionDigits: 2 })
+          : "",
+      plants_count:
+        typeof row.plants_count === "number"
+          ? formatNumberForInput(Math.round(row.plants_count), {
+              maximumFractionDigits: 0,
+            })
+          : "",
       notes: row.notes || "",
     });
     setMobileLastEditedField(null);
@@ -834,6 +882,8 @@ function PlantingPlans(): React.ReactElement {
     const selectedBed = beds.find((bed) => bed.id === Number(mobileCreateForm.bed));
     const hasAreaInput = mobileCreateForm.area_m2.trim() !== "";
     const hasPlantsInput = mobileCreateForm.plants_count.trim() !== "";
+    const parsedArea = parseLocalizedNumber(mobileCreateForm.area_m2, numberLocale);
+    const parsedPlants = parseLocalizedNumber(mobileCreateForm.plants_count, numberLocale);
     const usePlantsInput =
       mobileLastEditedField === "plants_count" ||
       (!mobileLastEditedField && !hasAreaInput && hasPlantsInput);
@@ -841,8 +891,8 @@ function PlantingPlans(): React.ReactElement {
       hasAreaInput || hasPlantsInput
         ? {
             area_input_value: usePlantsInput
-              ? Number(mobileCreateForm.plants_count)
-              : Number(mobileCreateForm.area_m2),
+              ? parsedPlants
+              : parsedArea,
             area_input_unit: usePlantsInput ? "PLANTS" : "M2",
           }
         : typeof selectedBed?.area_sqm === "number"
@@ -1214,42 +1264,51 @@ function PlantingPlans(): React.ReactElement {
               }
             />
             <TextField
-              type="number"
+              type="text"
+              inputMode="decimal"
               label={t("plantingPlans:columns.areaM2")}
               value={mobileCreateForm.area_m2}
               onChange={(event) => {
                 const nextArea = event.target.value;
                 const plantsPerSqm = getPlantsPerSqmForCulture(mobileCreateForm.culture);
+                const parsedArea = parseLocalizedNumber(nextArea, numberLocale);
                 setMobileCreateForm((previous) => ({
                   ...previous,
                   area_m2: nextArea,
                   plants_count:
-                    plantsPerSqm && nextArea !== ""
-                      ? String(Math.round(Number(nextArea) * plantsPerSqm))
+                    plantsPerSqm && parsedArea !== null
+                      ? formatNumberForInput(
+                          Math.round(parsedArea * plantsPerSqm),
+                          { maximumFractionDigits: 0 },
+                        )
                       : previous.plants_count,
                 }));
                 setMobileLastEditedField("area_m2");
               }}
-              slotProps={{ htmlInput: { min: 0, step: "0.01" } }}
+              slotProps={{ htmlInput: { inputMode: "decimal" } }}
             />
             <TextField
-              type="number"
+              type="text"
+              inputMode="numeric"
               label={t("plantingPlans:columns.plantsCount")}
               value={mobileCreateForm.plants_count}
               onChange={(event) => {
                 const nextPlants = event.target.value;
                 const plantsPerSqm = getPlantsPerSqmForCulture(mobileCreateForm.culture);
+                const parsedPlants = parseLocalizedNumber(nextPlants, numberLocale);
                 setMobileCreateForm((previous) => ({
                   ...previous,
                   plants_count: nextPlants,
                   area_m2:
-                    plantsPerSqm && nextPlants !== ""
-                      ? String((Number(nextPlants) / plantsPerSqm).toFixed(2))
+                    plantsPerSqm && parsedPlants !== null
+                      ? formatNumberForInput(parsedPlants / plantsPerSqm, {
+                          maximumFractionDigits: 2,
+                        })
                       : previous.area_m2,
                 }));
                 setMobileLastEditedField("plants_count");
               }}
-              slotProps={{ htmlInput: { min: 0, step: "1" } }}
+              slotProps={{ htmlInput: { inputMode: "numeric" } }}
             />
             <TextField
               label={t("common:fields.notes")}
