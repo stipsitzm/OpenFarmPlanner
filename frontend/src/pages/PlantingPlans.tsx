@@ -134,9 +134,15 @@ function PlantingPlans(): React.ReactElement {
     bed: "",
     cultivation_type: "pre_cultivation" as CultivationType,
     planting_date: "",
+    area_m2: "",
+    plants_count: "",
+    notes: "",
   });
   const [mobileCreateError, setMobileCreateError] = useState("");
   const [mobileEditId, setMobileEditId] = useState<number | null>(null);
+  const [mobileLastEditedField, setMobileLastEditedField] = useState<
+    "area_m2" | "plants_count" | null
+  >(null);
 
   useCommandContextTag("plans");
 
@@ -661,6 +667,19 @@ function PlantingPlans(): React.ReactElement {
     return fallback?.label ?? "—";
   };
 
+  const getDisplayArea = (row: PlantingPlanRow): string => {
+    if (typeof row.area_m2 === "number" && !Number.isNaN(row.area_m2)) {
+      return formatAreaM2(row.area_m2);
+    }
+    if (typeof row.plants_count === "number") {
+      const plantsPerSqm = getPlantsPerSqmForCulture(String(row.culture));
+      if (plantsPerSqm) {
+        return formatAreaM2(row.plants_count / plantsPerSqm);
+      }
+    }
+    return "—";
+  };
+
   const toggleCardExpanded = (id: string | number): void => {
     setExpandedCardIds((previous) => {
       const next = new Set(previous);
@@ -680,7 +699,11 @@ function PlantingPlans(): React.ReactElement {
       bed: "",
       cultivation_type: "pre_cultivation",
       planting_date: "",
+      area_m2: "",
+      plants_count: "",
+      notes: "",
     });
+    setMobileLastEditedField(null);
     setIsMobileCreateOpen(true);
   };
 
@@ -688,6 +711,16 @@ function PlantingPlans(): React.ReactElement {
     setIsMobileCreateOpen(false);
     setMobileCreateError("");
     setMobileEditId(null);
+    setMobileLastEditedField(null);
+  };
+
+  const getPlantsPerSqmForCulture = (cultureId: string): number | null => {
+    const numericCultureId = Number(cultureId);
+    const culture = cultures.find((item) => item.id === numericCultureId);
+    if (!culture || !culture.plants_per_m2 || culture.plants_per_m2 <= 0) {
+      return null;
+    }
+    return culture.plants_per_m2;
   };
 
   const validateMobileForm = (): boolean => {
@@ -714,7 +747,17 @@ function PlantingPlans(): React.ReactElement {
         bed: Number(mobileCreateForm.bed),
         planting_date: mobileCreateForm.planting_date,
         cultivation_type: mobileCreateForm.cultivation_type,
-        notes: "",
+        notes: mobileCreateForm.notes || "",
+        ...(mobileCreateForm.area_m2 || mobileCreateForm.plants_count
+          ? {
+              area_input_value:
+                mobileLastEditedField === "plants_count"
+                  ? Number(mobileCreateForm.plants_count)
+                  : Number(mobileCreateForm.area_m2),
+              area_input_unit:
+                mobileLastEditedField === "plants_count" ? "PLANTS" : "M2",
+            }
+          : {}),
       } as PlantingPlan);
       closeMobileCreateDialog();
       await gridCommandApiRef.current?.reload();
@@ -731,7 +774,11 @@ function PlantingPlans(): React.ReactElement {
       bed: String(row.bed ?? ""),
       cultivation_type: (row.cultivation_type as CultivationType) || "pre_cultivation",
       planting_date: row.planting_date || "",
+      area_m2: typeof row.area_m2 === "number" ? String(row.area_m2) : "",
+      plants_count: typeof row.plants_count === "number" ? String(Math.round(row.plants_count)) : "",
+      notes: row.notes || "",
     });
+    setMobileLastEditedField(null);
     setIsMobileCreateOpen(true);
   };
 
@@ -745,6 +792,17 @@ function PlantingPlans(): React.ReactElement {
         bed: Number(mobileCreateForm.bed),
         planting_date: mobileCreateForm.planting_date,
         cultivation_type: mobileCreateForm.cultivation_type,
+        notes: mobileCreateForm.notes || "",
+        ...(mobileCreateForm.area_m2 || mobileCreateForm.plants_count
+          ? {
+              area_input_value:
+                mobileLastEditedField === "plants_count"
+                  ? Number(mobileCreateForm.plants_count)
+                  : Number(mobileCreateForm.area_m2),
+              area_input_unit:
+                mobileLastEditedField === "plants_count" ? "PLANTS" : "M2",
+            }
+          : {}),
       } as PlantingPlan);
       closeMobileCreateDialog();
       await gridCommandApiRef.current?.reload();
@@ -793,8 +851,9 @@ function PlantingPlans(): React.ReactElement {
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.plantingDate")}:</strong> {formatDateForDisplay(item.planting_date)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.harvestStartDate")}:</strong> {formatDateForDisplay(item.harvest_date)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.harvestEndDate")}:</strong> {formatDateForDisplay(item.harvest_end_date)}</Typography>
-                  <Typography variant="body2"><strong>{t("plantingPlans:columns.areaM2")}:</strong> {typeof item.area_m2 === "number" ? formatAreaM2(item.area_m2) : "—"}</Typography>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.areaM2")}:</strong> {getDisplayArea(item)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.plantsCount")}:</strong> {typeof item.plants_count === "number" ? `≈ ${Math.round(item.plants_count)}` : "—"}</Typography>
+                  <Typography variant="body2"><strong>{t("common:fields.notes")}:</strong> {item.notes?.trim() ? item.notes : "—"}</Typography>
                 </Stack>
               )}
               renderActions={(item) => (
@@ -1092,6 +1151,53 @@ function PlantingPlans(): React.ReactElement {
               value={mobileCreateForm.planting_date}
               onChange={(event) =>
                 setMobileCreateForm((previous) => ({ ...previous, planting_date: event.target.value }))
+              }
+            />
+            <TextField
+              type="number"
+              label={t("plantingPlans:columns.areaM2")}
+              value={mobileCreateForm.area_m2}
+              onChange={(event) => {
+                const nextArea = event.target.value;
+                const plantsPerSqm = getPlantsPerSqmForCulture(mobileCreateForm.culture);
+                setMobileCreateForm((previous) => ({
+                  ...previous,
+                  area_m2: nextArea,
+                  plants_count:
+                    plantsPerSqm && nextArea !== ""
+                      ? String(Math.round(Number(nextArea) * plantsPerSqm))
+                      : previous.plants_count,
+                }));
+                setMobileLastEditedField("area_m2");
+              }}
+              slotProps={{ htmlInput: { min: 0, step: "0.01" } }}
+            />
+            <TextField
+              type="number"
+              label={t("plantingPlans:columns.plantsCount")}
+              value={mobileCreateForm.plants_count}
+              onChange={(event) => {
+                const nextPlants = event.target.value;
+                const plantsPerSqm = getPlantsPerSqmForCulture(mobileCreateForm.culture);
+                setMobileCreateForm((previous) => ({
+                  ...previous,
+                  plants_count: nextPlants,
+                  area_m2:
+                    plantsPerSqm && nextPlants !== ""
+                      ? String((Number(nextPlants) / plantsPerSqm).toFixed(2))
+                      : previous.area_m2,
+                }));
+                setMobileLastEditedField("plants_count");
+              }}
+              slotProps={{ htmlInput: { min: 0, step: "1" } }}
+            />
+            <TextField
+              label={t("common:fields.notes")}
+              multiline
+              minRows={3}
+              value={mobileCreateForm.notes}
+              onChange={(event) =>
+                setMobileCreateForm((previous) => ({ ...previous, notes: event.target.value }))
               }
             />
           </Stack>
