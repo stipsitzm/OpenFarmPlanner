@@ -42,6 +42,7 @@ import {
   type Bed,
 } from "../api/api";
 import type { CultivationType } from "../api/types";
+import { extractApiErrorMessage } from "../api/errors";
 import { AreaM2EditCell } from "../components/data-grid/AreaM2EditCell";
 import {
   EditableDataGrid,
@@ -741,6 +742,27 @@ function PlantingPlans(): React.ReactElement {
     if (!validateMobileForm()) {
       return;
     }
+    const selectedBed = beds.find((bed) => bed.id === Number(mobileCreateForm.bed));
+    const hasAreaInput = mobileCreateForm.area_m2.trim() !== "";
+    const hasPlantsInput = mobileCreateForm.plants_count.trim() !== "";
+    const usePlantsInput =
+      mobileLastEditedField === "plants_count" ||
+      (!mobileLastEditedField && !hasAreaInput && hasPlantsInput);
+    const areaPayload =
+      hasAreaInput || hasPlantsInput
+        ? {
+            area_input_value: usePlantsInput
+              ? Number(mobileCreateForm.plants_count)
+              : Number(mobileCreateForm.area_m2),
+            area_input_unit: usePlantsInput ? "PLANTS" : "M2",
+          }
+        : typeof selectedBed?.area_sqm === "number"
+          ? {
+              area_input_value: selectedBed.area_sqm,
+              area_input_unit: "M2" as const,
+            }
+          : {};
+
     try {
       await plantingPlanAPI.create({
         culture: Number(mobileCreateForm.culture),
@@ -748,21 +770,14 @@ function PlantingPlans(): React.ReactElement {
         planting_date: mobileCreateForm.planting_date,
         cultivation_type: mobileCreateForm.cultivation_type,
         notes: mobileCreateForm.notes || "",
-        ...(mobileCreateForm.area_m2 || mobileCreateForm.plants_count
-          ? {
-              area_input_value:
-                mobileLastEditedField === "plants_count"
-                  ? Number(mobileCreateForm.plants_count)
-                  : Number(mobileCreateForm.area_m2),
-              area_input_unit:
-                mobileLastEditedField === "plants_count" ? "PLANTS" : "M2",
-            }
-          : {}),
+        ...areaPayload,
       } as PlantingPlan);
       closeMobileCreateDialog();
       await gridCommandApiRef.current?.reload();
-    } catch {
-      setMobileCreateError(t("plantingPlans:errors.save"));
+    } catch (error) {
+      setMobileCreateError(
+        extractApiErrorMessage(error, t, t("plantingPlans:errors.save")),
+      );
     }
   };
 
@@ -786,6 +801,27 @@ function PlantingPlans(): React.ReactElement {
     if (!mobileEditId || !validateMobileForm()) {
       return;
     }
+    const selectedBed = beds.find((bed) => bed.id === Number(mobileCreateForm.bed));
+    const hasAreaInput = mobileCreateForm.area_m2.trim() !== "";
+    const hasPlantsInput = mobileCreateForm.plants_count.trim() !== "";
+    const usePlantsInput =
+      mobileLastEditedField === "plants_count" ||
+      (!mobileLastEditedField && !hasAreaInput && hasPlantsInput);
+    const areaPayload =
+      hasAreaInput || hasPlantsInput
+        ? {
+            area_input_value: usePlantsInput
+              ? Number(mobileCreateForm.plants_count)
+              : Number(mobileCreateForm.area_m2),
+            area_input_unit: usePlantsInput ? "PLANTS" : "M2",
+          }
+        : typeof selectedBed?.area_sqm === "number"
+          ? {
+              area_input_value: selectedBed.area_sqm,
+              area_input_unit: "M2" as const,
+            }
+          : {};
+
     try {
       await plantingPlanAPI.update(mobileEditId, {
         culture: Number(mobileCreateForm.culture),
@@ -793,21 +829,14 @@ function PlantingPlans(): React.ReactElement {
         planting_date: mobileCreateForm.planting_date,
         cultivation_type: mobileCreateForm.cultivation_type,
         notes: mobileCreateForm.notes || "",
-        ...(mobileCreateForm.area_m2 || mobileCreateForm.plants_count
-          ? {
-              area_input_value:
-                mobileLastEditedField === "plants_count"
-                  ? Number(mobileCreateForm.plants_count)
-                  : Number(mobileCreateForm.area_m2),
-              area_input_unit:
-                mobileLastEditedField === "plants_count" ? "PLANTS" : "M2",
-            }
-          : {}),
+        ...areaPayload,
       } as PlantingPlan);
       closeMobileCreateDialog();
       await gridCommandApiRef.current?.reload();
-    } catch {
-      setMobileCreateError(t("plantingPlans:errors.save"));
+    } catch (error) {
+      setMobileCreateError(
+        extractApiErrorMessage(error, t, t("plantingPlans:errors.save")),
+      );
     }
   };
 
@@ -822,7 +851,7 @@ function PlantingPlans(): React.ReactElement {
         </Alert>
       ) : null}
 
-      <Box sx={{ width: "fit-content", maxWidth: "100%" }}>
+      <Box sx={{ width: "100%", maxWidth: "100%" }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
           <h1>{t("plantingPlans:title")}</h1>
           {!isMobile ? (
