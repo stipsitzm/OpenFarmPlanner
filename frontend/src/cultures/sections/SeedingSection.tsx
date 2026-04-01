@@ -221,7 +221,9 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
                 ))}
               </Select>
             </FormControl>
-            <IconButton onClick={() => onChange('seed_packages', packages.filter((_item, idx) => idx !== index))} aria-label="delete-seed-package"><DeleteIcon fontSize="small" /></IconButton>
+            <Tooltip title={t('form.deleteSeedPackage', { defaultValue: 'Packung entfernen' })} arrow>
+              <IconButton onClick={() => onChange('seed_packages', packages.filter((_item, idx) => idx !== index))} aria-label={t('form.deleteSeedPackage', { defaultValue: 'Packung entfernen' })}><DeleteIcon fontSize="small" /></IconButton>
+            </Tooltip>
           </Box>
         ))}
         {errors.seed_packages && <Typography variant="caption" color="error">{errors.seed_packages}</Typography>}

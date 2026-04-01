@@ -108,13 +108,14 @@ function FieldsBedsHierarchy({
 
   // Bed operations
   const { addBed, saveBed, deleteBed, pendingEditRow, setPendingEditRow } =
-    useBedOperations(beds, setBeds, setError);
+    useBedOperations(beds, setBeds, setError, t);
 
   // Field operations
   const { addField, deleteField } = useFieldOperations(
     locations,
     setError,
     fetchData,
+    t,
   );
 
   const rows = useMemo<GridRowsProp<HierarchyRow>>(() => {
@@ -345,16 +346,16 @@ function FieldsBedsHierarchy({
         parsedLength !== null &&
         parsedLength < 0
       ) {
-        setError("Länge muss größer oder gleich 0 sein.");
-        throw new Error("Länge muss größer oder gleich 0 sein.");
+        setError(t('validation.lengthNonNegative'));
+        throw new Error(t('validation.lengthNonNegative'));
       }
       if (
         parsedWidth !== undefined &&
         parsedWidth !== null &&
         parsedWidth < 0
       ) {
-        setError("Breite muss größer oder gleich 0 sein.");
-        throw new Error("Breite muss größer oder gleich 0 sein.");
+        setError(t('validation.widthNonNegative'));
+        throw new Error(t('validation.widthNonNegative'));
       }
 
       const computedBedArea =
@@ -410,16 +411,16 @@ function FieldsBedsHierarchy({
         parsedLength !== null &&
         parsedLength < 0
       ) {
-        setError("Länge muss größer oder gleich 0 sein.");
-        throw new Error("Länge muss größer oder gleich 0 sein.");
+        setError(t('validation.lengthNonNegative'));
+        throw new Error(t('validation.lengthNonNegative'));
       }
       if (
         parsedWidth !== undefined &&
         parsedWidth !== null &&
         parsedWidth < 0
       ) {
-        setError("Breite muss größer oder gleich 0 sein.");
-        throw new Error("Breite muss größer oder gleich 0 sein.");
+        setError(t('validation.widthNonNegative'));
+        throw new Error(t('validation.widthNonNegative'));
       }
 
       const fieldArea =
@@ -822,7 +823,7 @@ function FieldsBedsHierarchy({
       {/* Notes Editor Drawer */}
       <NotesDrawer
         open={notesEditor.isOpen}
-        title="Notizen"
+        title={t("columns.notes")}
         value={notesEditor.draft}
         onChange={notesEditor.setDraft}
         onSave={notesEditor.handleSave}

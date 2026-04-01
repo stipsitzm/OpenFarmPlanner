@@ -138,8 +138,9 @@ function renderNameCell(
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', pl: `${indent}px`, width: '100%', gap: 0.5 }}>
       {hasExpandToggle && (
-        <IconButton
+        <Tooltip title={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}><IconButton
           size="small"
+          aria-label={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}
           onClick={(event) => {
             event.stopPropagation();
             callbacks.onToggleExpand(row.id);
@@ -147,7 +148,7 @@ function renderNameCell(
           sx={{ mr: 1 }}
         >
           {row.expanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
-        </IconButton>
+        </IconButton></Tooltip>
       )}
 
       {!hasExpandToggle && <Box sx={{ width: 32 }} />}
@@ -227,11 +228,11 @@ export function createHierarchyColumns(
     },
     {
       field: 'length_m',
-      headerName: 'Länge (m)',
+      headerName: t('columns.length'),
       renderHeader: () => (
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-          <SwapVertIcon fontSize="small" />
-          <span>Länge (m)</span>
+          <Tooltip title={t('tooltips.length')}><SwapVertIcon fontSize="small" aria-label={t('tooltips.length')} /></Tooltip>
+          <span>{t('columns.length')}</span>
         </Box>
       ),
       width: widths.dimensions,
@@ -241,11 +242,11 @@ export function createHierarchyColumns(
     },
     {
       field: 'width_m',
-      headerName: 'Breite (m)',
+      headerName: t('columns.width'),
       renderHeader: () => (
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-          <SwapHorizIcon fontSize="small" />
-          <span>Breite (m)</span>
+          <Tooltip title={t('tooltips.width')}><SwapHorizIcon fontSize="small" aria-label={t('tooltips.width')} /></Tooltip>
+          <span>{t('columns.width')}</span>
         </Box>
       ),
       width: widths.dimensions,

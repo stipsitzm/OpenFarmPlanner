@@ -1,3 +1,4 @@
+import { mockT } from './helpers/testI18n';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useBedOperations } from '../components/hierarchy/hooks/useBedOperations';
@@ -45,7 +46,7 @@ describe('useBedOperations', () => {
     const setError = vi.fn();
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError)
+      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
     );
 
     const tempId = result.current.addBed(9);
@@ -70,7 +71,7 @@ describe('useBedOperations', () => {
     createBedMock.mockResolvedValue({ data: savedBed });
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError)
+      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
     );
 
     const response = await result.current.saveBed({
@@ -100,7 +101,7 @@ describe('useBedOperations', () => {
     createBedMock.mockResolvedValue({ data: { id: 11, name: '', field: 1, notes: '' } });
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError)
+      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
     );
 
     await result.current.saveBed({ id: -10, field: 1 });
@@ -126,7 +127,7 @@ describe('useBedOperations', () => {
     updateBedMock.mockResolvedValue({ data: updatedBed });
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError)
+      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
     );
 
     const response = await result.current.saveBed({ id: 11, field: 1, name: 'B-updated', area_sqm: 7, notes: 'ok' });
@@ -154,7 +155,7 @@ describe('useBedOperations', () => {
     createBedMock.mockRejectedValue(saveError);
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError)
+      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
     );
 
     await expect(result.current.saveBed({ id: -7, field: 4, name: 'X' })).rejects.toThrow('failed');
@@ -168,7 +169,7 @@ describe('useBedOperations', () => {
     const setError = vi.fn();
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError)
+      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
     );
 
     await result.current.deleteBed(3);
@@ -187,7 +188,7 @@ describe('useBedOperations', () => {
     const setError = vi.fn();
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError)
+      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
     );
 
     await result.current.deleteBed(-1);
@@ -207,7 +208,7 @@ describe('useBedOperations', () => {
     deleteBedMock.mockResolvedValue(undefined);
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError)
+      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
     );
 
     await result.current.deleteBed(8);
@@ -228,7 +229,7 @@ describe('useBedOperations', () => {
     deleteBedMock.mockRejectedValue(deleteError);
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError)
+      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
     );
 
     await expect(result.current.deleteBed(21)).rejects.toThrow('cannot delete');

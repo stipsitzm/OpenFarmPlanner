@@ -8,22 +8,47 @@
     "location": "Standort",
     "field": "Schlag",
     "area": "Fläche (m²)",
-    "notes": "Notizen"
+    "notes": "Notizen",
+    "length": "Länge (m)",
+    "width": "Breite (m)"
   },
   "errors": {
     "load": "Fehler beim Laden der Daten",
     "save": "Fehler beim Speichern",
-    "delete": "Fehler beim Löschen"
+    "delete": "Fehler beim Löschen",
+    "createField": "Fehler beim Erstellen des Schlags",
+    "deleteField": "Fehler beim Löschen des Schlags",
+    "saveBed": "Fehler beim Speichern des Beets",
+    "deleteBed": "Fehler beim Löschen des Beets"
   },
   "validation": {
     "nameRequired": "Name ist ein Pflichtfeld",
     "bedAreaExceedsField": "Die Summe der Beetflächen ({{sum}} m²) überschreitet die Fläche des Schlags ({{max}} m²). Bitte passen Sie die Flächen an.",
     "areaMustBePositive": "Die Fläche muss größer als 0 sein.",
-    "areaTooLarge": "Die eingegebene Fläche ist zu groß. Bitte einen kleineren Wert eingeben."
+    "areaTooLarge": "Die eingegebene Fläche ist zu groß. Bitte einen kleineren Wert eingeben.",
+    "lengthNonNegative": "Länge muss größer oder gleich 0 sein.",
+    "widthNonNegative": "Breite muss größer oder gleich 0 sein."
   },
   "confirmDelete": "Möchten Sie diesen Eintrag wirklich löschen?",
   "footer": {
     "singleLocation": "Erweitern Sie Schläge um Beete hinzuzufügen",
     "multipleLocations": "Erweitern Sie Standorte/Schläge um neue Schläge/Beete hinzuzufügen"
+  },
+  "tooltips": {
+    "expand": "Eintrag aufklappen",
+    "collapse": "Eintrag zuklappen",
+    "length": "Länge in Metern",
+    "width": "Breite in Metern",
+    "addField": "Schlag hinzufügen"
+  },
+  "messages": {
+    "createLocationFirst": "Bitte erstellen Sie zuerst einen Standort."
+  },
+  "prompts": {
+    "newFieldName": "Name des neuen Schlags:"
+  },
+  "confirm": {
+    "deleteFieldWithBeds": "Möchten Sie diesen Schlag wirklich löschen? Alle zugehörigen Beete werden ebenfalls gelöscht.",
+    "deleteBed": "Möchten Sie dieses Beet wirklich löschen?"
   }
 }

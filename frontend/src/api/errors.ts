@@ -32,6 +32,29 @@ function translatedOrFallback(t: TFunction, key: string, fallback: string): stri
   return translated === key ? fallback : translated;
 }
 
+
+const backendMessageMap: Record<string, string> = {
+  'this field is required.': 'validation.required',
+  'enter a valid email address.': 'validation.invalidEmail',
+  'no public cultures found': 'errors.noPublicCultures',
+  'bed not found.': 'errors.bedNotFound',
+  'uploaded file exceeds the 10mb size limit.': 'errors.fileTooLarge',
+  'uploaded file is not a valid image.': 'errors.invalidImage',
+};
+
+function localizeBackendMessage(message: string, t: TFunction): string {
+  const normalized = message.trim().toLowerCase();
+  const key = backendMessageMap[normalized];
+  if (key) {
+    return translatedOrFallback(t, key, message);
+  }
+  if (/^ensure this field has at least (\d+) characters\.$/i.test(message)) {
+    const count = Number(message.match(/(\d+)/)?.[1] ?? 0);
+    return translatedOrFallback(t, 'validation.minLength', message).replace('{{count}}', String(count));
+  }
+  return message;
+}
+
 function formatServiceError(detail: string, t: TFunction, fallbackMessage: string): string {
   const normalized = detail.toLowerCase();
 
@@ -67,7 +90,7 @@ function formatServiceError(detail: string, t: TFunction, fallbackMessage: strin
     );
   }
 
-  return detail || fallbackMessage;
+  return localizeBackendMessage(detail || fallbackMessage, t);
 }
 
 /**
@@ -97,9 +120,9 @@ export function extractApiErrorMessage(
       const contentType = axiosError.response?.headers?.['content-type'];
       const looksLikeHtml = trimmed.startsWith('<!DOCTYPE html') || trimmed.startsWith('<html');
       if (looksLikeHtml || (typeof contentType === 'string' && contentType.includes('text/html'))) {
-        return fallbackMessage;
+        return translatedOrFallback(t, 'errors.generic', fallbackMessage);
       }
-      return status === 503 ? formatServiceError(data, t, fallbackMessage) : data;
+      return status === 503 ? formatServiceError(data, t, fallbackMessage) : localizeBackendMessage(data, t);
     }
 
     if (status === 503 && data && typeof data === 'object' && 'detail' in data && typeof data.detail === 'string') {
@@ -127,11 +150,11 @@ export function extractApiErrorMessage(
           }
           if (Array.isArray(value)) {
             value.forEach((msg: string) => {
-              const errorMsg = `${fieldName}: ${msg}`;
+              const errorMsg = `${fieldName}: ${localizeBackendMessage(msg, t)}`;
               errors.push(errorMsg);
             });
           } else if (typeof value === 'string') {
-            const errorMsg = `${fieldName}: ${value}`;
+            const errorMsg = `${fieldName}: ${localizeBackendMessage(value, t)}`;
             errors.push(errorMsg);
           }
         });
@@ -145,7 +168,7 @@ export function extractApiErrorMessage(
   }
 
   // Fallback to generic error message
-  return fallbackMessage;
+  return translatedOrFallback(t, 'errors.generic', fallbackMessage);
 }
 
 

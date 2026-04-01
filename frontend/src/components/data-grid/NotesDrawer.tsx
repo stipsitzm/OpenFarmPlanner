@@ -163,14 +163,14 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
     const afterText = value.substring(end);
     let newText = '';
     switch (format) {
-      case 'bold': newText = `${beforeText}**${selectedText || 'fetter Text'}**${afterText}`; break;
-      case 'italic': newText = `${beforeText}_${selectedText || 'kursiver Text'}_${afterText}`; break;
+      case 'bold': newText = `${beforeText}**${selectedText || t('notesDrawer.defaults.bold')}**${afterText}`; break;
+      case 'italic': newText = `${beforeText}_${selectedText || t('notesDrawer.defaults.italic')}_${afterText}`; break;
       case 'code': newText = `${beforeText}\`${selectedText || 'Code'}\`${afterText}`; break;
-      case 'heading': newText = `${beforeText}## ${selectedText || 'Überschrift'}${afterText}`; break;
-      case 'bullet-list': newText = `${beforeText}- ${selectedText || 'Listeneintrag'}${afterText}`; break;
-      case 'numbered-list': newText = `${beforeText}1. ${selectedText || 'Listeneintrag'}${afterText}`; break;
-      case 'link': newText = `${beforeText}[${selectedText || 'Linktext'}](url)${afterText}`; break;
-      case 'quote': newText = `${beforeText}> ${selectedText || 'Zitat'}${afterText}`; break;
+      case 'heading': newText = `${beforeText}## ${selectedText || t('notesDrawer.defaults.heading')}${afterText}`; break;
+      case 'bullet-list': newText = `${beforeText}- ${selectedText || t('notesDrawer.defaults.listItem')}${afterText}`; break;
+      case 'numbered-list': newText = `${beforeText}1. ${selectedText || t('notesDrawer.defaults.listItem')}${afterText}`; break;
+      case 'link': newText = `${beforeText}[${selectedText || t('notesDrawer.defaults.linkText')}](url)${afterText}`; break;
+      case 'quote': newText = `${beforeText}> ${selectedText || t('notesDrawer.defaults.quote')}${afterText}`; break;
       default: return;
     }
     onChange(newText);
@@ -319,8 +319,8 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 3 }} onKeyDown={handleKeyDown}>
         <Typography variant="h6" gutterBottom>{title}</Typography>
         <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-          <Tab label="Bearbeiten" value="edit" />
-          <Tab label="Vorschau" value="preview" />
+          <Tab label={t('notesDrawer.tabs.edit')} value="edit" />
+          <Tab label={t('notesDrawer.tabs.preview')} value="preview" />
         </Tabs>
 
         {noteId && (
@@ -343,7 +343,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
               {attachments.map((attachment) => (
                 <ImageListItem key={attachment.id}>
                   <img src={attachment.image_url ?? attachment.image} alt={attachment.caption || t('notesDrawer.attachmentAlt')} loading="lazy" style={{ cursor: 'pointer' }} onClick={() => setSelectedImage(attachment.image_url ?? attachment.image)} />
-                  <IconButton size="small" sx={{ position: 'absolute', right: 2, top: 2, bgcolor: 'rgba(0,0,0,0.4)', color: 'white' }} onClick={async () => {
+                  <IconButton size="small" aria-label={t('actions.delete')} sx={{ position: 'absolute', right: 2, top: 2, bgcolor: 'rgba(0,0,0,0.4)', color: 'white' }} onClick={async () => {
                     await noteAttachmentAPI.delete(attachment.id);
                     await loadAttachments();
                   }}>
@@ -363,14 +363,14 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
             </>
           ) : (
             <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1, minHeight: '300px' }}>
-              {value ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown> : <Typography color="text.secondary" fontStyle="italic">Keine Notizen vorhanden</Typography>}
+              {value ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown> : <Typography color="text.secondary" fontStyle="italic">{t('notes.empty')}</Typography>}
             </Box>
           )}
         </Box>
 
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-          <Button onClick={onClose} disabled={loading} variant="outlined">Abbrechen</Button>
-          <Button onClick={onSave} disabled={loading} variant="contained" color="primary" startIcon={loading ? <CircularProgress size={16} /> : undefined}>Speichern</Button>
+          <Button onClick={onClose} disabled={loading} variant="outlined">{t('actions.cancel')}</Button>
+          <Button onClick={onSave} disabled={loading} variant="contained" color="primary" startIcon={loading ? <CircularProgress size={16} /> : undefined}>{t('actions.save')}</Button>
         </Box>
       </Box>
 
