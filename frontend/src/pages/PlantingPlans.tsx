@@ -112,6 +112,17 @@ const toIsoDateString = (value: unknown): string | null => {
   return null;
 };
 
+const toNumericValue = (value: unknown): number | null => {
+  if (typeof value === "number") {
+    return Number.isNaN(value) ? null : value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+};
+
 function PlantingPlans(): React.ReactElement {
   const { t } = useTranslation(["plantingPlans", "common"]);
   const theme = useTheme();
@@ -671,8 +682,9 @@ function PlantingPlans(): React.ReactElement {
   };
 
   const getDisplayArea = (row: PlantingPlanRow): string => {
-    if (typeof row.area_m2 === "number" && !Number.isNaN(row.area_m2)) {
-      return formatAreaM2(row.area_m2);
+    const explicitArea = toNumericValue(row.area_m2);
+    if (explicitArea !== null) {
+      return formatAreaM2(explicitArea);
     }
     if (typeof row.plants_count === "number") {
       const plantsPerSqm = getPlantsPerSqmForCulture(String(row.culture));
@@ -727,8 +739,9 @@ function PlantingPlans(): React.ReactElement {
   };
 
   const getDerivedAreaFromRow = (row: PlantingPlanRow): number | null => {
-    if (typeof row.area_m2 === "number" && !Number.isNaN(row.area_m2)) {
-      return row.area_m2;
+    const explicitArea = toNumericValue(row.area_m2);
+    if (explicitArea !== null) {
+      return explicitArea;
     }
     if (typeof row.plants_count !== "number") {
       return null;
@@ -966,6 +979,7 @@ function PlantingPlans(): React.ReactElement {
               : undefined
           }
           mapToRow={(plan) => {
+            const areaFromApi = toNumericValue(plan.area_usage_sqm);
             return {
               ...plan,
               id: plan.id!,
@@ -979,7 +993,7 @@ function PlantingPlans(): React.ReactElement {
               harvest_end_date: plan.harvest_end_date,
               quantity: plan.quantity,
               // Backend field name is area_usage_sqm, map to area_m2 for grid
-              area_m2: plan.area_usage_sqm,
+              area_m2: areaFromApi ?? undefined,
               // plants_count computed by backend serializer
               plants_count: plan.plants_count ?? null,
               notes: plan.notes || "",
