@@ -13,6 +13,7 @@ export interface AreaM2EditCellProps extends GridRenderEditCellParams {
   bedAreaSqm?: number;
   onLastEditedFieldChange: (field: 'area_m2') => void;
   normalizeAreaOnBlur?: (value: number | null) => Promise<number | null>;
+  fallbackValue?: number | null;
 }
 
 export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
@@ -24,11 +25,16 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     bedAreaSqm,
     onLastEditedFieldChange,
     normalizeAreaOnBlur,
+    fallbackValue,
   } = props;
   const apiRef = useGridApiContext();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [inputValue, setInputValue] = useState<string>(
-    typeof value === 'number' && !Number.isNaN(value) ? value.toString() : ''
+    typeof value === 'number' && !Number.isNaN(value)
+      ? value.toString()
+      : typeof fallbackValue === 'number' && !Number.isNaN(fallbackValue)
+        ? fallbackValue.toString()
+        : ''
   );
 
   const maxDisabled = bedAreaSqm === undefined || bedAreaSqm === null;
@@ -47,6 +53,18 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
       inputRef.current?.select();
     }
   }, [hasFocus]);
+
+  useEffect(() => {
+    if (typeof value === 'number' && !Number.isNaN(value)) {
+      setInputValue(value.toString());
+      return;
+    }
+    if (typeof fallbackValue === 'number' && !Number.isNaN(fallbackValue)) {
+      setInputValue(fallbackValue.toString());
+      return;
+    }
+    setInputValue('');
+  }, [value, fallbackValue]);
 
   const applyValue = async (nextValue: number | null): Promise<void> => {
     onLastEditedFieldChange('area_m2');

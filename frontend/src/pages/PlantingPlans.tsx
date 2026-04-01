@@ -529,11 +529,13 @@ function PlantingPlans(): React.ReactElement {
         renderEditCell: (params) => {
           const row = params.row as PlantingPlanRow;
           const selectedBed = beds.find((item) => item.id === row.bed);
+          const derivedArea = getDerivedAreaFromRow(row);
 
           return (
             <AreaM2EditCell
               {...params}
               bedAreaSqm={selectedBed?.area_sqm}
+              fallbackValue={derivedArea}
               onLastEditedFieldChange={() => {
                 lastEditedFieldRef.current = "area_m2";
               }}
@@ -724,6 +726,20 @@ function PlantingPlans(): React.ReactElement {
     return culture.plants_per_m2;
   };
 
+  const getDerivedAreaFromRow = (row: PlantingPlanRow): number | null => {
+    if (typeof row.area_m2 === "number" && !Number.isNaN(row.area_m2)) {
+      return row.area_m2;
+    }
+    if (typeof row.plants_count !== "number") {
+      return null;
+    }
+    const plantsPerSqm = getPlantsPerSqmForCulture(String(row.culture ?? ""));
+    if (!plantsPerSqm) {
+      return null;
+    }
+    return Number((row.plants_count / plantsPerSqm).toFixed(2));
+  };
+
   const validateMobileForm = (): boolean => {
     if (!mobileCreateForm.culture || !mobileCreateForm.bed || !mobileCreateForm.planting_date) {
       setMobileCreateError(t("plantingPlans:validation.requiredFields", {
@@ -782,6 +798,7 @@ function PlantingPlans(): React.ReactElement {
   };
 
   const openMobileEditDialog = (row: PlantingPlanRow): void => {
+    const derivedArea = getDerivedAreaFromRow(row);
     setMobileCreateError("");
     setMobileEditId(row.id);
     setMobileCreateForm({
@@ -789,7 +806,7 @@ function PlantingPlans(): React.ReactElement {
       bed: String(row.bed ?? ""),
       cultivation_type: (row.cultivation_type as CultivationType) || "pre_cultivation",
       planting_date: row.planting_date || "",
-      area_m2: typeof row.area_m2 === "number" ? String(row.area_m2) : "",
+      area_m2: derivedArea !== null ? String(derivedArea) : "",
       plants_count: typeof row.plants_count === "number" ? String(Math.round(row.plants_count)) : "",
       notes: row.notes || "",
     });
