@@ -10,7 +10,7 @@
  * @returns JSX element rendering the culture selector and detail view
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
@@ -27,6 +27,12 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack,
+  Button,
 } from '@mui/material';
 import type { Culture } from '../api/api';
 import { SearchableSelect } from '../components/inputs/SearchableSelect';
@@ -87,16 +93,57 @@ export function CultureDetail({
   onCultureSelect,
 }: CultureDetailProps): React.ReactElement {
   const { t } = useTranslation('cultures');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFamilyFilter, setSelectedFamilyFilter] = useState('');
+  const [selectedCultivationFilter, setSelectedCultivationFilter] = useState('');
+  const [selectedSupplierFilter, setSelectedSupplierFilter] = useState('');
+
+  const familyOptions = useMemo(
+    () => Array.from(new Set(
+      cultures
+        .map((culture) => culture.crop_family?.trim())
+        .filter((entry): entry is string => Boolean(entry))
+    )).sort((left, right) => left.localeCompare(right, 'de')),
+    [cultures]
+  );
+
+  const supplierOptions = useMemo(
+    () => Array.from(new Set(
+      cultures
+        .map((culture) => culture.seed_supplier?.trim())
+        .filter((entry): entry is string => Boolean(entry))
+    )).sort((left, right) => left.localeCompare(right, 'de')),
+    [cultures]
+  );
+
+  const filteredCultures = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    return cultures.filter((culture) => {
+      const cultureName = culture.name?.toLowerCase() ?? '';
+      const nameMatches = normalizedQuery.length === 0 || cultureName.includes(normalizedQuery);
+      const familyMatches = selectedFamilyFilter.length === 0 || culture.crop_family === selectedFamilyFilter;
+      const supplierMatches = selectedSupplierFilter.length === 0 || culture.seed_supplier === selectedSupplierFilter;
+      const cultivationValues = culture.cultivation_types && culture.cultivation_types.length > 0
+        ? culture.cultivation_types
+        : (culture.cultivation_type ? [culture.cultivation_type] : []);
+      const cultivationMatches = (
+        selectedCultivationFilter.length === 0
+        || cultivationValues.includes(selectedCultivationFilter as 'direct_sowing' | 'pre_cultivation')
+      );
+
+      return nameMatches && familyMatches && supplierMatches && cultivationMatches;
+    });
+  }, [cultures, searchQuery, selectedFamilyFilter, selectedCultivationFilter, selectedSupplierFilter]);
 
   const cultureOptions: SearchableSelectOption<Culture>[] = useMemo(
-    () => cultures
+    () => filteredCultures
       .filter((culture) => culture.id !== undefined)
       .map((culture) => ({
         value: culture.id!,
         label: `${culture.name}${culture.variety ? ` - ${culture.variety}` : ''}${culture.seed_supplier ? ` | ${culture.seed_supplier}` : ''}`,
         data: culture,
       })),
-    [cultures]
+    [filteredCultures]
   );
 
   const selectedOption = useMemo(
@@ -198,15 +245,79 @@ export function CultureDetail({
     <Box sx={{ width: '100%' }}>
       {/* Searchable Dropdown */}
       <Box sx={{ mb: 3 }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1.5}
+          sx={{ mb: 2 }}
+        >
+          <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
+            <InputLabel id="culture-family-filter-label">{t('filters.cropFamily')}</InputLabel>
+            <Select
+              labelId="culture-family-filter-label"
+              value={selectedFamilyFilter}
+              label={t('filters.cropFamily')}
+              onChange={(event) => setSelectedFamilyFilter(event.target.value)}
+            >
+              <MenuItem value="">{t('filters.all')}</MenuItem>
+              {familyOptions.map((family) => (
+                <MenuItem key={family} value={family}>{family}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
+            <InputLabel id="culture-method-filter-label">{t('filters.cultivationType')}</InputLabel>
+            <Select
+              labelId="culture-method-filter-label"
+              value={selectedCultivationFilter}
+              label={t('filters.cultivationType')}
+              onChange={(event) => setSelectedCultivationFilter(event.target.value)}
+            >
+              <MenuItem value="">{t('filters.all')}</MenuItem>
+              <MenuItem value="direct_sowing">{t('filters.directSowing')}</MenuItem>
+              <MenuItem value="pre_cultivation">{t('filters.preCultivation')}</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
+            <InputLabel id="culture-supplier-filter-label">{t('filters.supplier')}</InputLabel>
+            <Select
+              labelId="culture-supplier-filter-label"
+              value={selectedSupplierFilter}
+              label={t('filters.supplier')}
+              onChange={(event) => setSelectedSupplierFilter(event.target.value)}
+            >
+              <MenuItem value="">{t('filters.all')}</MenuItem>
+              {supplierOptions.map((supplier) => (
+                <MenuItem key={supplier} value={supplier}>{supplier}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setSearchQuery('');
+              setSelectedFamilyFilter('');
+              setSelectedCultivationFilter('');
+              setSelectedSupplierFilter('');
+            }}
+            sx={{ alignSelf: { xs: 'stretch', md: 'center' } }}
+          >
+            {t('filters.reset')}
+          </Button>
+        </Stack>
         <SearchableSelect
           options={cultureOptions}
           value={selectedOption}
           onChange={(option) => onCultureSelect(option?.data ?? null)}
           label={t('searchPlaceholder')}
-          placeholder={t('searchInputPlaceholder')}
-          noOptionsText={t('noOptions')}
+          placeholder={t('searchInputPlaceholderEnhanced')}
+          noOptionsText={t('noOptionsEnhanced')}
           textFieldSx={{ width: '100%' }}
+          inputValue={searchQuery}
+          onInputChange={setSearchQuery}
         />
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: 'block' }}>
+          {t('searchHelperText', { count: filteredCultures.length })}
+        </Typography>
       </Box>
 
       {/* Detail View */}
@@ -618,12 +729,38 @@ export function CultureDetail({
       )}
 
       {/* Empty State */}
-      {!selectedCulture && (
+      {!selectedCulture && filteredCultures.length > 0 && (
         <Card>
           <CardContent>
             <Typography variant="body1" color="text.secondary" align="center">
               {t('selectPrompt')}
             </Typography>
+          </CardContent>
+        </Card>
+      )}
+
+      {!selectedCulture && filteredCultures.length === 0 && (
+        <Card>
+          <CardContent>
+            <Typography variant="h6" align="center" sx={{ mb: 1 }}>
+              {t('emptySearch.title')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>
+              {t('emptySearch.description')}
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedFamilyFilter('');
+                  setSelectedCultivationFilter('');
+                  setSelectedSupplierFilter('');
+                }}
+              >
+                {t('emptySearch.resetAction')}
+              </Button>
+            </Box>
           </CardContent>
         </Card>
       )}

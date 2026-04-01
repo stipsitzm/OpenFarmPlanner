@@ -3,7 +3,25 @@
   "searchPlaceholder": "Kultur suchen",
   "searchInputPlaceholder": "Name der Kultur eingeben...",
   "noOptions": "Keine Kulturen gefunden",
+  "searchInputPlaceholderEnhanced": "Nach Kulturname suchen (z. B. Karotte)",
+  "searchHelperText_one": "{{count}} Kultur gefunden. Mit den Filtern können Sie weiter eingrenzen.",
+  "searchHelperText_other": "{{count}} Kulturen gefunden. Mit den Filtern können Sie weiter eingrenzen.",
+  "noOptionsEnhanced": "Keine passende Kultur. Prüfen Sie Suche oder Filter.",
   "selectPrompt": "Wählen Sie eine Kultur aus der Liste aus, um Details anzuzeigen.",
+  "filters": {
+    "all": "Alle",
+    "cropFamily": "Familie",
+    "cultivationType": "Anbauart",
+    "supplier": "Lieferant",
+    "directSowing": "Direktsaat",
+    "preCultivation": "Pflanzung",
+    "reset": "Filter zurücksetzen"
+  },
+  "emptySearch": {
+    "title": "Keine Kulturen gefunden",
+    "description": "Versuchen Sie einen kürzeren Suchbegriff oder setzen Sie einzelne Filter zurück.",
+    "resetAction": "Suche und Filter zurücksetzen"
+  },
   "perennial": "Mehrjährig",
   "annual": "Einjährig",
   "unknown": "Unbekannt",
