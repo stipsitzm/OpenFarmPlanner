@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProjectSettings
-from farm.models import Bed, Culture, Field, PlantingPlan, Project, ProjectInvitation, ProjectMembership, Location
+from farm.models import Bed, Culture, Field, PlantingPlan, Project, ProjectInvitation, ProjectMembership, Location, Supplier
 from farm.services.demo_projects import ensure_demo_template_project
 
 User = get_user_model()
@@ -600,3 +600,24 @@ class DemoProjectFlowTests(APITestCase):
         me_response = self.client.get('/openfarmplanner/api/auth/me/')
         self.assertEqual(me_response.status_code, status.HTTP_200_OK)
         self.assertTrue((me_response.data.get('email') or '').endswith('@demo.local'))
+
+    def test_demo_project_can_create_supplier_even_with_global_name_collision(self) -> None:
+        Supplier.objects.create(
+            project=self.normal_project,
+            name='BioSaat',
+            homepage_url='https://biosaat.example',
+            allowed_domains=['biosaat.example'],
+        )
+        self._login_regular_user()
+        demo_response = self.client.post('/openfarmplanner/api/projects/open-demo/', {}, format='json')
+        demo_project_id = demo_response.data['project_id']
+
+        create_response = self.client.post(
+            '/openfarmplanner/api/suppliers/',
+            {'name': 'BioSaat', 'homepage_url': 'https://biosaat.example'},
+            format='json',
+            HTTP_X_PROJECT_ID=str(demo_project_id),
+        )
+
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Supplier.objects.filter(project_id=demo_project_id).exists())

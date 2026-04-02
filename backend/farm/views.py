@@ -16,7 +16,7 @@ from django.conf import settings
 from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q, Count
 from django.db.models.functions import Coalesce, Ceil, Cast
 from django.http import HttpResponseBadRequest, HttpResponseForbidden
@@ -804,11 +804,38 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
             'homepage_url': homepage_url,
             'allowed_domains': Supplier.normalize_allowed_domains(allowed_domains) if isinstance(allowed_domains, list) else [],
         }
-        supplier, created = Supplier.objects.get_or_create(
-            name_normalized=normalized,
-            project=request.active_project,
-            defaults={**supplier_defaults, 'project': request.active_project}
-        )
+        supplier = Supplier.objects.filter(name_normalized=normalized, project=request.active_project).first()
+        created = False
+        if supplier is None:
+            candidate_name = name
+            suffix = 2
+            while True:
+                candidate_normalized = normalize_supplier_name(candidate_name) or ''
+                collision = Supplier.objects.filter(name_normalized=candidate_normalized).exclude(project=request.active_project).exists()
+                if collision and not getattr(request.active_project, 'is_demo_copy', False):
+                    return Response(
+                        {'name': 'Supplier with this name already exists in another project.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if collision:
+                    candidate_name = f'{name} Demo {request.active_project.id}-{suffix}'
+                    suffix += 1
+                    continue
+                try:
+                    supplier = Supplier.objects.create(
+                        project=request.active_project,
+                        name=candidate_name,
+                        homepage_url=homepage_url,
+                        allowed_domains=supplier_defaults['allowed_domains'],
+                    )
+                    created = True
+                    break
+                except IntegrityError:
+                    if not getattr(request.active_project, 'is_demo_copy', False):
+                        raise
+                    candidate_name = f'{name} Demo {request.active_project.id}-{suffix}'
+                    suffix += 1
+
         if not created:
             update_fields: list[str] = []
             if homepage_url and supplier.homepage_url != homepage_url:
