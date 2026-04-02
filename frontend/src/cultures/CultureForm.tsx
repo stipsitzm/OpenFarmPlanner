@@ -14,7 +14,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../i18n';
-import type { Culture } from '../api/types';
+import type { Culture, Supplier } from '../api/types';
 import { extractApiErrorMessage } from '../api/errors';
 import {
   Dialog,
@@ -31,6 +31,8 @@ import {
   IconButton,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { supplierAPI } from '../api/api';
+import { useNavigate } from 'react-router-dom';
 import { validateCulture } from './validation';
 import { BasicInfoSection } from './sections/BasicInfoSection';
 import { TimingSection } from './sections/TimingSection';
@@ -113,6 +115,7 @@ export function CultureForm({
   onCancel,
 }: CultureFormProps): React.ReactElement {
   const { t } = useTranslation('cultures');
+  const navigate = useNavigate();
   const isEdit = Boolean(culture);
   const [saveError, setSaveError] = useState<string>('');
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
@@ -132,6 +135,7 @@ export function CultureForm({
   const [formData, setFormData] = useState<Partial<Culture>>(buildInitialFormData(culture));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [supplierOptions, setSupplierOptions] = useState<Supplier[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
   const dialogContentRef = useRef<HTMLDivElement | null>(null);
@@ -143,6 +147,18 @@ export function CultureForm({
     setIsValid(true);
     setSaveError('');
   }, [culture]);
+
+  useEffect(() => {
+    const loadSuppliers = async () => {
+      try {
+        const response = await supplierAPI.list();
+        setSupplierOptions(response.data.results || []);
+      } catch {
+        setSupplierOptions([]);
+      }
+    };
+    void loadSuppliers();
+  }, []);
 
   // Validate on every change
   const validateAndSet = (draft: Partial<Culture>) => {
@@ -301,22 +317,39 @@ export function CultureForm({
             ) : null}
             {supplierRows.map((row, supplierIndex) => (
               <div key={`supplier-row-${supplierIndex}`} style={{ border: '1px solid #e0e0e0', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <TextField
-                  label="Saatgutlieferant"
-                  value={row.supplier_name_input ?? row.supplier_name ?? ''}
-                  onChange={(event) => updateSupplierRow(supplierIndex, { supplier_name_input: event.target.value })}
-                  fullWidth
-                />
+                <Select
+                  value={row.supplier_id ?? row.supplier?.id ?? ''}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    if (value === -1) {
+                      navigate('/app/suppliers?create=1');
+                      return;
+                    }
+                    const selectedSupplier = supplierOptions.find((supplier) => supplier.id === value);
+                    updateSupplierRow(supplierIndex, {
+                      supplier_id: value,
+                      supplier_name_input: selectedSupplier ? undefined : row.supplier_name_input,
+                      supplier_name: selectedSupplier?.name ?? row.supplier_name,
+                    });
+                  }}
+                  displayEmpty
+                  size="small"
+                >
+                  <MenuItem value="">{supplierOptions.length > 0 ? 'Lieferant auswählen' : 'Keine Lieferanten vorhanden'}</MenuItem>
+                  {supplierOptions.map((supplier) => (
+                    <MenuItem key={supplier.id} value={supplier.id}>{supplier.name}</MenuItem>
+                  ))}
+                  <MenuItem value={-1}>+ Neuer Lieferant</MenuItem>
+                </Select>
+                {supplierOptions.length === 0 ? (
+                  <Button variant="outlined" onClick={() => navigate('/app/suppliers?create=1')}>
+                    Lieferanten anlegen
+                  </Button>
+                ) : null}
                 <TextField
                   label="Artikelbezeichnung beim Lieferanten"
                   value={row.supplier_product_name ?? ''}
                   onChange={(event) => updateSupplierRow(supplierIndex, { supplier_product_name: event.target.value })}
-                  fullWidth
-                />
-                <TextField
-                  label="Lieferanten-URL"
-                  value={row.supplier_product_url ?? ''}
-                  onChange={(event) => updateSupplierRow(supplierIndex, { supplier_product_url: event.target.value })}
                   fullWidth
                 />
                 <TextField

@@ -9,6 +9,20 @@ vi.mock('../i18n', () => ({
   }),
 }));
 
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+}));
+
+vi.mock('../api/api', async () => {
+  const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
+  return {
+    ...actual,
+    supplierAPI: {
+      list: vi.fn().mockResolvedValue({ data: { results: [] } }),
+    },
+  };
+});
+
 vi.mock('../cultures/sections/BasicInfoSection', () => ({
   BasicInfoSection: ({ formData, onChange }: { formData: Partial<Culture>; onChange: <K extends keyof Culture>(name: K, value: Culture[K]) => void }) => (
     <div>
