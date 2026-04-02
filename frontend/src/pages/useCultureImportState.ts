@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useReducer } from 'react';
 import type { ImportFailedEntry, ImportPreviewResult } from './culturesPageUtils';
 
 type ImportStatus = 'idle' | 'ready' | 'uploading' | 'success' | 'error';
@@ -15,6 +15,34 @@ type CultureImportState = {
   failedEntries: ImportFailedEntry[];
 };
 
+type SetErrorPayload = {
+  error: string;
+  previewCount?: number;
+  validCount?: number;
+  invalidEntries?: string[];
+};
+
+type SetPreviewReadyPayload = {
+  previewCount: number;
+  validCount: number;
+  invalidEntries: string[];
+  payload: Record<string, unknown>[];
+  previewResults: ImportPreviewResult[];
+};
+
+type SetPartialFailurePayload = {
+  error: string;
+  failedEntries: ImportFailedEntry[];
+};
+
+type ImportAction =
+  | { type: 'reset' }
+  | { type: 'set_error'; payload: SetErrorPayload }
+  | { type: 'set_preview_ready'; payload: SetPreviewReadyPayload }
+  | { type: 'set_uploading' }
+  | { type: 'set_partial_failure'; payload: SetPartialFailurePayload }
+  | { type: 'set_success'; payload: { message: string } };
+
 const INITIAL_IMPORT_STATE: CultureImportState = {
   previewCount: 0,
   validCount: 0,
@@ -27,92 +55,102 @@ const INITIAL_IMPORT_STATE: CultureImportState = {
   failedEntries: [],
 };
 
+const cultureImportReducer = (state: CultureImportState, action: ImportAction): CultureImportState => {
+  switch (action.type) {
+    case 'reset':
+      return INITIAL_IMPORT_STATE;
+    case 'set_error':
+      return {
+        ...state,
+        status: 'error',
+        error: action.payload.error,
+        success: null,
+        failedEntries: [],
+        previewCount: action.payload.previewCount ?? state.previewCount,
+        validCount: action.payload.validCount ?? state.validCount,
+        invalidEntries: action.payload.invalidEntries ?? state.invalidEntries,
+      };
+    case 'set_preview_ready':
+      return {
+        ...state,
+        status: 'ready',
+        error: null,
+        success: null,
+        failedEntries: [],
+        previewCount: action.payload.previewCount,
+        validCount: action.payload.validCount,
+        invalidEntries: action.payload.invalidEntries,
+        payload: action.payload.payload,
+        previewResults: action.payload.previewResults,
+      };
+    case 'set_uploading':
+      return {
+        ...state,
+        status: 'uploading',
+        error: null,
+        success: null,
+        failedEntries: [],
+      };
+    case 'set_partial_failure':
+      return {
+        ...state,
+        status: 'error',
+        error: action.payload.error,
+        success: null,
+        failedEntries: action.payload.failedEntries,
+      };
+    case 'set_success':
+      return {
+        ...state,
+        status: 'success',
+        success: action.payload.message,
+        error: null,
+        failedEntries: [],
+      };
+    default:
+      return state;
+  }
+};
+
 export const useCultureImportState = () => {
-  const [state, setState] = useState<CultureImportState>(INITIAL_IMPORT_STATE);
+  const [state, dispatch] = useReducer(cultureImportReducer, INITIAL_IMPORT_STATE);
 
   const reset = useCallback(() => {
-    setState(INITIAL_IMPORT_STATE);
+    dispatch({ type: 'reset' });
   }, []);
 
-  const setErrorState = useCallback((params: {
-    error: string;
-    previewCount?: number;
-    validCount?: number;
-    invalidEntries?: string[];
-  }) => {
-    setState((prev) => ({
-      ...prev,
-      status: 'error',
-      error: params.error,
-      previewCount: params.previewCount ?? prev.previewCount,
-      validCount: params.validCount ?? prev.validCount,
-      invalidEntries: params.invalidEntries ?? prev.invalidEntries,
-    }));
+  const setErrorState = useCallback((payload: SetErrorPayload) => {
+    dispatch({ type: 'set_error', payload });
   }, []);
 
-  const setPreviewReadyState = useCallback((params: {
-    previewCount: number;
-    validCount: number;
-    invalidEntries: string[];
-    payload: Record<string, unknown>[];
-    previewResults: ImportPreviewResult[];
-  }) => {
-    setState((prev) => ({
-      ...prev,
-      status: 'ready',
-      error: null,
-      success: null,
-      failedEntries: [],
-      previewCount: params.previewCount,
-      validCount: params.validCount,
-      invalidEntries: params.invalidEntries,
-      payload: params.payload,
-      previewResults: params.previewResults,
-    }));
+  const setPreviewReadyState = useCallback((payload: SetPreviewReadyPayload) => {
+    dispatch({ type: 'set_preview_ready', payload });
   }, []);
 
   const setUploading = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      status: 'uploading',
-      error: null,
-      success: null,
-      failedEntries: [],
-    }));
+    dispatch({ type: 'set_uploading' });
   }, []);
 
-  const setPartialFailure = useCallback((params: {
-    error: string;
-    failedEntries: ImportFailedEntry[];
-  }) => {
-    setState((prev) => ({
-      ...prev,
-      status: 'error',
-      error: params.error,
-      success: null,
-      failedEntries: params.failedEntries,
-    }));
+  const setPartialFailure = useCallback((payload: SetPartialFailurePayload) => {
+    dispatch({ type: 'set_partial_failure', payload });
   }, []);
 
   const setSuccessState = useCallback((message: string) => {
-    setState((prev) => ({
-      ...prev,
-      status: 'success',
-      success: message,
-      error: null,
-      failedEntries: [],
-    }));
+    dispatch({ type: 'set_success', payload: { message } });
   }, []);
+
+  const hasImportableEntries = state.validCount > 0 && state.payload.length > 0;
 
   return useMemo(() => ({
     state,
+    hasImportableEntries,
     reset,
     setErrorState,
     setPreviewReadyState,
     setUploading,
     setPartialFailure,
     setSuccessState,
-  }), [reset, setErrorState, setPartialFailure, setPreviewReadyState, setSuccessState, setUploading, state]);
+  }), [hasImportableEntries, reset, setErrorState, setPartialFailure, setPreviewReadyState, setSuccessState, setUploading, state]);
 };
 
 export type { CultureImportState, ImportStatus };

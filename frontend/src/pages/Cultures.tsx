@@ -114,6 +114,7 @@ function Cultures(): React.ReactElement {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const {
     state: importState,
+    hasImportableEntries,
     reset: resetImportState,
     setErrorState: setImportErrorState,
     setPreviewReadyState,
@@ -493,7 +494,7 @@ function Cultures(): React.ReactElement {
   };
 
   const handleImportStart = async () => {
-    if (importState.payload.length === 0 || importState.status === 'uploading') {
+    if (!hasImportableEntries || importState.status === 'uploading') {
       return;
     }
 
@@ -1128,6 +1129,7 @@ function Cultures(): React.ReactElement {
       <CulturesImportDialog
         open={importDialogOpen}
         importState={importState}
+        hasImportableEntries={hasImportableEntries}
         confirmUpdates={confirmUpdates}
         onConfirmUpdatesChange={setConfirmUpdates}
         onClose={handleImportDialogClose}

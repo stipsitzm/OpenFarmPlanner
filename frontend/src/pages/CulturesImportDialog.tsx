@@ -18,6 +18,7 @@ type Translator = (key: string, options?: Record<string, unknown>) => string;
 type CulturesImportDialogProps = {
   open: boolean;
   importState: CultureImportState;
+  hasImportableEntries: boolean;
   confirmUpdates: boolean;
   onConfirmUpdatesChange: (value: boolean) => void;
   onClose: () => void;
@@ -28,6 +29,7 @@ type CulturesImportDialogProps = {
 export function CulturesImportDialog({
   open,
   importState,
+  hasImportableEntries,
   confirmUpdates,
   onConfirmUpdatesChange,
   onClose,
@@ -157,7 +159,7 @@ export function CulturesImportDialog({
         <Button
           variant="contained"
           onClick={onImportStart}
-          disabled={importState.validCount === 0 || importState.status === 'uploading' || importState.status === 'success'}
+          disabled={!hasImportableEntries || importState.status === 'uploading' || importState.status === 'success'}
         >
           {importState.status === 'success' ? t('import.done') : t('import.start')}
         </Button>
