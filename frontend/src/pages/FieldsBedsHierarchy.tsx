@@ -19,7 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../i18n";
 import { DataGrid, GridRowModes } from "@mui/x-data-grid";
 import type { GridRowsProp, GridRowModesModel } from "@mui/x-data-grid";
-import { Box, Alert } from "@mui/material";
+import { Box, Alert, useMediaQuery, useTheme } from "@mui/material";
 import { dataGridSx } from "../components/data-grid/styles";
 import {
   handleRowEditStop,
@@ -58,11 +58,14 @@ function FieldsBedsHierarchy({
 }: FieldsBedsHierarchyProps): React.ReactElement {
   const { t } = useTranslation("hierarchy");
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [selectedRowId, setSelectedRowId] = useState<string | number | null>(
     null,
   );
   const [treeActive, setTreeActive] = useState(false);
+  const [expandedMobileDetailRows, setExpandedMobileDetailRows] = useState<Set<string | number>>(new Set());
   const hasInitiallyExpandedRef = useRef(false);
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
 
@@ -738,6 +741,21 @@ function FieldsBedsHierarchy({
         ...DEFAULT_HIERARCHY_COLUMN_WIDTHS,
         name: nameColumnWidth,
       },
+      {
+        isMobile,
+        expandedMobileDetailRows,
+        onToggleMobileDetails: (rowId) => {
+          setExpandedMobileDetailRows((previous) => {
+            const next = new Set(previous);
+            if (next.has(rowId)) {
+              next.delete(rowId);
+            } else {
+              next.add(rowId);
+            }
+            return next;
+          });
+        },
+      },
     );
   }, [
     toggleExpand,
@@ -749,6 +767,8 @@ function FieldsBedsHierarchy({
     notesEditor.handleOpen,
     t,
     nameColumnWidth,
+    isMobile,
+    expandedMobileDetailRows,
   ]);
 
   return (
@@ -764,7 +784,7 @@ function FieldsBedsHierarchy({
 
         <Box
           ref={tableWrapperRef}
-          sx={{ width: "100%", overflowX: "auto" }}
+          sx={{ width: "100%", overflowX: isMobile ? "hidden" : "auto" }}
           onClick={() => setTreeActive(true)}
         >
           <DataGrid
@@ -783,6 +803,18 @@ function FieldsBedsHierarchy({
             sortModel={sortModel}
             onSortModelChange={setSortModel}
             isRowSelectable={() => true}
+            columnVisibilityModel={{
+              length_m: !isMobile,
+              width_m: !isMobile,
+              notes: !isMobile,
+            }}
+            getRowHeight={(params) => {
+              if (!isMobile) {
+                return null;
+              }
+              const rowId = params.id;
+              return expandedMobileDetailRows.has(rowId) ? 102 : 56;
+            }}
             isCellEditable={(params) => {
               if (params.row.type === "field") {
                 return (

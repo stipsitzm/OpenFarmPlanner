@@ -24,6 +24,12 @@ export interface HierarchyColumnWidths {
   notes: number;
 }
 
+export interface HierarchyColumnOptions {
+  isMobile?: boolean;
+  expandedMobileDetailRows?: Set<string | number>;
+  onToggleMobileDetails?: (rowId: string | number) => void;
+}
+
 export const DEFAULT_HIERARCHY_COLUMN_WIDTHS: HierarchyColumnWidths = {
   name: 280,
   area: 120,
@@ -38,6 +44,8 @@ interface NameCellCallbacks {
   onAddField: (locationId?: number) => void;
   onDeleteField: (fieldId: number) => void;
   onCreatePlantingPlan: (bedId: number) => void;
+  onOpenNotes: (rowId: string | number, field: string) => void;
+  onToggleMobileDetails: (rowId: string | number) => void;
 }
 
 function renderActionIconButton({
@@ -45,11 +53,13 @@ function renderActionIconButton({
   color,
   onClick,
   icon,
+  touchFriendly,
 }: {
   label: string;
   color?: 'default' | 'primary' | 'error';
   onClick: (event: MouseEvent) => void;
   icon: ReactElement;
+  touchFriendly?: boolean;
 }): ReactElement {
   return (
     <Tooltip title={label}>
@@ -57,6 +67,14 @@ function renderActionIconButton({
         size="small"
         color={color}
         aria-label={label}
+        sx={
+          touchFriendly
+            ? {
+                width: 40,
+                height: 40,
+              }
+            : undefined
+        }
         onClick={(event) => {
           event.stopPropagation();
           onClick(event);
@@ -71,7 +89,8 @@ function renderActionIconButton({
 function renderInlineActions(
   row: HierarchyRow,
   callbacks: NameCellCallbacks,
-  t: TFunction
+  t: TFunction,
+  isMobile?: boolean,
 ): ReactElement | null {
   if (row.type === 'location') {
     return renderActionIconButton({
@@ -79,6 +98,7 @@ function renderInlineActions(
       color: 'primary',
       onClick: () => callbacks.onAddField(row.locationId),
       icon: <AddIcon fontSize="small" />,
+      touchFriendly: isMobile,
     });
   }
 
@@ -90,12 +110,14 @@ function renderInlineActions(
           color: 'primary',
           onClick: () => callbacks.onAddBed(row.fieldId!),
           icon: <AddIcon fontSize="small" />,
+          touchFriendly: isMobile,
         })}
         {renderActionIconButton({
           label: t('common:actions.delete'),
           color: 'error',
           onClick: () => callbacks.onDeleteField(row.fieldId!),
           icon: <DeleteIcon fontSize="small" />,
+          touchFriendly: isMobile,
         })}
       </>
     );
@@ -109,12 +131,14 @@ function renderInlineActions(
           color: 'primary',
           onClick: () => callbacks.onCreatePlantingPlan(row.bedId!),
           icon: <AgricultureIcon fontSize="small" />,
+          touchFriendly: isMobile,
         })}
         {renderActionIconButton({
           label: t('common:actions.delete'),
           color: 'error',
           onClick: () => callbacks.onDeleteBed(row.bedId!),
           icon: <DeleteIcon fontSize="small" />,
+          touchFriendly: isMobile,
         })}
       </>
     );
@@ -126,51 +150,98 @@ function renderInlineActions(
 function renderNameCell(
   params: GridRenderCellParams<HierarchyRow>,
   callbacks: NameCellCallbacks,
-  t: TFunction
+  t: TFunction,
+  options?: HierarchyColumnOptions,
 ) {
   const row = params.row;
+  const isMobile = options?.isMobile ?? false;
   const baseIndent = row.level * 24;
-  const indent = row.type === 'bed' ? baseIndent + 34 : baseIndent;
+  const indent = row.type === 'bed' ? baseIndent + (isMobile ? 22 : 34) : baseIndent;
 
   const hasExpandToggle = row.type === 'location' || row.type === 'field';
+  const hasMobileDetails = isMobile && row.type !== 'location';
+  const detailsExpanded = options?.expandedMobileDetailRows?.has(row.id) ?? false;
   const showInlineActions = params.cellMode !== 'edit';
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', pl: `${indent}px`, width: '100%', gap: 0.5 }}>
-      {hasExpandToggle && (
-        <Tooltip title={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}><IconButton
-          size="small"
-          aria-label={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}
-          onClick={(event) => {
-            event.stopPropagation();
-            callbacks.onToggleExpand(row.id);
-          }}
-          sx={{ mr: 1 }}
-        >
-          {row.expanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
-        </IconButton></Tooltip>
-      )}
+    <Box sx={{ display: 'flex', flexDirection: 'column', pl: `${indent}px`, width: '100%', py: isMobile ? 0.5 : 0 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 0.5 }}>
+        {hasExpandToggle && (
+          <Tooltip title={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}>
+            <IconButton
+              size="small"
+              aria-label={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}
+              onClick={(event) => {
+                event.stopPropagation();
+                callbacks.onToggleExpand(row.id);
+              }}
+              sx={{ mr: 0.5, width: isMobile ? 40 : undefined, height: isMobile ? 40 : undefined }}
+            >
+              {row.expanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
+            </IconButton>
+          </Tooltip>
+        )}
 
-      {!hasExpandToggle && <Box sx={{ width: 32 }} />}
+        {!hasExpandToggle && <Box sx={{ width: isMobile ? 40 : 32 }} />}
 
-      <Box sx={{ display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: 0.5 }}>
-        <Box
-          component="span"
-          sx={{
-            fontWeight: row.type === 'location' ? 'bold' : 'normal',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            maxWidth: '100%',
-          }}
-        >
-          {params.value}
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: 0.5, flex: 1 }}>
+          <Box
+            component="span"
+            sx={{
+              fontWeight: row.type === 'location' ? 'bold' : 'normal',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: '100%',
+            }}
+          >
+            {params.value}
+          </Box>
+
+          {hasMobileDetails && showInlineActions && (
+            <Tooltip title={detailsExpanded ? t('tooltips.collapse') : t('tooltips.expand')}>
+              <IconButton
+                size="small"
+                aria-label={detailsExpanded ? t('tooltips.collapse') : t('tooltips.expand')}
+                sx={{ width: 40, height: 40 }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  callbacks.onToggleMobileDetails(row.id);
+                }}
+              >
+                {detailsExpanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
+              </IconButton>
+            </Tooltip>
+          )}
         </Box>
 
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-          {showInlineActions ? renderInlineActions(row, callbacks, t) : null}
+          {showInlineActions ? renderInlineActions(row, callbacks, t, isMobile) : null}
         </Box>
       </Box>
+
+      {hasMobileDetails && detailsExpanded && (
+        <Box
+          sx={{
+            mt: 0.5,
+            ml: hasExpandToggle ? 5 : 6,
+            fontSize: '0.75rem',
+            color: 'text.secondary',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: 0.5,
+          }}
+        >
+          <Box>{t('columns.length')}: {row.length_m ?? '—'}</Box>
+          <Box>{t('columns.width')}: {row.width_m ?? '—'}</Box>
+          <Box
+            sx={{ gridColumn: '1 / -1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            onClick={() => callbacks.onOpenNotes(row.id, 'notes')}
+          >
+            {t('common:fields.notes')}: {row.notes?.trim() ? getPlainExcerpt(row.notes, 80) : '—'}
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }
@@ -198,7 +269,8 @@ export function createHierarchyColumns(
   onCreatePlantingPlan: (bedId: number) => void,
   onOpenNotes: (rowId: string | number, field: string) => void,
   t: TFunction,
-  columnWidths?: Partial<HierarchyColumnWidths>
+  columnWidths?: Partial<HierarchyColumnWidths>,
+  options?: HierarchyColumnOptions,
 ): GridColDef<HierarchyRow>[] {
   const widths: HierarchyColumnWidths = {
     ...DEFAULT_HIERARCHY_COLUMN_WIDTHS,
@@ -212,6 +284,8 @@ export function createHierarchyColumns(
     onAddField,
     onDeleteField,
     onCreatePlantingPlan,
+    onOpenNotes,
+    onToggleMobileDetails: options?.onToggleMobileDetails ?? (() => undefined),
   };
 
   return [
@@ -220,7 +294,7 @@ export function createHierarchyColumns(
       headerName: t('hierarchy:columns.name'),
       width: widths.name,
       editable: true,
-      renderCell: (params) => renderNameCell(params, callbacks, t),
+      renderCell: (params) => renderNameCell(params, callbacks, t, options),
       preProcessEditCellProps: (params) => {
         const hasError = !params.props.value || params.props.value.trim() === '';
         return { ...params.props, error: hasError };
