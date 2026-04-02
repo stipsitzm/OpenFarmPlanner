@@ -127,28 +127,6 @@ export function validateCulture(
     errors.thousand_kernel_weight_g = t('form.thousandKernelWeightError');
   }
 
-  if (draft.seed_packages && Array.isArray(draft.seed_packages)) {
-    const seen = new Set<string>();
-    draft.seed_packages.forEach((pkg, index) => {
-      const sizeValue = toNumber(pkg?.size_value);
-      const sizeUnit = pkg?.size_unit ?? 'g';
-      if (sizeValue === null || sizeValue <= 0) {
-        errors[`seed_packages.${index}.size_value`] = 'Packgröße muss > 0 sein';
-      } else if (sizeUnit === 'g' && Math.round(sizeValue * 10) !== sizeValue * 10) {
-        errors[`seed_packages.${index}.size_value`] = 'Packgröße darf maximal eine Nachkommastelle haben';
-      } else if (sizeUnit === 'seeds' && !Number.isInteger(sizeValue)) {
-        errors[`seed_packages.${index}.size_value`] = 'Korn-Packgrößen müssen ganze Zahlen sein';
-      }
-      const key = `${sizeUnit}:${sizeValue}`;
-      if (sizeValue !== null) {
-        if (seen.has(key)) {
-          errors.seed_packages = 'Doppelte Packungsgrößen sind nicht erlaubt';
-        }
-        seen.add(key);
-      }
-    });
-  }
-
   // Display color validation
   if (draft.display_color && !/^#[0-9A-Fa-f]{6}$/.test(draft.display_color)) {
     errors.display_color = t('form.displayColorError');

@@ -1954,10 +1954,8 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
             .order_by('culture__name', 'culture__variety')
         )
         grouped: dict[int, dict] = {}
-        culture_map: dict[int, Culture] = {}
         for plan in plans:
             culture = plan.culture
-            culture_map[culture.id] = culture
             entry = grouped.setdefault(
                 culture.id,
                 {
@@ -2006,39 +2004,12 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
         suppliers_map: dict[int, list[CultureSupplierData]] = defaultdict(list)
         for row in supplier_rows:
             suppliers_map[row.culture_id].append(row)
-        legacy_package_map: dict[int, list[SeedPackage]] = defaultdict(list)
-        for package in SeedPackage.objects.filter(culture_id__in=culture_ids, project=request.active_project).order_by('culture_id', 'size_unit', 'size_value'):
-            legacy_package_map[package.culture_id].append(package)
-
         rows: list[dict] = []
         for culture_id, entry in grouped.items():
             required_amount = entry['required_amount_value']
             required_unit = entry['required_amount_unit']
             warning = entry['warning']
             supplier_options = suppliers_map.get(culture_id, [])
-            if not supplier_options and legacy_package_map.get(culture_id):
-                culture = culture_map.get(culture_id)
-                supplier_name = (
-                    culture.supplier.name
-                    if culture and culture.supplier
-                    else ((culture.seed_supplier or '').strip() if culture else '')
-                )
-                legacy_packaging = [
-                    {
-                        'size_value': float(pkg.size_value),
-                        'size_unit': pkg.size_unit,
-                    }
-                    for pkg in legacy_package_map[culture_id]
-                ]
-                supplier_options = [
-                    CultureSupplierData(
-                        culture_id=culture_id,
-                        supplier_id=(culture.supplier_id if culture else None),
-                        supplier_name=supplier_name,
-                        packaging_sizes=legacy_packaging,
-                        thousand_kernel_weight_g=(culture.thousand_kernel_weight_g if culture else None),
-                    )
-                ]
             selected_supplier = None
             selected_supplier_id = selected_supplier_by_culture.get(culture_id)
             if selected_supplier_id:

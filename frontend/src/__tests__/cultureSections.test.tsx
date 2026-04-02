@@ -98,53 +98,7 @@ describe('culture form UI sections', () => {
     fireEvent.change(safetyInput, { target: { value: '10' } });
     expect(onChange).toHaveBeenCalledWith('sowing_calculation_safety_percent_direct', 10);
 
-    const thousandKernelWeightInput = screen.getByLabelText('Tausendkorngewicht (g)');
-    fireEvent.change(thousandKernelWeightInput, { target: { value: '472.02' } });
-    expect(onChange).toHaveBeenCalledWith('thousand_kernel_weight_g', 472.02);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Packung hinzufügen' }));
-    expect(onChange).toHaveBeenCalledWith('seed_packages', [{ size_value: 0, size_unit: 'g' }]);
-
-
     expect(screen.getByText('Bitte wählen')).toBeInTheDocument();
-  });
-
-  it('uses unit-dependent package size constraints and normalizes values on unit changes', () => {
-    const onChange = vi.fn();
-
-    const { rerender } = render(
-      <SeedingSection
-        formData={{ seed_packages: [{ size_value: 10, size_unit: 'seeds' }] }}
-        errors={{}}
-        onChange={onChange}
-        t={t}
-      />
-    );
-
-    const packageSizeInput = screen.getByLabelText('Packungsgröße');
-    expect(packageSizeInput).toHaveAttribute('min', '1');
-    expect(packageSizeInput).toHaveAttribute('step', 'any');
-
-    fireEvent.mouseDown(screen.getByRole('combobox'));
-    fireEvent.click(screen.getByRole('option', { name: 'g' }));
-    expect(onChange).toHaveBeenCalledWith('seed_packages', [{ size_value: 10, size_unit: 'g' }]);
-
-    rerender(
-      <SeedingSection
-        formData={{ seed_packages: [{ size_value: 10.4, size_unit: 'g' }] }}
-        errors={{}}
-        onChange={onChange}
-        t={t}
-      />
-    );
-
-    const packageSizeInputInGram = screen.getByLabelText('Packungsgröße');
-    expect(packageSizeInputInGram).toHaveAttribute('min', '0.1');
-    expect(packageSizeInputInGram).toHaveAttribute('step', 'any');
-
-    fireEvent.mouseDown(screen.getByRole('combobox'));
-    fireEvent.click(screen.getByRole('option', { name: 'Korn' }));
-    expect(onChange).toHaveBeenCalledWith('seed_packages', [{ size_value: 10, size_unit: 'seeds' }]);
   });
 
   it('shows method blocks based on selected cultivation types', () => {

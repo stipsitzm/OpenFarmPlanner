@@ -49,14 +49,14 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
       supplier_name: culture.supplier.name,
       supplier_url: culture.supplier.homepage_url ?? '',
       supplier_product_url: culture.supplier_product_url ?? '',
-      packaging_sizes: normalizedSeedPackages ?? [],
-      thousand_kernel_weight_g: culture.thousand_kernel_weight_g ?? null,
+      packaging_sizes: [],
+      thousand_kernel_weight_g: null,
     });
   }
 
   const payload: CultureSavePayload = {
     ...culture,
-    seed_packages: normalizedSeedPackages,
+    seed_packages: undefined,
     seed_rate_unit: normalizeSeedRateUnit(culture.seed_rate_unit),
     seed_rate_direct_unit: normalizeSeedRateUnit(culture.seed_rate_direct_unit),
     seed_rate_pre_cultivation_unit: normalizeSeedRateUnit(culture.seed_rate_pre_cultivation_unit),

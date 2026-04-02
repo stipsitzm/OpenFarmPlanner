@@ -26,7 +26,11 @@ import {
   Button,
   Typography,
   TextField,
+  Select,
+  MenuItem,
+  IconButton,
 } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { validateCulture } from './validation';
 import { BasicInfoSection } from './sections/BasicInfoSection';
 import { TimingSection } from './sections/TimingSection';
@@ -175,12 +179,29 @@ export function CultureForm({
     }
   };
 
-  const primarySupplierRow = (formData.supplier_data && formData.supplier_data[0]) || null;
-  const handleSupplierRowChange = (key: 'supplier_name_input' | 'supplier_product_name' | 'supplier_product_url', value: string) => {
-    const currentRows = formData.supplier_data ?? [];
-    const firstRow = currentRows[0] ?? {};
-    const updatedRow = { ...firstRow, [key]: value };
-    handleChange('supplier_data', [updatedRow]);
+  const supplierRows = formData.supplier_data ?? [];
+  const updateSupplierRow = (index: number, patch: Record<string, unknown>) => {
+    const nextRows = supplierRows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row));
+    handleChange('supplier_data', nextRows);
+  };
+  const addSupplierRow = () => {
+    handleChange('supplier_data', [...supplierRows, { supplier_name_input: '', packaging_sizes: [] }]);
+  };
+  const removeSupplierRow = (index: number) => {
+    handleChange('supplier_data', supplierRows.filter((_row, rowIndex) => rowIndex !== index));
+  };
+  const addPackageRow = (supplierIndex: number) => {
+    const currentPackages = supplierRows[supplierIndex]?.packaging_sizes ?? [];
+    updateSupplierRow(supplierIndex, { packaging_sizes: [...currentPackages, { size_value: 0, size_unit: 'g' }] });
+  };
+  const updatePackageRow = (supplierIndex: number, packageIndex: number, patch: Record<string, unknown>) => {
+    const currentPackages = supplierRows[supplierIndex]?.packaging_sizes ?? [];
+    const nextPackages = currentPackages.map((pkg, index) => (index === packageIndex ? { ...pkg, ...patch } : pkg));
+    updateSupplierRow(supplierIndex, { packaging_sizes: nextPackages });
+  };
+  const removePackageRow = (supplierIndex: number, packageIndex: number) => {
+    const currentPackages = supplierRows[supplierIndex]?.packaging_sizes ?? [];
+    updateSupplierRow(supplierIndex, { packaging_sizes: currentPackages.filter((_pkg, index) => index !== packageIndex) });
   };
 
   const handleDialogContentScrollKey = (event: { key: string; altKey: boolean; ctrlKey: boolean; metaKey: boolean; preventDefault: () => void }, contentElement: HTMLDivElement) => {
@@ -273,24 +294,67 @@ export function CultureForm({
             <Typography variant="body2" color="text.secondary">
               Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.
             </Typography>
-            <TextField
-              label="Saatgutlieferant"
-              value={primarySupplierRow?.supplier_name_input ?? ''}
-              onChange={(event) => handleSupplierRowChange('supplier_name_input', event.target.value)}
-              fullWidth
-            />
-            <TextField
-              label="Artikelbezeichnung beim Lieferanten"
-              value={primarySupplierRow?.supplier_product_name ?? ''}
-              onChange={(event) => handleSupplierRowChange('supplier_product_name', event.target.value)}
-              fullWidth
-            />
-            <TextField
-              label="Lieferanten-URL"
-              value={primarySupplierRow?.supplier_product_url ?? ''}
-              onChange={(event) => handleSupplierRowChange('supplier_product_url', event.target.value)}
-              fullWidth
-            />
+            {supplierRows.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Noch keine Saatgutdaten für Lieferanten vorhanden.
+              </Typography>
+            ) : null}
+            {supplierRows.map((row, supplierIndex) => (
+              <div key={`supplier-row-${supplierIndex}`} style={{ border: '1px solid #e0e0e0', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <TextField
+                  label="Saatgutlieferant"
+                  value={row.supplier_name_input ?? row.supplier_name ?? ''}
+                  onChange={(event) => updateSupplierRow(supplierIndex, { supplier_name_input: event.target.value })}
+                  fullWidth
+                />
+                <TextField
+                  label="Artikelbezeichnung beim Lieferanten"
+                  value={row.supplier_product_name ?? ''}
+                  onChange={(event) => updateSupplierRow(supplierIndex, { supplier_product_name: event.target.value })}
+                  fullWidth
+                />
+                <TextField
+                  label="Lieferanten-URL"
+                  value={row.supplier_product_url ?? ''}
+                  onChange={(event) => updateSupplierRow(supplierIndex, { supplier_product_url: event.target.value })}
+                  fullWidth
+                />
+                <TextField
+                  label="Tausendkorngewicht (g)"
+                  type="number"
+                  value={row.thousand_kernel_weight_g ?? ''}
+                  onChange={(event) => updateSupplierRow(supplierIndex, { thousand_kernel_weight_g: event.target.value ? Number(event.target.value) : null })}
+                  fullWidth
+                />
+                <Typography variant="subtitle2">Packungsgrößen</Typography>
+                {(row.packaging_sizes ?? []).map((pkg, packageIndex) => (
+                  <div key={`pkg-${supplierIndex}-${packageIndex}`} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <TextField
+                      label="Menge"
+                      type="number"
+                      value={pkg.size_value}
+                      onChange={(event) => updatePackageRow(supplierIndex, packageIndex, { size_value: Number(event.target.value) || 0 })}
+                    />
+                    <Select
+                      value={pkg.size_unit}
+                      onChange={(event) => updatePackageRow(supplierIndex, packageIndex, { size_unit: event.target.value })}
+                      size="small"
+                    >
+                      <MenuItem value="g">g</MenuItem>
+                      <MenuItem value="seeds">Korn</MenuItem>
+                    </Select>
+                    <IconButton onClick={() => removePackageRow(supplierIndex, packageIndex)} aria-label="Packungsgröße entfernen">
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Button variant="outlined" onClick={() => addPackageRow(supplierIndex)}>Packungsgröße hinzufügen</Button>
+                  <Button variant="outlined" color="error" onClick={() => removeSupplierRow(supplierIndex)}>Lieferantendaten löschen</Button>
+                </div>
+              </div>
+            ))}
+            <Button variant="outlined" onClick={addSupplierRow}>Lieferantendaten hinzufügen</Button>
           </div>
         </DialogContent>
         <DialogActions sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
