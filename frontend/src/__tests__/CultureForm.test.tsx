@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CultureForm } from '../cultures/CultureForm';
 import type { Culture } from '../api/types';
 
@@ -9,8 +9,13 @@ vi.mock('../i18n', () => ({
   }),
 }));
 
+const { navigateMock, supplierListMock } = vi.hoisted(() => ({
+  navigateMock: vi.fn(),
+  supplierListMock: vi.fn().mockResolvedValue({ data: { results: [] } }),
+}));
+
 vi.mock('react-router-dom', () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigateMock,
 }));
 
 vi.mock('../api/api', async () => {
@@ -18,7 +23,7 @@ vi.mock('../api/api', async () => {
   return {
     ...actual,
     supplierAPI: {
-      list: vi.fn().mockResolvedValue({ data: { results: [] } }),
+      list: supplierListMock,
     },
   };
 });
@@ -71,11 +76,51 @@ const CULTURE_B: Culture = {
 };
 
 describe('CultureForm', () => {
+  beforeEach(() => {
+    navigateMock.mockReset();
+    supplierListMock.mockReset();
+    supplierListMock.mockResolvedValue({ data: { results: [] } });
+  });
+
+  it('renders supplier selection states based on supplier availability', async () => {
+    supplierListMock.mockResolvedValueOnce({ data: { results: [] } });
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ packaging_sizes: [] }] }}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(supplierListMock).toHaveBeenCalled());
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText('form.noSuppliersHint')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
+    expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
+  });
+
+  it('shows inline link for creating a supplier when options are available', async () => {
+    supplierListMock.mockResolvedValueOnce({ data: { results: [{ id: 99, name: 'New Supplier' }] } });
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ packaging_sizes: [] }] }}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'form.createNewSupplierInline' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'form.createNewSupplierInline' }));
+    expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
+  });
+
   it('renders separated general and supplier-specific sections', () => {
     render(<CultureForm culture={CULTURE_A} onSave={vi.fn().mockResolvedValue(undefined)} onCancel={() => {}} />);
 
-    expect(screen.getByText('Allgemeine Informationen')).toBeInTheDocument();
-    expect(screen.getByText('Saatgutdaten je Lieferant')).toBeInTheDocument();
+    expect(screen.getByText('form.generalInfoSectionTitle')).toBeInTheDocument();
+    expect(screen.getByText('form.supplierDataSectionTitle')).toBeInTheDocument();
   });
 
   it('saves changed form data when editing a culture', async () => {
