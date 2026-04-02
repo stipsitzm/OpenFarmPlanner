@@ -1,5 +1,5 @@
 import type { Culture } from '../api/api';
-import type { CultureSupplierDataInput, SeedPackage } from '../api/types';
+import type { CultureSupplierDataInput } from '../api/types';
 import {
   normalizeCultivationType,
   normalizeHarvestMethod,
@@ -15,17 +15,6 @@ export type CultureSavePayload = Culture & {
 };
 
 export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
-  const normalizedSeedPackages: SeedPackage[] | undefined = Array.isArray(culture.seed_packages)
-    ? culture.seed_packages.map((pkg) => ({
-        size_value: pkg.size_unit === 'g'
-          ? Math.round((Number(pkg.size_value) || 0) * 10) / 10
-          : Math.round(Number(pkg.size_value) || 0),
-        size_unit: (pkg.size_unit === 'seeds' ? 'seeds' : 'g') as SeedPackage['size_unit'],
-        evidence_text: pkg.evidence_text ?? '',
-        last_seen_at: pkg.last_seen_at ?? null,
-      }))
-    : culture.seed_packages;
-
   const supplierPayloadRows: CultureSupplierDataInput[] = [];
   if (Array.isArray(culture.supplier_data) && culture.supplier_data.length > 0) {
     supplierPayloadRows.push(...culture.supplier_data.map((row) => ({
