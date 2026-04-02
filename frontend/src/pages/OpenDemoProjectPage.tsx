@@ -8,7 +8,7 @@ import { useTranslation } from '../i18n';
 
 export default function OpenDemoProjectPage(): React.ReactElement {
   const { t } = useTranslation('home');
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const hasTriggeredRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,8 +20,10 @@ export default function OpenDemoProjectPage(): React.ReactElement {
     try {
       const response = await projectAPI.openDemo();
       const projectId = response.data.project_id;
+      if (response.data.created_guest_user || !user) {
+        await refreshUser();
+      }
       window.localStorage.setItem('activeProjectId', String(projectId));
-      await refreshUser();
       navigate('/app/locations', { replace: true });
     } catch {
       setError(t('landing.demoOpenError'));

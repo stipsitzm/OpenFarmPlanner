@@ -2152,16 +2152,31 @@ class OpenDemoProjectView(APIView):
 
     def post(self, request):
         user = request.user
+        created_guest_user = False
         if not user.is_authenticated:
             user = create_demo_guest_user()
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            created_guest_user = True
 
         result = open_fresh_demo_project_for_user(user)
+        has_non_demo_membership = ProjectMembership.objects.filter(
+            user=user,
+            project__is_demo_copy=False,
+            project__is_demo_template=False,
+            project__is_active=True,
+        ).exists()
+        if created_guest_user or not has_non_demo_membership:
+            settings_obj, _ = UserProjectSettings.objects.get_or_create(user=user)
+            settings_obj.default_project = result.demo_project
+            settings_obj.last_project = result.demo_project
+            settings_obj.save(update_fields=['default_project', 'last_project', 'updated_at'])
+
         return Response({
             'detail': 'Demo project opened.',
             'project': ProjectSerializer(result.demo_project).data,
             'project_id': result.demo_project.id,
             'template_project_id': result.template_project.id,
+            'created_guest_user': created_guest_user,
         })
 
 

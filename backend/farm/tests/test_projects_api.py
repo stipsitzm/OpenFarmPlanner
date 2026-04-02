@@ -621,3 +621,16 @@ class DemoProjectFlowTests(APITestCase):
 
         self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Supplier.objects.filter(project_id=demo_project_id).exists())
+
+    def test_opening_demo_does_not_override_regular_user_project_settings(self) -> None:
+        self._login_regular_user()
+        settings_before = UserProjectSettings.objects.get(user=self.user)
+        self.assertEqual(settings_before.default_project_id, self.normal_project.id)
+        self.assertEqual(settings_before.last_project_id, self.normal_project.id)
+
+        response = self.client.post('/openfarmplanner/api/projects/open-demo/', {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        settings_after = UserProjectSettings.objects.get(user=self.user)
+        self.assertEqual(settings_after.default_project_id, self.normal_project.id)
+        self.assertEqual(settings_after.last_project_id, self.normal_project.id)

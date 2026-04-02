@@ -556,9 +556,4 @@ def open_fresh_demo_project_for_user(user) -> DemoOpenResult:
         defaults={'role': ProjectMembership.ROLE_ADMIN},
     )
 
-    settings_obj, _ = UserProjectSettings.objects.get_or_create(user=user)
-    settings_obj.default_project = demo_project
-    settings_obj.last_project = demo_project
-    settings_obj.save(update_fields=['default_project', 'last_project', 'updated_at'])
-
     return DemoOpenResult(template_project=template_project, demo_project=demo_project)
