@@ -23,6 +23,7 @@ from farm.models import (
     Project,
     ProjectMembership,
     SeedPackage,
+    Supplier,
     Task,
 )
 
@@ -369,6 +370,21 @@ def _clone_project_entities(source_project: Project, target_project: Project) ->
     bed_map: dict[int, Bed] = {}
     culture_map: dict[int, Culture] = {}
     plan_map: dict[int, PlantingPlan] = {}
+    supplier_map: dict[int, Supplier] = {}
+
+    def _build_unique_supplier_name(base_name: str) -> str:
+        candidate = base_name.strip() or f'Demo Saatgut {target_project.id}'
+        suffix = 2
+        while Supplier.objects.filter(name=candidate).exists():
+            candidate = f'{base_name} Demo {target_project.id}-{suffix}'
+            suffix += 1
+        return candidate
+
+    fallback_supplier = Supplier.objects.create(
+        project=target_project,
+        name=_build_unique_supplier_name('Demo Saatgut'),
+        homepage_url='https://example.invalid',
+    )
 
     for source_location in Location.objects.filter(project=source_project):
         location_map[source_location.id] = Location.objects.create(
@@ -422,14 +438,25 @@ def _clone_project_entities(source_project: Project, target_project: Project) ->
             scale=source_bed_layout.scale,
         )
 
+    for source_supplier in Supplier.objects.filter(project=source_project):
+        supplier_map[source_supplier.id] = Supplier.objects.create(
+            project=target_project,
+            name=_build_unique_supplier_name(source_supplier.name),
+            homepage_url=source_supplier.homepage_url,
+            allowed_domains=source_supplier.allowed_domains,
+        )
+
     for source_culture in Culture.objects.filter(project=source_project):
+        supplier = fallback_supplier
+        if source_culture.supplier_id:
+            supplier = supplier_map.get(source_culture.supplier_id, fallback_supplier)
         cloned_culture = Culture.objects.create(
             project=target_project,
             name=source_culture.name,
             variety=source_culture.variety,
             notes=source_culture.notes,
             seed_supplier=source_culture.seed_supplier,
-            supplier=None,
+            supplier=supplier,
             supplier_product_url='',
             image_file=source_culture.image_file,
             source_public_culture=source_culture.source_public_culture,

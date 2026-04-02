@@ -112,6 +112,21 @@ class SupplierSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'homepage_url', 'slug', 'allowed_domains', 'created_at', 'updated_at', 'created']
         read_only_fields = ['created_at', 'updated_at', 'slug']
 
+    def create(self, validated_data):
+        from .utils import normalize_supplier_name
+
+        project = validated_data.get('project')
+        base_name = (validated_data.get('name') or '').strip()
+        if project is not None and getattr(project, 'is_demo_copy', False):
+            stem = base_name or 'Demo Lieferant'
+            candidate = stem
+            suffix = 2
+            while Supplier.objects.filter(name_normalized=normalize_supplier_name(candidate) or '').exists():
+                candidate = f'{stem} Demo {project.id}-{suffix}'
+                suffix += 1
+            validated_data['name'] = candidate
+        return super().create(validated_data)
+
 
 class FieldSerializer(serializers.ModelSerializer):
     location_name = serializers.CharField(source='location.name', read_only=True)

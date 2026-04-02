@@ -1,5 +1,5 @@
 import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { projectAPI } from '../api/api';
@@ -10,6 +10,7 @@ export default function OpenDemoProjectPage(): React.ReactElement {
   const { t } = useTranslation('home');
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
+  const hasTriggeredRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +31,10 @@ export default function OpenDemoProjectPage(): React.ReactElement {
   };
 
   useEffect(() => {
+    if (hasTriggeredRef.current) {
+      return;
+    }
+    hasTriggeredRef.current = true;
     void openDemo();
   }, []);
 
