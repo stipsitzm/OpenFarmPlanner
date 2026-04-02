@@ -55,6 +55,20 @@ describe('CultureDetail Component', () => {
     expect(screen.getByText(translations.cultures.selectPrompt)).toBeInTheDocument();
   });
 
+  it('shows loading state without empty-state flicker', () => {
+    const mockOnSelect = vi.fn();
+    render(
+      <CultureDetail
+        cultures={[]}
+        isLoading
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getByText('Kulturen werden geladen…')).toBeInTheDocument();
+    expect(screen.queryByText(translations.cultures.emptySearch.title)).not.toBeInTheDocument();
+  });
+
   it('displays culture details when culture is selected', () => {
     const mockOnSelect = vi.fn();
     render(

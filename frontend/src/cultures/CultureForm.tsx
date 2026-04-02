@@ -406,11 +406,7 @@ export function CultureForm({
                       {t('form.createSuppliers')}
                     </Button>
                   </>
-                ) : (
-                  <Button variant="text" size="small" onClick={() => navigate('/app/suppliers?create=1')}>
-                    {t('form.createNewSupplierInline')}
-                  </Button>
-                )}
+                ) : null}
                 <TextField
                   label={t('form.supplierProductNameLabel') }
                   value={row.supplier_product_name ?? ''}

@@ -128,9 +128,6 @@ export default function SeedDemandPage(): React.ReactElement {
                               ))}
                             </Select>
                           </FormControl>
-                          <Link component={RouterLink} to="/suppliers" underline="hover" variant="caption">
-                            {t('seedDemand.createSupplierAction')}
-                          </Link>
                         </Box>
                       ) : (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>

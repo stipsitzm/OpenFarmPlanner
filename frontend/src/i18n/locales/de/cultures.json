@@ -160,6 +160,7 @@
     "createError": "Fehler beim Erstellen der Kultur",
     "updateError": "Fehler beim Aktualisieren der Kultur",
     "fetchError": "Fehler beim Laden der Kulturen",
+    "loadingCultures": "Kulturen werden geladen…",
     "saving": "Speichern...",
     "unsavedChanges": "Ungespeicherte Änderungen",
     "fixErrors": "Bitte beheben Sie die Validierungsfehler",

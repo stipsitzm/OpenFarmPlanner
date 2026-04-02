@@ -100,7 +100,7 @@ describe('CultureForm', () => {
     expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
   });
 
-  it('shows inline link for creating a supplier when options are available', async () => {
+  it('does not show create-supplier helper link when supplier options are available', async () => {
     supplierListMock.mockResolvedValueOnce({ data: { results: [{ id: 99, name: 'New Supplier' }] } });
 
     render(
@@ -111,9 +111,8 @@ describe('CultureForm', () => {
       />
     );
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'form.createNewSupplierInline' })).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'form.createNewSupplierInline' }));
-    expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'form.createNewSupplierInline' })).not.toBeInTheDocument();
   });
 
   it('renders separated general and supplier-specific sections', () => {

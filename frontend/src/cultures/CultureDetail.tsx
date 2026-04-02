@@ -18,6 +18,7 @@ import {
   Box,
   Card,
   CardContent,
+  CircularProgress,
   Typography,
   Chip,
   Divider,
@@ -40,6 +41,7 @@ import type { SearchableSelectOption } from '../components/inputs/SearchableSele
 
 interface CultureDetailProps {
   cultures: Culture[];
+  isLoading?: boolean;
   selectedCultureId?: number;
   onCultureSelect: (culture: Culture | null) => void;
 }
@@ -89,6 +91,7 @@ function formatSeedUnitLabel(unit: string | null | undefined): string {
 
 export function CultureDetail({
   cultures,
+  isLoading = false,
   selectedCultureId,
   onCultureSelect,
 }: CultureDetailProps): React.ReactElement {
@@ -732,7 +735,20 @@ export function CultureDetail({
       )}
 
       {/* Empty State */}
-      {!selectedCulture && filteredCultures.length > 0 && (
+      {isLoading && (
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+              <CircularProgress size={20} />
+              <Typography variant="body2" color="text.secondary">
+                {t('messages.loadingCultures')}
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLoading && !selectedCulture && filteredCultures.length > 0 && (
         <Card>
           <CardContent>
             <Typography variant="body1" color="text.secondary" align="center">
@@ -742,7 +758,7 @@ export function CultureDetail({
         </Card>
       )}
 
-      {!selectedCulture && filteredCultures.length === 0 && (
+      {!isLoading && !selectedCulture && filteredCultures.length === 0 && (
         <Card>
           <CardContent>
             <Typography variant="h6" align="center" sx={{ mb: 1 }}>
