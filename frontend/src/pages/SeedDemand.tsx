@@ -82,7 +82,11 @@ export default function SeedDemandPage(): React.ReactElement {
 
       {!isLoading && !error && (
         <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
-          <Table>
+          <Table
+            sx={{
+              '& .MuiTableCell-root': { py: 1 },
+            }}
+          >
             <TableHead>
               <TableRow>
                 <TableCell>{t('seedDemand.columns.culture')}</TableCell>
@@ -111,6 +115,9 @@ export default function SeedDemandPage(): React.ReactElement {
                           <FormControl size="small" sx={{ minWidth: 220 }}>
                             <Select
                               value={row.selected_supplier_id ?? ''}
+                              sx={{
+                                '& .MuiSelect-select': { py: 0.75 },
+                              }}
                               onChange={(event) => {
                                 const selectedValue = String(event.target.value ?? '');
                                 void handleSupplierChange(
