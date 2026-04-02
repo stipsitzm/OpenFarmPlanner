@@ -732,6 +732,10 @@ function createAppRouter(basename: string) {
       element: <RegisterPage />,
     },
     {
+      path: '/demo',
+      element: <OpenDemoProjectPage />,
+    },
+    {
       path: '/activate',
       element: <ActivatePage />,
     },
@@ -778,7 +782,6 @@ function createAppRouter(basename: string) {
             { path: 'project-selection', element: <ProjectSelectionPage /> },
             { path: 'account-settings', element: <AccountSettingsPage /> },
             { path: 'project-settings', element: <ProjectSettingsPage /> },
-            { path: 'demo', element: <OpenDemoProjectPage /> },
           ],
         },
       ],

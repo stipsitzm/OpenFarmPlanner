@@ -93,7 +93,7 @@ from .services.public_cultures import (
     import_public_culture_into_project,
     publish_culture_to_public_library,
 )
-from .services.demo_projects import open_fresh_demo_project_for_user
+from .services.demo_projects import create_demo_guest_user, open_fresh_demo_project_for_user
 from config.version import get_version
 from config.frontend_urls import build_public_frontend_url
 
@@ -1304,6 +1304,12 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
     @action(detail=True, methods=['post'], url_path='publish-public')
     def publish_public(self, request, pk=None):
         culture = self.get_object()
+        active_project = getattr(request, 'active_project', None)
+        if active_project and (active_project.is_demo_copy or active_project.is_demo_template):
+            return Response(
+                {'detail': 'Publishing is disabled for demo projects.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         if not culture.name.strip():
             return Response({'detail': 'Name is required for publishing.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -2115,9 +2121,15 @@ class ProjectSwitchView(APIView):
 
 class OpenDemoProjectView(APIView):
     """Create and open a fresh per-user demo project copy."""
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        result = open_fresh_demo_project_for_user(request.user)
+        user = request.user
+        if not user.is_authenticated:
+            user = create_demo_guest_user()
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+
+        result = open_fresh_demo_project_for_user(user)
         return Response({
             'detail': 'Demo project opened.',
             'project': ProjectSerializer(result.demo_project).data,

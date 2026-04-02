@@ -1571,6 +1571,17 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.assertEqual(public_culture.seed_packages[0]['size_value'], 25.0)
         self.assertEqual(response.data['duplicates'], [])
 
+    def test_publish_is_disabled_for_demo_copy_projects(self):
+        demo_project = Project.objects.create(name='Demo', slug='demo-test', is_demo_copy=True, demo_owner=self.user)
+        ProjectMembership.objects.create(user=self.user, project=demo_project, role='admin')
+        demo_culture = Culture.objects.create(name='Demo Salat', variety='Test', project=demo_project)
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(demo_project.id)
+
+        response = self.client.post(f'/openfarmplanner/api/cultures/{demo_culture.id}/publish-public/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(PublicCulture.objects.count(), 0)
+
     def test_publish_rejects_duplicates_with_conflict_response(self):
         other_culture = Culture.objects.create(
             name='Lettuce',

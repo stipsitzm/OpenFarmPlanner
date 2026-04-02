@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 
 from accounts.models import UserProjectSettings
@@ -26,12 +28,28 @@ from farm.models import (
 DEMO_TEMPLATE_SLUG = 'demo-garten-vorlage'
 DEMO_TEMPLATE_NAME = 'Demo-Garten (Vorlage)'
 DEMO_COPY_NAME = 'Demo-Garten'
+DEMO_GUEST_USERNAME_PREFIX = 'demo_guest'
 
 
 @dataclass
 class DemoOpenResult:
     template_project: Project
     demo_project: Project
+
+
+def create_demo_guest_user():
+    """Create a temporary guest account for anonymous demo usage."""
+    user_model = get_user_model()
+    token = uuid.uuid4().hex[:12]
+    username = f'{DEMO_GUEST_USERNAME_PREFIX}_{token}'
+    email = f'{username}@demo.local'
+    user = user_model.objects.create_user(
+        username=username,
+        email=email,
+        password=get_random_string(48),
+        is_active=True,
+    )
+    return user
 
 
 def _grant_template_access_to_superusers(template_project: Project) -> None:

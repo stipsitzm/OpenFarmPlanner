@@ -591,3 +591,12 @@ class DemoProjectFlowTests(APITestCase):
         self.assertEqual(demo_plan.project_id, demo_project_id)
         self.assertEqual(demo_plan.bed.project_id, demo_project_id)
         self.assertEqual(demo_plan.culture.project_id, demo_project_id)
+
+    def test_anonymous_user_can_open_demo_without_login(self) -> None:
+        response = self.client.post('/openfarmplanner/api/projects/open-demo/', {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['project_id'])
+
+        me_response = self.client.get('/openfarmplanner/api/auth/me/')
+        self.assertEqual(me_response.status_code, status.HTTP_200_OK)
+        self.assertTrue((me_response.data.get('email') or '').endswith('@demo.local'))
