@@ -4,12 +4,15 @@ from tempfile import TemporaryDirectory
 from unittest import skipUnless
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.auth import get_user_model
 from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from farm.image_processing import MAX_IMAGE_SIDE
-from farm.models import Location, Field, Bed, Culture, PlantingPlan, NoteAttachment, Project
+from farm.models import Location, Field, Bed, Culture, PlantingPlan, NoteAttachment, Project, ProjectMembership
+
+User = get_user_model()
 
 try:
     from PIL import Image
@@ -21,7 +24,11 @@ except Exception:
 @skipUnless(PIL_AVAILABLE, 'Pillow is required for image processing tests')
 class NoteAttachmentProcessingApiTest(APITestCase):
     def setUp(self):
+        self.user = User.objects.create_user(username='attachprocuser', email='attachproc@example.com', password='testpass', is_active=True)
         self.project = Project.objects.create(name='Attachment Project', slug='attachment-project')
+        ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
+        self.client.force_authenticate(user=self.user)
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
         self.location = Location.objects.create(name='Attachment Location', project=self.project)
         self.field = Field.objects.create(name='Attachment Field', location=self.location, project=self.project)
         self.bed = Bed.objects.create(name='Attachment Bed', field=self.field, project=self.project)

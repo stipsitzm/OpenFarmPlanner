@@ -152,6 +152,41 @@ class CultureHistoryTests(TestCase):
         call_command('cleanup_history')
         self.assertFalse(CultureRevision.objects.filter(id=old.id).exists())
 
+    def test_global_history_is_scoped_to_active_project(self):
+        other_user = User.objects.create_user(username='otherhist', email='otherhist@example.com', password='testpass', is_active=True)
+        other_project = Project.objects.create(name='Other History Project', slug='other-history-project')
+        ProjectMembership.objects.create(user=other_user, project=other_project, role='admin')
+        other_culture = Culture.objects.create(
+            name='Hidden Culture',
+            variety='Secret',
+            growth_duration_days=55,
+            harvest_duration_days=12,
+            harvest_method='per_plant',
+            project=other_project,
+        )
+        other_culture.name = 'Hidden Culture Updated'
+        other_culture.save()
+
+        response = self.client.get('/openfarmplanner/api/history/global/')
+        self.assertEqual(response.status_code, 200)
+        culture_ids = {entry['culture_id'] for entry in response.json()}
+        self.assertIn(self.culture.id, culture_ids)
+        self.assertNotIn(other_culture.id, culture_ids)
+
+    def test_project_restore_requires_admin_role(self):
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        member_user = User.objects.create_user(username='memberhist', email='memberhist@example.com', password='testpass', is_active=True)
+        ProjectMembership.objects.create(user=member_user, project=self.project, role='member')
+        self.client.force_login(member_user)
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
+
+        response = self.client.post(
+            '/openfarmplanner/api/history/project/restore/',
+            data={'history_id': 1},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 403)
+
 
 class MediaCleanupTests(TestCase):
     def test_cleanup_orphaned_media_command(self):

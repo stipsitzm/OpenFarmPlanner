@@ -1139,7 +1139,11 @@ class PlantingPlanAreaInputTest(DRFAPITestCase):
 
 class NoteAttachmentApiTest(DRFAPITestCase):
     def setUp(self):
+        self.user = User.objects.create_user(username='attachapiuser', email='attachapi@example.com', password='testpass', is_active=True)
         self.project = Project.objects.create(name='Attachment API Project', slug='attachment-api-project')
+        ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
+        self.client.force_authenticate(user=self.user)
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
         self.location = Location.objects.create(name="Attachment Location", project=self.project)
         self.field = Field.objects.create(name="Attachment Field", location=self.location, project=self.project)
         self.bed = Bed.objects.create(name="Attachment Bed", field=self.field, project=self.project)
@@ -1211,6 +1215,17 @@ class NoteAttachmentApiTest(DRFAPITestCase):
             format='multipart',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_list_attachments_for_other_project_is_forbidden(self):
+        other_user = User.objects.create_user(username='attachother', email='attachother@example.com', password='testpass', is_active=True)
+        other_project = Project.objects.create(name='Other Attachment Project', slug='other-attachment-project')
+        ProjectMembership.objects.create(user=other_user, project=other_project, role='admin')
+
+        self.client.force_authenticate(user=other_user)
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(other_project.id)
+
+        response = self.client.get(f'/openfarmplanner/api/notes/{self.plan.id}/attachments/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class PlantingPlanAttachmentCountApiTest(DRFAPITestCase):
@@ -1372,6 +1387,23 @@ class PlantingPlanRemainingAreaApiTest(DRFAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('detail', response.data)
+
+    def test_remaining_area_rejects_bed_from_other_project(self):
+        other_project = Project.objects.create(name='Other Remaining Project', slug='other-remaining-project')
+        other_location = Location.objects.create(name='Other Remaining Location', project=other_project)
+        other_field = Field.objects.create(name='Other Remaining Field', location=other_location, project=other_project)
+        other_bed = Bed.objects.create(name='Other Remaining Bed', field=other_field, area_sqm=12, project=other_project)
+
+        response = self.client.get(
+            '/openfarmplanner/api/planting-plans/remaining-area/',
+            {
+                'bed_id': other_bed.id,
+                'start_date': '2024-03-20',
+                'end_date': '2024-04-10',
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class CultureEnrichmentApiTest(DRFAPITestCase):
