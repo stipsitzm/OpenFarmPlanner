@@ -148,10 +148,9 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
           renderInput={(params) => (
             <TextField
               {...params}
-              required
               label={t('form.supplier', { defaultValue: 'Saatgutlieferant' })}
               placeholder={t('form.supplierPlaceholder', { defaultValue: 'Lieferant auswählen' })}
-              helperText={errors.supplier || t('form.supplierHelp', { defaultValue: 'Lieferant aus der Liste auswählen' })}
+              helperText={errors.supplier || t('form.supplierHelp', { defaultValue: 'Optional: Lieferant aus der Liste auswählen' })}
               error={Boolean(errors.supplier)}
             />
           )}

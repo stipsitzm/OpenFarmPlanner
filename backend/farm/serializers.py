@@ -1129,6 +1129,8 @@ class SeedDemandSerializer(serializers.Serializer):
     culture_name = serializers.CharField()
     variety = serializers.CharField(allow_blank=True, allow_null=True)
     supplier = serializers.CharField(allow_blank=True, allow_null=True)
+    selected_supplier_id = serializers.IntegerField(allow_null=True, required=False)
+    supplier_options = serializers.ListField(child=serializers.DictField(), required=False)
     required_amount_value = serializers.FloatField(allow_null=True)
     required_amount_unit = serializers.CharField(allow_null=True)
     total_grams = serializers.FloatField(allow_null=True)

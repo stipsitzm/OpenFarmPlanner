@@ -201,6 +201,8 @@ export interface SeedDemand {
   culture_name: string;
   variety?: string | null;
   supplier?: string | null;
+  selected_supplier_id?: number | null;
+  supplier_options?: Array<{ supplier_id: number; supplier_name: string }>;
   total_grams: number | null;
   required_amount_value: number | null;
   required_amount_unit: 'g' | 'seeds' | null;

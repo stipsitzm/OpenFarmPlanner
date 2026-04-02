@@ -81,15 +81,6 @@ export function validateCulture(
   if (!draft.variety) {
     errors.variety = t('form.varietyRequired');
   }
-  const hasSupplierData = Array.isArray(draft.supplier_data) && draft.supplier_data.some((row) => {
-    const supplierName = row.supplier_name_input ?? row.supplier_name ?? row.supplier?.name;
-    return Boolean((supplierName || '').trim());
-  });
-  if (!draft.supplier && !hasSupplierData) {
-    errors.supplier = t('form.supplierRequired');
-  }
-
-
   // Optional numeric fields with explicit error keys
   if (draft.growth_duration_days !== undefined && draft.growth_duration_days !== null && (typeof draft.growth_duration_days !== 'string' || draft.growth_duration_days !== '')) {
     const numValue = toNumber(draft.growth_duration_days);

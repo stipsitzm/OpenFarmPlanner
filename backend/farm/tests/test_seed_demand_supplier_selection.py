@@ -1,0 +1,85 @@
+from datetime import date
+
+from django.contrib.auth import get_user_model
+from rest_framework import status
+from rest_framework.test import APITestCase
+
+from farm.models import Bed, Culture, CultureSupplierData, Field, Location, PlantingPlan, Project, ProjectMembership, Supplier
+
+
+User = get_user_model()
+
+
+class SeedDemandSupplierSelectionApiTest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='seedselect', email='seedselect@example.com', password='testpass', is_active=True)
+        self.project = Project.objects.create(name='Seed Select Project', slug='seed-select-project')
+        ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
+        self.client.force_authenticate(user=self.user)
+        self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
+
+        location = Location.objects.create(name='Loc', project=self.project)
+        field = Field.objects.create(name='Field', location=location, project=self.project)
+        self.bed = Bed.objects.create(name='Bed', field=field, area_sqm=100, project=self.project)
+
+    def _create_plan(self, culture: Culture, area: float):
+        PlantingPlan.objects.create(
+            culture=culture,
+            bed=self.bed,
+            planting_date=date(2026, 3, 1),
+            area_usage_sqm=area,
+            cultivation_type='direct_sowing',
+            project=self.project,
+        )
+
+    def test_seed_demand_can_switch_supplier_per_culture(self):
+        culture = Culture.objects.create(
+            name='Karotte',
+            variety='Nantaise',
+            cultivation_types=['direct_sowing'],
+            seed_rate_direct_value=11,
+            seed_rate_direct_unit='g_per_m2',
+            project=self.project,
+        )
+        supplier_a = Supplier.objects.create(name='Reinsaat', homepage_url='https://reinsaat.example', project=self.project)
+        supplier_b = Supplier.objects.create(name='Bingenheimer', homepage_url='https://bingenheimer.example', project=self.project)
+        CultureSupplierData.objects.create(
+            culture=culture,
+            supplier=supplier_a,
+            project=self.project,
+            packaging_sizes=[{'size_value': 5, 'size_unit': 'g'}, {'size_value': 50, 'size_unit': 'g'}],
+        )
+        CultureSupplierData.objects.create(
+            culture=culture,
+            supplier=supplier_b,
+            project=self.project,
+            packaging_sizes=[{'size_value': 25, 'size_unit': 'g'}],
+        )
+        self._create_plan(culture, 5)
+
+        response = self.client.get('/openfarmplanner/api/seed-demand/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        row = response.data['results'][0]
+        self.assertEqual(len(row['supplier_options']), 2)
+
+        selected_response = self.client.get(f'/openfarmplanner/api/seed-demand/?supplier_selection={culture.id}:{supplier_a.id}')
+        self.assertEqual(selected_response.status_code, status.HTTP_200_OK)
+        selected_row = selected_response.data['results'][0]
+        self.assertEqual(selected_row['selected_supplier_id'], supplier_a.id)
+        self.assertEqual(selected_row['seed_packages'], [{'size_value': 5.0, 'size_unit': 'g'}, {'size_value': 50.0, 'size_unit': 'g'}])
+
+    def test_seed_demand_shows_warning_without_supplier_data(self):
+        culture = Culture.objects.create(
+            name='Mangold',
+            cultivation_types=['direct_sowing'],
+            seed_rate_direct_value=3,
+            seed_rate_direct_unit='g_per_m2',
+            project=self.project,
+        )
+        self._create_plan(culture, 5)
+
+        response = self.client.get('/openfarmplanner/api/seed-demand/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        row = response.data['results'][0]
+        self.assertEqual(row['warning'], 'Keine Lieferantendaten vorhanden.')
+        self.assertEqual(row['supplier_options'], [])

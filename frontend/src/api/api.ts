@@ -168,7 +168,9 @@ export const noteAttachmentAPI = {
 };
 
 export const seedDemandAPI = {
-  list: () => http.get<PaginatedResponse<SeedDemand>>('/seed-demand/'),
+  list: (supplierSelection?: string) => http.get<PaginatedResponse<SeedDemand>>('/seed-demand/', {
+    params: supplierSelection ? { supplier_selection: supplierSelection } : {},
+  }),
 };
 
 export const yieldCalendarAPI = {

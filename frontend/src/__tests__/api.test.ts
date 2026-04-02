@@ -153,8 +153,10 @@ describe('API Client', () => {
 
   it('calls seed demand endpoint', () => {
     seedDemandAPI.list();
+    seedDemandAPI.list('3:11');
 
-    expect(getMock).toHaveBeenCalledWith('/seed-demand/');
+    expect(getMock).toHaveBeenCalledWith('/seed-demand/', { params: {} });
+    expect(getMock).toHaveBeenCalledWith('/seed-demand/', { params: { supplier_selection: '3:11' } });
   });
 
   it('exports grouped default API object', () => {
