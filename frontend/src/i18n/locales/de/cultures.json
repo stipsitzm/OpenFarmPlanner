@@ -295,6 +295,12 @@
     "loadError": "Die öffentliche Kulturbibliothek konnte nicht geladen werden.",
     "versionLabel": "Version",
     "createdByLabel": "Von",
+    "filters": {
+      "variety": "Sorte",
+      "supplier": "Saatgutlieferant",
+      "nutrientDemand": "Nährstoffbedarf",
+      "cropFamily": "Pflanzenfamilie"
+    },
     "badges": {
       "local": "Lokal",
       "imported": "Importiert",
