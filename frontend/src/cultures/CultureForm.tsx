@@ -361,42 +361,60 @@ export function CultureForm({
             ) : null}
             {supplierRows.map((row, supplierIndex) => (
               <div key={`supplier-row-${supplierIndex}`} style={{ border: '1px solid #e0e0e0', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <Select
-                  value={row.supplier_id ?? row.supplier?.id ?? ''}
-                  onChange={(event) => {
-                    const selectedValue = String(event.target.value ?? '');
+                {(() => {
+                  const selectedSupplierId = row.supplier_id ?? row.supplier?.id ?? null;
+                  const availableSupplierIds = new Set(supplierOptions.map((supplier) => supplier.id));
+                  const hasSelectedSupplier = typeof selectedSupplierId === 'number';
+                  const isSelectedSupplierAvailable = hasSelectedSupplier && availableSupplierIds.has(selectedSupplierId);
+                  const selectValue = isSelectedSupplierAvailable ? String(selectedSupplierId) : '';
+                  const showUnavailableSelectedSupplier = hasSelectedSupplier && !isSelectedSupplierAvailable;
+                  const unavailableSupplierLabel = row.supplier_name || row.supplier?.name || `${t('seedDemand.columns.supplier')} #${selectedSupplierId}`;
 
-                    if (selectedValue === '') {
-                      updateSupplierRow(supplierIndex, {
-                        supplier_id: null,
-                        supplier_name: undefined,
-                        supplier_name_input: undefined,
-                      });
-                      return;
-                    }
+                  return (
+                    <Select
+                      value={selectValue}
+                      onChange={(event) => {
+                        const selectedValue = String(event.target.value ?? '');
 
-                    const value = Number(selectedValue);
-                    if (value === -1) {
-                      navigate('/app/suppliers?create=1');
-                      return;
-                    }
-                    const selectedSupplier = supplierOptions.find((supplier) => supplier.id === value);
-                    updateSupplierRow(supplierIndex, {
-                      supplier_id: value,
-                      supplier_name_input: selectedSupplier ? undefined : row.supplier_name_input,
-                      supplier_name: selectedSupplier?.name ?? row.supplier_name,
-                    });
-                  }}
-                  displayEmpty
-                  size="small"
-                  disabled={supplierOptions.length === 0}
-                >
-                  <MenuItem value="">{supplierOptions.length > 0 ? t('form.supplierPlaceholder') : t('form.noSuppliers')}</MenuItem>
-                  {supplierOptions.map((supplier) => (
-                    <MenuItem key={supplier.id} value={supplier.id}>{supplier.name}</MenuItem>
-                  ))}
-                  <MenuItem value={-1}>{t('form.newSupplierOption')}</MenuItem>
-                </Select>
+                        if (selectedValue === '') {
+                          updateSupplierRow(supplierIndex, {
+                            supplier_id: null,
+                            supplier_name: undefined,
+                            supplier_name_input: undefined,
+                          });
+                          return;
+                        }
+
+                        if (selectedValue === '-1') {
+                          navigate('/app/suppliers?create=1');
+                          return;
+                        }
+
+                        const parsedSupplierId = Number(selectedValue);
+                        const selectedSupplier = supplierOptions.find((supplier) => supplier.id === parsedSupplierId);
+                        updateSupplierRow(supplierIndex, {
+                          supplier_id: parsedSupplierId,
+                          supplier_name_input: selectedSupplier ? undefined : row.supplier_name_input,
+                          supplier_name: selectedSupplier?.name ?? row.supplier_name,
+                        });
+                      }}
+                      displayEmpty
+                      size="small"
+                      disabled={supplierOptions.length === 0}
+                    >
+                      <MenuItem value="">{supplierOptions.length > 0 ? t('form.supplierPlaceholder') : t('form.noSuppliers')}</MenuItem>
+                      {supplierOptions.map((supplier) => (
+                        <MenuItem key={supplier.id} value={String(supplier.id)}>{supplier.name}</MenuItem>
+                      ))}
+                      {showUnavailableSelectedSupplier ? (
+                        <MenuItem value={String(selectedSupplierId)} disabled>
+                          {unavailableSupplierLabel}
+                        </MenuItem>
+                      ) : null}
+                      <MenuItem value="-1">{t('form.newSupplierOption')}</MenuItem>
+                    </Select>
+                  );
+                })()}
                 {supplierOptions.length === 0 ? (
                   <>
                     <Typography variant="body2" color="warning.main">

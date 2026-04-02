@@ -115,6 +115,24 @@ describe('CultureForm', () => {
     expect(screen.queryByRole('button', { name: 'form.createNewSupplierInline' })).not.toBeInTheDocument();
   });
 
+  it('falls back to empty supplier selection when saved supplier is not in options', async () => {
+    supplierListMock.mockResolvedValueOnce({ data: { results: [{ id: 99, name: 'Different Supplier' }] } });
+
+    render(
+      <CultureForm
+        culture={{
+          ...CULTURE_A,
+          supplier_data: [{ supplier_id: 10, supplier_name: 'Bingenheimer', packaging_sizes: [] }],
+        }}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeInTheDocument());
+    expect(screen.getByRole('combobox')).toHaveTextContent('form.supplierPlaceholder');
+  });
+
   it('renders separated general and supplier-specific sections', () => {
     render(<CultureForm culture={CULTURE_A} onSave={vi.fn().mockResolvedValue(undefined)} onCancel={() => {}} />);
 

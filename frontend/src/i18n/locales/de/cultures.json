@@ -25,12 +25,20 @@
   "perennial": "Mehrjährig",
   "annual": "Einjährig",
   "unknown": "Unbekannt",
+  "culture": "Kultur",
   "noData": "Keine Angabe",
+  "columns": {
+    "culture": "Kultur"
+  },
+  "validation": {
+    "required": "Dieses Feld ist erforderlich."
+  },
   "sections": {
     "growthHarvest": "Wachstum & Ernte",
     "additionalInfo": "Weitere Informationen"
   },
   "fields": {
+    "culture": "Kultur",
     "daysToFirstHarvest": "Tage bis zur ersten Ernte",
     "daysToLastHarvest": "Tage bis zur letzten Ernte",
     "harvestWindow": "Erntefenster",
