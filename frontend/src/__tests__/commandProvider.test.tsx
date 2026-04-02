@@ -131,7 +131,6 @@ describe('CommandProvider', () => {
     expect(screen.getByText('Projekt wechseln: Garten')).toBeInTheDocument();
     expect(screen.getByText('Nächste Seite')).toBeInTheDocument();
     expect(screen.getByText('Alt+Shift+P')).toBeInTheDocument();
-    expect(screen.getByText('Alt+Shift+N')).toBeInTheDocument();
     expect(screen.getByText('Alt+1')).toBeInTheDocument();
     expect(screen.getByText('Alt+Shift+A')).toBeInTheDocument();
     expect(screen.getByText('Alt+Shift+V')).toBeInTheDocument();

@@ -349,11 +349,11 @@ function PlantingPlans(): React.ReactElement {
     () => [
       {
         id: "plans.create",
-        label: "Neuer Anbauplan (Alt+N)",
+        label: "Neuer Anbauplan (Alt+Shift+N)",
         group: 'navigation',
         keywords: ["anbauplan", "neu", "create"],
-        shortcutHint: "Alt+N",
-        keys: { alt: true, key: "n" },
+        shortcutHint: "Alt+Shift+N",
+        keys: { alt: true, shift: true, key: "n" },
         contextTags: ["plans"],
         isEnabled: () => Boolean(gridCommandApiRef.current),
         action: () => gridCommandApiRef.current?.addRow(),

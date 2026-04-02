@@ -575,11 +575,11 @@ function FieldsBedsHierarchy({
     () => [
       {
         id: "areas.create",
-        label: "Neu erstellen (Alt+N)",
+        label: "Neu erstellen (Alt+Shift+N)",
         group: 'navigation',
       keywords: ["neu", "anbauflächen", "create"],
-        shortcutHint: "Alt+N",
-        keys: { alt: true, key: "n" },
+        shortcutHint: "Alt+Shift+N",
+        keys: { alt: true, shift: true, key: "n" },
         contextTags: ["areas"],
         isEnabled: () => selectedRow !== null,
         action: handleCreateBySelection,
