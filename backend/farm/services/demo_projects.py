@@ -19,6 +19,7 @@ from farm.models import (
     FieldLayout,
     Location,
     PlantingPlan,
+    PublicCulture,
     Project,
     ProjectMembership,
     SeedPackage,
@@ -128,10 +129,14 @@ def _seed_demo_template(template_project: Project) -> None:
             name='Salat',
             variety='Batavia grün',
             cultivation_types=['pre_cultivation'],
+            propagation_duration_days=24,
             growth_duration_days=35,
             harvest_duration_days=14,
             harvest_method='per_sqm',
             expected_yield=3.5,
+            seed_rate_pre_cultivation_value=1.0,
+            seed_rate_pre_cultivation_unit='seeds_per_plant',
+            sowing_calculation_safety_percent_pre_cultivation=12,
             notes='Schnittweise Ernte möglich.',
         ),
         'Karotte': Culture.objects.create(
@@ -143,16 +148,23 @@ def _seed_demo_template(template_project: Project) -> None:
             harvest_duration_days=20,
             harvest_method='per_sqm',
             expected_yield=4.2,
+            seed_rate_direct_value=2.8,
+            seed_rate_direct_unit='g_per_m2',
+            sowing_calculation_safety_percent_direct=10,
         ),
         'Zucchini': Culture.objects.create(
             project=template_project,
             name='Zucchini',
             variety='Zuboda',
             cultivation_types=['pre_cultivation'],
+            propagation_duration_days=28,
             growth_duration_days=65,
             harvest_duration_days=35,
             harvest_method='per_plant',
             expected_yield=1.8,
+            seed_rate_pre_cultivation_value=1.0,
+            seed_rate_pre_cultivation_unit='seeds_per_plant',
+            sowing_calculation_safety_percent_pre_cultivation=18,
         ),
         'Radieschen': Culture.objects.create(
             project=template_project,
@@ -163,32 +175,61 @@ def _seed_demo_template(template_project: Project) -> None:
             harvest_duration_days=7,
             harvest_method='per_sqm',
             expected_yield=1.6,
+            seed_rate_direct_value=9.5,
+            seed_rate_direct_unit='g_per_m2',
+            sowing_calculation_safety_percent_direct=8,
         ),
         'Mangold': Culture.objects.create(
             project=template_project,
             name='Mangold',
             variety='Bright Lights',
-            cultivation_types=['pre_cultivation'],
+            cultivation_types=['pre_cultivation', 'direct_sowing'],
+            propagation_duration_days=24,
             growth_duration_days=55,
             harvest_duration_days=75,
             harvest_method='per_sqm',
             expected_yield=4.0,
+            seed_rate_by_cultivation={
+                'pre_cultivation': {'value': 1.2, 'unit': 'seeds_per_plant'},
+                'direct_sowing': {'value': 5.0, 'unit': 'g_per_m2'},
+            },
         ),
         'Kohlrabi': Culture.objects.create(
             project=template_project,
             name='Kohlrabi',
             variety='Superschmelz',
             cultivation_types=['pre_cultivation'],
+            propagation_duration_days=25,
             growth_duration_days=60,
             harvest_duration_days=14,
             harvest_method='per_plant',
             expected_yield=0.45,
+            seed_rate_pre_cultivation_value=1.0,
+            seed_rate_pre_cultivation_unit='seeds_per_plant',
+            sowing_calculation_safety_percent_pre_cultivation=10,
+        ),
+        'Tomate': Culture.objects.create(
+            project=template_project,
+            name='Tomate',
+            variety='Ruthje',
+            cultivation_types=['pre_cultivation'],
+            propagation_duration_days=35,
+            growth_duration_days=78,
+            harvest_duration_days=45,
+            harvest_method='per_plant',
+            expected_yield=2.4,
+            seed_rate_pre_cultivation_value=1.0,
+            seed_rate_pre_cultivation_unit='seeds_per_plant',
+            sowing_calculation_safety_percent_pre_cultivation=15,
         ),
     }
 
     SeedPackage.objects.create(project=template_project, culture=cultures['Salat'], size_value=5, size_unit=SeedPackage.UNIT_GRAMS)
     SeedPackage.objects.create(project=template_project, culture=cultures['Karotte'], size_value=10, size_unit=SeedPackage.UNIT_GRAMS)
     SeedPackage.objects.create(project=template_project, culture=cultures['Kohlrabi'], size_value=100, size_unit=SeedPackage.UNIT_SEEDS)
+    SeedPackage.objects.create(project=template_project, culture=cultures['Radieschen'], size_value=15, size_unit=SeedPackage.UNIT_GRAMS)
+    SeedPackage.objects.create(project=template_project, culture=cultures['Mangold'], size_value=8, size_unit=SeedPackage.UNIT_GRAMS)
+    SeedPackage.objects.create(project=template_project, culture=cultures['Tomate'], size_value=30, size_unit=SeedPackage.UNIT_SEEDS)
 
     plans = [
         PlantingPlan.objects.create(
@@ -247,12 +288,55 @@ def _seed_demo_template(template_project: Project) -> None:
             quantity=24,
             area_usage_sqm=10.0,
         ),
+        PlantingPlan.objects.create(
+            project=template_project,
+            culture=cultures['Tomate'],
+            bed=beds['Beet 2'],
+            cultivation_type='pre_cultivation',
+            planting_date=date(2026, 5, 12),
+            quantity=36,
+            area_usage_sqm=5.5,
+            notes='Stabtomaten mit Tröpfchenbewässerung.',
+        ),
     ]
 
     Task.objects.create(project=template_project, planting_plan=plans[0], title='Aussaat Salat nachziehen', due_date=date(2026, 3, 25), status='pending')
     Task.objects.create(project=template_project, planting_plan=plans[2], title='Karottenbeet hacken', due_date=date(2026, 4, 18), status='pending')
     Task.objects.create(project=template_project, planting_plan=plans[5], title='Bewässerung prüfen', due_date=date(2026, 5, 7), status='pending')
     Task.objects.create(project=template_project, title='Erntekisten für Markt vorbereiten', due_date=date(2026, 4, 22), status='in_progress')
+
+
+def _seed_public_library_if_empty() -> None:
+    if PublicCulture.objects.exists():
+        return
+
+    PublicCulture.objects.create(
+        name='Spinat',
+        variety='Matador',
+        notes='Robuste Frühjahrskultur für schnelle Sätze.',
+        cultivation_types=['direct_sowing'],
+        growth_duration_days=45,
+        harvest_duration_days=14,
+        harvest_method='per_sqm',
+        seed_rate_value=3.5,
+        seed_rate_unit='g_per_m2',
+        seed_packages=[{'size_value': 10.0, 'size_unit': 'g'}],
+        supplier_name='BioSaat',
+    )
+    PublicCulture.objects.create(
+        name='Fenchel',
+        variety='Finale',
+        notes='Sommer- und Herbstfenchel für Bündelware.',
+        cultivation_types=['pre_cultivation'],
+        propagation_duration_days=28,
+        growth_duration_days=70,
+        harvest_duration_days=12,
+        harvest_method='per_plant',
+        seed_rate_value=1.0,
+        seed_rate_unit='seeds_per_plant',
+        seed_packages=[{'size_value': 200.0, 'size_unit': 'seeds'}],
+        supplier_name='Sativa',
+    )
 
 
 def ensure_demo_template_project() -> Project:
@@ -273,6 +357,7 @@ def ensure_demo_template_project() -> Project:
 
     if created and not template_project.locations.exists():
         _seed_demo_template(template_project)
+        _seed_public_library_if_empty()
 
     _grant_template_access_to_superusers(template_project)
     return template_project
