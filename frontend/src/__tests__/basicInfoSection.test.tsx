@@ -185,7 +185,7 @@ describe('BasicInfoSection', () => {
     expect(onChange).toHaveBeenCalledWith('supplier', { id: 5, name: 'Bestehend' });
 
     fireEvent.click(screen.getByRole('button', { name: 'create-supplier' }));
-    expect(navigateMock).toHaveBeenCalledWith('/app/suppliers');
+    expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
   });
 
   it('handles supplier list errors gracefully', async () => {
@@ -224,6 +224,6 @@ describe('BasicInfoSection', () => {
 
     expect(await screen.findByText('Keine Lieferanten vorhanden')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Lieferanten anlegen' }));
-    expect(navigateMock).toHaveBeenCalledWith('/app/suppliers');
+    expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
   });
 });

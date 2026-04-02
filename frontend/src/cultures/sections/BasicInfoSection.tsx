@@ -81,7 +81,7 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
   };
 
   const handleCreateSupplierClick = () => {
-    navigate('/app/suppliers');
+    navigate('/app/suppliers?create=1');
   };
 
   const newSupplierOption = useMemo<Supplier>(

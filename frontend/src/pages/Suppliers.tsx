@@ -22,6 +22,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import type { Supplier } from '../api/types';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface SupplierDraft {
   id?: number;
@@ -53,6 +54,8 @@ const isValidUrl = (url: string): boolean => {
 
 export default function Suppliers(): React.ReactElement {
   const { t } = useTranslation('suppliers');
+  const location = useLocation();
+  const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState('');
@@ -75,6 +78,25 @@ export default function Suppliers(): React.ReactElement {
     setDraft({ name: '', homepage_url: '' });
     setDialogOpen(true);
   };
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('create') !== '1') {
+      return;
+    }
+
+    setDraft({ name: '', homepage_url: '' });
+    setDialogOpen(true);
+    searchParams.delete('create');
+    const nextSearch = searchParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+      },
+      { replace: true },
+    );
+  }, [location.pathname, location.search, navigate]);
 
   const openEdit = (supplier: Supplier): void => {
     setDraft({
