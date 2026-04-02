@@ -48,8 +48,6 @@ import {
   Snackbar,
   Tooltip,
   Typography,
-  CircularProgress,
-  LinearProgress,
   Link,
   Stack,
 } from '@mui/material';
@@ -63,9 +61,6 @@ import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PublicIcon from '@mui/icons-material/Public';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
-import AutorenewIcon from '@mui/icons-material/Autorenew';
 import {
   buildAllCulturesExport,
   buildAllCulturesFilename,
@@ -101,6 +96,8 @@ import { useAuth } from '../auth/useAuth';
 import { dedupePublicCultures } from './publicCultureUtils';
 import { useCultureImportState } from './useCultureImportState';
 import { useEnrichmentLoadingProgress } from './useEnrichmentLoadingProgress';
+import { CulturesImportDialog } from './CulturesImportDialog';
+import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -1128,140 +1125,15 @@ function Cultures(): React.ReactElement {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={importDialogOpen} onClose={handleImportDialogClose} maxWidth="md" fullWidth>
-        <DialogTitle>{t('import.title')}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            {/* Summary */}
-            <Typography variant="body1">
-              {t('import.foundCount', { count: importState.validCount || importState.previewCount })}
-            </Typography>
-            {importState.previewCount !== importState.validCount && (
-              <Typography variant="body2" color="warning.main">
-                {t('import.invalidCount', {
-                  invalid: importState.previewCount - importState.validCount,
-                })}
-              </Typography>
-            )}
-            
-            {/* Grouped results */}
-            {importState.previewResults.length > 0 && (
-              <>
-                {/* New cultures */}
-                {(() => {
-                  const newCultures = importState.previewResults.filter(r => r.status === 'create');
-                  return newCultures.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="h6" color="success.main">
-                        {t('import.newCultures')} ({newCultures.length})
-                      </Typography>
-                      <List dense>
-                        {newCultures.map((result) => (
-                          <ListItem key={result.index}>
-                            <ListItemText 
-                              primary={`${result.import_data.name}${result.import_data.variety ? ` (${result.import_data.variety})` : ''}`}
-                            />
-                          </ListItem>
-                        ))}
-                      </List>
-                    </Box>
-                  );
-                })()}
-                
-                {/* Update candidates */}
-                {(() => {
-                  const updateCandidates = importState.previewResults.filter(r => r.status === 'update_candidate');
-                  return updateCandidates.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="h6" color="warning.main">
-                        {t('import.updateCandidates')} ({updateCandidates.length})
-                      </Typography>
-                      <List dense>
-                        {updateCandidates.map((result) => (
-                          <ListItem key={result.index} sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                            <ListItemText 
-                              primary={`${result.import_data.name}${result.import_data.variety ? ` (${result.import_data.variety})` : ''}`}
-                              secondary={result.diff && result.diff.length > 0 ? t('import.fieldsChanged', { count: result.diff.length }) : t('import.noChanges')}
-                            />
-                            {result.diff && result.diff.length > 0 && (
-                              <Box sx={{ ml: 2, fontSize: '0.875rem' }}>
-                                {result.diff.map((d, idx) => (
-                                  <Typography key={idx} variant="caption" display="block">
-                                    {d.field}: {JSON.stringify(d.current)} → {JSON.stringify(d.new)}
-                                  </Typography>
-                                ))}
-                              </Box>
-                            )}
-                          </ListItem>
-                        ))}
-                      </List>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                        <input
-                          type="checkbox"
-                          id="confirm-updates"
-                          checked={confirmUpdates}
-                          onChange={(e) => setConfirmUpdates(e.target.checked)}
-                        />
-                        <label htmlFor="confirm-updates">
-                          <Typography variant="body2">{t('import.confirmUpdates')}</Typography>
-                        </label>
-                      </Box>
-                    </Box>
-                  );
-                })()}
-              </>
-            )}
-            
-            {/* Invalid entries */}
-            {importState.invalidEntries.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="h6" color="error.main">
-                  {t('import.invalidEntries')} ({importState.invalidEntries.length})
-                </Typography>
-                <List dense>
-                  {importState.invalidEntries.map((entry) => (
-                    <ListItem key={entry}>
-                      <ListItemText primary={entry} />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            )}
-            
-            {/* Failed entries from import attempt */}
-            {importState.failedEntries.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="h6" color="error.main">
-                  {t('import.failedEntries')} ({importState.failedEntries.length})
-                </Typography>
-                <List dense>
-                  {importState.failedEntries.map((entry, idx) => (
-                    <ListItem key={idx}>
-                      <ListItemText 
-                        primary={entry.name ? `${entry.name}${entry.variety ? ` (${entry.variety})` : ''}` : `${t('import.invalidEntry')} ${entry.index + 1}`}
-                        secondary={typeof entry.error === 'string' ? entry.error : JSON.stringify(entry.error)}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            )}
-            
-            {importState.error && <Alert severity="error">{importState.error}</Alert>}
-            {importState.success && <Alert severity="success">{importState.success}</Alert>}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleImportDialogClose}>{t('import.close')}</Button>
-          <Button
-            variant="contained"
-            onClick={handleImportStart}
-            disabled={importState.validCount === 0 || importState.status === 'uploading' || importState.status === 'success'}
-          >
-            {importState.status === 'success' ? t('import.done') : t('import.start')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CulturesImportDialog
+        open={importDialogOpen}
+        importState={importState}
+        confirmUpdates={confirmUpdates}
+        onConfirmUpdatesChange={setConfirmUpdates}
+        onClose={handleImportDialogClose}
+        onImportStart={() => void handleImportStart()}
+        t={t}
+      />
 
       {aiEnrichmentEnabled && (<Dialog open={enrichAllConfirmOpen} onClose={() => setEnrichAllConfirmOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>{t('ai.confirmAllTitle')}</DialogTitle>
@@ -1276,36 +1148,16 @@ function Cultures(): React.ReactElement {
         </DialogActions>
       </Dialog>)}
 
-      {aiEnrichmentEnabled && (<Dialog open={enrichmentLoading} aria-labelledby="enrichment-loading-title" maxWidth="xs" fullWidth>
-        <DialogTitle id="enrichment-loading-title">{t('ai.loadingTitle')}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1, mb: 1 }}>
-            <CircularProgress size={22} />
-            <Typography>{t('ai.loadingText')}</Typography>
-          </Box>
-          <LinearProgress variant="determinate" value={enrichmentProgressPercent} sx={{ mb: 1 }} />
-          <Typography variant="caption" color="text.secondary">
-            {t('ai.loadingElapsed', { seconds: enrichmentElapsedSeconds, percent: enrichmentProgressPercent })}
-          </Typography>
-          <List dense sx={{ mt: 1 }}>
-            {enrichmentLoadingSteps.map((step, index) => {
-              const isDone = enrichmentElapsedSeconds >= step.startSeconds && index < enrichmentActiveStepIndex;
-              const isActive = index === enrichmentActiveStepIndex;
-              const Icon = isDone ? CheckCircleOutlineIcon : isActive ? AutorenewIcon : RadioButtonUncheckedIcon;
-              return (
-                <ListItem key={step.key} sx={{ px: 0 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Icon fontSize="small" color={isDone ? 'success' : isActive ? 'primary' : 'disabled'} />
-                    <Typography variant="body2" color={isActive ? 'text.primary' : 'text.secondary'}>
-                      {t(`ai.loadingSteps.${step.key}`)}
-                    </Typography>
-                  </Box>
-                </ListItem>
-              );
-            })}
-          </List>
-        </DialogContent>
-      </Dialog>)}
+      {aiEnrichmentEnabled && (
+        <EnrichmentLoadingDialog
+          open={enrichmentLoading}
+          elapsedSeconds={enrichmentElapsedSeconds}
+          progressPercent={enrichmentProgressPercent}
+          activeStepIndex={enrichmentActiveStepIndex}
+          steps={enrichmentLoadingSteps}
+          t={t}
+        />
+      )}
 
       {aiEnrichmentEnabled && (<Dialog open={enrichmentDialogOpen} onClose={() => setEnrichmentDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>{t('ai.suggestionsTitle')}</DialogTitle>
