@@ -193,4 +193,34 @@ describe('GanttChartPage', () => {
 
     await waitFor(() => expect(editSwitch).toBeChecked());
   });
+
+  it('fills empty yield weeks between available week entries', async () => {
+    mocks.planList.mockResolvedValue({ data: { results: [] } });
+    mocks.cultureList.mockResolvedValue({ data: { results: [] } });
+    mocks.yieldList.mockResolvedValue({
+      data: [
+        {
+          iso_week: '2026-W13',
+          week_start: '2026-03-23',
+          cultures: [{ culture_id: 1, culture_name: 'Kohl', yield: 0.7, color: '#16a34a' }],
+        },
+        {
+          iso_week: '2026-W15',
+          week_start: '2026-04-06',
+          cultures: [{ culture_id: 1, culture_name: 'Kohl', yield: 0.9, color: '#16a34a' }],
+        },
+      ],
+    });
+
+    render(
+      <CommandProvider>
+        <GanttChartPage />
+      </CommandProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText('Ertragsverteilung')).toBeInTheDocument());
+    expect(screen.getByText('W13')).toBeInTheDocument();
+    expect(screen.getByText('W14')).toBeInTheDocument();
+    expect(screen.getByText('W15')).toBeInTheDocument();
+  });
 });

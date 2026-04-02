@@ -4,14 +4,12 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   IconButton,
   Link,
-  Stack,
   Table,
   TableBody,
   TableCell,
@@ -19,35 +17,17 @@ import {
   TableRow,
   TableContainer,
   TextField,
-  Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import type { Supplier } from '../api/types';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface SupplierDraft {
   id?: number;
   name: string;
   homepage_url: string;
-  allowed_domains: string[];
-}
-
-const suggestDomains = (homepageUrl: string): string[] => {
-  try {
-    const host = new URL(homepageUrl).hostname.toLowerCase().replace(/^www\./, '');
-    return host ? [host, `www.${host}`] : [];
-  } catch {
-    return [];
-  }
-};
-
-const isValidDomain = (domain: string): boolean => {
-  if (!domain || domain.length > 253) return false;
-  if (domain.includes('/') || domain.includes(':') || domain.includes(' ')) return false;
-  // Check for valid hostname pattern
-  const domainPattern = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
-  return domainPattern.test(domain);
 };
 
 const normalizeUrl = (input: string): string => {
@@ -74,11 +54,12 @@ const isValidUrl = (url: string): boolean => {
 
 export default function Suppliers(): React.ReactElement {
   const { t } = useTranslation('suppliers');
+  const location = useLocation();
+  const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState('');
-  const [domainInput, setDomainInput] = useState('');
-  const [draft, setDraft] = useState<SupplierDraft>({ name: '', homepage_url: '', allowed_domains: [] });
+  const [draft, setDraft] = useState<SupplierDraft>({ name: '', homepage_url: '' });
 
   const loadSuppliers = async (): Promise<void> => {
     const response = await supplierAPI.list();
@@ -94,16 +75,34 @@ export default function Suppliers(): React.ReactElement {
   }, []);
 
   const openCreate = (): void => {
-    setDraft({ name: '', homepage_url: '', allowed_domains: [] });
+    setDraft({ name: '', homepage_url: '' });
     setDialogOpen(true);
   };
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('create') !== '1') {
+      return;
+    }
+
+    setDraft({ name: '', homepage_url: '' });
+    setDialogOpen(true);
+    searchParams.delete('create');
+    const nextSearch = searchParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+      },
+      { replace: true },
+    );
+  }, [location.pathname, location.search, navigate]);
 
   const openEdit = (supplier: Supplier): void => {
     setDraft({
       id: supplier.id,
       name: supplier.name,
       homepage_url: supplier.homepage_url ?? '',
-      allowed_domains: supplier.allowed_domains || [],
     });
     setDialogOpen(true);
   };
@@ -123,22 +122,15 @@ export default function Suppliers(): React.ReactElement {
         return;
       }
       
-      // Client-side domain validation
-      const invalidDomains = draft.allowed_domains.filter(d => !isValidDomain(d));
-      if (invalidDomains.length > 0) {
-        setError(t('invalidDomain', { domain: invalidDomains[0] }));
-        return;
-      }
-      
       const payload = {
         name: draft.name.trim(),
         homepage_url: normalizedUrl,
-        allowed_domains: draft.allowed_domains,
+        allowed_domains: [],
       };
       if (draft.id) {
         await supplierAPI.update(draft.id, payload);
       } else {
-        await supplierAPI.create(payload.name, payload.homepage_url, payload.allowed_domains);
+        await supplierAPI.create(payload.name, payload.homepage_url, []);
       }
       setDialogOpen(false);
       await loadSuppliers();
@@ -148,9 +140,7 @@ export default function Suppliers(): React.ReactElement {
       // Better error handling for backend validation errors
       if (axios.isAxiosError(saveError) && saveError.response?.data) {
         const errorData = saveError.response.data;
-        if (typeof errorData.allowed_domains === 'string') {
-          setError(errorData.allowed_domains);
-        } else if (typeof errorData.homepage_url === 'string') {
+        if (typeof errorData.homepage_url === 'string') {
           setError(errorData.homepage_url);
         } else if (typeof errorData.name === 'string') {
           setError(errorData.name);
@@ -240,34 +230,9 @@ export default function Suppliers(): React.ReactElement {
             value={draft.homepage_url}
             onChange={(e) => {
               const value = e.target.value;
-              setDraft((prev) => ({ ...prev, homepage_url: value, allowed_domains: prev.allowed_domains.length > 0 ? prev.allowed_domains : suggestDomains(value) }));
+              setDraft((prev) => ({ ...prev, homepage_url: value }));
             }}
           />
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" sx={{ mb: 1 }}>{t('allowedDomains')}</Typography>
-            <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-              {draft.allowed_domains.map((domain) => (
-                <Chip key={domain} label={domain} onDelete={() => setDraft((prev) => ({ ...prev, allowed_domains: prev.allowed_domains.filter((item) => item !== domain) }))} />
-              ))}
-            </Stack>
-            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-              <TextField size="small" fullWidth label={t('addDomain')} value={domainInput} onChange={(e) => setDomainInput(e.target.value)} />
-              <Button onClick={() => {
-                const domain = domainInput.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '');
-                if (!domain) return;
-                
-                // Validate domain before adding
-                if (!isValidDomain(domain)) {
-                  setError(t('invalidDomain', { domain }));
-                  return;
-                }
-                
-                setError(''); // Clear any previous errors
-                setDraft((prev) => ({ ...prev, allowed_domains: prev.allowed_domains.includes(domain) ? prev.allowed_domains : [...prev.allowed_domains, domain] }));
-                setDomainInput('');
-              }}>{t('add')}</Button>
-            </Box>
-          </Box>
           {error ? <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert> : null}
         </DialogContent>
         <DialogActions>

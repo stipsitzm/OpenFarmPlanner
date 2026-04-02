@@ -73,6 +73,15 @@ function formatDateToAPI(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function formatIsoWeek(date: Date): string {
+  const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = utcDate.getUTCDay() || 7;
+  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
+  const weekNumber = Math.ceil((((utcDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${utcDate.getUTCFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
+}
+
 function GanttChartPage(): React.ReactElement {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
   useCommandContextTag('calendar');
@@ -277,9 +286,26 @@ function GanttChartPage(): React.ReactElement {
 
   const { chartData, chartCultures, maxTotalYield } = useMemo(() => {
     const cultureMeta = new Map<number, WeeklyYieldCultureMeta>();
+    const weekMap = new Map(weeklyYield.map((week) => [week.week_start, week]));
+    const sortedByStart = [...weeklyYield].sort((left, right) => left.week_start.localeCompare(right.week_start));
+    if (sortedByStart.length === 0) {
+      return {
+        chartData: [] as WeeklyYieldChartColumn[],
+        chartCultures: [] as WeeklyYieldCultureMeta[],
+        maxTotalYield: 0,
+      };
+    }
 
-    const rows: WeeklyYieldChartColumn[] = weeklyYield.map((week) => {
-      const culturesForWeek = week.cultures.map((entry) => {
+    const startDateRange = parseDateString(sortedByStart[0].week_start);
+    const endDateRange = parseDateString(sortedByStart[sortedByStart.length - 1].week_start);
+
+    const rows: WeeklyYieldChartColumn[] = [];
+    const currentDate = new Date(startDateRange);
+    while (currentDate <= endDateRange) {
+      const weekStart = formatDateToAPI(currentDate);
+      const week = weekMap.get(weekStart);
+      const weekCultures = week?.cultures || [];
+      const culturesForWeek = weekCultures.map((entry) => {
         if (!cultureMeta.has(entry.culture_id)) {
           cultureMeta.set(entry.culture_id, {
             id: entry.culture_id,
@@ -289,19 +315,19 @@ function GanttChartPage(): React.ReactElement {
         }
         return entry;
       });
-
       const totalYield = culturesForWeek.reduce((sum, item) => sum + item.yield, 0);
-      const weekStartDate = parseDateString(week.week_start);
+      const weekStartDate = parseDateString(weekStart);
       const monthLabel = weekStartDate.toLocaleDateString('de-DE', { month: 'short' });
-
-      return {
-        isoWeek: week.iso_week,
-        weekLabel: week.iso_week.split('-W')[1] ? `W${week.iso_week.split('-W')[1]}` : week.iso_week,
+      const isoWeek = week?.iso_week || formatIsoWeek(weekStartDate);
+      rows.push({
+        isoWeek,
+        weekLabel: isoWeek.split('-W')[1] ? `W${isoWeek.split('-W')[1]}` : isoWeek,
         monthLabel,
         cultures: culturesForWeek,
         totalYield,
-      };
-    });
+      });
+      currentDate.setDate(currentDate.getDate() + 7);
+    }
 
     const sortedCultures = [...cultureMeta.values()].sort((left, right) => left.name.localeCompare(right.name));
     const maxYield = rows.reduce((max, row) => Math.max(max, row.totalYield), 0);

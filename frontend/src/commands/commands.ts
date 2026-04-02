@@ -74,8 +74,6 @@ export function createRootCommands(options: RootCommandFactoryOptions): CommandS
       label: options.labels.createProject,
       keywords: ['projekt', 'neu', 'erstellen'],
       group: 'project',
-      shortcutHint: 'Alt+Shift+N',
-      keys: { alt: true, shift: true, key: 'n' },
       contextTags: ['global'],
       action: options.onOpenCreateProject,
     },

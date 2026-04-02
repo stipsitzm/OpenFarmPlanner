@@ -17,5 +17,6 @@
     "fieldRequired": "Schlag ist ein Pflichtfeld"
   },
   "confirmDelete": "Möchten Sie dieses Beet wirklich löschen?",
-  "addButton": "Neues Beet hinzufügen"
+  "addButton": "Neues Beet hinzufügen",
+  "selectField": "Schlag auswählen"
 }

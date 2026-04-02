@@ -472,7 +472,7 @@ function RootLayout(): React.ReactElement {
             >
               <MenuIcon fontSize="small" />
             </IconButton>
-            <span className="mobile-nav-title">OpenFarmPlanner · {activeProjectLabel}</span>
+            <span className="mobile-nav-title">OpenFarmPlanner</span>
           </div>
         ) : (
           <div className="nav-links">

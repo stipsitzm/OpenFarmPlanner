@@ -7,6 +7,7 @@ export type CreateCulturesCommandSpecsOptions = {
   enableAiEnrichment: boolean;
   enrichmentLoading: boolean;
   goToRelativeCulture: (direction: 'next' | 'previous') => void;
+  handleCreateCulture: () => void;
   handleCreatePlantingPlan: () => void;
   handleDelete: (culture: Culture) => void;
   handleEdit: (culture: Culture) => void;
@@ -25,6 +26,7 @@ export function createCulturesCommandSpecs({
   enableAiEnrichment,
   enrichmentLoading,
   goToRelativeCulture,
+  handleCreateCulture,
   handleCreatePlantingPlan,
   handleDelete,
   handleEdit,
@@ -77,6 +79,17 @@ export function createCulturesCommandSpecs({
   ] : [];
 
   return [
+    {
+      id: 'culture.create',
+      label: 'Neue Kultur erstellen (Alt+Shift+N)',
+      group: 'navigation',
+      keywords: ['kultur', 'neu', 'create'],
+      shortcutHint: 'Alt+Shift+N',
+      keys: { alt: true, shift: true, key: 'n' },
+      contextTags: ['cultures'],
+      isEnabled: () => true,
+      action: handleCreateCulture,
+    },
     {
       id: 'culture.edit',
       label: 'Kultur bearbeiten (Alt+E)',

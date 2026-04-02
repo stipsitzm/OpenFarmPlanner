@@ -1,16 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
-const { supplierListMock, supplierCreateMock } = vi.hoisted(() => ({
+const { supplierListMock } = vi.hoisted(() => ({
   supplierListMock: vi.fn(),
-  supplierCreateMock: vi.fn(),
 }));
+const navigateMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../api/api', () => ({
   supplierAPI: {
     list: supplierListMock,
-    create: supplierCreateMock,
   },
+}));
+
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => navigateMock,
 }));
 
 vi.mock('@mui/material', async () => {
@@ -24,7 +27,7 @@ vi.mock('@mui/material', async () => {
         onChange={(e) => props.onInputChange?.(e, (e.target as HTMLInputElement).value)}
       />
       <button type="button" onClick={() => props.onChange?.({} as never, null)}>clear-supplier</button>
-      <button type="button" onClick={() => props.onChange?.({} as never, 'Neuer Lieferant')}>create-supplier</button>
+      <button type="button" onClick={() => props.onChange?.({} as never, { id: -1, name: '+ Neuer Lieferant' })}>create-supplier</button>
       <button type="button" onClick={() => props.onChange?.({} as never, { id: 5, name: 'Bestehend' })}>select-supplier</button>
       <button
         type="button"
@@ -37,6 +40,7 @@ vi.mock('@mui/material', async () => {
             labelB,
             equal,
             loading: props.loading,
+            noOptionsText: props.noOptionsText,
           };
         }}
       >
@@ -66,7 +70,7 @@ const t = mockI18n.t as unknown;
 describe('BasicInfoSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(window, 'prompt').mockReturnValue('https://www.neuer-lieferant.de');
+    supplierListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Biohof', allowed_domains: [] }] } });
   });
 
   it('updates basic text fields', () => {
@@ -112,8 +116,6 @@ describe('BasicInfoSection', () => {
 
   it('searches suppliers only when at least 2 characters are typed', async () => {
     const onChange = vi.fn();
-    supplierListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Biohof' }] } });
-
     render(
       <BasicInfoSection
         formData={{}}
@@ -123,8 +125,12 @@ describe('BasicInfoSection', () => {
       />
     );
 
+    await waitFor(() => {
+      expect(supplierListMock).toHaveBeenCalledTimes(1);
+    });
+
     fireEvent.change(screen.getByLabelText('supplier-mock-input'), { target: { value: 'b' } });
-    expect(supplierListMock).not.toHaveBeenCalled();
+    expect(supplierListMock).toHaveBeenCalledTimes(2);
 
     fireEvent.change(screen.getByLabelText('supplier-mock-input'), { target: { value: 'bi' } });
     await waitFor(() => {
@@ -134,7 +140,6 @@ describe('BasicInfoSection', () => {
 
   it('uses autocomplete label/equality helpers and loading flag', async () => {
     const onChange = vi.fn();
-    supplierListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Biohof' }] } });
 
     render(
       <BasicInfoSection
@@ -153,16 +158,16 @@ describe('BasicInfoSection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'probe-autocomplete' }));
 
     expect((window as Window & { __autocompleteProbe?: unknown }).__autocompleteProbe).toEqual({
-      labelA: 'Freitext',
+      labelA: undefined,
       labelB: 'Bestehend',
       equal: true,
       loading: false,
+      noOptionsText: 'Keine Lieferanten vorhanden',
     });
   });
 
-  it('handles supplier clear, select existing and create new supplier', async () => {
+  it('handles supplier clear, select existing and redirect to create supplier', async () => {
     const onChange = vi.fn();
-    supplierCreateMock.mockResolvedValue({ data: { id: 9, name: 'Neuer Lieferant' } });
 
     render(
       <BasicInfoSection
@@ -180,21 +185,13 @@ describe('BasicInfoSection', () => {
     expect(onChange).toHaveBeenCalledWith('supplier', { id: 5, name: 'Bestehend' });
 
     fireEvent.click(screen.getByRole('button', { name: 'create-supplier' }));
-    await waitFor(() => {
-      expect(supplierCreateMock).toHaveBeenCalledWith(
-        'Neuer Lieferant',
-        'https://www.neuer-lieferant.de',
-        []
-      );
-      expect(onChange).toHaveBeenCalledWith('supplier', { id: 9, name: 'Neuer Lieferant' });
-    });
+    expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
   });
 
-  it('handles supplier list/create errors gracefully', async () => {
+  it('handles supplier list errors gracefully', async () => {
     const onChange = vi.fn();
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     supplierListMock.mockRejectedValue(new Error('list failed'));
-    supplierCreateMock.mockRejectedValue(new Error('create failed'));
 
     render(
       <BasicInfoSection
@@ -206,10 +203,27 @@ describe('BasicInfoSection', () => {
     );
 
     fireEvent.change(screen.getByLabelText('supplier-mock-input'), { target: { value: 'ab' } });
-    fireEvent.click(screen.getByRole('button', { name: 'create-supplier' }));
 
     await waitFor(() => {
       expect(errorSpy).toHaveBeenCalled();
     });
+  });
+
+  it('shows empty supplier state action', async () => {
+    const onChange = vi.fn();
+    supplierListMock.mockResolvedValue({ data: { results: [] } });
+
+    render(
+      <BasicInfoSection
+        formData={{}}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+
+    expect(await screen.findByText('Keine Lieferanten vorhanden')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Lieferanten anlegen' }));
+    expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
   });
 });

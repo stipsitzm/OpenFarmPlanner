@@ -37,11 +37,11 @@ function Locations(): React.ReactElement {
   const commands = useMemo<CommandSpec[]>(() => [
     {
       id: 'locations.create',
-      label: 'Neuer Standort (Alt+N)',
+      label: 'Neuer Standort (Alt+Shift+N)',
       group: 'navigation',
       keywords: ['standort', 'neu', 'create'],
-      shortcutHint: 'Alt+N',
-      keys: { alt: true, key: 'n' },
+      shortcutHint: 'Alt+Shift+N',
+      keys: { alt: true, shift: true, key: 'n' },
       contextTags: ['locations'],
       isEnabled: () => Boolean(commandApiRef.current),
       action: () => setCreateDialogOpen(true),

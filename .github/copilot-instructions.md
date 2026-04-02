@@ -1,55 +1,31 @@
-# Copilot Instructions (Repository-wide)
+# Copilot Instructions
 
-This repository has two main parts:
+## UI Language and i18n Rules (Mandatory)
 
-- Backend: Python (Django, managed with PDM)
-- Frontend: React + TypeScript (Vite)
+- All user-visible UI text **must** come from the i18n layer (`useTranslation`, namespace keys).
+- Do **not** add hardcoded UI strings (especially English) in components, dialogs, tables, filters, tooltips, snackbars, or form helpers.
+- The default UI language in this project is German. New keys must include a German translation.
+- Never render raw enum values or backend/internal field names directly in UI (for example: `high`, `medium`, `low`, `direct_sowing`, `created_at`).
+- Always map backend and enum values to user-friendly, localized labels before rendering.
+- Backend/API error payloads must be converted to friendly localized messages for end users.
+- Technical/raw text is allowed only in logs/debug output (`console.*`, monitoring), not in visible UI.
+- New UI features must be i18n-complete from the first commit:
+  - labels
+  - placeholders
+  - empty states
+  - loading states
+  - validation errors
+  - table headers
+  - button texts
+  - filter labels/options
+  - tooltips
+  - dialog content
+- Reuse existing translation namespaces and patterns; do not create parallel localization mechanisms.
 
-All comments, docstrings, logs, and output messages must be written in English.
+## Review Checklist for Every UI Change
 
-## Comment Style
-
-- Keep comments and docstrings concise and single-line whenever possible.
-- Avoid verbose attribute lists in class docstrings; prefer a short summary sentence.
-- Apply this especially to Django model classes and their methods.
-
-For specific coding rules, see:
-
-- `./instructions/python-backend.instructions.md`
-- `./instructions/react-frontend.instructions.md`
-
-## Django Migrations
-
-- Never modify an existing migration file after it is created.
-- Always create a new migration for every follow-up schema change.
-- If a previous migration needs correction, add a new fix migration instead of editing the old one.
-
-## AI commit instructions
-
-When generating commits or PR titles:
-
-- Always use Conventional Commits.
-- Use `type(scope): description` (scope optional).
-- Commit messages and PR titles must always be in English.
-
-Examples:
-
-- `feat: add crop sharing`
-- `fix: prevent duplicate entries`
-- `refactor: simplify version endpoint`
-- `docs: update deployment instructions`
-
-Rules:
-
-- Use `feat:` only for user-visible features.
-- Use `fix:` only for bug fixes.
-- Use `refactor:` for internal changes without behavior changes.
-- Do not use `feat:` or `fix:` unless a release should be triggered.
-- PR titles must follow the same format.
-
-Release automation mapping:
-
-- `fix:` -> patch release
-- `feat:` -> minor release
-- `type!:` or `BREAKING CHANGE:` -> major release
-- `docs:`, `refactor:`, `test:`, `chore:`, `ci:`, `build:`, `style:`, `perf:` -> no release by default
+- Verify there are no newly introduced hardcoded user-visible strings.
+- Verify no raw technical values are rendered directly.
+- Verify all new/changed messages are translated and understandable for users.
+- Verify fallback messages shown from API errors are localized and non-technical.
+- Verify updated tests (if applicable) assert localized labels rather than internal codes.
