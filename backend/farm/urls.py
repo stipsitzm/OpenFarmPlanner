@@ -6,6 +6,7 @@ from .views import (
     FieldViewSet,
     BedViewSet,
     CultureViewSet,
+    CultureSupplierDataViewSet,
     PlantingPlanViewSet,
     TaskViewSet,
     SeedDemandListView,
@@ -41,6 +42,7 @@ router.register(r'suppliers', SupplierViewSet)
 router.register(r'fields', FieldViewSet)
 router.register(r'beds', BedViewSet)
 router.register(r'cultures', CultureViewSet)
+router.register(r'culture-supplier-data', CultureSupplierDataViewSet)
 router.register(r'public-cultures', PublicCultureViewSet, basename='public-cultures')
 router.register(r'seed-packages', SeedPackageViewSet)
 router.register(r'planting-plans', PlantingPlanViewSet)

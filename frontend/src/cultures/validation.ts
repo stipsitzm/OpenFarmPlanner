@@ -74,18 +74,13 @@ export function validateCulture(
     }
   }
 
-  // Required fields: name, variety, supplier
+  // Required fields: name, variety
   if (!draft.name) {
     errors.name = t('form.nameRequired');
   }
   if (!draft.variety) {
     errors.variety = t('form.varietyRequired');
   }
-  if (!draft.supplier) {
-    errors.supplier = t('form.supplierRequired');
-  }
-
-
   // Optional numeric fields with explicit error keys
   if (draft.growth_duration_days !== undefined && draft.growth_duration_days !== null && (typeof draft.growth_duration_days !== 'string' || draft.growth_duration_days !== '')) {
     const numValue = toNumber(draft.growth_duration_days);
@@ -130,28 +125,6 @@ export function validateCulture(
 
   if (draft.thousand_kernel_weight_g !== undefined && draft.thousand_kernel_weight_g !== null && Number(draft.thousand_kernel_weight_g) <= 0) {
     errors.thousand_kernel_weight_g = t('form.thousandKernelWeightError');
-  }
-
-  if (draft.seed_packages && Array.isArray(draft.seed_packages)) {
-    const seen = new Set<string>();
-    draft.seed_packages.forEach((pkg, index) => {
-      const sizeValue = toNumber(pkg?.size_value);
-      const sizeUnit = pkg?.size_unit ?? 'g';
-      if (sizeValue === null || sizeValue <= 0) {
-        errors[`seed_packages.${index}.size_value`] = 'Packgröße muss > 0 sein';
-      } else if (sizeUnit === 'g' && Math.round(sizeValue * 10) !== sizeValue * 10) {
-        errors[`seed_packages.${index}.size_value`] = 'Packgröße darf maximal eine Nachkommastelle haben';
-      } else if (sizeUnit === 'seeds' && !Number.isInteger(sizeValue)) {
-        errors[`seed_packages.${index}.size_value`] = 'Korn-Packgrößen müssen ganze Zahlen sein';
-      }
-      const key = `${sizeUnit}:${sizeValue}`;
-      if (sizeValue !== null) {
-        if (seen.has(key)) {
-          errors.seed_packages = 'Doppelte Packungsgrößen sind nicht erlaubt';
-        }
-        seen.add(key);
-      }
-    });
   }
 
   // Display color validation

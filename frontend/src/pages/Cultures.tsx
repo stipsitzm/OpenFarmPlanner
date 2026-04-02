@@ -149,6 +149,7 @@ function Cultures(): React.ReactElement {
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
 
   const [cultures, setCultures] = useState<Culture[]>([]);
+  const [isCulturesLoading, setIsCulturesLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingCulture, setEditingCulture] = useState<Culture | undefined>(undefined);
   const [importMenuAnchor, setImportMenuAnchor] = useState<null | HTMLElement>(null);
@@ -213,12 +214,15 @@ function Cultures(): React.ReactElement {
   }, [enrichmentLoading]);
 
   const fetchCultures = useCallback(async () => {
+    setIsCulturesLoading(true);
     try {
       const response = await cultureAPI.list();
       setCultures(response.data.results);
     } catch (error) {
       console.error('Error fetching cultures:', error);
       showSnackbar(t('messages.fetchError'), 'error');
+    } finally {
+      setIsCulturesLoading(false);
     }
   }, [showSnackbar, t]);
 
@@ -1013,6 +1017,7 @@ function Cultures(): React.ReactElement {
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <CultureDetail
           cultures={cultures}
+          isLoading={isCulturesLoading}
           selectedCultureId={selectedCultureId}
           onCultureSelect={handleCultureSelect}
         />

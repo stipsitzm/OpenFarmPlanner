@@ -60,7 +60,18 @@
     "noSuppliers": "Keine Lieferanten vorhanden",
     "createSuppliers": "Lieferanten anlegen",
     "newSupplierOption": "+ Neuer Lieferant",
+    "createNewSupplierInline": "Neuen Lieferanten anlegen",
+    "noSuppliersHint": "Bitte legen Sie zuerst einen Lieferanten an.",
     "supplierHomepage": "Lieferanten-Homepage",
+    "generalInfoSectionTitle": "Allgemeine Informationen",
+    "generalInfoSectionDescription": "Diese Angaben gelten allgemein für die Sorte und sind nicht vom Saatgutlieferanten abhängig.",
+    "supplierDataSectionTitle": "Saatgutdaten je Lieferant",
+    "supplierDataSectionDescription": "Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.",
+    "noSupplierDataRows": "Noch keine Saatgutdaten für Lieferanten vorhanden.",
+    "supplierProductNameLabel": "Artikelbezeichnung beim Lieferanten",
+    "addSupplierData": "Lieferantendaten hinzufügen",
+    "removeSupplierData": "Lieferantendaten löschen",
+    "removeSeedPackageAriaLabel": "Packungsgröße entfernen",
     "cropFamily": "Pflanzenfamilie",
     "cropFamilyPlaceholder": "z.B. Solanaceae",
     "nutrientDemand": "Nährstoffbedarf",
@@ -139,7 +150,9 @@
     "seedRateDirectUnit": "Direktsaat Einheit",
     "seedRatePreCultivationValue": "Pflanzung Menge",
     "seedRatePreCultivationUnit": "Pflanzung Einheit",
-    "packageUnitLabel": "Packungseinheit"
+    "packageUnitLabel": "Packungseinheit",
+    "packageUnitGram": "g",
+    "packageUnitSeeds": "Korn"
   },
   "messages": {
     "createSuccess": "Kultur erfolgreich erstellt",
@@ -147,10 +160,30 @@
     "createError": "Fehler beim Erstellen der Kultur",
     "updateError": "Fehler beim Aktualisieren der Kultur",
     "fetchError": "Fehler beim Laden der Kulturen",
+    "loadingCultures": "Kulturen werden geladen…",
     "saving": "Speichern...",
     "unsavedChanges": "Ungespeicherte Änderungen",
     "fixErrors": "Bitte beheben Sie die Validierungsfehler",
     "exportSuccess": "JSON exportiert"
+  },
+  "seedDemand": {
+    "title": "Saatgutbedarf",
+    "loadError": "Saatgutbedarf konnte nicht geladen werden.",
+    "saveError": "Lieferantenauswahl konnte nicht gespeichert werden.",
+    "selectSupplier": "Lieferant auswählen",
+    "createSupplierAction": "Neuen Lieferanten anlegen",
+    "editCultureAction": "Kultur bearbeiten",
+    "noSupplierData": "Keine Lieferantendaten vorhanden",
+    "noPackagesAvailable": "Keine Packungsgrößen verfügbar",
+    "noPackageCalculationPossible": "Keine Berechnung möglich",
+    "unitSeeds": "Korn",
+    "unitGrams": "g",
+    "columns": {
+      "culture": "Kultur",
+      "supplier": "Lieferant",
+      "requiredAmount": "Gesamtbedarf",
+      "packages": "Packungsgrößen"
+    }
   },
   "history": {
     "titles": {

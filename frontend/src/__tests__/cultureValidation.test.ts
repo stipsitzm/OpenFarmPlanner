@@ -10,7 +10,7 @@ describe('validateCulture', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors.name).toBe('form.nameRequired');
     expect(result.errors.variety).toBe('form.varietyRequired');
-    expect(result.errors.supplier).toBe('form.supplierRequired');
+    expect(result.errors.supplier).toBeUndefined();
     expect(result.errors.growth_duration_days).toBeUndefined();
     expect(result.errors.harvest_duration_days).toBeUndefined();
     expect(result.errors.propagation_duration_days).toBeUndefined();

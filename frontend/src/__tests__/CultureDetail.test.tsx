@@ -55,6 +55,20 @@ describe('CultureDetail Component', () => {
     expect(screen.getByText(translations.cultures.selectPrompt)).toBeInTheDocument();
   });
 
+  it('shows loading state without empty-state flicker', () => {
+    const mockOnSelect = vi.fn();
+    render(
+      <CultureDetail
+        cultures={[]}
+        isLoading
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getByText('Kulturen werden geladen…')).toBeInTheDocument();
+    expect(screen.queryByText(translations.cultures.emptySearch.title)).not.toBeInTheDocument();
+  });
+
   it('displays culture details when culture is selected', () => {
     const mockOnSelect = vi.fn();
     render(
@@ -67,6 +81,7 @@ describe('CultureDetail Component', () => {
     
     expect(screen.getByText('Tomato')).toBeInTheDocument();
     expect(screen.getByText('Cherry')).toBeInTheDocument();
+    expect(screen.getByText('Saatgutdaten je Lieferant')).toBeInTheDocument();
   });
 
   it('displays harvest information correctly', () => {
@@ -125,12 +140,15 @@ describe('CultureDetail Component', () => {
       {
         id: 12,
         name: 'Salat',
-        supplier: {
-          id: 9,
-          name: 'ReinSaat',
-          homepage_url: 'https://www.reinsaat.at',
-          allowed_domains: ['reinsaat.at'],
-        },
+        supplier_data: [{
+          supplier: {
+            id: 9,
+            name: 'ReinSaat',
+            homepage_url: 'https://www.reinsaat.at',
+            allowed_domains: ['reinsaat.at'],
+          },
+          supplier_product_url: 'https://www.reinsaat.at',
+        }],
       },
     ];
 

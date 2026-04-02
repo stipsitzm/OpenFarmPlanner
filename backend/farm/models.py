@@ -629,6 +629,14 @@ class Culture(TimestampedModel):
         related_name='cultures',
         help_text="Seed supplier (preferred over seed_supplier text field)"
     )
+    selected_seed_demand_supplier = models.ForeignKey(
+        'Supplier',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='seed_demand_cultures',
+        help_text='Persisted supplier selection for seed-demand package calculations',
+    )
     supplier_product_url = models.URLField(null=True, blank=True, help_text='Supplier product page URL for enrichment')
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='cultures')
     source_public_culture = models.ForeignKey('PublicCulture', null=True, blank=True, on_delete=models.SET_NULL, related_name='imported_cultures')
@@ -901,6 +909,9 @@ class Culture(TimestampedModel):
         if self.thousand_kernel_weight_g is not None and self.thousand_kernel_weight_g <= 0:
             errors['thousand_kernel_weight_g'] = 'Thousand kernel weight must be greater than zero.'
 
+        if self.selected_seed_demand_supplier_id and self.project_id and self.selected_seed_demand_supplier.project_id != self.project_id:
+            errors['selected_seed_demand_supplier'] = 'Selected seed demand supplier must belong to the same project.'
+
         
         # Validate hex color format if provided.
         if self.display_color:
@@ -930,6 +941,7 @@ class Culture(TimestampedModel):
                 'seed_rate_pre_cultivation_unit', 'sowing_calculation_safety_percent_pre_cultivation',
                 'thousand_kernel_weight_g', 'seeding_requirement',
                 'seeding_requirement_type', 'display_color', 'supplier_id', 'supplier_product_url', 'image_file_id',
+                'selected_seed_demand_supplier_id',
             }
             if any(previous.get(field) != getattr(self, field) for field in tracked_fields):
                 self.is_modified_from_source = True
@@ -1060,6 +1072,41 @@ class Culture(TimestampedModel):
                 )
             )
         ]
+
+class CultureSupplierData(TimestampedModel):
+    """Supplier-specific seed metadata attached to one culture."""
+
+    culture = models.ForeignKey(Culture, on_delete=models.CASCADE, related_name='supplier_data')
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='culture_supplier_data')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='culture_supplier_data')
+    supplier_name = models.CharField(max_length=200, blank=True)
+    supplier_url = models.URLField(blank=True)
+    supplier_product_name = models.CharField(max_length=255, blank=True)
+    supplier_product_url = models.URLField(blank=True)
+    packaging_sizes = models.JSONField(default=list, blank=True)
+    thousand_kernel_weight_g = models.FloatField(null=True, blank=True)
+    germination_rate = models.FloatField(null=True, blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    notes = models.TextField(blank=True)
+    source_url = models.URLField(blank=True)
+
+    class Meta:
+        ordering = ['culture', 'supplier']
+        constraints = [
+            models.UniqueConstraint(fields=['culture', 'supplier'], name='unique_culture_supplier_data_per_supplier'),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        errors = {}
+        if self.thousand_kernel_weight_g is not None and self.thousand_kernel_weight_g <= 0:
+            errors['thousand_kernel_weight_g'] = 'Thousand kernel weight must be greater than zero.'
+        if self.germination_rate is not None and (self.germination_rate < 0 or self.germination_rate > 100):
+            errors['germination_rate'] = 'Germination rate must be between 0 and 100.'
+        if self.price is not None and self.price < 0:
+            errors['price'] = 'Price must be non-negative.'
+        if errors:
+            raise ValidationError(errors)
 
 
 class PublicCulture(TimestampedModel):

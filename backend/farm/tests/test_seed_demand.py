@@ -4,7 +4,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
-from farm.models import Location, Field, Bed, Culture, PlantingPlan, Project, ProjectMembership, SeedPackage
+from farm.models import Location, Field, Bed, Culture, CultureSupplierData, PlantingPlan, Project, ProjectMembership, Supplier
 
 User = get_user_model()
 
@@ -46,6 +46,20 @@ def _create_plan(culture: Culture, bed: Bed, area: float, quantity: int | None =
     )
 
 
+def _create_supplier_data(culture: Culture, package_size: float, package_unit: str) -> None:
+    supplier = Supplier.objects.create(
+        name=f'Supplier {culture.name}',
+        homepage_url=f'https://{culture.name.lower()}.example',
+        project=culture.project,
+    )
+    CultureSupplierData.objects.create(
+        culture=culture,
+        supplier=supplier,
+        project=culture.project,
+        packaging_sizes=[{'size_value': package_size, 'size_unit': package_unit}],
+    )
+
+
 @pytest.mark.django_db
 def test_seed_demand_applies_safety_margin(api_client: APIClient, bed: Bed):
     culture = Culture.objects.create(
@@ -60,7 +74,7 @@ def test_seed_demand_applies_safety_margin(api_client: APIClient, bed: Bed):
     )
     _create_plan(culture, bed, 5)
     _create_plan(culture, bed, 5)
-    SeedPackage.objects.create(culture=culture, size_value=25, size_unit='g', project=bed.project)
+    _create_supplier_data(culture, 25, 'g')
 
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     row = response.json()['results'][0]
@@ -82,7 +96,7 @@ def test_seed_demand_supports_seed_per_m2_and_seed_packages(api_client: APIClien
         project=bed.project,
     )
     _create_plan(culture, bed, 10)
-    SeedPackage.objects.create(culture=culture, size_value=50, size_unit='seeds', project=bed.project)
+    _create_supplier_data(culture, 50, 'seeds')
 
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     assert response.status_code == 200
@@ -106,7 +120,7 @@ def test_seed_demand_converts_grams_to_seed_packages_with_tkg(api_client: APICli
         project=bed.project,
     )
     _create_plan(culture, bed, 5)
-    SeedPackage.objects.create(culture=culture, size_value=5000, size_unit='seeds', project=bed.project)
+    _create_supplier_data(culture, 5000, 'seeds')
 
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     assert response.status_code == 200
@@ -129,7 +143,7 @@ def test_seed_demand_returns_warning_when_conversion_missing(api_client: APIClie
         project=bed.project,
     )
     _create_plan(culture, bed, 10, quantity=30, cultivation_type='pre_cultivation')
-    SeedPackage.objects.create(culture=culture, size_value=5, size_unit='g', project=bed.project)
+    _create_supplier_data(culture, 5, 'g')
 
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     assert response.status_code == 200

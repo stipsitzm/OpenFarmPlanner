@@ -12,9 +12,9 @@
  * @returns JSX element rendering the culture form
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../i18n';
-import type { Culture } from '../api/types';
+import type { Culture, Supplier } from '../api/types';
 import { extractApiErrorMessage } from '../api/errors';
 import {
   Dialog,
@@ -25,7 +25,14 @@ import {
   Alert,
   Button,
   Typography,
+  TextField,
+  Select,
+  MenuItem,
+  IconButton,
 } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { supplierAPI } from '../api/api';
+import { useNavigate } from 'react-router-dom';
 import { validateCulture } from './validation';
 import { BasicInfoSection } from './sections/BasicInfoSection';
 import { TimingSection } from './sections/TimingSection';
@@ -108,6 +115,7 @@ export function CultureForm({
   onCancel,
 }: CultureFormProps): React.ReactElement {
   const { t } = useTranslation('cultures');
+  const navigate = useNavigate();
   const isEdit = Boolean(culture);
   const [saveError, setSaveError] = useState<string>('');
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
@@ -127,9 +135,55 @@ export function CultureForm({
   const [formData, setFormData] = useState<Partial<Culture>>(buildInitialFormData(culture));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [supplierOptions, setSupplierOptions] = useState<Supplier[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
   const dialogContentRef = useRef<HTMLDivElement | null>(null);
+  const supplierOptionsRef = useRef<Supplier[]>([]);
+
+  const loadSuppliers = useCallback(async () => {
+    try {
+      const response = await supplierAPI.list();
+      const nextSuppliers = response.data.results || [];
+      const previousIds = new Set(supplierOptionsRef.current.map((supplier) => supplier.id).filter((id): id is number => typeof id === 'number'));
+      const newestSupplier = [...nextSuppliers].reverse().find((supplier) => typeof supplier.id === 'number' && !previousIds.has(supplier.id));
+
+      supplierOptionsRef.current = nextSuppliers;
+      setSupplierOptions(nextSuppliers);
+
+      if (newestSupplier?.id) {
+        setFormData((prev) => {
+          const rows = prev.supplier_data ?? [];
+          let hasChanges = false;
+          const nextRows = rows.map((row) => {
+            const hasSupplier = typeof row.supplier_id === 'number' || typeof row.supplier?.id === 'number';
+            if (hasSupplier) {
+              return row;
+            }
+            hasChanges = true;
+            return {
+              ...row,
+              supplier_id: newestSupplier.id,
+              supplier_name: newestSupplier.name,
+              supplier_name_input: undefined,
+            };
+          });
+
+          if (!hasChanges) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            supplier_data: nextRows,
+          };
+        });
+      }
+    } catch {
+      supplierOptionsRef.current = [];
+      setSupplierOptions([]);
+    }
+  }, []);
 
   useEffect(() => {
     setFormData(buildInitialFormData(culture));
@@ -138,6 +192,17 @@ export function CultureForm({
     setIsValid(true);
     setSaveError('');
   }, [culture]);
+
+  useEffect(() => {
+    void loadSuppliers();
+
+    const onWindowFocus = () => {
+      void loadSuppliers();
+    };
+
+    window.addEventListener('focus', onWindowFocus);
+    return () => window.removeEventListener('focus', onWindowFocus);
+  }, [loadSuppliers]);
 
   // Validate on every change
   const validateAndSet = (draft: Partial<Culture>) => {
@@ -172,6 +237,31 @@ export function CultureForm({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const supplierRows = formData.supplier_data ?? [];
+  const updateSupplierRow = (index: number, patch: Record<string, unknown>) => {
+    const nextRows = supplierRows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row));
+    handleChange('supplier_data', nextRows);
+  };
+  const addSupplierRow = () => {
+    handleChange('supplier_data', [...supplierRows, { supplier_name_input: '', packaging_sizes: [] }]);
+  };
+  const removeSupplierRow = (index: number) => {
+    handleChange('supplier_data', supplierRows.filter((_row, rowIndex) => rowIndex !== index));
+  };
+  const addPackageRow = (supplierIndex: number) => {
+    const currentPackages = supplierRows[supplierIndex]?.packaging_sizes ?? [];
+    updateSupplierRow(supplierIndex, { packaging_sizes: [...currentPackages, { size_value: 0, size_unit: 'g' }] });
+  };
+  const updatePackageRow = (supplierIndex: number, packageIndex: number, patch: Record<string, unknown>) => {
+    const currentPackages = supplierRows[supplierIndex]?.packaging_sizes ?? [];
+    const nextPackages = currentPackages.map((pkg, index) => (index === packageIndex ? { ...pkg, ...patch } : pkg));
+    updateSupplierRow(supplierIndex, { packaging_sizes: nextPackages });
+  };
+  const removePackageRow = (supplierIndex: number, packageIndex: number) => {
+    const currentPackages = supplierRows[supplierIndex]?.packaging_sizes ?? [];
+    updateSupplierRow(supplierIndex, { packaging_sizes: currentPackages.filter((_pkg, index) => index !== packageIndex) });
   };
 
   const handleDialogContentScrollKey = (event: { key: string; altKey: boolean; ctrlKey: boolean; metaKey: boolean; preventDefault: () => void }, contentElement: HTMLDivElement) => {
@@ -249,7 +339,10 @@ export function CultureForm({
         </DialogTitle>
         <DialogContent ref={dialogContentRef} dividers sx={{ maxHeight: '70vh' }} onKeyDownCapture={handleDialogContentKeyDown}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 8 }}>
-            <Typography variant="h6">Allgemeine Informationen</Typography>
+            <Typography variant="h6">{t('form.generalInfoSectionTitle')}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {t('form.generalInfoSectionDescription')}
+            </Typography>
             <BasicInfoSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <TimingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <HarvestSection formData={formData} errors={errors} onChange={handleChange} t={t} />
@@ -257,6 +350,105 @@ export function CultureForm({
             <SeedingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <ColorSection formData={formData} errors={errors} onChange={handleChange} t={t} defaultColor={DEFAULT_DISPLAY_COLOR} />
             <NotesSection formData={formData} onChange={handleChange} t={t} errors={errors} />
+            <Typography variant="h6" sx={{ mt: 1 }}>{t('form.supplierDataSectionTitle')}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {t('form.supplierDataSectionDescription')}
+            </Typography>
+            {supplierRows.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                {t('form.noSupplierDataRows')}
+              </Typography>
+            ) : null}
+            {supplierRows.map((row, supplierIndex) => (
+              <div key={`supplier-row-${supplierIndex}`} style={{ border: '1px solid #e0e0e0', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Select
+                  value={row.supplier_id ?? row.supplier?.id ?? ''}
+                  onChange={(event) => {
+                    const selectedValue = String(event.target.value ?? '');
+
+                    if (selectedValue === '') {
+                      updateSupplierRow(supplierIndex, {
+                        supplier_id: null,
+                        supplier_name: undefined,
+                        supplier_name_input: undefined,
+                      });
+                      return;
+                    }
+
+                    const value = Number(selectedValue);
+                    if (value === -1) {
+                      navigate('/app/suppliers?create=1');
+                      return;
+                    }
+                    const selectedSupplier = supplierOptions.find((supplier) => supplier.id === value);
+                    updateSupplierRow(supplierIndex, {
+                      supplier_id: value,
+                      supplier_name_input: selectedSupplier ? undefined : row.supplier_name_input,
+                      supplier_name: selectedSupplier?.name ?? row.supplier_name,
+                    });
+                  }}
+                  displayEmpty
+                  size="small"
+                  disabled={supplierOptions.length === 0}
+                >
+                  <MenuItem value="">{supplierOptions.length > 0 ? t('form.supplierPlaceholder') : t('form.noSuppliers')}</MenuItem>
+                  {supplierOptions.map((supplier) => (
+                    <MenuItem key={supplier.id} value={supplier.id}>{supplier.name}</MenuItem>
+                  ))}
+                  <MenuItem value={-1}>{t('form.newSupplierOption')}</MenuItem>
+                </Select>
+                {supplierOptions.length === 0 ? (
+                  <>
+                    <Typography variant="body2" color="warning.main">
+                      {t('form.noSuppliersHint')}
+                    </Typography>
+                    <Button variant="outlined" onClick={() => navigate('/app/suppliers?create=1')}>
+                      {t('form.createSuppliers')}
+                    </Button>
+                  </>
+                ) : null}
+                <TextField
+                  label={t('form.supplierProductNameLabel') }
+                  value={row.supplier_product_name ?? ''}
+                  onChange={(event) => updateSupplierRow(supplierIndex, { supplier_product_name: event.target.value })}
+                  fullWidth
+                />
+                <TextField
+                  label={t('form.thousandKernelWeightLabel')}
+                  type="number"
+                  value={row.thousand_kernel_weight_g ?? ''}
+                  onChange={(event) => updateSupplierRow(supplierIndex, { thousand_kernel_weight_g: event.target.value ? Number(event.target.value) : null })}
+                  fullWidth
+                />
+                <Typography variant="subtitle2">{t('form.seedPackagesLabel')}</Typography>
+                {(row.packaging_sizes ?? []).map((pkg, packageIndex) => (
+                  <div key={`pkg-${supplierIndex}-${packageIndex}`} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <TextField
+                      label={t('form.seedAmountLabel')}
+                      type="number"
+                      value={pkg.size_value}
+                      onChange={(event) => updatePackageRow(supplierIndex, packageIndex, { size_value: Number(event.target.value) || 0 })}
+                    />
+                    <Select
+                      value={pkg.size_unit}
+                      onChange={(event) => updatePackageRow(supplierIndex, packageIndex, { size_unit: event.target.value })}
+                      size="small"
+                    >
+                      <MenuItem value="g">{t('form.packageUnitGram')}</MenuItem>
+                      <MenuItem value="seeds">{t('form.packageUnitSeeds')}</MenuItem>
+                    </Select>
+                    <IconButton onClick={() => removePackageRow(supplierIndex, packageIndex)} aria-label={t('form.removeSeedPackageAriaLabel')}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Button variant="outlined" onClick={() => addPackageRow(supplierIndex)}>{t('form.addSeedPackage')}</Button>
+                  <Button variant="outlined" color="error" onClick={() => removeSupplierRow(supplierIndex)}>{t('form.removeSupplierData')}</Button>
+                </div>
+              </div>
+            ))}
+            <Button variant="outlined" onClick={addSupplierRow}>{t('form.addSupplierData')}</Button>
           </div>
         </DialogContent>
         <DialogActions sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>

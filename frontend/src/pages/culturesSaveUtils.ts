@@ -1,5 +1,5 @@
 import type { Culture } from '../api/api';
-import type { SeedPackage } from '../api/types';
+import type { CultureSupplierDataInput } from '../api/types';
 import {
   normalizeCultivationType,
   normalizeHarvestMethod,
@@ -15,20 +15,35 @@ export type CultureSavePayload = Culture & {
 };
 
 export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
-  const normalizedSeedPackages: SeedPackage[] | undefined = Array.isArray(culture.seed_packages)
-    ? culture.seed_packages.map((pkg) => ({
-        size_value: pkg.size_unit === 'g'
-          ? Math.round((Number(pkg.size_value) || 0) * 10) / 10
-          : Math.round(Number(pkg.size_value) || 0),
-        size_unit: (pkg.size_unit === 'seeds' ? 'seeds' : 'g') as SeedPackage['size_unit'],
-        evidence_text: pkg.evidence_text ?? '',
-        last_seen_at: pkg.last_seen_at ?? null,
-      }))
-    : culture.seed_packages;
+  const supplierPayloadRows: CultureSupplierDataInput[] = [];
+  if (Array.isArray(culture.supplier_data) && culture.supplier_data.length > 0) {
+    supplierPayloadRows.push(...culture.supplier_data.map((row) => ({
+      supplier_id: row.supplier?.id ?? row.supplier_id ?? null,
+      supplier_name_input: row.supplier_name_input,
+      supplier_name: row.supplier_name ?? row.supplier?.name,
+      supplier_product_name: row.supplier_product_name,
+      supplier_product_url: row.supplier_product_url,
+      packaging_sizes: row.packaging_sizes ?? [],
+      thousand_kernel_weight_g: row.thousand_kernel_weight_g ?? null,
+      germination_rate: row.germination_rate ?? null,
+      price: row.price ?? null,
+      notes: row.notes ?? '',
+      source_url: row.source_url ?? '',
+    })));
+  } else if (culture.supplier) {
+    supplierPayloadRows.push({
+      supplier_id: culture.supplier.id ?? null,
+      supplier_name_input: culture.supplier.id ? undefined : culture.supplier.name,
+      supplier_name: culture.supplier.name,
+      supplier_product_url: culture.supplier_product_url ?? '',
+      packaging_sizes: [],
+      thousand_kernel_weight_g: null,
+    });
+  }
 
   const payload: CultureSavePayload = {
     ...culture,
-    seed_packages: normalizedSeedPackages,
+    seed_packages: undefined,
     seed_rate_unit: normalizeSeedRateUnit(culture.seed_rate_unit),
     seed_rate_direct_unit: normalizeSeedRateUnit(culture.seed_rate_direct_unit),
     seed_rate_pre_cultivation_unit: normalizeSeedRateUnit(culture.seed_rate_pre_cultivation_unit),
@@ -42,6 +57,7 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
     seeding_requirement_type: normalizeSeedingRequirementType(culture.seeding_requirement_type),
     supplier_id: culture.supplier?.id || null,
     supplier_name: culture.supplier && !culture.supplier.id ? culture.supplier.name : undefined,
+    supplier_data_input: supplierPayloadRows,
     supplier: undefined,
   };
 

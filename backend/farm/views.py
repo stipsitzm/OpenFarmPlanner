@@ -31,7 +31,7 @@ from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 from django.utils.dateparse import parse_date
 from django.utils.translation import gettext as _
-from .models import AgentLoginToken, Location, Field, Bed, BedLayout, FieldLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, PublicCulture, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
+from .models import AgentLoginToken, Location, Field, Bed, BedLayout, FieldLayout, Culture, CultureSupplierData, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, PublicCulture, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
 from .project_context import get_active_project_or_400, require_project_admin, resolve_project_for_user
 from .serializers import (
     LocationSerializer,
@@ -49,6 +49,7 @@ from .serializers import (
     CultureHistoryEntrySerializer,
     CultureRestoreSerializer,
     SeedPackageSerializer,
+    CultureSupplierDataSerializer,
     ProjectSerializer,
     ProjectMembershipSerializer,
     ProjectInvitationSerializer,
@@ -929,9 +930,9 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
     def get_queryset(self):
         include_deleted = self.request.query_params.get('include_deleted') in {'1', 'true', 'True'}
         if include_deleted:
-            return Culture.all_objects.filter(project=self.request.active_project)
-        return Culture.objects.filter(project=self.request.active_project)
-    
+            return Culture.all_objects.filter(project=self.request.active_project).prefetch_related('supplier_data__supplier')
+        return Culture.objects.filter(project=self.request.active_project).prefetch_related('supplier_data__supplier')
+
     def _resolve_supplier(self, culture_data: dict) -> Supplier | None:
         """Resolve supplier from culture data using supplier_id or supplier_name.
         
@@ -1469,6 +1470,27 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
 
 
 
+class CultureSupplierDataViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
+    queryset = CultureSupplierData.objects.select_related('culture', 'supplier')
+    serializer_class = CultureSupplierDataSerializer
+
+    def get_queryset(self):
+        return self.queryset.filter(project=self.request.active_project)
+
+    def perform_create(self, serializer):
+        instance = serializer.save(project=self.request.active_project)
+        self.create_project_revision(f"CultureSupplierData created #{instance.pk}")
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"CultureSupplierData updated #{instance.pk}")
+
+    def perform_destroy(self, instance):
+        instance_id = instance.pk
+        instance.delete()
+        self.create_project_revision(f"CultureSupplierData deleted #{instance_id}")
+
+
 class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only public library for published cultures with project import action."""
 
@@ -1833,6 +1855,24 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
     serializer_class = SeedDemandSerializer
 
     @staticmethod
+    def _parse_selected_suppliers(raw_value: str | None) -> dict[int, int]:
+        selected: dict[int, int] = {}
+        if not raw_value:
+            return selected
+        for item in raw_value.split(','):
+            if ':' not in item:
+                continue
+            culture_raw, supplier_raw = item.split(':', 1)
+            try:
+                culture_id = int(culture_raw.strip())
+                supplier_id = int(supplier_raw.strip())
+            except (TypeError, ValueError):
+                continue
+            if culture_id > 0 and supplier_id > 0:
+                selected[culture_id] = supplier_id
+        return selected
+
+    @staticmethod
     def _select_seed_rate(culture: Culture, cultivation_type: str | None) -> tuple[Decimal | None, str | None]:
         active_types = set(culture.cultivation_types or [])
         if cultivation_type and active_types and cultivation_type not in active_types:
@@ -1910,7 +1950,7 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
         plans = (
             PlantingPlan.objects
             .filter(project=request.active_project)
-            .select_related('culture', 'culture__supplier')
+            .select_related('culture', 'culture__supplier', 'culture__selected_seed_demand_supplier')
             .order_by('culture__name', 'culture__variety')
         )
         grouped: dict[int, dict] = {}
@@ -1927,6 +1967,7 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                     'required_amount_unit': None,
                     'warning': None,
                     'tkg': Decimal(str(culture.thousand_kernel_weight_g)) if culture.thousand_kernel_weight_g else None,
+                    'culture': culture,
                 },
             )
             if entry['warning']:
@@ -1954,37 +1995,79 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
             entry['required_amount_value'] += requirement_value * margin_factor
 
         culture_ids = list(grouped.keys())
-        package_map: dict[int, list[SeedPackage]] = defaultdict(list)
-        for package in SeedPackage.objects.filter(culture_id__in=culture_ids).filter(
-            Q(project=request.active_project) | Q(project__isnull=True),
-        ).order_by('size_unit', 'size_value'):
-            package_map[package.culture_id].append(package)
-
+        selected_supplier_by_culture = self._parse_selected_suppliers(request.query_params.get('supplier_selection'))
+        supplier_rows = (
+            CultureSupplierData.objects
+            .filter(project=request.active_project, culture_id__in=culture_ids)
+            .select_related('supplier')
+            .order_by('culture_id', 'supplier__name')
+        )
+        suppliers_map: dict[int, list[CultureSupplierData]] = defaultdict(list)
+        for row in supplier_rows:
+            suppliers_map[row.culture_id].append(row)
+        pending_selection_updates: list[Culture] = []
         rows: list[dict] = []
         for culture_id, entry in grouped.items():
             required_amount = entry['required_amount_value']
             required_unit = entry['required_amount_unit']
             warning = entry['warning']
-            packages = package_map.get(culture_id, [])
+            culture = entry['culture']
+            supplier_options = suppliers_map.get(culture_id, [])
+            selected_supplier = None
+            selected_supplier_id = selected_supplier_by_culture.get(culture_id)
+            if selected_supplier_id is None:
+                selected_supplier_id = culture.selected_seed_demand_supplier_id
+            if selected_supplier_id:
+                selected_supplier = next((item for item in supplier_options if item.supplier_id == selected_supplier_id), None)
+            if selected_supplier is None and len(supplier_options) == 1:
+                selected_supplier = supplier_options[0]
+                selected_supplier_id = selected_supplier.supplier_id
+
+            if selected_supplier and culture.selected_seed_demand_supplier_id != selected_supplier.supplier_id:
+                culture.selected_seed_demand_supplier_id = selected_supplier.supplier_id
+                pending_selection_updates.append(culture)
+            if selected_supplier is None and culture.selected_seed_demand_supplier_id is not None and not supplier_options:
+                culture.selected_seed_demand_supplier = None
+                pending_selection_updates.append(culture)
+
+            packages_raw = selected_supplier.packaging_sizes if selected_supplier else []
+            packages = []
+            for item in packages_raw or []:
+                if not isinstance(item, dict):
+                    continue
+                size_value = item.get('size_value')
+                size_unit = item.get('size_unit')
+                if not isinstance(size_value, (int, float)) or size_unit not in {SEED_PACKAGE_UNIT_GRAMS, SEED_PACKAGE_UNIT_SEEDS}:
+                    continue
+                packages.append({'size_value': float(size_value), 'size_unit': size_unit})
+            row_tkg = Decimal(str(selected_supplier.thousand_kernel_weight_g)) if (selected_supplier and selected_supplier.thousand_kernel_weight_g) else entry['tkg']
             row = {
                 'culture_id': entry['culture_id'],
                 'culture_name': entry['culture_name'],
                 'variety': entry['variety'],
-                'supplier': entry['supplier'],
+                'supplier': (
+                    selected_supplier.supplier.name
+                    if selected_supplier and selected_supplier.supplier
+                    else (selected_supplier.supplier_name if selected_supplier else '')
+                ),
+                'selected_supplier_id': selected_supplier.supplier_id if selected_supplier else None,
+                'supplier_options': [
+                    {
+                        'supplier_id': item.supplier_id,
+                        'supplier_name': item.supplier.name if item.supplier else item.supplier_name,
+                    }
+                    for item in supplier_options
+                ],
                 'required_amount_value': float(required_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)) if required_unit else None,
                 'required_amount_unit': required_unit,
                 'total_grams': None,
-                'seed_packages': [
-                    {
-                        'size_value': float(pkg.size_value),
-                        'size_unit': pkg.size_unit,
-                    }
-                    for pkg in packages
-                ],
+                'seed_packages': packages,
                 'package_suggestion': None,
                 'packages_needed': None,
                 'warning': warning,
             }
+            if not supplier_options:
+                row['warning'] = row['warning'] or 'Keine Lieferantendaten vorhanden.'
             if required_unit == SEED_PACKAGE_UNIT_GRAMS:
                 row['total_grams'] = row['required_amount_value']
 
@@ -1992,16 +2075,20 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                 rows.append(row)
                 continue
 
-            same_unit_packages = [pkg for pkg in packages if pkg.size_unit == required_unit]
+            if not packages:
+                rows.append(row)
+                continue
+
+            same_unit_packages = [pkg for pkg in packages if pkg['size_unit'] == required_unit]
             target_unit = required_unit
             target_amount = required_amount
             if not same_unit_packages and packages:
-                preferred_unit = packages[0].size_unit
+                preferred_unit = packages[0]['size_unit']
                 converted, conversion_warning = self._convert_requirement_to_unit(
                     requirement_value=required_amount,
                     requirement_unit=required_unit,
                     target_unit=preferred_unit,
-                    tkg=entry['tkg'],
+                    tkg=row_tkg,
                 )
                 if converted is None:
                     row['warning'] = conversion_warning or 'Cannot convert required amount to package units.'
@@ -2009,11 +2096,11 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                     continue
                 target_amount = converted
                 target_unit = preferred_unit
-                same_unit_packages = [pkg for pkg in packages if pkg.size_unit == target_unit]
+                same_unit_packages = [pkg for pkg in packages if pkg['size_unit'] == target_unit]
 
             suggestion = compute_seed_package_suggestion(
                 required_amount=target_amount,
-                packages=[PackageOption(size_value=pkg.size_value, size_unit=pkg.size_unit) for pkg in same_unit_packages],
+                packages=[PackageOption(size_value=Decimal(str(pkg['size_value'])), size_unit=pkg['size_unit']) for pkg in same_unit_packages],
                 unit=target_unit,
             )
             if suggestion.pack_count > 0:
@@ -2034,9 +2121,47 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                 row['packages_needed'] = suggestion.pack_count
             rows.append(row)
 
+        if pending_selection_updates:
+            Culture.objects.bulk_update(pending_selection_updates, ['selected_seed_demand_supplier'])
+
         rows.sort(key=lambda item: (item['culture_name'] or '', item['variety'] or ''))
         serializer = self.get_serializer(rows, many=True)
         return Response({'count': len(rows), 'next': None, 'previous': None, 'results': serializer.data})
+
+    def post(self, request, *args, **kwargs):
+        culture_id = request.data.get('culture_id')
+        supplier_id = request.data.get('supplier_id')
+        try:
+            culture_id = int(culture_id)
+        except (TypeError, ValueError):
+            return Response({'detail': 'culture_id must be a positive integer.'}, status=status.HTTP_400_BAD_REQUEST)
+        if culture_id <= 0:
+            return Response({'detail': 'culture_id must be a positive integer.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        culture = get_object_or_404(Culture, id=culture_id, project=request.active_project)
+
+        if supplier_id in (None, ''):
+            culture.selected_seed_demand_supplier = None
+            culture.save(update_fields=['selected_seed_demand_supplier', 'updated_at'])
+            return Response({'culture_id': culture.id, 'selected_supplier_id': None}, status=status.HTTP_200_OK)
+
+        try:
+            supplier_id = int(supplier_id)
+        except (TypeError, ValueError):
+            return Response({'detail': 'supplier_id must be an integer or null.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        supplier = get_object_or_404(Supplier, id=supplier_id, project=request.active_project)
+        has_supplier_data = CultureSupplierData.objects.filter(
+            project=request.active_project,
+            culture=culture,
+            supplier=supplier,
+        ).exists()
+        if not has_supplier_data:
+            return Response({'detail': 'Supplier is not available for this culture.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        culture.selected_seed_demand_supplier = supplier
+        culture.save(update_fields=['selected_seed_demand_supplier', 'updated_at'])
+        return Response({'culture_id': culture.id, 'selected_supplier_id': supplier.id}, status=status.HTTP_200_OK)
 
 class MyProjectsView(APIView):
     """Return all projects for current user with membership metadata."""

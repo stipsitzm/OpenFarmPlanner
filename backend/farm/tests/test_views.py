@@ -6,7 +6,7 @@ from datetime import date
 from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
 
-from farm.models import Bed, BedLayout, Culture, Field, FieldLayout, Location, PlantingPlan, Project, ProjectMembership, PublicCulture, Supplier, NoteAttachment, SeedPackage
+from farm.models import Bed, BedLayout, Culture, CultureSupplierData, Field, FieldLayout, Location, PlantingPlan, Project, ProjectMembership, PublicCulture, Supplier, NoteAttachment, SeedPackage
 
 User = get_user_model()
 
@@ -382,8 +382,8 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(float(response.data['seed_packages'][0]['size_value']), 25.0)
         self.assertEqual(SeedPackage.objects.get(culture=culture).project, self.project)
 
-    def test_seed_demand_uses_seed_packages_for_existing_cultures(self):
-        """Project seed packages should appear in seed demand for existing cultures."""
+    def test_seed_demand_uses_supplier_specific_packages_for_existing_cultures(self):
+        """Supplier-scoped package sizes should appear in seed demand for existing cultures."""
         culture = Culture.objects.create(
             name='Legacy Bean',
             variety='Classic',
@@ -394,7 +394,17 @@ class ApiEndpointsTest(DRFAPITestCase):
             seed_rate_unit='g_per_m2',
             project=self.project,
         )
-        SeedPackage.objects.create(culture=culture, size_value='25.0', size_unit='g', project=self.project)
+        supplier = Supplier.objects.create(
+            name='Bean Supplier',
+            homepage_url='https://beans.example',
+            project=self.project,
+        )
+        CultureSupplierData.objects.create(
+            culture=culture,
+            supplier=supplier,
+            project=self.project,
+            packaging_sizes=[{'size_value': 25.0, 'size_unit': 'g'}],
+        )
         PlantingPlan.objects.create(
             culture=culture,
             bed=self.bed,

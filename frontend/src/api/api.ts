@@ -21,6 +21,7 @@ import type {
   BedLayoutEntry,
   FieldLayoutEntry,
   LocationLayoutsResponse,
+  CultureSupplierData,
 } from './types';
 
 const getActiveProjectId = (): number | null => {
@@ -108,6 +109,13 @@ export const supplierAPI = {
   delete: (id: number) => http.delete(`/suppliers/${id}/`),
 };
 
+export const cultureSupplierDataAPI = {
+  list: () => http.get<PaginatedResponse<CultureSupplierData>>('/culture-supplier-data/'),
+  create: (data: CultureSupplierData) => http.post<CultureSupplierData>('/culture-supplier-data/', withActiveProject(data)),
+  update: (id: number, data: CultureSupplierData) => http.put<CultureSupplierData>(`/culture-supplier-data/${id}/`, withActiveProject(data)),
+  delete: (id: number) => http.delete(`/culture-supplier-data/${id}/`),
+};
+
 export const bedAPI = {
   list: () => http.get<PaginatedResponse<Bed>>('/beds/'),
   get: (id: number) => http.get<Bed>(`/beds/${id}/`),
@@ -160,7 +168,14 @@ export const noteAttachmentAPI = {
 };
 
 export const seedDemandAPI = {
-  list: () => http.get<PaginatedResponse<SeedDemand>>('/seed-demand/'),
+  list: (supplierSelection?: string) => http.get<PaginatedResponse<SeedDemand>>('/seed-demand/', {
+    params: supplierSelection ? { supplier_selection: supplierSelection } : {},
+  }),
+  saveSupplierSelection: (cultureId: number, supplierId: number | null) =>
+    http.post<{ culture_id: number; selected_supplier_id: number | null }>('/seed-demand/', {
+      culture_id: cultureId,
+      supplier_id: supplierId,
+    }),
 };
 
 export const yieldCalendarAPI = {
@@ -294,12 +309,14 @@ export type {
   BedLayoutEntry,
   FieldLayoutEntry,
   LocationLayoutsResponse,
+  CultureSupplierData,
 };
 
 export default {
   cultures: cultureAPI,
   publicCultures: publicCultureAPI,
   suppliers: supplierAPI,
+  cultureSupplierData: cultureSupplierDataAPI,
   beds: bedAPI,
   plantingPlans: plantingPlanAPI,
   fields: fieldAPI,
