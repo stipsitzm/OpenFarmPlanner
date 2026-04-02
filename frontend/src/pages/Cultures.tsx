@@ -48,8 +48,6 @@ import {
   Snackbar,
   Tooltip,
   Typography,
-  CircularProgress,
-  LinearProgress,
   Link,
   Stack,
 } from '@mui/material';
@@ -63,9 +61,6 @@ import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PublicIcon from '@mui/icons-material/Public';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
-import AutorenewIcon from '@mui/icons-material/Autorenew';
 import {
   buildAllCulturesExport,
   buildAllCulturesFilename,
@@ -79,8 +74,6 @@ import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
 import {
   buildImportSuccessMessage,
   mapImportErrors,
-  type ImportFailedEntry,
-  type ImportPreviewResult,
   type SnackbarState,
 } from './culturesPageUtils';
 import {
@@ -100,46 +93,11 @@ import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
 import { useAuth } from '../auth/useAuth';
-
-const ENRICHMENT_LOADING_STEPS = [
-  { key: 'request', startSeconds: 0 },
-  { key: 'research', startSeconds: 12 },
-  { key: 'validation', startSeconds: 32 },
-  { key: 'results', startSeconds: 52 },
-] as const;
-const ENRICHMENT_EXPECTED_SECONDS = 75;
-
-function normalizePublicCultureIdentityValue(value: string | undefined | null): string {
-  return (value || '').trim().toLowerCase().replace(/\s+/g, ' ');
-}
-
-function getPublicCultureSupplierLabel(culture: PublicCulture): string {
-  return culture.supplier_name || culture.seed_supplier || '';
-}
-
-function dedupePublicCultures(cultures: PublicCulture[]): PublicCulture[] {
-  const byIdentity = new Map<string, PublicCulture>();
-  for (const item of cultures) {
-    const identity = [
-      normalizePublicCultureIdentityValue(item.name),
-      normalizePublicCultureIdentityValue(item.variety),
-      normalizePublicCultureIdentityValue(getPublicCultureSupplierLabel(item)),
-    ].join('||');
-
-    const existing = byIdentity.get(identity);
-    if (!existing) {
-      byIdentity.set(identity, item);
-      continue;
-    }
-
-    const itemPublishedAt = item.published_at ? new Date(item.published_at).getTime() : 0;
-    const existingPublishedAt = existing.published_at ? new Date(existing.published_at).getTime() : 0;
-    if (itemPublishedAt > existingPublishedAt || (itemPublishedAt === existingPublishedAt && item.id > existing.id)) {
-      byIdentity.set(identity, item);
-    }
-  }
-  return Array.from(byIdentity.values());
-}
+import { dedupePublicCultures } from './publicCultureUtils';
+import { useCultureImportState } from './useCultureImportState';
+import { useEnrichmentLoadingProgress } from './useEnrichmentLoadingProgress';
+import { CulturesImportDialog } from './CulturesImportDialog';
+import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -154,15 +112,16 @@ function Cultures(): React.ReactElement {
   const [editingCulture, setEditingCulture] = useState<Culture | undefined>(undefined);
   const [importMenuAnchor, setImportMenuAnchor] = useState<null | HTMLElement>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [importPreviewCount, setImportPreviewCount] = useState(0);
-  const [importValidCount, setImportValidCount] = useState(0);
-  const [importInvalidEntries, setImportInvalidEntries] = useState<string[]>([]);
-  const [importPayload, setImportPayload] = useState<Record<string, unknown>[]>([]);
-  const [importPreviewResults, setImportPreviewResults] = useState<ImportPreviewResult[]>([]);
-  const [importStatus, setImportStatus] = useState<'idle' | 'ready' | 'uploading' | 'success' | 'error'>('idle');
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importSuccess, setImportSuccess] = useState<string | null>(null);
-  const [importFailedEntries, setImportFailedEntries] = useState<ImportFailedEntry[]>([]);
+  const {
+    state: importState,
+    hasImportableEntries,
+    reset: resetImportState,
+    setErrorState: setImportErrorState,
+    setPreviewReadyState,
+    setUploading: setImportUploading,
+    setPartialFailure: setImportPartialFailure,
+    setSuccessState: setImportSuccessState,
+  } = useCultureImportState();
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
   const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
@@ -176,8 +135,6 @@ function Cultures(): React.ReactElement {
   const [enrichmentResult, setEnrichmentResult] = useState<EnrichmentResult | null>(null);
   const [selectedSuggestionFields, setSelectedSuggestionFields] = useState<string[]>([]);
   const [enrichmentLoading, setEnrichmentLoading] = useState(false);
-  const [enrichmentLoadingStartedAt, setEnrichmentLoadingStartedAt] = useState<number | null>(null);
-  const [enrichmentLoadingNow, setEnrichmentLoadingNow] = useState<number>(Date.now());
   const [enrichmentCostBanner, setEnrichmentCostBanner] = useState<string | null>(null);
   const [enrichAllConfirmOpen, setEnrichAllConfirmOpen] = useState(false);
   const enrichmentLoadingRef = useRef(false);
@@ -200,18 +157,13 @@ function Cultures(): React.ReactElement {
     enrichmentLoadingRef.current = enrichmentLoading;
   }, [enrichmentLoading]);
 
-  useEffect(() => {
-    if (!enrichmentLoading) {
-      setEnrichmentLoadingStartedAt(null);
-      return;
-    }
+  const {
+    activeStepIndex: enrichmentActiveStepIndex,
+    elapsedSeconds: enrichmentElapsedSeconds,
+    progressPercent: enrichmentProgressPercent,
+    steps: enrichmentLoadingSteps,
+  } = useEnrichmentLoadingProgress(enrichmentLoading);
 
-    const startedAt = Date.now();
-    setEnrichmentLoadingStartedAt(startedAt);
-    setEnrichmentLoadingNow(startedAt);
-    const intervalId = window.setInterval(() => setEnrichmentLoadingNow(Date.now()), 500);
-    return () => window.clearInterval(intervalId);
-  }, [enrichmentLoading]);
 
   const fetchCultures = useCallback(async () => {
     setIsCulturesLoading(true);
@@ -384,18 +336,6 @@ function Cultures(): React.ReactElement {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const resetImportState = () => {
-    setImportPreviewCount(0);
-    setImportValidCount(0);
-    setImportInvalidEntries([]);
-    setImportPayload([]);
-    setImportStatus('idle');
-    setImportError(null);
-    setImportSuccess(null);
-    setImportPreviewResults([]);
-    setImportFailedEntries([]);
-  };
-
   const fetchPublicCultures = useCallback(async (query = '') => {
     try {
       setPublicLibraryLoading(true);
@@ -519,76 +459,72 @@ function Cultures(): React.ReactElement {
       const importAnalysis = analyzeCultureImportJson(jsonString, t);
 
       if (importAnalysis.status === 'error') {
-        setImportStatus('error');
-        setImportError(t(importAnalysis.errorKey));
-        setImportPreviewCount(importAnalysis.originalCount);
-        setImportValidCount(0);
-        setImportInvalidEntries(importAnalysis.invalidEntries);
+        setImportErrorState({
+          error: t(importAnalysis.errorKey),
+          previewCount: importAnalysis.originalCount,
+          validCount: 0,
+          invalidEntries: importAnalysis.invalidEntries,
+        });
         setImportDialogOpen(true);
         return;
       }
 
-      setImportStatus('uploading');
+      setImportUploading();
       try {
         const response = await cultureAPI.importPreview(importAnalysis.validEntries);
 
-        setImportPreviewCount(importAnalysis.originalCount);
-        setImportValidCount(importAnalysis.validEntries.length);
-        setImportInvalidEntries(importAnalysis.invalidEntries);
-        setImportPayload(importAnalysis.validEntries);
-        setImportPreviewResults(response.data.results);
-        setImportStatus('ready');
+        setPreviewReadyState({
+          previewCount: importAnalysis.originalCount,
+          validCount: importAnalysis.validEntries.length,
+          invalidEntries: importAnalysis.invalidEntries,
+          payload: importAnalysis.validEntries,
+          previewResults: response.data.results,
+        });
         setImportDialogOpen(true);
       } catch (error) {
         console.error('Error calling preview endpoint:', error);
-        setImportStatus('error');
-        setImportError(t('import.errors.network'));
+        setImportErrorState({ error: t('import.errors.network') });
         setImportDialogOpen(true);
       }
     } catch (error) {
       console.error('Error reading JSON file:', error);
-      setImportStatus('error');
-      setImportError(t('import.errors.parse'));
+      setImportErrorState({ error: t('import.errors.parse') });
       setImportDialogOpen(true);
     }
   };
 
   const handleImportStart = async () => {
-    if (importPayload.length === 0 || importStatus === 'uploading') {
+    if (!hasImportableEntries || importState.status === 'uploading') {
       return;
     }
 
-    setImportStatus('uploading');
-    setImportError(null);
-    setImportSuccess(null);
-    setImportFailedEntries([]);
+    setImportUploading();
 
     try {
       const response = await cultureAPI.importApply({
-        items: importPayload,
+        items: importState.payload,
         confirm_updates: confirmUpdates,
       });
 
       const { created_count, updated_count, skipped_count, errors } = response.data;
       
       if (errors.length > 0) {
-        setImportFailedEntries(mapImportErrors(errors, importPayload));
-        setImportError(t('import.errors.someFailures', {
-          failed: errors.length,
-        }));
-        setImportStatus('error');
+        setImportPartialFailure({
+          failedEntries: mapImportErrors(errors, importState.payload),
+          error: t('import.errors.someFailures', {
+            failed: errors.length,
+          }),
+        });
         return;
       }
 
       const successMessage = buildImportSuccessMessage(created_count, updated_count, skipped_count, t);
 
-      setImportStatus('success');
-      setImportSuccess(successMessage || t('import.success'));
+      setImportSuccessState(successMessage || t('import.success'));
       await fetchCultures();
     } catch (error) {
       console.error('Error importing cultures:', error);
-      setImportStatus('error');
-      setImportError(t('import.errors.network'));
+      setImportErrorState({ error: t('import.errors.network') });
     }
   };
 
@@ -945,14 +881,6 @@ function Cultures(): React.ReactElement {
 
 
 
-  const enrichmentElapsedSeconds = enrichmentLoadingStartedAt
-    ? Math.max(0, Math.floor((enrichmentLoadingNow - enrichmentLoadingStartedAt) / 1000))
-    : 0;
-  const enrichmentProgressPercent = Math.min(95, Math.round((enrichmentElapsedSeconds / ENRICHMENT_EXPECTED_SECONDS) * 100));
-  const enrichmentActiveStepIndex = ENRICHMENT_LOADING_STEPS.reduce((lastIndex, step, index) => (
-    enrichmentElapsedSeconds >= step.startSeconds ? index : lastIndex
-  ), 0);
-
   return (
     <div className="page-container">
       <Box
@@ -1198,140 +1126,16 @@ function Cultures(): React.ReactElement {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={importDialogOpen} onClose={handleImportDialogClose} maxWidth="md" fullWidth>
-        <DialogTitle>{t('import.title')}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            {/* Summary */}
-            <Typography variant="body1">
-              {t('import.foundCount', { count: importValidCount || importPreviewCount })}
-            </Typography>
-            {importPreviewCount !== importValidCount && (
-              <Typography variant="body2" color="warning.main">
-                {t('import.invalidCount', {
-                  invalid: importPreviewCount - importValidCount,
-                })}
-              </Typography>
-            )}
-            
-            {/* Grouped results */}
-            {importPreviewResults.length > 0 && (
-              <>
-                {/* New cultures */}
-                {(() => {
-                  const newCultures = importPreviewResults.filter(r => r.status === 'create');
-                  return newCultures.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="h6" color="success.main">
-                        {t('import.newCultures')} ({newCultures.length})
-                      </Typography>
-                      <List dense>
-                        {newCultures.map((result) => (
-                          <ListItem key={result.index}>
-                            <ListItemText 
-                              primary={`${result.import_data.name}${result.import_data.variety ? ` (${result.import_data.variety})` : ''}`}
-                            />
-                          </ListItem>
-                        ))}
-                      </List>
-                    </Box>
-                  );
-                })()}
-                
-                {/* Update candidates */}
-                {(() => {
-                  const updateCandidates = importPreviewResults.filter(r => r.status === 'update_candidate');
-                  return updateCandidates.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="h6" color="warning.main">
-                        {t('import.updateCandidates')} ({updateCandidates.length})
-                      </Typography>
-                      <List dense>
-                        {updateCandidates.map((result) => (
-                          <ListItem key={result.index} sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                            <ListItemText 
-                              primary={`${result.import_data.name}${result.import_data.variety ? ` (${result.import_data.variety})` : ''}`}
-                              secondary={result.diff && result.diff.length > 0 ? t('import.fieldsChanged', { count: result.diff.length }) : t('import.noChanges')}
-                            />
-                            {result.diff && result.diff.length > 0 && (
-                              <Box sx={{ ml: 2, fontSize: '0.875rem' }}>
-                                {result.diff.map((d, idx) => (
-                                  <Typography key={idx} variant="caption" display="block">
-                                    {d.field}: {JSON.stringify(d.current)} → {JSON.stringify(d.new)}
-                                  </Typography>
-                                ))}
-                              </Box>
-                            )}
-                          </ListItem>
-                        ))}
-                      </List>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                        <input
-                          type="checkbox"
-                          id="confirm-updates"
-                          checked={confirmUpdates}
-                          onChange={(e) => setConfirmUpdates(e.target.checked)}
-                        />
-                        <label htmlFor="confirm-updates">
-                          <Typography variant="body2">{t('import.confirmUpdates')}</Typography>
-                        </label>
-                      </Box>
-                    </Box>
-                  );
-                })()}
-              </>
-            )}
-            
-            {/* Invalid entries */}
-            {importInvalidEntries.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="h6" color="error.main">
-                  {t('import.invalidEntries')} ({importInvalidEntries.length})
-                </Typography>
-                <List dense>
-                  {importInvalidEntries.map((entry) => (
-                    <ListItem key={entry}>
-                      <ListItemText primary={entry} />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            )}
-            
-            {/* Failed entries from import attempt */}
-            {importFailedEntries.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="h6" color="error.main">
-                  {t('import.failedEntries')} ({importFailedEntries.length})
-                </Typography>
-                <List dense>
-                  {importFailedEntries.map((entry, idx) => (
-                    <ListItem key={idx}>
-                      <ListItemText 
-                        primary={entry.name ? `${entry.name}${entry.variety ? ` (${entry.variety})` : ''}` : `${t('import.invalidEntry')} ${entry.index + 1}`}
-                        secondary={typeof entry.error === 'string' ? entry.error : JSON.stringify(entry.error)}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            )}
-            
-            {importError && <Alert severity="error">{importError}</Alert>}
-            {importSuccess && <Alert severity="success">{importSuccess}</Alert>}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleImportDialogClose}>{t('import.close')}</Button>
-          <Button
-            variant="contained"
-            onClick={handleImportStart}
-            disabled={importValidCount === 0 || importStatus === 'uploading' || importStatus === 'success'}
-          >
-            {importStatus === 'success' ? t('import.done') : t('import.start')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CulturesImportDialog
+        open={importDialogOpen}
+        importState={importState}
+        hasImportableEntries={hasImportableEntries}
+        confirmUpdates={confirmUpdates}
+        onConfirmUpdatesChange={setConfirmUpdates}
+        onClose={handleImportDialogClose}
+        onImportStart={() => void handleImportStart()}
+        t={t}
+      />
 
       {aiEnrichmentEnabled && (<Dialog open={enrichAllConfirmOpen} onClose={() => setEnrichAllConfirmOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>{t('ai.confirmAllTitle')}</DialogTitle>
@@ -1346,36 +1150,16 @@ function Cultures(): React.ReactElement {
         </DialogActions>
       </Dialog>)}
 
-      {aiEnrichmentEnabled && (<Dialog open={enrichmentLoading} aria-labelledby="enrichment-loading-title" maxWidth="xs" fullWidth>
-        <DialogTitle id="enrichment-loading-title">{t('ai.loadingTitle')}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1, mb: 1 }}>
-            <CircularProgress size={22} />
-            <Typography>{t('ai.loadingText')}</Typography>
-          </Box>
-          <LinearProgress variant="determinate" value={enrichmentProgressPercent} sx={{ mb: 1 }} />
-          <Typography variant="caption" color="text.secondary">
-            {t('ai.loadingElapsed', { seconds: enrichmentElapsedSeconds, percent: enrichmentProgressPercent })}
-          </Typography>
-          <List dense sx={{ mt: 1 }}>
-            {ENRICHMENT_LOADING_STEPS.map((step, index) => {
-              const isDone = enrichmentElapsedSeconds >= step.startSeconds && index < enrichmentActiveStepIndex;
-              const isActive = index === enrichmentActiveStepIndex;
-              const Icon = isDone ? CheckCircleOutlineIcon : isActive ? AutorenewIcon : RadioButtonUncheckedIcon;
-              return (
-                <ListItem key={step.key} sx={{ px: 0 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Icon fontSize="small" color={isDone ? 'success' : isActive ? 'primary' : 'disabled'} />
-                    <Typography variant="body2" color={isActive ? 'text.primary' : 'text.secondary'}>
-                      {t(`ai.loadingSteps.${step.key}`)}
-                    </Typography>
-                  </Box>
-                </ListItem>
-              );
-            })}
-          </List>
-        </DialogContent>
-      </Dialog>)}
+      {aiEnrichmentEnabled && (
+        <EnrichmentLoadingDialog
+          open={enrichmentLoading}
+          elapsedSeconds={enrichmentElapsedSeconds}
+          progressPercent={enrichmentProgressPercent}
+          activeStepIndex={enrichmentActiveStepIndex}
+          steps={enrichmentLoadingSteps}
+          t={t}
+        />
+      )}
 
       {aiEnrichmentEnabled && (<Dialog open={enrichmentDialogOpen} onClose={() => setEnrichmentDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>{t('ai.suggestionsTitle')}</DialogTitle>
