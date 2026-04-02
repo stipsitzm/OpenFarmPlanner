@@ -4,8 +4,9 @@ import { MemoryRouter } from 'react-router-dom';
 import SeedDemandPage from '../pages/SeedDemand';
 import { CommandProvider } from '../commands/CommandProvider';
 
-const { listMock } = vi.hoisted(() => ({
+const { listMock, saveSelectionMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
+  saveSelectionMock: vi.fn(),
 }));
 
 vi.mock('../api/api', async () => {
@@ -14,13 +15,21 @@ vi.mock('../api/api', async () => {
     ...actual,
     seedDemandAPI: {
       list: listMock,
+      saveSupplierSelection: saveSelectionMock,
     },
   };
 });
 
+vi.mock('../i18n', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
 describe('SeedDemandPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    saveSelectionMock.mockResolvedValue({ data: { culture_id: 1, selected_supplier_id: 10 } });
   });
 
   it('shows culture with variety in parentheses', async () => {
@@ -35,6 +44,8 @@ describe('SeedDemandPage', () => {
             culture_name: 'Bohne',
             variety: 'Canadian Wonder',
             supplier: 'Reinsaat',
+            supplier_options: [{ supplier_id: 10, supplier_name: 'Reinsaat' }],
+            selected_supplier_id: 10,
             required_amount_value: 184.2,
             required_amount_unit: 'g',
             total_grams: 184.2,
@@ -67,7 +78,7 @@ describe('SeedDemandPage', () => {
       '/cultures?cultureId=1'
     );
 
-    expect(screen.getByText('25 g × 8')).toBeInTheDocument();
+    expect(screen.getByText('25 seedDemand.unitGrams × 8')).toBeInTheDocument();
     expect(screen.queryByText(/Vorschlag:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/over:/i)).not.toBeInTheDocument();
   });
@@ -83,6 +94,8 @@ describe('SeedDemandPage', () => {
             culture_id: 2,
             culture_name: 'Salat',
             supplier: 'Reinsaat',
+            supplier_options: [{ supplier_id: 10, supplier_name: 'Reinsaat' }],
+            selected_supplier_id: 10,
             required_amount_value: 0.25,
             required_amount_unit: 'g',
             total_grams: 0.25,
@@ -102,7 +115,7 @@ describe('SeedDemandPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Keine Packungsgrößen verfügbar')).toBeInTheDocument();
+      expect(screen.getByText('seedDemand.noPackagesAvailable')).toBeInTheDocument();
     });
   });
 
@@ -182,7 +195,10 @@ describe('SeedDemandPage', () => {
     fireEvent.mouseDown(screen.getByRole('combobox'));
     fireEvent.click(screen.getByRole('option', { name: 'Bingenheimer' }));
 
-    expect(screen.getByRole('combobox')).toHaveTextContent('Bingenheimer');
+    await waitFor(() => {
+      expect(saveSelectionMock).toHaveBeenCalledWith(3, 11);
+      expect(listMock).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('shows empty-state supplier text when no supplier data exists', async () => {
@@ -217,7 +233,57 @@ describe('SeedDemandPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getAllByText('Keine Lieferantendaten vorhanden').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('seedDemand.noSupplierData').length).toBeGreaterThan(0);
+      expect(screen.getByRole('link', { name: 'seedDemand.editCultureAction' })).toBeInTheDocument();
     });
+  });
+
+  it('renders exactly one row per culture in seed demand table', async () => {
+    listMock.mockResolvedValue({
+      data: {
+        count: 2,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 10,
+            culture_name: 'Karotte',
+            supplier_options: [{ supplier_id: 1, supplier_name: 'Supplier A' }],
+            selected_supplier_id: 1,
+            required_amount_value: 20,
+            required_amount_unit: 'g',
+            total_grams: 20,
+            package_suggestion: null,
+            warning: null,
+          },
+          {
+            culture_id: 11,
+            culture_name: 'Salat',
+            supplier_options: [{ supplier_id: 2, supplier_name: 'Supplier B' }],
+            selected_supplier_id: 2,
+            required_amount_value: 10,
+            required_amount_unit: 'g',
+            total_grams: 10,
+            package_suggestion: null,
+            warning: null,
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('row', { name: /Karotte/i })).toBeInTheDocument();
+      expect(screen.getByRole('row', { name: /Salat/i })).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByRole('row')).toHaveLength(3);
   });
 });

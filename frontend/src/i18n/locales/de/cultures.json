@@ -165,6 +165,25 @@
     "fixErrors": "Bitte beheben Sie die Validierungsfehler",
     "exportSuccess": "JSON exportiert"
   },
+  "seedDemand": {
+    "title": "Saatgutbedarf",
+    "loadError": "Saatgutbedarf konnte nicht geladen werden.",
+    "saveError": "Lieferantenauswahl konnte nicht gespeichert werden.",
+    "selectSupplier": "Lieferant auswählen",
+    "createSupplierAction": "Neuen Lieferanten anlegen",
+    "editCultureAction": "Kultur bearbeiten",
+    "noSupplierData": "Keine Lieferantendaten vorhanden",
+    "noPackagesAvailable": "Keine Packungsgrößen verfügbar",
+    "noPackageCalculationPossible": "Keine Berechnung möglich",
+    "unitSeeds": "Korn",
+    "unitGrams": "g",
+    "columns": {
+      "culture": "Kultur",
+      "supplier": "Lieferant",
+      "requiredAmount": "Gesamtbedarf",
+      "packages": "Packungsgrößen"
+    }
+  },
   "history": {
     "titles": {
       "culture": "Versionen",

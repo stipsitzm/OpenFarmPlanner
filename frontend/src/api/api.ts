@@ -171,6 +171,11 @@ export const seedDemandAPI = {
   list: (supplierSelection?: string) => http.get<PaginatedResponse<SeedDemand>>('/seed-demand/', {
     params: supplierSelection ? { supplier_selection: supplierSelection } : {},
   }),
+  saveSupplierSelection: (cultureId: number, supplierId: number | null) =>
+    http.post<{ culture_id: number; selected_supplier_id: number | null }>('/seed-demand/', {
+      culture_id: cultureId,
+      supplier_id: supplierId,
+    }),
 };
 
 export const yieldCalendarAPI = {

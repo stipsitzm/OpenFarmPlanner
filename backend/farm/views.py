@@ -1950,7 +1950,7 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
         plans = (
             PlantingPlan.objects
             .filter(project=request.active_project)
-            .select_related('culture', 'culture__supplier')
+            .select_related('culture', 'culture__supplier', 'culture__selected_seed_demand_supplier')
             .order_by('culture__name', 'culture__variety')
         )
         grouped: dict[int, dict] = {}
@@ -1967,6 +1967,7 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                     'required_amount_unit': None,
                     'warning': None,
                     'tkg': Decimal(str(culture.thousand_kernel_weight_g)) if culture.thousand_kernel_weight_g else None,
+                    'culture': culture,
                 },
             )
             if entry['warning']:
@@ -2004,18 +2005,30 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
         suppliers_map: dict[int, list[CultureSupplierData]] = defaultdict(list)
         for row in supplier_rows:
             suppliers_map[row.culture_id].append(row)
+        pending_selection_updates: list[Culture] = []
         rows: list[dict] = []
         for culture_id, entry in grouped.items():
             required_amount = entry['required_amount_value']
             required_unit = entry['required_amount_unit']
             warning = entry['warning']
+            culture = entry['culture']
             supplier_options = suppliers_map.get(culture_id, [])
             selected_supplier = None
             selected_supplier_id = selected_supplier_by_culture.get(culture_id)
+            if selected_supplier_id is None:
+                selected_supplier_id = culture.selected_seed_demand_supplier_id
             if selected_supplier_id:
                 selected_supplier = next((item for item in supplier_options if item.supplier_id == selected_supplier_id), None)
-            if selected_supplier is None and supplier_options:
+            if selected_supplier is None and len(supplier_options) == 1:
                 selected_supplier = supplier_options[0]
+                selected_supplier_id = selected_supplier.supplier_id
+
+            if selected_supplier and culture.selected_seed_demand_supplier_id != selected_supplier.supplier_id:
+                culture.selected_seed_demand_supplier_id = selected_supplier.supplier_id
+                pending_selection_updates.append(culture)
+            if selected_supplier is None and culture.selected_seed_demand_supplier_id is not None and not supplier_options:
+                culture.selected_seed_demand_supplier = None
+                pending_selection_updates.append(culture)
 
             packages_raw = selected_supplier.packaging_sizes if selected_supplier else []
             packages = []
@@ -2108,9 +2121,47 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                 row['packages_needed'] = suggestion.pack_count
             rows.append(row)
 
+        if pending_selection_updates:
+            Culture.objects.bulk_update(pending_selection_updates, ['selected_seed_demand_supplier'])
+
         rows.sort(key=lambda item: (item['culture_name'] or '', item['variety'] or ''))
         serializer = self.get_serializer(rows, many=True)
         return Response({'count': len(rows), 'next': None, 'previous': None, 'results': serializer.data})
+
+    def post(self, request, *args, **kwargs):
+        culture_id = request.data.get('culture_id')
+        supplier_id = request.data.get('supplier_id')
+        try:
+            culture_id = int(culture_id)
+        except (TypeError, ValueError):
+            return Response({'detail': 'culture_id must be a positive integer.'}, status=status.HTTP_400_BAD_REQUEST)
+        if culture_id <= 0:
+            return Response({'detail': 'culture_id must be a positive integer.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        culture = get_object_or_404(Culture, id=culture_id, project=request.active_project)
+
+        if supplier_id in (None, ''):
+            culture.selected_seed_demand_supplier = None
+            culture.save(update_fields=['selected_seed_demand_supplier', 'updated_at'])
+            return Response({'culture_id': culture.id, 'selected_supplier_id': None}, status=status.HTTP_200_OK)
+
+        try:
+            supplier_id = int(supplier_id)
+        except (TypeError, ValueError):
+            return Response({'detail': 'supplier_id must be an integer or null.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        supplier = get_object_or_404(Supplier, id=supplier_id, project=request.active_project)
+        has_supplier_data = CultureSupplierData.objects.filter(
+            project=request.active_project,
+            culture=culture,
+            supplier=supplier,
+        ).exists()
+        if not has_supplier_data:
+            return Response({'detail': 'Supplier is not available for this culture.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        culture.selected_seed_demand_supplier = supplier
+        culture.save(update_fields=['selected_seed_demand_supplier', 'updated_at'])
+        return Response({'culture_id': culture.id, 'selected_supplier_id': supplier.id}, status=status.HTTP_200_OK)
 
 class MyProjectsView(APIView):
     """Return all projects for current user with membership metadata."""

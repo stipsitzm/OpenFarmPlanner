@@ -62,9 +62,16 @@ class SeedDemandSupplierSelectionApiTest(APITestCase):
         row = response.data['results'][0]
         self.assertEqual(len(row['supplier_options']), 2)
 
-        selected_response = self.client.get(f'/openfarmplanner/api/seed-demand/?supplier_selection={culture.id}:{supplier_a.id}')
+        selected_response = self.client.post(
+            '/openfarmplanner/api/seed-demand/',
+            {'culture_id': culture.id, 'supplier_id': supplier_a.id},
+            format='json',
+        )
         self.assertEqual(selected_response.status_code, status.HTTP_200_OK)
-        selected_row = selected_response.data['results'][0]
+        self.assertEqual(selected_response.data['selected_supplier_id'], supplier_a.id)
+
+        reloaded = self.client.get('/openfarmplanner/api/seed-demand/')
+        selected_row = reloaded.data['results'][0]
         self.assertEqual(selected_row['selected_supplier_id'], supplier_a.id)
         self.assertEqual(selected_row['seed_packages'], [{'size_value': 5.0, 'size_unit': 'g'}, {'size_value': 50.0, 'size_unit': 'g'}])
 
@@ -83,3 +90,28 @@ class SeedDemandSupplierSelectionApiTest(APITestCase):
         row = response.data['results'][0]
         self.assertEqual(row['warning'], 'Keine Lieferantendaten vorhanden.')
         self.assertEqual(row['supplier_options'], [])
+
+    def test_seed_demand_auto_selects_single_supplier(self):
+        culture = Culture.objects.create(
+            name='Petersilie',
+            cultivation_types=['direct_sowing'],
+            seed_rate_direct_value=4,
+            seed_rate_direct_unit='g_per_m2',
+            project=self.project,
+        )
+        supplier = Supplier.objects.create(name='Only Supplier', homepage_url='https://only.example', project=self.project)
+        CultureSupplierData.objects.create(
+            culture=culture,
+            supplier=supplier,
+            project=self.project,
+            packaging_sizes=[{'size_value': 10, 'size_unit': 'g'}],
+        )
+        self._create_plan(culture, 5)
+
+        response = self.client.get('/openfarmplanner/api/seed-demand/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        row = response.data['results'][0]
+        self.assertEqual(row['selected_supplier_id'], supplier.id)
+
+        culture.refresh_from_db()
+        self.assertEqual(culture.selected_seed_demand_supplier_id, supplier.id)

@@ -154,9 +154,13 @@ describe('API Client', () => {
   it('calls seed demand endpoint', () => {
     seedDemandAPI.list();
     seedDemandAPI.list('3:11');
+    seedDemandAPI.saveSupplierSelection(3, 11);
+    seedDemandAPI.saveSupplierSelection(3, null);
 
     expect(getMock).toHaveBeenCalledWith('/seed-demand/', { params: {} });
     expect(getMock).toHaveBeenCalledWith('/seed-demand/', { params: { supplier_selection: '3:11' } });
+    expect(postMock).toHaveBeenCalledWith('/seed-demand/', { culture_id: 3, supplier_id: 11 });
+    expect(postMock).toHaveBeenCalledWith('/seed-demand/', { culture_id: 3, supplier_id: null });
   });
 
   it('exports grouped default API object', () => {

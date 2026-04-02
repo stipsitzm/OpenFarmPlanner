@@ -18,64 +18,63 @@ import {
   Typography,
 } from '@mui/material';
 import { seedDemandAPI, type SeedDemand } from '../api/api';
+import { useTranslation } from '../i18n';
 import { useCommandContextTag } from '../commands/useCommandContext';
 
-const formatPackageSelection = (row: SeedDemand): string => {
+const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
+  unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
+);
+
+const formatPackageSelection = (row: SeedDemand, t: (key: string) => string): string => {
   if (!row.package_suggestion || row.package_suggestion.selection.length === 0) {
-    return 'Keine Packungsgrößen verfügbar';
+    return t('seedDemand.noPackagesAvailable');
   }
 
   return row.package_suggestion.selection
-    .map((item) => `${item.size_value} ${item.size_unit === 'seeds' ? 'Korn' : 'g'}${item.count > 1 ? ` × ${item.count}` : ''}`)
+    .map((item) => `${item.size_value} ${formatUnit(item.size_unit, t)}${item.count > 1 ? ` × ${item.count}` : ''}`)
     .join(' + ');
 };
 
 export default function SeedDemandPage(): React.ReactElement {
   useCommandContextTag('seedDemand');
+  const { t } = useTranslation('cultures');
   const [rows, setRows] = useState<SeedDemand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [supplierSelection, setSupplierSelection] = useState<Record<number, number>>({});
-  const [selectionLoaded, setSelectionLoaded] = useState(false);
 
-  const supplierSelectionParam = Object.entries(supplierSelection)
-    .map(([cultureId, supplierId]) => `${cultureId}:${supplierId}`)
-    .join(',');
-
-  const loadRows = async (selectionParam: string) => {
+  const loadRows = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await seedDemandAPI.list(selectionParam);
-      const resultRows = response.data.results ?? [];
-      setRows(resultRows);
-      if (!selectionLoaded) {
-        const initialSelection: Record<number, number> = {};
-        resultRows.forEach((row) => {
-          if (row.culture_id && row.selected_supplier_id) {
-            initialSelection[row.culture_id] = row.selected_supplier_id;
-          }
-        });
-        if (Object.keys(initialSelection).length > 0) {
-          setSupplierSelection(initialSelection);
-        }
-        setSelectionLoaded(true);
-      }
+      const response = await seedDemandAPI.list();
+      setRows(response.data.results ?? []);
     } catch {
-      setError('Saatgutbedarf konnte nicht geladen werden.');
+      setError(t('seedDemand.loadError'));
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleSupplierChange = async (cultureId: number, supplierId: number | null) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await seedDemandAPI.saveSupplierSelection(cultureId, supplierId);
+      await loadRows();
+    } catch {
+      setError(t('seedDemand.saveError'));
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    void loadRows(supplierSelectionParam);
-  }, [selectionLoaded, supplierSelectionParam]);
+    void loadRows();
+  }, []);
 
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        Saatgutbedarf
+        {t('seedDemand.title')}
       </Typography>
 
       {isLoading && <CircularProgress />}
@@ -86,54 +85,73 @@ export default function SeedDemandPage(): React.ReactElement {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Kultur</TableCell>
-                <TableCell>Lieferant</TableCell>
-                <TableCell align="right">Gesamtbedarf</TableCell>
-                <TableCell>Packungsgrößen</TableCell>
+                <TableCell>{t('seedDemand.columns.culture')}</TableCell>
+                <TableCell>{t('seedDemand.columns.supplier')}</TableCell>
+                <TableCell align="right">{t('seedDemand.columns.requiredAmount')}</TableCell>
+                <TableCell>{t('seedDemand.columns.packages')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.culture_id}>
-                  <TableCell>
-                    <Link component={RouterLink} to={`/cultures?cultureId=${row.culture_id}`} underline="hover">
-                      {row.variety ? `${row.culture_name} (${row.variety})` : row.culture_name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    {(row.supplier_options && row.supplier_options.length > 1) ? (
-                      <FormControl size="small" sx={{ minWidth: 180 }}>
-                        <Select
-                          value={row.selected_supplier_id ?? ''}
-                          onChange={(event) => {
-                            const nextSupplierId = Number(event.target.value);
-                            setSupplierSelection((prev) => {
-                              const nextSelection = { ...prev, [row.culture_id]: nextSupplierId };
-                              const nextParam = Object.entries(nextSelection)
-                                .map(([cultureId, supplierId]) => `${cultureId}:${supplierId}`)
-                                .join(',');
-                              void loadRows(nextParam);
-                              return nextSelection;
-                            });
-                          }}
-                        >
-                          {row.supplier_options.map((option) => (
-                            <MenuItem key={option.supplier_id} value={option.supplier_id}>
-                              {option.supplier_name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    ) : row.supplier_options && row.supplier_options.length === 1 ? (
-                      row.supplier_options[0].supplier_name
-                    ) : (
-                      'Keine Lieferantendaten vorhanden'
-                    )}
-                  </TableCell>
-                  <TableCell align="right">{row.required_amount_value === null || row.required_amount_unit === null ? '-' : `${row.required_amount_value.toFixed(2)} ${row.required_amount_unit === 'seeds' ? 'Korn' : 'g'}`}</TableCell>
-                  <TableCell>{row.warning === 'Keine Lieferantendaten vorhanden.' ? 'Keine Lieferantendaten vorhanden' : formatPackageSelection(row)}</TableCell>
-                </TableRow>
-              ))}
+              {rows.map((row) => {
+                const hasSupplierOptions = Boolean(row.supplier_options && row.supplier_options.length > 0);
+                const packageInfo = hasSupplierOptions
+                  ? formatPackageSelection(row, t)
+                  : t('seedDemand.noPackageCalculationPossible');
+
+                return (
+                  <TableRow key={row.culture_id}>
+                    <TableCell>
+                      <Link component={RouterLink} to={`/cultures?cultureId=${row.culture_id}`} underline="hover">
+                        {row.variety ? `${row.culture_name} (${row.variety})` : row.culture_name}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      {hasSupplierOptions ? (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          <FormControl size="small" sx={{ minWidth: 220 }}>
+                            <Select
+                              value={row.selected_supplier_id ?? ''}
+                              onChange={(event) => {
+                                const selectedValue = String(event.target.value ?? '');
+                                void handleSupplierChange(
+                                  row.culture_id,
+                                  selectedValue ? Number(selectedValue) : null,
+                                );
+                              }}
+                              displayEmpty
+                            >
+                              <MenuItem value="">{t('seedDemand.selectSupplier')}</MenuItem>
+                              {(row.supplier_options ?? []).map((option) => (
+                                <MenuItem key={option.supplier_id} value={option.supplier_id}>
+                                  {option.supplier_name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                          <Link component={RouterLink} to="/suppliers" underline="hover" variant="caption">
+                            {t('seedDemand.createSupplierAction')}
+                          </Link>
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            {t('seedDemand.noSupplierData')}
+                          </Typography>
+                          <Link component={RouterLink} to={`/cultures?cultureId=${row.culture_id}`} underline="hover" variant="caption">
+                            {t('seedDemand.editCultureAction')}
+                          </Link>
+                        </Box>
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      {row.required_amount_value === null || row.required_amount_unit === null
+                        ? '-'
+                        : `${row.required_amount_value.toFixed(2)} ${formatUnit(row.required_amount_unit, t)}`}
+                    </TableCell>
+                    <TableCell>{packageInfo}</TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>
