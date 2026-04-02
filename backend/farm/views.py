@@ -180,6 +180,8 @@ def agent_login_consume_view(request, token: str):  # noqa: ANN001
     link = AgentLoginToken.objects.select_related('created_by', 'project').filter(token_hash=token_hash).first()
     if link is None:
         return HttpResponseBadRequest('Invalid token.')
+    if link.used_at is not None:
+        return HttpResponseBadRequest('Token already used.')
     if link.expires_at is not None and timezone.now() >= link.expires_at:
         return HttpResponseBadRequest('Token expired.')
     if not link.created_by.is_active or not link.created_by.is_superuser:
@@ -443,7 +445,8 @@ class BedLayoutByLocationView(APIView):
     """GET/PUT bed and field layout entries for a given location."""
 
     def get(self, request, location_id: int):
-        location = get_object_or_404(Location, pk=location_id)
+        active_project = get_active_project_or_400(request)
+        location = get_object_or_404(Location, pk=location_id, project=active_project)
         bed_layouts = BedLayout.objects.filter(location=location).select_related('bed__field')
         field_layouts = FieldLayout.objects.filter(location=location).select_related('field')
         return Response(
@@ -454,7 +457,8 @@ class BedLayoutByLocationView(APIView):
         )
 
     def put(self, request, location_id: int):
-        location = get_object_or_404(Location, pk=location_id)
+        active_project = get_active_project_or_400(request)
+        location = get_object_or_404(Location, pk=location_id, project=active_project)
         bed_payload = request.data.get('bed_layouts')
         field_payload = request.data.get('field_layouts')
 
@@ -1580,6 +1584,7 @@ class PlantingPlanViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.Mod
         :param request: DRF request with bed_id, start_date, end_date and optional exclude_plan_id.
         :return: Remaining area payload for the requested bed and interval.
         """
+        active_project = request.active_project
         bed_id_param = request.query_params.get('bed_id')
         start_date_param = request.query_params.get('start_date')
         end_date_param = request.query_params.get('end_date')
@@ -1613,6 +1618,15 @@ class PlantingPlanViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.Mod
                     {'detail': 'exclude_plan_id must be an integer.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+        bed = Bed.objects.filter(id=bed_id, project=active_project).only('id').first()
+        if bed is None:
+            return Response({'detail': 'Bed not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if exclude_plan_id is not None:
+            plan_exists = PlantingPlan.objects.filter(id=exclude_plan_id, project=active_project).exists()
+            if not plan_exists:
+                return Response({'detail': 'exclude_plan_id not found in active project.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             payload = calculate_remaining_bed_area(
@@ -1670,7 +1684,8 @@ class CultureUndeleteView(APIView):
     """Undelete a soft-deleted culture by ID."""
 
     def post(self, request, pk: int):
-        culture = get_object_or_404(Culture.all_objects.all(), pk=pk)
+        active_project = get_active_project_or_400(request)
+        culture = get_object_or_404(Culture.all_objects.filter(project=active_project), pk=pk)
         culture.deleted_at = None
         culture.save()
         if culture.image_file_id:
@@ -1683,8 +1698,9 @@ class ProjectHistoryListView(APIView):
     """List full-project snapshots."""
 
     def get(self, request):
+        active_project = get_active_project_or_400(request)
         since = timezone.now() - timedelta(days=30)
-        rows = ProjectRevision.objects.filter(created_at__gte=since).order_by('-created_at')
+        rows = ProjectRevision.objects.filter(project=active_project, created_at__gte=since).order_by('-created_at')
         payload = []
         for row in rows:
             object_type, action, object_id = _parse_project_summary(row.summary or '')
@@ -1706,11 +1722,13 @@ class ProjectHistoryRestoreView(APIView):
     """Restore whole project state from a snapshot."""
 
     def post(self, request):
+        active_project = get_active_project_or_400(request)
+        require_project_admin(request.user, active_project.id, request=request)
         serializer = CultureRestoreSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         revision_id = serializer.validated_data['history_id']
 
-        revision = get_object_or_404(ProjectRevision.objects.all(), id=revision_id)
+        revision = get_object_or_404(ProjectRevision.objects.filter(project=active_project), id=revision_id)
         _restore_project_state(revision.snapshot)
         _create_project_revision(f"Project restored from snapshot #{revision_id}", project=revision.project)
 
@@ -1721,11 +1739,12 @@ class GlobalHistoryListView(APIView):
     """List recent history entries across all cultures."""
 
     def get(self, request):
+        active_project = get_active_project_or_400(request)
         since = timezone.now() - timedelta(days=30)
         rows = (
             CultureRevision.objects
             .select_related('culture')
-            .filter(created_at__gte=since)
+            .filter(culture__project=active_project, created_at__gte=since)
             .order_by('-created_at')
         )
         payload = [
@@ -1753,11 +1772,16 @@ class GlobalHistoryRestoreView(APIView):
     """Restore a culture from a global history entry (supports soft-deleted cultures)."""
 
     def post(self, request):
+        active_project = get_active_project_or_400(request)
+        require_project_admin(request.user, active_project.id, request=request)
         serializer = CultureRestoreSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         revision_id = serializer.validated_data['history_id']
 
-        revision = get_object_or_404(CultureRevision.objects.select_related('culture'), id=revision_id)
+        revision = get_object_or_404(
+            CultureRevision.objects.select_related('culture').filter(culture__project=active_project),
+            id=revision_id,
+        )
         culture = revision.culture
         snapshot = revision.snapshot
         allowed_fields = {f.name for f in Culture._meta.fields if f.name not in {'id', 'created_at', 'updated_at'}}
@@ -1777,6 +1801,7 @@ class MediaFileUploadView(APIView):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
 
     def post(self, request):
+        active_project = get_active_project_or_400(request)
         upload = request.FILES.get('file')
         if upload is None:
             return Response({'file': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
@@ -1784,7 +1809,7 @@ class MediaFileUploadView(APIView):
         rel_path = culture_media_upload_path(None, upload.name)
         saved_path = default_storage.save(rel_path, upload)
         media = MediaFile.objects.create(storage_path=saved_path)
-        _create_project_revision(f"Media uploaded #{media.pk}", project=_get_bootstrap_project())
+        _create_project_revision(f"Media uploaded #{media.pk}", project=active_project)
         return Response({'id': media.id, 'storage_path': media.storage_path, 'uploaded_at': media.uploaded_at}, status=status.HTTP_201_CREATED)
 
 class NoteAttachmentListCreateView(APIView):
@@ -1793,13 +1818,15 @@ class NoteAttachmentListCreateView(APIView):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
 
     def get(self, request, note_id: int):
-        plan = get_object_or_404(PlantingPlan, pk=note_id)
+        active_project = get_active_project_or_400(request)
+        plan = get_object_or_404(PlantingPlan, pk=note_id, project=active_project)
         attachments = plan.attachments.all()
         serializer = NoteAttachmentSerializer(attachments, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, note_id: int):
-        plan = get_object_or_404(PlantingPlan, pk=note_id)
+        active_project = get_active_project_or_400(request)
+        plan = get_object_or_404(PlantingPlan, pk=note_id, project=active_project)
 
         if plan.attachments.count() >= 10:
             return Response({'detail': 'Attachment limit per note reached (10).'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1840,7 +1867,8 @@ class NoteAttachmentDeleteView(APIView):
     """Delete a note attachment."""
 
     def delete(self, request, attachment_id: int):
-        attachment = get_object_or_404(NoteAttachment, pk=attachment_id)
+        active_project = get_active_project_or_400(request)
+        attachment = get_object_or_404(NoteAttachment, pk=attachment_id, project=active_project)
         attachment_id = attachment.pk
         attachment_project = attachment.project
         attachment.image.delete(save=False)
@@ -2397,12 +2425,12 @@ class AcceptProjectInvitationByTokenView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, token: str):
-        logger.info('Invitation accept endpoint reached', extra={'user_id': request.user.id, 'token': token, 'path': request.path})
+        logger.info('Invitation accept endpoint reached', extra={'user_id': request.user.id, 'path': request.path})
         try:
             invitation = get_invitation_by_token(token)
             result = accept_invitation(invitation=invitation, user=request.user)
         except InvitationFlowError as exc:
-            logger.warning('Invitation accept failed', extra={'user_id': request.user.id, 'token': token, 'code': exc.code, 'path': request.path})
+            logger.warning('Invitation accept failed', extra={'user_id': request.user.id, 'code': exc.code, 'path': request.path})
             return _invitation_error_response(exc)
 
         project_payload = _apply_invitation_project_settings(user=request.user, project=result.invitation.project)
@@ -2427,7 +2455,7 @@ class AcceptProjectInvitationView(APIView):
         serializer = InvitationTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         token = serializer.validated_data['token']
-        logger.info('Invitation accept body endpoint reached', extra={'user_id': request.user.id, 'token': token, 'path': request.path})
+        logger.info('Invitation accept body endpoint reached', extra={'user_id': request.user.id, 'path': request.path})
         return AcceptProjectInvitationByTokenView().post(request, token)
 
 
@@ -2465,3 +2493,4 @@ class RevokeProjectInvitationView(APIView):
         invitation = get_object_or_404(ProjectInvitation, id=invitation_id, project_id=project_id)
         result = revoke_invitation(invitation=invitation, actor=request.user)
         return Response({'code': result.code, 'detail': result.message})
+        active_project = request.active_project
