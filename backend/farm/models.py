@@ -1061,6 +1061,41 @@ class Culture(TimestampedModel):
             )
         ]
 
+class CultureSupplierData(TimestampedModel):
+    """Supplier-specific seed metadata attached to one culture."""
+
+    culture = models.ForeignKey(Culture, on_delete=models.CASCADE, related_name='supplier_data')
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='culture_supplier_data')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='culture_supplier_data')
+    supplier_name = models.CharField(max_length=200, blank=True)
+    supplier_url = models.URLField(blank=True)
+    supplier_product_name = models.CharField(max_length=255, blank=True)
+    supplier_product_url = models.URLField(blank=True)
+    packaging_sizes = models.JSONField(default=list, blank=True)
+    thousand_kernel_weight_g = models.FloatField(null=True, blank=True)
+    germination_rate = models.FloatField(null=True, blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    notes = models.TextField(blank=True)
+    source_url = models.URLField(blank=True)
+
+    class Meta:
+        ordering = ['culture', 'supplier']
+        constraints = [
+            models.UniqueConstraint(fields=['culture', 'supplier'], name='unique_culture_supplier_data_per_supplier'),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        errors = {}
+        if self.thousand_kernel_weight_g is not None and self.thousand_kernel_weight_g <= 0:
+            errors['thousand_kernel_weight_g'] = 'Thousand kernel weight must be greater than zero.'
+        if self.germination_rate is not None and (self.germination_rate < 0 or self.germination_rate > 100):
+            errors['germination_rate'] = 'Germination rate must be between 0 and 100.'
+        if self.price is not None and self.price < 0:
+            errors['price'] = 'Price must be non-negative.'
+        if errors:
+            raise ValidationError(errors)
+
 
 class PublicCulture(TimestampedModel):
     """Published culture template in the shared public library."""

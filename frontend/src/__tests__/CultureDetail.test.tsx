@@ -67,6 +67,7 @@ describe('CultureDetail Component', () => {
     
     expect(screen.getByText('Tomato')).toBeInTheDocument();
     expect(screen.getByText('Cherry')).toBeInTheDocument();
+    expect(screen.getByText('Saatgutdaten je Lieferant')).toBeInTheDocument();
   });
 
   it('displays harvest information correctly', () => {
@@ -125,12 +126,15 @@ describe('CultureDetail Component', () => {
       {
         id: 12,
         name: 'Salat',
-        supplier: {
-          id: 9,
-          name: 'ReinSaat',
-          homepage_url: 'https://www.reinsaat.at',
-          allowed_domains: ['reinsaat.at'],
-        },
+        supplier_data: [{
+          supplier: {
+            id: 9,
+            name: 'ReinSaat',
+            homepage_url: 'https://www.reinsaat.at',
+            allowed_domains: ['reinsaat.at'],
+          },
+          supplier_product_url: 'https://www.reinsaat.at',
+        }],
       },
     ];
 

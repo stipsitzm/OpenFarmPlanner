@@ -152,6 +152,7 @@ export function CultureDetail({
   );
 
   const selectedCulture = selectedOption?.data ?? null;
+  const supplierRows = selectedCulture?.supplier_data ?? [];
   const activeCultivationTypes = useMemo(
     () => (
       selectedCulture
@@ -385,33 +386,6 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
-                {selectedCulture.seed_supplier && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Saatgutanbieter
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedCulture.seed_supplier}
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.supplier?.homepage_url && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Lieferanten-URL
-                    </Typography>
-                    <Typography variant="body1">
-                      <Link
-                        href={selectedCulture.supplier.homepage_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        underline="hover"
-                      >
-                        {selectedCulture.supplier.homepage_url}
-                      </Link>
-                    </Typography>
-                  </Box>
-                )}
                 {selectedCulture.nutrient_demand && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
@@ -443,6 +417,35 @@ export function CultureDetail({
                   </Box>
                 )}
               </Box>
+            </Box>
+
+            <Divider sx={{ mb: 3 }} />
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                Saatgutdaten je Lieferant
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.
+              </Typography>
+              {supplierRows.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">Keine Lieferantendaten vorhanden.</Typography>
+              ) : (
+                <Stack spacing={2}>
+                  {supplierRows.map((row) => (
+                    <Box key={`${row.id ?? row.supplier?.id ?? row.supplier_name}`}>
+                      <Typography variant="subtitle2">{row.supplier?.name || row.supplier_name || 'Lieferant'}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {row.supplier_product_name || '-'}
+                      </Typography>
+                      {row.supplier_product_url && (
+                        <Link href={row.supplier_product_url} target="_blank" rel="noopener noreferrer" underline="hover">
+                          {row.supplier_product_url}
+                        </Link>
+                      )}
+                    </Box>
+                  ))}
+                </Stack>
+              )}
             </Box>
 
             <Divider sx={{ mb: 3 }} />

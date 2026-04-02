@@ -25,6 +25,7 @@ import {
   Alert,
   Button,
   Typography,
+  TextField,
 } from '@mui/material';
 import { validateCulture } from './validation';
 import { BasicInfoSection } from './sections/BasicInfoSection';
@@ -174,6 +175,14 @@ export function CultureForm({
     }
   };
 
+  const primarySupplierRow = (formData.supplier_data && formData.supplier_data[0]) || null;
+  const handleSupplierRowChange = (key: 'supplier_name_input' | 'supplier_product_name' | 'supplier_product_url', value: string) => {
+    const currentRows = formData.supplier_data ?? [];
+    const firstRow = currentRows[0] ?? {};
+    const updatedRow = { ...firstRow, [key]: value };
+    handleChange('supplier_data', [updatedRow]);
+  };
+
   const handleDialogContentScrollKey = (event: { key: string; altKey: boolean; ctrlKey: boolean; metaKey: boolean; preventDefault: () => void }, contentElement: HTMLDivElement) => {
     if (event.altKey || event.ctrlKey || event.metaKey) {
       return;
@@ -250,6 +259,9 @@ export function CultureForm({
         <DialogContent ref={dialogContentRef} dividers sx={{ maxHeight: '70vh' }} onKeyDownCapture={handleDialogContentKeyDown}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 8 }}>
             <Typography variant="h6">Allgemeine Informationen</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Diese Angaben gelten allgemein für die Sorte und sind nicht vom Saatgutlieferanten abhängig.
+            </Typography>
             <BasicInfoSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <TimingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <HarvestSection formData={formData} errors={errors} onChange={handleChange} t={t} />
@@ -257,6 +269,28 @@ export function CultureForm({
             <SeedingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <ColorSection formData={formData} errors={errors} onChange={handleChange} t={t} defaultColor={DEFAULT_DISPLAY_COLOR} />
             <NotesSection formData={formData} onChange={handleChange} t={t} errors={errors} />
+            <Typography variant="h6" sx={{ mt: 1 }}>Saatgutdaten je Lieferant</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.
+            </Typography>
+            <TextField
+              label="Saatgutlieferant"
+              value={primarySupplierRow?.supplier_name_input ?? ''}
+              onChange={(event) => handleSupplierRowChange('supplier_name_input', event.target.value)}
+              fullWidth
+            />
+            <TextField
+              label="Artikelbezeichnung beim Lieferanten"
+              value={primarySupplierRow?.supplier_product_name ?? ''}
+              onChange={(event) => handleSupplierRowChange('supplier_product_name', event.target.value)}
+              fullWidth
+            />
+            <TextField
+              label="Lieferanten-URL"
+              value={primarySupplierRow?.supplier_product_url ?? ''}
+              onChange={(event) => handleSupplierRowChange('supplier_product_url', event.target.value)}
+              fullWidth
+            />
           </div>
         </DialogContent>
         <DialogActions sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>

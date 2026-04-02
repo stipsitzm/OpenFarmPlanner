@@ -1,5 +1,5 @@
 import type { Culture } from '../api/api';
-import type { SeedPackage } from '../api/types';
+import type { CultureSupplierDataInput, SeedPackage } from '../api/types';
 import {
   normalizeCultivationType,
   normalizeHarvestMethod,
@@ -26,6 +26,34 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
       }))
     : culture.seed_packages;
 
+  const supplierPayloadRows: CultureSupplierDataInput[] = [];
+  if (Array.isArray(culture.supplier_data) && culture.supplier_data.length > 0) {
+    supplierPayloadRows.push(...culture.supplier_data.map((row) => ({
+      supplier_id: row.supplier?.id ?? row.supplier_id ?? null,
+      supplier_name_input: row.supplier_name_input,
+      supplier_name: row.supplier_name ?? row.supplier?.name,
+      supplier_url: row.supplier_url,
+      supplier_product_name: row.supplier_product_name,
+      supplier_product_url: row.supplier_product_url,
+      packaging_sizes: row.packaging_sizes ?? [],
+      thousand_kernel_weight_g: row.thousand_kernel_weight_g ?? null,
+      germination_rate: row.germination_rate ?? null,
+      price: row.price ?? null,
+      notes: row.notes ?? '',
+      source_url: row.source_url ?? '',
+    })));
+  } else if (culture.supplier) {
+    supplierPayloadRows.push({
+      supplier_id: culture.supplier.id ?? null,
+      supplier_name_input: culture.supplier.id ? undefined : culture.supplier.name,
+      supplier_name: culture.supplier.name,
+      supplier_url: culture.supplier.homepage_url ?? '',
+      supplier_product_url: culture.supplier_product_url ?? '',
+      packaging_sizes: normalizedSeedPackages ?? [],
+      thousand_kernel_weight_g: culture.thousand_kernel_weight_g ?? null,
+    });
+  }
+
   const payload: CultureSavePayload = {
     ...culture,
     seed_packages: normalizedSeedPackages,
@@ -42,6 +70,7 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
     seeding_requirement_type: normalizeSeedingRequirementType(culture.seeding_requirement_type),
     supplier_id: culture.supplier?.id || null,
     supplier_name: culture.supplier && !culture.supplier.id ? culture.supplier.name : undefined,
+    supplier_data_input: supplierPayloadRows,
     supplier: undefined,
   };
 

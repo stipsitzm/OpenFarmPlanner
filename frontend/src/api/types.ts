@@ -54,6 +54,8 @@ export interface Culture {
   seed_supplier?: string;
   supplier?: Supplier | null;
   supplier_product_url?: string | null;
+  supplier_data?: CultureSupplierData[];
+  supplier_data_input?: CultureSupplierDataInput[];
   image_file?: MediaFileRef | null;
   image_file_id?: number | null;
   notes?: string;
@@ -84,6 +86,40 @@ export interface Culture {
   
   created_at?: string;
   updated_at?: string;
+}
+
+export interface CultureSupplierData {
+  id?: number;
+  culture?: number;
+  project?: number;
+  supplier?: Supplier | null;
+  supplier_id?: number | null;
+  supplier_name?: string;
+  supplier_name_input?: string;
+  supplier_url?: string;
+  supplier_product_name?: string;
+  supplier_product_url?: string;
+  packaging_sizes?: SeedPackage[];
+  thousand_kernel_weight_g?: number | null;
+  germination_rate?: number | null;
+  price?: number | null;
+  notes?: string;
+  source_url?: string;
+}
+
+export interface CultureSupplierDataInput {
+  supplier_id?: number | null;
+  supplier_name_input?: string;
+  supplier_name?: string;
+  supplier_url?: string;
+  supplier_product_name?: string;
+  supplier_product_url?: string;
+  packaging_sizes?: SeedPackage[];
+  thousand_kernel_weight_g?: number | null;
+  germination_rate?: number | null;
+  price?: number | null;
+  notes?: string;
+  source_url?: string;
 }
 
 

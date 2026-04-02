@@ -21,6 +21,7 @@ import type {
   BedLayoutEntry,
   FieldLayoutEntry,
   LocationLayoutsResponse,
+  CultureSupplierData,
 } from './types';
 
 const getActiveProjectId = (): number | null => {
@@ -106,6 +107,13 @@ export const supplierAPI = {
   create: (name: string, homepage_url: string, allowed_domains: string[] = []) => http.post<Supplier>('/suppliers/', { name, homepage_url, allowed_domains }),
   update: (id: number, data: Partial<Supplier>) => http.put<Supplier>(`/suppliers/${id}/`, data),
   delete: (id: number) => http.delete(`/suppliers/${id}/`),
+};
+
+export const cultureSupplierDataAPI = {
+  list: () => http.get<PaginatedResponse<CultureSupplierData>>('/culture-supplier-data/'),
+  create: (data: CultureSupplierData) => http.post<CultureSupplierData>('/culture-supplier-data/', withActiveProject(data)),
+  update: (id: number, data: CultureSupplierData) => http.put<CultureSupplierData>(`/culture-supplier-data/${id}/`, withActiveProject(data)),
+  delete: (id: number) => http.delete(`/culture-supplier-data/${id}/`),
 };
 
 export const bedAPI = {
@@ -294,12 +302,14 @@ export type {
   BedLayoutEntry,
   FieldLayoutEntry,
   LocationLayoutsResponse,
+  CultureSupplierData,
 };
 
 export default {
   cultures: cultureAPI,
   publicCultures: publicCultureAPI,
   suppliers: supplierAPI,
+  cultureSupplierData: cultureSupplierDataAPI,
   beds: bedAPI,
   plantingPlans: plantingPlanAPI,
   fields: fieldAPI,

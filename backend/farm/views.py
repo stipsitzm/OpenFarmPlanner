@@ -31,7 +31,7 @@ from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 from django.utils.dateparse import parse_date
 from django.utils.translation import gettext as _
-from .models import AgentLoginToken, Location, Field, Bed, BedLayout, FieldLayout, Culture, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, PublicCulture, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
+from .models import AgentLoginToken, Location, Field, Bed, BedLayout, FieldLayout, Culture, CultureSupplierData, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, PublicCulture, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
 from .project_context import get_active_project_or_400, require_project_admin, resolve_project_for_user
 from .serializers import (
     LocationSerializer,
@@ -49,6 +49,7 @@ from .serializers import (
     CultureHistoryEntrySerializer,
     CultureRestoreSerializer,
     SeedPackageSerializer,
+    CultureSupplierDataSerializer,
     ProjectSerializer,
     ProjectMembershipSerializer,
     ProjectInvitationSerializer,
@@ -929,9 +930,9 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
     def get_queryset(self):
         include_deleted = self.request.query_params.get('include_deleted') in {'1', 'true', 'True'}
         if include_deleted:
-            return Culture.all_objects.filter(project=self.request.active_project)
-        return Culture.objects.filter(project=self.request.active_project)
-    
+            return Culture.all_objects.filter(project=self.request.active_project).prefetch_related('supplier_data__supplier')
+        return Culture.objects.filter(project=self.request.active_project).prefetch_related('supplier_data__supplier')
+
     def _resolve_supplier(self, culture_data: dict) -> Supplier | None:
         """Resolve supplier from culture data using supplier_id or supplier_name.
         
@@ -1467,6 +1468,27 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
         }, status=status.HTTP_200_OK)
 
 
+
+
+class CultureSupplierDataViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
+    queryset = CultureSupplierData.objects.select_related('culture', 'supplier')
+    serializer_class = CultureSupplierDataSerializer
+
+    def get_queryset(self):
+        return self.queryset.filter(project=self.request.active_project)
+
+    def perform_create(self, serializer):
+        instance = serializer.save(project=self.request.active_project)
+        self.create_project_revision(f"CultureSupplierData created #{instance.pk}")
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self.create_project_revision(f"CultureSupplierData updated #{instance.pk}")
+
+    def perform_destroy(self, instance):
+        instance_id = instance.pk
+        instance.delete()
+        self.create_project_revision(f"CultureSupplierData deleted #{instance_id}")
 
 
 class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):

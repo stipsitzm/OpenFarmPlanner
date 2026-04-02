@@ -57,6 +57,13 @@ const CULTURE_B: Culture = {
 };
 
 describe('CultureForm', () => {
+  it('renders separated general and supplier-specific sections', () => {
+    render(<CultureForm culture={CULTURE_A} onSave={vi.fn().mockResolvedValue(undefined)} onCancel={() => {}} />);
+
+    expect(screen.getByText('Allgemeine Informationen')).toBeInTheDocument();
+    expect(screen.getByText('Saatgutdaten je Lieferant')).toBeInTheDocument();
+  });
+
   it('saves changed form data when editing a culture', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
 

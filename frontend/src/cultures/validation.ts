@@ -74,14 +74,18 @@ export function validateCulture(
     }
   }
 
-  // Required fields: name, variety, supplier
+  // Required fields: name, variety
   if (!draft.name) {
     errors.name = t('form.nameRequired');
   }
   if (!draft.variety) {
     errors.variety = t('form.varietyRequired');
   }
-  if (!draft.supplier) {
+  const hasSupplierData = Array.isArray(draft.supplier_data) && draft.supplier_data.some((row) => {
+    const supplierName = row.supplier_name_input ?? row.supplier_name ?? row.supplier?.name;
+    return Boolean((supplierName || '').trim());
+  });
+  if (!draft.supplier && !hasSupplierData) {
     errors.supplier = t('form.supplierRequired');
   }
 

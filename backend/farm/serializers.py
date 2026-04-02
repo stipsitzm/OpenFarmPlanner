@@ -22,6 +22,7 @@ from .models import (
     BedLayout,
     FieldLayout,
     Culture,
+    CultureSupplierData,
     Field,
     Location,
     MediaFile,
@@ -309,6 +310,71 @@ class SeedPackageSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class CultureSupplierDataSerializer(serializers.ModelSerializer):
+    supplier = SupplierSerializer(read_only=True)
+    supplier_id = serializers.PrimaryKeyRelatedField(
+        queryset=Supplier.objects.all(),
+        source='supplier',
+        write_only=True,
+        required=False,
+        allow_null=True,
+    )
+    supplier_name_input = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
+
+    class Meta:
+        model = CultureSupplierData
+        fields = [
+            'id',
+            'culture',
+            'project',
+            'supplier',
+            'supplier_id',
+            'supplier_name',
+            'supplier_name_input',
+            'supplier_url',
+            'supplier_product_name',
+            'supplier_product_url',
+            'packaging_sizes',
+            'thousand_kernel_weight_g',
+            'germination_rate',
+            'price',
+            'notes',
+            'source_url',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'project']
+        extra_kwargs = {'culture': {'required': False}}
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        supplier_name_input = attrs.pop('supplier_name_input', None)
+        if not attrs.get('supplier') and supplier_name_input:
+            from .utils import normalize_supplier_name
+
+            project = None
+            request = self.context.get('request')
+            if request is not None:
+                project = getattr(request, 'active_project', None)
+            if project is None and self.instance is not None:
+                project = self.instance.project
+            if project is None:
+                raise serializers.ValidationError({'supplier': 'Supplier is required.'})
+
+            supplier, _ = Supplier.objects.get_or_create(
+                project=project,
+                name_normalized=normalize_supplier_name(supplier_name_input) or '',
+                defaults={
+                    'name': supplier_name_input.strip(),
+                    'homepage_url': 'https://example.invalid',
+                    'project': project,
+                },
+            )
+            attrs['supplier'] = supplier
+            attrs['supplier_name'] = supplier.name
+
+        return attrs
+
 
 
 class PublicCultureSerializer(serializers.ModelSerializer):
@@ -460,6 +526,12 @@ class CultureSerializer(serializers.ModelSerializer):
         help_text="Type of seeding requirement (e.g. 'g', 'seeds')"
     )
     seed_packages = SeedPackageSerializer(many=True, required=False)
+    supplier_data = serializers.SerializerMethodField()
+    supplier_data_input = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        required=False,
+    )
 
     plants_per_m2 = serializers.DecimalField(
         max_digits=10,
@@ -476,6 +548,10 @@ class CultureSerializer(serializers.ModelSerializer):
             'id': obj.image_file_id,
             'storage_path': obj.image_file.storage_path,
         }
+
+    def get_supplier_data(self, obj):
+        rows = obj.supplier_data.select_related('supplier').all()
+        return CultureSupplierDataSerializer(rows, many=True).data
 
     class Meta:
         model = Culture
@@ -541,8 +617,20 @@ class CultureSerializer(serializers.ModelSerializer):
         return normalized_packages
 
     def create(self, validated_data):
+        supplier_data_input = validated_data.pop('supplier_data_input', [])
         seed_packages = validated_data.pop('seed_packages', [])
         culture = super().create(validated_data)
+        if isinstance(supplier_data_input, list):
+            for row in supplier_data_input:
+                if not isinstance(row, dict):
+                    continue
+                row_data = dict(row)
+                serializer = CultureSupplierDataSerializer(
+                    data=row_data,
+                    context=self.context,
+                )
+                serializer.is_valid(raise_exception=True)
+                serializer.save(culture=culture, project=culture.project)
         if isinstance(seed_packages, list):
             for package_data in seed_packages:
                 if isinstance(package_data, dict):
@@ -553,8 +641,22 @@ class CultureSerializer(serializers.ModelSerializer):
         return culture
 
     def update(self, instance, validated_data):
+        supplier_data_input = validated_data.pop('supplier_data_input', None)
         seed_packages = validated_data.pop('seed_packages', None)
         culture = super().update(instance, validated_data)
+        if supplier_data_input is not None:
+            culture.supplier_data.all().delete()
+            if isinstance(supplier_data_input, list):
+                for row in supplier_data_input:
+                    if not isinstance(row, dict):
+                        continue
+                    row_data = dict(row)
+                    serializer = CultureSupplierDataSerializer(
+                        data=row_data,
+                        context=self.context,
+                    )
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save(culture=culture, project=culture.project)
         if seed_packages is not None:
             culture.seed_packages.all().delete()
             if isinstance(seed_packages, list):
