@@ -12,20 +12,16 @@ import {
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import type { EnrichmentLoadingStep } from './useEnrichmentLoadingProgress';
 
 type Translator = (key: string, options?: Record<string, unknown>) => string;
-
-type EnrichmentStep = {
-  key: string;
-  startSeconds: number;
-};
 
 type EnrichmentLoadingDialogProps = {
   open: boolean;
   elapsedSeconds: number;
   progressPercent: number;
   activeStepIndex: number;
-  steps: readonly EnrichmentStep[];
+  steps: readonly EnrichmentLoadingStep[];
   t: Translator;
 };
 

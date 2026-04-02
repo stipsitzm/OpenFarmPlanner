@@ -2,15 +2,18 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   List,
   ListItem,
   ListItemText,
   Typography,
 } from '@mui/material';
+import type { ImportPreviewResult } from './culturesPageUtils';
 import type { CultureImportState } from './useCultureImportState';
 
 type Translator = (key: string, options?: Record<string, unknown>) => string;
@@ -26,6 +29,79 @@ type CulturesImportDialogProps = {
   t: Translator;
 };
 
+const renderCultureLabel = (result: ImportPreviewResult): string => (
+  `${result.import_data.name}${result.import_data.variety ? ` (${result.import_data.variety})` : ''}`
+);
+
+function NewCulturesSection({ entries, t }: { entries: ImportPreviewResult[]; t: Translator }): React.ReactElement | null {
+  if (!entries.length) {
+    return null;
+  }
+
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="h6" color="success.main">
+        {t('import.newCultures')} ({entries.length})
+      </Typography>
+      <List dense>
+        {entries.map((result) => (
+          <ListItem key={result.index}>
+            <ListItemText primary={renderCultureLabel(result)} />
+          </ListItem>
+        ))}
+      </List>
+    </Box>
+  );
+}
+
+function UpdateCandidatesSection({
+  entries,
+  confirmUpdates,
+  onConfirmUpdatesChange,
+  t,
+}: {
+  entries: ImportPreviewResult[];
+  confirmUpdates: boolean;
+  onConfirmUpdatesChange: (value: boolean) => void;
+  t: Translator;
+}): React.ReactElement | null {
+  if (!entries.length) {
+    return null;
+  }
+
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="h6" color="warning.main">
+        {t('import.updateCandidates')} ({entries.length})
+      </Typography>
+      <List dense>
+        {entries.map((result) => (
+          <ListItem key={result.index} sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+            <ListItemText
+              primary={renderCultureLabel(result)}
+              secondary={result.diff && result.diff.length > 0 ? t('import.fieldsChanged', { count: result.diff.length }) : t('import.noChanges')}
+            />
+            {result.diff && result.diff.length > 0 && (
+              <Box sx={{ ml: 2, fontSize: '0.875rem' }}>
+                {result.diff.map((change, index) => (
+                  <Typography key={index} variant="caption" display="block">
+                    {change.field}: {JSON.stringify(change.current)} → {JSON.stringify(change.new)}
+                  </Typography>
+                ))}
+              </Box>
+            )}
+          </ListItem>
+        ))}
+      </List>
+      <FormControlLabel
+        sx={{ mt: 1 }}
+        control={<Checkbox checked={confirmUpdates} onChange={(event) => onConfirmUpdatesChange(event.target.checked)} />}
+        label={t('import.confirmUpdates')}
+      />
+    </Box>
+  );
+}
+
 export function CulturesImportDialog({
   open,
   importState,
@@ -36,6 +112,9 @@ export function CulturesImportDialog({
   onImportStart,
   t,
 }: CulturesImportDialogProps): React.ReactElement {
+  const newCultures = importState.previewResults.filter((result) => result.status === 'create');
+  const updateCandidates = importState.previewResults.filter((result) => result.status === 'update_candidate');
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>{t('import.title')}</DialogTitle>
@@ -52,70 +131,13 @@ export function CulturesImportDialog({
             </Typography>
           )}
 
-          {importState.previewResults.length > 0 && (
-            <>
-              {(() => {
-                const newCultures = importState.previewResults.filter((result) => result.status === 'create');
-                return newCultures.length > 0 && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="h6" color="success.main">
-                      {t('import.newCultures')} ({newCultures.length})
-                    </Typography>
-                    <List dense>
-                      {newCultures.map((result) => (
-                        <ListItem key={result.index}>
-                          <ListItemText
-                            primary={`${result.import_data.name}${result.import_data.variety ? ` (${result.import_data.variety})` : ''}`}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                );
-              })()}
-
-              {(() => {
-                const updateCandidates = importState.previewResults.filter((result) => result.status === 'update_candidate');
-                return updateCandidates.length > 0 && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="h6" color="warning.main">
-                      {t('import.updateCandidates')} ({updateCandidates.length})
-                    </Typography>
-                    <List dense>
-                      {updateCandidates.map((result) => (
-                        <ListItem key={result.index} sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                          <ListItemText
-                            primary={`${result.import_data.name}${result.import_data.variety ? ` (${result.import_data.variety})` : ''}`}
-                            secondary={result.diff && result.diff.length > 0 ? t('import.fieldsChanged', { count: result.diff.length }) : t('import.noChanges')}
-                          />
-                          {result.diff && result.diff.length > 0 && (
-                            <Box sx={{ ml: 2, fontSize: '0.875rem' }}>
-                              {result.diff.map((change, index) => (
-                                <Typography key={index} variant="caption" display="block">
-                                  {change.field}: {JSON.stringify(change.current)} → {JSON.stringify(change.new)}
-                                </Typography>
-                              ))}
-                            </Box>
-                          )}
-                        </ListItem>
-                      ))}
-                    </List>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                      <input
-                        type="checkbox"
-                        id="confirm-updates"
-                        checked={confirmUpdates}
-                        onChange={(event) => onConfirmUpdatesChange(event.target.checked)}
-                      />
-                      <label htmlFor="confirm-updates">
-                        <Typography variant="body2">{t('import.confirmUpdates')}</Typography>
-                      </label>
-                    </Box>
-                  </Box>
-                );
-              })()}
-            </>
-          )}
+          <NewCulturesSection entries={newCultures} t={t} />
+          <UpdateCandidatesSection
+            entries={updateCandidates}
+            confirmUpdates={confirmUpdates}
+            onConfirmUpdatesChange={onConfirmUpdatesChange}
+            t={t}
+          />
 
           {importState.invalidEntries.length > 0 && (
             <Box sx={{ mt: 2 }}>

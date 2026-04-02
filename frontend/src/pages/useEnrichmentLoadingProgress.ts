@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 
-const ENRICHMENT_LOADING_STEPS = [
+export type EnrichmentLoadingStep = {
+  key: 'request' | 'research' | 'validation' | 'results';
+  startSeconds: number;
+};
+
+export const ENRICHMENT_LOADING_STEPS: readonly EnrichmentLoadingStep[] = [
   { key: 'request', startSeconds: 0 },
   { key: 'research', startSeconds: 12 },
   { key: 'validation', startSeconds: 32 },
