@@ -93,6 +93,7 @@ from .services.public_cultures import (
     import_public_culture_into_project,
     publish_culture_to_public_library,
 )
+from .services.demo_projects import open_fresh_demo_project_for_user
 from config.version import get_version
 from config.frontend_urls import build_public_frontend_url
 
@@ -2112,6 +2113,19 @@ class ProjectSwitchView(APIView):
         })
 
 
+class OpenDemoProjectView(APIView):
+    """Create and open a fresh per-user demo project copy."""
+
+    def post(self, request):
+        result = open_fresh_demo_project_for_user(request.user)
+        return Response({
+            'detail': 'Demo project opened.',
+            'project': ProjectSerializer(result.demo_project).data,
+            'project_id': result.demo_project.id,
+            'template_project_id': result.template_project.id,
+        })
+
+
 class ProjectViewSet(viewsets.ModelViewSet):
     """Project CRUD for authenticated users."""
 
@@ -2188,6 +2202,8 @@ class ProjectInvitationView(APIView):
         serializer = ProjectInvitationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         project = get_object_or_404(Project, id=project_id, is_active=True)
+        if project.is_demo_template:
+            return Response({'detail': 'Invitations are disabled for the demo template project.'}, status=status.HTTP_403_FORBIDDEN)
 
         try:
             result = create_or_resend_invitation(

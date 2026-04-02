@@ -46,6 +46,9 @@ export default function HomePage(): React.ReactElement {
               <Button component={RouterLink} to="/app" variant="contained" size="large" sx={{ minWidth: 150 }}>
                 {t('landing.actions.openApp')}
               </Button>
+              <Button component={RouterLink} to="/app/demo" variant="contained" color="secondary" size="large" sx={{ minWidth: 150 }}>
+                {t('landing.actions.openDemo')}
+              </Button>
               <Button component={RouterLink} to="/login" variant="outlined" size="large" sx={{ minWidth: 150 }}>
                 {t('landing.actions.login')}
               </Button>

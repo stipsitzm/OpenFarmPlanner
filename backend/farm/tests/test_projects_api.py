@@ -7,7 +7,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProjectSettings
-from farm.models import Project, ProjectInvitation, ProjectMembership, Location
+from farm.models import Bed, Culture, Field, PlantingPlan, Project, ProjectInvitation, ProjectMembership, Location
+from farm.services.demo_projects import ensure_demo_template_project
 
 User = get_user_model()
 
@@ -474,3 +475,119 @@ class ProjectsApiTests(APITestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class DemoProjectFlowTests(APITestCase):
+    def setUp(self) -> None:
+        self.user = User.objects.create_user(username='demo-user', email='demo-user@example.com', password='pass12345', is_active=True)
+        self.superuser = User.objects.create_superuser(username='root', email='root@example.com', password='pass12345')
+        self.normal_project = Project.objects.create(name='Normal', slug='normal')
+        ProjectMembership.objects.create(user=self.user, project=self.normal_project, role='admin')
+        UserProjectSettings.objects.create(user=self.user, default_project=self.normal_project, last_project=self.normal_project)
+
+    def _login_regular_user(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'demo-user@example.com', 'password': 'pass12345'}, format='json')
+
+    def _login_superuser(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'root@example.com', 'password': 'pass12345'}, format='json')
+
+    def test_demo_template_is_created_automatically_if_missing(self) -> None:
+        self.assertFalse(Project.objects.filter(is_demo_template=True).exists())
+        self._login_regular_user()
+
+        response = self.client.post('/openfarmplanner/api/projects/open-demo/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        template = Project.objects.get(is_demo_template=True)
+        self.assertEqual(template.slug, 'demo-garten-vorlage')
+        self.assertEqual(Location.objects.filter(project=template).count(), 1)
+        self.assertEqual(Field.objects.filter(project=template).count(), 2)
+        self.assertEqual(Bed.objects.filter(project=template).count(), 6)
+        self.assertGreaterEqual(Culture.objects.filter(project=template).count(), 6)
+        self.assertGreaterEqual(PlantingPlan.objects.filter(project=template).count(), 6)
+
+    def test_opening_demo_creates_fresh_editable_demo_copy(self) -> None:
+        self._login_regular_user()
+
+        response = self.client.post('/openfarmplanner/api/projects/open-demo/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        demo_project = Project.objects.get(id=response.data['project_id'])
+        membership = ProjectMembership.objects.get(user=self.user, project=demo_project)
+        self.assertEqual(membership.role, ProjectMembership.ROLE_ADMIN)
+        create_location = self.client.post(
+            '/openfarmplanner/api/locations/',
+            {'name': 'Temporärer Standort'},
+            format='json',
+            HTTP_X_PROJECT_ID=str(demo_project.id),
+        )
+        self.assertEqual(create_location.status_code, status.HTTP_201_CREATED)
+
+    def test_reopening_demo_resets_previous_changes(self) -> None:
+        self._login_regular_user()
+        first_response = self.client.post('/openfarmplanner/api/projects/open-demo/', {}, format='json')
+        first_demo_id = first_response.data['project_id']
+
+        self.client.post(
+            '/openfarmplanner/api/locations/',
+            {'name': 'Nur im ersten Lauf'},
+            format='json',
+            HTTP_X_PROJECT_ID=str(first_demo_id),
+        )
+
+        second_response = self.client.post('/openfarmplanner/api/projects/open-demo/', {}, format='json')
+        second_demo_id = second_response.data['project_id']
+
+        self.assertNotEqual(first_demo_id, second_demo_id)
+        self.assertFalse(Project.objects.filter(id=first_demo_id).exists())
+        self.assertFalse(Location.objects.filter(project_id=second_demo_id, name='Nur im ersten Lauf').exists())
+
+    def test_normal_users_cannot_edit_real_demo_template(self) -> None:
+        template = ensure_demo_template_project()
+        self._login_regular_user()
+
+        response = self.client.post(
+            '/openfarmplanner/api/locations/',
+            {'name': 'Unerlaubter Zugriff'},
+            format='json',
+            HTTP_X_PROJECT_ID=str(template.id),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_superuser_can_access_and_maintain_demo_template(self) -> None:
+        template = ensure_demo_template_project()
+        self._login_superuser()
+
+        response = self.client.post(
+            '/openfarmplanner/api/locations/',
+            {'name': 'Vorlage bearbeitet'},
+            format='json',
+            HTTP_X_PROJECT_ID=str(template.id),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Location.objects.filter(project=template, name='Vorlage bearbeitet').exists())
+
+    def test_opening_demo_does_not_modify_normal_projects(self) -> None:
+        self._login_regular_user()
+        before_memberships = ProjectMembership.objects.filter(user=self.user, project=self.normal_project).count()
+        before_locations = Location.objects.filter(project=self.normal_project).count()
+
+        response = self.client.post('/openfarmplanner/api/projects/open-demo/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(ProjectMembership.objects.filter(user=self.user, project=self.normal_project).count(), before_memberships)
+        self.assertEqual(Location.objects.filter(project=self.normal_project).count(), before_locations)
+
+    def test_cloned_objects_are_remapped_to_demo_copy(self) -> None:
+        self._login_regular_user()
+        response = self.client.post('/openfarmplanner/api/projects/open-demo/', {}, format='json')
+        demo_project_id = response.data['project_id']
+        demo_plan = PlantingPlan.objects.filter(project_id=demo_project_id).select_related('bed', 'culture').first()
+
+        self.assertIsNotNone(demo_plan)
+        assert demo_plan is not None
+        self.assertEqual(demo_plan.project_id, demo_project_id)
+        self.assertEqual(demo_plan.bed.project_id, demo_project_id)
+        self.assertEqual(demo_plan.culture.project_id, demo_project_id)

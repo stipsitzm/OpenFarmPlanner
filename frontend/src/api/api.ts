@@ -267,6 +267,8 @@ export const projectAPI = {
     http.post<InvitationAcceptResponse>(`/project-invitations/${token}/accept/`),
   acceptInvitation: (token: string) =>
     http.post<InvitationAcceptResponse>('/invitations/accept/', { token }),
+  openDemo: () =>
+    http.post<{ detail: string; project_id: number; template_project_id: number }>('/projects/open-demo/'),
 };
 
 export const versionAPI = {

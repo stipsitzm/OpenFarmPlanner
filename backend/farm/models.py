@@ -69,6 +69,15 @@ class Project(TimestampedModel):
     slug = models.SlugField(max_length=220, unique=True)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    is_demo_template = models.BooleanField(default=False)
+    is_demo_copy = models.BooleanField(default=False)
+    demo_owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='owned_demo_projects',
+    )
 
     class Meta:
         ordering = ['name']

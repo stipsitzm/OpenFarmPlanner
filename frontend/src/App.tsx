@@ -55,6 +55,7 @@ import './App.css';
 import { useAuth } from './auth/useAuth';
 import ProtectedRoute from './auth/ProtectedRoute';
 import HomePage from './pages/public/HomePage';
+import OpenDemoProjectPage from './pages/OpenDemoProjectPage';
 import ImprintPage from './pages/public/ImprintPage';
 import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
 import LoginPage from './pages/auth/LoginPage';
@@ -777,6 +778,7 @@ function createAppRouter(basename: string) {
             { path: 'project-selection', element: <ProjectSelectionPage /> },
             { path: 'account-settings', element: <AccountSettingsPage /> },
             { path: 'project-settings', element: <ProjectSettingsPage /> },
+            { path: 'demo', element: <OpenDemoProjectPage /> },
           ],
         },
       ],
