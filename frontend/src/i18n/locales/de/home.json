@@ -6,7 +6,7 @@
     "description": "OpenFarmPlanner hilft dabei, Kulturen, Anbauflächen und Anbauzeiträume übersichtlich zu verwalten. So bleiben Anbaupläne, Flächen und wichtige Informationen an einem Ort organisiert.",
     "actions": {
       "openApp": "App öffnen",
-      "openDemo": "Demo testen",
+      "openDemo": "Demo ausprobieren",
       "login": "Anmelden",
       "register": "Registrieren"
     },

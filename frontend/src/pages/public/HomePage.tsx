@@ -42,18 +42,27 @@ export default function HomePage(): React.ReactElement {
             <Typography color="text.secondary" sx={{ maxWidth: 720 }}>
               {t('landing.description')}
             </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ width: { xs: '100%', sm: 'auto' } }}>
-              <Button component={RouterLink} to="/app" variant="contained" size="large" sx={{ minWidth: 150 }}>
-                {t('landing.actions.openApp')}
-              </Button>
-              <Button component={RouterLink} to="/demo" variant="contained" color="secondary" size="large" sx={{ minWidth: 150 }}>
+            <Stack spacing={2.5} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                <Button component={RouterLink} to="/app" variant="contained" size="large" sx={{ minWidth: 150 }}>
+                  {t('landing.actions.openApp')}
+                </Button>
+                <Button component={RouterLink} to="/login" variant="outlined" size="large" sx={{ minWidth: 150 }}>
+                  {t('landing.actions.login')}
+                </Button>
+                <Button component={RouterLink} to="/register" variant="outlined" size="large" sx={{ minWidth: 150 }}>
+                  {t('landing.actions.register')}
+                </Button>
+              </Stack>
+              <Button
+                component={RouterLink}
+                to="/demo"
+                variant="outlined"
+                color="inherit"
+                size="medium"
+                sx={{ minWidth: 180 }}
+              >
                 {t('landing.actions.openDemo')}
-              </Button>
-              <Button component={RouterLink} to="/login" variant="outlined" size="large" sx={{ minWidth: 150 }}>
-                {t('landing.actions.login')}
-              </Button>
-              <Button component={RouterLink} to="/register" variant="outlined" size="large" sx={{ minWidth: 150 }}>
-                {t('landing.actions.register')}
               </Button>
             </Stack>
           </Stack>
