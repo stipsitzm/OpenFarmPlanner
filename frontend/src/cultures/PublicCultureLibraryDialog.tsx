@@ -78,6 +78,12 @@ export function PublicCultureLibraryDialog({
     () => Array.from(new Set(cultures.map((entry) => entry.nutrient_demand || '').filter(Boolean))).sort((a, b) => a.localeCompare(b)),
     [cultures],
   );
+  const nutrientLabel = (value: string): string => {
+    if (value === 'low') return t('form.nutrientDemandLow');
+    if (value === 'medium') return t('form.nutrientDemandMedium');
+    if (value === 'high') return t('form.nutrientDemandHigh');
+    return value;
+  };
   const cropFamilyOptions = useMemo(
     () => Array.from(new Set(cultures.map((entry) => entry.crop_family?.trim()).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b)),
     [cultures],
@@ -145,7 +151,7 @@ export function PublicCultureLibraryDialog({
             <Select value={nutrientFilter} label={t('library.filters.nutrientDemand')} onChange={(event) => setNutrientFilter(event.target.value)}>
               <MenuItem value="">{t('filters.all')}</MenuItem>
               {nutrientOptions.map((option) => (
-                <MenuItem key={option} value={option}>{option}</MenuItem>
+                <MenuItem key={option} value={option}>{nutrientLabel(option)}</MenuItem>
               ))}
             </Select>
           </FormControl>
