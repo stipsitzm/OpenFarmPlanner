@@ -203,6 +203,7 @@ export function CultureDetail({
 
     return supplierRows[0];
   }, [selectedCulture?.selected_seed_demand_supplier, selectedCulture?.supplier?.id, supplierRows]);
+  const hasMultipleSupplierRows = supplierRows.length > 1;
   const activeCultivationTypes = useMemo(
     () => (
       selectedCulture
@@ -640,11 +641,13 @@ export function CultureDetail({
               </Box>
               <Box sx={{ mt: 3, ml: { xs: 0, sm: 2 } }}>
                 <Typography variant="subtitle1" component="h3" gutterBottom>
-                  Saatgutdaten je Lieferant
+                  {hasMultipleSupplierRows ? 'Saatgutdaten je Lieferant' : 'Lieferant'}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.
-                </Typography>
+                {hasMultipleSupplierRows && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.
+                  </Typography>
+                )}
                 {selectedSupplierRow === null ? (
                   <Typography variant="body2" color="text.secondary">Keine Lieferantendaten vorhanden.</Typography>
                 ) : (
