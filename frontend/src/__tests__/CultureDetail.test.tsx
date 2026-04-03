@@ -97,7 +97,6 @@ describe('CultureDetail Component', () => {
     const sectionTitles = screen.getAllByRole('heading', { level: 6 }).map((node) => node.textContent?.trim());
     expect(sectionTitles).toEqual([
       'Allgemeine Informationen',
-      'Saatgutdaten je Lieferant',
       'Zeitplanung',
       'Abstände',
       'Saatgut',
@@ -106,7 +105,7 @@ describe('CultureDetail Component', () => {
     ]);
   });
 
-  it('renders supplier section exactly once between general info and timing', () => {
+  it('renders supplier seed data once inside the seed section', () => {
     const mockOnSelect = vi.fn();
     render(
       <CultureDetail
@@ -116,14 +115,13 @@ describe('CultureDetail Component', () => {
       />
     );
 
-    const generalHeading = screen.getByRole('heading', { level: 6, name: 'Allgemeine Informationen' });
-    const supplierHeadings = screen.getAllByRole('heading', { level: 6, name: 'Saatgutdaten je Lieferant' });
-    const timingHeading = screen.getByRole('heading', { level: 6, name: 'Zeitplanung' });
+    const seedHeading = screen.getByRole('heading', { level: 6, name: 'Saatgut' });
+    const harvestHeading = screen.getByRole('heading', { level: 6, name: 'Ernte' });
+    const supplierSubheading = screen.getByRole('heading', { level: 3, name: 'Saatgutdaten je Lieferant' });
 
-    expect(supplierHeadings).toHaveLength(1);
-    const supplierHeading = supplierHeadings[0];
-    expect(generalHeading.compareDocumentPosition(supplierHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(supplierHeading.compareDocumentPosition(timingHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByText('Saatgutdaten je Lieferant')).toHaveLength(1);
+    expect(seedHeading.compareDocumentPosition(supplierSubheading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(supplierSubheading.compareDocumentPosition(harvestHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('displays harvest information correctly', () => {
