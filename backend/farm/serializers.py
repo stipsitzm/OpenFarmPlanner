@@ -757,6 +757,34 @@ class CultureSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         """Validate cross-field rules and supplier get-or-create."""
         errors = {}
+        from .utils import normalize_text
+
+        raw_name = attrs.get(
+            'name',
+            getattr(self.instance, 'name', None) if self.instance else None,
+        )
+        normalized_name = normalize_text(raw_name)
+        if not normalized_name:
+            errors['name'] = 'Name is required.'
+        else:
+            attrs['name'] = ' '.join(str(raw_name).split())
+            request = self.context.get('request')
+            project = attrs.get('project')
+            if project is None and request is not None:
+                project = getattr(request, 'active_project', None)
+            if project is None and self.instance is not None:
+                project = self.instance.project
+
+            if project is not None:
+                existing_name_query = Culture.all_objects.filter(
+                    project=project,
+                    deleted_at__isnull=True,
+                    name_normalized=normalized_name,
+                )
+                if self.instance is not None:
+                    existing_name_query = existing_name_query.exclude(pk=self.instance.pk)
+                if existing_name_query.exists():
+                    errors['name'] = 'A culture with this name already exists.'
 
         cultivation_types = attrs.get(
             'cultivation_types',

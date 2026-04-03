@@ -268,6 +268,26 @@ class ApiEndpointsTest(DRFAPITestCase):
         # Check that display color was auto-generated
         self.assertIn('display_color', response.data)
         self.assertTrue(response.data['display_color'].startswith('#'))
+
+    def test_culture_create_rejects_duplicate_name(self):
+        data = {
+            'name': self.culture.name,
+            'variety': 'Different Variety',
+            'project': self.project.id,
+        }
+        response = self.client.post('/openfarmplanner/api/cultures/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('name', response.data)
+
+    def test_culture_create_rejects_duplicate_name_case_and_whitespace_insensitive(self):
+        data = {
+            'name': f"  {self.culture.name.upper()}  ",
+            'variety': 'Another Variety',
+            'project': self.project.id,
+        }
+        response = self.client.post('/openfarmplanner/api/cultures/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('name', response.data)
     
     def test_culture_create_with_all_fields(self):
         """Test creating culture with all manual planning fields"""

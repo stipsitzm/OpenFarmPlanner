@@ -33,13 +33,15 @@
     "supplier_id": "Lieferant"
   },
   "validation": {
-    "required": "Dieses Feld ist erforderlich."
+    "required": "Dieses Feld ist erforderlich.",
+    "cultureNameUnique": "Eine Kultur mit diesem Namen existiert bereits."
   },
   "sections": {
     "growthHarvest": "Wachstum & Ernte",
     "additionalInfo": "Weitere Informationen"
   },
   "fields": {
+    "name": "Name",
     "culture": "Kultur",
     "supplier_id": "Lieferant",
     "daysToFirstHarvest": "Tage bis zur ersten Ernte",

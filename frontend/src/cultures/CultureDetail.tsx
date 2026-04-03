@@ -158,14 +158,27 @@ export function CultureDetail({
   }, [cultures, searchQuery, selectedFamilyFilter, selectedCultivationFilter, selectedSupplierFilter]);
 
   const cultureOptions: SearchableSelectOption<Culture>[] = useMemo(
-    () => filteredCultures
-      .filter((culture) => culture.id !== undefined)
-      .map((culture) => ({
+    () => {
+      const selectedCultureFromAll = selectedCultureId !== undefined
+        ? cultures.find((culture) => culture.id === selectedCultureId)
+        : undefined;
+      const optionCultures = [...filteredCultures];
+      if (
+        selectedCultureFromAll
+        && !optionCultures.some((culture) => culture.id === selectedCultureFromAll.id)
+      ) {
+        optionCultures.unshift(selectedCultureFromAll);
+      }
+
+      return optionCultures
+        .filter((culture) => culture.id !== undefined)
+        .map((culture) => ({
         value: culture.id!,
         label: `${culture.name}${culture.variety ? ` - ${culture.variety}` : ''}${culture.seed_supplier ? ` | ${culture.seed_supplier}` : ''}`,
         data: culture,
-      })),
-    [filteredCultures]
+      }));
+    },
+    [cultures, filteredCultures, selectedCultureId]
   );
 
   const selectedOption = useMemo(

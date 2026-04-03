@@ -117,6 +117,21 @@ describe('extractApiErrorMessage', () => {
     ].join('\n'));
   });
 
+  it('maps duplicate culture-name backend errors to user-friendly localized text', () => {
+    const t = createT({
+      'fields.name': 'Name',
+      'validation.cultureNameUnique': 'Eine Kultur mit diesem Namen existiert bereits.',
+    });
+
+    const error = createAxiosError(400, {
+      name: ['A culture with this name already exists.'],
+    });
+
+    const result = extractApiErrorMessage(error, t, fallbackMessage);
+
+    expect(result).toBe('Name: Eine Kultur mit diesem Namen existiert bereits.');
+  });
+
 
 
   it('returns fallback when 400 object has no string or array messages', () => {

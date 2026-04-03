@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { CultureDetail } from '../cultures/CultureDetail';
 import type { Culture } from '../api/api';
 import translations from '@/test-utils/translations';
@@ -82,6 +82,28 @@ describe('CultureDetail Component', () => {
     expect(screen.getByText('Tomato')).toBeInTheDocument();
     expect(screen.getByText('Cherry')).toBeInTheDocument();
     expect(screen.getByText('Saatgutdaten je Lieferant')).toBeInTheDocument();
+  });
+
+  it('renders detail sections in the expected order', () => {
+    const mockOnSelect = vi.fn();
+    render(
+      <CultureDetail
+        cultures={mockCultures}
+        selectedCultureId={1}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    const sectionTitles = screen.getAllByRole('heading', { level: 6 }).map((node) => node.textContent?.trim());
+    expect(sectionTitles).toEqual([
+      'Allgemeine Informationen',
+      'Saatgutdaten je Lieferant',
+      'Zeitplanung',
+      'Abstände',
+      'Saatgut',
+      'Ernte',
+      'Notizen',
+    ]);
   });
 
   it('displays harvest information correctly', () => {
@@ -250,6 +272,23 @@ describe('CultureDetail Component', () => {
     expect(screen.getByText('4 g')).toBeInTheDocument();
     expect(screen.queryByText('999 g')).not.toBeInTheDocument();
     expect(screen.queryByText('99 g')).not.toBeInTheDocument();
+  });
+
+  it('keeps selected culture visible even when active search filter does not match', () => {
+    const mockOnSelect = vi.fn();
+    render(
+      <CultureDetail
+        cultures={mockCultures}
+        selectedCultureId={1}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    const searchInput = screen.getByLabelText(translations.cultures.searchPlaceholder);
+    fireEvent.change(searchInput, { target: { value: 'zzzz-no-match' } });
+
+    expect(screen.getByText('Tomato')).toBeInTheDocument();
+    expect(screen.getByText('Cherry')).toBeInTheDocument();
   });
 
   it('shows cultivation chips and per-method seed-rate table', () => {
