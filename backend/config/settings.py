@@ -49,7 +49,7 @@ SECRET_KEY = os.getenv(
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # In production, explicitly set DEBUG=False via environment variable
-DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 # Environment selector used for security-sensitive development overrides.
 DJANGO_ENV = _env_str('DJANGO_ENV', 'production').lower()
@@ -246,6 +246,22 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 _csrf_origins_str = os.getenv('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins_str.split(',') if origin.strip()]
 
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = _env_str('SESSION_COOKIE_SAMESITE', 'Lax')
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = _env_str('CSRF_COOKIE_SAMESITE', 'Lax')
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = _env_str('SECURE_SSL_REDIRECT', 'True').lower() in ('true', '1', 'yes')
+    SECURE_HSTS_SECONDS = int(_env_str('SECURE_HSTS_SECONDS', '31536000') or '31536000')
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_str('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'True').lower() in ('true', '1', 'yes')
+    SECURE_HSTS_PRELOAD = _env_str('SECURE_HSTS_PRELOAD', 'True').lower() in ('true', '1', 'yes')
+    SECURE_REFERRER_POLICY = _env_str('SECURE_REFERRER_POLICY', 'strict-origin-when-cross-origin')
+    X_FRAME_OPTIONS = _env_str('X_FRAME_OPTIONS', 'DENY')
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -258,10 +274,11 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 100,
 }
 
-CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
-SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
-CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
-SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
+CSRF_COOKIE_SAMESITE = _env_str('CSRF_COOKIE_SAMESITE', CSRF_COOKIE_SAMESITE)
+SESSION_COOKIE_SAMESITE = _env_str('SESSION_COOKIE_SAMESITE', SESSION_COOKIE_SAMESITE)
+if DEBUG:
+    CSRF_COOKIE_SECURE = _env_str('CSRF_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
+    SESSION_COOKIE_SECURE = _env_str('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
 
 
 

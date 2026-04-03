@@ -39,6 +39,19 @@ from .models import (
 )
 
 
+def _resolve_active_project_from_serializer(serializer) -> Project | None:
+    """Resolve active project from serializer context or bound instance."""
+    request = serializer.context.get('request')
+    if request is not None:
+        active_project = getattr(request, 'active_project', None)
+        if active_project is not None:
+            return active_project
+    instance = getattr(serializer, 'instance', None)
+    if instance is not None and hasattr(instance, 'project'):
+        return instance.project
+    return None
+
+
 class AuditUserSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     email = serializers.EmailField()
@@ -154,6 +167,14 @@ class FieldSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Width must be greater than or equal to 0.')
         return value
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        project = _resolve_active_project_from_serializer(self)
+        location = attrs.get('location') or getattr(self.instance, 'location', None)
+        if project is not None and location is not None and location.project_id != project.id:
+            raise serializers.ValidationError({'location': 'Location does not belong to the active project.'})
+        return attrs
+
 
 class BedSerializer(serializers.ModelSerializer):
     field_name = serializers.CharField(source='field.name', read_only=True)
@@ -194,6 +215,14 @@ class BedSerializer(serializers.ModelSerializer):
         if value is not None and value < 0:
             raise serializers.ValidationError('Width must be greater than or equal to 0.')
         return value
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        project = _resolve_active_project_from_serializer(self)
+        field = attrs.get('field') or getattr(self.instance, 'field', None)
+        if project is not None and field is not None and field.project_id != project.id:
+            raise serializers.ValidationError({'field': 'Field does not belong to the active project.'})
+        return attrs
 
 
 class FieldLayoutSerializer(serializers.ModelSerializer):
@@ -273,10 +302,16 @@ class SeedPackageSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        project = _resolve_active_project_from_serializer(self)
 
         culture = attrs.get('culture')
+        if culture is None and self.instance is not None:
+            culture = self.instance.culture
         size_value = attrs.get('size_value')
         size_unit = attrs.get('size_unit')
+
+        if project is not None and culture is not None and culture.project_id != project.id:
+            raise serializers.ValidationError({'culture': 'Culture does not belong to the active project.'})
 
         if culture is None or size_value is None or size_unit is None:
             return attrs
@@ -371,16 +406,18 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        project = _resolve_active_project_from_serializer(self)
+        culture = self._resolve_culture_for_validation(attrs)
+        supplier = attrs.get('supplier') or (self.instance.supplier if self.instance is not None else None)
+        if project is not None and culture is not None and culture.project_id != project.id:
+            raise serializers.ValidationError({'culture': 'Culture does not belong to the active project.'})
+        if project is not None and supplier is not None and supplier.project_id != project.id:
+            raise serializers.ValidationError({'supplier_id': 'Supplier does not belong to the active project.'})
         supplier_name_input = attrs.pop('supplier_name_input', None)
         if not attrs.get('supplier') and supplier_name_input:
             from .utils import normalize_supplier_name
 
-            project = None
-            request = self.context.get('request')
-            if request is not None:
-                project = getattr(request, 'active_project', None)
-            if project is None and self.instance is not None:
-                project = self.instance.project
+            project = _resolve_active_project_from_serializer(self)
             if project is None:
                 raise serializers.ValidationError({'supplier': 'Supplier is required.'})
 
@@ -962,6 +999,15 @@ class CultureSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
 
         supplier = attrs.get('supplier', getattr(self.instance, 'supplier', None) if self.instance else None)
+        project = attrs.get('project') or _resolve_active_project_from_serializer(self)
+        if project is not None and supplier is not None and supplier.project_id != project.id:
+            errors['supplier'] = 'Supplier does not belong to the active project.'
+        selected_supplier = attrs.get(
+            'selected_seed_demand_supplier',
+            getattr(self.instance, 'selected_seed_demand_supplier', None) if self.instance else None,
+        )
+        if project is not None and selected_supplier is not None and selected_supplier.project_id != project.id:
+            errors['selected_seed_demand_supplier'] = 'Selected supplier does not belong to the active project.'
         supplier_product_url = attrs.get(
             'supplier_product_url',
             getattr(self.instance, 'supplier_product_url', None) if self.instance else None,
@@ -1060,6 +1106,13 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
         return round(obj.area_usage_sqm * plants_per_m2)
 
     def validate(self, attrs):
+        project = _resolve_active_project_from_serializer(self)
+        culture = attrs.get('culture') or (self.instance.culture if self.instance else None)
+        bed = attrs.get('bed') or (self.instance.bed if self.instance else None)
+        if project is not None and culture is not None and culture.project_id != project.id:
+            raise serializers.ValidationError({'culture': 'Culture does not belong to the active project.'})
+        if project is not None and bed is not None and bed.project_id != project.id:
+            raise serializers.ValidationError({'bed': 'Bed does not belong to the active project.'})
         
         # Handle area input conversion
         area_input_value = attrs.pop('area_input_value', None)
@@ -1151,6 +1204,14 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = '__all__'
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        project = _resolve_active_project_from_serializer(self)
+        planting_plan = attrs.get('planting_plan') or getattr(self.instance, 'planting_plan', None)
+        if project is not None and planting_plan is not None and planting_plan.project_id != project.id:
+            raise serializers.ValidationError({'planting_plan': 'Planting plan does not belong to the active project.'})
+        return attrs
 
 
 class CultureImportPreviewItemSerializer(serializers.Serializer):
