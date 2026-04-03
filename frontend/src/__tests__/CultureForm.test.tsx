@@ -213,6 +213,17 @@ describe('CultureForm', () => {
     }));
   });
 
+  it('renders save error inline instead of snackbar overlap', async () => {
+    const onSave = vi.fn().mockRejectedValue(new Error('boom'));
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(screen.getByText('messages.updateError')).toBeInTheDocument();
+  });
+
   it('scrolls dialog content with arrow and page keys, even when an input is focused', () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const scrollByMock = vi.fn();

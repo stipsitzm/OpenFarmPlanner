@@ -21,7 +21,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
   Alert,
   Button,
   Typography,
@@ -118,7 +117,6 @@ export function CultureForm({
   const navigate = useNavigate();
   const isEdit = Boolean(culture);
   const [saveError, setSaveError] = useState<string>('');
-  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
   // --- Validation now imported from ../cultures/validation ---
 
@@ -230,7 +228,7 @@ export function CultureForm({
     setIsSaving(true);
     try {
       await saveCulture(formData);
-      setShowSaveSuccess(true);
+      setSaveError('');
       setIsDirty(false);
     } catch (error) {
       setSaveError(extractApiErrorMessage(error, t, t('messages.updateError')));
@@ -469,7 +467,12 @@ export function CultureForm({
             <Button variant="outlined" onClick={addSupplierRow}>{t('form.addSupplierData')}</Button>
           </div>
         </DialogContent>
-        <DialogActions sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
+        <DialogActions sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center', mt: 1, flexWrap: 'wrap' }}>
+          {saveError ? (
+            <Alert severity="error" sx={{ width: '100%' }}>
+              {saveError}
+            </Alert>
+          ) : null}
           {isDirty && (
             <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
               {isValid
@@ -491,26 +494,6 @@ export function CultureForm({
           </Button>
         </DialogActions>
       </form>
-      <Snackbar
-        open={showSaveSuccess}
-        autoHideDuration={3000}
-        onClose={() => setShowSaveSuccess(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity="success" onClose={() => setShowSaveSuccess(false)}>
-          {t('messages.updateSuccess', { defaultValue: 'Erfolgreich gespeichert' })}
-        </Alert>
-      </Snackbar>
-      <Snackbar
-        open={Boolean(saveError)}
-        autoHideDuration={6000}
-        onClose={() => setSaveError('')}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity="error" onClose={() => setSaveError('')}>
-          {saveError}
-        </Alert>
-      </Snackbar>
     </Dialog>
   );
 }
