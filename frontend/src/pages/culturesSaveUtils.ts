@@ -18,6 +18,7 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
   const supplierPayloadRows: CultureSupplierDataInput[] = [];
   if (Array.isArray(culture.supplier_data) && culture.supplier_data.length > 0) {
     supplierPayloadRows.push(...culture.supplier_data.map((row) => ({
+      id: row.id,
       supplier_id: row.supplier?.id ?? row.supplier_id ?? null,
       supplier_name_input: row.supplier_name_input,
       supplier_name: row.supplier_name ?? row.supplier?.name,

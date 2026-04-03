@@ -82,6 +82,11 @@ export function SearchableSelect<T = unknown>({
       onChange={(_, newValue) => onChange(newValue)}
       isOptionEqualToValue={(option, selected) => option.value === selected.value}
       getOptionLabel={(option) => option.label}
+      renderOption={(props, option) => (
+        <li {...props} key={option.value}>
+          {option.label}
+        </li>
+      )}
       noOptionsText={noOptionsText}
       renderInput={(params) => (
         <TextField

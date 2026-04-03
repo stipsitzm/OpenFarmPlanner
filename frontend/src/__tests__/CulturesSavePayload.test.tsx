@@ -137,4 +137,36 @@ describe('Cultures save payload', () => {
     const payload = updateMock.mock.calls[0][1] as Record<string, unknown>;
     expect(payload.seed_rate_unit).toBe('g_per_m2');
   });
+
+  it('includes supplier_data row ids so nested records update instead of duplicate create', async () => {
+    saveCultureMock.mockReturnValue({
+      id: 1,
+      name: 'Karotte',
+      variety: 'Nantaise',
+      supplier_data: [
+        {
+          id: 77,
+          supplier_id: 10,
+          supplier_name: 'Bingenheimer',
+          packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
+        },
+      ],
+    } as unknown as Culture);
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <Cultures />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'select-culture' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Kultur bearbeiten (Alt+E)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'submit-edit' }));
+
+    await waitFor(() => expect(updateMock).toHaveBeenCalledTimes(1));
+    const payload = updateMock.mock.calls[0][1] as { supplier_data_input?: Array<{ id?: number }> };
+    expect(payload.supplier_data_input?.[0]?.id).toBe(77);
+  });
 });

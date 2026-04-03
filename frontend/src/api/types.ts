@@ -108,6 +108,7 @@ export interface CultureSupplierData {
 }
 
 export interface CultureSupplierDataInput {
+  id?: number;
   supplier_id?: number | null;
   supplier_name_input?: string;
   supplier_name?: string;
