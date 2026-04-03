@@ -64,8 +64,8 @@
     },
     "shortcuts": {
       "groups": {
-        "frequent": "Frequent actions",
         "navigation": "Navigation",
+        "culture": "Culture",
         "data": "Data / Import / Export",
         "project": "Project",
         "account": "Account",
