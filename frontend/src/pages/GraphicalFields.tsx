@@ -1518,31 +1518,48 @@ export default function GraphicalFields({
                                       },
                                       viewport.scale,
                                     ) ? (
-                                      <Text
-                                        x={
-                                          currentFieldRect.x +
-                                          FIELD_INNER_OFFSET_X +
-                                          4 +
-                                          bedVm.x
-                                        }
-                                        y={
-                                          currentFieldRect.y +
-                                          FIELD_INNER_OFFSET_Y +
-                                          4 +
-                                          bedVm.y
-                                        }
-                                        text={
-                                          visibility.showDetailedBedLabels
+                                      (() => {
+                                        const bedScreenWidth =
+                                          bedVm.width * viewport.scale;
+                                        const bedScreenHeight =
+                                          bedVm.height * viewport.scale;
+                                        const shouldUseCompactLabel =
+                                          bedScreenWidth < 120 ||
+                                          bedScreenHeight < 42;
+                                        const labelText =
+                                          visibility.showDetailedBedLabels &&
+                                          !shouldUseCompactLabel
                                             ? `${bedVm.name} (${bedVm.area || "-"} m²)`
-                                            : bedVm.name
-                                        }
-                                        fontSize={12}
-                                        width={Math.max(40, bedVm.width - 8)}
-                                        wrap="word"
-                                        listening={false}
-                                        scaleX={1 / viewport.scale}
-                                        scaleY={1 / viewport.scale}
-                                      />
+                                            : bedVm.name;
+                                        return (
+                                          <Text
+                                            x={
+                                              currentFieldRect.x +
+                                              FIELD_INNER_OFFSET_X +
+                                              4 +
+                                              bedVm.x
+                                            }
+                                            y={
+                                              currentFieldRect.y +
+                                              FIELD_INNER_OFFSET_Y +
+                                              4 +
+                                              bedVm.y
+                                            }
+                                            text={labelText}
+                                            fontSize={
+                                              shouldUseCompactLabel ? 11 : 12
+                                            }
+                                            width={Math.max(
+                                              36,
+                                              bedScreenWidth - 8,
+                                            )}
+                                            wrap="word"
+                                            listening={false}
+                                            scaleX={1 / viewport.scale}
+                                            scaleY={1 / viewport.scale}
+                                          />
+                                        );
+                                      })()
                                     ) : null}
                                   </Group>
                                 ))
