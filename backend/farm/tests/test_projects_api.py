@@ -79,7 +79,13 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(settings_obj.last_project_id, self.project2.id)
 
     def test_project_history_restore_does_not_delete_other_project_data(self) -> None:
-        Location.objects.create(name='P1 before restore', project=self.project)
+        create_response = self.client.post(
+            '/openfarmplanner/api/locations/',
+            {'name': 'P1 before restore', 'address': '', 'notes': ''},
+            format='json',
+            HTTP_X_PROJECT_ID=str(self.project.id),
+        )
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
         Location.objects.create(name='P2 untouched', project=self.project2)
 
         history_response = self.client.get(

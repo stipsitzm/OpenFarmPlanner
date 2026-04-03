@@ -967,7 +967,7 @@ class CultureSerializer(serializers.ModelSerializer):
         supplier_explicitly_set = 'supplier' in attrs
         if supplier_name and not supplier_explicitly_set and not attrs.get('supplier'):
             from .utils import normalize_supplier_name
-            project = None
+            project = attrs.get('project')
             if self.instance is not None:
                 project = self.instance.project
             if project is None:
