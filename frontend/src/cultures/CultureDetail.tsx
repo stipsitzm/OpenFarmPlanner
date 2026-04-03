@@ -485,6 +485,16 @@ export function CultureDetail({
                       {formatPackageSizes(selectedSupplierRow.packaging_sizes, t)}
                     </Typography>
                   </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Tausendkorngewicht
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedSupplierRow.thousand_kernel_weight_g !== null && selectedSupplierRow.thousand_kernel_weight_g !== undefined
+                        ? `${formatNumber(selectedSupplierRow.thousand_kernel_weight_g, t)} g`
+                        : t('noData')}
+                    </Typography>
+                  </Box>
                 </Stack>
               )}
             </Box>
@@ -639,28 +649,6 @@ export function CultureDetail({
                     </Typography>
                     <Typography variant="body1">
                       {selectedCulture.sowing_calculation_safety_percent} %
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.thousand_kernel_weight_g !== undefined && selectedCulture.thousand_kernel_weight_g !== null && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Tausendkorngewicht
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatNumber(selectedCulture.thousand_kernel_weight_g, t)} g
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.seed_packages && selectedCulture.seed_packages.length > 0 && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Packungsgrößen
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedCulture.seed_packages
-                        .map((pkg) => `${formatNumber(pkg.size_value, t)} ${pkg.size_unit === 'seeds' ? 'Korn' : 'g'}`)
-                        .join(', ')}
                     </Typography>
                   </Box>
                 )}

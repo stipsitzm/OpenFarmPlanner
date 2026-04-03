@@ -217,7 +217,39 @@ describe('CultureDetail Component', () => {
       />
     );
 
-    expect(screen.getByText(translations.cultures.noData)).toBeInTheDocument();
+    expect(screen.getAllByText(translations.cultures.noData).length).toBeGreaterThan(0);
+  });
+
+  it('does not render legacy culture-level package and TKW values in seed section', () => {
+    const mockOnSelect = vi.fn();
+    const culturesWithLegacyValues: Culture[] = [
+      {
+        id: 15,
+        name: 'Karotte',
+        thousand_kernel_weight_g: 99,
+        seed_packages: [{ size_value: 999, size_unit: 'g' }],
+        supplier_data: [
+          {
+            supplier_name: 'ReinSaat',
+            thousand_kernel_weight_g: 4,
+            packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
+          },
+        ],
+      },
+    ];
+
+    render(
+      <CultureDetail
+        cultures={culturesWithLegacyValues}
+        selectedCultureId={15}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getByText('25 g')).toBeInTheDocument();
+    expect(screen.getByText('4 g')).toBeInTheDocument();
+    expect(screen.queryByText('999 g')).not.toBeInTheDocument();
+    expect(screen.queryByText('99 g')).not.toBeInTheDocument();
   });
 
   it('shows cultivation chips and per-method seed-rate table', () => {
