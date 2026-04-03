@@ -9,12 +9,12 @@ describe('httpClient', () => {
   describe('computeBaseURL', () => {
     it('should return PROD_API_PATH when in production with no VITE_API_BASE_URL', () => {
       const baseUrl = computeBaseURL(true, undefined);
-      expect(baseUrl).toBe('/openfarmplanner/api');
+      expect(baseUrl).toBe('/api');
     });
 
     it('should always return PROD_API_PATH in production regardless of VITE_API_BASE_URL', () => {
       const baseUrl = computeBaseURL(true, 'https://api.example.com');
-      expect(baseUrl).toBe('/openfarmplanner/api');
+      expect(baseUrl).toBe('/api');
     });
 
     it('should return VITE_API_BASE_URL in development when set', () => {
@@ -24,12 +24,12 @@ describe('httpClient', () => {
 
     it('should return PROD_API_PATH in development when VITE_API_BASE_URL is not set', () => {
       const baseUrl = computeBaseURL(false, undefined);
-      expect(baseUrl).toBe('/openfarmplanner/api');
+      expect(baseUrl).toBe('/api');
     });
 
     it('should return PROD_API_PATH in development when VITE_API_BASE_URL is empty', () => {
       const baseUrl = computeBaseURL(false, '');
-      expect(baseUrl).toBe('/openfarmplanner/api');
+      expect(baseUrl).toBe('/api');
     });
   });
 

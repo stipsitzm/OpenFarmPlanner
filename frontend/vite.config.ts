@@ -4,7 +4,7 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/openfarmplanner/',
+  base: '/',
   plugins: [react()],
   resolve: {
     alias: {
@@ -13,11 +13,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/openfarmplanner/admin': {
+      '/admin': {
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
-      '/openfarmplanner/api': {
+      '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
       },

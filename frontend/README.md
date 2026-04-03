@@ -23,7 +23,7 @@ npm install
 npm run dev
 ```
 
-Local app URL: `http://localhost:5173/openfarmplanner`
+Local app URL: `http://localhost:5173/`
 
 ## Available Scripts
 
@@ -40,7 +40,7 @@ npm run test:e2e:headed
 
 ## API Integration
 
-- Frontend API client targets `/openfarmplanner/api` by default.
+- Frontend API client targets `/api` by default.
 - In development, `VITE_API_BASE_URL` can override the API base URL.
 - Requests include credentials and CSRF token handling for write operations.
 - Active project context is sent via `X-Project-Id` when available.

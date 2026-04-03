@@ -21,8 +21,8 @@ pdm run migrate
 pdm run runserver
 ```
 
-API base path: `http://localhost:8000/openfarmplanner/api/`
-Admin path: `http://localhost:8000/openfarmplanner/admin/`
+API base path: `http://localhost:8000/api/`
+Admin path: `http://localhost:8000/admin/`
 
 ## Useful Commands
 
@@ -64,6 +64,7 @@ For production, configure these environment variables:
 - `EMAIL_HOST_PASSWORD` - SMTP password for `noreply@zwiebelzopf.at`
 - `PUBLIC_FRONTEND_URL` - Public frontend base URL used in activation, password reset, and invitation links
 - `FRONTEND_URL` - Optional local/development fallback for frontend links
+- `URL_PREFIX` - Optional backend URL prefix (default: root). Example: `openfarmplanner` for legacy prefixed routing.
 
 ### SMTP configuration for Uberspace (production)
 
@@ -77,7 +78,7 @@ EMAIL_USE_TLS=True
 EMAIL_HOST_USER=noreply@zwiebelzopf.at
 EMAIL_HOST_PASSWORD=<your-secret-password>
 DEFAULT_FROM_EMAIL=OpenFarmPlanner <noreply@zwiebelzopf.at>
-PUBLIC_FRONTEND_URL=https://your-frontend-domain.tld/openfarmplanner
+PUBLIC_FRONTEND_URL=https://your-frontend-domain.tld
 ```
 
 For local development you can keep email output in the terminal:
@@ -88,7 +89,7 @@ EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 
 ### Authentication endpoints
 
-Auth endpoints are available under `/openfarmplanner/api/auth/`:
+Auth endpoints are available under `/api/auth/`:
 
 - `GET csrf/`
 - `POST register/`
@@ -103,8 +104,8 @@ Auth endpoints are available under `/openfarmplanner/api/auth/`:
 ### DNS recommendations for deliverability
 ## Authentication and API Notes
 
-- Auth endpoints: `/openfarmplanner/api/auth/*`
-- API endpoints: `/openfarmplanner/api/*`
+- Auth endpoints: `/api/auth/*`
+- API endpoints: `/api/*`
 - Session authentication with CSRF protection is enabled.
 - Most API endpoints require authentication by default.
 

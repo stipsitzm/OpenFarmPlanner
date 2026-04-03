@@ -71,7 +71,7 @@ pdm run migrate
 pdm run runserver
 ```
 
-Backend API base path: `http://localhost:8000/openfarmplanner/api/`
+Backend API base path: `http://localhost:8000/api/`
 
 ### 2) Frontend setup
 
@@ -84,11 +84,11 @@ npm install
 npm run dev
 ```
 
-Frontend dev server: `http://localhost:5173/openfarmplanner`
+Frontend dev server: `http://localhost:5173/`
 
 ## Backend / Frontend Overview
 
-- The frontend sends credentialed requests to `/openfarmplanner/api/` and includes CSRF headers for write operations.
+- The frontend sends credentialed requests to `/api/` and includes CSRF headers for write operations.
 - The backend enforces authenticated access for API endpoints by default and supports project scoping via `X-Project-Id`.
 - Public flows (registration, activation, login, password reset, invitation acceptance) are exposed through dedicated auth/invitation endpoints.
 
@@ -104,7 +104,7 @@ OpenFarmPlanner uses Django session authentication with CSRF protection:
 
 Authentication endpoints are available under:
 
-- `/openfarmplanner/api/auth/*`
+- `/api/auth/*`
 
 ## Testing Overview
 
