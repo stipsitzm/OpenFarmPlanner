@@ -12,7 +12,7 @@ type InviteFixture = {
 
 const e2eApiBase =
   process.env.PLAYWRIGHT_E2E_API_BASE ??
-  'http://127.0.0.1:8000/openfarmplanner/api/__e2e__/invite-flow/';
+  'http://127.0.0.1:8000/api/__e2e__/invite-flow/';
 const e2eToken = process.env.E2E_TEST_TOKEN || 'openfarmplanner-e2e-token';
 
 async function invokeE2EAction(
@@ -114,7 +114,7 @@ test.describe('project invitation flow', () => {
     await page.goto(revokedFixture.inviteUrl);
     await expect(page.getByText('Diese Einladung wurde widerrufen.')).toBeVisible();
 
-    await page.goto('/openfarmplanner/invite/accept?token=this-token-does-not-exist');
+    await page.goto('/invite/accept?token=this-token-does-not-exist');
     await expect(page.getByText('Ungültiger Einladungslink.')).toBeVisible();
   });
 });

@@ -13,7 +13,7 @@ export default defineConfig({
     timeout: 10_000,
   },
   use: {
-    baseURL: `http://127.0.0.1:${frontendPort}/openfarmplanner`,
+    baseURL: `http://127.0.0.1:${frontendPort}`,
     trace: 'on-first-retry',
     video: 'retain-on-failure',
   },
@@ -27,7 +27,7 @@ export default defineConfig({
       env: {
         ...process.env,
         DEBUG: 'True',
-        FRONTEND_URL: `http://127.0.0.1:${frontendPort}/openfarmplanner`,
+        FRONTEND_URL: `http://127.0.0.1:${frontendPort}`,
         CORS_ALLOWED_ORIGINS: `http://127.0.0.1:${frontendPort}`,
         CSRF_TRUSTED_ORIGINS: `http://127.0.0.1:${frontendPort}`,
         E2E_TEST_TOKEN: e2eToken,
@@ -41,7 +41,7 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         ...process.env,
-        VITE_API_BASE_URL: `http://127.0.0.1:${backendPort}/openfarmplanner/api`,
+        VITE_API_BASE_URL: `http://127.0.0.1:${backendPort}/api`,
       },
     },
   ],

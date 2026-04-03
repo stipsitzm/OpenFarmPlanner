@@ -2,8 +2,8 @@ import type { AccountDeleteResponse, AuthUser, ProjectSwitchResponse } from './t
 import i18n from '../i18n';
 
 const API_BASE = import.meta.env.PROD
-  ? '/openfarmplanner/api'
-  : import.meta.env.VITE_API_BASE_URL || '/openfarmplanner/api';
+  ? '/api'
+  : import.meta.env.VITE_API_BASE_URL || '/api';
 
 export class AuthApiError extends Error {
   code?: string;

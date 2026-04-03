@@ -81,7 +81,7 @@ describe('CultureDetail Component', () => {
     
     expect(screen.getByText('Tomato')).toBeInTheDocument();
     expect(screen.getByText('Cherry')).toBeInTheDocument();
-    expect(screen.getByText('Saatgutdaten je Lieferant')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Lieferant' })).toBeInTheDocument();
   });
 
   it('renders detail sections in the expected order', () => {
@@ -97,7 +97,6 @@ describe('CultureDetail Component', () => {
     const sectionTitles = screen.getAllByRole('heading', { level: 6 }).map((node) => node.textContent?.trim());
     expect(sectionTitles).toEqual([
       'Allgemeine Informationen',
-      'Saatgutdaten je Lieferant',
       'Zeitplanung',
       'Abstände',
       'Saatgut',
@@ -106,7 +105,7 @@ describe('CultureDetail Component', () => {
     ]);
   });
 
-  it('renders supplier section exactly once between general info and timing', () => {
+  it('renders supplier seed data once inside the seed section', () => {
     const mockOnSelect = vi.fn();
     render(
       <CultureDetail
@@ -116,14 +115,13 @@ describe('CultureDetail Component', () => {
       />
     );
 
-    const generalHeading = screen.getByRole('heading', { level: 6, name: 'Allgemeine Informationen' });
-    const supplierHeadings = screen.getAllByRole('heading', { level: 6, name: 'Saatgutdaten je Lieferant' });
-    const timingHeading = screen.getByRole('heading', { level: 6, name: 'Zeitplanung' });
+    const seedHeading = screen.getByRole('heading', { level: 6, name: 'Saatgut' });
+    const harvestHeading = screen.getByRole('heading', { level: 6, name: 'Ernte' });
+    const supplierSubheading = screen.getByRole('heading', { level: 3, name: 'Lieferant' });
 
-    expect(supplierHeadings).toHaveLength(1);
-    const supplierHeading = supplierHeadings[0];
-    expect(generalHeading.compareDocumentPosition(supplierHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(supplierHeading.compareDocumentPosition(timingHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Lieferant' })).toHaveLength(1);
+    expect(seedHeading.compareDocumentPosition(supplierSubheading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(supplierSubheading.compareDocumentPosition(harvestHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('displays harvest information correctly', () => {
@@ -205,7 +203,7 @@ describe('CultureDetail Component', () => {
     expect(screen.getByRole('link', { name: 'https://www.reinsaat.at' })).toHaveAttribute('href', 'https://www.reinsaat.at');
   });
 
-  it('renders supplier-specific package sizes in culture detail', () => {
+  it('renders simplified single-supplier seed details without helper text', () => {
     const mockOnSelect = vi.fn();
     const culturesWithSupplierPackages: Culture[] = [
       {
@@ -216,6 +214,7 @@ describe('CultureDetail Component', () => {
           {
             supplier: { id: 9, name: 'ReinSaat', allowed_domains: [] },
             packaging_sizes: [{ size_value: 5, size_unit: 'g' }, { size_value: 10, size_unit: 'g' }, { size_value: 25, size_unit: 'g' }],
+            thousand_kernel_weight_g: 4,
           },
         ],
       },
@@ -229,7 +228,11 @@ describe('CultureDetail Component', () => {
       />
     );
 
+    expect(screen.getByRole('heading', { level: 3, name: 'Lieferant' })).toBeInTheDocument();
+    expect(screen.queryByText('Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.')).not.toBeInTheDocument();
+    expect(screen.getByText('ReinSaat')).toBeInTheDocument();
     expect(screen.getByText('5 g, 10 g, 25 g')).toBeInTheDocument();
+    expect(screen.getByText('4 g')).toBeInTheDocument();
   });
 
   it('renders no-data state when supplier package sizes are empty or invalid', () => {
@@ -260,6 +263,37 @@ describe('CultureDetail Component', () => {
     );
 
     expect(screen.getAllByText(translations.cultures.noData).length).toBeGreaterThan(0);
+  });
+
+  it('renders supplier-specific heading and helper text when multiple suppliers exist', () => {
+    const mockOnSelect = vi.fn();
+    const culturesWithMultipleSuppliers: Culture[] = [
+      {
+        id: 16,
+        name: 'Fenchel',
+        supplier_data: [
+          {
+            supplier: { id: 2, name: 'Alpha Seeds', allowed_domains: [] },
+            packaging_sizes: [{ size_value: 5, size_unit: 'g' }],
+          },
+          {
+            supplier: { id: 3, name: 'Beta Seeds', allowed_domains: [] },
+            packaging_sizes: [{ size_value: 10, size_unit: 'g' }],
+          },
+        ],
+      },
+    ];
+
+    render(
+      <CultureDetail
+        cultures={culturesWithMultipleSuppliers}
+        selectedCultureId={16}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getByRole('heading', { level: 3, name: 'Saatgutdaten je Lieferant' })).toBeInTheDocument();
+    expect(screen.getByText('Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.')).toBeInTheDocument();
   });
 
   it('does not render legacy culture-level package and TKW values in seed section', () => {

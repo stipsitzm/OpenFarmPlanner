@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const PROD_API_PATH = '/openfarmplanner/api';
+const PROD_API_PATH = '/api';
 
 /**
  * Computes the baseURL based on environment flags and API base URL configuration.

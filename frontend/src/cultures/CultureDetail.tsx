@@ -203,6 +203,7 @@ export function CultureDetail({
 
     return supplierRows[0];
   }, [selectedCulture?.selected_seed_demand_supplier, selectedCulture?.supplier?.id, supplierRows]);
+  const hasMultipleSupplierRows = supplierRows.length > 1;
   const activeCultivationTypes = useMemo(
     () => (
       selectedCulture
@@ -470,49 +471,6 @@ export function CultureDetail({
             </Box>
 
             <Divider sx={{ mb: 3 }} />
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                Saatgutdaten je Lieferant
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.
-              </Typography>
-              {selectedSupplierRow === null ? (
-                <Typography variant="body2" color="text.secondary">Keine Lieferantendaten vorhanden.</Typography>
-              ) : (
-                <Stack spacing={1}>
-                  <Typography variant="subtitle2">{selectedSupplierRow.supplier?.name || selectedSupplierRow.supplier_name || 'Lieferant'}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {selectedSupplierRow.supplier_product_name || '-'}
-                  </Typography>
-                  {selectedSupplierRow.supplier_product_url && (
-                    <Link href={selectedSupplierRow.supplier_product_url} target="_blank" rel="noopener noreferrer" underline="hover">
-                      {selectedSupplierRow.supplier_product_url}
-                    </Link>
-                  )}
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Packungsgrößen
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatPackageSizes(selectedSupplierRow.packaging_sizes, t)}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Tausendkorngewicht
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedSupplierRow.thousand_kernel_weight_g !== null && selectedSupplierRow.thousand_kernel_weight_g !== undefined
-                        ? `${formatNumber(selectedSupplierRow.thousand_kernel_weight_g, t)} g`
-                        : t('noData')}
-                    </Typography>
-                  </Box>
-                </Stack>
-              )}
-            </Box>
-
-            <Divider sx={{ mb: 3 }} />
 
             {/* Timing Section */}
             <Box sx={{ mb: 4 }}>
@@ -679,6 +637,49 @@ export function CultureDetail({
                           : ''}
                     </Typography>
                   </Box>
+                )}
+              </Box>
+              <Box sx={{ mt: 3, ml: { xs: 0, sm: 2 } }}>
+                <Typography variant="subtitle1" component="h3" gutterBottom>
+                  {hasMultipleSupplierRows ? 'Saatgutdaten je Lieferant' : 'Lieferant'}
+                </Typography>
+                {hasMultipleSupplierRows && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.
+                  </Typography>
+                )}
+                {selectedSupplierRow === null ? (
+                  <Typography variant="body2" color="text.secondary">Keine Lieferantendaten vorhanden.</Typography>
+                ) : (
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2">{selectedSupplierRow.supplier?.name || selectedSupplierRow.supplier_name || 'Lieferant'}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {selectedSupplierRow.supplier_product_name || '-'}
+                    </Typography>
+                    {selectedSupplierRow.supplier_product_url && (
+                      <Link href={selectedSupplierRow.supplier_product_url} target="_blank" rel="noopener noreferrer" underline="hover">
+                        {selectedSupplierRow.supplier_product_url}
+                      </Link>
+                    )}
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Packungsgrößen
+                      </Typography>
+                      <Typography variant="body1">
+                        {formatPackageSizes(selectedSupplierRow.packaging_sizes, t)}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Tausendkorngewicht
+                      </Typography>
+                      <Typography variant="body1">
+                        {selectedSupplierRow.thousand_kernel_weight_g !== null && selectedSupplierRow.thousand_kernel_weight_g !== undefined
+                          ? `${formatNumber(selectedSupplierRow.thousand_kernel_weight_g, t)} g`
+                          : t('noData')}
+                      </Typography>
+                    </Box>
+                  </Stack>
                 )}
               </Box>
             </Box>

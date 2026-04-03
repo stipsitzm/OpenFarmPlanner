@@ -198,8 +198,17 @@ MEDIA_ROOT = Path(os.getenv('MEDIA_ROOT', PROJECT_ROOT / 'media'))
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Frontend base URL used for links in account emails.
+def _normalize_url_prefix(raw_value: str) -> str:
+    trimmed = raw_value.strip()
+    if not trimmed or trimmed == '/':
+        return ''
+    return trimmed.strip('/')
+
+
+URL_PREFIX = _normalize_url_prefix(_env_str('URL_PREFIX', ''))
+
 _frontend_url_from_env = _env_str('FRONTEND_URL', '')
-FRONTEND_URL = _frontend_url_from_env or 'http://localhost:5173/openfarmplanner'
+FRONTEND_URL = _frontend_url_from_env or 'http://localhost:5173'
 _public_frontend_url_from_env = _env_str('PUBLIC_FRONTEND_URL', '')
 PUBLIC_FRONTEND_URL = _public_frontend_url_from_env or FRONTEND_URL
 

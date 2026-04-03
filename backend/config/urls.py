@@ -20,15 +20,32 @@ from django.contrib import admin
 from django.urls import include, path
 from farm.views import agent_login_consume_view
 
+def _with_prefix(path_suffix: str) -> str:
+    """Build a URL path suffix with optional deployment prefix."""
+    prefix = getattr(settings, 'URL_PREFIX', '').strip('/')
+    clean_suffix = path_suffix.lstrip('/')
+    return f'{prefix}/{clean_suffix}' if prefix else clean_suffix
+
 urlpatterns = [
-    path('openfarmplanner/admin/', admin.site.urls),
-    path('openfarmplanner/api/auth/', include('accounts.urls')),
-    path('openfarmplanner/api/', include('farm.urls')),
-    path('openfarmplanner/agent-login/<str:token>/', agent_login_consume_view, name='agent-login-consume'),
+    path(_with_prefix('admin/'), admin.site.urls),
+    path(_with_prefix('api/auth/'), include('accounts.urls')),
+    path(_with_prefix('api/'), include('farm.urls')),
+    path(_with_prefix('agent-login/<str:token>/'), agent_login_consume_view, name='agent-login-consume'),
 ]
 
+legacy_prefix = 'openfarmplanner'
+if getattr(settings, 'URL_PREFIX', '').strip('/') != legacy_prefix:
+    urlpatterns += [
+        path(f'{legacy_prefix}/admin/', admin.site.urls),
+        path(f'{legacy_prefix}/api/auth/', include('accounts.urls')),
+        path(f'{legacy_prefix}/api/', include('farm.urls')),
+        path(f'{legacy_prefix}/agent-login/<str:token>/', agent_login_consume_view, name='agent-login-consume-legacy'),
+    ]
+
 if getattr(settings, 'DEBUG', False) and getattr(settings, 'E2E_TEST_TOKEN', ''):
-    urlpatterns.append(path('openfarmplanner/api/', include('farm.e2e_urls')))
+    urlpatterns.append(path(_with_prefix('api/'), include('farm.e2e_urls')))
+    if getattr(settings, 'URL_PREFIX', '').strip('/') != legacy_prefix:
+        urlpatterns.append(path(f'{legacy_prefix}/api/', include('farm.e2e_urls')))
 
 # Debug Toolbar URLs nur in Entwicklung
 if getattr(settings, 'DEBUG', False):

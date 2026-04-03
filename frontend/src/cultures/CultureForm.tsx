@@ -89,12 +89,27 @@ const buildInitialFormData = (culture?: Culture): Partial<Culture> => {
     return EMPTY_CULTURE;
   }
 
+  const normalizedSpacingValues: Partial<Culture> = {
+    distance_within_row_cm:
+      typeof culture.distance_within_row_cm === 'number'
+        ? Math.round(culture.distance_within_row_cm)
+        : culture.distance_within_row_cm,
+    row_spacing_cm:
+      typeof culture.row_spacing_cm === 'number'
+        ? Math.round(culture.row_spacing_cm)
+        : culture.row_spacing_cm,
+  };
+
   if (culture.supplier || !culture.seed_supplier) {
-    return culture;
+    return {
+      ...culture,
+      ...normalizedSpacingValues,
+    };
   }
 
   return {
     ...culture,
+    ...normalizedSpacingValues,
     supplier: {
       name: culture.seed_supplier,
       allowed_domains: [],
