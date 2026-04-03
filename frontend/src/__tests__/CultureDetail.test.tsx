@@ -96,6 +96,7 @@ describe('CultureDetail Component', () => {
 
     const sectionTitles = screen.getAllByRole('heading', { level: 6 }).map((node) => node.textContent?.trim());
     expect(sectionTitles).toEqual([
+      'Filter',
       'Allgemeine Informationen',
       'Zeitplanung',
       'Abstände',

@@ -49,7 +49,14 @@ const withActiveProject = <T extends object>(data: T): T | (T & { project: numbe
 };
 
 export const cultureAPI = {
-  list: (url = '/cultures/') => http.get<PaginatedResponse<Culture>>(url),
+  list: (request: string | { url?: string; params?: Record<string, unknown> } = '/cultures/') => {
+    if (typeof request === 'string') {
+      return http.get<PaginatedResponse<Culture>>(request);
+    }
+    return http.get<PaginatedResponse<Culture>>(request.url ?? '/cultures/', {
+      params: request.params ?? {},
+    });
+  },
   get: (id: number) => http.get<Culture>(`/cultures/${id}/`),
   create: (data: Culture) => http.post<Culture>('/cultures/', withActiveProject(data)),
   update: (id: number, data: Culture) => http.put<Culture>(`/cultures/${id}/`, withActiveProject(data)),

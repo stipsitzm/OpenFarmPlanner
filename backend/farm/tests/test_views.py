@@ -301,6 +301,70 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
 
+    def test_culture_list_supports_combined_filters(self):
+        matching = Culture.objects.create(
+            name='Buschbohne',
+            crop_family='Fabaceae',
+            cultivation_types=['direct_sowing'],
+            growth_duration_days=95,
+            nutrient_demand='low',
+            expected_yield=2.4,
+            notes='trockenheitsresistent',
+            project=self.project,
+        )
+        Culture.objects.create(
+            name='Tomate',
+            crop_family='Solanaceae',
+            cultivation_types=['pre_cultivation'],
+            growth_duration_days=120,
+            nutrient_demand='high',
+            expected_yield=4.8,
+            notes='hoher Wasserbedarf',
+            project=self.project,
+        )
+        PlantingPlan.objects.create(
+            culture=matching,
+            bed=self.bed,
+            cultivation_type='direct_sowing',
+            planting_date=date(2026, 4, 10),
+            harvest_date=date(2026, 7, 20),
+            project=self.project,
+        )
+
+        response = self.client.get(
+            '/openfarmplanner/api/cultures/'
+            '?search=bohne'
+            '&plant_family=Fabaceae'
+            '&cultivation_method=direct_sowing'
+            '&growth_days_max=100'
+            '&sowing_month=4'
+            '&nutrient_need=low'
+            '&yield_min=2'
+            '&yield_max=3'
+            '&requirements=trocken',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['name'], 'Buschbohne')
+
+    def test_culture_list_filters_by_both_cultivation_methods(self):
+        Culture.objects.create(
+            name='Mangold',
+            cultivation_types=['direct_sowing', 'pre_cultivation'],
+            project=self.project,
+        )
+        Culture.objects.create(
+            name='Kürbis',
+            cultivation_types=['direct_sowing'],
+            project=self.project,
+        )
+
+        response = self.client.get('/openfarmplanner/api/cultures/?cultivation_method=both')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        result_names = {entry['name'] for entry in response.data['results']}
+        self.assertIn('Mangold', result_names)
+        self.assertNotIn('Kürbis', result_names)
+
     def test_culture_create(self):
         data = {
             'name': 'New Culture',

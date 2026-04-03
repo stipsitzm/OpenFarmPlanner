@@ -98,6 +98,13 @@ import { useCultureImportState } from './useCultureImportState';
 import { useEnrichmentLoadingProgress } from './useEnrichmentLoadingProgress';
 import { CulturesImportDialog } from './CulturesImportDialog';
 import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
+import {
+  buildCultureFilterParams,
+  DEFAULT_CULTURE_FILTERS,
+  loadCultureFilters,
+  persistCultureFilters,
+  type CultureFilters,
+} from '../cultures/cultureFilters';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -146,6 +153,9 @@ function Cultures(): React.ReactElement {
   const [publicCultures, setPublicCultures] = useState<PublicCulture[]>([]);
   const [publicLibraryImportingId, setPublicLibraryImportingId] = useState<number | null>(null);
   const [publishingCultureId, setPublishingCultureId] = useState<number | null>(null);
+  const [cultureFilters, setCultureFilters] = useState<CultureFilters>(() => loadCultureFilters());
+  const [debouncedCultureFilters, setDebouncedCultureFilters] = useState<CultureFilters>(cultureFilters);
+  const filtersRef = useRef<CultureFilters>(cultureFilters);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error' | 'info') => {
     setSnackbar({ open: true, message, severity });
@@ -168,7 +178,7 @@ function Cultures(): React.ReactElement {
   const fetchCultures = useCallback(async () => {
     setIsCulturesLoading(true);
     try {
-      const response = await cultureAPI.list();
+      const response = await cultureAPI.list({ params: buildCultureFilterParams(filtersRef.current) });
       setCultures(response.data.results);
     } catch (error) {
       console.error('Error fetching cultures:', error);
@@ -178,11 +188,18 @@ function Cultures(): React.ReactElement {
     }
   }, [showSnackbar, t]);
 
-  // Fetch cultures on mount
   useEffect(() => {
-    // eslint-disable-next-line -- Data fetching on mount is intentional
-    fetchCultures();
-  }, [fetchCultures]);
+    persistCultureFilters(cultureFilters);
+    const timer = window.setTimeout(() => {
+      setDebouncedCultureFilters(cultureFilters);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [cultureFilters]);
+
+  useEffect(() => {
+    filtersRef.current = debouncedCultureFilters;
+    void fetchCultures();
+  }, [debouncedCultureFilters, fetchCultures]);
 
 
   useEffect(() => {
@@ -943,6 +960,9 @@ function Cultures(): React.ReactElement {
           cultures={cultures}
           isLoading={isCulturesLoading}
           selectedCultureId={selectedCultureId}
+          filters={cultureFilters}
+          onFiltersChange={setCultureFilters}
+          onFiltersReset={() => setCultureFilters(DEFAULT_CULTURE_FILTERS)}
           onCultureSelect={handleCultureSelect}
         />
       </Box>

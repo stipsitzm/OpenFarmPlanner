@@ -34,15 +34,26 @@ import {
   MenuItem,
   Stack,
   Button,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  TextField,
+  Checkbox,
+  ListItemText,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import type { Culture } from '../api/api';
 import { SearchableSelect } from '../components/inputs/SearchableSelect';
 import type { SearchableSelectOption } from '../components/inputs/SearchableSelect';
+import type { CultureFilters } from './cultureFilters';
 
 interface CultureDetailProps {
   cultures: Culture[];
   isLoading?: boolean;
   selectedCultureId?: number;
+  filters?: CultureFilters;
+  onFiltersChange?: (filters: CultureFilters) => void;
+  onFiltersReset?: () => void;
   onCultureSelect: (culture: Culture | null) => void;
 }
 
@@ -112,13 +123,27 @@ export function CultureDetail({
   cultures,
   isLoading = false,
   selectedCultureId,
+  filters,
+  onFiltersChange,
+  onFiltersReset,
   onCultureSelect,
 }: CultureDetailProps): React.ReactElement {
   const { t } = useTranslation('cultures');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFamilyFilter, setSelectedFamilyFilter] = useState('');
-  const [selectedCultivationFilter, setSelectedCultivationFilter] = useState('');
-  const [selectedSupplierFilter, setSelectedSupplierFilter] = useState('');
+  const [filtersExpanded, setFiltersExpanded] = useState(true);
+  const effectiveFilters = filters ?? {
+    search: '',
+    plantFamily: '',
+    cultivationMethod: '',
+    growthDaysMin: '',
+    growthDaysMax: '',
+    sowingMonths: [],
+    nutrientNeed: '',
+    yieldMin: '',
+    yieldMax: '',
+    requirements: '',
+  };
+  const applyFilters = onFiltersChange ?? (() => {});
+  const resetFilters = onFiltersReset ?? (() => {});
 
   const familyOptions = useMemo(
     () => Array.from(new Set(
@@ -129,33 +154,14 @@ export function CultureDetail({
     [cultures]
   );
 
-  const supplierOptions = useMemo(
-    () => Array.from(new Set(
-      cultures
-        .map((culture) => culture.seed_supplier?.trim())
-        .filter((entry): entry is string => Boolean(entry))
-    )).sort((left, right) => left.localeCompare(right, 'de')),
-    [cultures]
+  const filteredCultures = cultures;
+  const monthOptions = useMemo(
+    () => Array.from({ length: 12 }, (_, index) => ({
+      value: index + 1,
+      label: t(`filters.monthNames.${index + 1}`),
+    })),
+    [t],
   );
-
-  const filteredCultures = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-    return cultures.filter((culture) => {
-      const cultureName = culture.name?.toLowerCase() ?? '';
-      const nameMatches = normalizedQuery.length === 0 || cultureName.includes(normalizedQuery);
-      const familyMatches = selectedFamilyFilter.length === 0 || culture.crop_family === selectedFamilyFilter;
-      const supplierMatches = selectedSupplierFilter.length === 0 || culture.seed_supplier === selectedSupplierFilter;
-      const cultivationValues = culture.cultivation_types && culture.cultivation_types.length > 0
-        ? culture.cultivation_types
-        : (culture.cultivation_type ? [culture.cultivation_type] : []);
-      const cultivationMatches = (
-        selectedCultivationFilter.length === 0
-        || cultivationValues.includes(selectedCultivationFilter as 'direct_sowing' | 'pre_cultivation')
-      );
-
-      return nameMatches && familyMatches && supplierMatches && cultivationMatches;
-    });
-  }, [cultures, searchQuery, selectedFamilyFilter, selectedCultivationFilter, selectedSupplierFilter]);
 
   const cultureOptions: SearchableSelectOption<Culture>[] = useMemo(
     () => {
@@ -297,65 +303,138 @@ export function CultureDetail({
     <Box sx={{ width: '100%' }}>
       {/* Searchable Dropdown */}
       <Box sx={{ mb: 3 }}>
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          spacing={1.5}
-          sx={{ mb: 2 }}
-        >
-          <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
-            <InputLabel id="culture-family-filter-label">{t('filters.cropFamily')}</InputLabel>
-            <Select
-              labelId="culture-family-filter-label"
-              value={selectedFamilyFilter}
-              label={t('filters.cropFamily')}
-              onChange={(event) => setSelectedFamilyFilter(event.target.value)}
+        <Accordion expanded={filtersExpanded} onChange={(_, expanded) => setFiltersExpanded(expanded)} disableGutters>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="subtitle2">{t('filters.title')}</Typography>
+          </AccordionSummary>
+          <AccordionDetails sx={{ pt: 0.5 }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
+                gap: 1.5,
+              }}
             >
-              <MenuItem value="">{t('filters.all')}</MenuItem>
-              {familyOptions.map((family) => (
-                <MenuItem key={family} value={family}>{family}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
-            <InputLabel id="culture-method-filter-label">{t('filters.cultivationType')}</InputLabel>
-            <Select
-              labelId="culture-method-filter-label"
-              value={selectedCultivationFilter}
-              label={t('filters.cultivationType')}
-              onChange={(event) => setSelectedCultivationFilter(event.target.value)}
-            >
-              <MenuItem value="">{t('filters.all')}</MenuItem>
-              <MenuItem value="direct_sowing">{t('filters.directSowing')}</MenuItem>
-              <MenuItem value="pre_cultivation">{t('filters.preCultivation')}</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
-            <InputLabel id="culture-supplier-filter-label">{t('filters.supplier')}</InputLabel>
-            <Select
-              labelId="culture-supplier-filter-label"
-              value={selectedSupplierFilter}
-              label={t('filters.supplier')}
-              onChange={(event) => setSelectedSupplierFilter(event.target.value)}
-            >
-              <MenuItem value="">{t('filters.all')}</MenuItem>
-              {supplierOptions.map((supplier) => (
-                <MenuItem key={supplier} value={supplier}>{supplier}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setSearchQuery('');
-              setSelectedFamilyFilter('');
-              setSelectedCultivationFilter('');
-              setSelectedSupplierFilter('');
-            }}
-            sx={{ alignSelf: { xs: 'stretch', md: 'center' } }}
-          >
-            {t('filters.reset')}
-          </Button>
-        </Stack>
+              <TextField
+                size="small"
+                label={t('filters.search')}
+                value={effectiveFilters.search}
+                onChange={(event) => applyFilters({ ...effectiveFilters, search: event.target.value })}
+              />
+              <FormControl size="small">
+                <InputLabel id="culture-family-filter-label">{t('filters.cropFamily')}</InputLabel>
+                <Select
+                  labelId="culture-family-filter-label"
+                  value={effectiveFilters.plantFamily}
+                  label={t('filters.cropFamily')}
+                  onChange={(event) => applyFilters({ ...effectiveFilters, plantFamily: event.target.value })}
+                >
+                  <MenuItem value="">{t('filters.all')}</MenuItem>
+                  {familyOptions.map((family) => (
+                    <MenuItem key={family} value={family}>{family}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl size="small">
+                <InputLabel id="culture-method-filter-label">{t('filters.cultivationType')}</InputLabel>
+                <Select
+                  labelId="culture-method-filter-label"
+                  value={effectiveFilters.cultivationMethod}
+                  label={t('filters.cultivationType')}
+                  onChange={(event) => applyFilters({ ...effectiveFilters, cultivationMethod: event.target.value as CultureFilters['cultivationMethod'] })}
+                >
+                  <MenuItem value="">{t('filters.all')}</MenuItem>
+                  <MenuItem value="direct_sowing">{t('filters.directSowing')}</MenuItem>
+                  <MenuItem value="pre_cultivation">{t('filters.preCultivation')}</MenuItem>
+                  <MenuItem value="both">{t('filters.both')}</MenuItem>
+                </Select>
+              </FormControl>
+              <Stack direction="row" spacing={1}>
+                <TextField
+                  size="small"
+                  type="number"
+                  label={t('filters.growthDaysMin')}
+                  value={effectiveFilters.growthDaysMin}
+                  onChange={(event) => applyFilters({ ...effectiveFilters, growthDaysMin: event.target.value })}
+                  fullWidth
+                />
+                <TextField
+                  size="small"
+                  type="number"
+                  label={t('filters.growthDaysMax')}
+                  value={effectiveFilters.growthDaysMax}
+                  onChange={(event) => applyFilters({ ...effectiveFilters, growthDaysMax: event.target.value })}
+                  fullWidth
+                />
+              </Stack>
+              <FormControl size="small">
+                <InputLabel id="culture-sowing-month-filter-label">{t('filters.sowingPeriod')}</InputLabel>
+                <Select
+                  multiple
+                  labelId="culture-sowing-month-filter-label"
+                  value={effectiveFilters.sowingMonths}
+                  label={t('filters.sowingPeriod')}
+                  renderValue={(selected) => (selected as number[])
+                    .sort((left, right) => left - right)
+                    .map((month) => monthOptions.find((entry) => entry.value === month)?.label ?? String(month))
+                    .join(', ')}
+                  onChange={(event) => applyFilters({
+                    ...effectiveFilters,
+                    sowingMonths: (event.target.value as number[]).map((entry) => Number(entry)).filter((entry) => entry >= 1 && entry <= 12),
+                  })}
+                >
+                  {monthOptions.map((month) => (
+                    <MenuItem key={month.value} value={month.value}>
+                      <Checkbox checked={effectiveFilters.sowingMonths.includes(month.value)} />
+                      <ListItemText primary={month.label} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl size="small">
+                <InputLabel id="culture-nutrient-filter-label">{t('filters.nutrientNeed')}</InputLabel>
+                <Select
+                  labelId="culture-nutrient-filter-label"
+                  value={effectiveFilters.nutrientNeed}
+                  label={t('filters.nutrientNeed')}
+                  onChange={(event) => applyFilters({ ...effectiveFilters, nutrientNeed: event.target.value as CultureFilters['nutrientNeed'] })}
+                >
+                  <MenuItem value="">{t('filters.all')}</MenuItem>
+                  <MenuItem value="low">{t('form.nutrientDemandLow')}</MenuItem>
+                  <MenuItem value="medium">{t('form.nutrientDemandMedium')}</MenuItem>
+                  <MenuItem value="high">{t('form.nutrientDemandHigh')}</MenuItem>
+                </Select>
+              </FormControl>
+              <Stack direction="row" spacing={1}>
+                <TextField
+                  size="small"
+                  type="number"
+                  label={t('filters.yieldMin')}
+                  value={effectiveFilters.yieldMin}
+                  onChange={(event) => applyFilters({ ...effectiveFilters, yieldMin: event.target.value })}
+                  fullWidth
+                />
+                <TextField
+                  size="small"
+                  type="number"
+                  label={t('filters.yieldMax')}
+                  value={effectiveFilters.yieldMax}
+                  onChange={(event) => applyFilters({ ...effectiveFilters, yieldMax: event.target.value })}
+                  fullWidth
+                />
+              </Stack>
+              <TextField
+                size="small"
+                label={t('filters.requirements')}
+                value={effectiveFilters.requirements}
+                onChange={(event) => applyFilters({ ...effectiveFilters, requirements: event.target.value })}
+              />
+            </Box>
+            <Button variant="outlined" onClick={resetFilters} sx={{ mt: 1.5 }}>
+              {t('filters.reset')}
+            </Button>
+          </AccordionDetails>
+        </Accordion>
         <SearchableSelect
           options={cultureOptions}
           value={selectedOption}
@@ -364,8 +443,8 @@ export function CultureDetail({
           placeholder={t('searchInputPlaceholderEnhanced')}
           noOptionsText={t('noOptionsEnhanced')}
           textFieldSx={{ width: '100%' }}
-          inputValue={searchQuery}
-          onInputChange={setSearchQuery}
+          inputValue={effectiveFilters.search}
+          onInputChange={(value) => applyFilters({ ...effectiveFilters, search: value })}
         />
         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: 'block' }}>
           {t('searchHelperText', { count: filteredCultures.length })}
@@ -811,10 +890,7 @@ export function CultureDetail({
               <Button
                 variant="outlined"
                 onClick={() => {
-                  setSearchQuery('');
-                  setSelectedFamilyFilter('');
-                  setSelectedCultivationFilter('');
-                  setSelectedSupplierFilter('');
+                  resetFilters();
                 }}
               >
                 {t('emptySearch.resetAction')}

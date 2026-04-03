@@ -8,7 +8,7 @@ for its respective model.
 from collections import defaultdict
 import logging
 from datetime import date, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 import json
 import re
 
@@ -16,7 +16,7 @@ from django.conf import settings
 from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import transaction
+from django.db import transaction, connection
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q, Count
 from django.db.models.functions import Coalesce, Ceil, Cast
 from django.http import HttpResponseBadRequest, HttpResponseForbidden
@@ -943,9 +943,95 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
 
     def get_queryset(self):
         include_deleted = self.request.query_params.get('include_deleted') in {'1', 'true', 'True'}
-        if include_deleted:
-            return Culture.all_objects.filter(project=self.request.active_project).prefetch_related('supplier_data__supplier')
-        return Culture.objects.filter(project=self.request.active_project).prefetch_related('supplier_data__supplier')
+        queryset = (
+            Culture.all_objects.filter(project=self.request.active_project)
+            if include_deleted
+            else Culture.objects.filter(project=self.request.active_project)
+        ).prefetch_related('supplier_data__supplier')
+
+        search = (self.request.query_params.get('search') or '').strip()
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search)
+                | Q(variety__icontains=search)
+                | Q(notes__icontains=search)
+            )
+
+        plant_family = (self.request.query_params.get('plant_family') or '').strip()
+        if plant_family:
+            queryset = queryset.filter(crop_family__iexact=plant_family)
+
+        cultivation_method = (self.request.query_params.get('cultivation_method') or '').strip()
+        supports_json_contains = connection.vendor != 'sqlite'
+        if cultivation_method == 'direct_sowing':
+            if supports_json_contains:
+                queryset = queryset.filter(Q(cultivation_types__contains=['direct_sowing']) | Q(cultivation_type='direct_sowing'))
+            else:
+                queryset = queryset.filter(Q(cultivation_types__icontains='direct_sowing') | Q(cultivation_type='direct_sowing'))
+        elif cultivation_method == 'pre_cultivation':
+            if supports_json_contains:
+                queryset = queryset.filter(Q(cultivation_types__contains=['pre_cultivation']) | Q(cultivation_type='pre_cultivation'))
+            else:
+                queryset = queryset.filter(Q(cultivation_types__icontains='pre_cultivation') | Q(cultivation_type='pre_cultivation'))
+        elif cultivation_method == 'both':
+            if supports_json_contains:
+                queryset = queryset.filter(cultivation_types__contains=['direct_sowing', 'pre_cultivation'])
+            else:
+                queryset = queryset.filter(cultivation_types__icontains='direct_sowing').filter(cultivation_types__icontains='pre_cultivation')
+
+        growth_days_min = self.request.query_params.get('growth_days_min')
+        if growth_days_min not in {None, ''}:
+            try:
+                queryset = queryset.filter(growth_duration_days__gte=int(growth_days_min))
+            except (TypeError, ValueError):
+                pass
+
+        growth_days_max = self.request.query_params.get('growth_days_max')
+        if growth_days_max not in {None, ''}:
+            try:
+                queryset = queryset.filter(growth_duration_days__lte=int(growth_days_max))
+            except (TypeError, ValueError):
+                pass
+
+        sowing_month_values = self.request.query_params.getlist('sowing_month')
+        if not sowing_month_values:
+            raw_sowing_month = (self.request.query_params.get('sowing_month') or '').strip()
+            if raw_sowing_month:
+                sowing_month_values = [item.strip() for item in raw_sowing_month.split(',')]
+        valid_sowing_months = []
+        for raw_month in sowing_month_values:
+            try:
+                month = int(raw_month)
+            except (TypeError, ValueError):
+                continue
+            if 1 <= month <= 12:
+                valid_sowing_months.append(month)
+        if valid_sowing_months:
+            queryset = queryset.filter(planting_plans__planting_date__month__in=valid_sowing_months)
+
+        nutrient_need = (self.request.query_params.get('nutrient_need') or '').strip()
+        if nutrient_need in {'low', 'medium', 'high'}:
+            queryset = queryset.filter(nutrient_demand=nutrient_need)
+
+        yield_min = self.request.query_params.get('yield_min')
+        if yield_min not in {None, ''}:
+            try:
+                queryset = queryset.filter(expected_yield__gte=Decimal(str(yield_min)))
+            except (InvalidOperation, TypeError, ValueError):
+                pass
+
+        yield_max = self.request.query_params.get('yield_max')
+        if yield_max not in {None, ''}:
+            try:
+                queryset = queryset.filter(expected_yield__lte=Decimal(str(yield_max)))
+            except (InvalidOperation, TypeError, ValueError):
+                pass
+
+        requirements = (self.request.query_params.get('requirements') or '').strip()
+        if requirements:
+            queryset = queryset.filter(notes__icontains=requirements)
+
+        return queryset.distinct()
 
     def _resolve_supplier(self, culture_data: dict) -> Supplier | None:
         """Resolve supplier from culture data using supplier_id or supplier_name.
