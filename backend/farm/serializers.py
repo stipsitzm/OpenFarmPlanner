@@ -776,15 +776,25 @@ class CultureSerializer(serializers.ModelSerializer):
                 project = self.instance.project
 
             if project is not None:
-                existing_name_query = Culture.all_objects.filter(
-                    project=project,
-                    deleted_at__isnull=True,
-                    name_normalized=normalized_name,
-                )
+                instance_name_normalized = None
                 if self.instance is not None:
-                    existing_name_query = existing_name_query.exclude(pk=self.instance.pk)
-                if existing_name_query.exists():
-                    errors['name'] = 'A culture with this name already exists.'
+                    instance_name_normalized = normalize_text(getattr(self.instance, 'name', None))
+
+                # Keep existing duplicate records editable when the normalized name
+                # is unchanged on update. This preserves compatibility with legacy
+                # data that may already contain duplicates.
+                if self.instance is not None and instance_name_normalized == normalized_name:
+                    pass
+                else:
+                    existing_name_query = Culture.all_objects.filter(
+                        project=project,
+                        deleted_at__isnull=True,
+                        name_normalized=normalized_name,
+                    )
+                    if self.instance is not None:
+                        existing_name_query = existing_name_query.exclude(pk=self.instance.pk)
+                    if existing_name_query.exists():
+                        errors['name'] = 'A culture with this name already exists.'
 
         cultivation_types = attrs.get(
             'cultivation_types',
