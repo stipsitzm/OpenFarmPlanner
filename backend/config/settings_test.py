@@ -1,5 +1,10 @@
 """Test settings for running tests with SQLite database."""
 
+import os
+
+os.environ.setdefault('DEBUG', 'True')
+os.environ.setdefault('PUBLIC_FRONTEND_URL', 'http://localhost:5173')
+
 from .settings import *  # noqa: F403, F401
 
 # Override database to use SQLite for tests
@@ -15,3 +20,4 @@ DATABASES = {
 REST_FRAMEWORK['DEFAULT_PERMISSION_CLASSES'] = [  # type: ignore[name-defined]
     'rest_framework.permissions.AllowAny',
 ]
+REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []  # type: ignore[name-defined]
