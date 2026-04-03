@@ -127,7 +127,7 @@ export function CultureDetail({
   onCultureSelect,
 }: CultureDetailProps): React.ReactElement {
   const { t } = useTranslation('cultures');
-  const [filtersExpanded, setFiltersExpanded] = useState(true);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const effectiveFilters = filters ?? {
     search: '',
     plantFamily: '',
@@ -291,8 +291,23 @@ export function CultureDetail({
       {/* Searchable Dropdown */}
       <Box sx={{ mb: 3 }}>
         <Accordion expanded={filtersExpanded} onChange={(_, expanded) => setFiltersExpanded(expanded)} disableGutters>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="subtitle2">{t('filters.title')}</Typography>
+          <AccordionSummary
+            sx={{
+              '& .MuiAccordionSummary-content': {
+                my: 0.5,
+              },
+            }}
+          >
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography variant="subtitle2">{t('filters.title')}</Typography>
+              <ExpandMoreIcon
+                fontSize="small"
+                sx={{
+                  transition: 'transform 0.2s ease',
+                  transform: filtersExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                }}
+              />
+            </Box>
           </AccordionSummary>
           <AccordionDetails sx={{ pt: 0.5 }}>
             <Box
