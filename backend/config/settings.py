@@ -213,6 +213,8 @@ _public_frontend_url_from_env = _env_str('PUBLIC_FRONTEND_URL', '')
 PUBLIC_FRONTEND_URL = _public_frontend_url_from_env or FRONTEND_URL
 
 if not DEBUG:
+    if SECRET_KEY == 'django-insecure-ov1io#b(%s+zc#ue30exe(t(sa3d7xf*i4biy7zh*yx95pzitd':
+        raise ImproperlyConfigured('SECRET_KEY must be set explicitly when DEBUG is False.')
     parsed_public_frontend_url = urlparse(PUBLIC_FRONTEND_URL)
     if not parsed_public_frontend_url.scheme or not parsed_public_frontend_url.netloc:
         raise ImproperlyConfigured('PUBLIC_FRONTEND_URL must be an absolute URL when DEBUG is False.')
@@ -270,6 +272,19 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'auth_login': _env_str('THROTTLE_AUTH_LOGIN', '10/minute'),
+        'auth_register': _env_str('THROTTLE_AUTH_REGISTER', '5/minute'),
+        'auth_activation': _env_str('THROTTLE_AUTH_ACTIVATION', '10/minute'),
+        'auth_resend_activation': _env_str('THROTTLE_AUTH_RESEND_ACTIVATION', '5/minute'),
+        'auth_password_reset_request': _env_str('THROTTLE_AUTH_PASSWORD_RESET_REQUEST', '5/minute'),
+        'auth_password_reset_confirm': _env_str('THROTTLE_AUTH_PASSWORD_RESET_CONFIRM', '10/minute'),
+        'invitation_accept': _env_str('THROTTLE_INVITATION_ACCEPT', '20/hour'),
+        'agent_login_consume': _env_str('THROTTLE_AGENT_LOGIN_CONSUME', '30/hour'),
+    },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 100,
 }

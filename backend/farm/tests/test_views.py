@@ -153,6 +153,17 @@ class ApiEndpointsTest(DRFAPITestCase):
             self.assertEqual(response.status_code, status.HTTP_201_CREATED, f'Should accept domain-only URL: {input_url}')
             self.assertEqual(response.data['homepage_url'], expected_url, f'Should normalize {input_url} to {expected_url}')
 
+    def test_media_upload_rejects_non_image_file(self):
+        upload = SimpleUploadedFile('payload.txt', b'not-an-image', content_type='text/plain')
+        response = self.client.post(
+            '/openfarmplanner/api/media-files/upload/',
+            {'file': upload},
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('file', response.data)
+
 
 
     def test_field_update_with_length_and_width_overwrites_area(self):

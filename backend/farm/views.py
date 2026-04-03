@@ -102,6 +102,13 @@ logger = logging.getLogger(__name__)
 
 BOOTSTRAP_PROJECT_NAME = 'Gelawi Zwiebelzopf'
 BOOTSTRAP_PROJECT_SLUG = 'gelawi-zwiebelzopf'
+MAX_MEDIA_UPLOAD_BYTES = 10 * 1024 * 1024
+ALLOWED_MEDIA_UPLOAD_CONTENT_TYPES = {
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+}
 
 
 def _invitation_error_response(exc: InvitationFlowError) -> Response:
@@ -1808,6 +1815,11 @@ class MediaFileUploadView(APIView):
         upload = request.FILES.get('file')
         if upload is None:
             return Response({'file': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
+        if upload.size > MAX_MEDIA_UPLOAD_BYTES:
+            return Response({'file': ['File is too large. Maximum allowed size is 10 MB.']}, status=status.HTTP_400_BAD_REQUEST)
+        content_type = (getattr(upload, 'content_type', '') or '').lower()
+        if content_type not in ALLOWED_MEDIA_UPLOAD_CONTENT_TYPES:
+            return Response({'file': ['Unsupported file type. Only image uploads are allowed.']}, status=status.HTTP_400_BAD_REQUEST)
 
         rel_path = culture_media_upload_path(None, upload.name)
         saved_path = default_storage.save(rel_path, upload)
@@ -2426,6 +2438,7 @@ class AcceptProjectInvitationByTokenView(APIView):
     """Accept invitation by token path parameter."""
 
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'invitation_accept'
 
     def post(self, request, token: str):
         logger.info('Invitation accept endpoint reached', extra={'user_id': request.user.id, 'path': request.path})
@@ -2453,6 +2466,7 @@ class AcceptProjectInvitationView(APIView):
     """Accept invitation token from request body for backward compatibility."""
 
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'invitation_accept'
 
     def post(self, request):
         serializer = InvitationTokenSerializer(data=request.data)
@@ -2466,6 +2480,7 @@ class AcceptPendingProjectInvitationView(APIView):
     """Accept the invitation token currently stored in the session."""
 
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'invitation_accept'
 
     def post(self, request):
         logger.info('Pending invitation accept endpoint reached', extra={'user_id': request.user.id, 'path': request.path})
