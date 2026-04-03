@@ -163,6 +163,63 @@ describe('CultureDetail Component', () => {
     expect(screen.getByRole('link', { name: 'https://www.reinsaat.at' })).toHaveAttribute('href', 'https://www.reinsaat.at');
   });
 
+  it('renders supplier-specific package sizes in culture detail', () => {
+    const mockOnSelect = vi.fn();
+    const culturesWithSupplierPackages: Culture[] = [
+      {
+        id: 13,
+        name: 'Rote Bete',
+        supplier: { id: 9, name: 'ReinSaat', allowed_domains: [] },
+        supplier_data: [
+          {
+            supplier: { id: 9, name: 'ReinSaat', allowed_domains: [] },
+            packaging_sizes: [{ size_value: 5, size_unit: 'g' }, { size_value: 10, size_unit: 'g' }, { size_value: 25, size_unit: 'g' }],
+          },
+        ],
+      },
+    ];
+
+    render(
+      <CultureDetail
+        cultures={culturesWithSupplierPackages}
+        selectedCultureId={13}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getByText('5 g, 10 g, 25 g')).toBeInTheDocument();
+  });
+
+  it('renders no-data state when supplier package sizes are empty or invalid', () => {
+    const mockOnSelect = vi.fn();
+    const culturesWithEmptySupplierPackages: Culture[] = [
+      {
+        id: 14,
+        name: 'Pastinake',
+        supplier_data: [
+          {
+            supplier_name: 'ReinSaat',
+            packaging_sizes: [
+              { size_value: 0, size_unit: 'g' },
+              { size_value: Number.NaN, size_unit: 'g' },
+              { size_unit: 'g' } as unknown as { size_value: number; size_unit: 'g' | 'seeds' },
+            ],
+          },
+        ],
+      },
+    ];
+
+    render(
+      <CultureDetail
+        cultures={culturesWithEmptySupplierPackages}
+        selectedCultureId={14}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getByText(translations.cultures.noData)).toBeInTheDocument();
+  });
+
   it('shows cultivation chips and per-method seed-rate table', () => {
     const mockOnSelect = vi.fn();
     const cultures: Culture[] = [

@@ -44,6 +44,7 @@ class CultureSupplierDataApiTest(APITestCase):
             supplier=self.supplier,
             supplier_name='Reinsaat',
             supplier_product_name='Nantaise fein',
+            packaging_sizes=[{'size_value': 5, 'size_unit': 'g'}, {'size_value': 25, 'size_unit': 'g'}],
         )
 
         response = self.client.get(f'/openfarmplanner/api/cultures/{self.culture.id}/')
@@ -52,3 +53,7 @@ class CultureSupplierDataApiTest(APITestCase):
         self.assertIn('supplier_data', response.data)
         self.assertEqual(len(response.data['supplier_data']), 1)
         self.assertEqual(response.data['supplier_data'][0]['supplier_product_name'], 'Nantaise fein')
+        self.assertEqual(
+            response.data['supplier_data'][0]['packaging_sizes'],
+            [{'size_value': 5, 'size_unit': 'g'}, {'size_value': 25, 'size_unit': 'g'}],
+        )
