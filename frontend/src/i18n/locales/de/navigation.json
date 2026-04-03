@@ -58,8 +58,31 @@
       "openAccountSettings": "Kontoeinstellungen öffnen",
       "openVersionHistory": "Versionsverlauf öffnen",
       "logout": "Abmelden",
+      "openPalette": "Aktionssuche öffnen",
       "openShortcuts": "Tastenkürzel öffnen",
       "closeDialog": "Dialog schließen"
+    },
+    "shortcuts": {
+      "groups": {
+        "frequent": "Häufige Aktionen",
+        "navigation": "Navigation",
+        "data": "Daten / Import / Export",
+        "project": "Projekt",
+        "account": "Konto",
+        "help": "Hilfe"
+      },
+      "actions": {
+        "createCulture": "Neue Kultur erstellen",
+        "editCulture": "Kultur bearbeiten",
+        "deleteCulture": "Kultur löschen",
+        "createPlantingPlan": "Anbauplan erstellen",
+        "nextCulture": "Nächste Kultur",
+        "previousCulture": "Vorherige Kultur",
+        "exportJson": "JSON exportieren",
+        "exportAllCultures": "Alle Kulturen exportieren",
+        "importJson": "JSON importieren",
+        "openActionSearch": "Aktionssuche"
+      }
     },
     "feedback": {
       "versionHistoryLoadError": "Versionsverlauf konnte nicht geladen werden.",

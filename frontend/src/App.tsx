@@ -11,6 +11,7 @@
 import { createBrowserRouter, RouterProvider, Outlet, NavLink, Link as RouterLink, redirect, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import {
   Alert,
+  Box,
   Button,
   Chip,
   Divider,
@@ -28,6 +29,7 @@ import {
   Snackbar,
   Stack,
   TextField,
+  Typography,
   Drawer,
   useMediaQuery,
 } from '@mui/material';
@@ -35,6 +37,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from './i18n';
 import { useCommandContext, useRegisterCommands } from './commands/useCommandContext';
 import { createRootCommands } from './commands/commands';
+import { createShortcutModalGroups } from './commands/shortcutModalConfig';
 import { useEffect, useMemo, useState } from 'react';
 import Locations from './pages/Locations';
 import FieldsBedsPage from './pages/FieldsBedsPage';
@@ -183,7 +186,7 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
         {t('accountSettings')}
       </MenuItem>
       <MenuItem onClick={onOpenShortcuts}>
-        Tastenkürzel
+        {t('commandPalette.commands.openShortcuts')}
       </MenuItem>
       <MenuItem onClick={() => void onLogout()}>
         {t('commandPalette.commands.logout')} {userLabel}
@@ -452,10 +455,11 @@ function RootLayout(): React.ReactElement {
       openAccountSettings: t('commandPalette.commands.openAccountSettings'),
       openVersionHistory: t('commandPalette.commands.openVersionHistory'),
       logout: t('commandPalette.commands.logout'),
-      openPalette: t('commandPalette.label'),
+      openPalette: t('commandPalette.commands.openPalette'),
       openShortcuts: t('commandPalette.commands.openShortcuts'),
     },
   }), [activeMembershipRole, activeProjectId, location.pathname, memberships, navigate, openPalette, t]);
+  const shortcutModalGroups = useMemo(() => createShortcutModalGroups(t), [t]);
 
   useRegisterCommands('global-app', globalCommands);
   
@@ -626,21 +630,61 @@ function RootLayout(): React.ReactElement {
 
       <Dialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t('commandPalette.shortcutsTitle')}</DialogTitle>
-        <DialogContent>
-          <List dense>
-            <ListItem>
-              <ListItemText primary={t('commandPalette.commands.openShortcuts')} secondary="Alt+H" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary={t('commandPalette.label')} secondary="Alt+K" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="–" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary={t('commandPalette.commands.closeDialog')} secondary="Esc" />
-            </ListItem>
-          </List>
+        <DialogContent dividers sx={{ maxHeight: { xs: '70vh', sm: '75vh' }, p: 0 }}>
+          {shortcutModalGroups.map((group, groupIndex) => (
+            <Box key={group.id} sx={{ px: { xs: 2, sm: 3 }, py: 2.25 }}>
+              {groupIndex > 0 ? <Divider sx={{ mb: 2 }} /> : null}
+              <Typography
+                variant="overline"
+                sx={{
+                  display: 'block',
+                  letterSpacing: 0.8,
+                  color: 'text.secondary',
+                  fontWeight: 700,
+                  mb: 1.25,
+                }}
+              >
+                {group.title}
+              </Typography>
+              <List dense disablePadding>
+                {group.actions.map((action) => (
+                  <ListItem
+                    key={action.id}
+                    disableGutters
+                    sx={{
+                      py: 0.6,
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(0, 1fr) auto',
+                      columnGap: 1.5,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <ListItemText
+                      primary={action.label}
+                      primaryTypographyProps={{
+                        variant: 'body2',
+                        fontWeight: action.featured ? 600 : 400,
+                        color: 'text.primary',
+                      }}
+                    />
+                    <Typography
+                      component="span"
+                      variant="caption"
+                      sx={{
+                        justifySelf: 'end',
+                        color: action.featured ? 'primary.main' : 'text.secondary',
+                        fontWeight: action.featured ? 700 : 600,
+                        fontFamily: 'monospace',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {action.shortcut}
+                    </Typography>
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          ))}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShortcutsOpen(false)}>{t('common:actions.close')}</Button>

@@ -58,8 +58,31 @@
       "openAccountSettings": "Open account settings",
       "openVersionHistory": "Open version history",
       "logout": "Logout",
+      "openPalette": "Open action search",
       "openShortcuts": "Open shortcuts",
       "closeDialog": "Close dialog"
+    },
+    "shortcuts": {
+      "groups": {
+        "frequent": "Frequent actions",
+        "navigation": "Navigation",
+        "data": "Data / Import / Export",
+        "project": "Project",
+        "account": "Account",
+        "help": "Help"
+      },
+      "actions": {
+        "createCulture": "Create new culture",
+        "editCulture": "Edit culture",
+        "deleteCulture": "Delete culture",
+        "createPlantingPlan": "Create planting plan",
+        "nextCulture": "Next culture",
+        "previousCulture": "Previous culture",
+        "exportJson": "Export JSON",
+        "exportAllCultures": "Export all cultures",
+        "importJson": "Import JSON",
+        "openActionSearch": "Action search"
+      }
     },
     "feedback": {
       "versionHistoryLoadError": "Could not load version history.",
