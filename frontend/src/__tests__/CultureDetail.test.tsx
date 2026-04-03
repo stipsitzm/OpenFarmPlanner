@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { CultureDetail } from '../cultures/CultureDetail';
 import type { Culture } from '../api/api';
 import translations from '@/test-utils/translations';
@@ -84,6 +84,48 @@ describe('CultureDetail Component', () => {
     expect(screen.getByText('Saatgutdaten je Lieferant')).toBeInTheDocument();
   });
 
+  it('renders detail sections in the expected order', () => {
+    const mockOnSelect = vi.fn();
+    render(
+      <CultureDetail
+        cultures={mockCultures}
+        selectedCultureId={1}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    const sectionTitles = screen.getAllByRole('heading', { level: 6 }).map((node) => node.textContent?.trim());
+    expect(sectionTitles).toEqual([
+      'Allgemeine Informationen',
+      'Saatgutdaten je Lieferant',
+      'Zeitplanung',
+      'Abstände',
+      'Saatgut',
+      'Ernte',
+      'Notizen',
+    ]);
+  });
+
+  it('renders supplier section exactly once between general info and timing', () => {
+    const mockOnSelect = vi.fn();
+    render(
+      <CultureDetail
+        cultures={mockCultures}
+        selectedCultureId={1}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    const generalHeading = screen.getByRole('heading', { level: 6, name: 'Allgemeine Informationen' });
+    const supplierHeadings = screen.getAllByRole('heading', { level: 6, name: 'Saatgutdaten je Lieferant' });
+    const timingHeading = screen.getByRole('heading', { level: 6, name: 'Zeitplanung' });
+
+    expect(supplierHeadings).toHaveLength(1);
+    const supplierHeading = supplierHeadings[0];
+    expect(generalHeading.compareDocumentPosition(supplierHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(supplierHeading.compareDocumentPosition(timingHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('displays harvest information correctly', () => {
     const mockOnSelect = vi.fn();
     render(
@@ -161,6 +203,112 @@ describe('CultureDetail Component', () => {
     );
 
     expect(screen.getByRole('link', { name: 'https://www.reinsaat.at' })).toHaveAttribute('href', 'https://www.reinsaat.at');
+  });
+
+  it('renders supplier-specific package sizes in culture detail', () => {
+    const mockOnSelect = vi.fn();
+    const culturesWithSupplierPackages: Culture[] = [
+      {
+        id: 13,
+        name: 'Rote Bete',
+        supplier: { id: 9, name: 'ReinSaat', allowed_domains: [] },
+        supplier_data: [
+          {
+            supplier: { id: 9, name: 'ReinSaat', allowed_domains: [] },
+            packaging_sizes: [{ size_value: 5, size_unit: 'g' }, { size_value: 10, size_unit: 'g' }, { size_value: 25, size_unit: 'g' }],
+          },
+        ],
+      },
+    ];
+
+    render(
+      <CultureDetail
+        cultures={culturesWithSupplierPackages}
+        selectedCultureId={13}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getByText('5 g, 10 g, 25 g')).toBeInTheDocument();
+  });
+
+  it('renders no-data state when supplier package sizes are empty or invalid', () => {
+    const mockOnSelect = vi.fn();
+    const culturesWithEmptySupplierPackages: Culture[] = [
+      {
+        id: 14,
+        name: 'Pastinake',
+        supplier_data: [
+          {
+            supplier_name: 'ReinSaat',
+            packaging_sizes: [
+              { size_value: 0, size_unit: 'g' },
+              { size_value: Number.NaN, size_unit: 'g' },
+              { size_unit: 'g' } as unknown as { size_value: number; size_unit: 'g' | 'seeds' },
+            ],
+          },
+        ],
+      },
+    ];
+
+    render(
+      <CultureDetail
+        cultures={culturesWithEmptySupplierPackages}
+        selectedCultureId={14}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getAllByText(translations.cultures.noData).length).toBeGreaterThan(0);
+  });
+
+  it('does not render legacy culture-level package and TKW values in seed section', () => {
+    const mockOnSelect = vi.fn();
+    const culturesWithLegacyValues: Culture[] = [
+      {
+        id: 15,
+        name: 'Karotte',
+        thousand_kernel_weight_g: 99,
+        seed_packages: [{ size_value: 999, size_unit: 'g' }],
+        supplier_data: [
+          {
+            supplier_name: 'ReinSaat',
+            thousand_kernel_weight_g: 4,
+            packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
+          },
+        ],
+      },
+    ];
+
+    render(
+      <CultureDetail
+        cultures={culturesWithLegacyValues}
+        selectedCultureId={15}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    expect(screen.getByText('25 g')).toBeInTheDocument();
+    expect(screen.getByText('4 g')).toBeInTheDocument();
+    expect(screen.queryByText('999 g')).not.toBeInTheDocument();
+    expect(screen.queryByText('99 g')).not.toBeInTheDocument();
+  });
+
+  it('keeps selected culture visible even when active search filter does not match', () => {
+    const mockOnSelect = vi.fn();
+    render(
+      <CultureDetail
+        cultures={mockCultures}
+        selectedCultureId={1}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    const searchInput = screen.getByLabelText(translations.cultures.searchPlaceholder);
+    fireEvent.change(searchInput, { target: { value: 'zzzz-no-match' } });
+
+    expect(screen.getByText('Tomato')).toBeInTheDocument();
+    expect(screen.getByText('Cherry')).toBeInTheDocument();
   });
 
   it('shows cultivation chips and per-method seed-rate table', () => {

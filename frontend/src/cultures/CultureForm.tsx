@@ -21,7 +21,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
   Alert,
   Button,
   Typography,
@@ -118,7 +117,6 @@ export function CultureForm({
   const navigate = useNavigate();
   const isEdit = Boolean(culture);
   const [saveError, setSaveError] = useState<string>('');
-  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
   // --- Validation now imported from ../cultures/validation ---
 
@@ -230,7 +228,7 @@ export function CultureForm({
     setIsSaving(true);
     try {
       await saveCulture(formData);
-      setShowSaveSuccess(true);
+      setSaveError('');
       setIsDirty(false);
     } catch (error) {
       setSaveError(extractApiErrorMessage(error, t, t('messages.updateError')));
@@ -361,42 +359,60 @@ export function CultureForm({
             ) : null}
             {supplierRows.map((row, supplierIndex) => (
               <div key={`supplier-row-${supplierIndex}`} style={{ border: '1px solid #e0e0e0', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <Select
-                  value={row.supplier_id ?? row.supplier?.id ?? ''}
-                  onChange={(event) => {
-                    const selectedValue = String(event.target.value ?? '');
+                {(() => {
+                  const selectedSupplierId = row.supplier_id ?? row.supplier?.id ?? null;
+                  const availableSupplierIds = new Set(supplierOptions.map((supplier) => supplier.id));
+                  const hasSelectedSupplier = typeof selectedSupplierId === 'number';
+                  const isSelectedSupplierAvailable = hasSelectedSupplier && availableSupplierIds.has(selectedSupplierId);
+                  const selectValue = isSelectedSupplierAvailable ? String(selectedSupplierId) : '';
+                  const showUnavailableSelectedSupplier = hasSelectedSupplier && !isSelectedSupplierAvailable;
+                  const unavailableSupplierLabel = row.supplier_name || row.supplier?.name || `${t('seedDemand.columns.supplier')} #${selectedSupplierId}`;
 
-                    if (selectedValue === '') {
-                      updateSupplierRow(supplierIndex, {
-                        supplier_id: null,
-                        supplier_name: undefined,
-                        supplier_name_input: undefined,
-                      });
-                      return;
-                    }
+                  return (
+                    <Select
+                      value={selectValue}
+                      onChange={(event) => {
+                        const selectedValue = String(event.target.value ?? '');
 
-                    const value = Number(selectedValue);
-                    if (value === -1) {
-                      navigate('/app/suppliers?create=1');
-                      return;
-                    }
-                    const selectedSupplier = supplierOptions.find((supplier) => supplier.id === value);
-                    updateSupplierRow(supplierIndex, {
-                      supplier_id: value,
-                      supplier_name_input: selectedSupplier ? undefined : row.supplier_name_input,
-                      supplier_name: selectedSupplier?.name ?? row.supplier_name,
-                    });
-                  }}
-                  displayEmpty
-                  size="small"
-                  disabled={supplierOptions.length === 0}
-                >
-                  <MenuItem value="">{supplierOptions.length > 0 ? t('form.supplierPlaceholder') : t('form.noSuppliers')}</MenuItem>
-                  {supplierOptions.map((supplier) => (
-                    <MenuItem key={supplier.id} value={supplier.id}>{supplier.name}</MenuItem>
-                  ))}
-                  <MenuItem value={-1}>{t('form.newSupplierOption')}</MenuItem>
-                </Select>
+                        if (selectedValue === '') {
+                          updateSupplierRow(supplierIndex, {
+                            supplier_id: null,
+                            supplier_name: undefined,
+                            supplier_name_input: undefined,
+                          });
+                          return;
+                        }
+
+                        if (selectedValue === '-1') {
+                          navigate('/app/suppliers?create=1');
+                          return;
+                        }
+
+                        const parsedSupplierId = Number(selectedValue);
+                        const selectedSupplier = supplierOptions.find((supplier) => supplier.id === parsedSupplierId);
+                        updateSupplierRow(supplierIndex, {
+                          supplier_id: parsedSupplierId,
+                          supplier_name_input: selectedSupplier ? undefined : row.supplier_name_input,
+                          supplier_name: selectedSupplier?.name ?? row.supplier_name,
+                        });
+                      }}
+                      displayEmpty
+                      size="small"
+                      disabled={supplierOptions.length === 0}
+                    >
+                      <MenuItem value="">{supplierOptions.length > 0 ? t('form.supplierPlaceholder') : t('form.noSuppliers')}</MenuItem>
+                      {supplierOptions.map((supplier) => (
+                        <MenuItem key={supplier.id} value={String(supplier.id)}>{supplier.name}</MenuItem>
+                      ))}
+                      {showUnavailableSelectedSupplier ? (
+                        <MenuItem value={String(selectedSupplierId)} disabled>
+                          {unavailableSupplierLabel}
+                        </MenuItem>
+                      ) : null}
+                      <MenuItem value="-1">{t('form.newSupplierOption')}</MenuItem>
+                    </Select>
+                  );
+                })()}
                 {supplierOptions.length === 0 ? (
                   <>
                     <Typography variant="body2" color="warning.main">
@@ -451,7 +467,12 @@ export function CultureForm({
             <Button variant="outlined" onClick={addSupplierRow}>{t('form.addSupplierData')}</Button>
           </div>
         </DialogContent>
-        <DialogActions sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
+        <DialogActions sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center', mt: 1, flexWrap: 'wrap' }}>
+          {saveError ? (
+            <Alert severity="error" sx={{ width: '100%' }}>
+              {saveError}
+            </Alert>
+          ) : null}
           {isDirty && (
             <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
               {isValid
@@ -473,26 +494,6 @@ export function CultureForm({
           </Button>
         </DialogActions>
       </form>
-      <Snackbar
-        open={showSaveSuccess}
-        autoHideDuration={3000}
-        onClose={() => setShowSaveSuccess(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity="success" onClose={() => setShowSaveSuccess(false)}>
-          {t('messages.updateSuccess', { defaultValue: 'Erfolgreich gespeichert' })}
-        </Alert>
-      </Snackbar>
-      <Snackbar
-        open={Boolean(saveError)}
-        autoHideDuration={6000}
-        onClose={() => setSaveError('')}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity="error" onClose={() => setSaveError('')}>
-          {saveError}
-        </Alert>
-      </Snackbar>
     </Dialog>
   );
 }

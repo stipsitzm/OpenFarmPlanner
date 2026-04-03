@@ -53,6 +53,7 @@ export interface Culture {
   variety?: string;
   seed_supplier?: string;
   supplier?: Supplier | null;
+  selected_seed_demand_supplier?: number | null;
   supplier_product_url?: string | null;
   supplier_data?: CultureSupplierData[];
   supplier_data_input?: CultureSupplierDataInput[];
@@ -108,6 +109,7 @@ export interface CultureSupplierData {
 }
 
 export interface CultureSupplierDataInput {
+  id?: number;
   supplier_id?: number | null;
   supplier_name_input?: string;
   supplier_name?: string;

@@ -345,6 +345,29 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'project']
         extra_kwargs = {'culture': {'required': False}}
+        validators = []
+
+    def _resolve_culture_for_validation(self, attrs):
+        culture = attrs.get('culture')
+        if culture is not None:
+            return culture
+        if self.instance is not None:
+            return self.instance.culture
+        return self.context.get('parent_culture')
+
+    def _validate_unique_culture_supplier(self, attrs):
+        culture = self._resolve_culture_for_validation(attrs)
+        supplier = attrs.get('supplier') or (self.instance.supplier if self.instance is not None else None)
+        if culture is None or supplier is None:
+            return
+
+        queryset = CultureSupplierData.objects.filter(culture=culture, supplier=supplier)
+        if self.instance is not None:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError({
+                'supplier_id': 'Supplier data for this culture already exists.',
+            })
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
@@ -373,6 +396,7 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
             attrs['supplier'] = supplier
             attrs['supplier_name'] = supplier.name
 
+        self._validate_unique_culture_supplier(attrs)
         return attrs
 
 
@@ -627,7 +651,7 @@ class CultureSerializer(serializers.ModelSerializer):
                 row_data = dict(row)
                 serializer = CultureSupplierDataSerializer(
                     data=row_data,
-                    context=self.context,
+                    context={**self.context, 'parent_culture': culture},
                 )
                 serializer.is_valid(raise_exception=True)
                 serializer.save(culture=culture, project=culture.project)
@@ -645,18 +669,32 @@ class CultureSerializer(serializers.ModelSerializer):
         seed_packages = validated_data.pop('seed_packages', None)
         culture = super().update(instance, validated_data)
         if supplier_data_input is not None:
-            culture.supplier_data.all().delete()
+            existing_by_id = {row.id: row for row in culture.supplier_data.all()}
+            seen_ids: set[int] = set()
             if isinstance(supplier_data_input, list):
                 for row in supplier_data_input:
                     if not isinstance(row, dict):
                         continue
                     row_data = dict(row)
+                    raw_row_id = row_data.get('id')
+                    try:
+                        row_id = int(raw_row_id)
+                    except (TypeError, ValueError):
+                        row_id = None
+                    instance_row = existing_by_id.get(row_id) if row_id is not None else None
                     serializer = CultureSupplierDataSerializer(
+                        instance=instance_row,
                         data=row_data,
-                        context=self.context,
+                        context={**self.context, 'parent_culture': culture},
+                        partial=instance_row is not None,
                     )
                     serializer.is_valid(raise_exception=True)
-                    serializer.save(culture=culture, project=culture.project)
+                    saved_row = serializer.save(culture=culture, project=culture.project)
+                    seen_ids.add(saved_row.id)
+
+            ids_to_delete = [row_id for row_id in existing_by_id if row_id not in seen_ids]
+            if ids_to_delete:
+                CultureSupplierData.objects.filter(id__in=ids_to_delete).delete()
         if seed_packages is not None:
             culture.seed_packages.all().delete()
             if isinstance(seed_packages, list):
@@ -719,6 +757,44 @@ class CultureSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         """Validate cross-field rules and supplier get-or-create."""
         errors = {}
+        from .utils import normalize_text
+
+        raw_name = attrs.get(
+            'name',
+            getattr(self.instance, 'name', None) if self.instance else None,
+        )
+        normalized_name = normalize_text(raw_name)
+        if not normalized_name:
+            errors['name'] = 'Name is required.'
+        else:
+            attrs['name'] = ' '.join(str(raw_name).split())
+            request = self.context.get('request')
+            project = attrs.get('project')
+            if project is None and request is not None:
+                project = getattr(request, 'active_project', None)
+            if project is None and self.instance is not None:
+                project = self.instance.project
+
+            if project is not None:
+                instance_name_normalized = None
+                if self.instance is not None:
+                    instance_name_normalized = normalize_text(getattr(self.instance, 'name', None))
+
+                # Keep existing duplicate records editable when the normalized name
+                # is unchanged on update. This preserves compatibility with legacy
+                # data that may already contain duplicates.
+                if self.instance is not None and instance_name_normalized == normalized_name:
+                    pass
+                else:
+                    existing_name_query = Culture.all_objects.filter(
+                        project=project,
+                        deleted_at__isnull=True,
+                        name_normalized=normalized_name,
+                    )
+                    if self.instance is not None:
+                        existing_name_query = existing_name_query.exclude(pk=self.instance.pk)
+                    if existing_name_query.exists():
+                        errors['name'] = 'A culture with this name already exists.'
 
         cultivation_types = attrs.get(
             'cultivation_types',

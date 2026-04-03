@@ -101,6 +101,11 @@ export default function SeedDemandPage(): React.ReactElement {
                 const packageInfo = hasSupplierOptions
                   ? formatPackageSelection(row, t)
                   : t('seedDemand.noPackageCalculationPossible');
+                const supplierOptionValues = new Set((row.supplier_options ?? []).map((option) => String(option.supplier_id)));
+                const selectedSupplierValue = row.selected_supplier_id !== null && row.selected_supplier_id !== undefined
+                  ? String(row.selected_supplier_id)
+                  : '';
+                const selectValue = supplierOptionValues.has(selectedSupplierValue) ? selectedSupplierValue : '';
 
                 return (
                   <TableRow key={row.culture_id}>
@@ -114,7 +119,7 @@ export default function SeedDemandPage(): React.ReactElement {
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                           <FormControl size="small" sx={{ minWidth: 220 }}>
                             <Select
-                              value={row.selected_supplier_id ?? ''}
+                              value={selectValue}
                               sx={{
                                 '& .MuiSelect-select': { py: 0.75 },
                               }}
@@ -129,7 +134,7 @@ export default function SeedDemandPage(): React.ReactElement {
                             >
                               <MenuItem value="">{t('seedDemand.selectSupplier')}</MenuItem>
                               {(row.supplier_options ?? []).map((option) => (
-                                <MenuItem key={option.supplier_id} value={option.supplier_id}>
+                                <MenuItem key={option.supplier_id} value={String(option.supplier_id)}>
                                   {option.supplier_name}
                                 </MenuItem>
                               ))}

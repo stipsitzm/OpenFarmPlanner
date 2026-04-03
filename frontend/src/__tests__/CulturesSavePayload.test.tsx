@@ -6,9 +6,10 @@ import Cultures from '../pages/Cultures';
 import { CommandProvider } from '../commands/CommandProvider';
 import type { Culture } from '../api/types';
 
-const { listMock, updateMock, saveCultureMock } = vi.hoisted(() => ({
+const { listMock, updateMock, createMock, saveCultureMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   updateMock: vi.fn(),
+  createMock: vi.fn(),
   saveCultureMock: vi.fn(),
 }));
 
@@ -20,25 +21,38 @@ vi.mock('../api/api', async () => {
       ...actual.cultureAPI,
       list: listMock,
       update: updateMock,
+      create: createMock,
     },
   };
 });
 
 vi.mock('../cultures/CultureDetail', () => ({
-  CultureDetail: ({ onCultureSelect }: { onCultureSelect: (culture: Culture | null) => void }): ReactElement => (
-    <button
-      type="button"
-      onClick={() => onCultureSelect({
-        id: 1,
-        name: 'Karotte',
-        variety: 'Nantaise',
-        supplier: { id: 10, name: 'Bingenheimer' },
-        row_spacing_cm: 20,
-        row_spacing_m: 0.2,
-      } as Culture)}
-    >
-      select-culture
-    </button>
+  CultureDetail: ({
+    cultures,
+    selectedCultureId,
+    onCultureSelect,
+  }: {
+    cultures: Culture[];
+    selectedCultureId?: number;
+    onCultureSelect: (culture: Culture | null) => void;
+  }): ReactElement => (
+    <div>
+      <button
+        type="button"
+        onClick={() => onCultureSelect({
+          id: 1,
+          name: 'Karotte',
+          variety: 'Nantaise',
+          supplier: { id: 10, name: 'Bingenheimer' },
+          row_spacing_cm: 20,
+          row_spacing_m: 0.2,
+        } as Culture)}
+      >
+        select-culture
+      </button>
+      <div data-testid="culture-list">{cultures.map((culture) => culture.name).join(', ')}</div>
+      <div data-testid="selected-culture-id">{selectedCultureId ?? 'none'}</div>
+    </div>
   ),
 }));
 
@@ -76,6 +90,9 @@ describe('Cultures save payload', () => {
 
     updateMock.mockResolvedValue({
       data: { id: 1, name: 'Karotte', variety: 'Nantaise' },
+    });
+    createMock.mockResolvedValue({
+      data: { id: 2, name: 'Neue Kultur', variety: 'Nova' },
     });
   });
 
@@ -136,5 +153,79 @@ describe('Cultures save payload', () => {
     await waitFor(() => expect(updateMock).toHaveBeenCalledTimes(1));
     const payload = updateMock.mock.calls[0][1] as Record<string, unknown>;
     expect(payload.seed_rate_unit).toBe('g_per_m2');
+  });
+
+  it('includes supplier_data row ids so nested records update instead of duplicate create', async () => {
+    saveCultureMock.mockReturnValue({
+      id: 1,
+      name: 'Karotte',
+      variety: 'Nantaise',
+      supplier_data: [
+        {
+          id: 77,
+          supplier_id: 10,
+          supplier_name: 'Bingenheimer',
+          packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
+        },
+      ],
+    } as unknown as Culture);
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <Cultures />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'select-culture' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Kultur bearbeiten (Alt+E)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'submit-edit' }));
+
+    await waitFor(() => expect(updateMock).toHaveBeenCalledTimes(1));
+    const payload = updateMock.mock.calls[0][1] as { supplier_data_input?: Array<{ id?: number }> };
+    expect(payload.supplier_data_input?.[0]?.id).toBe(77);
+  });
+
+  it('shows and selects newly created culture immediately after save', async () => {
+    listMock
+      .mockResolvedValueOnce({
+        data: {
+          count: 1,
+          next: null,
+          previous: null,
+          results: [{ id: 1, name: 'Karotte', variety: 'Nantaise' }],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          count: 2,
+          next: null,
+          previous: null,
+          results: [
+            { id: 1, name: 'Karotte', variety: 'Nantaise' },
+            { id: 2, name: 'Neue Kultur', variety: 'Nova' },
+          ],
+        },
+      });
+    saveCultureMock.mockReturnValue({
+      name: 'Neue Kultur',
+      variety: 'Nova',
+    } as Culture);
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <Cultures />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Neue Kultur hinzufügen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'submit-edit' }));
+
+    await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByTestId('culture-list')).toHaveTextContent('Karotte, Neue Kultur'));
+    expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('2');
   });
 });

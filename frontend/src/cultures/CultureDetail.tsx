@@ -88,6 +88,25 @@ function formatSeedUnitLabel(unit: string | null | undefined): string {
   return unit ?? '';
 }
 
+function formatPackageSizes(
+  packageSizes: Array<{ size_value?: number | null; size_unit?: string | null }> | null | undefined,
+  t: (key: string) => string,
+): string {
+  if (!Array.isArray(packageSizes) || packageSizes.length === 0) {
+    return t('noData');
+  }
+
+  const normalized = packageSizes
+    .filter((entry) => entry && typeof entry.size_value === 'number' && Number.isFinite(entry.size_value) && entry.size_value > 0)
+    .map((entry) => `${formatNumber(entry.size_value ?? null, t)} ${entry.size_unit === 'seeds' ? 'Korn' : 'g'}`);
+
+  if (normalized.length === 0) {
+    return t('noData');
+  }
+
+  return normalized.join(', ');
+}
+
 
 export function CultureDetail({
   cultures,
@@ -139,14 +158,27 @@ export function CultureDetail({
   }, [cultures, searchQuery, selectedFamilyFilter, selectedCultivationFilter, selectedSupplierFilter]);
 
   const cultureOptions: SearchableSelectOption<Culture>[] = useMemo(
-    () => filteredCultures
-      .filter((culture) => culture.id !== undefined)
-      .map((culture) => ({
+    () => {
+      const selectedCultureFromAll = selectedCultureId !== undefined
+        ? cultures.find((culture) => culture.id === selectedCultureId)
+        : undefined;
+      const optionCultures = [...filteredCultures];
+      if (
+        selectedCultureFromAll
+        && !optionCultures.some((culture) => culture.id === selectedCultureFromAll.id)
+      ) {
+        optionCultures.unshift(selectedCultureFromAll);
+      }
+
+      return optionCultures
+        .filter((culture) => culture.id !== undefined)
+        .map((culture) => ({
         value: culture.id!,
         label: `${culture.name}${culture.variety ? ` - ${culture.variety}` : ''}${culture.seed_supplier ? ` | ${culture.seed_supplier}` : ''}`,
         data: culture,
-      })),
-    [filteredCultures]
+      }));
+    },
+    [cultures, filteredCultures, selectedCultureId]
   );
 
   const selectedOption = useMemo(
@@ -156,6 +188,21 @@ export function CultureDetail({
 
   const selectedCulture = selectedOption?.data ?? null;
   const supplierRows = selectedCulture?.supplier_data ?? [];
+  const selectedSupplierRow = useMemo(() => {
+    if (supplierRows.length === 0) {
+      return null;
+    }
+
+    const preferredSupplierId = selectedCulture?.supplier?.id ?? selectedCulture?.selected_seed_demand_supplier ?? null;
+    if (typeof preferredSupplierId === 'number') {
+      const match = supplierRows.find((row) => (row.supplier?.id ?? row.supplier_id ?? null) === preferredSupplierId);
+      if (match) {
+        return match;
+      }
+    }
+
+    return supplierRows[0];
+  }, [selectedCulture?.selected_seed_demand_supplier, selectedCulture?.supplier?.id, supplierRows]);
   const activeCultivationTypes = useMemo(
     () => (
       selectedCulture
@@ -430,23 +477,37 @@ export function CultureDetail({
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.
               </Typography>
-              {supplierRows.length === 0 ? (
+              {selectedSupplierRow === null ? (
                 <Typography variant="body2" color="text.secondary">Keine Lieferantendaten vorhanden.</Typography>
               ) : (
-                <Stack spacing={2}>
-                  {supplierRows.map((row) => (
-                    <Box key={`${row.id ?? row.supplier?.id ?? row.supplier_name}`}>
-                      <Typography variant="subtitle2">{row.supplier?.name || row.supplier_name || 'Lieferant'}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {row.supplier_product_name || '-'}
-                      </Typography>
-                      {row.supplier_product_url && (
-                        <Link href={row.supplier_product_url} target="_blank" rel="noopener noreferrer" underline="hover">
-                          {row.supplier_product_url}
-                        </Link>
-                      )}
-                    </Box>
-                  ))}
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2">{selectedSupplierRow.supplier?.name || selectedSupplierRow.supplier_name || 'Lieferant'}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedSupplierRow.supplier_product_name || '-'}
+                  </Typography>
+                  {selectedSupplierRow.supplier_product_url && (
+                    <Link href={selectedSupplierRow.supplier_product_url} target="_blank" rel="noopener noreferrer" underline="hover">
+                      {selectedSupplierRow.supplier_product_url}
+                    </Link>
+                  )}
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Packungsgrößen
+                    </Typography>
+                    <Typography variant="body1">
+                      {formatPackageSizes(selectedSupplierRow.packaging_sizes, t)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Tausendkorngewicht
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedSupplierRow.thousand_kernel_weight_g !== null && selectedSupplierRow.thousand_kernel_weight_g !== undefined
+                        ? `${formatNumber(selectedSupplierRow.thousand_kernel_weight_g, t)} g`
+                        : t('noData')}
+                    </Typography>
+                  </Box>
                 </Stack>
               )}
             </Box>
@@ -601,28 +662,6 @@ export function CultureDetail({
                     </Typography>
                     <Typography variant="body1">
                       {selectedCulture.sowing_calculation_safety_percent} %
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.thousand_kernel_weight_g !== undefined && selectedCulture.thousand_kernel_weight_g !== null && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Tausendkorngewicht
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatNumber(selectedCulture.thousand_kernel_weight_g, t)} g
-                    </Typography>
-                  </Box>
-                )}
-                {selectedCulture.seed_packages && selectedCulture.seed_packages.length > 0 && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Packungsgrößen
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedCulture.seed_packages
-                        .map((pkg) => `${formatNumber(pkg.size_value, t)} ${pkg.size_unit === 'seeds' ? 'Korn' : 'g'}`)
-                        .join(', ')}
                     </Typography>
                   </Box>
                 )}

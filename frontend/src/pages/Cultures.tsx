@@ -286,10 +286,6 @@ function Cultures(): React.ReactElement {
       setEditingCulture(undefined);
     } catch (error) {
       console.error('Error saving culture:', error);
-      showSnackbar(
-        editingCulture ? t('messages.updateError') : t('messages.createError'),
-        'error'
-      );
       throw error; // Re-throw to prevent form from closing
     }
   };
