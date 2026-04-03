@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  GRAPHICAL_MAX_SCALE,
   GRAPHICAL_MANUAL_MIN_SCALE,
+  BED_LABEL_MIN_SCALE,
   clampViewportToStage,
   fitBoundsToStage,
   fitContentToStage,
@@ -35,12 +37,21 @@ describe('graphicalViewport helpers', () => {
     });
   });
 
-  it('shows labels only when zoom and size are sufficient', () => {
+  it('shows labels when zoom is sufficient or when the bed is large enough on screen', () => {
     expect(shouldShowFieldLabel({ width: 150, height: 80 }, 1)).toBe(true);
     expect(shouldShowFieldLabel({ width: 80, height: 30 }, 1)).toBe(false);
     expect(shouldShowBedLabel({ width: 120, height: 50 }, ZOOM_LEVEL_DETAIL)).toBe(true);
-    expect(shouldShowBedLabel({ width: 60, height: 20 }, ZOOM_LEVEL_DETAIL)).toBe(false);
-    expect(shouldShowBedLabel({ width: 120, height: 50 }, ZOOM_LEVEL_OVERVIEW)).toBe(false);
+    expect(shouldShowBedLabel({ width: 60, height: 20 }, ZOOM_LEVEL_DETAIL)).toBe(true);
+    expect(shouldShowBedLabel({ width: 120, height: 50 }, ZOOM_LEVEL_OVERVIEW)).toBe(true);
+    expect(shouldShowBedLabel({ width: 80, height: 28 }, BED_LABEL_MIN_SCALE - 0.05)).toBe(true);
+  });
+
+  it('shows bed labels at maximum zoom even for moderately sized beds', () => {
+    expect(shouldShowBedLabel({ width: 28, height: 14 }, GRAPHICAL_MAX_SCALE)).toBe(true);
+  });
+
+  it('keeps bed labels hidden when beds are truly too small', () => {
+    expect(shouldShowBedLabel({ width: 12, height: 5 }, GRAPHICAL_MAX_SCALE)).toBe(false);
   });
 
   it('fits content into the available stage size', () => {
