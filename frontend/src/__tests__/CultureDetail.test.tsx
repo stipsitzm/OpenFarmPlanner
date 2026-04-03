@@ -106,6 +106,26 @@ describe('CultureDetail Component', () => {
     ]);
   });
 
+  it('renders supplier section exactly once between general info and timing', () => {
+    const mockOnSelect = vi.fn();
+    render(
+      <CultureDetail
+        cultures={mockCultures}
+        selectedCultureId={1}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+
+    const generalHeading = screen.getByRole('heading', { level: 6, name: 'Allgemeine Informationen' });
+    const supplierHeadings = screen.getAllByRole('heading', { level: 6, name: 'Saatgutdaten je Lieferant' });
+    const timingHeading = screen.getByRole('heading', { level: 6, name: 'Zeitplanung' });
+
+    expect(supplierHeadings).toHaveLength(1);
+    const supplierHeading = supplierHeadings[0];
+    expect(generalHeading.compareDocumentPosition(supplierHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(supplierHeading.compareDocumentPosition(timingHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('displays harvest information correctly', () => {
     const mockOnSelect = vi.fn();
     render(
