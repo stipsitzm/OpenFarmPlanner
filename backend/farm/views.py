@@ -102,6 +102,13 @@ logger = logging.getLogger(__name__)
 
 BOOTSTRAP_PROJECT_NAME = 'Gelawi Zwiebelzopf'
 BOOTSTRAP_PROJECT_SLUG = 'gelawi-zwiebelzopf'
+MAX_MEDIA_UPLOAD_BYTES = 10 * 1024 * 1024
+ALLOWED_MEDIA_UPLOAD_CONTENT_TYPES = {
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+}
 
 
 def _invitation_error_response(exc: InvitationFlowError) -> Response:
@@ -237,20 +244,19 @@ def _iso_week_key(day: date) -> str:
     return f"{iso_year}-W{iso_week:02d}"
 
 
-def _serialize_project_state() -> dict[str, list[dict]]:
-    """Serialize all major project entities to JSON-compatible dictionaries."""
+def _serialize_project_state(project: Project) -> dict[str, list[dict]]:
+    """Serialize project-scoped entities to JSON-compatible dictionaries."""
     return {
-        'locations': list(Location.objects.order_by('id').values()),
-        'fields': list(Field.objects.order_by('id').values()),
-        'beds': list(Bed.objects.order_by('id').values()),
-        'bed_layouts': list(BedLayout.objects.order_by('id').values()),
-        'field_layouts': list(FieldLayout.objects.order_by('id').values()),
-        'suppliers': list(Supplier.objects.order_by('id').values()),
-        'media_files': list(MediaFile.objects.order_by('id').values()),
-        'cultures': list(Culture.all_objects.order_by('id').values()),
-        'planting_plans': list(PlantingPlan.objects.order_by('id').values()),
-        'tasks': list(Task.objects.order_by('id').values()),
-        'note_attachments': list(NoteAttachment.objects.order_by('id').values()),
+        'locations': list(Location.objects.filter(project=project).order_by('id').values()),
+        'fields': list(Field.objects.filter(project=project).order_by('id').values()),
+        'beds': list(Bed.objects.filter(project=project).order_by('id').values()),
+        'bed_layouts': list(BedLayout.objects.filter(project=project).order_by('id').values()),
+        'field_layouts': list(FieldLayout.objects.filter(project=project).order_by('id').values()),
+        'suppliers': list(Supplier.objects.filter(project=project).order_by('id').values()),
+        'cultures': list(Culture.all_objects.filter(project=project).order_by('id').values()),
+        'planting_plans': list(PlantingPlan.objects.filter(project=project).order_by('id').values()),
+        'tasks': list(Task.objects.filter(project=project).order_by('id').values()),
+        'note_attachments': list(NoteAttachment.objects.filter(project=project).order_by('id').values()),
     }
 
 
@@ -264,8 +270,8 @@ def _get_bootstrap_project() -> Project:
 
 
 def _create_project_revision(summary: str, project: Project | None = None) -> None:
-    snapshot = json.loads(json.dumps(_serialize_project_state(), cls=DjangoJSONEncoder))
     target_project = project or _get_bootstrap_project()
+    snapshot = json.loads(json.dumps(_serialize_project_state(target_project), cls=DjangoJSONEncoder))
     ProjectRevision.objects.create(snapshot=snapshot, summary=summary, project=target_project)
 
 
@@ -407,19 +413,18 @@ def _resolve_project_object_display_name(snapshot: dict, object_type: str, objec
     return None
 
 
-def _restore_project_state(snapshot: dict[str, list[dict]]) -> None:
+def _restore_project_state(snapshot: dict[str, list[dict]], *, project: Project) -> None:
     with transaction.atomic():
-        Task.objects.all().delete()
-        NoteAttachment.objects.all().delete()
-        PlantingPlan.objects.all().delete()
-        Culture.all_objects.all().delete()
-        BedLayout.objects.all().delete()
-        FieldLayout.objects.all().delete()
-        Bed.objects.all().delete()
-        Field.objects.all().delete()
-        Location.objects.all().delete()
-        Supplier.objects.all().delete()
-        MediaFile.objects.all().delete()
+        Task.objects.filter(project=project).delete()
+        NoteAttachment.objects.filter(project=project).delete()
+        PlantingPlan.objects.filter(project=project).delete()
+        Culture.all_objects.filter(project=project).delete()
+        BedLayout.objects.filter(project=project).delete()
+        FieldLayout.objects.filter(project=project).delete()
+        Bed.objects.filter(project=project).delete()
+        Field.objects.filter(project=project).delete()
+        Location.objects.filter(project=project).delete()
+        Supplier.objects.filter(project=project).delete()
 
         for model, key in [
             (Location, 'locations'),
@@ -428,7 +433,6 @@ def _restore_project_state(snapshot: dict[str, list[dict]]) -> None:
             (BedLayout, 'bed_layouts'),
             (FieldLayout, 'field_layouts'),
             (Supplier, 'suppliers'),
-            (MediaFile, 'media_files'),
             (Culture, 'cultures'),
             (PlantingPlan, 'planting_plans'),
             (Task, 'tasks'),
@@ -437,7 +441,13 @@ def _restore_project_state(snapshot: dict[str, list[dict]]) -> None:
             rows = snapshot.get(key, [])
             if not rows:
                 continue
-            model.objects.bulk_create([model(**row) for row in rows])
+            project_rows = []
+            for row in rows:
+                row_data = dict(row)
+                if 'project_id' in row_data:
+                    row_data['project_id'] = project.id
+                project_rows.append(model(**row_data))
+            model.objects.bulk_create(project_rows)
 
 
 
@@ -1729,7 +1739,7 @@ class ProjectHistoryRestoreView(APIView):
         revision_id = serializer.validated_data['history_id']
 
         revision = get_object_or_404(ProjectRevision.objects.filter(project=active_project), id=revision_id)
-        _restore_project_state(revision.snapshot)
+        _restore_project_state(revision.snapshot, project=active_project)
         _create_project_revision(f"Project restored from snapshot #{revision_id}", project=revision.project)
 
         return Response({'detail': 'Project restored successfully.'}, status=status.HTTP_200_OK)
@@ -1805,6 +1815,11 @@ class MediaFileUploadView(APIView):
         upload = request.FILES.get('file')
         if upload is None:
             return Response({'file': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
+        if upload.size > MAX_MEDIA_UPLOAD_BYTES:
+            return Response({'file': ['File is too large. Maximum allowed size is 10 MB.']}, status=status.HTTP_400_BAD_REQUEST)
+        content_type = (getattr(upload, 'content_type', '') or '').lower()
+        if content_type not in ALLOWED_MEDIA_UPLOAD_CONTENT_TYPES:
+            return Response({'file': ['Unsupported file type. Only image uploads are allowed.']}, status=status.HTTP_400_BAD_REQUEST)
 
         rel_path = culture_media_upload_path(None, upload.name)
         saved_path = default_storage.save(rel_path, upload)
@@ -2423,6 +2438,7 @@ class AcceptProjectInvitationByTokenView(APIView):
     """Accept invitation by token path parameter."""
 
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'invitation_accept'
 
     def post(self, request, token: str):
         logger.info('Invitation accept endpoint reached', extra={'user_id': request.user.id, 'path': request.path})
@@ -2450,6 +2466,7 @@ class AcceptProjectInvitationView(APIView):
     """Accept invitation token from request body for backward compatibility."""
 
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'invitation_accept'
 
     def post(self, request):
         serializer = InvitationTokenSerializer(data=request.data)
@@ -2463,6 +2480,7 @@ class AcceptPendingProjectInvitationView(APIView):
     """Accept the invitation token currently stored in the session."""
 
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'invitation_accept'
 
     def post(self, request):
         logger.info('Pending invitation accept endpoint reached', extra={'user_id': request.user.id, 'path': request.path})

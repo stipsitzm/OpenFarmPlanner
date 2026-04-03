@@ -153,6 +153,7 @@ class CsrfTokenView(APIView):
 
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_scope = 'auth_register'
 
     def post(self, request: Request) -> Response:
         serializer = RegisterSerializer(data=request.data)
@@ -165,6 +166,7 @@ class RegisterView(APIView):
 
 class ActivateView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_scope = 'auth_activation'
 
     def post(self, request: Request) -> Response:
         serializer = ActivateSerializer(data=request.data)
@@ -192,6 +194,7 @@ class ActivateView(APIView):
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_scope = 'auth_login'
 
     def post(self, request: Request) -> Response:
         serializer = LoginSerializer(data=request.data)
@@ -316,6 +319,7 @@ class AccountStatusView(APIView):
 
 class ResendActivationView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_scope = 'auth_resend_activation'
 
     def post(self, request: Request) -> Response:
         serializer = ResendActivationSerializer(data=request.data)
@@ -332,6 +336,7 @@ class ResendActivationView(APIView):
 
 class PasswordResetRequestView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_scope = 'auth_password_reset_request'
 
     def post(self, request: Request) -> Response:
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -347,6 +352,7 @@ class PasswordResetRequestView(APIView):
 
 class PasswordResetConfirmView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_scope = 'auth_password_reset_confirm'
 
     def post(self, request: Request) -> Response:
         serializer = PasswordResetConfirmSerializer(data=request.data)

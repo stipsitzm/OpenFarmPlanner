@@ -78,6 +78,36 @@ class ProjectsApiTests(APITestCase):
         settings_obj = UserProjectSettings.objects.get(user=self.user)
         self.assertEqual(settings_obj.last_project_id, self.project2.id)
 
+    def test_project_history_restore_does_not_delete_other_project_data(self) -> None:
+        create_response = self.client.post(
+            '/openfarmplanner/api/locations/',
+            {'name': 'P1 before restore', 'address': '', 'notes': ''},
+            format='json',
+            HTTP_X_PROJECT_ID=str(self.project.id),
+        )
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        Location.objects.create(name='P2 untouched', project=self.project2)
+
+        history_response = self.client.get(
+            '/openfarmplanner/api/history/project/',
+            HTTP_X_PROJECT_ID=str(self.project.id),
+        )
+        self.assertEqual(history_response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(history_response.data), 1)
+        history_id = history_response.data[0]['history_id']
+
+        Location.objects.filter(project=self.project).delete()
+
+        restore_response = self.client.post(
+            '/openfarmplanner/api/history/project/restore/',
+            {'history_id': history_id},
+            format='json',
+            HTTP_X_PROJECT_ID=str(self.project.id),
+        )
+        self.assertEqual(restore_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(Location.objects.filter(project=self.project, name='P1 before restore').exists())
+        self.assertTrue(Location.objects.filter(project=self.project2, name='P2 untouched').exists())
+
     def test_create_project_without_slug_succeeds(self) -> None:
         response = self.client.post('/openfarmplanner/api/projects/', {'name': 'Neues Projekt', 'description': ''}, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

@@ -153,6 +153,17 @@ class ApiEndpointsTest(DRFAPITestCase):
             self.assertEqual(response.status_code, status.HTTP_201_CREATED, f'Should accept domain-only URL: {input_url}')
             self.assertEqual(response.data['homepage_url'], expected_url, f'Should normalize {input_url} to {expected_url}')
 
+    def test_media_upload_rejects_non_image_file(self):
+        upload = SimpleUploadedFile('payload.txt', b'not-an-image', content_type='text/plain')
+        response = self.client.post(
+            '/openfarmplanner/api/media-files/upload/',
+            {'file': upload},
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('file', response.data)
+
 
 
     def test_field_update_with_length_and_width_overwrites_area(self):
@@ -194,6 +205,43 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(float(self.field.area_sqm), 200.0)
         self.assertEqual(self.field.length_m, 25.0)
         self.assertIsNone(self.field.width_m)
+
+    def test_field_create_rejects_location_from_other_project(self):
+        other_project = Project.objects.create(name='Other project', slug='other-project')
+        foreign_location = Location.objects.create(name='Foreign location', project=other_project)
+
+        response = self.client.post(
+            '/openfarmplanner/api/fields/',
+            {
+                'name': 'Cross-project field',
+                'location': foreign_location.id,
+                'area_sqm': 10.0,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('location', response.data)
+
+    def test_planting_plan_create_rejects_bed_from_other_project(self):
+        other_project = Project.objects.create(name='Other project 2', slug='other-project-2')
+        other_location = Location.objects.create(name='Other location', project=other_project)
+        other_field = Field.objects.create(name='Other field', location=other_location, project=other_project)
+        other_bed = Bed.objects.create(name='Other bed', field=other_field, area_sqm=5.0, project=other_project)
+
+        response = self.client.post(
+            '/openfarmplanner/api/planting-plans/',
+            {
+                'culture': self.culture.id,
+                'bed': other_bed.id,
+                'planting_date': date(2026, 3, 1).isoformat(),
+                'area_usage_sqm': 1.0,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('bed', response.data)
 
     def test_bed_update_with_length_and_width_overwrites_area(self):
         response = self.client.put(
