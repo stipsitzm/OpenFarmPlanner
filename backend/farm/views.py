@@ -8,7 +8,7 @@ for its respective model.
 from collections import defaultdict
 import logging
 from datetime import date, timedelta
-from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
+from decimal import Decimal, ROUND_HALF_UP
 import json
 import re
 
@@ -993,43 +993,9 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
             except (TypeError, ValueError):
                 pass
 
-        sowing_month_values = self.request.query_params.getlist('sowing_month')
-        if not sowing_month_values:
-            raw_sowing_month = (self.request.query_params.get('sowing_month') or '').strip()
-            if raw_sowing_month:
-                sowing_month_values = [item.strip() for item in raw_sowing_month.split(',')]
-        valid_sowing_months = []
-        for raw_month in sowing_month_values:
-            try:
-                month = int(raw_month)
-            except (TypeError, ValueError):
-                continue
-            if 1 <= month <= 12:
-                valid_sowing_months.append(month)
-        if valid_sowing_months:
-            queryset = queryset.filter(planting_plans__planting_date__month__in=valid_sowing_months)
-
         nutrient_need = (self.request.query_params.get('nutrient_need') or '').strip()
         if nutrient_need in {'low', 'medium', 'high'}:
             queryset = queryset.filter(nutrient_demand=nutrient_need)
-
-        yield_min = self.request.query_params.get('yield_min')
-        if yield_min not in {None, ''}:
-            try:
-                queryset = queryset.filter(expected_yield__gte=Decimal(str(yield_min)))
-            except (InvalidOperation, TypeError, ValueError):
-                pass
-
-        yield_max = self.request.query_params.get('yield_max')
-        if yield_max not in {None, ''}:
-            try:
-                queryset = queryset.filter(expected_yield__lte=Decimal(str(yield_max)))
-            except (InvalidOperation, TypeError, ValueError):
-                pass
-
-        requirements = (self.request.query_params.get('requirements') or '').strip()
-        if requirements:
-            queryset = queryset.filter(notes__icontains=requirements)
 
         return queryset.distinct()
 

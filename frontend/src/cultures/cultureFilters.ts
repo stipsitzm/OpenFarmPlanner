@@ -7,11 +7,7 @@ export interface CultureFilters {
   cultivationMethod: CultivationMethodFilter;
   growthDaysMin: string;
   growthDaysMax: string;
-  sowingMonths: number[];
   nutrientNeed: NutrientNeed;
-  yieldMin: string;
-  yieldMax: string;
-  requirements: string;
 }
 
 export const DEFAULT_CULTURE_FILTERS: CultureFilters = {
@@ -20,11 +16,7 @@ export const DEFAULT_CULTURE_FILTERS: CultureFilters = {
   cultivationMethod: '',
   growthDaysMin: '',
   growthDaysMax: '',
-  sowingMonths: [],
   nutrientNeed: '',
-  yieldMin: '',
-  yieldMax: '',
-  requirements: '',
 };
 
 const CULTURE_FILTERS_STORAGE_KEY = 'ofp.cultures.filters.v1';
@@ -60,26 +52,8 @@ export function buildCultureFilterParams(filters: CultureFilters): Record<string
     params.growth_days_max = growthDaysMax;
   }
 
-  if (filters.sowingMonths.length > 0) {
-    params.sowing_month = filters.sowingMonths.join(',');
-  }
-
   if (filters.nutrientNeed) {
     params.nutrient_need = filters.nutrientNeed;
-  }
-
-  const yieldMin = toNumber(filters.yieldMin);
-  if (yieldMin !== null) {
-    params.yield_min = yieldMin;
-  }
-
-  const yieldMax = toNumber(filters.yieldMax);
-  if (yieldMax !== null) {
-    params.yield_max = yieldMax;
-  }
-
-  if (filters.requirements.trim()) {
-    params.requirements = filters.requirements.trim();
   }
 
   return params;
@@ -100,9 +74,6 @@ export function loadCultureFilters(): CultureFilters {
     return {
       ...DEFAULT_CULTURE_FILTERS,
       ...parsed,
-      sowingMonths: Array.isArray(parsed.sowingMonths)
-        ? parsed.sowingMonths.filter((month): month is number => Number.isInteger(month) && month >= 1 && month <= 12)
-        : [],
     };
   } catch {
     return DEFAULT_CULTURE_FILTERS;

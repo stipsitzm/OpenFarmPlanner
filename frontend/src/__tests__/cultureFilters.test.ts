@@ -20,11 +20,7 @@ describe('cultureFilters', () => {
       cultivationMethod: 'direct_sowing',
       growthDaysMin: '50',
       growthDaysMax: '120',
-      sowingMonths: [3, 4],
       nutrientNeed: 'low',
-      yieldMin: '1.2',
-      yieldMax: '3.4',
-      requirements: 'trocken',
     };
 
     expect(buildCultureFilterParams(filters)).toEqual({
@@ -33,11 +29,7 @@ describe('cultureFilters', () => {
       cultivation_method: 'direct_sowing',
       growth_days_min: 50,
       growth_days_max: 120,
-      sowing_month: '3,4',
       nutrient_need: 'low',
-      yield_min: 1.2,
-      yield_max: 3.4,
-      requirements: 'trocken',
     });
   });
 
@@ -45,7 +37,6 @@ describe('cultureFilters', () => {
     const filters: CultureFilters = {
       ...DEFAULT_CULTURE_FILTERS,
       search: 'Karotte',
-      sowingMonths: [2, 5, 13],
     };
 
     persistCultureFilters(filters);
@@ -53,7 +44,6 @@ describe('cultureFilters', () => {
     expect(loadCultureFilters()).toEqual({
       ...DEFAULT_CULTURE_FILTERS,
       search: 'Karotte',
-      sowingMonths: [2, 5],
     });
   });
 });

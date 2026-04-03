@@ -302,14 +302,12 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(len(response.data['results']), 1)
 
     def test_culture_list_supports_combined_filters(self):
-        matching = Culture.objects.create(
+        Culture.objects.create(
             name='Buschbohne',
             crop_family='Fabaceae',
             cultivation_types=['direct_sowing'],
             growth_duration_days=95,
             nutrient_demand='low',
-            expected_yield=2.4,
-            notes='trockenheitsresistent',
             project=self.project,
         )
         Culture.objects.create(
@@ -318,16 +316,6 @@ class ApiEndpointsTest(DRFAPITestCase):
             cultivation_types=['pre_cultivation'],
             growth_duration_days=120,
             nutrient_demand='high',
-            expected_yield=4.8,
-            notes='hoher Wasserbedarf',
-            project=self.project,
-        )
-        PlantingPlan.objects.create(
-            culture=matching,
-            bed=self.bed,
-            cultivation_type='direct_sowing',
-            planting_date=date(2026, 4, 10),
-            harvest_date=date(2026, 7, 20),
             project=self.project,
         )
 
@@ -337,11 +325,7 @@ class ApiEndpointsTest(DRFAPITestCase):
             '&plant_family=Fabaceae'
             '&cultivation_method=direct_sowing'
             '&growth_days_max=100'
-            '&sowing_month=4'
-            '&nutrient_need=low'
-            '&yield_min=2'
-            '&yield_max=3'
-            '&requirements=trocken',
+            '&nutrient_need=low',
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)

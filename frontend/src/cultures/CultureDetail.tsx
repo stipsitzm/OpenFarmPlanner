@@ -38,8 +38,6 @@ import {
   AccordionSummary,
   AccordionDetails,
   TextField,
-  Checkbox,
-  ListItemText,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import type { Culture } from '../api/api';
@@ -136,11 +134,7 @@ export function CultureDetail({
     cultivationMethod: '',
     growthDaysMin: '',
     growthDaysMax: '',
-    sowingMonths: [],
     nutrientNeed: '',
-    yieldMin: '',
-    yieldMax: '',
-    requirements: '',
   };
   const applyFilters = onFiltersChange ?? (() => {});
   const resetFilters = onFiltersReset ?? (() => {});
@@ -155,13 +149,6 @@ export function CultureDetail({
   );
 
   const filteredCultures = cultures;
-  const monthOptions = useMemo(
-    () => Array.from({ length: 12 }, (_, index) => ({
-      value: index + 1,
-      label: t(`filters.monthNames.${index + 1}`),
-    })),
-    [t],
-  );
 
   const cultureOptions: SearchableSelectOption<Culture>[] = useMemo(
     () => {
@@ -368,30 +355,6 @@ export function CultureDetail({
                 />
               </Stack>
               <FormControl size="small">
-                <InputLabel id="culture-sowing-month-filter-label">{t('filters.sowingPeriod')}</InputLabel>
-                <Select
-                  multiple
-                  labelId="culture-sowing-month-filter-label"
-                  value={effectiveFilters.sowingMonths}
-                  label={t('filters.sowingPeriod')}
-                  renderValue={(selected) => (selected as number[])
-                    .sort((left, right) => left - right)
-                    .map((month) => monthOptions.find((entry) => entry.value === month)?.label ?? String(month))
-                    .join(', ')}
-                  onChange={(event) => applyFilters({
-                    ...effectiveFilters,
-                    sowingMonths: (event.target.value as number[]).map((entry) => Number(entry)).filter((entry) => entry >= 1 && entry <= 12),
-                  })}
-                >
-                  {monthOptions.map((month) => (
-                    <MenuItem key={month.value} value={month.value}>
-                      <Checkbox checked={effectiveFilters.sowingMonths.includes(month.value)} />
-                      <ListItemText primary={month.label} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl size="small">
                 <InputLabel id="culture-nutrient-filter-label">{t('filters.nutrientNeed')}</InputLabel>
                 <Select
                   labelId="culture-nutrient-filter-label"
@@ -405,30 +368,6 @@ export function CultureDetail({
                   <MenuItem value="high">{t('form.nutrientDemandHigh')}</MenuItem>
                 </Select>
               </FormControl>
-              <Stack direction="row" spacing={1}>
-                <TextField
-                  size="small"
-                  type="number"
-                  label={t('filters.yieldMin')}
-                  value={effectiveFilters.yieldMin}
-                  onChange={(event) => applyFilters({ ...effectiveFilters, yieldMin: event.target.value })}
-                  fullWidth
-                />
-                <TextField
-                  size="small"
-                  type="number"
-                  label={t('filters.yieldMax')}
-                  value={effectiveFilters.yieldMax}
-                  onChange={(event) => applyFilters({ ...effectiveFilters, yieldMax: event.target.value })}
-                  fullWidth
-                />
-              </Stack>
-              <TextField
-                size="small"
-                label={t('filters.requirements')}
-                value={effectiveFilters.requirements}
-                onChange={(event) => applyFilters({ ...effectiveFilters, requirements: event.target.value })}
-              />
             </Box>
             <Button variant="outlined" onClick={resetFilters} sx={{ mt: 1.5 }}>
               {t('filters.reset')}
