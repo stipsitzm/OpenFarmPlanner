@@ -9,7 +9,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import type { GridColDef } from '@mui/x-data-grid';
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from '../i18n';
 import { locationAPI, type Location } from '../api/api';
@@ -150,8 +150,7 @@ function Locations(): React.ReactElement {
     if (typeof latitude !== 'number' || typeof longitude !== 'number') {
       return '';
     }
-    const separator = i18n.language.startsWith('de') ? '; ' : ', ';
-    return `${formatCoordinate(latitude)}${separator}${formatCoordinate(longitude)}`;
+    return `${formatCoordinate(latitude)}; ${formatCoordinate(longitude)}`;
   };
 
   const columns: GridColDef[] = [
@@ -168,7 +167,7 @@ function Locations(): React.ReactElement {
     },
     {
       field: 'coordinates',
-      headerName: t('locations:columns.coordinates'),
+      headerName: t('locations:columns.coordinatesLatLon'),
       width: 280,
       editable: false,
       valueGetter: (_value, row) =>
@@ -184,30 +183,22 @@ function Locations(): React.ReactElement {
         const label = formatCoordinates(row.latitude, row.longitude);
         const href = `https://www.google.com/maps?q=${row.latitude},${row.longitude}`;
         return (
-          <a href={href} target="_blank" rel="noreferrer">
-            {label}
-          </a>
+          <Tooltip title={t('locations:tooltips.openInGoogleMaps')} arrow>
+            <Box
+              component="a"
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              sx={{
+                color: 'text.primary',
+                textDecoration: 'none',
+                '&:hover': { textDecoration: 'underline', textUnderlineOffset: 2 },
+              }}
+            >
+              {label}
+            </Box>
+          </Tooltip>
         );
-      },
-    },
-    {
-      field: 'latitude',
-      headerName: t('locations:columns.latitude'),
-      width: 160,
-      editable: true,
-      valueFormatter: (value) => {
-        if (typeof value !== 'number') return '';
-        return formatCoordinate(value);
-      },
-    },
-    {
-      field: 'longitude',
-      headerName: t('locations:columns.longitude'),
-      width: 170,
-      editable: true,
-      valueFormatter: (value) => {
-        if (typeof value !== 'number') return '';
-        return formatCoordinate(value);
       },
     },
     {

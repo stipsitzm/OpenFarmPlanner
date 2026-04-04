@@ -16,10 +16,14 @@
   "columns": {
     "coordinates": "Koordinaten",
     "latitude": "Latitude",
-    "longitude": "Longitude"
+    "longitude": "Longitude",
+    "coordinatesLatLon": "Koordinaten (Latitude, Longitude)"
   },
   "placeholders": {
     "latitude": "z.B. 46,6145",
     "longitude": "z.B. 13,8503"
+  },
+  "tooltips": {
+    "openInGoogleMaps": "In Google Maps öffnen"
   }
 }
