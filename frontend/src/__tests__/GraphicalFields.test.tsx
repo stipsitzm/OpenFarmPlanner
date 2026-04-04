@@ -326,9 +326,7 @@ describe("GraphicalFields", () => {
   it("renders the edit mode toggle and allows toggling it by click", async () => {
     render(<GraphicalFields />);
 
-    expect(
-      await screen.findByLabelText("Modushilfe anzeigen"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Modus")).toBeInTheDocument();
     expect(
       screen.queryByText(
         "Editiermodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
@@ -348,9 +346,7 @@ describe("GraphicalFields", () => {
 
   it("renders fit-to-view and zoom controls", async () => {
     render(<GraphicalFields />);
-    expect(
-      await screen.findByLabelText("Modushilfe anzeigen"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Modus")).toBeInTheDocument();
     act(() => {
       fireEvent.click(
         screen.getByRole("button", { name: "Standort: Hof Nord" }),
@@ -427,9 +423,7 @@ describe("GraphicalFields", () => {
       "data-strict-mode",
       "false",
     );
-    expect(
-      screen.getByLabelText("Modushilfe anzeigen"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Modus")).toBeInTheDocument();
 
     act(() => {
       fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
@@ -762,7 +756,7 @@ describe("GraphicalFields", () => {
 
   it("toggles edit mode via Alt+E but ignores the shortcut while typing in an input", async () => {
     render(<GraphicalFields />);
-    await screen.findByLabelText("Modushilfe anzeigen");
+    await screen.findByText("Modus");
     expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "false");
 
     act(() => {
