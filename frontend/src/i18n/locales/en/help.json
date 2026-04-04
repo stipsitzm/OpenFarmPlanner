@@ -12,6 +12,6 @@
     "plantingPlans": {"title": "Help: Planting plans", "points": ["Plan crop planting.", "Use New to create.", "Rows are clickable for editing.", "Graphical mode shows occupancy."]},
     "seedDemand": {"title": "Help: Seed demand", "points": ["Seed demand is calculated.", "Based on cultures and plans.", "Use filters.", "Supports order planning."]},
     "suppliers": {"title": "Help: Suppliers", "points": ["Manage suppliers.", "Link suppliers to seed data.", "Use New to create.", "Rows are clickable for editing."]},
-    "graphical": {"title": "Help: Graphical view", "points": ["See fields and beds layout.", "Edit mode allows moving.", "Use zoom and pan.", "Click elements to edit."]}
+    "graphical": {"title": "Help: Graphical view", "points": ["See fields and beds layout.", "In View mode, you can navigate, zoom in/out, and open details.", "Edit mode allows moving.", "Fields and beds can only be changed in Edit mode. Use Alt+E to switch quickly.", "Use zoom and pan.", "Click elements to edit."]}
   }
 }

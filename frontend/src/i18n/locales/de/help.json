@@ -88,7 +88,9 @@
       "title": "Hilfe: Grafische Ansicht",
       "points": [
         "Hier siehst du Parzellen und Beete grafisch angeordnet.",
+        "Im Modus „Ansicht“ kannst du navigieren, hinein- und herauszoomen und Details öffnen.",
         "Im Bearbeitungsmodus kannst du Elemente verschieben.",
+        "Parzellen und Beete lassen sich nur im Modus „Bearbeiten“ ändern. Mit Alt+E wechselst du schnell in den Bearbeitungsmodus.",
         "Nutze Zoom und Verschieben zur Navigation.",
         "Klick auf ein Beet oder Element zum Bearbeiten."
       ]
