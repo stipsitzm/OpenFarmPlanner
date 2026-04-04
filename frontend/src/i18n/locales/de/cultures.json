@@ -15,6 +15,7 @@
     "supplier": "Lieferant",
     "directSowing": "Direktsaat",
     "preCultivation": "Pflanzung",
+    "toggle": "Filter",
     "reset": "Filter zurücksetzen"
   },
   "emptySearch": {

@@ -14,10 +14,15 @@ import { useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import {
+  Badge,
   Box,
   Card,
   CardContent,
+  Collapse,
   CircularProgress,
   Typography,
   Chip,
@@ -119,6 +124,13 @@ export function CultureDetail({
   const [selectedFamilyFilter, setSelectedFamilyFilter] = useState('');
   const [selectedCultivationFilter, setSelectedCultivationFilter] = useState('');
   const [selectedSupplierFilter, setSelectedSupplierFilter] = useState('');
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+
+  const activeFilterCount = useMemo(
+    () => [selectedFamilyFilter, selectedCultivationFilter, selectedSupplierFilter]
+      .filter((value) => value.length > 0).length,
+    [selectedCultivationFilter, selectedFamilyFilter, selectedSupplierFilter],
+  );
 
   const familyOptions = useMemo(
     () => Array.from(new Set(
@@ -297,76 +309,100 @@ export function CultureDetail({
     <Box sx={{ width: '100%' }}>
       {/* Searchable Dropdown */}
       <Box sx={{ mb: 3 }}>
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          spacing={1.5}
-          sx={{ mb: 2 }}
-        >
-          <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
-            <InputLabel id="culture-family-filter-label">{t('filters.cropFamily')}</InputLabel>
-            <Select
-              labelId="culture-family-filter-label"
-              value={selectedFamilyFilter}
-              label={t('filters.cropFamily')}
-              onChange={(event) => setSelectedFamilyFilter(event.target.value)}
-            >
-              <MenuItem value="">{t('filters.all')}</MenuItem>
-              {familyOptions.map((family) => (
-                <MenuItem key={family} value={family}>{family}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
-            <InputLabel id="culture-method-filter-label">{t('filters.cultivationType')}</InputLabel>
-            <Select
-              labelId="culture-method-filter-label"
-              value={selectedCultivationFilter}
-              label={t('filters.cultivationType')}
-              onChange={(event) => setSelectedCultivationFilter(event.target.value)}
-            >
-              <MenuItem value="">{t('filters.all')}</MenuItem>
-              <MenuItem value="direct_sowing">{t('filters.directSowing')}</MenuItem>
-              <MenuItem value="pre_cultivation">{t('filters.preCultivation')}</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
-            <InputLabel id="culture-supplier-filter-label">{t('filters.supplier')}</InputLabel>
-            <Select
-              labelId="culture-supplier-filter-label"
-              value={selectedSupplierFilter}
-              label={t('filters.supplier')}
-              onChange={(event) => setSelectedSupplierFilter(event.target.value)}
-            >
-              <MenuItem value="">{t('filters.all')}</MenuItem>
-              {supplierOptions.map((supplier) => (
-                <MenuItem key={supplier} value={supplier}>{supplier}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
+          <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 280 } }}>
+            <SearchableSelect
+              options={cultureOptions}
+              value={selectedOption}
+              onChange={(option) => onCultureSelect(option?.data ?? null)}
+              label={t('searchPlaceholder')}
+              placeholder={t('searchInputPlaceholderEnhanced')}
+              noOptionsText={t('noOptionsEnhanced')}
+              textFieldSx={{ width: '100%' }}
+              inputValue={searchQuery}
+              onInputChange={setSearchQuery}
+            />
+          </Box>
           <Button
             variant="outlined"
-            onClick={() => {
-              setSearchQuery('');
-              setSelectedFamilyFilter('');
-              setSelectedCultivationFilter('');
-              setSelectedSupplierFilter('');
-            }}
-            sx={{ alignSelf: { xs: 'stretch', md: 'center' } }}
+            size="small"
+            onClick={() => setFiltersExpanded((prev) => !prev)}
+            startIcon={
+              <Badge color="primary" badgeContent={activeFilterCount > 0 ? activeFilterCount : null}>
+                <FilterListIcon fontSize="small" />
+              </Badge>
+            }
+            endIcon={filtersExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            sx={{ alignSelf: { xs: 'flex-end', sm: 'center' }, whiteSpace: 'nowrap' }}
+            aria-expanded={filtersExpanded}
+            aria-label={t('filters.toggle')}
           >
-            {t('filters.reset')}
+            {t('filters.toggle')}
           </Button>
         </Stack>
-        <SearchableSelect
-          options={cultureOptions}
-          value={selectedOption}
-          onChange={(option) => onCultureSelect(option?.data ?? null)}
-          label={t('searchPlaceholder')}
-          placeholder={t('searchInputPlaceholderEnhanced')}
-          noOptionsText={t('noOptionsEnhanced')}
-          textFieldSx={{ width: '100%' }}
-          inputValue={searchQuery}
-          onInputChange={setSearchQuery}
-        />
+
+        <Collapse in={filtersExpanded}>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1}
+            sx={{ pt: 0.5, pb: 0.5 }}
+          >
+            <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
+              <InputLabel id="culture-family-filter-label">{t('filters.cropFamily')}</InputLabel>
+              <Select
+                labelId="culture-family-filter-label"
+                value={selectedFamilyFilter}
+                label={t('filters.cropFamily')}
+                onChange={(event) => setSelectedFamilyFilter(event.target.value)}
+              >
+                <MenuItem value="">{t('filters.all')}</MenuItem>
+                {familyOptions.map((family) => (
+                  <MenuItem key={family} value={family}>{family}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
+              <InputLabel id="culture-method-filter-label">{t('filters.cultivationType')}</InputLabel>
+              <Select
+                labelId="culture-method-filter-label"
+                value={selectedCultivationFilter}
+                label={t('filters.cultivationType')}
+                onChange={(event) => setSelectedCultivationFilter(event.target.value)}
+              >
+                <MenuItem value="">{t('filters.all')}</MenuItem>
+                <MenuItem value="direct_sowing">{t('filters.directSowing')}</MenuItem>
+                <MenuItem value="pre_cultivation">{t('filters.preCultivation')}</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
+              <InputLabel id="culture-supplier-filter-label">{t('filters.supplier')}</InputLabel>
+              <Select
+                labelId="culture-supplier-filter-label"
+                value={selectedSupplierFilter}
+                label={t('filters.supplier')}
+                onChange={(event) => setSelectedSupplierFilter(event.target.value)}
+              >
+                <MenuItem value="">{t('filters.all')}</MenuItem>
+                {supplierOptions.map((supplier) => (
+                  <MenuItem key={supplier} value={supplier}>{supplier}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Button
+              variant="text"
+              size="small"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedFamilyFilter('');
+                setSelectedCultivationFilter('');
+                setSelectedSupplierFilter('');
+              }}
+              sx={{ alignSelf: { xs: 'flex-end', md: 'center' }, whiteSpace: 'nowrap' }}
+            >
+              {t('filters.reset')}
+            </Button>
+          </Stack>
+        </Collapse>
         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: 'block' }}>
           {t('searchHelperText', { count: filteredCultures.length })}
         </Typography>
