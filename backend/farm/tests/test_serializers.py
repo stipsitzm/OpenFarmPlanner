@@ -154,6 +154,18 @@ class SerializerBranchCoverageTest(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
+    def test_allows_pre_cultivation_unit_without_value(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Mangold',
+                'variety': 'X',
+                'cultivation_types': ['pre_cultivation'],
+                'seed_rate_pre_cultivation_unit': 'g_per_m2',
+                'project': self.project.id,
+            }
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
     def test_accepts_direct_sowing_only(self):
         serializer = CultureSerializer(
             data={

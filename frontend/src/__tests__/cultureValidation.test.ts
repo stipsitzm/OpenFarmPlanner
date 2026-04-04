@@ -34,7 +34,7 @@ describe('validateCulture', () => {
       { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as unknown, cultivation_types: ['pre_cultivation'], growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_pre_cultivation_unit: 'g_per_m2' },
       t
     );
-    expect(unitWithoutValue.errors.seed_rate_pre_cultivation_value).toBe('form.seedRateValueRequired');
+    expect(unitWithoutValue.errors.seed_rate_pre_cultivation_value).toBeUndefined();
   });
 
   it('accepts direct sowing without propagation duration', () => {

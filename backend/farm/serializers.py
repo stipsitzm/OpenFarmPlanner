@@ -945,8 +945,6 @@ class CultureSerializer(serializers.ModelSerializer):
         }:
             errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is unsupported.'
 
-        if 'pre_cultivation' in active_types and pre_value is None and pre_unit:
-            errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value is required when pre-cultivation unit is set.'
         if 'pre_cultivation' in active_types and pre_value is not None and not pre_unit:
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is required when pre-cultivation value is set.'
         if pre_value is not None and pre_value <= 0:

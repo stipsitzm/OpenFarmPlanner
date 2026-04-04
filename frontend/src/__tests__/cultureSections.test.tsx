@@ -204,5 +204,6 @@ describe('culture form UI sections', () => {
     fireEvent.change(yieldInput, { target: { value: '' } });
     expect(onChange).toHaveBeenCalledWith('expected_yield', undefined);
     expect(screen.getByText('Ungültig')).toBeInTheDocument();
+    expect(screen.getByText('kg')).toBeInTheDocument();
   });
 });
