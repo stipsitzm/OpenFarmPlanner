@@ -3,6 +3,7 @@
   "columns": {
     "culture": "Kultur",
     "bed": "Beet",
+    "fieldBed": "Parzelle - Beet",
     "plantingDate": "Pflanzdatum",
     "harvestDate": "Erntedatum",
     "harvestStartDate": "Erntebeginn",

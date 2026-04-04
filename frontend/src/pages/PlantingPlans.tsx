@@ -134,6 +134,29 @@ const toNumericValue = (value: unknown): number | null => {
   return null;
 };
 
+const buildBedDisplayLabel = (
+  bedName: string | null | undefined,
+  fieldName: string | null | undefined,
+  areaSqm: number | null,
+  locale: string,
+): string => {
+  const normalizedBedName = (bedName ?? "").trim();
+  const normalizedFieldName = (fieldName ?? "").trim();
+  const combinedName = [normalizedFieldName, normalizedBedName]
+    .filter((part) => part.length > 0)
+    .join(" - ");
+
+  if (!combinedName) {
+    return "—";
+  }
+
+  if (areaSqm === null) {
+    return combinedName;
+  }
+
+  return `${combinedName} (${formatAreaM2(areaSqm, locale)})`;
+};
+
 function PlantingPlans(): React.ReactElement {
   const { t } = useTranslation(["plantingPlans", "common"]);
   const { i18n } = useTranslation();
@@ -205,15 +228,18 @@ function PlantingPlans(): React.ReactElement {
       beds
         .filter((b) => b.id !== undefined)
         .map((b) => {
-          const baseName = b.field_name
-            ? `${b.field_name} - ${b.name}`
-            : b.name;
-          const areaInfo = b.area_sqm
-            ? ` (${formatAreaM2(b.area_sqm, numberLocale)})`
-            : "";
-          return { value: b.id!, label: `${baseName}${areaInfo}` };
+          const normalizedAreaSqm = toNumericValue(b.area_sqm);
+          return {
+            value: b.id!,
+            label: buildBedDisplayLabel(
+              b.name,
+              b.field_name,
+              normalizedAreaSqm,
+              numberLocale,
+            ),
+          };
         }),
-    [beds],
+    [beds, numberLocale],
   );
 
   const cultivationTypeOptions = useMemo(
@@ -236,7 +262,7 @@ function PlantingPlans(): React.ReactElement {
     );
     const bedWidth = estimateColumnWidth(
       [
-        t("plantingPlans:columns.bed"),
+        t("plantingPlans:columns.fieldBed"),
         ...bedOptions.map((option) => option.label),
       ],
       260,
@@ -350,7 +376,12 @@ function PlantingPlans(): React.ReactElement {
           bedAPI.list(),
         ]);
         setCultures(culturesResponse.data.results);
-        setBeds(bedsResponse.data.results);
+        setBeds(
+          bedsResponse.data.results.map((bed) => ({
+            ...bed,
+            area_sqm: toNumericValue(bed.area_sqm) ?? undefined,
+          })),
+        );
       } catch (err) {
         console.error("Error fetching cultures and beds:", err);
       }
@@ -479,7 +510,7 @@ function PlantingPlans(): React.ReactElement {
       {
         ...createSingleSelectColumn<PlantingPlanRow>({
           field: "bed",
-          headerName: t("plantingPlans:columns.bed"),
+          headerName: t("plantingPlans:columns.fieldBed"),
           flex: 0,
           minWidth: dynamicWidths.bed,
           maxWidth: BED_COLUMN_MAX_WIDTH,
@@ -709,8 +740,17 @@ function PlantingPlans(): React.ReactElement {
   };
 
   const getBedLabel = (row: PlantingPlanRow): string => {
+    const linkedBed = beds.find((bed) => bed.id === row.bed);
+    if (linkedBed) {
+      return buildBedDisplayLabel(
+        linkedBed.name,
+        linkedBed.field_name,
+        toNumericValue(linkedBed.area_sqm),
+        numberLocale,
+      );
+    }
     if (row.bed_name) {
-      return row.bed_name;
+      return buildBedDisplayLabel(row.bed_name, null, null, numberLocale);
     }
     const fallback = bedOptions.find((option) => option.value === row.bed);
     return fallback?.label ?? "—";
