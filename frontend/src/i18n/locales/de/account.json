@@ -12,5 +12,11 @@
   "cancel": "Abbrechen",
   "confirmDelete": "Konto zur Löschung vormerken",
   "deletionScheduled": "Dein Konto wurde zur Löschung vorgemerkt. Endgültige Löschung am {{date}}.",
-  "noDisplayName": "—"
+  "noDisplayName": "—",
+  "helpHints": {
+    "title": "Hilfe & Hinweise",
+    "description": "Setzt alle ausgeblendeten Hilfetexte zurück.",
+    "resetButton": "Alle Hilfen wieder anzeigen",
+    "resetSuccess": "Alle Hilfen werden wieder angezeigt."
+  }
 }

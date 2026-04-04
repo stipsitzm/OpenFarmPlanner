@@ -15,9 +15,10 @@ import {
   Typography,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMediaQuery } from '@mui/system';
 import { useTranslation } from '../../i18n';
+import { markFirstLoginHelpAsShown, shouldAutoOpenHelp } from './helpSettings';
 
 export type HelpPageKey =
   | 'dashboard'
@@ -44,12 +45,30 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const helpButtonRef = useRef<HTMLButtonElement | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
 
   useEffect(() => {
     setIsHidden(window.localStorage.getItem(storageKey(pageKey)) === '1');
   }, [pageKey]);
+
+  useEffect(() => {
+    if (isHidden || !shouldAutoOpenHelp(pageKey)) {
+      return;
+    }
+
+    if (isMobile) {
+      setMobileOpen(true);
+      markFirstLoginHelpAsShown();
+      return;
+    }
+
+    if (helpButtonRef.current) {
+      setAnchorEl(helpButtonRef.current);
+      markFirstLoginHelpAsShown();
+    }
+  }, [isHidden, isMobile, pageKey]);
 
   const points = useMemo(
     () => t(`pages.${pageKey}.points`, { returnObjects: true }) as string[],
@@ -89,7 +108,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
   return (
     <>
       <Tooltip title={t('showTooltip')}>
-        <IconButton aria-label={t('showTooltip')} onClick={handleOpen} size="small" sx={{ color: 'text.secondary' }}>
+        <IconButton ref={helpButtonRef} aria-label={t('showTooltip')} onClick={handleOpen} size="small" sx={{ color: 'text.secondary' }}>
           <HelpOutlineIcon fontSize="small" />
         </IconButton>
       </Tooltip>
