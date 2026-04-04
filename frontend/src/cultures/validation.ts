@@ -69,9 +69,6 @@ export function validateCulture(
     if (hasValue && Number(draft.seed_rate_pre_cultivation_value) <= 0) {
       errors.seed_rate_pre_cultivation_value = t('form.seedRateValueRequired');
     }
-    if (!hasValue && hasUnit) {
-      errors.seed_rate_pre_cultivation_value = t('form.seedRateValueRequired');
-    }
   }
 
   // Required fields: name, variety

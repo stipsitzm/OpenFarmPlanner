@@ -38,7 +38,7 @@ export function HarvestSection({ formData, errors, onChange, t }: HarvestSection
         <TextField
           sx={fieldSx}
           type="number"
-          label={t('form.expectedYield')}
+          label={t('form.expectedYieldWithUnit', { defaultValue: `${t('form.expectedYield')} (${t('form.expectedYieldUnit', { defaultValue: 'kg' })})` })}
           placeholder={t('form.expectedYieldPlaceholder')}
           value={formData.expected_yield ?? ''}
           onChange={e => onChange('expected_yield', e.target.value ? parseFloat(e.target.value) : undefined)}

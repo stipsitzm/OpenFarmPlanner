@@ -1,5 +1,5 @@
 /**
- * Fields (Schläge) page component.
+ * Fields (Parzellen) page component.
  *
  * Manages farm fields with list and create functionality.
  * Fields belong to locations and contain beds.

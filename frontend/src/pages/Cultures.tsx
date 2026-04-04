@@ -1041,16 +1041,20 @@ function Cultures(): React.ReactElement {
               </Button>
             </span>
           </Tooltip>
-          <Button
-            variant="outlined"
-            startIcon={<PublicIcon />}
-            onClick={() => void handlePublishCurrentCulture()}
-            disabled={!selectedCulture || publishingCultureId === selectedCulture?.id}
-          >
-            {publishingCultureId === selectedCulture?.id
-              ? (isUpdatingOwnPublicCulture ? t('library.updating') : t('library.publishing'))
-              : (isUpdatingOwnPublicCulture ? t('library.updateButton') : t('library.publishButton'))}
-          </Button>
+          <Tooltip title={t('library.publishTooltip')}>
+            <span>
+              <Button
+                variant="outlined"
+                startIcon={<PublicIcon />}
+                onClick={() => void handlePublishCurrentCulture()}
+                disabled={!selectedCulture || publishingCultureId === selectedCulture?.id}
+              >
+                {publishingCultureId === selectedCulture?.id
+                  ? (isUpdatingOwnPublicCulture ? t('library.updating') : t('library.publishing'))
+                  : (isUpdatingOwnPublicCulture ? t('library.updateButton') : t('library.publishButton'))}
+              </Button>
+            </span>
+          </Tooltip>
           <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
             Versionen
           </Button>

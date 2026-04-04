@@ -5,8 +5,7 @@
     "subtitle": "Simple crop planning for vegetable production, CSA, and small farms.",
     "description": "OpenFarmPlanner helps manage crops, growing areas, and cultivation periods in a clear way. Keep plans, fields, and key information organized in one place.",
     "actions": {
-      "openApp": "Open app",
-      "login": "Log in",
+      "openApp": "Open OpenFarmPlanner",
       "register": "Register"
     }
   },

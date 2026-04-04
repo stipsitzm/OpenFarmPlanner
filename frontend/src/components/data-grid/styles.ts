@@ -36,7 +36,7 @@ export const dataGridSx = {
     boxShadow: 'inset 0 0 0 2px #d32f2f',
   },
   '& .ofp-cell-dirty': {
-    backgroundColor: '#fff8e1',
+    backgroundColor: 'rgba(25, 118, 210, 0.08)',
   },
   '& .ofp-row-editing': {
     boxShadow: 'inset 3px 0 0 #1976d2',

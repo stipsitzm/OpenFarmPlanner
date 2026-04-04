@@ -456,6 +456,8 @@ class Field(TimestampedModel):
 
     class Meta:
         ordering = ['location', 'name']
+        verbose_name = 'Parzelle'
+        verbose_name_plural = 'Parzellen'
 
 
 class Bed(TimestampedModel):
@@ -465,7 +467,7 @@ class Bed(TimestampedModel):
     MAX_AREA_SQM = Decimal('10000.00')  # Maximum 10,000 sqm (~1 hectare, reasonable for a bed)
     
     name = models.CharField(max_length=200)
-    field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds')
+    field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds', verbose_name='Parzelle')
     area_sqm = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
     length_m = models.FloatField(null=True, blank=True)
     width_m = models.FloatField(null=True, blank=True)
@@ -901,8 +903,6 @@ class Culture(TimestampedModel):
             errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value must be greater than zero.'
         if self.seed_rate_pre_cultivation_unit and self.seed_rate_pre_cultivation_unit not in self.PRE_CULTIVATION_AUTO_SEED_RATE_UNITS:
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is unsupported.'
-        if has_pre and self.seed_rate_pre_cultivation_value is None and self.seed_rate_pre_cultivation_unit:
-            errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value is required when pre-cultivation unit is set.'
         if has_pre and self.seed_rate_pre_cultivation_value is not None and not self.seed_rate_pre_cultivation_unit:
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is required when pre-cultivation value is set.'
 

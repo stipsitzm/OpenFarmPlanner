@@ -303,7 +303,7 @@ describe("GraphicalFields", () => {
       fields: [
         {
           id: 10,
-          name: "Schlag A",
+          name: "Parzelle A",
           location: 1,
           area_sqm: 1200,
           width_m: 20,
@@ -323,37 +323,33 @@ describe("GraphicalFields", () => {
     });
   });
 
-  it("renders the edit mode switch and allows toggling it by click", async () => {
+  it("renders the edit mode toggle and allows toggling it by click", async () => {
     render(<GraphicalFields />);
 
     expect(
-      await screen.findByText(
-        /Navigieren, hinein- und herauszoomen und Details öffnen\./,
-      ),
+      await screen.findByLabelText("Modushilfe anzeigen"),
     ).toBeInTheDocument();
     expect(
       screen.queryByText(
-        "Editiermodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+        "Editiermodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
       ),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("switch")).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "false");
 
     act(() => {
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
-    expect(screen.getByRole("switch")).toBeChecked();
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bearbeitungsmodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+      "Bearbeitungsmodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
     );
   }, 15000);
 
   it("renders fit-to-view and zoom controls", async () => {
     render(<GraphicalFields />);
     expect(
-      await screen.findByText(
-        /Navigieren, hinein- und herauszoomen und Details öffnen\./,
-      ),
+      await screen.findByLabelText("Modushilfe anzeigen"),
     ).toBeInTheDocument();
     act(() => {
       fireEvent.click(
@@ -414,7 +410,7 @@ describe("GraphicalFields", () => {
     expect(Number(screen.getByTestId("konva-stage").getAttribute("data-y"))).toBeGreaterThan(startY);
   }, 15000);
 
-  it("keeps UI hint and interaction state consistent with the edit mode switch", async () => {
+  it("keeps UI hint and interaction state consistent with the edit mode toggle", async () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
@@ -422,7 +418,7 @@ describe("GraphicalFields", () => {
       );
     });
 
-    expect(screen.getByRole("switch")).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "false");
     expect(await screen.findByTestId("field-rect-10")).toHaveAttribute(
       "draggable",
       "false",
@@ -432,24 +428,22 @@ describe("GraphicalFields", () => {
       "false",
     );
     expect(
-      screen.getByText(
-        /Navigieren, hinein- und herauszoomen und Details öffnen\./,
-      ),
+      screen.getByLabelText("Modushilfe anzeigen"),
     ).toBeInTheDocument();
 
     act(() => {
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
     await waitFor(() => {
-      expect(screen.getByRole("switch")).toBeChecked();
+      expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "true");
       expect(screen.getByTestId("field-rect-10")).toHaveAttribute(
         "draggable",
         "true",
       );
     });
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bearbeitungsmodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+      "Bearbeitungsmodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
     );
   }, 15000);
 
@@ -560,8 +554,8 @@ describe("GraphicalFields", () => {
     expect(Number(movedStage.getAttribute("data-y"))).toBe(initialY);
 
     act(() => {
-      fireEvent.click(screen.getByRole("switch"));
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+      fireEvent.click(screen.getByRole("button", { name: "Ansicht" }));
     });
 
     const modeToggledStage = screen.getByTestId("konva-stage");
@@ -626,7 +620,7 @@ describe("GraphicalFields", () => {
       fireEvent.click(
         screen.getByRole("button", { name: "Standort: Hof Nord" }),
       );
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
     const fieldRect = await screen.findByTestId("field-rect-10");
@@ -663,7 +657,7 @@ describe("GraphicalFields", () => {
       fireEvent.click(
         screen.getByRole("button", { name: "Standort: Hof Nord" }),
       );
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
     const node = mockKonvaNodes["field-rect-10"];
@@ -711,7 +705,7 @@ describe("GraphicalFields", () => {
     });
 
     act(() => {
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
     const editNode = mockKonvaNodes["field-rect-10"];
@@ -738,7 +732,7 @@ describe("GraphicalFields", () => {
       fireEvent.click(
         screen.getByRole("button", { name: "Standort: Hof Nord" }),
       );
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
     const node = mockKonvaNodes["field-rect-10"];
@@ -755,7 +749,7 @@ describe("GraphicalFields", () => {
     });
 
     act(() => {
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Ansicht" }));
     });
 
     await waitFor(() => {
@@ -768,18 +762,16 @@ describe("GraphicalFields", () => {
 
   it("toggles edit mode via Alt+E but ignores the shortcut while typing in an input", async () => {
     render(<GraphicalFields />);
-    await screen.findByText(
-      /Navigieren, hinein- und herauszoomen und Details öffnen\./,
-    );
-    expect(screen.getByRole("switch")).not.toBeChecked();
+    await screen.findByLabelText("Modushilfe anzeigen");
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "false");
 
     act(() => {
       fireEvent.keyDown(window, { key: "e", altKey: true });
     });
 
-    expect(screen.getByRole("switch")).toBeChecked();
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bearbeitungsmodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+      "Bearbeitungsmodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
     );
 
     const input = document.createElement("input");
@@ -790,7 +782,7 @@ describe("GraphicalFields", () => {
       fireEvent.keyDown(window, { key: "e", altKey: true });
     });
 
-    expect(screen.getByRole("switch")).toBeChecked();
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "true");
 
     input.blur();
     document.body.removeChild(input);

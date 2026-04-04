@@ -27,6 +27,10 @@
   z-index: 1200;
 }
 
+body.hide-version-footer .app-version-footer {
+  display: none;
+}
+
 /* Navigation Styles */
 .nav {
   width: 100%;

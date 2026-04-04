@@ -32,6 +32,7 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
+import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTranslation } from "../i18n";
 import {
   plantingPlanAPI,
@@ -58,6 +59,7 @@ import {
   type EditableDataGridCommandApi,
 } from "../components/data-grid";
 import { MobileCardList } from "../components/mobile/MobileCardList";
+import { NotesDrawer } from "../components/data-grid/NotesDrawer";
 import {
   useCommandContextTag,
   useRegisterCommands,
@@ -73,6 +75,16 @@ interface PlantingPlanRow extends PlantingPlan, EditableRow {
   area_m2?: number;
   plants_count?: number | null; // UI-only derived field
   note_attachment_count?: number;
+}
+
+interface MobileCreateFormState {
+  culture: string;
+  bed: string;
+  cultivation_type: CultivationType;
+  planting_date: string;
+  area_m2: string;
+  plants_count: string;
+  notes: string;
 }
 
 const CULTIVATION_TYPE_OPTIONS = [
@@ -132,6 +144,71 @@ const toNumericValue = (value: unknown): number | null => {
   return null;
 };
 
+const buildBedDisplayLabel = (
+  bedName: string | null | undefined,
+  fieldName: string | null | undefined,
+  areaSqm: number | null,
+  locale: string,
+): string => {
+  const normalizedBedName = (bedName ?? "").trim();
+  const normalizedFieldName = (fieldName ?? "").trim();
+  const combinedName = [normalizedFieldName, normalizedBedName]
+    .filter((part) => part.length > 0)
+    .join(" - ");
+
+  if (!combinedName) {
+    return "—";
+  }
+
+  if (areaSqm === null) {
+    return combinedName;
+  }
+
+  return `${combinedName} (${formatAreaM2(areaSqm, locale)})`;
+};
+
+const createEmptyMobileCreateForm = (): MobileCreateFormState => ({
+  culture: "",
+  bed: "",
+  cultivation_type: "pre_cultivation",
+  planting_date: "",
+  area_m2: "",
+  plants_count: "",
+  notes: "",
+});
+
+export const getVisibleMobileRows = (
+  rows: PlantingPlanRow[],
+): PlantingPlanRow[] => rows.filter((row) => !row.isNew);
+
+export const buildMobileCreateForm = (
+  locale: string,
+  beds: Bed[],
+  prefill?: { cultureId?: number | null; bedId?: number | null },
+): MobileCreateFormState => {
+  const baseForm = createEmptyMobileCreateForm();
+  const prefilledBed =
+    typeof prefill?.bedId === "number"
+      ? beds.find((bed) => bed.id === prefill.bedId)
+      : undefined;
+  const prefilledArea = toNumericValue(prefilledBed?.area_sqm);
+
+  return {
+    ...baseForm,
+    culture:
+      typeof prefill?.cultureId === "number" ? String(prefill.cultureId) : "",
+    bed: typeof prefill?.bedId === "number" ? String(prefill.bedId) : "",
+    area_m2:
+      prefilledArea !== null
+        ? formatLocalizedNumber(prefilledArea, locale, {
+            useGrouping: false,
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          })
+        : "",
+  };
+};
+
 function PlantingPlans(): React.ReactElement {
   const { t } = useTranslation(["plantingPlans", "common"]);
   const { i18n } = useTranslation();
@@ -152,20 +229,30 @@ function PlantingPlans(): React.ReactElement {
     new Set(),
   );
   const [isMobileCreateOpen, setIsMobileCreateOpen] = useState(false);
-  const [mobileCreateForm, setMobileCreateForm] = useState({
-    culture: "",
-    bed: "",
-    cultivation_type: "pre_cultivation" as CultivationType,
-    planting_date: "",
-    area_m2: "",
-    plants_count: "",
-    notes: "",
-  });
+  const [mobileCreateForm, setMobileCreateForm] = useState<MobileCreateFormState>(
+    () => createEmptyMobileCreateForm(),
+  );
   const [mobileCreateError, setMobileCreateError] = useState("");
   const [mobileEditId, setMobileEditId] = useState<number | null>(null);
   const [mobileLastEditedField, setMobileLastEditedField] = useState<
     "area_m2" | "plants_count" | null
   >(null);
+  const [isMobileNotesOpen, setIsMobileNotesOpen] = useState(false);
+  const [mobileNotesTarget, setMobileNotesTarget] = useState<PlantingPlanRow | null>(null);
+  const [mobileNotesDraft, setMobileNotesDraft] = useState("");
+  const [isMobileNotesSaving, setIsMobileNotesSaving] = useState(false);
+  const mobilePrefillHandledRef = useRef(false);
+
+  useEffect(() => {
+    if (isMobile) {
+      document.body.classList.add("hide-version-footer");
+    } else {
+      document.body.classList.remove("hide-version-footer");
+    }
+    return () => {
+      document.body.classList.remove("hide-version-footer");
+    };
+  }, [isMobile]);
 
   useCommandContextTag("plans");
 
@@ -188,15 +275,18 @@ function PlantingPlans(): React.ReactElement {
       beds
         .filter((b) => b.id !== undefined)
         .map((b) => {
-          const baseName = b.field_name
-            ? `${b.field_name} - ${b.name}`
-            : b.name;
-          const areaInfo = b.area_sqm
-            ? ` (${formatAreaM2(b.area_sqm, numberLocale)})`
-            : "";
-          return { value: b.id!, label: `${baseName}${areaInfo}` };
+          const normalizedAreaSqm = toNumericValue(b.area_sqm);
+          return {
+            value: b.id!,
+            label: buildBedDisplayLabel(
+              b.name,
+              b.field_name,
+              normalizedAreaSqm,
+              numberLocale,
+            ),
+          };
         }),
-    [beds],
+    [beds, numberLocale],
   );
 
   const cultivationTypeOptions = useMemo(
@@ -219,7 +309,7 @@ function PlantingPlans(): React.ReactElement {
     );
     const bedWidth = estimateColumnWidth(
       [
-        t("plantingPlans:columns.bed"),
+        t("plantingPlans:columns.fieldBed"),
         ...bedOptions.map((option) => option.label),
       ],
       260,
@@ -333,7 +423,12 @@ function PlantingPlans(): React.ReactElement {
           bedAPI.list(),
         ]);
         setCultures(culturesResponse.data.results);
-        setBeds(bedsResponse.data.results);
+        setBeds(
+          bedsResponse.data.results.map((bed) => ({
+            ...bed,
+            area_sqm: toNumericValue(bed.area_sqm) ?? undefined,
+          })),
+        );
       } catch (err) {
         console.error("Error fetching cultures and beds:", err);
       }
@@ -462,7 +557,7 @@ function PlantingPlans(): React.ReactElement {
       {
         ...createSingleSelectColumn<PlantingPlanRow>({
           field: "bed",
-          headerName: t("plantingPlans:columns.bed"),
+          headerName: t("plantingPlans:columns.fieldBed"),
           flex: 0,
           minWidth: dynamicWidths.bed,
           maxWidth: BED_COLUMN_MAX_WIDTH,
@@ -680,7 +775,11 @@ function PlantingPlans(): React.ReactElement {
   };
 
   const getCultureLabel = (row: PlantingPlanRow): string => {
+    const linkedCulture = cultures.find((culture) => culture.id === row.culture);
     if (row.culture_name) {
+      if (linkedCulture?.variety && !row.culture_name.includes(`(${linkedCulture.variety})`)) {
+        return `${row.culture_name} (${linkedCulture.variety})`;
+      }
       return row.culture_name;
     }
     const fallback = cultureOptions.find((option) => option.value === row.culture);
@@ -688,8 +787,17 @@ function PlantingPlans(): React.ReactElement {
   };
 
   const getBedLabel = (row: PlantingPlanRow): string => {
+    const linkedBed = beds.find((bed) => bed.id === row.bed);
+    if (linkedBed) {
+      return buildBedDisplayLabel(
+        linkedBed.name,
+        linkedBed.field_name,
+        toNumericValue(linkedBed.area_sqm),
+        numberLocale,
+      );
+    }
     if (row.bed_name) {
-      return row.bed_name;
+      return buildBedDisplayLabel(row.bed_name, null, null, numberLocale);
     }
     const fallback = bedOptions.find((option) => option.value === row.bed);
     return fallback?.label ?? "—";
@@ -731,17 +839,12 @@ function PlantingPlans(): React.ReactElement {
     });
   };
 
-  const openMobileCreateDialog = (): void => {
+  const openMobileCreateDialog = (
+    prefill?: { cultureId?: number | null; bedId?: number | null },
+  ): void => {
     setMobileCreateError("");
-    setMobileCreateForm({
-      culture: "",
-      bed: "",
-      cultivation_type: "pre_cultivation",
-      planting_date: "",
-      area_m2: "",
-      plants_count: "",
-      notes: "",
-    });
+    setMobileEditId(null);
+    setMobileCreateForm(buildMobileCreateForm(numberLocale, beds, prefill));
     setMobileLastEditedField(null);
     setIsMobileCreateOpen(true);
   };
@@ -751,6 +854,56 @@ function PlantingPlans(): React.ReactElement {
     setMobileCreateError("");
     setMobileEditId(null);
     setMobileLastEditedField(null);
+  };
+
+  useEffect(() => {
+    if (!isMobile || mobilePrefillHandledRef.current) {
+      return;
+    }
+    if (initialSelection.cultureId === null && initialSelection.bedId === null) {
+      return;
+    }
+    if (initialSelection.bedId !== null && beds.length === 0) {
+      return;
+    }
+    openMobileCreateDialog({
+      cultureId: initialSelection.cultureId,
+      bedId: initialSelection.bedId,
+    });
+    mobilePrefillHandledRef.current = true;
+  }, [isMobile, initialSelection.cultureId, initialSelection.bedId, beds, numberLocale]);
+
+  const openMobileNotesDialog = (row: PlantingPlanRow): void => {
+    setMobileNotesTarget(row);
+    setMobileNotesDraft(row.notes || "");
+    setIsMobileNotesOpen(true);
+  };
+
+  const closeMobileNotesDialog = (): void => {
+    setIsMobileNotesOpen(false);
+    setIsMobileNotesSaving(false);
+    setMobileNotesTarget(null);
+    setMobileNotesDraft("");
+  };
+
+  const saveMobileNotes = async (): Promise<void> => {
+    if (!mobileNotesTarget?.id) {
+      return;
+    }
+
+    setIsMobileNotesSaving(true);
+    try {
+      await plantingPlanAPI.update(mobileNotesTarget.id, {
+        notes: mobileNotesDraft,
+      } as PlantingPlan);
+      closeMobileNotesDialog();
+      await gridCommandApiRef.current?.reload();
+    } catch (error) {
+      setMobileCreateError(
+        extractApiErrorMessage(error, t, t("plantingPlans:errors.save")),
+      );
+      setIsMobileNotesSaving(false);
+    }
   };
 
   const getPlantsPerSqmForCulture = (cultureId: string): number | null => {
@@ -949,13 +1102,14 @@ function PlantingPlans(): React.ReactElement {
         {isMobile ? (
           <Box sx={{ pb: 10 }}>
             <MobileCardList
-              items={mobileRows}
+              items={getVisibleMobileRows(mobileRows)}
               expandedIds={expandedCardIds}
               onToggleExpanded={toggleCardExpanded}
               renderPrimary={(item) => getCultureLabel(item)}
-              renderSecondary={(item) => `${t("plantingPlans:columns.cultivationType")}: ${t(`plantingPlans:cultivationTypes.${item.cultivation_type === "direct_sowing" ? "directSowing" : "preCultivation"}`)}`}
+              renderSecondary={(item) => `${formatDateForDisplay(item.planting_date)} · ${getBedLabel(item)}`}
               renderDetails={(item) => (
                 <Stack spacing={0.75}>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.cultivationType")}:</strong> {t(`plantingPlans:cultivationTypes.${item.cultivation_type === "direct_sowing" ? "directSowing" : "preCultivation"}`)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.bed")}:</strong> {getBedLabel(item)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.plantingDate")}:</strong> {formatDateForDisplay(item.planting_date)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.harvestStartDate")}:</strong> {formatDateForDisplay(item.harvest_date)}</Typography>
@@ -966,15 +1120,28 @@ function PlantingPlans(): React.ReactElement {
                 </Stack>
               )}
               renderActions={(item) => (
-                <Button
-                  variant="outlined"
-                  startIcon={<EditIcon />}
-                  size="large"
-                  onClick={() => openMobileEditDialog(item)}
-                  aria-label={t("plantingPlans:mobile.editAria")}
-                >
-                  {t("common:actions.edit")}
-                </Button>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  <Button
+                    variant="outlined"
+                    startIcon={<EditIcon />}
+                    size="small"
+                    onClick={() => openMobileEditDialog(item)}
+                    aria-label={t("plantingPlans:mobile.editAria")}
+                    sx={{ minWidth: "auto" }}
+                  >
+                    {t("common:actions.edit")}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<PhotoCameraOutlinedIcon />}
+                    size="small"
+                    onClick={() => openMobileNotesDialog(item)}
+                    aria-label={t("plantingPlans:mobile.notesPhotosAria")}
+                    sx={{ minWidth: "auto" }}
+                  >
+                    {t("plantingPlans:mobile.notesPhotos")}
+                  </Button>
+                </Stack>
               )}
               detailsShowLabel={t("plantingPlans:mobile.showDetails")}
               detailsHideLabel={t("plantingPlans:mobile.hideDetails")}
@@ -985,7 +1152,7 @@ function PlantingPlans(): React.ReactElement {
                     <Typography variant="body2" color="text.secondary">
                       {t("plantingPlans:mobile.emptyDescription")}
                     </Typography>
-                    <Button variant="contained" onClick={openMobileCreateDialog}>
+                    <Button variant="contained" onClick={() => openMobileCreateDialog()}>
                       {t("plantingPlans:mobile.emptyCta")}
                     </Button>
                   </Stack>
@@ -1016,7 +1183,7 @@ function PlantingPlans(): React.ReactElement {
             isNew: true,
           })}
           initialRow={
-            initialSelection.cultureId || initialSelection.bedId
+            !isMobile && (initialSelection.cultureId || initialSelection.bedId)
               ? {
                   ...(initialSelection.cultureId
                     ? { culture: initialSelection.cultureId }
@@ -1195,7 +1362,7 @@ function PlantingPlans(): React.ReactElement {
           <Fab
             color="primary"
             variant="extended"
-            onClick={openMobileCreateDialog}
+            onClick={() => openMobileCreateDialog()}
             sx={{ position: "fixed", bottom: 24, right: 16, zIndex: theme.zIndex.fab }}
             aria-label={t("plantingPlans:mobile.fabAria")}
           >
@@ -1328,6 +1495,19 @@ function PlantingPlans(): React.ReactElement {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <NotesDrawer
+        open={isMobileNotesOpen}
+        title={t("common:fields.notes")}
+        value={mobileNotesDraft}
+        onChange={setMobileNotesDraft}
+        onSave={saveMobileNotes}
+        onClose={closeMobileNotesDialog}
+        loading={isMobileNotesSaving}
+        noteId={mobileNotesTarget?.id}
+        focusAttachments
+        focusRequestId={mobileNotesTarget?.id ?? 0}
+      />
     </div>
   );
 }

@@ -137,10 +137,10 @@ describe('Cultures action area', () => {
     renderCultures();
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Öffentlich veröffentlichen' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Veröffentlichen' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Öffentlich veröffentlichen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
 
     await waitFor(() => {
       expect(publishPublicMock).toHaveBeenCalledWith(1);
@@ -191,6 +191,6 @@ describe('Cultures action area', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Öffentliche Version aktualisieren' })).toBeInTheDocument();
     });
-    expect(screen.queryByRole('button', { name: 'Öffentlich veröffentlichen' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Veröffentlichen' })).not.toBeInTheDocument();
   });
 });

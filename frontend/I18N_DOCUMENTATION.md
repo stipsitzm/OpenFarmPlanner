@@ -74,7 +74,7 @@ Contains navigation menu labels:
 {
   "home": "Start",
   "locations": "Standorte",
-  "fieldsAndBeds": "Schläge & Beete",
+  "fieldsAndBeds": "Parzellen & Beete",
   "cultures": "Kulturen",
   "plantingPlans": "Anbaupläne",
   

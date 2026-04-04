@@ -47,7 +47,7 @@
     "emptyDescription": "Versuche einen anderen Suchbegriff oder prüfe, ob im aktuellen Kontext weitere Aktionen verfügbar sind.",
     "shortcutsTitle": "Tastenkürzel",
     "currentVersion": "Aktuelle Version",
-    "restoreVersion": "Wiederherstellen",
+    "restoreVersion": "Zu dieser Version wechseln",
     "commands": {
       "nextPage": "Nächste Seite",
       "previousPage": "Vorherige Seite",

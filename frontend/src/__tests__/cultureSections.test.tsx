@@ -195,7 +195,7 @@ describe('culture form UI sections', () => {
       />
     );
 
-    const yieldInput = screen.getByLabelText('form.expectedYield');
+    const yieldInput = screen.getByLabelText('form.expectedYield (kg)');
     expect(yieldInput).toHaveValue(3.5);
 
     fireEvent.change(yieldInput, { target: { value: '4.25' } });
@@ -204,5 +204,6 @@ describe('culture form UI sections', () => {
     fireEvent.change(yieldInput, { target: { value: '' } });
     expect(onChange).toHaveBeenCalledWith('expected_yield', undefined);
     expect(screen.getByText('Ungültig')).toBeInTheDocument();
+    expect(screen.getByLabelText('form.expectedYield (kg)')).toBeInTheDocument();
   });
 });

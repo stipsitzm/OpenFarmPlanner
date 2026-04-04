@@ -113,7 +113,7 @@ describe('useFieldOperations', () => {
 
     await result.current.addField();
 
-    expect(setError).toHaveBeenCalledWith('Fehler beim Erstellen des Schlags');
+    expect(setError).toHaveBeenCalledWith('Fehler beim Erstellen der Parzelle');
     expect(fetchData).not.toHaveBeenCalled();
   });
 
@@ -159,7 +159,7 @@ describe('useFieldOperations', () => {
 
     await result.current.deleteField(88);
 
-    expect(setError).toHaveBeenCalledWith('Fehler beim Löschen des Schlags');
+    expect(setError).toHaveBeenCalledWith('Fehler beim Löschen der Parzelle');
     expect(fetchData).not.toHaveBeenCalled();
   });
 });

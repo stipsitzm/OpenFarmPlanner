@@ -99,8 +99,6 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
   const [cropRect, setCropRect] = useState<CropRect | null>(null);
 
   const textFieldRef = useRef<HTMLTextAreaElement>(null);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const cropImageRef = useRef<HTMLImageElement>(null);
   const dragRef = useRef<{ mode: DragMode; startX: number; startY: number; initialRect: CropRect } | null>(null);
   const attachmentsSectionRef = useRef<HTMLDivElement>(null);
@@ -132,8 +130,6 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
     setPendingPreviewUrl(null);
     setCropRect(null);
     setSourceSize(null);
-    if (galleryInputRef.current) galleryInputRef.current.value = '';
-    if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
 
 
@@ -325,17 +321,32 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
 
         {noteId && (
           <Box sx={{ mb: 2 }} ref={attachmentsSectionRef} tabIndex={-1}>
-            <input ref={galleryInputRef} type="file" accept="image/*" hidden onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) openCropDialog(file);
-            }} />
-            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) openCropDialog(file);
-            }} />
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
-              <Button variant="outlined" onClick={() => cameraInputRef.current?.click()}>{t('notesDrawer.takePhoto')}</Button>
-              <Button variant="outlined" onClick={() => galleryInputRef.current?.click()}>{t('notesDrawer.selectFromGallery')}</Button>
+              <Button variant="outlined" component="label">
+                {t('notesDrawer.takePhoto')}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  hidden
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) openCropDialog(file);
+                  }}
+                />
+              </Button>
+              <Button variant="outlined" component="label">
+                {t('notesDrawer.selectFromGallery')}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) openCropDialog(file);
+                  }}
+                />
+              </Button>
               {uploading && <Typography variant="body2">{t('notesDrawer.uploading')}</Typography>}
             </Stack>
             {uploading && <LinearProgress variant="determinate" value={uploadProgress} />}

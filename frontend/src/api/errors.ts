@@ -22,7 +22,7 @@ const fieldLabelFallbacks: Record<string, string> = {
   cultivation_type: 'Anbauart',
   culture: 'Kultur',
   bed: 'Beet',
-  field: 'Schlag',
+  field: 'Parzelle',
   location: 'Standort',
   non_field_errors: 'Fehler',
 };

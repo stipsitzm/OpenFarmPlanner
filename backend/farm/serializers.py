@@ -141,7 +141,10 @@ class FieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Field
         fields = '__all__'
-        extra_kwargs = {'project': {'required': False}}
+        extra_kwargs = {
+            'project': {'required': False},
+            'name': {'label': 'Parzelle'},
+        }
     
     def validate_area_sqm(self, value):
         if value is not None:
@@ -190,7 +193,10 @@ class BedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bed
         fields = '__all__'
-        extra_kwargs = {'project': {'required': False}}
+        extra_kwargs = {
+            'project': {'required': False},
+            'field': {'label': 'Parzelle'},
+        }
 
     def validate_area_sqm(self, value):
         if value is not None:
@@ -945,8 +951,6 @@ class CultureSerializer(serializers.ModelSerializer):
         }:
             errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is unsupported.'
 
-        if 'pre_cultivation' in active_types and pre_value is None and pre_unit:
-            errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value is required when pre-cultivation unit is set.'
         if 'pre_cultivation' in active_types and pre_value is not None and not pre_unit:
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is required when pre-cultivation value is set.'
         if pre_value is not None and pre_value <= 0:

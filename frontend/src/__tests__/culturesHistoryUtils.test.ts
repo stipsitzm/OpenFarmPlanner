@@ -53,14 +53,14 @@ describe('culturesHistoryUtils', () => {
     expect(getHistoryActorLabel(withoutActor, t, 'Fallback User')).toBe('Fallback User');
   });
 
-  it('builds metadata line with actor and timestamp', () => {
+  it('builds metadata line with explicit version timestamp wording', () => {
     const entry = buildEntry({
       actor_label: 'Martin Stipsitz',
       history_date: '2026-03-23T14:48:00.000Z',
     });
 
     const meta = getHistoryEntryMeta(entry, t);
-    expect(meta).toContain('von Martin Stipsitz ·');
+    expect(meta).toContain('Version vom');
   });
 
   it('builds culture links from culture_id and summary fallback', () => {
