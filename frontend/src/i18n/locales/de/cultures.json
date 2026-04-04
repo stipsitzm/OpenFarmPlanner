@@ -128,6 +128,7 @@
     "harvestMethodPerPlant": "Pro Pflanze",
     "harvestMethodPerSqm": "Pro m²",
     "expectedYield": "Erwarteter Ertrag",
+    "expectedYieldWithUnit": "Erwarteter Ertrag (kg)",
     "expectedYieldPlaceholder": "z.B. 500",
     "expectedYieldUnit": "kg",
     "expectedYieldError": "Erwarteter Ertrag muss ≥ 0 sein",

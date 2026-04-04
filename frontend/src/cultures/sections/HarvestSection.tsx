@@ -2,7 +2,7 @@
  * HarvestSection: Harvest method, expected yield
  * @remarks Presentational, no internal state
  */
-import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField, InputAdornment } from '@mui/material';
+import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
 import type { Culture } from '../../api/types';
 import type { TFunction } from 'i18next';
 import { fieldSx } from './styles.tsx';
@@ -38,18 +38,13 @@ export function HarvestSection({ formData, errors, onChange, t }: HarvestSection
         <TextField
           sx={fieldSx}
           type="number"
-          label={t('form.expectedYield')}
+          label={t('form.expectedYieldWithUnit', { defaultValue: `${t('form.expectedYield')} (${t('form.expectedYieldUnit', { defaultValue: 'kg' })})` })}
           placeholder={t('form.expectedYieldPlaceholder')}
           value={formData.expected_yield ?? ''}
           onChange={e => onChange('expected_yield', e.target.value ? parseFloat(e.target.value) : undefined)}
           error={Boolean(errors.expected_yield)}
           helperText={errors.expected_yield}
-          slotProps={{
-            htmlInput: { min: 0, step: 0.01 },
-            input: {
-              endAdornment: <InputAdornment position="end">{t('form.expectedYieldUnit', { defaultValue: 'kg' })}</InputAdornment>,
-            },
-          }}
+          slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
         />
       </Box>
     </>
