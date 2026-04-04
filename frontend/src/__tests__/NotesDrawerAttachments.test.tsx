@@ -28,6 +28,10 @@ describe('NotesDrawer attachments', () => {
 
   it('uses capture environment for camera input', () => {
     render(<NotesDrawer open title="Notes" value="" onChange={() => {}} onSave={() => {}} onClose={() => {}} noteId={1} />);
+    const fileInputs = Array.from(document.querySelectorAll('input[type="file"]')) as HTMLInputElement[];
+    expect(fileInputs).toHaveLength(2);
+    expect(fileInputs.every((input) => input.accept === 'image/*')).toBe(true);
+
     const cameraInput = document.querySelector('input[capture]') as HTMLInputElement | null;
     expect(cameraInput).not.toBeNull();
     expect(cameraInput?.getAttribute('capture')).toBe('environment');

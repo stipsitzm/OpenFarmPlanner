@@ -1,0 +1,96 @@
+{
+  "showTooltip": "Hilfe anzeigen",
+  "hideForPage": "Nicht mehr auf dieser Seite anzeigen",
+  "pages": {
+    "dashboard": {
+      "title": "Hilfe: Übersicht",
+      "points": [
+        "Hier siehst du eine Übersicht über dein Projekt.",
+        "Nutze die Navigation, um zu den Bereichen zu wechseln.",
+        "Wichtige Aktionen sind schnell erreichbar.",
+        "Öffne Seiten, um Daten zu bearbeiten oder zu planen."
+      ]
+    },
+    "locations": {
+      "title": "Hilfe: Standorte",
+      "points": [
+        "Hier verwaltest du deine Standorte.",
+        "Ein Standort kann mehrere Parzellen enthalten.",
+        "Mit „Neu“ legst du einen Standort an.",
+        "Tabellenzeilen sind anklickbar und können bearbeitet werden."
+      ]
+    },
+    "fields": {
+      "title": "Hilfe: Parzellen",
+      "points": [
+        "Hier verwaltest du Parzellen innerhalb eines Standorts.",
+        "Eine Parzelle enthält mehrere Beete.",
+        "Mit „Neu“ legst du eine Parzelle an.",
+        "Tabellenzeilen sind anklickbar und können bearbeitet werden."
+      ]
+    },
+    "beds": {
+      "title": "Hilfe: Beete",
+      "points": [
+        "Hier verwaltest du deine Beete.",
+        "Beete gehören immer zu einer Parzelle.",
+        "Mit „Neu“ legst du ein Beet an.",
+        "Tabellenzeilen sind anklickbar und können bearbeitet werden."
+      ]
+    },
+    "areas": {
+      "title": "Hilfe: Anbauflächen",
+      "points": [
+        "Hier verwaltest du Anbauflächen.",
+        "Anbauflächen verbinden Beete mit Kulturen oder Planungen.",
+        "Mit „Neu“ legst du eine Fläche an.",
+        "Tabellenzeilen sind anklickbar und können bearbeitet werden."
+      ]
+    },
+    "cultures": {
+      "title": "Hilfe: Kulturen",
+      "points": [
+        "Hier verwaltest du alle Kulturen.",
+        "Mit „Neu“ legst du eine Kultur an.",
+        "Tabellenzeilen sind anklickbar und können bearbeitet werden.",
+        "Nutze Filter oder Suche zum Eingrenzen."
+      ]
+    },
+    "plantingPlans": {
+      "title": "Hilfe: Anbauplan",
+      "points": [
+        "Hier planst du den Anbau deiner Kulturen.",
+        "Mit „Neu“ legst du einen Eintrag an.",
+        "Tabellenzeilen sind anklickbar und können bearbeitet werden.",
+        "Die grafische Ansicht zeigt die Belegung der Beete."
+      ]
+    },
+    "seedDemand": {
+      "title": "Hilfe: Saatgutbedarf",
+      "points": [
+        "Hier wird der Saatgutbedarf berechnet.",
+        "Die Daten basieren auf Kulturen und Anbauplanung.",
+        "Nutze Filter zum Eingrenzen der Anzeige.",
+        "Die Ansicht hilft dir bei der Bestellvorbereitung."
+      ]
+    },
+    "suppliers": {
+      "title": "Hilfe: Lieferanten",
+      "points": [
+        "Hier verwaltest du Saatgutlieferanten.",
+        "Lieferanten können Kulturen und Saatgutdaten zugeordnet werden.",
+        "Mit „Neu“ legst du einen Lieferanten an.",
+        "Tabellenzeilen sind anklickbar und können bearbeitet werden."
+      ]
+    },
+    "graphical": {
+      "title": "Hilfe: Grafische Ansicht",
+      "points": [
+        "Hier siehst du Parzellen und Beete grafisch angeordnet.",
+        "Im Bearbeitungsmodus kannst du Elemente verschieben.",
+        "Nutze Zoom und Verschieben zur Navigation.",
+        "Klick auf ein Beet oder Element zum Bearbeiten."
+      ]
+    }
+  }
+}

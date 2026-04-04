@@ -11,15 +11,16 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControlLabel,
   IconButton,
   Paper,
   Stack,
-  Switch,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import FitScreenIcon from "@mui/icons-material/FitScreen";
@@ -1058,37 +1059,41 @@ export default function GraphicalFields({
               {t("fields:graphical.title")}
             </Typography>
           ) : null}
-          <Typography variant="body2" color="text.secondary">
-            {isViewMode
-              ? t("fields:graphical.viewModeDescription")
-              : t("fields:graphical.editModeDescription")}
-          </Typography>
         </Box>
-        <Tooltip title={t("fields:graphical.editModeShortcut")} placement="top">
-          <FormControlLabel
-            control={
-              <Switch
-                checked={isEditMode}
-                onChange={(_, checked) =>
-                  setInteractionMode(checked ? "edit" : "view")
-                }
-                color="primary"
-                inputProps={{
-                  "aria-label": isEditMode
-                    ? t("fields:graphical.editMode")
-                    : t("fields:graphical.viewMode"),
-                  "aria-description": t("fields:graphical.editModeShortcut"),
-                }}
-              />
-            }
-            label={
-              isEditMode
-                ? t("fields:graphical.editMode")
-                : t("fields:graphical.viewMode")
-            }
-            sx={{ mr: 0 }}
-          />
-        </Tooltip>
+        <Stack spacing={0.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
+          <Stack direction="row" spacing={0.5} alignItems="center" justifyContent={{ xs: "space-between", sm: "flex-start" }}>
+            <Typography variant="subtitle2">{t("fields:graphical.viewMode")}</Typography>
+            <Tooltip
+              title={t("fields:graphical.modeHelpTooltip")}
+              placement="top"
+              enterTouchDelay={0}
+            >
+              <IconButton size="small" aria-label={t("fields:graphical.modeHelpAria")}>
+                <InfoOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+          <ToggleButtonGroup
+            value={interactionMode}
+            exclusive
+            size="small"
+            color="primary"
+            fullWidth
+            aria-label={t("fields:graphical.modeAriaLabel")}
+            onChange={(_, selectedMode: InteractionMode | null) => {
+              if (selectedMode !== null) {
+                setInteractionMode(selectedMode);
+              }
+            }}
+          >
+            <ToggleButton value="view" aria-label={t("fields:graphical.viewModeOption")}>
+              {t("fields:graphical.viewModeOption")}
+            </ToggleButton>
+            <ToggleButton value="edit" aria-label={t("fields:graphical.editModeOption")}>
+              {t("fields:graphical.editModeOption")}
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
       </Stack>
 
       {isEditMode ? (

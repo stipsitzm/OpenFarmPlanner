@@ -60,7 +60,7 @@ describe('App', () => {
     render(<CommandProvider><App /></CommandProvider>);
 
     expect(await screen.findByText('OpenFarmPlanner')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'App öffnen' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'OpenFarmPlanner öffnen' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Impressum' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Datenschutzerklärung' })).toBeInTheDocument();
   });

@@ -38,6 +38,7 @@ import GanttChart, { ViewMode } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
+import PageHelp from '../components/help/PageHelp';
 import type { CommandSpec } from '../commands/types';
 import {
   buildFieldOccupancyTaskGroups,
@@ -353,7 +354,10 @@ function GanttChartPage(): React.ReactElement {
   if (loading) {
     return (
       <div className="page-container">
-        <h1>{t('ganttChart:title')}</h1>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <h1>{t('ganttChart:title')}</h1>
+          <PageHelp pageKey="graphical" />
+        </Box>
         <p>{t('ganttChart:loading')}</p>
       </div>
     );
@@ -361,7 +365,10 @@ function GanttChartPage(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <h1>{t('ganttChart:title')}</h1>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <h1>{t('ganttChart:title')}</h1>
+        <PageHelp pageKey="graphical" />
+      </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 

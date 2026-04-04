@@ -84,6 +84,42 @@ class CentimetersField(serializers.FloatField):
 
 
 class LocationSerializer(serializers.ModelSerializer):
+    @staticmethod
+    def _parse_coordinate(value, field_name: str):
+        if value in (None, ''):
+            return None
+        if isinstance(value, str):
+            value = value.strip().replace(',', '.')
+            if value == '':
+                return None
+        try:
+            return float(value)
+        except (TypeError, ValueError) as exc:
+            raise serializers.ValidationError({field_name: f'{field_name.capitalize()} must be a valid number.'}) from exc
+
+    def to_internal_value(self, data):
+        payload = data.copy() if isinstance(data, dict) else data
+        if isinstance(payload, dict):
+            if 'latitude' in payload:
+                payload['latitude'] = self._parse_coordinate(payload.get('latitude'), 'latitude')
+            if 'longitude' in payload:
+                payload['longitude'] = self._parse_coordinate(payload.get('longitude'), 'longitude')
+        return super().to_internal_value(payload)
+
+    def validate_latitude(self, value):
+        if value is None:
+            return value
+        if not (-90 <= value <= 90):
+            raise serializers.ValidationError('Latitude must be between -90 and 90.')
+        return value
+
+    def validate_longitude(self, value):
+        if value is None:
+            return value
+        if not (-180 <= value <= 180):
+            raise serializers.ValidationError('Longitude must be between -180 and 180.')
+        return value
+
     def get_image_file(self, obj):
         if not obj.image_file_id:
             return None
@@ -141,7 +177,10 @@ class FieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Field
         fields = '__all__'
-        extra_kwargs = {'project': {'required': False}}
+        extra_kwargs = {
+            'project': {'required': False},
+            'name': {'label': 'Parzelle'},
+        }
     
     def validate_area_sqm(self, value):
         if value is not None:
@@ -190,7 +229,10 @@ class BedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bed
         fields = '__all__'
-        extra_kwargs = {'project': {'required': False}}
+        extra_kwargs = {
+            'project': {'required': False},
+            'field': {'label': 'Parzelle'},
+        }
 
     def validate_area_sqm(self, value):
         if value is not None:
@@ -945,8 +987,6 @@ class CultureSerializer(serializers.ModelSerializer):
         }:
             errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is unsupported.'
 
-        if 'pre_cultivation' in active_types and pre_value is None and pre_unit:
-            errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value is required when pre-cultivation unit is set.'
         if 'pre_cultivation' in active_types and pre_value is not None and not pre_unit:
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is required when pre-cultivation value is set.'
         if pre_value is not None and pre_value <= 0:

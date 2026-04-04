@@ -22,10 +22,21 @@
   "cancel": "Cancel",
   "submit": "Create",
   "selectLocation": "Select location",
+  "representation": {
+    "label": "Representation",
+    "ariaLabel": "Select representation",
+    "table": "List",
+    "graphical": "Graphic"
+  },
   "graphical": {
     "title": "Graphical field view",
-    "viewMode": "View mode",
+    "viewMode": "Mode",
+    "modeAriaLabel": "Select mode",
+    "viewModeOption": "View",
+    "editModeOption": "Edit",
     "editMode": "Edit mode",
+    "modeHelpAria": "Show mode help",
+    "modeHelpTooltip": "Navigate, zoom and inspect details. Fields and beds can only be moved or edited in edit mode. Shortcut: Alt+E",
     "viewModeDescription": "Navigate, zoom and inspect details. Fields and beds can only be moved or edited in edit mode.",
     "editModeDescription": "Move fields and beds and adjust layouts.",
     "editModeBanner": "Edit mode active – fields and beds can now be moved.",

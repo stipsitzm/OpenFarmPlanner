@@ -154,6 +154,18 @@ class SerializerBranchCoverageTest(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
+    def test_allows_pre_cultivation_unit_without_value(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Mangold',
+                'variety': 'X',
+                'cultivation_types': ['pre_cultivation'],
+                'seed_rate_pre_cultivation_unit': 'g_per_m2',
+                'project': self.project.id,
+            }
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
     def test_accepts_direct_sowing_only(self):
         serializer = CultureSerializer(
             data={
@@ -267,7 +279,7 @@ class SerializerBranchCoverageTest(TestCase):
     def test_field_serializer_rejects_more_than_one_decimal_place(self):
         serializer = FieldSerializer(
             data={
-                'name': 'Schlag B',
+                'name': 'Parzelle B',
                 'location': self.location.id,
                 'area_sqm': '12.34',
                 'project': self.project.id,
@@ -280,7 +292,7 @@ class SerializerBranchCoverageTest(TestCase):
     def test_field_serializer_allows_one_decimal_place(self):
         serializer = FieldSerializer(
             data={
-                'name': 'Schlag B',
+                'name': 'Parzelle B',
                 'location': self.location.id,
                 'area_sqm': '12.3',
                 'project': self.project.id,
@@ -293,10 +305,33 @@ class SerializerBranchCoverageTest(TestCase):
         serializer = LocationSerializer(data={'name': 'Standort B'})
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
+    def test_location_serializer_accepts_comma_decimal_coordinates(self):
+        serializer = LocationSerializer(
+            data={
+                'name': 'Standort C',
+                'latitude': '46,6145',
+                'longitude': '13,8503',
+            }
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data['latitude'], 46.6145)
+        self.assertEqual(serializer.validated_data['longitude'], 13.8503)
+
+    def test_location_serializer_rejects_out_of_range_coordinates(self):
+        serializer = LocationSerializer(
+            data={
+                'name': 'Standort D',
+                'latitude': '120.0',
+                'longitude': '13.8503',
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('latitude', serializer.errors)
+
     def test_field_serializer_does_not_require_project_field(self):
         serializer = FieldSerializer(
             data={
-                'name': 'Schlag C',
+                'name': 'Parzelle C',
                 'location': self.location.id,
                 'area_sqm': '10.0',
             }

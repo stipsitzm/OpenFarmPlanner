@@ -5,8 +5,7 @@
     "subtitle": "Einfache Anbauplanung für Gemüsebau, CSA und kleine landwirtschaftliche Betriebe.",
     "description": "OpenFarmPlanner hilft dabei, Kulturen, Anbauflächen und Anbauzeiträume übersichtlich zu verwalten. So bleiben Anbaupläne, Flächen und wichtige Informationen an einem Ort organisiert.",
     "actions": {
-      "openApp": "App öffnen",
-      "login": "Anmelden",
+      "openApp": "OpenFarmPlanner öffnen",
       "register": "Registrieren"
     }
   },

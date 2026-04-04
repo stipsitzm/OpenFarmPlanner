@@ -47,7 +47,7 @@
     "emptyDescription": "Try another search term or check whether more actions are available in the current context.",
     "shortcutsTitle": "Keyboard shortcuts",
     "currentVersion": "Current version",
-    "restoreVersion": "Restore",
+    "restoreVersion": "Switch to this version",
     "commands": {
       "nextPage": "Next page",
       "previousPage": "Previous page",

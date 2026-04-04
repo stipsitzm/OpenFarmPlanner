@@ -223,6 +223,8 @@ export interface Location {
   id?: number;
   name: string;
   address?: string;
+  latitude?: number;
+  longitude?: number;
   notes?: string;
   created_at?: string;
   updated_at?: string;
