@@ -1,15 +1,17 @@
-import { FormControlLabel, Switch } from '@mui/material';
+import { Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
+import { useTranslation } from '../i18n';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 
 type ViewMode = 'table' | 'graphical';
 
 export default function FieldsBedsPage(): React.ReactElement {
+  const { t } = useTranslation(['fields', 'hierarchy']);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
     return stored === 'graphical' ? 'graphical' : 'table';
@@ -61,18 +63,30 @@ export default function FieldsBedsPage(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <h1>Anbauflächen</h1>
-      <FormControlLabel
-        sx={{ mb: 1 }}
-        control={
-          <Switch
-            checked={viewMode === 'graphical'}
-            onChange={(_, checked) => setViewMode(checked ? 'graphical' : 'table')}
-            inputProps={{ 'aria-label': 'Grafische Ansicht umschalten' }}
-          />
-        }
-        label={viewMode === 'graphical' ? 'Grafische Ansicht' : 'Tabellarische Ansicht'}
-      />
+      <h1>{t('hierarchy:title')}</h1>
+      <Stack spacing={0.75} sx={{ mb: 2, width: { xs: '100%', sm: 'fit-content' } }}>
+        <Typography variant="subtitle2">{t('fields:representation.label')}</Typography>
+        <ToggleButtonGroup
+          value={viewMode}
+          exclusive
+          onChange={(_, selectedViewMode: ViewMode | null) => {
+            if (selectedViewMode !== null) {
+              setViewMode(selectedViewMode);
+            }
+          }}
+          size="small"
+          color="primary"
+          aria-label={t('fields:representation.ariaLabel')}
+          fullWidth
+        >
+          <ToggleButton value="table" aria-label={t('fields:representation.table')}>
+            {t('fields:representation.table')}
+          </ToggleButton>
+          <ToggleButton value="graphical" aria-label={t('fields:representation.graphical')}>
+            {t('fields:representation.graphical')}
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
 
       {viewMode === 'graphical' ? <GraphicalFields showTitle={false} /> : <FieldsBedsHierarchy showTitle={false} />}
     </div>

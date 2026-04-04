@@ -47,6 +47,8 @@
     "emptyCta": "Anbauplan erstellen",
     "createTitle": "Neuen Anbauplan erstellen",
     "editTitle": "Anbauplan bearbeiten",
-    "editAria": "Anbauplan bearbeiten"
+    "editAria": "Anbauplan bearbeiten",
+    "notesPhotos": "Fotos",
+    "notesPhotosAria": "Notizen und Fotos öffnen"
   }
 }

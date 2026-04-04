@@ -11,11 +11,11 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControlLabel,
   IconButton,
   Paper,
   Stack,
-  Switch,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -1064,31 +1064,34 @@ export default function GraphicalFields({
               : t("fields:graphical.editModeDescription")}
           </Typography>
         </Box>
-        <Tooltip title={t("fields:graphical.editModeShortcut")} placement="top">
-          <FormControlLabel
-            control={
-              <Switch
-                checked={isEditMode}
-                onChange={(_, checked) =>
-                  setInteractionMode(checked ? "edit" : "view")
-                }
-                color="primary"
-                inputProps={{
-                  "aria-label": isEditMode
-                    ? t("fields:graphical.editMode")
-                    : t("fields:graphical.viewMode"),
-                  "aria-description": t("fields:graphical.editModeShortcut"),
-                }}
-              />
-            }
-            label={
-              isEditMode
-                ? t("fields:graphical.editMode")
-                : t("fields:graphical.viewMode")
-            }
-            sx={{ mr: 0 }}
-          />
-        </Tooltip>
+        <Stack spacing={0.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
+          <Typography variant="subtitle2">{t("fields:graphical.viewMode")}</Typography>
+          <ToggleButtonGroup
+            value={interactionMode}
+            exclusive
+            size="small"
+            color="primary"
+            fullWidth
+            aria-label={t("fields:graphical.modeAriaLabel")}
+            onChange={(_, selectedMode: InteractionMode | null) => {
+              if (selectedMode !== null) {
+                setInteractionMode(selectedMode);
+              }
+            }}
+          >
+            <ToggleButton value="view" aria-label={t("fields:graphical.viewModeOption")}>
+              {t("fields:graphical.viewModeOption")}
+            </ToggleButton>
+            <ToggleButton value="edit" aria-label={t("fields:graphical.editModeOption")}>
+              {t("fields:graphical.editModeOption")}
+            </ToggleButton>
+          </ToggleButtonGroup>
+          <Tooltip title={t("fields:graphical.editModeShortcut")} placement="top">
+            <Typography variant="caption" color="text.secondary">
+              {t("fields:graphical.editModeShortcut")}
+            </Typography>
+          </Tooltip>
+        </Stack>
       </Stack>
 
       {isEditMode ? (

@@ -32,6 +32,7 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
+import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTranslation } from "../i18n";
 import {
   plantingPlanAPI,
@@ -58,6 +59,7 @@ import {
   type EditableDataGridCommandApi,
 } from "../components/data-grid";
 import { MobileCardList } from "../components/mobile/MobileCardList";
+import { NotesDrawer } from "../components/data-grid/NotesDrawer";
 import {
   useCommandContextTag,
   useRegisterCommands,
@@ -166,6 +168,21 @@ function PlantingPlans(): React.ReactElement {
   const [mobileLastEditedField, setMobileLastEditedField] = useState<
     "area_m2" | "plants_count" | null
   >(null);
+  const [isMobileNotesOpen, setIsMobileNotesOpen] = useState(false);
+  const [mobileNotesTarget, setMobileNotesTarget] = useState<PlantingPlanRow | null>(null);
+  const [mobileNotesDraft, setMobileNotesDraft] = useState("");
+  const [isMobileNotesSaving, setIsMobileNotesSaving] = useState(false);
+
+  useEffect(() => {
+    if (isMobile) {
+      document.body.classList.add("hide-version-footer");
+    } else {
+      document.body.classList.remove("hide-version-footer");
+    }
+    return () => {
+      document.body.classList.remove("hide-version-footer");
+    };
+  }, [isMobile]);
 
   useCommandContextTag("plans");
 
@@ -680,7 +697,11 @@ function PlantingPlans(): React.ReactElement {
   };
 
   const getCultureLabel = (row: PlantingPlanRow): string => {
+    const linkedCulture = cultures.find((culture) => culture.id === row.culture);
     if (row.culture_name) {
+      if (linkedCulture?.variety && !row.culture_name.includes(`(${linkedCulture.variety})`)) {
+        return `${row.culture_name} (${linkedCulture.variety})`;
+      }
       return row.culture_name;
     }
     const fallback = cultureOptions.find((option) => option.value === row.culture);
@@ -751,6 +772,39 @@ function PlantingPlans(): React.ReactElement {
     setMobileCreateError("");
     setMobileEditId(null);
     setMobileLastEditedField(null);
+  };
+
+  const openMobileNotesDialog = (row: PlantingPlanRow): void => {
+    setMobileNotesTarget(row);
+    setMobileNotesDraft(row.notes || "");
+    setIsMobileNotesOpen(true);
+  };
+
+  const closeMobileNotesDialog = (): void => {
+    setIsMobileNotesOpen(false);
+    setIsMobileNotesSaving(false);
+    setMobileNotesTarget(null);
+    setMobileNotesDraft("");
+  };
+
+  const saveMobileNotes = async (): Promise<void> => {
+    if (!mobileNotesTarget?.id) {
+      return;
+    }
+
+    setIsMobileNotesSaving(true);
+    try {
+      await plantingPlanAPI.update(mobileNotesTarget.id, {
+        notes: mobileNotesDraft,
+      } as PlantingPlan);
+      closeMobileNotesDialog();
+      await gridCommandApiRef.current?.reload();
+    } catch (error) {
+      setMobileCreateError(
+        extractApiErrorMessage(error, t, t("plantingPlans:errors.save")),
+      );
+      setIsMobileNotesSaving(false);
+    }
   };
 
   const getPlantsPerSqmForCulture = (cultureId: string): number | null => {
@@ -953,9 +1007,10 @@ function PlantingPlans(): React.ReactElement {
               expandedIds={expandedCardIds}
               onToggleExpanded={toggleCardExpanded}
               renderPrimary={(item) => getCultureLabel(item)}
-              renderSecondary={(item) => `${t("plantingPlans:columns.cultivationType")}: ${t(`plantingPlans:cultivationTypes.${item.cultivation_type === "direct_sowing" ? "directSowing" : "preCultivation"}`)}`}
+              renderSecondary={(item) => `${formatDateForDisplay(item.planting_date)} · ${getBedLabel(item)}`}
               renderDetails={(item) => (
                 <Stack spacing={0.75}>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.cultivationType")}:</strong> {t(`plantingPlans:cultivationTypes.${item.cultivation_type === "direct_sowing" ? "directSowing" : "preCultivation"}`)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.bed")}:</strong> {getBedLabel(item)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.plantingDate")}:</strong> {formatDateForDisplay(item.planting_date)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.harvestStartDate")}:</strong> {formatDateForDisplay(item.harvest_date)}</Typography>
@@ -966,15 +1021,28 @@ function PlantingPlans(): React.ReactElement {
                 </Stack>
               )}
               renderActions={(item) => (
-                <Button
-                  variant="outlined"
-                  startIcon={<EditIcon />}
-                  size="large"
-                  onClick={() => openMobileEditDialog(item)}
-                  aria-label={t("plantingPlans:mobile.editAria")}
-                >
-                  {t("common:actions.edit")}
-                </Button>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  <Button
+                    variant="outlined"
+                    startIcon={<EditIcon />}
+                    size="small"
+                    onClick={() => openMobileEditDialog(item)}
+                    aria-label={t("plantingPlans:mobile.editAria")}
+                    sx={{ minWidth: "auto" }}
+                  >
+                    {t("common:actions.edit")}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<PhotoCameraOutlinedIcon />}
+                    size="small"
+                    onClick={() => openMobileNotesDialog(item)}
+                    aria-label={t("plantingPlans:mobile.notesPhotosAria")}
+                    sx={{ minWidth: "auto" }}
+                  >
+                    {t("plantingPlans:mobile.notesPhotos")}
+                  </Button>
+                </Stack>
               )}
               detailsShowLabel={t("plantingPlans:mobile.showDetails")}
               detailsHideLabel={t("plantingPlans:mobile.hideDetails")}
@@ -1328,6 +1396,19 @@ function PlantingPlans(): React.ReactElement {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <NotesDrawer
+        open={isMobileNotesOpen}
+        title={t("common:fields.notes")}
+        value={mobileNotesDraft}
+        onChange={setMobileNotesDraft}
+        onSave={saveMobileNotes}
+        onClose={closeMobileNotesDialog}
+        loading={isMobileNotesSaving}
+        noteId={mobileNotesTarget?.id}
+        focusAttachments
+        focusRequestId={mobileNotesTarget?.id ?? 0}
+      />
     </div>
   );
 }

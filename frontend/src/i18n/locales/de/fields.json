@@ -22,9 +22,18 @@
   "cancel": "Abbrechen",
   "submit": "Erstellen",
   "selectLocation": "Standort auswählen",
+  "representation": {
+    "label": "Darstellung",
+    "ariaLabel": "Darstellung auswählen",
+    "table": "Liste",
+    "graphical": "Grafik"
+  },
   "graphical": {
     "title": "Grafische Ansicht der Anbauflächen",
-    "viewMode": "Ansichtsmodus",
+    "viewMode": "Modus",
+    "modeAriaLabel": "Modus auswählen",
+    "viewModeOption": "Ansicht",
+    "editModeOption": "Bearbeiten",
     "editMode": "Bearbeitungsmodus",
     "viewModeDescription": "Navigieren, hinein- und herauszoomen und Details öffnen. Schläge und Beete lassen sich nur im Bearbeitungsmodus verschieben oder bearbeiten.",
     "editModeDescription": "Flächen verschieben und Layouts anpassen.",
