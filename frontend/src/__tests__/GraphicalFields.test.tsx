@@ -323,7 +323,7 @@ describe("GraphicalFields", () => {
     });
   });
 
-  it("renders the edit mode switch and allows toggling it by click", async () => {
+  it("renders the edit mode toggle and allows toggling it by click", async () => {
     render(<GraphicalFields />);
 
     expect(
@@ -336,13 +336,13 @@ describe("GraphicalFields", () => {
         "Editiermodus aktiv – Schläge und Beete können jetzt verschoben werden.",
       ),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("switch")).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "false");
 
     act(() => {
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
-    expect(screen.getByRole("switch")).toBeChecked();
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Bearbeitungsmodus aktiv – Schläge und Beete können jetzt verschoben werden.",
     );
@@ -414,7 +414,7 @@ describe("GraphicalFields", () => {
     expect(Number(screen.getByTestId("konva-stage").getAttribute("data-y"))).toBeGreaterThan(startY);
   }, 15000);
 
-  it("keeps UI hint and interaction state consistent with the edit mode switch", async () => {
+  it("keeps UI hint and interaction state consistent with the edit mode toggle", async () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
@@ -422,7 +422,7 @@ describe("GraphicalFields", () => {
       );
     });
 
-    expect(screen.getByRole("switch")).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "false");
     expect(await screen.findByTestId("field-rect-10")).toHaveAttribute(
       "draggable",
       "false",
@@ -438,11 +438,11 @@ describe("GraphicalFields", () => {
     ).toBeInTheDocument();
 
     act(() => {
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
     await waitFor(() => {
-      expect(screen.getByRole("switch")).toBeChecked();
+      expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "true");
       expect(screen.getByTestId("field-rect-10")).toHaveAttribute(
         "draggable",
         "true",
@@ -560,8 +560,8 @@ describe("GraphicalFields", () => {
     expect(Number(movedStage.getAttribute("data-y"))).toBe(initialY);
 
     act(() => {
-      fireEvent.click(screen.getByRole("switch"));
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+      fireEvent.click(screen.getByRole("button", { name: "Ansicht" }));
     });
 
     const modeToggledStage = screen.getByTestId("konva-stage");
@@ -626,7 +626,7 @@ describe("GraphicalFields", () => {
       fireEvent.click(
         screen.getByRole("button", { name: "Standort: Hof Nord" }),
       );
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
     const fieldRect = await screen.findByTestId("field-rect-10");
@@ -663,7 +663,7 @@ describe("GraphicalFields", () => {
       fireEvent.click(
         screen.getByRole("button", { name: "Standort: Hof Nord" }),
       );
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
     const node = mockKonvaNodes["field-rect-10"];
@@ -711,7 +711,7 @@ describe("GraphicalFields", () => {
     });
 
     act(() => {
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
     const editNode = mockKonvaNodes["field-rect-10"];
@@ -738,7 +738,7 @@ describe("GraphicalFields", () => {
       fireEvent.click(
         screen.getByRole("button", { name: "Standort: Hof Nord" }),
       );
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
     const node = mockKonvaNodes["field-rect-10"];
@@ -755,7 +755,7 @@ describe("GraphicalFields", () => {
     });
 
     act(() => {
-      fireEvent.click(screen.getByRole("switch"));
+      fireEvent.click(screen.getByRole("button", { name: "Ansicht" }));
     });
 
     await waitFor(() => {
@@ -771,13 +771,13 @@ describe("GraphicalFields", () => {
     await screen.findByText(
       /Navigieren, hinein- und herauszoomen und Details öffnen\./,
     );
-    expect(screen.getByRole("switch")).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "false");
 
     act(() => {
       fireEvent.keyDown(window, { key: "e", altKey: true });
     });
 
-    expect(screen.getByRole("switch")).toBeChecked();
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Bearbeitungsmodus aktiv – Schläge und Beete können jetzt verschoben werden.",
     );
@@ -790,7 +790,7 @@ describe("GraphicalFields", () => {
       fireEvent.keyDown(window, { key: "e", altKey: true });
     });
 
-    expect(screen.getByRole("switch")).toBeChecked();
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "true");
 
     input.blur();
     document.body.removeChild(input);
