@@ -6,8 +6,20 @@
     "delete": "Fehler beim Löschen des Standorts"
   },
   "validation": {
-    "nameRequired": "Name ist ein Pflichtfeld"
+    "nameRequired": "Name ist ein Pflichtfeld",
+    "latitudeRange": "Latitude muss zwischen -90 und 90 liegen.",
+    "longitudeRange": "Longitude muss zwischen -180 und 180 liegen.",
+    "coordinateInvalid": "{{field}} muss eine gültige Zahl sein."
   },
   "confirmDelete": "Möchten Sie diesen Standort wirklich löschen?",
-  "addButton": "Neuen Standort hinzufügen"
+  "addButton": "Neuen Standort hinzufügen",
+  "columns": {
+    "coordinates": "Koordinaten",
+    "latitude": "Latitude",
+    "longitude": "Longitude"
+  },
+  "placeholders": {
+    "latitude": "z.B. 46,6145",
+    "longitude": "z.B. 13,8503"
+  }
 }

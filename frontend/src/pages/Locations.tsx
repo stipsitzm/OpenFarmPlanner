@@ -16,19 +16,38 @@ import { locationAPI, type Location } from '../api/api';
 import { EditableDataGrid, type EditableDataGridCommandApi, type EditableRow, type DataGridAPI } from '../components/data-grid';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
+import { formatLocalizedNumber, resolveLocaleFromLanguage } from '../utils/numberLocalization';
 
 interface LocationRow extends Location, EditableRow {
   id: number;
   isNew?: boolean;
 }
 
+const parseCoordinateInput = (value: string): number | null => {
+  const normalized = value.trim().replace(',', '.');
+  if (normalized === '') {
+    return null;
+  }
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const validateCoordinateRange = (
+  value: number | null,
+  min: number,
+  max: number,
+): boolean => value === null || (value >= min && value <= max);
+
 function Locations(): React.ReactElement {
   const { t } = useTranslation(['locations', 'common']);
+  const { i18n } = useTranslation();
+  const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const commandApiRef = useRef<EditableDataGridCommandApi | null>(null);
   const [selectedRow, setSelectedRow] = useState<LocationRow | null>(null);
   const [isCreateDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
   const [newLocationName, setNewLocationName] = useState<string>('');
-  const [newLocationAddress, setNewLocationAddress] = useState<string>('');
+  const [newLocationLatitude, setNewLocationLatitude] = useState<string>('');
+  const [newLocationLongitude, setNewLocationLongitude] = useState<string>('');
   const [newLocationNotes, setNewLocationNotes] = useState<string>('');
   const [createError, setCreateError] = useState<string>('');
 
@@ -74,7 +93,8 @@ function Locations(): React.ReactElement {
 
   const resetCreateDialog = (): void => {
     setNewLocationName('');
-    setNewLocationAddress('');
+    setNewLocationLatitude('');
+    setNewLocationLongitude('');
     setNewLocationNotes('');
     setCreateError('');
     setCreateDialogOpen(false);
@@ -85,11 +105,30 @@ function Locations(): React.ReactElement {
       setCreateError(t('locations:validation.nameRequired'));
       return;
     }
+    const latitude = parseCoordinateInput(newLocationLatitude);
+    const longitude = parseCoordinateInput(newLocationLongitude);
+    if (newLocationLatitude.trim() && latitude === null) {
+      setCreateError(t('locations:validation.coordinateInvalid', { field: t('locations:columns.latitude') }));
+      return;
+    }
+    if (newLocationLongitude.trim() && longitude === null) {
+      setCreateError(t('locations:validation.coordinateInvalid', { field: t('locations:columns.longitude') }));
+      return;
+    }
+    if (!validateCoordinateRange(latitude, -90, 90)) {
+      setCreateError(t('locations:validation.latitudeRange'));
+      return;
+    }
+    if (!validateCoordinateRange(longitude, -180, 180)) {
+      setCreateError(t('locations:validation.longitudeRange'));
+      return;
+    }
 
     try {
       await locationAPI.create({
         name: newLocationName.trim(),
-        address: newLocationAddress.trim(),
+        latitude: latitude ?? undefined,
+        longitude: longitude ?? undefined,
         notes: newLocationNotes.trim(),
       });
       resetCreateDialog();
@@ -100,6 +139,20 @@ function Locations(): React.ReactElement {
   };
   
   //Define columns for the Data Grid with inline editing
+  const formatCoordinate = (value: number): string =>
+    formatLocalizedNumber(value, numberLocale, {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+    });
+
+  const formatCoordinates = (latitude?: number, longitude?: number): string => {
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return '';
+    }
+    const separator = i18n.language.startsWith('de') ? '; ' : ', ';
+    return `${formatCoordinate(latitude)}${separator}${formatCoordinate(longitude)}`;
+  };
+
   const columns: GridColDef[] = [
     {
       field: 'name',
@@ -113,10 +166,48 @@ function Locations(): React.ReactElement {
       },
     },
     {
-      field: 'address',
-      headerName: t('common:fields.address'),
-      width: 300,
+      field: 'coordinates',
+      headerName: t('locations:columns.coordinates'),
+      width: 280,
+      editable: false,
+      valueGetter: (_value, row) =>
+        formatCoordinates(
+          typeof row.latitude === 'number' ? row.latitude : undefined,
+          typeof row.longitude === 'number' ? row.longitude : undefined,
+        ),
+      renderCell: (params) => {
+        const row = params.row as LocationRow;
+        if (typeof row.latitude !== 'number' || typeof row.longitude !== 'number') {
+          return '—';
+        }
+        const label = formatCoordinates(row.latitude, row.longitude);
+        const href = `https://www.google.com/maps?q=${row.latitude},${row.longitude}`;
+        return (
+          <a href={href} target="_blank" rel="noreferrer">
+            {label}
+          </a>
+        );
+      },
+    },
+    {
+      field: 'latitude',
+      headerName: t('locations:columns.latitude'),
+      width: 160,
       editable: true,
+      valueFormatter: (value) => {
+        if (typeof value !== 'number') return '';
+        return formatCoordinate(value);
+      },
+    },
+    {
+      field: 'longitude',
+      headerName: t('locations:columns.longitude'),
+      width: 170,
+      editable: true,
+      valueFormatter: (value) => {
+        if (typeof value !== 'number') return '';
+        return formatCoordinate(value);
+      },
     },
     {
       field: 'notes',
@@ -154,9 +245,16 @@ function Locations(): React.ReactElement {
               autoFocus
             />
             <TextField
-              label={t('common:fields.address')}
-              value={newLocationAddress}
-              onChange={(event) => setNewLocationAddress(event.target.value)}
+              label={t('locations:columns.latitude')}
+              value={newLocationLatitude}
+              onChange={(event) => setNewLocationLatitude(event.target.value)}
+              placeholder={t('locations:placeholders.latitude')}
+            />
+            <TextField
+              label={t('locations:columns.longitude')}
+              value={newLocationLongitude}
+              onChange={(event) => setNewLocationLongitude(event.target.value)}
+              placeholder={t('locations:placeholders.longitude')}
             />
             <TextField
               label={t('common:fields.notes')}
@@ -178,7 +276,8 @@ function Locations(): React.ReactElement {
         createNewRow={() => ({
           id: -Date.now(),
           name: '',
-          address: '',
+          latitude: undefined,
+          longitude: undefined,
           notes: '',
           isNew: true,
         })}
@@ -186,20 +285,58 @@ function Locations(): React.ReactElement {
           ...loc,
           id: loc.id,
           name: loc.name || '',
-          address: loc.address || '',
+          latitude: typeof loc.latitude === 'number' ? loc.latitude : undefined,
+          longitude: typeof loc.longitude === 'number' ? loc.longitude : undefined,
           notes: loc.notes || '',
         })}
-        mapToApiData={(row) => ({
-          name: row.name,
-          address: row.address || '',
-          notes: row.notes || '',
-          ...((row as LocationRow & { project?: number }).project
-            ? { project: (row as LocationRow & { project?: number }).project }
-            : {}),
-        })}
+        mapToApiData={(row) => {
+          const latitudeValue =
+            typeof row.latitude === 'number'
+              ? row.latitude
+              : parseCoordinateInput(String(row.latitude ?? ''));
+          const longitudeValue =
+            typeof row.longitude === 'number'
+              ? row.longitude
+              : parseCoordinateInput(String(row.longitude ?? ''));
+          return {
+            name: row.name,
+            latitude: latitudeValue ?? undefined,
+            longitude: longitudeValue ?? undefined,
+            notes: row.notes || '',
+            ...((row as LocationRow & { project?: number }).project
+              ? { project: (row as LocationRow & { project?: number }).project }
+              : {}),
+          };
+        }}
         validateRow={(row) => {
           if (!row.name || row.name.trim() === '') {
             return t('locations:validation.nameRequired');
+          }
+          const latitudeValue =
+            typeof row.latitude === 'number'
+              ? row.latitude
+              : parseCoordinateInput(String(row.latitude ?? ''));
+          const longitudeValue =
+            typeof row.longitude === 'number'
+              ? row.longitude
+              : parseCoordinateInput(String(row.longitude ?? ''));
+          if (String(row.latitude ?? '').trim() !== '' && latitudeValue === null) {
+            return t('locations:validation.coordinateInvalid', { field: t('locations:columns.latitude') });
+          }
+          if (String(row.longitude ?? '').trim() !== '' && longitudeValue === null) {
+            return t('locations:validation.coordinateInvalid', { field: t('locations:columns.longitude') });
+          }
+          if (
+            latitudeValue !== null &&
+            !validateCoordinateRange(latitudeValue, -90, 90)
+          ) {
+            return t('locations:validation.latitudeRange');
+          }
+          if (
+            longitudeValue !== null &&
+            !validateCoordinateRange(longitudeValue, -180, 180)
+          ) {
+            return t('locations:validation.longitudeRange');
           }
           return null;
         }}

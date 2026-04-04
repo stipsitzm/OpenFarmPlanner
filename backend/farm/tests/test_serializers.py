@@ -305,6 +305,29 @@ class SerializerBranchCoverageTest(TestCase):
         serializer = LocationSerializer(data={'name': 'Standort B'})
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
+    def test_location_serializer_accepts_comma_decimal_coordinates(self):
+        serializer = LocationSerializer(
+            data={
+                'name': 'Standort C',
+                'latitude': '46,6145',
+                'longitude': '13,8503',
+            }
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data['latitude'], 46.6145)
+        self.assertEqual(serializer.validated_data['longitude'], 13.8503)
+
+    def test_location_serializer_rejects_out_of_range_coordinates(self):
+        serializer = LocationSerializer(
+            data={
+                'name': 'Standort D',
+                'latitude': '120.0',
+                'longitude': '13.8503',
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('latitude', serializer.errors)
+
     def test_field_serializer_does_not_require_project_field(self):
         serializer = FieldSerializer(
             data={

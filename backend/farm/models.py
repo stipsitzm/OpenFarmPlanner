@@ -399,8 +399,18 @@ class Location(TimestampedModel):
     """A physical farm location that can contain multiple fields."""
     name = models.CharField(max_length=200)
     address = models.TextField(blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     notes = models.TextField(blank=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='locations')
+
+    def clean(self) -> None:
+        """Validate optional geographic coordinates."""
+        super().clean()
+        if self.latitude is not None and not (-90 <= self.latitude <= 90):
+            raise ValidationError({'latitude': 'Latitude must be between -90 and 90.'})
+        if self.longitude is not None and not (-180 <= self.longitude <= 180):
+            raise ValidationError({'longitude': 'Longitude must be between -180 and 180.'})
 
     def __str__(self) -> str:
         """Return the location name."""
