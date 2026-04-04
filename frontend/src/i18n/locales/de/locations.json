@@ -23,7 +23,7 @@
   "placeholders": {
     "latitude": "z.B. 46,6145",
     "longitude": "z.B. 13,8503",
-    "coordinates": "46.6116, 13.9146"
+    "coordinates": "46.6116, 13.9146 oder 46,6116; 13,9146"
   },
   "tooltips": {
     "openInGoogleMaps": "In Google Maps öffnen"

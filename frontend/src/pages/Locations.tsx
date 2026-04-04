@@ -45,19 +45,36 @@ interface ParsedCoordinates {
   longitude: number;
 }
 
-const parseCoordinatesValue = (value: string): ParsedCoordinates | null => {
+const splitCoordinateParts = (value: string): [string, string] | null => {
   const trimmed = value.trim();
   if (trimmed === '') {
     return null;
   }
 
-  const parts = trimmed.split(',');
-  if (parts.length !== 2) {
+  if (trimmed.includes(';')) {
+    const semicolonParts = trimmed.split(';').map((part) => part.trim()).filter(Boolean);
+    return semicolonParts.length === 2
+      ? [semicolonParts[0] ?? '', semicolonParts[1] ?? '']
+      : null;
+  }
+
+  const commaParts = trimmed.split(',').map((part) => part.trim()).filter(Boolean);
+  if (commaParts.length === 2) {
+    return [commaParts[0] ?? '', commaParts[1] ?? ''];
+  }
+
+  return null;
+};
+
+const parseCoordinatesValue = (value: string): ParsedCoordinates | null => {
+  const coordinateParts = splitCoordinateParts(value);
+  if (!coordinateParts) {
     return null;
   }
 
-  const latitude = parseCoordinateInput(parts[0] ?? '');
-  const longitude = parseCoordinateInput(parts[1] ?? '');
+  const [latitudeInput, longitudeInput] = coordinateParts;
+  const latitude = parseCoordinateInput(latitudeInput);
+  const longitude = parseCoordinateInput(longitudeInput);
   if (latitude === null || longitude === null) {
     return null;
   }
@@ -233,7 +250,7 @@ function Locations(): React.ReactElement {
             typeof row.longitude === 'number' ? row.longitude : undefined,
           ),
         ),
-      valueFormatter: (value, row) =>
+      valueFormatter: (_value, row) =>
         formatCoordinates(
           typeof row.latitude === 'number' ? row.latitude : undefined,
           typeof row.longitude === 'number' ? row.longitude : undefined,
