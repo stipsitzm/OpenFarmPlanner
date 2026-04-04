@@ -279,7 +279,7 @@ class SerializerBranchCoverageTest(TestCase):
     def test_field_serializer_rejects_more_than_one_decimal_place(self):
         serializer = FieldSerializer(
             data={
-                'name': 'Schlag B',
+                'name': 'Parzelle B',
                 'location': self.location.id,
                 'area_sqm': '12.34',
                 'project': self.project.id,
@@ -292,7 +292,7 @@ class SerializerBranchCoverageTest(TestCase):
     def test_field_serializer_allows_one_decimal_place(self):
         serializer = FieldSerializer(
             data={
-                'name': 'Schlag B',
+                'name': 'Parzelle B',
                 'location': self.location.id,
                 'area_sqm': '12.3',
                 'project': self.project.id,
@@ -308,7 +308,7 @@ class SerializerBranchCoverageTest(TestCase):
     def test_field_serializer_does_not_require_project_field(self):
         serializer = FieldSerializer(
             data={
-                'name': 'Schlag C',
+                'name': 'Parzelle C',
                 'location': self.location.id,
                 'area_sqm': '10.0',
             }

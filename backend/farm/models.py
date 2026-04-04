@@ -456,6 +456,8 @@ class Field(TimestampedModel):
 
     class Meta:
         ordering = ['location', 'name']
+        verbose_name = 'Parzelle'
+        verbose_name_plural = 'Parzellen'
 
 
 class Bed(TimestampedModel):
@@ -465,7 +467,7 @@ class Bed(TimestampedModel):
     MAX_AREA_SQM = Decimal('10000.00')  # Maximum 10,000 sqm (~1 hectare, reasonable for a bed)
     
     name = models.CharField(max_length=200)
-    field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds')
+    field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds', verbose_name='Parzelle')
     area_sqm = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
     length_m = models.FloatField(null=True, blank=True)
     width_m = models.FloatField(null=True, blank=True)

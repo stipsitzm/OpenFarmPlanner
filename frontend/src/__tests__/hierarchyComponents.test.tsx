@@ -89,7 +89,7 @@ describe('hierarchy components and behaviors', () => {
         } as never)}
       </>
     );
-    await user.click(screen.getByLabelText('Feld hinzufügen'));
+    await user.click(screen.getByLabelText('Parzelle hinzufügen'));
     expect(addField).toHaveBeenCalledWith(2);
 
     rerender(
@@ -97,7 +97,7 @@ describe('hierarchy components and behaviors', () => {
         {nameColumn?.renderCell?.({
           id: 'field-10',
           field: 'name',
-          value: 'Schlag 10',
+          value: 'Parzelle 10',
           row: { id: 'field-10', type: 'field', fieldId: 10, level: 1, expanded: true },
         } as never)}
       </>
@@ -248,7 +248,7 @@ describe('hierarchy components and behaviors', () => {
       <HierarchyFooter locations={[createLocation({ id: 9 })]} onAddField={onAddField} />,
     );
 
-    await user.click(screen.getByLabelText('Feld hinzufügen'));
+    await user.click(screen.getByLabelText('Parzelle hinzufügen'));
     expect(onAddField).toHaveBeenCalledWith(9);
     expect(screen.getByText('Ein Standort')).toBeInTheDocument();
 
@@ -259,7 +259,7 @@ describe('hierarchy components and behaviors', () => {
       />,
     );
 
-    expect(screen.queryByLabelText('Feld hinzufügen')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Parzelle hinzufügen')).not.toBeInTheDocument();
     expect(screen.getByText('Mehrere Standorte')).toBeInTheDocument();
   });
 });

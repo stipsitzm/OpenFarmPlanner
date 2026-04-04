@@ -21,7 +21,7 @@
     "dec": "Dezember"
   },
   "weekShort": "KW",
-  "field": "Schlag",
+  "field": "Parzelle",
   "bed": "Beet",
   "area": "Fläche",
   "year": "Jahr",
@@ -76,7 +76,7 @@
     "seedlings": "Jungpflanzen"
   },
   "modeDescriptions": {
-    "occupancy": "Belegung von Schlägen und Beeten im Jahresverlauf. Diese Ansicht unterstützt weiterhin das Verschieben bestehender Anbaupläne.",
+    "occupancy": "Belegung von Parzellen und Beeten im Jahresverlauf. Diese Ansicht unterstützt weiterhin das Verschieben bestehender Anbaupläne.",
     "seedlings": "Anzuchtzeiträume für Jungpflanzen nach Kultur. Diese Ansicht ist schreibgeschützt und zeigt nur relevante Voranzuchten im aktuellen Jahr."
   },
   "seedlings": {

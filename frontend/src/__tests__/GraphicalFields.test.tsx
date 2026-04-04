@@ -303,7 +303,7 @@ describe("GraphicalFields", () => {
       fields: [
         {
           id: 10,
-          name: "Schlag A",
+          name: "Parzelle A",
           location: 1,
           area_sqm: 1200,
           width_m: 20,
@@ -331,7 +331,7 @@ describe("GraphicalFields", () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByText(
-        "Editiermodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+        "Editiermodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
       ),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "false");
@@ -342,7 +342,7 @@ describe("GraphicalFields", () => {
 
     expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bearbeitungsmodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+      "Bearbeitungsmodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
     );
   }, 15000);
 
@@ -443,7 +443,7 @@ describe("GraphicalFields", () => {
       );
     });
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bearbeitungsmodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+      "Bearbeitungsmodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
     );
   }, 15000);
 
@@ -771,7 +771,7 @@ describe("GraphicalFields", () => {
 
     expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bearbeitungsmodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+      "Bearbeitungsmodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
     );
 
     const input = document.createElement("input");

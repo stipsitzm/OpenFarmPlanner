@@ -141,7 +141,10 @@ class FieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Field
         fields = '__all__'
-        extra_kwargs = {'project': {'required': False}}
+        extra_kwargs = {
+            'project': {'required': False},
+            'name': {'label': 'Parzelle'},
+        }
     
     def validate_area_sqm(self, value):
         if value is not None:
@@ -190,7 +193,10 @@ class BedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bed
         fields = '__all__'
-        extra_kwargs = {'project': {'required': False}}
+        extra_kwargs = {
+            'project': {'required': False},
+            'field': {'label': 'Parzelle'},
+        }
 
     def validate_area_sqm(self, value):
         if value is not None:

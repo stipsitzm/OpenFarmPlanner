@@ -1052,7 +1052,6 @@ export function CultureDetail({
                   setSearchQuery('');
                   setSelectedFamilyFilter('');
                   setSelectedCultivationFilter('');
-                  setSelectedSupplierFilter('');
                 }}
               >
                 {t('emptySearch.resetAction')}

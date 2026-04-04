@@ -1,5 +1,5 @@
 {
-  "title": "Schläge",
+  "title": "Parzellen",
   "columns": {
     "name": "Name",
     "location": "Standort",
@@ -7,18 +7,18 @@
     "notes": "Notizen"
   },
   "errors": {
-    "load": "Fehler beim Laden der Schläge",
-    "save": "Fehler beim Speichern des Schlags",
-    "delete": "Fehler beim Löschen des Schlags",
+    "load": "Fehler beim Laden der Parzellen",
+    "save": "Fehler beim Speichern der Parzelle",
+    "delete": "Fehler beim Löschen der Parzelle",
     "loadLocations": "Fehler beim Laden der Standorte"
   },
   "validation": {
     "nameRequired": "Name ist ein Pflichtfeld",
     "locationRequired": "Standort ist ein Pflichtfeld"
   },
-  "confirmDelete": "Möchten Sie diesen Schlag wirklich löschen?",
-  "addButton": "Neuen Schlag hinzufügen",
-  "createNew": "Neuen Schlag erstellen",
+  "confirmDelete": "Möchten Sie diese Parzelle wirklich löschen?",
+  "addButton": "Neue Parzelle hinzufügen",
+  "createNew": "Neue Parzelle erstellen",
   "cancel": "Abbrechen",
   "submit": "Erstellen",
   "selectLocation": "Standort auswählen",
@@ -36,10 +36,10 @@
     "editModeOption": "Bearbeiten",
     "editMode": "Bearbeitungsmodus",
     "modeHelpAria": "Modushilfe anzeigen",
-    "modeHelpTooltip": "Navigieren, hinein- und herauszoomen und Details öffnen. Schläge und Beete lassen sich nur im Bearbeitungsmodus verschieben oder bearbeiten. Tastenkürzel: Alt+E",
-    "viewModeDescription": "Navigieren, hinein- und herauszoomen und Details öffnen. Schläge und Beete lassen sich nur im Bearbeitungsmodus verschieben oder bearbeiten.",
+    "modeHelpTooltip": "Navigieren, hinein- und herauszoomen und Details öffnen. Parzellen und Beete lassen sich nur im Bearbeitungsmodus verschieben oder bearbeiten. Tastenkürzel: Alt+E",
+    "viewModeDescription": "Navigieren, hinein- und herauszoomen und Details öffnen. Parzellen und Beete lassen sich nur im Bearbeitungsmodus verschieben oder bearbeiten.",
     "editModeDescription": "Flächen verschieben und Layouts anpassen.",
-    "editModeBanner": "Bearbeitungsmodus aktiv – Schläge und Beete können jetzt verschoben werden.",
+    "editModeBanner": "Bearbeitungsmodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
     "editModeShortcut": "Tastenkürzel: Alt+E",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
@@ -53,11 +53,11 @@
     "zoomLevel": "Zoom: {{value}}×",
     "locationTitle": "Standort: {{name}}",
     "details": {
-      "field": "Schlagdetails",
+      "field": "Parzellendetails",
       "bed": "Beetdetails"
     },
     "location": "Standort",
-    "parentField": "Schlag",
+    "parentField": "Parzelle",
     "area": "Fläche"
   }
 }

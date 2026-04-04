@@ -99,7 +99,7 @@ describe('GanttChartPage', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Feldbelegung')).toBeInTheDocument());
-    expect(screen.queryByText(/Belegung von Schlägen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Belegung von Parzellen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
     expect(screen.getByRole('switch')).toBeInTheDocument();
     expect(screen.getByText('Beet 1')).toBeInTheDocument();
     expect(mocks.ganttProps).toHaveBeenCalled();
