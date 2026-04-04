@@ -60,6 +60,7 @@ import {
 } from "../components/data-grid";
 import { MobileCardList } from "../components/mobile/MobileCardList";
 import { NotesDrawer } from "../components/data-grid/NotesDrawer";
+import PageHelp from "../components/help/PageHelp";
 import {
   useCommandContextTag,
   useRegisterCommands,
@@ -1087,16 +1088,19 @@ function PlantingPlans(): React.ReactElement {
       <Box sx={{ width: "100%", maxWidth: "100%" }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
           <h1>{t("plantingPlans:title")}</h1>
-          {!isMobile ? (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => gridCommandApiRef.current?.addRow()}
-              aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
-            >
-              {t("plantingPlans:addButton")}
-            </Button>
-          ) : null}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+            <PageHelp pageKey="plantingPlans" />
+            {!isMobile ? (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => gridCommandApiRef.current?.addRow()}
+                aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
+              >
+                {t("plantingPlans:addButton")}
+              </Button>
+            ) : null}
+          </Box>
         </Box>
 
         {isMobile ? (

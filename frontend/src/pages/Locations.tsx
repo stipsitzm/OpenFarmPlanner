@@ -14,6 +14,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from '../i18n';
 import { locationAPI, type Location } from '../api/api';
 import { EditableDataGrid, type EditableDataGridCommandApi, type EditableRow, type DataGridAPI } from '../components/data-grid';
+import PageHelp from '../components/help/PageHelp';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
 import { formatLocalizedNumber, resolveLocaleFromLanguage } from '../utils/numberLocalization';
@@ -222,14 +223,17 @@ function Locations(): React.ReactElement {
       <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <h1>{t('locations:title')}</h1>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setCreateDialogOpen(true)}
-            aria-label={`${t('locations:addButton')} (Alt+N)`}
-          >
-            {t('locations:addButton')}
-          </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <PageHelp pageKey="locations" />
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setCreateDialogOpen(true)}
+              aria-label={`${t('locations:addButton')} (Alt+N)`}
+            >
+              {t('locations:addButton')}
+            </Button>
+          </Box>
         </Box>
 
         <Dialog open={isCreateDialogOpen} onClose={resetCreateDialog} fullWidth maxWidth="sm">

@@ -21,6 +21,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
+import PageHelp from '../components/help/PageHelp';
 import type { Supplier } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -177,9 +178,12 @@ export default function Suppliers(): React.ReactElement {
       <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <h1>{t('title')}</h1>
-          <Button variant="contained" onClick={openCreate}>
-            + {t('create')}
-          </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <PageHelp pageKey="suppliers" />
+            <Button variant="contained" onClick={openCreate}>
+              + {t('create')}
+            </Button>
+          </Box>
         </Box>
         <TableContainer sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
           <Table size="small" sx={{ width: 'auto' }}>

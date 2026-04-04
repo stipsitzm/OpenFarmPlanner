@@ -1,0 +1,16 @@
+{
+  "showTooltip": "Show help",
+  "hideForPage": "Do not show again on this page",
+  "pages": {
+    "dashboard": {"title": "Help: Overview", "points": ["Project overview.", "Use navigation.", "Quick actions.", "Open pages to edit data."]},
+    "locations": {"title": "Help: Locations", "points": ["Manage locations.", "A location can contain fields.", "Use New to create.", "Rows are clickable for editing."]},
+    "fields": {"title": "Help: Fields", "points": ["Manage fields.", "A field contains beds.", "Use New to create.", "Rows are clickable for editing."]},
+    "beds": {"title": "Help: Beds", "points": ["Manage beds.", "Beds belong to a field.", "Use New to create.", "Rows are clickable for editing."]},
+    "areas": {"title": "Help: Areas", "points": ["Manage growing areas.", "Areas connect beds and plans.", "Use New to create.", "Rows are clickable for editing."]},
+    "cultures": {"title": "Help: Cultures", "points": ["Manage cultures.", "Use New to create.", "Rows are clickable for editing.", "Use filter/search."]},
+    "plantingPlans": {"title": "Help: Planting plans", "points": ["Plan crop planting.", "Use New to create.", "Rows are clickable for editing.", "Graphical mode shows occupancy."]},
+    "seedDemand": {"title": "Help: Seed demand", "points": ["Seed demand is calculated.", "Based on cultures and plans.", "Use filters.", "Supports order planning."]},
+    "suppliers": {"title": "Help: Suppliers", "points": ["Manage suppliers.", "Link suppliers to seed data.", "Use New to create.", "Rows are clickable for editing."]},
+    "graphical": {"title": "Help: Graphical view", "points": ["See fields and beds layout.", "Edit mode allows moving.", "Use zoom and pan.", "Click elements to edit."]}
+  }
+}

@@ -1,10 +1,11 @@
-import { Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Box, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
+import PageHelp from '../components/help/PageHelp';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 
@@ -63,7 +64,10 @@ export default function FieldsBedsPage(): React.ReactElement {
 
   return (
     <div className="page-container">
-      <h1>{t('hierarchy:title')}</h1>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <h1>{t('hierarchy:title')}</h1>
+        <PageHelp pageKey={viewMode === 'graphical' ? 'graphical' : 'areas'} />
+      </Box>
       <Stack spacing={0.75} sx={{ mb: 2, width: { xs: '100%', sm: 'fit-content' } }}>
         <Typography variant="subtitle2">{t('fields:representation.label')}</Typography>
         <ToggleButtonGroup

@@ -90,6 +90,7 @@ import { createCulturesCommandSpecs } from './culturesCommandSpecs';
 import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './culturesHistoryUtils';
+import PageHelp from '../components/help/PageHelp';
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
 import { useAuth } from '../auth/useAuth';
@@ -891,6 +892,7 @@ function Cultures(): React.ReactElement {
       >
         <h1>{t('title')}</h1>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 'auto' }}>
+          <PageHelp pageKey="cultures" />
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNew}>
             {t('buttons.addNew')}
           </Button>

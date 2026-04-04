@@ -24,10 +24,12 @@ import bedsDE from './locales/de/beds.json';
 import hierarchyDE from './locales/de/hierarchy.json';
 import ganttChartDE from './locales/de/ganttChart.json';
 import suppliersDE from './locales/de/suppliers.json';
+import helpDE from './locales/de/help.json';
 import authDE from './locales/de/auth.json';
 import accountDE from './locales/de/account.json';
 import projectInvitationsDE from './locales/de/projectInvitations.json';
 import projectInvitationsEN from './locales/en/projectInvitations.json';
+import helpEN from './locales/en/help.json';
 
 // Configure i18next
 i18n
@@ -41,7 +43,7 @@ i18n
     debug: import.meta.env.DEV,
     
     // Namespaces for organizing translations
-    ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart', 'suppliers', 'auth', 'account', 'projectInvitations'],
+    ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart', 'suppliers', 'help', 'auth', 'account', 'projectInvitations'],
     defaultNS: 'common',
     
     // Translation resources
@@ -58,6 +60,7 @@ i18n
         hierarchy: hierarchyDE,
         ganttChart: ganttChartDE,
         suppliers: suppliersDE,
+        help: helpDE,
         auth: authDE,
         account: accountDE,
         projectInvitations: projectInvitationsDE,
@@ -66,6 +69,7 @@ i18n
         navigation: navigationEN,
         home: homeEN,
         fields: fieldsEN,
+        help: helpEN,
         projectInvitations: projectInvitationsEN,
       },
     },
