@@ -21,6 +21,7 @@ import { formatLocalizedNumber, resolveLocaleFromLanguage } from '../utils/numbe
 
 interface LocationRow extends Location, EditableRow {
   id: number;
+  coordinates?: string;
   isNew?: boolean;
 }
 
@@ -38,6 +39,31 @@ const validateCoordinateRange = (
   min: number,
   max: number,
 ): boolean => value === null || (value >= min && value <= max);
+
+interface ParsedCoordinates {
+  latitude: number;
+  longitude: number;
+}
+
+const parseCoordinatesValue = (value: string): ParsedCoordinates | null => {
+  const trimmed = value.trim();
+  if (trimmed === '') {
+    return null;
+  }
+
+  const parts = trimmed.split(',');
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  const latitude = parseCoordinateInput(parts[0] ?? '');
+  const longitude = parseCoordinateInput(parts[1] ?? '');
+  if (latitude === null || longitude === null) {
+    return null;
+  }
+
+  return { latitude, longitude };
+};
 
 function Locations(): React.ReactElement {
   const { t } = useTranslation(['locations', 'common']);
@@ -153,6 +179,13 @@ function Locations(): React.ReactElement {
     return `${formatCoordinate(latitude)}; ${formatCoordinate(longitude)}`;
   };
 
+  const formatCoordinatesForInput = (latitude?: number, longitude?: number): string => {
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return '';
+    }
+    return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+  };
+
   const columns: GridColDef[] = [
     {
       field: 'name',
@@ -169,8 +202,38 @@ function Locations(): React.ReactElement {
       field: 'coordinates',
       headerName: t('locations:columns.coordinatesLatLon'),
       width: 280,
-      editable: false,
+      editable: true,
+      preProcessEditCellProps: (params) => {
+        const value = String(params.props.value ?? '').trim();
+        const hasError = value !== '' && parseCoordinatesValue(value) === null;
+        return { ...params.props, error: hasError };
+      },
+      renderEditCell: (params) => (
+        <TextField
+          value={String(params.value ?? '')}
+          onChange={(event) => {
+            void params.api.setEditCellValue({
+              id: params.id,
+              field: params.field,
+              value: event.target.value,
+            });
+          }}
+          placeholder={t('locations:placeholders.coordinates')}
+          error={Boolean(params.error)}
+          helperText={params.error ? t('locations:validation.coordinatesFormat') : ' '}
+          variant="standard"
+          fullWidth
+        />
+      ),
       valueGetter: (_value, row) =>
+        String(
+          row.coordinates ??
+          formatCoordinatesForInput(
+            typeof row.latitude === 'number' ? row.latitude : undefined,
+            typeof row.longitude === 'number' ? row.longitude : undefined,
+          ),
+        ),
+      valueFormatter: (value, row) =>
         formatCoordinates(
           typeof row.latitude === 'number' ? row.latitude : undefined,
           typeof row.longitude === 'number' ? row.longitude : undefined,
@@ -273,6 +336,7 @@ function Locations(): React.ReactElement {
           name: '',
           latitude: undefined,
           longitude: undefined,
+          coordinates: '',
           notes: '',
           isNew: true,
         })}
@@ -282,21 +346,27 @@ function Locations(): React.ReactElement {
           name: loc.name || '',
           latitude: typeof loc.latitude === 'number' ? loc.latitude : undefined,
           longitude: typeof loc.longitude === 'number' ? loc.longitude : undefined,
+          coordinates: formatCoordinatesForInput(
+            typeof loc.latitude === 'number' ? loc.latitude : undefined,
+            typeof loc.longitude === 'number' ? loc.longitude : undefined,
+          ),
           notes: loc.notes || '',
         })}
         mapToApiData={(row) => {
-          const latitudeValue =
-            typeof row.latitude === 'number'
-              ? row.latitude
-              : parseCoordinateInput(String(row.latitude ?? ''));
-          const longitudeValue =
-            typeof row.longitude === 'number'
-              ? row.longitude
-              : parseCoordinateInput(String(row.longitude ?? ''));
+          const coordinatesValue = String(row.coordinates ?? '').trim();
+          const parsedCoordinates = parseCoordinatesValue(coordinatesValue);
+
+          const latitudeValue = coordinatesValue === ''
+            ? undefined
+            : parsedCoordinates?.latitude;
+          const longitudeValue = coordinatesValue === ''
+            ? undefined
+            : parsedCoordinates?.longitude;
+
           return {
             name: row.name,
-            latitude: latitudeValue ?? undefined,
-            longitude: longitudeValue ?? undefined,
+            latitude: latitudeValue,
+            longitude: longitudeValue,
             notes: row.notes || '',
             ...((row as LocationRow & { project?: number }).project
               ? { project: (row as LocationRow & { project?: number }).project }
@@ -307,20 +377,16 @@ function Locations(): React.ReactElement {
           if (!row.name || row.name.trim() === '') {
             return t('locations:validation.nameRequired');
           }
-          const latitudeValue =
-            typeof row.latitude === 'number'
-              ? row.latitude
-              : parseCoordinateInput(String(row.latitude ?? ''));
-          const longitudeValue =
-            typeof row.longitude === 'number'
-              ? row.longitude
-              : parseCoordinateInput(String(row.longitude ?? ''));
-          if (String(row.latitude ?? '').trim() !== '' && latitudeValue === null) {
-            return t('locations:validation.coordinateInvalid', { field: t('locations:columns.latitude') });
+
+          const coordinatesValue = String(row.coordinates ?? '').trim();
+          const parsedCoordinates = parseCoordinatesValue(coordinatesValue);
+          if (coordinatesValue !== '' && parsedCoordinates === null) {
+            return t('locations:validation.coordinatesFormat');
           }
-          if (String(row.longitude ?? '').trim() !== '' && longitudeValue === null) {
-            return t('locations:validation.coordinateInvalid', { field: t('locations:columns.longitude') });
-          }
+
+          const latitudeValue = parsedCoordinates?.latitude ?? null;
+          const longitudeValue = parsedCoordinates?.longitude ?? null;
+
           if (
             latitudeValue !== null &&
             !validateCoordinateRange(latitudeValue, -90, 90)

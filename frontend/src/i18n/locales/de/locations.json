@@ -9,7 +9,8 @@
     "nameRequired": "Name ist ein Pflichtfeld",
     "latitudeRange": "Latitude muss zwischen -90 und 90 liegen.",
     "longitudeRange": "Longitude muss zwischen -180 und 180 liegen.",
-    "coordinateInvalid": "{{field}} muss eine gültige Zahl sein."
+    "coordinateInvalid": "{{field}} muss eine gültige Zahl sein.",
+    "coordinatesFormat": "Koordinaten müssen im Format „Latitude, Longitude“ eingegeben werden."
   },
   "confirmDelete": "Möchten Sie diesen Standort wirklich löschen?",
   "addButton": "Neuen Standort hinzufügen",
@@ -21,7 +22,8 @@
   },
   "placeholders": {
     "latitude": "z.B. 46,6145",
-    "longitude": "z.B. 13,8503"
+    "longitude": "z.B. 13,8503",
+    "coordinates": "46.6116, 13.9146"
   },
   "tooltips": {
     "openInGoogleMaps": "In Google Maps öffnen"
