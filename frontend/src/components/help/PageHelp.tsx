@@ -15,7 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMediaQuery } from '@mui/system';
 import { useTranslation } from '../../i18n';
 import { markFirstLoginHelpAsShown, shouldAutoOpenHelp } from './helpSettings';
@@ -35,6 +35,8 @@ export type HelpPageKey =
 interface PageHelpProps {
   pageKey: HelpPageKey;
 }
+
+const HELP_SHORTCUT_KEY = 'H';
 
 function storageKey(pageKey: HelpPageKey): string {
   return `pageHelpHidden:${pageKey}`;
@@ -76,13 +78,18 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
   );
 
   const title = t(`pages.${pageKey}.title`);
+  const tooltipText = t('showTooltipWithShortcut', { shortcut: `Alt+Shift+${HELP_SHORTCUT_KEY}` });
 
-  const handleOpen = (event: React.MouseEvent<HTMLElement>): void => {
+  const openHelp = useCallback((anchor?: HTMLElement): void => {
     if (isMobile) {
       setMobileOpen(true);
       return;
     }
-    setAnchorEl(event.currentTarget);
+    setAnchorEl(anchor ?? helpButtonRef.current);
+  }, [isMobile]);
+
+  const handleOpen = (event: React.MouseEvent<HTMLElement>): void => {
+    openHelp(event.currentTarget);
   };
 
   const handleClose = (): void => {
@@ -101,14 +108,38 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
     setIsHidden(false);
   };
 
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent): void => {
+      if (isHidden || !event.altKey || !event.shiftKey || event.key.toUpperCase() !== HELP_SHORTCUT_KEY) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      openHelp(helpButtonRef.current ?? undefined);
+    };
+
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, [isHidden, openHelp]);
+
   if (isHidden) {
     return null;
   }
 
   return (
     <>
-      <Tooltip title={t('showTooltip')}>
-        <IconButton ref={helpButtonRef} aria-label={t('showTooltip')} onClick={handleOpen} size="small" sx={{ color: 'text.secondary' }}>
+      <Tooltip title={tooltipText}>
+        <IconButton ref={helpButtonRef} aria-label={tooltipText} onClick={handleOpen} size="small" sx={{ color: 'text.secondary' }}>
           <HelpOutlineIcon fontSize="small" />
         </IconButton>
       </Tooltip>

@@ -1,5 +1,6 @@
 {
   "showTooltip": "Show help",
+  "showTooltipWithShortcut": "Show help ({{shortcut}})",
   "hideForPage": "Do not show again on this page",
   "pages": {
     "dashboard": {"title": "Help: Overview", "points": ["Project overview.", "Use navigation.", "Quick actions.", "Open pages to edit data."]},

@@ -1,5 +1,6 @@
 {
   "showTooltip": "Hilfe anzeigen",
+  "showTooltipWithShortcut": "Hilfe anzeigen ({{shortcut}})",
   "hideForPage": "Nicht mehr auf dieser Seite anzeigen",
   "pages": {
     "dashboard": {
