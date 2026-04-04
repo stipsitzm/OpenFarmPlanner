@@ -35,6 +35,8 @@
     "viewModeOption": "Ansicht",
     "editModeOption": "Bearbeiten",
     "editMode": "Bearbeitungsmodus",
+    "modeHelpAria": "Modushilfe anzeigen",
+    "modeHelpTooltip": "Navigieren, hinein- und herauszoomen und Details öffnen. Schläge und Beete lassen sich nur im Bearbeitungsmodus verschieben oder bearbeiten. Tastenkürzel: Alt+E",
     "viewModeDescription": "Navigieren, hinein- und herauszoomen und Details öffnen. Schläge und Beete lassen sich nur im Bearbeitungsmodus verschieben oder bearbeiten.",
     "editModeDescription": "Flächen verschieben und Layouts anpassen.",
     "editModeBanner": "Bearbeitungsmodus aktiv – Schläge und Beete können jetzt verschoben werden.",

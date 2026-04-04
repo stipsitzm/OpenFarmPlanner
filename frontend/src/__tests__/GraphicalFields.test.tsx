@@ -327,9 +327,7 @@ describe("GraphicalFields", () => {
     render(<GraphicalFields />);
 
     expect(
-      await screen.findByText(
-        /Navigieren, hinein- und herauszoomen und Details öffnen\./,
-      ),
+      await screen.findByLabelText("Modushilfe anzeigen"),
     ).toBeInTheDocument();
     expect(
       screen.queryByText(
@@ -351,9 +349,7 @@ describe("GraphicalFields", () => {
   it("renders fit-to-view and zoom controls", async () => {
     render(<GraphicalFields />);
     expect(
-      await screen.findByText(
-        /Navigieren, hinein- und herauszoomen und Details öffnen\./,
-      ),
+      await screen.findByLabelText("Modushilfe anzeigen"),
     ).toBeInTheDocument();
     act(() => {
       fireEvent.click(
@@ -432,9 +428,7 @@ describe("GraphicalFields", () => {
       "false",
     );
     expect(
-      screen.getByText(
-        /Navigieren, hinein- und herauszoomen und Details öffnen\./,
-      ),
+      screen.getByLabelText("Modushilfe anzeigen"),
     ).toBeInTheDocument();
 
     act(() => {
@@ -768,9 +762,7 @@ describe("GraphicalFields", () => {
 
   it("toggles edit mode via Alt+E but ignores the shortcut while typing in an input", async () => {
     render(<GraphicalFields />);
-    await screen.findByText(
-      /Navigieren, hinein- und herauszoomen und Details öffnen\./,
-    );
+    await screen.findByLabelText("Modushilfe anzeigen");
     expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "false");
 
     act(() => {

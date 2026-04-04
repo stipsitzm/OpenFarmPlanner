@@ -20,6 +20,7 @@ import {
   Typography,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import FitScreenIcon from "@mui/icons-material/FitScreen";
@@ -1058,14 +1059,20 @@ export default function GraphicalFields({
               {t("fields:graphical.title")}
             </Typography>
           ) : null}
-          <Typography variant="body2" color="text.secondary">
-            {isViewMode
-              ? t("fields:graphical.viewModeDescription")
-              : t("fields:graphical.editModeDescription")}
-          </Typography>
         </Box>
         <Stack spacing={0.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
-          <Typography variant="subtitle2">{t("fields:graphical.viewMode")}</Typography>
+          <Stack direction="row" spacing={0.5} alignItems="center" justifyContent={{ xs: "space-between", sm: "flex-start" }}>
+            <Typography variant="subtitle2">{t("fields:graphical.viewMode")}</Typography>
+            <Tooltip
+              title={t("fields:graphical.modeHelpTooltip")}
+              placement="top"
+              enterTouchDelay={0}
+            >
+              <IconButton size="small" aria-label={t("fields:graphical.modeHelpAria")}>
+                <InfoOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Stack>
           <ToggleButtonGroup
             value={interactionMode}
             exclusive
@@ -1086,11 +1093,6 @@ export default function GraphicalFields({
               {t("fields:graphical.editModeOption")}
             </ToggleButton>
           </ToggleButtonGroup>
-          <Tooltip title={t("fields:graphical.editModeShortcut")} placement="top">
-            <Typography variant="caption" color="text.secondary">
-              {t("fields:graphical.editModeShortcut")}
-            </Typography>
-          </Tooltip>
         </Stack>
       </Stack>
 
