@@ -77,6 +77,16 @@ interface PlantingPlanRow extends PlantingPlan, EditableRow {
   note_attachment_count?: number;
 }
 
+interface MobileCreateFormState {
+  culture: string;
+  bed: string;
+  cultivation_type: CultivationType;
+  planting_date: string;
+  area_m2: string;
+  plants_count: string;
+  notes: string;
+}
+
 const CULTIVATION_TYPE_OPTIONS = [
   {
     value: "direct_sowing",
@@ -157,6 +167,48 @@ const buildBedDisplayLabel = (
   return `${combinedName} (${formatAreaM2(areaSqm, locale)})`;
 };
 
+const createEmptyMobileCreateForm = (): MobileCreateFormState => ({
+  culture: "",
+  bed: "",
+  cultivation_type: "pre_cultivation",
+  planting_date: "",
+  area_m2: "",
+  plants_count: "",
+  notes: "",
+});
+
+export const getVisibleMobileRows = (
+  rows: PlantingPlanRow[],
+): PlantingPlanRow[] => rows.filter((row) => !row.isNew);
+
+export const buildMobileCreateForm = (
+  locale: string,
+  beds: Bed[],
+  prefill?: { cultureId?: number | null; bedId?: number | null },
+): MobileCreateFormState => {
+  const baseForm = createEmptyMobileCreateForm();
+  const prefilledBed =
+    typeof prefill?.bedId === "number"
+      ? beds.find((bed) => bed.id === prefill.bedId)
+      : undefined;
+  const prefilledArea = toNumericValue(prefilledBed?.area_sqm);
+
+  return {
+    ...baseForm,
+    culture:
+      typeof prefill?.cultureId === "number" ? String(prefill.cultureId) : "",
+    bed: typeof prefill?.bedId === "number" ? String(prefill.bedId) : "",
+    area_m2:
+      prefilledArea !== null
+        ? formatLocalizedNumber(prefilledArea, locale, {
+            useGrouping: false,
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          })
+        : "",
+  };
+};
+
 function PlantingPlans(): React.ReactElement {
   const { t } = useTranslation(["plantingPlans", "common"]);
   const { i18n } = useTranslation();
@@ -177,15 +229,9 @@ function PlantingPlans(): React.ReactElement {
     new Set(),
   );
   const [isMobileCreateOpen, setIsMobileCreateOpen] = useState(false);
-  const [mobileCreateForm, setMobileCreateForm] = useState({
-    culture: "",
-    bed: "",
-    cultivation_type: "pre_cultivation" as CultivationType,
-    planting_date: "",
-    area_m2: "",
-    plants_count: "",
-    notes: "",
-  });
+  const [mobileCreateForm, setMobileCreateForm] = useState<MobileCreateFormState>(
+    () => createEmptyMobileCreateForm(),
+  );
   const [mobileCreateError, setMobileCreateError] = useState("");
   const [mobileEditId, setMobileEditId] = useState<number | null>(null);
   const [mobileLastEditedField, setMobileLastEditedField] = useState<
@@ -195,6 +241,7 @@ function PlantingPlans(): React.ReactElement {
   const [mobileNotesTarget, setMobileNotesTarget] = useState<PlantingPlanRow | null>(null);
   const [mobileNotesDraft, setMobileNotesDraft] = useState("");
   const [isMobileNotesSaving, setIsMobileNotesSaving] = useState(false);
+  const mobilePrefillHandledRef = useRef(false);
 
   useEffect(() => {
     if (isMobile) {
@@ -792,17 +839,12 @@ function PlantingPlans(): React.ReactElement {
     });
   };
 
-  const openMobileCreateDialog = (): void => {
+  const openMobileCreateDialog = (
+    prefill?: { cultureId?: number | null; bedId?: number | null },
+  ): void => {
     setMobileCreateError("");
-    setMobileCreateForm({
-      culture: "",
-      bed: "",
-      cultivation_type: "pre_cultivation",
-      planting_date: "",
-      area_m2: "",
-      plants_count: "",
-      notes: "",
-    });
+    setMobileEditId(null);
+    setMobileCreateForm(buildMobileCreateForm(numberLocale, beds, prefill));
     setMobileLastEditedField(null);
     setIsMobileCreateOpen(true);
   };
@@ -813,6 +855,23 @@ function PlantingPlans(): React.ReactElement {
     setMobileEditId(null);
     setMobileLastEditedField(null);
   };
+
+  useEffect(() => {
+    if (!isMobile || mobilePrefillHandledRef.current) {
+      return;
+    }
+    if (initialSelection.cultureId === null && initialSelection.bedId === null) {
+      return;
+    }
+    if (initialSelection.bedId !== null && beds.length === 0) {
+      return;
+    }
+    openMobileCreateDialog({
+      cultureId: initialSelection.cultureId,
+      bedId: initialSelection.bedId,
+    });
+    mobilePrefillHandledRef.current = true;
+  }, [isMobile, initialSelection.cultureId, initialSelection.bedId, beds, numberLocale]);
 
   const openMobileNotesDialog = (row: PlantingPlanRow): void => {
     setMobileNotesTarget(row);
@@ -1043,7 +1102,7 @@ function PlantingPlans(): React.ReactElement {
         {isMobile ? (
           <Box sx={{ pb: 10 }}>
             <MobileCardList
-              items={mobileRows}
+              items={getVisibleMobileRows(mobileRows)}
               expandedIds={expandedCardIds}
               onToggleExpanded={toggleCardExpanded}
               renderPrimary={(item) => getCultureLabel(item)}
@@ -1093,7 +1152,7 @@ function PlantingPlans(): React.ReactElement {
                     <Typography variant="body2" color="text.secondary">
                       {t("plantingPlans:mobile.emptyDescription")}
                     </Typography>
-                    <Button variant="contained" onClick={openMobileCreateDialog}>
+                    <Button variant="contained" onClick={() => openMobileCreateDialog()}>
                       {t("plantingPlans:mobile.emptyCta")}
                     </Button>
                   </Stack>
@@ -1124,7 +1183,7 @@ function PlantingPlans(): React.ReactElement {
             isNew: true,
           })}
           initialRow={
-            initialSelection.cultureId || initialSelection.bedId
+            !isMobile && (initialSelection.cultureId || initialSelection.bedId)
               ? {
                   ...(initialSelection.cultureId
                     ? { culture: initialSelection.cultureId }
@@ -1303,7 +1362,7 @@ function PlantingPlans(): React.ReactElement {
           <Fab
             color="primary"
             variant="extended"
-            onClick={openMobileCreateDialog}
+            onClick={() => openMobileCreateDialog()}
             sx={{ position: "fixed", bottom: 24, right: 16, zIndex: theme.zIndex.fab }}
             aria-label={t("plantingPlans:mobile.fabAria")}
           >
