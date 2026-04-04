@@ -36,7 +36,6 @@ urlpatterns = [
 legacy_prefix = 'openfarmplanner'
 if getattr(settings, 'URL_PREFIX', '').strip('/') != legacy_prefix:
     urlpatterns += [
-        path(f'{legacy_prefix}/admin/', admin.site.urls),
         path(f'{legacy_prefix}/api/auth/', include('accounts.urls')),
         path(f'{legacy_prefix}/api/', include('farm.urls')),
         path(f'{legacy_prefix}/agent-login/<str:token>/', agent_login_consume_view, name='agent-login-consume-legacy'),
