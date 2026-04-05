@@ -19,6 +19,10 @@ export function resetHelpSettings(): void {
 }
 
 export function shouldAutoOpenHelp(pageKey: HelpPageKey): boolean {
+  if (import.meta.env.MODE === 'test') {
+    return false;
+  }
+
   if (window.localStorage.getItem(HELP_FIRST_LOGIN_DONE_KEY) === '1') {
     return false;
   }

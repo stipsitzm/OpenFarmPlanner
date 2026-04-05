@@ -72,10 +72,16 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
     }
   }, [isHidden, isMobile, pageKey]);
 
-  const points = useMemo(
-    () => t(`pages.${pageKey}.points`, { returnObjects: true }) as string[],
-    [pageKey, t],
-  );
+  const points = useMemo(() => {
+    const translatedPoints = t(`pages.${pageKey}.points`, { returnObjects: true });
+    if (Array.isArray(translatedPoints)) {
+      return translatedPoints;
+    }
+    if (typeof translatedPoints === 'string' && translatedPoints.trim() !== '') {
+      return [translatedPoints];
+    }
+    return [];
+  }, [pageKey, t]);
 
   const title = t(`pages.${pageKey}.title`);
   const tooltipText = t('showTooltipWithShortcut', { shortcut: `Alt+Shift+${HELP_SHORTCUT_KEY}` });
