@@ -268,7 +268,7 @@ function Locations(): React.ReactElement {
             const taskPreview = (location.id ? tasksByLocation[location.id] : []) ?? [];
 
             return (
-              <Grid key={location.id} item xs={12} sm={6} lg={4}>
+              <Grid key={location.id} size={{ xs: 12, sm: 6, lg: 4 }}>
                 <Card variant="outlined" sx={{ height: '100%' }}>
                   <CardContent>
                     <Typography variant="h6" mb={1}>{location.name}</Typography>
