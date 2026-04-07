@@ -179,10 +179,10 @@ export default function Suppliers(): React.ReactElement {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <h1>{t('title')}</h1>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-            <PageHelp pageKey="suppliers" />
             <Button variant="contained" onClick={openCreate}>
               + {t('create')}
             </Button>
+            <PageHelp pageKey="suppliers" />
           </Box>
         </Box>
         <TableContainer sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>

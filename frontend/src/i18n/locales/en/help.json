@@ -1,5 +1,28 @@
 {
   "showTooltip": "Show help",
+  "title": "Help",
+  "heading": "How OpenFarmPlanner works",
+  "intro": "OpenFarmPlanner consists of several pages that work together:",
+  "sections": [
+    {
+      "title": "Locations / Growing areas",
+      "points": ["Create locations, fields, and beds here."]
+    },
+    {
+      "title": "Planting plans",
+      "points": ["Plan which crop is grown in which bed here."]
+    },
+    {
+      "title": "Planting calendar",
+      "points": ["See the timeline for your planting plans here."]
+    },
+    {
+      "title": "Seed demand",
+      "points": ["This calculates how much seed you need."]
+    }
+  ],
+  "workflowTitle": "Workflow",
+  "workflow": "Locations → Beds → Planting plans → Planting calendar → Seed demand",
   "pages": {
     "dashboard": {"title": "Help: Overview", "points": ["Project overview.", "Use navigation.", "Quick actions.", "Open pages to edit data."]},
     "locations": {"title": "Help: Locations", "points": ["Manage locations.", "A location can contain fields.", "Use New to create.", "Rows are clickable for editing."]},

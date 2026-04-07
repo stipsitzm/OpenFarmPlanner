@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Alert,
   Box,
@@ -111,7 +111,7 @@ function Locations(): React.ReactElement {
   const [formState, setFormState] = useState<LocationFormState>(emptyForm);
   const [formError, setFormError] = useState<string>('');
 
-  const loadData = async (): Promise<void> => {
+  const loadData = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError('');
     try {
@@ -132,11 +132,11 @@ function Locations(): React.ReactElement {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     void loadData();
-  }, []);
+  }, [loadData]);
 
   const tasksByLocation = useMemo(
     () =>
@@ -245,10 +245,10 @@ function Locations(): React.ReactElement {
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h4">{t('locations:title')}</Typography>
         <Stack direction="row" spacing={1} alignItems="center">
-          <PageHelp pageKey="locations" />
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
             {t('locations:addButton')}
           </Button>
+          <PageHelp pageKey="locations" />
         </Stack>
       </Stack>
 

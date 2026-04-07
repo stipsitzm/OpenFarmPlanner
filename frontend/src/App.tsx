@@ -52,6 +52,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { cultureAPI, projectAPI, versionAPI } from './api/api';
 import type { CultureHistoryEntry } from './api/types';
 import './App.css';
+import { HelpIcon } from './components/help/HelpIcon';
 import { useAuth } from './auth/useAuth';
 import ProtectedRoute from './auth/ProtectedRoute';
 import HomePage from './pages/public/HomePage';
@@ -528,6 +529,7 @@ function RootLayout(): React.ReactElement {
           >
             <MoreVertIcon fontSize="small" />
           </IconButton>
+          <HelpIcon buttonSx={{ color: 'white' }} size="small" />
           <GlobalMenu
             anchorEl={globalMenuAnchor}
             open={Boolean(globalMenuAnchor)}

@@ -1089,7 +1089,6 @@ function PlantingPlans(): React.ReactElement {
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
           <h1>{t("plantingPlans:title")}</h1>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-            <PageHelp pageKey="plantingPlans" />
             {!isMobile ? (
               <Button
                 variant="contained"
@@ -1100,6 +1099,7 @@ function PlantingPlans(): React.ReactElement {
                 {t("plantingPlans:addButton")}
               </Button>
             ) : null}
+            <PageHelp pageKey="plantingPlans" />
           </Box>
         </Box>
 

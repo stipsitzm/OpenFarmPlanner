@@ -1,5 +1,8 @@
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import AddIcon from '@mui/icons-material/Add';
+import AgricultureIcon from '@mui/icons-material/Agriculture';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import DeleteIcon from '@mui/icons-material/Delete';
 import FitScreenIcon from '@mui/icons-material/FitScreen';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -7,6 +10,8 @@ import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import RemoveIcon from '@mui/icons-material/Remove';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import SwapVertIcon from '@mui/icons-material/SwapVert';
 import {
   Box,
   Dialog,
@@ -24,12 +29,13 @@ import {
   Typography,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { useMemo, useState } from 'react';
 import { useMediaQuery } from '@mui/system';
+import { useMemo, useState, type ReactElement } from 'react';
 import { useTranslation } from '../../i18n';
 
 export type HelpPageKey =
   | 'dashboard'
+  | 'calendar'
   | 'locations'
   | 'fields'
   | 'beds'
@@ -49,7 +55,17 @@ interface HelpSection {
   points: string[];
 }
 
-export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement | null {
+/**
+ * Displays the page-specific help content for the given page key.
+ *
+ * @remarks
+ * Used in page headers to keep the previous contextual help texts available.
+ *
+ * @param props - Component properties.
+ * @param props.pageKey - The help page key to render.
+ * @returns JSX element with the page help entry point and content.
+ */
+export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | null {
   const { t } = useTranslation('help');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -63,6 +79,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
     }
     return translated.map((point) => String(point));
   }, [pageKey, t]);
+
   const sections = useMemo(() => {
     const translated = t(`pages.${pageKey}.sections`, { returnObjects: true });
     if (!Array.isArray(translated)) {
@@ -85,7 +102,20 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
       .filter((section): section is HelpSection => section !== null);
   }, [pageKey, t]);
 
+  const hasSectionSymbols = useMemo(() => {
+    const symbolEntries = t(`pages.${pageKey}.symbols`, { returnObjects: true }) as unknown;
+    return !!symbolEntries && typeof symbolEntries === 'object' && !Array.isArray(symbolEntries);
+  }, [pageKey, t]);
+
   const title = t(`pages.${pageKey}.title`);
+  const symbolsTitle = t(`pages.${pageKey}.symbolsTitle`);
+  const symbolItems = useMemo(() => {
+    const translated = t(`pages.${pageKey}.symbols`, { returnObjects: true }) as unknown;
+    if (!translated || typeof translated !== 'object' || Array.isArray(translated)) {
+      return [];
+    }
+    return Object.values(translated as Record<string, unknown>).map((value) => String(value));
+  }, [pageKey, t]);
 
   const handleOpen = (event: React.MouseEvent<HTMLElement>): void => {
     if (isMobile) {
@@ -100,7 +130,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
     setMobileOpen(false);
   };
 
-  const renderGraphicalHelpContent = (): React.ReactElement => (
+  const renderGraphicalHelpContent = (): ReactElement => (
     <Stack spacing={2}>
       {sections?.map((section, sectionIndex) => (
         <Box key={`${pageKey}-graphical-section-${sectionIndex}`}>
@@ -179,6 +209,55 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
     </Stack>
   );
 
+  const renderAreasSymbolsContent = (): ReactElement => (
+    <Box>
+      <Typography variant="body1" sx={{ fontWeight: 700, mb: 1 }}>
+        {t('pages.areas.symbolsTitle')}
+      </Typography>
+      <Stack spacing={1}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={0.1} alignItems="center">
+            <ChevronRightIcon fontSize="small" />
+            <KeyboardArrowDownIcon fontSize="small" />
+          </Stack>
+          <Typography variant="body2">{t('pages.areas.symbols.expandToggle')}</Typography>
+        </Stack>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <AddIcon fontSize="small" sx={{ color: 'primary.main' }} />
+          <Typography variant="body2">{t('pages.areas.symbols.add')}</Typography>
+        </Stack>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} />
+          <Typography variant="body2">{t('pages.areas.symbols.delete')}</Typography>
+        </Stack>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <AgricultureIcon fontSize="small" sx={{ color: 'primary.main' }} />
+          <Typography variant="body2">{t('pages.areas.symbols.createPlan')}</Typography>
+        </Stack>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <SwapVertIcon fontSize="small" />
+          <SwapHorizIcon fontSize="small" />
+          <Typography variant="body2">{t('pages.areas.symbols.dimensions')}</Typography>
+        </Stack>
+      </Stack>
+    </Box>
+  );
+
+  const renderGenericSymbolsContent = (): ReactElement => (
+    <Box>
+      <Typography variant="body1" sx={{ fontWeight: 700, mb: 0.75 }}>
+        {symbolsTitle}
+      </Typography>
+      <List dense disablePadding>
+        {symbolItems.map((symbol, index) => (
+          <ListItem key={`${pageKey}-symbol-${index}`} sx={{ py: 0.2, px: 0 }}>
+            <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${symbol}`} />
+          </ListItem>
+        ))}
+      </List>
+    </Box>
+  );
+
   return (
     <>
       <Tooltip title={t('showTooltip')}>
@@ -211,14 +290,26 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
                 </Box>
               ))}
             </List>
+          ) : null}
+
+          {pageKey === 'areas' && hasSectionSymbols ? (
+            <Box sx={{ mt: 1.5 }}>
+              {renderAreasSymbolsContent()}
+            </Box>
+          ) : sections && sections.length > 0 && pageKey !== 'graphical' && symbolItems.length > 0 ? (
+            <Box sx={{ mt: 1.5 }}>
+              {renderGenericSymbolsContent()}
+            </Box>
           ) : (
-            <List dense disablePadding>
-              {points.map((point, index) => (
-                <ListItem key={`${pageKey}-${index}`} sx={{ py: 0.25, px: 0 }}>
-                  <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
-                </ListItem>
-              ))}
-            </List>
+            pageKey !== 'graphical' && (!sections || sections.length === 0) ? (
+              <List dense disablePadding>
+                {points.map((point, index) => (
+                  <ListItem key={`${pageKey}-${index}`} sx={{ py: 0.25, px: 0 }}>
+                    <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
+                  </ListItem>
+                ))}
+              </List>
+            ) : null
           )}
         </Box>
       </Popover>
@@ -254,14 +345,26 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
                 </Box>
               ))}
             </List>
+          ) : null}
+
+          {pageKey === 'areas' && hasSectionSymbols ? (
+            <Box sx={{ mt: 1.5 }}>
+              {renderAreasSymbolsContent()}
+            </Box>
+          ) : sections && sections.length > 0 && pageKey !== 'graphical' && symbolItems.length > 0 ? (
+            <Box sx={{ mt: 1.5 }}>
+              {renderGenericSymbolsContent()}
+            </Box>
           ) : (
-            <List dense disablePadding>
-              {points.map((point, index) => (
-                <ListItem key={`${pageKey}-mobile-${index}`} sx={{ py: 0.25, px: 0 }}>
-                  <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
-                </ListItem>
-              ))}
-            </List>
+            pageKey !== 'graphical' && (!sections || sections.length === 0) ? (
+              <List dense disablePadding>
+                {points.map((point, index) => (
+                  <ListItem key={`${pageKey}-mobile-${index}`} sx={{ py: 0.25, px: 0 }}>
+                    <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
+                  </ListItem>
+                ))}
+              </List>
+            ) : null
           )}
         </DialogContent>
       </Dialog>
