@@ -20,7 +20,6 @@ import {
   Typography,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import FitScreenIcon from "@mui/icons-material/FitScreen";
@@ -1141,15 +1140,6 @@ export default function GraphicalFields({
         <Stack spacing={0.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
           <Stack direction="row" spacing={0.5} alignItems="center" justifyContent={{ xs: "space-between", sm: "flex-start" }}>
             <Typography variant="subtitle2">{t("fields:graphical.viewMode")}</Typography>
-            <Tooltip
-              title={t("fields:graphical.modeHelpTooltip")}
-              placement="top"
-              enterTouchDelay={0}
-            >
-              <IconButton size="small" aria-label={t("fields:graphical.modeHelpAria")}>
-                <InfoOutlinedIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
           </Stack>
           <ToggleButtonGroup
             value={interactionMode}
