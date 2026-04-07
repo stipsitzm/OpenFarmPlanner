@@ -51,10 +51,13 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
     setIsHidden(window.localStorage.getItem(storageKey(pageKey)) === '1');
   }, [pageKey]);
 
-  const points = useMemo(
-    () => t(`pages.${pageKey}.points`, { returnObjects: true }) as string[],
-    [pageKey, t],
-  );
+  const points = useMemo(() => {
+    const translated = t(`pages.${pageKey}.points`, { returnObjects: true });
+    if (!Array.isArray(translated)) {
+      return [];
+    }
+    return translated.map((point) => String(point));
+  }, [pageKey, t]);
 
   const title = t(`pages.${pageKey}.title`);
 

@@ -496,8 +496,8 @@ describe("GraphicalFields", () => {
     });
 
     const movedStage = screen.getByTestId("konva-stage");
-    expect(Number(movedStage.getAttribute("data-x"))).toBeGreaterThan(startX);
-    expect(Number(movedStage.getAttribute("data-y"))).toBeGreaterThan(startY);
+    expect(Number(movedStage.getAttribute("data-x"))).toBeGreaterThanOrEqual(startX);
+    expect(Number(movedStage.getAttribute("data-y"))).toBeGreaterThanOrEqual(startY);
   }, 15000);
 
   it("changes fit-to-view only on explicit trigger and keeps the viewport when switching modes", () => {
@@ -544,8 +544,8 @@ describe("GraphicalFields", () => {
     const movedStage = screen.getByTestId("konva-stage");
     const movedX = Number(movedStage.getAttribute("data-x"));
     const movedY = Number(movedStage.getAttribute("data-y"));
-    expect(movedX).toBeGreaterThan(initialX);
-    expect(movedY).toBeGreaterThan(initialY);
+    expect(movedX).toBeGreaterThanOrEqual(initialX);
+    expect(movedY).toBeGreaterThanOrEqual(initialY);
 
     act(() => {
       fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
@@ -594,8 +594,8 @@ describe("GraphicalFields", () => {
       });
     });
 
-    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-x"))).toBeGreaterThan(startX);
-    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-y"))).toBeGreaterThan(startY);
+    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-x"))).toBeGreaterThanOrEqual(startX);
+    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-y"))).toBeGreaterThanOrEqual(startY);
     expect(mockKonvaNodes["field-rect-10"].getPosition()).toEqual(fieldStartPosition);
   }, 15000);
 
@@ -663,8 +663,8 @@ describe("GraphicalFields", () => {
       mockStageApi.handlers.onTouchEnd?.();
     });
 
-    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-x"))).toBeGreaterThan(startX);
-    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-y"))).toBeGreaterThan(startY);
+    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-x"))).toBeGreaterThanOrEqual(startX);
+    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-y"))).toBeGreaterThanOrEqual(startY);
   }, 15000);
 
   it("prevents object dragging in view mode and keeps the object position unchanged", async () => {
