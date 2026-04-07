@@ -1,529 +1,438 @@
-/**
- * Locations (Standorte) page component.
- * 
- * Manages farm locations with Excel-like editable data grid.
- * Uses MUI Data Grid for inline editing with validation.
- * 
- * @returns The Locations page component
- */
-
-import { useMemo, useRef, useState } from 'react';
-import type { GridColDef } from '@mui/x-data-grid';
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, MenuItem, TextField, Tooltip } from '@mui/material';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardActions,
+  CardContent,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Grid,
+  IconButton,
+  MenuItem,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import { useTranslation } from '../i18n';
-import { locationAPI, type Location } from '../api/api';
-import { EditableDataGrid, type EditableDataGridCommandApi, type EditableRow, type DataGridAPI } from '../components/data-grid';
+import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, type Bed, type Culture, type Field, type Location, type PlantingPlan } from '../api/api';
 import PageHelp from '../components/help/PageHelp';
-import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
-import type { CommandSpec } from '../commands/types';
-import { formatLocalizedNumber, resolveLocaleFromLanguage } from '../utils/numberLocalization';
+import { useTranslation } from '../i18n';
+import { resolveLocaleFromLanguage } from '../utils/numberLocalization';
+import { deriveLocationTasks, type DerivedLocationTask } from './locationDerivedTasks';
 
-interface LocationRow extends Location, EditableRow {
-  id: number;
-  isNew?: boolean;
+type SoilType = NonNullable<Location['soil_type']>;
+type Exposure = NonNullable<Location['exposure']>;
+
+interface LocationFormState {
+  name: string;
+  latitude: string;
+  longitude: string;
+  address: string;
+  description: string;
+  soil_type: SoilType | '';
+  exposure: Exposure | '';
+  notes: string;
 }
+
+const SOIL_OPTIONS: Array<{ value: SoilType; labelKey: string }> = [
+  { value: 'sand', labelKey: 'sand' },
+  { value: 'loam', labelKey: 'loam' },
+  { value: 'clay', labelKey: 'clay' },
+];
+
+const EXPOSURE_OPTIONS: Array<{ value: Exposure; labelKey: string }> = [
+  { value: 'north', labelKey: 'north' },
+  { value: 'south', labelKey: 'south' },
+  { value: 'east', labelKey: 'east' },
+  { value: 'west', labelKey: 'west' },
+  { value: 'flat', labelKey: 'flat' },
+];
+
+const emptyForm: LocationFormState = {
+  name: '',
+  latitude: '',
+  longitude: '',
+  address: '',
+  description: '',
+  soil_type: '',
+  exposure: '',
+  notes: '',
+};
 
 const parseCoordinateInput = (value: string): number | null => {
   const normalized = value.trim().replace(',', '.');
-  if (normalized === '') {
-    return null;
-  }
+  if (!normalized) return null;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const validateCoordinateRange = (
-  value: number | null,
-  min: number,
-  max: number,
-): boolean => value === null || (value >= min && value <= max);
+const validateCoordinateRange = (value: number | null, min: number, max: number): boolean =>
+  value === null || (value >= min && value <= max);
 
-const SOIL_TYPE_OPTIONS: Array<{ value: NonNullable<Location['soil_type']>; key: string }> = [
-  { value: 'sand', key: 'sand' },
-  { value: 'loam', key: 'loam' },
-  { value: 'clay', key: 'clay' },
-];
+const formatCoordinate = (value: number, locale: string): string =>
+  new Intl.NumberFormat(locale, { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(value);
 
-const EXPOSURE_OPTIONS: Array<{ value: NonNullable<Location['exposure']>; key: string }> = [
-  { value: 'north', key: 'north' },
-  { value: 'south', key: 'south' },
-  { value: 'east', key: 'east' },
-  { value: 'west', key: 'west' },
-  { value: 'flat', key: 'flat' },
-];
+const formatTaskDate = (value: string, locale: string): string => {
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString(locale);
+};
+
+const toFormState = (location: Location | null): LocationFormState => ({
+  name: location?.name ?? '',
+  latitude: typeof location?.latitude === 'number' ? String(location.latitude) : '',
+  longitude: typeof location?.longitude === 'number' ? String(location.longitude) : '',
+  address: location?.address ?? '',
+  description: location?.description ?? '',
+  soil_type: location?.soil_type ?? '',
+  exposure: location?.exposure ?? '',
+  notes: location?.notes ?? '',
+});
 
 function Locations(): React.ReactElement {
-  const { t } = useTranslation(['locations', 'common']);
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation(['locations', 'common']);
   const numberLocale = resolveLocaleFromLanguage(i18n.language);
-  const commandApiRef = useRef<EditableDataGridCommandApi | null>(null);
-  const [selectedRow, setSelectedRow] = useState<LocationRow | null>(null);
-  const [isCreateDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
-  const [newLocationName, setNewLocationName] = useState<string>('');
-  const [newLocationLatitude, setNewLocationLatitude] = useState<string>('');
-  const [newLocationLongitude, setNewLocationLongitude] = useState<string>('');
-  const [newLocationAddress, setNewLocationAddress] = useState<string>('');
-  const [newLocationDescription, setNewLocationDescription] = useState<string>('');
-  const [newLocationSoilType, setNewLocationSoilType] = useState<NonNullable<Location['soil_type']> | ''>('');
-  const [newLocationExposure, setNewLocationExposure] = useState<NonNullable<Location['exposure']> | ''>('');
-  const [newLocationNotes, setNewLocationNotes] = useState<string>('');
-  const [createError, setCreateError] = useState<string>('');
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [fields, setFields] = useState<Field[]>([]);
+  const [beds, setBeds] = useState<Bed[]>([]);
+  const [plantingPlans, setPlantingPlans] = useState<PlantingPlan[]>([]);
+  const [cultures, setCultures] = useState<Culture[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
+  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [formState, setFormState] = useState<LocationFormState>(emptyForm);
+  const [formError, setFormError] = useState<string>('');
 
-  useCommandContextTag('locations');
-
-  const commands = useMemo<CommandSpec[]>(() => [
-    {
-      id: 'locations.create',
-      label: 'Neuer Standort (Alt+Shift+N)',
-      group: 'navigation',
-      keywords: ['standort', 'neu', 'create'],
-      shortcutHint: 'Alt+Shift+N',
-      keys: { alt: true, shift: true, key: 'n' },
-      contextTags: ['locations'],
-      isEnabled: () => Boolean(commandApiRef.current),
-      action: () => setCreateDialogOpen(true),
-    },
-    {
-      id: 'locations.edit',
-      label: 'Standort bearbeiten (Alt+E)',
-      group: 'navigation',
-      keywords: ['standort', 'bearbeiten', 'edit'],
-      shortcutHint: 'Alt+E',
-      keys: { alt: true, key: 'e' },
-      contextTags: ['locations'],
-      isEnabled: () => selectedRow !== null,
-      action: () => commandApiRef.current?.editSelectedRow(),
-    },
-    {
-      id: 'locations.delete',
-      label: 'Standort löschen (Alt+Shift+D)',
-      group: 'navigation',
-      keywords: ['standort', 'löschen', 'delete'],
-      shortcutHint: 'Alt+Shift+D',
-      keys: { alt: true, shift: true, key: 'd' },
-      contextTags: ['locations'],
-      isEnabled: () => selectedRow !== null,
-      action: () => commandApiRef.current?.deleteSelectedRow(),
-    },
-  ], [selectedRow]);
-
-  useRegisterCommands('locations-page', commands);
-
-  const resetCreateDialog = (): void => {
-    setNewLocationName('');
-    setNewLocationLatitude('');
-    setNewLocationLongitude('');
-    setNewLocationAddress('');
-    setNewLocationDescription('');
-    setNewLocationSoilType('');
-    setNewLocationExposure('');
-    setNewLocationNotes('');
-    setCreateError('');
-    setCreateDialogOpen(false);
+  const loadData = async (): Promise<void> => {
+    setLoading(true);
+    setError('');
+    try {
+      const [locationsResponse, fieldsResponse, bedsResponse, plansResponse, culturesResponse] = await Promise.all([
+        locationAPI.list(),
+        fieldAPI.list(),
+        bedAPI.list(),
+        plantingPlanAPI.list(),
+        cultureAPI.list(),
+      ]);
+      setLocations(locationsResponse.data.results);
+      setFields(fieldsResponse.data.results);
+      setBeds(bedsResponse.data.results);
+      setPlantingPlans(plansResponse.data.results);
+      setCultures(culturesResponse.data.results);
+    } catch {
+      setError(t('locations:errors.load'));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCreateLocation = async (): Promise<void> => {
-    if (!newLocationName.trim()) {
-      setCreateError(t('locations:validation.nameRequired'));
-      return;
+  useEffect(() => {
+    void loadData();
+  }, []);
+
+  const tasksByLocation = useMemo(
+    () =>
+      deriveLocationTasks({
+        locations,
+        fields,
+        beds,
+        plantingPlans,
+        cultures,
+      }),
+    [beds, cultures, fields, locations, plantingPlans],
+  );
+
+  const openCreateDialog = (): void => {
+    setEditingLocation(null);
+    setFormState(emptyForm);
+    setFormError('');
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (location: Location): void => {
+    setEditingLocation(location);
+    setFormState(toFormState(location));
+    setFormError('');
+    setDialogOpen(true);
+  };
+
+  const closeDialog = (): void => {
+    setDialogOpen(false);
+    setEditingLocation(null);
+    setFormState(emptyForm);
+    setFormError('');
+  };
+
+  const validateForm = (): { latitude: number | null; longitude: number | null } | null => {
+    if (!formState.name.trim()) {
+      setFormError(t('locations:validation.nameRequired'));
+      return null;
     }
-    const latitude = parseCoordinateInput(newLocationLatitude);
-    const longitude = parseCoordinateInput(newLocationLongitude);
-    if (newLocationLatitude.trim() && latitude === null) {
-      setCreateError(t('locations:validation.coordinateInvalid', { field: t('locations:columns.latitude') }));
-      return;
+    const latitude = parseCoordinateInput(formState.latitude);
+    const longitude = parseCoordinateInput(formState.longitude);
+    if (formState.latitude.trim() && latitude === null) {
+      setFormError(t('locations:validation.coordinateInvalid', { field: t('locations:columns.latitude') }));
+      return null;
     }
-    if (newLocationLongitude.trim() && longitude === null) {
-      setCreateError(t('locations:validation.coordinateInvalid', { field: t('locations:columns.longitude') }));
-      return;
+    if (formState.longitude.trim() && longitude === null) {
+      setFormError(t('locations:validation.coordinateInvalid', { field: t('locations:columns.longitude') }));
+      return null;
     }
     if (!validateCoordinateRange(latitude, -90, 90)) {
-      setCreateError(t('locations:validation.latitudeRange'));
-      return;
+      setFormError(t('locations:validation.latitudeRange'));
+      return null;
     }
     if (!validateCoordinateRange(longitude, -180, 180)) {
-      setCreateError(t('locations:validation.longitudeRange'));
-      return;
+      setFormError(t('locations:validation.longitudeRange'));
+      return null;
     }
+    return { latitude, longitude };
+  };
+
+  const saveLocation = async (): Promise<void> => {
+    const parsed = validateForm();
+    if (!parsed) return;
+    const payload: Location = {
+      name: formState.name.trim(),
+      latitude: parsed.latitude ?? undefined,
+      longitude: parsed.longitude ?? undefined,
+      address: formState.address.trim(),
+      description: formState.description.trim(),
+      soil_type: formState.soil_type || null,
+      exposure: formState.exposure || null,
+      notes: formState.notes.trim(),
+    };
 
     try {
-      await locationAPI.create({
-        name: newLocationName.trim(),
-        address: newLocationAddress.trim(),
-        description: newLocationDescription.trim(),
-        soil_type: newLocationSoilType || undefined,
-        exposure: newLocationExposure || undefined,
-        latitude: latitude ?? undefined,
-        longitude: longitude ?? undefined,
-        notes: newLocationNotes.trim(),
-      });
-      resetCreateDialog();
-      await commandApiRef.current?.reload();
+      if (editingLocation?.id) {
+        await locationAPI.update(editingLocation.id, payload);
+      } else {
+        await locationAPI.create(payload);
+      }
+      closeDialog();
+      await loadData();
     } catch {
-      setCreateError(t('locations:errors.save'));
+      setFormError(t('locations:errors.save'));
     }
   };
-  
-  //Define columns for the Data Grid with inline editing
-  const formatCoordinate = (value: number): string =>
-    formatLocalizedNumber(value, numberLocale, {
-      minimumFractionDigits: 4,
-      maximumFractionDigits: 4,
-    });
 
-  const formatCoordinates = (latitude?: number, longitude?: number): string => {
-    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
-      return '';
+  const deleteLocation = async (locationId: number): Promise<void> => {
+    if (!window.confirm(t('locations:confirmDelete'))) return;
+    try {
+      await locationAPI.delete(locationId);
+      await loadData();
+    } catch {
+      setError(t('locations:errors.delete'));
     }
-    const separator = i18n.language.startsWith('de') ? '; ' : ', ';
-    return `${formatCoordinate(latitude)}${separator}${formatCoordinate(longitude)}`;
   };
 
-  const formatOptionLabel = (
-    group: 'soilType' | 'exposure',
-    value: string | null | undefined,
-  ): string => {
-    if (!value) return '—';
-    return t(`locations:${group}.${value}`, { defaultValue: value });
+  const renderTaskLine = (task: DerivedLocationTask): string => {
+    const taskTitle = t(`locations:taskTitles.${task.type}`);
+    const culture = task.cultureName ? ` – ${task.cultureName}` : '';
+    return `${formatTaskDate(task.date, numberLocale)} – ${taskTitle}${culture}`;
   };
-
-  const columns: GridColDef[] = [
-    {
-      field: 'name',
-      headerName: t('common:fields.name'),
-      width: 200,
-      editable: true,
-      // Validation: name is required
-      preProcessEditCellProps: (params) => {
-        const hasError = !params.props.value || params.props.value.trim() === '';
-        return { ...params.props, error: hasError };
-      },
-    },
-    {
-      field: 'coordinates',
-      headerName: t('locations:columns.coordinates'),
-      width: 280,
-      editable: false,
-      valueGetter: (_value, row) =>
-        formatCoordinates(
-          typeof row.latitude === 'number' ? row.latitude : undefined,
-          typeof row.longitude === 'number' ? row.longitude : undefined,
-        ),
-      renderCell: (params) => {
-        const row = params.row as LocationRow;
-        if (typeof row.latitude !== 'number' || typeof row.longitude !== 'number') {
-          return '—';
-        }
-        return formatCoordinates(row.latitude, row.longitude);
-      },
-    },
-    {
-      field: 'googleMaps',
-      headerName: '',
-      width: 64,
-      sortable: false,
-      filterable: false,
-      editable: false,
-      disableColumnMenu: true,
-      align: 'center',
-      renderCell: (params) => {
-        const row = params.row as LocationRow;
-        if (typeof row.latitude !== 'number' || typeof row.longitude !== 'number') {
-          return null;
-        }
-        const href = `https://www.google.com/maps?q=${row.latitude},${row.longitude}`;
-        return (
-          <Tooltip title={t('locations:openInGoogleMaps')}>
-            <IconButton
-              size="small"
-              component="a"
-              href={href}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={t('locations:openInGoogleMaps')}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <OpenInNewIcon fontSize="inherit" />
-            </IconButton>
-          </Tooltip>
-        );
-      },
-    },
-    {
-      field: 'latitude',
-      headerName: t('locations:columns.latitude'),
-      width: 160,
-      editable: true,
-      valueFormatter: (value) => {
-        if (typeof value !== 'number') return '';
-        return formatCoordinate(value);
-      },
-    },
-    {
-      field: 'longitude',
-      headerName: t('locations:columns.longitude'),
-      width: 170,
-      editable: true,
-      valueFormatter: (value) => {
-        if (typeof value !== 'number') return '';
-        return formatCoordinate(value);
-      },
-    },
-    {
-      field: 'address',
-      headerName: t('locations:columns.address'),
-      width: 220,
-      editable: true,
-    },
-    {
-      field: 'description',
-      headerName: t('locations:columns.description'),
-      width: 260,
-      editable: true,
-      renderCell: (params) => (
-        <Box
-          component="span"
-          sx={{
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            display: 'block',
-            width: '100%',
-          }}
-        >
-          {String(params.value || '—')}
-        </Box>
-      ),
-    },
-    {
-      field: 'soil_type',
-      headerName: t('locations:columns.soilType'),
-      width: 150,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: SOIL_TYPE_OPTIONS.map((option) => option.value),
-      valueFormatter: (value) => formatOptionLabel('soilType', typeof value === 'string' ? value : null),
-    },
-    {
-      field: 'exposure',
-      headerName: t('locations:columns.exposure'),
-      width: 140,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: EXPOSURE_OPTIONS.map((option) => option.value),
-      valueFormatter: (value) => formatOptionLabel('exposure', typeof value === 'string' ? value : null),
-    },
-    {
-      field: 'notes',
-      headerName: t('common:fields.notes'),
-      width: 250,
-      // Notes field will be overridden by NotesCell in EditableDataGrid
-    },
-  ];
 
   return (
-    <div className="page-container">
-      <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <h1>{t('locations:title')}</h1>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-            <PageHelp pageKey="locations" />
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setCreateDialogOpen(true)}
-              aria-label={`${t('locations:addButton')} (Alt+N)`}
-            >
-              {t('locations:addButton')}
-            </Button>
-          </Box>
-        </Box>
+    <Box p={3}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h4">{t('locations:title')}</Typography>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <PageHelp pageKey="locations" />
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
+            {t('locations:addButton')}
+          </Button>
+        </Stack>
+      </Stack>
 
-        <Dialog open={isCreateDialogOpen} onClose={resetCreateDialog} fullWidth maxWidth="sm">
-          <DialogTitle>{t('locations:addButton')}</DialogTitle>
-          <DialogContent sx={{ display: 'grid', gap: 2, pt: 1 }}>
-            <TextField
-              label={t('common:fields.name')}
-              value={newLocationName}
-              onChange={(event) => setNewLocationName(event.target.value)}
-              error={Boolean(createError)}
-              helperText={createError || ' '}
-              required
-              autoFocus
-            />
-            <TextField
-              label={t('locations:columns.latitude')}
-              value={newLocationLatitude}
-              onChange={(event) => setNewLocationLatitude(event.target.value)}
-              placeholder={t('locations:placeholders.latitude')}
-            />
-            <TextField
-              label={t('locations:columns.longitude')}
-              value={newLocationLongitude}
-              onChange={(event) => setNewLocationLongitude(event.target.value)}
-              placeholder={t('locations:placeholders.longitude')}
-            />
-            <TextField
-              label={t('locations:columns.address')}
-              value={newLocationAddress}
-              onChange={(event) => setNewLocationAddress(event.target.value)}
-            />
-            <TextField
-              label={t('locations:columns.description')}
-              value={newLocationDescription}
-              onChange={(event) => setNewLocationDescription(event.target.value)}
-              multiline
-              minRows={2}
-            />
-            <TextField
-              select
-              label={t('locations:columns.soilType')}
-              value={newLocationSoilType}
-              onChange={(event) => setNewLocationSoilType(event.target.value as NonNullable<Location['soil_type']> | '')}
-              helperText={t('locations:helpers.optionalField')}
-            >
-              <MenuItem value="">{t('common:messages.noData')}</MenuItem>
-              {SOIL_TYPE_OPTIONS.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {t(`locations:soilType.${option.key}`)}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label={t('locations:columns.exposure')}
-              value={newLocationExposure}
-              onChange={(event) => setNewLocationExposure(event.target.value as NonNullable<Location['exposure']> | '')}
-              helperText={t('locations:helpers.optionalField')}
-            >
-              <MenuItem value="">{t('common:messages.noData')}</MenuItem>
-              {EXPOSURE_OPTIONS.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {t(`locations:exposure.${option.key}`)}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label={t('common:fields.notes')}
-              value={newLocationNotes}
-              onChange={(event) => setNewLocationNotes(event.target.value)}
-              multiline
-              minRows={3}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={resetCreateDialog}>{t('common:actions.cancel')}</Button>
-            <Button onClick={handleCreateLocation} variant="contained">{t('common:actions.save')}</Button>
-          </DialogActions>
-        </Dialog>
+      {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
+      {loading ? <Typography>{t('common:messages.loading')}</Typography> : null}
 
-        <EditableDataGrid<LocationRow>
-        columns={columns}
-        api={locationAPI as unknown as DataGridAPI<LocationRow>}
-        createNewRow={() => ({
-          id: -Date.now(),
-          name: '',
-          latitude: undefined,
-          longitude: undefined,
-          address: '',
-          description: '',
-          soil_type: null,
-          exposure: null,
-          notes: '',
-          isNew: true,
-        })}
-        mapToRow={(loc) => ({
-          ...loc,
-          id: loc.id,
-          name: loc.name || '',
-          latitude: typeof loc.latitude === 'number' ? loc.latitude : undefined,
-          longitude: typeof loc.longitude === 'number' ? loc.longitude : undefined,
-          address: loc.address || '',
-          description: loc.description || '',
-          soil_type: loc.soil_type ?? null,
-          exposure: loc.exposure ?? null,
-          notes: loc.notes || '',
-        })}
-        mapToApiData={(row) => {
-          const latitudeValue =
-            typeof row.latitude === 'number'
-              ? row.latitude
-              : parseCoordinateInput(String(row.latitude ?? ''));
-          const longitudeValue =
-            typeof row.longitude === 'number'
-              ? row.longitude
-              : parseCoordinateInput(String(row.longitude ?? ''));
-          return {
-            name: row.name,
-            latitude: latitudeValue ?? undefined,
-            longitude: longitudeValue ?? undefined,
-            address: row.address?.trim() || '',
-            description: row.description?.trim() || '',
-            soil_type: row.soil_type || null,
-            exposure: row.exposure || null,
-            notes: row.notes || '',
-            ...((row as LocationRow & { project?: number }).project
-              ? { project: (row as LocationRow & { project?: number }).project }
-              : {}),
-          };
-        }}
-        validateRow={(row) => {
-          if (!row.name || row.name.trim() === '') {
-            return t('locations:validation.nameRequired');
-          }
-          const latitudeValue =
-            typeof row.latitude === 'number'
-              ? row.latitude
-              : parseCoordinateInput(String(row.latitude ?? ''));
-          const longitudeValue =
-            typeof row.longitude === 'number'
-              ? row.longitude
-              : parseCoordinateInput(String(row.longitude ?? ''));
-          if (String(row.latitude ?? '').trim() !== '' && latitudeValue === null) {
-            return t('locations:validation.coordinateInvalid', { field: t('locations:columns.latitude') });
-          }
-          if (String(row.longitude ?? '').trim() !== '' && longitudeValue === null) {
-            return t('locations:validation.coordinateInvalid', { field: t('locations:columns.longitude') });
-          }
-          if (
-            latitudeValue !== null &&
-            !validateCoordinateRange(latitudeValue, -90, 90)
-          ) {
-            return t('locations:validation.latitudeRange');
-          }
-          if (
-            longitudeValue !== null &&
-            !validateCoordinateRange(longitudeValue, -180, 180)
-          ) {
-            return t('locations:validation.longitudeRange');
-          }
-          return null;
-        }}
-        loadErrorMessage={t('locations:errors.load')}
-        saveErrorMessage={t('locations:errors.save')}
-        deleteErrorMessage={t('locations:errors.delete')}
-        deleteConfirmMessage={t('locations:confirmDelete')}
-        addButtonLabel={`${t('locations:addButton')} (Alt+N)`}
-        tableKey="locations"
-        persistSortInUrl={true}
-        showAddAction={false}
-        showFooterEditControls={false}
-        showRowEditActions={true}
-        commandApiRef={commandApiRef}
-        onSelectedRowChange={setSelectedRow}
-        notes={{
-          fields: [
-            {
-              field: 'notes',
-              labelKey: 'common:fields.notes',
-            },
-          ],
-        }}
-        />
-      </Box>
-    </div>
+      {!loading && locations.length === 0 ? (
+        <Alert severity="info">{t('locations:emptyState')}</Alert>
+      ) : (
+        <Grid container spacing={2}>
+          {locations.map((location) => {
+            const hasCoordinates =
+              typeof location.latitude === 'number' && typeof location.longitude === 'number';
+            const mapLink = hasCoordinates
+              ? `https://www.google.com/maps?q=${location.latitude},${location.longitude}`
+              : null;
+            const taskPreview = (location.id ? tasksByLocation[location.id] : []) ?? [];
+
+            return (
+              <Grid key={location.id} item xs={12} sm={6} lg={4}>
+                <Card variant="outlined" sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1}>
+                      <Typography variant="h6">{location.name}</Typography>
+                      {mapLink ? (
+                        <Tooltip title={t('locations:openInGoogleMaps')}>
+                          <IconButton
+                            size="small"
+                            component="a"
+                            href={mapLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={t('locations:openInGoogleMaps')}
+                          >
+                            <OpenInNewIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      ) : null}
+                    </Stack>
+
+                    <Stack spacing={1}>
+                      <Typography variant="body2">
+                        <strong>{t('locations:columns.coordinates')}:</strong>{' '}
+                        {hasCoordinates
+                          ? `${formatCoordinate(location.latitude!, numberLocale)}; ${formatCoordinate(location.longitude!, numberLocale)}`
+                          : '—'}
+                      </Typography>
+                      <Typography variant="body2"><strong>{t('locations:columns.address')}:</strong> {location.address || '—'}</Typography>
+                      <Typography variant="body2"><strong>{t('locations:columns.soilType')}:</strong> {location.soil_type ? t(`locations:soilType.${location.soil_type}`) : '—'}</Typography>
+                      <Typography variant="body2"><strong>{t('locations:columns.exposure')}:</strong> {location.exposure ? t(`locations:exposure.${location.exposure}`) : '—'}</Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <strong>{t('locations:columns.description')}:</strong> {location.description || '—'}
+                      </Typography>
+                    </Stack>
+
+                    <Box mt={2}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        {t('locations:upcomingTasks')}
+                      </Typography>
+                      {taskPreview.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          {t('locations:noUpcomingTasks')}
+                        </Typography>
+                      ) : (
+                        <Stack spacing={0.5}>
+                          {taskPreview.slice(0, 3).map((task) => (
+                            <Chip key={`${task.type}-${task.date}-${task.planId ?? 'na'}`} label={renderTaskLine(task)} size="small" />
+                          ))}
+                        </Stack>
+                      )}
+                    </Box>
+                  </CardContent>
+                  <CardActions sx={{ justifyContent: 'flex-end' }}>
+                    <Button size="small" startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(location)}>
+                      {t('common:actions.edit')}
+                    </Button>
+                    {location.id ? (
+                      <Button
+                        color="error"
+                        size="small"
+                        startIcon={<DeleteOutlineIcon />}
+                        onClick={() => void deleteLocation(location.id!)}
+                      >
+                        {t('common:actions.delete')}
+                      </Button>
+                    ) : null}
+                  </CardActions>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      )}
+
+      <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
+        <DialogTitle>
+          {editingLocation ? t('locations:editTitle') : t('locations:addButton')}
+        </DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, pt: 1 }}>
+          <TextField
+            autoFocus
+            required
+            label={t('common:fields.name')}
+            value={formState.name}
+            onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
+            error={Boolean(formError)}
+            helperText={formError || ' '}
+          />
+          <TextField
+            label={t('locations:columns.latitude')}
+            value={formState.latitude}
+            onChange={(event) => setFormState((prev) => ({ ...prev, latitude: event.target.value }))}
+            placeholder={t('locations:placeholders.latitude')}
+          />
+          <TextField
+            label={t('locations:columns.longitude')}
+            value={formState.longitude}
+            onChange={(event) => setFormState((prev) => ({ ...prev, longitude: event.target.value }))}
+            placeholder={t('locations:placeholders.longitude')}
+          />
+          <TextField
+            label={t('locations:columns.address')}
+            value={formState.address}
+            onChange={(event) => setFormState((prev) => ({ ...prev, address: event.target.value }))}
+          />
+          <TextField
+            label={t('locations:columns.description')}
+            value={formState.description}
+            onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
+            multiline
+            minRows={2}
+          />
+          <TextField
+            select
+            label={t('locations:columns.soilType')}
+            value={formState.soil_type}
+            onChange={(event) => setFormState((prev) => ({ ...prev, soil_type: event.target.value as SoilType | '' }))}
+            helperText={t('locations:helpers.optionalField')}
+          >
+            <MenuItem value="">{t('common:messages.noData')}</MenuItem>
+            {SOIL_OPTIONS.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {t(`locations:soilType.${option.labelKey}`)}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label={t('locations:columns.exposure')}
+            value={formState.exposure}
+            onChange={(event) => setFormState((prev) => ({ ...prev, exposure: event.target.value as Exposure | '' }))}
+            helperText={t('locations:helpers.optionalField')}
+          >
+            <MenuItem value="">{t('common:messages.noData')}</MenuItem>
+            {EXPOSURE_OPTIONS.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {t(`locations:exposure.${option.labelKey}`)}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label={t('common:fields.notes')}
+            value={formState.notes}
+            onChange={(event) => setFormState((prev) => ({ ...prev, notes: event.target.value }))}
+            multiline
+            minRows={3}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDialog}>{t('common:actions.cancel')}</Button>
+          <Button variant="contained" onClick={() => void saveLocation()}>{t('common:actions.save')}</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 }
 
