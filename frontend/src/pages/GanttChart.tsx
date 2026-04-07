@@ -7,7 +7,7 @@
  * @returns The Gantt Chart page component
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from '../i18n';
 import {
   Alert,
@@ -66,6 +66,31 @@ interface WeeklyYieldChartColumn {
 }
 
 type CalendarMode = 'occupancy' | 'seedlings';
+
+class GanttRenderBoundary extends React.Component<
+  { fallback: React.ReactNode; children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { fallback: React.ReactNode; children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown): void {
+    console.error('Gantt render failed', error);
+  }
+
+  render(): React.ReactNode {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
 
 function formatDateToAPI(date: Date): string {
   const year = date.getFullYear();
@@ -406,52 +431,54 @@ function GanttChartPage(): React.ReactElement {
               : t('ganttChart:seedlings.emptyState')}
           </div>
         ) : (
-          <GanttChart
-            tasks={activeTaskGroups}
-            locale={resolvedLocale}
-            localeText={ganttLocaleText}
-            viewMode={ViewMode.MONTH}
-            startDate={startDate}
-            endDate={endDate}
-            editMode={calendarMode === 'occupancy' ? editMode : false}
-            allowTaskResize={false}
-            allowTaskMove={calendarMode === 'occupancy'}
-            showProgress={false}
-            darkMode={false}
-            onTaskUpdate={calendarMode === 'occupancy' ? handleTaskUpdate : undefined}
-            renderTooltip={({ task }) => (calendarMode === 'seedlings'
-              ? renderSeedlingTooltip({ task: task as GanttTask })
-              : renderOccupancyTooltip({ task: task as GanttTask }))}
-            renderTask={calendarMode === 'seedlings'
-              ? ({ task, leftPx, widthPx, topPx }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      left: `${leftPx}px`,
-                      top: `${topPx}px`,
-                      width: `${widthPx}px`,
-                      minWidth: `${widthPx}px`,
-                      height: 26,
-                      px: 1,
-                      borderRadius: 1,
-                      backgroundColor: task.color || '#3b82f6',
-                      color: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      overflow: 'hidden',
-                      whiteSpace: 'nowrap',
-                      textOverflow: 'ellipsis',
-                      boxSizing: 'border-box',
-                      cursor: 'default',
-                    }}
-                  >
-                    <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {task.name}
-                    </Typography>
-                  </Box>
-                )
-              : undefined}
-          />
+          <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
+            <GanttChart
+              tasks={activeTaskGroups}
+              locale={resolvedLocale}
+              localeText={ganttLocaleText}
+              viewMode={ViewMode.MONTH}
+              startDate={startDate}
+              endDate={endDate}
+              editMode={calendarMode === 'occupancy' ? editMode : false}
+              allowTaskResize={false}
+              allowTaskMove={calendarMode === 'occupancy'}
+              showProgress={false}
+              darkMode={false}
+              onTaskUpdate={calendarMode === 'occupancy' ? handleTaskUpdate : undefined}
+              renderTooltip={({ task }) => (calendarMode === 'seedlings'
+                ? renderSeedlingTooltip({ task: task as GanttTask })
+                : renderOccupancyTooltip({ task: task as GanttTask }))}
+              renderTask={calendarMode === 'seedlings'
+                ? ({ task, leftPx, widthPx, topPx }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        left: `${leftPx}px`,
+                        top: `${topPx}px`,
+                        width: `${widthPx}px`,
+                        minWidth: `${widthPx}px`,
+                        height: 26,
+                        px: 1,
+                        borderRadius: 1,
+                        backgroundColor: task.color || '#3b82f6',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        textOverflow: 'ellipsis',
+                        boxSizing: 'border-box',
+                        cursor: 'default',
+                      }}
+                    >
+                      <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {task.name}
+                      </Typography>
+                    </Box>
+                  )
+                : undefined}
+            />
+          </GanttRenderBoundary>
         )}
       </Paper>
 
