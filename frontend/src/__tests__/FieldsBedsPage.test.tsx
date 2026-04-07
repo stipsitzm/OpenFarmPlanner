@@ -20,17 +20,17 @@ describe('FieldsBedsPage', () => {
     window.localStorage.clear();
   });
 
-  it('shows the edit mode switch only when graphical view is active', () => {
+  it('switches between hierarchy and graphical view via representation buttons', () => {
     render(<FieldsBedsPage />);
 
     expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
     expect(screen.queryByText('Editiermodus')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('button', { name: 'Grafik' }));
 
     expect(screen.getByText('Editiermodus')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('button', { name: 'Liste' }));
 
     expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
     expect(screen.queryByText('Editiermodus')).not.toBeInTheDocument();
