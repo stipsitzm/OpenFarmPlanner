@@ -1,6 +1,5 @@
 {
   "showTooltip": "Hilfe anzeigen",
-  "hideForPage": "Nicht mehr auf dieser Seite anzeigen",
   "pages": {
     "dashboard": {
       "title": "Hilfe: Übersicht",
@@ -90,41 +89,43 @@
           "title": "Was sehe ich hier?",
           "points": [
             "Hier siehst du deine Standorte, Parzellen und Beete grafisch angeordnet.",
-            "Diese Ansicht hilft dir, deine Anbauflächen übersichtlich zu planen.",
-            "Die Positionen entsprechen der realen Anordnung deiner Beete."
+            "Diese Ansicht hilft dir, deine Anbauflächen räumlich zu verstehen und übersichtlich zu planen.",
+            "Die Anordnung kann der realen Lage deiner Beete entsprechen."
           ]
         },
         {
           "title": "Bedienung",
           "points": [
-            "Klick auf ein Beet → Details anzeigen oder bearbeiten",
-            "Ziehen im Bearbeitungsmodus → Beete verschieben",
-            "Leere Fläche ziehen → Ansicht verschieben (Pan)",
-            "Scrollrad / Pinch → Zoomen"
+            "Klick auf ein Beet oder eine Parzelle → Element öffnen",
+            "Im Modus „Bearbeiten“ kannst du Elemente verschieben.",
+            "Leere Fläche ziehen → Ansicht verschieben",
+            "Scrollrad oder Pinch-Geste → Zoomen"
           ]
         },
         {
-          "title": "Icons erklären",
+          "title": "Wie hängt diese Seite mit den anderen Seiten zusammen?",
           "points": [
-            "Pfeile → Ansicht verschieben",
-            "+ → Hineinzoomen",
-            "− → Herauszoomen",
-            "Rahmen-Icon → Auf gesamte Fläche zoomen",
-            "Vollbild-Icon → Maximale Ansicht anzeigen",
-            "Ansicht → Nur betrachten",
-            "Bearbeiten → Elemente verschieben und anpassen"
-          ]
-        },
-        {
-          "title": "Zusammenhang mit anderen Seiten",
-          "points": [
-            "1. Anbauflächen → Hier definierst du deine Beete und Parzellen",
-            "2. Anbaupläne → Hier planst du, was auf welchem Beet wächst",
-            "3. Anbaukalender → Hier siehst du die zeitliche Planung",
-            "4. Saatgutbedarf → Hier wird automatisch berechnet, wie viel Saatgut benötigt wird"
+            "Anbauflächen → Hier legst du Standorte, Parzellen und Beete an.",
+            "Anbaupläne → Hier planst du, welche Kultur auf welchem Beet angebaut wird.",
+            "Anbaukalender → Hier siehst du die zeitliche Planung deiner Anbaupläne.",
+            "Saatgutbedarf → Daraus wird berechnet, wie viel Saatgut du brauchst."
           ]
         }
-      ]
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "panArrows": "Pfeiltasten-Symbole → Ansicht nach oben, links, rechts oder unten verschieben",
+        "zoomIn": "Plus-Icon → Hineinzoomen",
+        "zoomOut": "Minus-Icon → Herauszoomen",
+        "fit": "Rahmen-Icon → Auf die gesamte Fläche einpassen",
+        "fullscreen": "Vollbild-Icon → Größtmögliche Ansicht anzeigen"
+      },
+      "modeTitle": "Modus",
+      "modeLabel": "Modus",
+      "modeView": "Ansicht",
+      "modeEdit": "Bearbeiten",
+      "modeViewDescription": "„Ansicht“ = nur ansehen und navigieren",
+      "modeEditDescription": "„Bearbeiten“ = Elemente verschieben und anordnen"
     }
   }
 }

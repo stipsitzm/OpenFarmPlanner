@@ -1,6 +1,5 @@
 {
   "showTooltip": "Show help",
-  "hideForPage": "Do not show again on this page",
   "pages": {
     "dashboard": {"title": "Help: Overview", "points": ["Project overview.", "Use navigation.", "Quick actions.", "Open pages to edit data."]},
     "locations": {"title": "Help: Locations", "points": ["Manage locations.", "A location can contain fields.", "Use New to create.", "Rows are clickable for editing."]},
@@ -11,6 +10,50 @@
     "plantingPlans": {"title": "Help: Planting plans", "points": ["Plan crop planting.", "Use New to create.", "Rows are clickable for editing.", "Graphical mode shows occupancy."]},
     "seedDemand": {"title": "Help: Seed demand", "points": ["Seed demand is calculated.", "Based on cultures and plans.", "Use filters.", "Supports order planning."]},
     "suppliers": {"title": "Help: Suppliers", "points": ["Manage suppliers.", "Link suppliers to seed data.", "Use New to create.", "Rows are clickable for editing."]},
-    "graphical": {"title": "Help: Graphical view", "points": ["See fields and beds layout.", "Edit mode allows moving.", "Use zoom and pan.", "Click elements to edit."]}
+    "graphical": {
+      "title": "Help: Graphical view of growing areas",
+      "sections": [
+        {
+          "title": "What do I see here?",
+          "points": [
+            "You can see your locations, fields and beds arranged visually.",
+            "This view helps you understand your growing areas spatially and keep planning clear.",
+            "The arrangement can match the real position of your beds."
+          ]
+        },
+        {
+          "title": "How to use it",
+          "points": [
+            "Click a bed or field → Open element",
+            "In “Edit” mode you can move elements.",
+            "Drag empty space → Pan the view",
+            "Mouse wheel or pinch gesture → Zoom"
+          ]
+        },
+        {
+          "title": "How is this page connected to other pages?",
+          "points": [
+            "Growing areas → Create locations, fields and beds.",
+            "Planting plans → Plan which crop is planted in which bed.",
+            "Planting calendar → See timeline planning for planting plans.",
+            "Seed demand → Calculates how much seed you need."
+          ]
+        }
+      ],
+      "symbolsTitle": "Icons and controls",
+      "symbols": {
+        "panArrows": "Arrow icons → Move view up, left, right or down",
+        "zoomIn": "Plus icon → Zoom in",
+        "zoomOut": "Minus icon → Zoom out",
+        "fit": "Frame icon → Fit whole area into the viewport",
+        "fullscreen": "Fullscreen icon → Show largest possible view"
+      },
+      "modeTitle": "Mode",
+      "modeLabel": "Mode",
+      "modeView": "View",
+      "modeEdit": "Edit",
+      "modeViewDescription": "\"View\" = only view and navigate",
+      "modeEditDescription": "\"Edit\" = move and arrange elements"
+    }
   }
 }
