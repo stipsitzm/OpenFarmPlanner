@@ -1250,77 +1250,79 @@ export default function GraphicalFields({
                     }}
                   >
                     <Stack spacing={0} alignItems="stretch">
-                      <Tooltip title={t("fields:graphical.panUp")} placement="left">
-                        <IconButton
-                          size="small"
-                          onClick={() => handlePanByOffset(locationId, 0, PAN_STEP)}
-                          aria-label={t("fields:graphical.panUp")}
-                          sx={{ borderRadius: 0, p: 1.25 }}
-                        >
-                          <KeyboardArrowUpIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Stack direction="row" spacing={0}>
+                      <Box sx={{ display: { xs: "none", sm: "block" } }}>
+                        <Tooltip title={t("fields:graphical.panUp")} placement="left">
+                          <IconButton
+                            size="small"
+                            onClick={() => handlePanByOffset(locationId, 0, PAN_STEP)}
+                            aria-label={t("fields:graphical.panUp")}
+                            sx={{ borderRadius: 0, p: 1.25 }}
+                          >
+                            <KeyboardArrowUpIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Stack direction="row" spacing={0}>
+                          <Tooltip
+                            title={t("fields:graphical.panLeft")}
+                            placement="left"
+                          >
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                handlePanByOffset(locationId, PAN_STEP, 0)
+                              }
+                              aria-label={t("fields:graphical.panLeft")}
+                              sx={{
+                                borderRadius: 0,
+                                p: 1.25,
+                                borderTop: "1px solid",
+                                borderColor: "divider",
+                                borderRight: "1px solid",
+                              }}
+                            >
+                              <KeyboardArrowLeftIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip
+                            title={t("fields:graphical.panRight")}
+                            placement="left"
+                          >
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                handlePanByOffset(locationId, -PAN_STEP, 0)
+                              }
+                              aria-label={t("fields:graphical.panRight")}
+                              sx={{
+                                borderRadius: 0,
+                                p: 1.25,
+                                borderTop: "1px solid",
+                                borderColor: "divider",
+                              }}
+                            >
+                              <KeyboardArrowRightIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
                         <Tooltip
-                          title={t("fields:graphical.panLeft")}
+                          title={t("fields:graphical.panDown")}
                           placement="left"
                         >
                           <IconButton
                             size="small"
-                            onClick={() =>
-                              handlePanByOffset(locationId, PAN_STEP, 0)
-                            }
-                            aria-label={t("fields:graphical.panLeft")}
+                            onClick={() => handlePanByOffset(locationId, 0, -PAN_STEP)}
+                            aria-label={t("fields:graphical.panDown")}
                             sx={{
                               borderRadius: 0,
                               p: 1.25,
                               borderTop: "1px solid",
                               borderColor: "divider",
-                              borderRight: "1px solid",
                             }}
                           >
-                            <KeyboardArrowLeftIcon fontSize="small" />
+                            <KeyboardArrowDownIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip
-                          title={t("fields:graphical.panRight")}
-                          placement="left"
-                        >
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              handlePanByOffset(locationId, -PAN_STEP, 0)
-                            }
-                            aria-label={t("fields:graphical.panRight")}
-                            sx={{
-                              borderRadius: 0,
-                              p: 1.25,
-                              borderTop: "1px solid",
-                              borderColor: "divider",
-                            }}
-                          >
-                            <KeyboardArrowRightIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                      <Tooltip
-                        title={t("fields:graphical.panDown")}
-                        placement="left"
-                      >
-                        <IconButton
-                          size="small"
-                          onClick={() => handlePanByOffset(locationId, 0, -PAN_STEP)}
-                          aria-label={t("fields:graphical.panDown")}
-                          sx={{
-                            borderRadius: 0,
-                            p: 1.25,
-                            borderTop: "1px solid",
-                            borderColor: "divider",
-                          }}
-                        >
-                          <KeyboardArrowDownIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      </Box>
                       <Tooltip
                         title={t("fields:graphical.zoomIn")}
                         placement="left"
