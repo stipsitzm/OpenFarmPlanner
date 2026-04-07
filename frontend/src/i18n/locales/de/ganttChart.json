@@ -31,7 +31,8 @@
   "loading": "Laden...",
   "errors": {
     "load": "Fehler beim Laden der Daten",
-    "updatePlan": "Fehler beim Aktualisieren des Anbauplans"
+    "updatePlan": "Fehler beim Aktualisieren des Anbauplans",
+    "render": "Die Kalenderansicht konnte nicht geladen werden."
   },
   "tooltip": {
     "culture": "Kultur",

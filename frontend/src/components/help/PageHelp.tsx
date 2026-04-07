@@ -35,6 +35,11 @@ interface PageHelpProps {
   pageKey: HelpPageKey;
 }
 
+interface HelpSection {
+  title: string;
+  points: string[];
+}
+
 function storageKey(pageKey: HelpPageKey): string {
   return `pageHelpHidden:${pageKey}`;
 }
@@ -51,10 +56,34 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
     setIsHidden(window.localStorage.getItem(storageKey(pageKey)) === '1');
   }, [pageKey]);
 
-  const points = useMemo(
-    () => t(`pages.${pageKey}.points`, { returnObjects: true }) as string[],
-    [pageKey, t],
-  );
+  const points = useMemo(() => {
+    const translated = t(`pages.${pageKey}.points`, { returnObjects: true });
+    if (!Array.isArray(translated)) {
+      return [];
+    }
+    return translated.map((point) => String(point));
+  }, [pageKey, t]);
+  const sections = useMemo(() => {
+    const translated = t(`pages.${pageKey}.sections`, { returnObjects: true });
+    if (!Array.isArray(translated)) {
+      return null;
+    }
+    return translated
+      .map((section) => {
+        if (!section || typeof section !== 'object') {
+          return null;
+        }
+        const item = section as { title?: unknown; points?: unknown };
+        if (typeof item.title !== 'string') {
+          return null;
+        }
+        const sectionPoints = Array.isArray(item.points)
+          ? item.points.map((point) => String(point))
+          : [];
+        return { title: item.title, points: sectionPoints } as HelpSection;
+      })
+      .filter((section): section is HelpSection => section !== null);
+  }, [pageKey, t]);
 
   const title = t(`pages.${pageKey}.title`);
 
@@ -101,15 +130,32 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Box sx={{ maxWidth: 360, p: 2 }}>
+        <Box sx={{ maxWidth: 560, p: 2 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{title}</Typography>
-          <List dense disablePadding>
-            {points.map((point, index) => (
-              <ListItem key={`${pageKey}-${index}`} sx={{ py: 0.25, px: 0 }}>
-                <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
-              </ListItem>
-            ))}
-          </List>
+          {sections && sections.length > 0 ? (
+            <List dense disablePadding>
+              {sections.map((section, sectionIndex) => (
+                <Box key={`${pageKey}-section-${sectionIndex}`} sx={{ mb: 1.25 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                    {section.title}
+                  </Typography>
+                  {section.points.map((point, pointIndex) => (
+                    <ListItem key={`${pageKey}-${sectionIndex}-${pointIndex}`} sx={{ py: 0.15, px: 0 }}>
+                      <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
+                    </ListItem>
+                  ))}
+                </Box>
+              ))}
+            </List>
+          ) : (
+            <List dense disablePadding>
+              {points.map((point, index) => (
+                <ListItem key={`${pageKey}-${index}`} sx={{ py: 0.25, px: 0 }}>
+                  <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
+                </ListItem>
+              ))}
+            </List>
+          )}
           <FormControlLabel
             sx={{ mt: 1 }}
             control={<Checkbox size="small" onChange={(event) => handleHiddenToggle(event.target.checked)} />}
@@ -133,13 +179,30 @@ export default function PageHelp({ pageKey }: PageHelpProps): React.ReactElement
       >
         <DialogTitle>{title}</DialogTitle>
         <DialogContent>
-          <List dense disablePadding>
-            {points.map((point, index) => (
-              <ListItem key={`${pageKey}-mobile-${index}`} sx={{ py: 0.25, px: 0 }}>
-                <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
-              </ListItem>
-            ))}
-          </List>
+          {sections && sections.length > 0 ? (
+            <List dense disablePadding>
+              {sections.map((section, sectionIndex) => (
+                <Box key={`${pageKey}-mobile-section-${sectionIndex}`} sx={{ mb: 1.25 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                    {section.title}
+                  </Typography>
+                  {section.points.map((point, pointIndex) => (
+                    <ListItem key={`${pageKey}-mobile-${sectionIndex}-${pointIndex}`} sx={{ py: 0.15, px: 0 }}>
+                      <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
+                    </ListItem>
+                  ))}
+                </Box>
+              ))}
+            </List>
+          ) : (
+            <List dense disablePadding>
+              {points.map((point, index) => (
+                <ListItem key={`${pageKey}-mobile-${index}`} sx={{ py: 0.25, px: 0 }}>
+                  <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
+                </ListItem>
+              ))}
+            </List>
+          )}
           <FormControlLabel
             sx={{ mt: 1 }}
             control={<Checkbox size="small" onChange={(event) => handleHiddenToggle(event.target.checked)} />}

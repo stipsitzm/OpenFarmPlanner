@@ -223,6 +223,9 @@ export interface Location {
   id?: number;
   name: string;
   address?: string;
+  description?: string;
+  soil_type?: 'sand' | 'loam' | 'clay' | null;
+  exposure?: 'north' | 'south' | 'east' | 'west' | 'flat' | null;
   latitude?: number;
   longitude?: number;
   notes?: string;

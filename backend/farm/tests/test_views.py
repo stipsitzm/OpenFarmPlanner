@@ -164,6 +164,34 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('file', response.data)
 
+    def test_location_create_and_update_with_agronomic_fields(self):
+        create_response = self.client.post(
+            '/openfarmplanner/api/locations/',
+            {
+                'name': 'Südfläche',
+                'address': 'Dorfstraße 1',
+                'description': 'Acker hinter Hof',
+                'soil_type': 'loam',
+                'exposure': 'south',
+                'latitude': 48.1234,
+                'longitude': 16.4321,
+            },
+            format='json',
+        )
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(create_response.data['soil_type'], 'loam')
+        self.assertEqual(create_response.data['exposure'], 'south')
+
+        location_id = create_response.data['id']
+        update_response = self.client.patch(
+            f'/openfarmplanner/api/locations/{location_id}/',
+            {'soil_type': None, 'exposure': None, 'description': ''},
+            format='json',
+        )
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(update_response.data['soil_type'])
+        self.assertIsNone(update_response.data['exposure'])
+
 
 
     def test_field_update_with_length_and_width_overwrites_area(self):

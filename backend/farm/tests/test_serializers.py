@@ -328,6 +328,30 @@ class SerializerBranchCoverageTest(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('latitude', serializer.errors)
 
+    def test_location_serializer_accepts_agronomic_optional_fields(self):
+        serializer = LocationSerializer(
+            data={
+                'name': 'Standort E',
+                'address': 'Hauptstraße 12',
+                'description': 'Acker hinter Hof',
+                'soil_type': Location.SOIL_TYPE_SAND,
+                'exposure': Location.EXPOSURE_WEST,
+            }
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_location_serializer_rejects_invalid_choice_values(self):
+        serializer = LocationSerializer(
+            data={
+                'name': 'Standort F',
+                'soil_type': 'peat',
+                'exposure': 'northwest',
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('soil_type', serializer.errors)
+        self.assertIn('exposure', serializer.errors)
+
     def test_field_serializer_does_not_require_project_field(self):
         serializer = FieldSerializer(
             data={

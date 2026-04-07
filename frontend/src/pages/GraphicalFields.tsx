@@ -20,7 +20,6 @@ import {
   Typography,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import FitScreenIcon from "@mui/icons-material/FitScreen";
@@ -53,8 +52,10 @@ import {
   fitBoundsToStage,
   getContentBoundsFromRects,
   getVisibleElements,
+  panViewport,
   shouldShowBedLabel,
   shouldShowFieldLabel,
+  startPanSession,
   toContentBounds,
   type ContentBounds,
   type PanSession,
@@ -701,33 +702,61 @@ export default function GraphicalFields({
     }
   };
 
-  const handleStageDragStart = (
-    locationId: number,
-    viewport: ViewportState,
-  ): void => {
-    void locationId;
-    void viewport;
-    return;
+  const canStartPanSession = (
+    event: KonvaEventObject<MouseEvent | TouchEvent>,
+  ): boolean => {
+    const target = event.target;
+    const stage = target?.getStage?.();
+    if (!stage || target !== stage) {
+      return false;
+    }
+    if ("button" in event.evt && event.evt.button !== 0) {
+      return false;
+    }
+    if ("touches" in event.evt && event.evt.touches.length > 1) {
+      return false;
+    }
+    return true;
   };
 
-  const handleStageDragMove = (
+  const beginPanSession = (
     locationId: number,
     viewport: ViewportState,
-    event: KonvaEventObject<DragEvent>,
+    event: KonvaEventObject<MouseEvent | TouchEvent>,
   ): void => {
-    void locationId;
-    void viewport;
-    void event;
-    return;
+    if (!canStartPanSession(event)) {
+      panSessionRef.current[locationId] = null;
+      return;
+    }
+    const pointer = stageRefs.current[locationId]?.getPointerPosition();
+    if (!pointer) {
+      return;
+    }
+    panSessionRef.current[locationId] = startPanSession(viewport, pointer);
+    setActivePanLocationId(locationId);
   };
 
-  const handleStageDragEnd = (
+  const continuePanSession = (
     locationId: number,
-    viewport: ViewportState,
-    event: KonvaEventObject<DragEvent>,
+    event: KonvaEventObject<MouseEvent | TouchEvent>,
   ): void => {
-    void viewport;
-    void event;
+    const session = panSessionRef.current[locationId];
+    if (!session) {
+      return;
+    }
+    const pointer = stageRefs.current[locationId]?.getPointerPosition();
+    if (!pointer) {
+      return;
+    }
+    if ("touches" in event.evt) {
+      event.evt.preventDefault();
+    }
+    updateViewport(locationId, (current) =>
+      panViewport(session, pointer, current.scale),
+    );
+  };
+
+  const endPanSession = (locationId: number): void => {
     panSessionRef.current[locationId] = null;
   };
 
@@ -737,11 +766,24 @@ export default function GraphicalFields({
   ): void => {
     const stage = stageRefs.current[locationId];
     const touches = event.evt.touches;
-    if (!stage || touches.length !== 2) {
-      pinchStateRef.current[locationId] = null;
+    if (!stage) {
       return;
     }
 
+    if (touches.length === 1) {
+      pinchStateRef.current[locationId] = null;
+      if (!panSessionRef.current[locationId]) return;
+      continuePanSession(locationId, event);
+      return;
+    }
+
+    if (touches.length !== 2) {
+      pinchStateRef.current[locationId] = null;
+      endPanSession(locationId);
+      return;
+    }
+
+    endPanSession(locationId);
     event.evt.preventDefault();
     const first = touches[0];
     const second = touches[1];
@@ -775,6 +817,40 @@ export default function GraphicalFields({
     });
 
     pinchStateRef.current[locationId] = { center, distance };
+  };
+
+  const handleStageMouseDown = (
+    locationId: number,
+    viewport: ViewportState,
+    event: KonvaEventObject<MouseEvent>,
+  ): void => {
+    beginPanSession(locationId, viewport, event);
+  };
+
+  const handleStageMouseMove = (
+    locationId: number,
+    event: KonvaEventObject<MouseEvent>,
+  ): void => {
+    continuePanSession(locationId, event);
+  };
+
+  const handleStageMouseUp = (locationId: number): void => {
+    endPanSession(locationId);
+  };
+
+  const handleStageTouchStart = (
+    locationId: number,
+    viewport: ViewportState,
+    event: KonvaEventObject<TouchEvent>,
+  ): void => {
+    const touches = event.evt.touches;
+    if (touches.length === 1) {
+      beginPanSession(locationId, viewport, event);
+      return;
+    }
+    if (touches.length === 2) {
+      endPanSession(locationId);
+    }
   };
 
   const getFieldInteractionProps = (
@@ -982,6 +1058,7 @@ export default function GraphicalFields({
   };
 
   const handleStageTouchEnd = (locationId: number): void => {
+    endPanSession(locationId);
     pinchStateRef.current[locationId] = null;
   };
 
@@ -1063,15 +1140,6 @@ export default function GraphicalFields({
         <Stack spacing={0.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
           <Stack direction="row" spacing={0.5} alignItems="center" justifyContent={{ xs: "space-between", sm: "flex-start" }}>
             <Typography variant="subtitle2">{t("fields:graphical.viewMode")}</Typography>
-            <Tooltip
-              title={t("fields:graphical.modeHelpTooltip")}
-              placement="top"
-              enterTouchDelay={0}
-            >
-              <IconButton size="small" aria-label={t("fields:graphical.modeHelpAria")}>
-                <InfoOutlinedIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
           </Stack>
           <ToggleButtonGroup
             value={interactionMode}
@@ -1172,77 +1240,79 @@ export default function GraphicalFields({
                     }}
                   >
                     <Stack spacing={0} alignItems="stretch">
-                      <Tooltip title={t("fields:graphical.panUp")} placement="left">
-                        <IconButton
-                          size="small"
-                          onClick={() => handlePanByOffset(locationId, 0, PAN_STEP)}
-                          aria-label={t("fields:graphical.panUp")}
-                          sx={{ borderRadius: 0, p: 1.25 }}
-                        >
-                          <KeyboardArrowUpIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Stack direction="row" spacing={0}>
+                      <Box sx={{ display: { xs: "none", sm: "block" } }}>
+                        <Tooltip title={t("fields:graphical.panUp")} placement="left">
+                          <IconButton
+                            size="small"
+                            onClick={() => handlePanByOffset(locationId, 0, PAN_STEP)}
+                            aria-label={t("fields:graphical.panUp")}
+                            sx={{ borderRadius: 0, p: 1.25 }}
+                          >
+                            <KeyboardArrowUpIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Stack direction="row" spacing={0}>
+                          <Tooltip
+                            title={t("fields:graphical.panLeft")}
+                            placement="left"
+                          >
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                handlePanByOffset(locationId, PAN_STEP, 0)
+                              }
+                              aria-label={t("fields:graphical.panLeft")}
+                              sx={{
+                                borderRadius: 0,
+                                p: 1.25,
+                                borderTop: "1px solid",
+                                borderColor: "divider",
+                                borderRight: "1px solid",
+                              }}
+                            >
+                              <KeyboardArrowLeftIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip
+                            title={t("fields:graphical.panRight")}
+                            placement="left"
+                          >
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                handlePanByOffset(locationId, -PAN_STEP, 0)
+                              }
+                              aria-label={t("fields:graphical.panRight")}
+                              sx={{
+                                borderRadius: 0,
+                                p: 1.25,
+                                borderTop: "1px solid",
+                                borderColor: "divider",
+                              }}
+                            >
+                              <KeyboardArrowRightIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
                         <Tooltip
-                          title={t("fields:graphical.panLeft")}
+                          title={t("fields:graphical.panDown")}
                           placement="left"
                         >
                           <IconButton
                             size="small"
-                            onClick={() =>
-                              handlePanByOffset(locationId, PAN_STEP, 0)
-                            }
-                            aria-label={t("fields:graphical.panLeft")}
+                            onClick={() => handlePanByOffset(locationId, 0, -PAN_STEP)}
+                            aria-label={t("fields:graphical.panDown")}
                             sx={{
                               borderRadius: 0,
                               p: 1.25,
                               borderTop: "1px solid",
                               borderColor: "divider",
-                              borderRight: "1px solid",
                             }}
                           >
-                            <KeyboardArrowLeftIcon fontSize="small" />
+                            <KeyboardArrowDownIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip
-                          title={t("fields:graphical.panRight")}
-                          placement="left"
-                        >
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              handlePanByOffset(locationId, -PAN_STEP, 0)
-                            }
-                            aria-label={t("fields:graphical.panRight")}
-                            sx={{
-                              borderRadius: 0,
-                              p: 1.25,
-                              borderTop: "1px solid",
-                              borderColor: "divider",
-                            }}
-                          >
-                            <KeyboardArrowRightIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                      <Tooltip
-                        title={t("fields:graphical.panDown")}
-                        placement="left"
-                      >
-                        <IconButton
-                          size="small"
-                          onClick={() => handlePanByOffset(locationId, 0, -PAN_STEP)}
-                          aria-label={t("fields:graphical.panDown")}
-                          sx={{
-                            borderRadius: 0,
-                            p: 1.25,
-                            borderTop: "1px solid",
-                            borderColor: "divider",
-                          }}
-                        >
-                          <KeyboardArrowDownIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      </Box>
                       <Tooltip
                         title={t("fields:graphical.zoomIn")}
                         placement="left"
@@ -1354,18 +1424,20 @@ export default function GraphicalFields({
                     y={viewport.y}
                     scaleX={viewport.scale}
                     scaleY={viewport.scale}
-                    onDragStart={() =>
-                      handleStageDragStart(locationId, viewport)
+                    onMouseDown={(event) =>
+                      handleStageMouseDown(locationId, viewport, event)
                     }
-                    onDragMove={(event: KonvaEventObject<DragEvent>) =>
-                      handleStageDragMove(locationId, viewport, event)
+                    onMouseMove={(event) =>
+                      handleStageMouseMove(locationId, event)
                     }
-                    onDragEnd={(event: KonvaEventObject<DragEvent>) =>
-                      handleStageDragEnd(locationId, viewport, event)
-                    }
+                    onMouseUp={() => handleStageMouseUp(locationId)}
+                    onMouseLeave={() => handleStageMouseUp(locationId)}
                     onWheel={(event) => handleStageWheel(locationId, event)}
                     onDblTap={() => handleStageDoubleTap(locationId)}
                     onDblClick={() => handleStageDoubleTap(locationId)}
+                    onTouchStart={(event) =>
+                      handleStageTouchStart(locationId, viewport, event)
+                    }
                     onTouchMove={(event) =>
                       handleStageTouchMove(locationId, event)
                     }

@@ -87,9 +87,9 @@ class LocationAdmin(admin.ModelAdmin):
         list_display: Fields to display in the list view
         search_fields: Fields to include in the search functionality
     """
-    list_display = ['name', 'project', 'address', 'created_at']
+    list_display = ['name', 'project', 'address', 'soil_type', 'exposure', 'created_at']
     list_filter = ['project']
-    search_fields = ['name', 'address', 'project__name', 'project__slug']
+    search_fields = ['name', 'address', 'description', 'project__name', 'project__slug']
 
 
 @admin.register(Field)

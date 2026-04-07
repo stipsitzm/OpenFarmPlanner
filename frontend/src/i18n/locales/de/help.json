@@ -84,12 +84,46 @@
       ]
     },
     "graphical": {
-      "title": "Hilfe: Grafische Ansicht",
-      "points": [
-        "Hier siehst du Parzellen und Beete grafisch angeordnet.",
-        "Im Bearbeitungsmodus kannst du Elemente verschieben.",
-        "Nutze Zoom und Verschieben zur Navigation.",
-        "Klick auf ein Beet oder Element zum Bearbeiten."
+      "title": "Hilfe: Grafische Ansicht der Anbauflächen",
+      "sections": [
+        {
+          "title": "Was sehe ich hier?",
+          "points": [
+            "Hier siehst du deine Standorte, Parzellen und Beete grafisch angeordnet.",
+            "Diese Ansicht hilft dir, deine Anbauflächen übersichtlich zu planen.",
+            "Die Positionen entsprechen der realen Anordnung deiner Beete."
+          ]
+        },
+        {
+          "title": "Bedienung",
+          "points": [
+            "Klick auf ein Beet → Details anzeigen oder bearbeiten",
+            "Ziehen im Bearbeitungsmodus → Beete verschieben",
+            "Leere Fläche ziehen → Ansicht verschieben (Pan)",
+            "Scrollrad / Pinch → Zoomen"
+          ]
+        },
+        {
+          "title": "Icons erklären",
+          "points": [
+            "Pfeile → Ansicht verschieben",
+            "+ → Hineinzoomen",
+            "− → Herauszoomen",
+            "Rahmen-Icon → Auf gesamte Fläche zoomen",
+            "Vollbild-Icon → Maximale Ansicht anzeigen",
+            "Ansicht → Nur betrachten",
+            "Bearbeiten → Elemente verschieben und anpassen"
+          ]
+        },
+        {
+          "title": "Zusammenhang mit anderen Seiten",
+          "points": [
+            "1. Anbauflächen → Hier definierst du deine Beete und Parzellen",
+            "2. Anbaupläne → Hier planst du, was auf welchem Beet wächst",
+            "3. Anbaukalender → Hier siehst du die zeitliche Planung",
+            "4. Saatgutbedarf → Hier wird automatisch berechnet, wie viel Saatgut benötigt wird"
+          ]
+        }
       ]
     }
   }

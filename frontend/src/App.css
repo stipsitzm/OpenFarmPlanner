@@ -27,6 +27,12 @@
   z-index: 1200;
 }
 
+@media (max-width: 900px) {
+  .app-version-footer {
+    display: none;
+  }
+}
+
 body.hide-version-footer .app-version-footer {
   display: none;
 }

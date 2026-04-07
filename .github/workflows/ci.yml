@@ -22,7 +22,7 @@ jobs:
       - name: Install and test frontend
         run: |
           cd frontend
-          npm install
+          npm install --force
           npm run test:coverage
 
   backend-tests:
@@ -82,7 +82,7 @@ jobs:
       - name: Install frontend dependencies
         run: |
           cd frontend
-          npm install
+          npm install --force
 
       - name: Run quality gate
         run: make quality
