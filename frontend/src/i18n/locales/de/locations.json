@@ -13,10 +13,30 @@
   },
   "confirmDelete": "Möchten Sie diesen Standort wirklich löschen?",
   "addButton": "Neuen Standort hinzufügen",
+  "openInGoogleMaps": "In Google Maps öffnen",
   "columns": {
     "coordinates": "Koordinaten",
     "latitude": "Latitude",
-    "longitude": "Longitude"
+    "longitude": "Longitude",
+    "address": "Adresse",
+    "description": "Beschreibung",
+    "soilType": "Bodenart",
+    "exposure": "Exposition"
+  },
+  "helpers": {
+    "optionalField": "Optional"
+  },
+  "soilType": {
+    "sand": "Sand",
+    "loam": "Lehm",
+    "clay": "Ton"
+  },
+  "exposure": {
+    "north": "Nord",
+    "south": "Süd",
+    "east": "Ost",
+    "west": "West",
+    "flat": "Eben"
   },
   "placeholders": {
     "latitude": "z.B. 46,6145",

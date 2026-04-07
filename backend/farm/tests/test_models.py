@@ -73,10 +73,15 @@ class LocationModelTest(TestCase):
         location = Location.objects.create(
             name="Main Farm",
             address="123 Farm Road",
+            description="Acker hinter Hof",
+            soil_type=Location.SOIL_TYPE_LOAM,
+            exposure=Location.EXPOSURE_SOUTH,
             project=self.project,
         )
         self.assertEqual(str(location), "Main Farm")
         self.assertEqual(location.name, "Main Farm")
+        self.assertEqual(location.soil_type, Location.SOIL_TYPE_LOAM)
+        self.assertEqual(location.exposure, Location.EXPOSURE_SOUTH)
 
 
 class FieldModelTest(TestCase):

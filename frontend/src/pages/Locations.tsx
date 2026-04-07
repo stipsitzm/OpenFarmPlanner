@@ -9,8 +9,9 @@
 
 import { useMemo, useRef, useState } from 'react';
 import type { GridColDef } from '@mui/x-data-grid';
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, MenuItem, TextField, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useTranslation } from '../i18n';
 import { locationAPI, type Location } from '../api/api';
 import { EditableDataGrid, type EditableDataGridCommandApi, type EditableRow, type DataGridAPI } from '../components/data-grid';
@@ -39,6 +40,20 @@ const validateCoordinateRange = (
   max: number,
 ): boolean => value === null || (value >= min && value <= max);
 
+const SOIL_TYPE_OPTIONS: Array<{ value: NonNullable<Location['soil_type']>; key: string }> = [
+  { value: 'sand', key: 'sand' },
+  { value: 'loam', key: 'loam' },
+  { value: 'clay', key: 'clay' },
+];
+
+const EXPOSURE_OPTIONS: Array<{ value: NonNullable<Location['exposure']>; key: string }> = [
+  { value: 'north', key: 'north' },
+  { value: 'south', key: 'south' },
+  { value: 'east', key: 'east' },
+  { value: 'west', key: 'west' },
+  { value: 'flat', key: 'flat' },
+];
+
 function Locations(): React.ReactElement {
   const { t } = useTranslation(['locations', 'common']);
   const { i18n } = useTranslation();
@@ -49,6 +64,10 @@ function Locations(): React.ReactElement {
   const [newLocationName, setNewLocationName] = useState<string>('');
   const [newLocationLatitude, setNewLocationLatitude] = useState<string>('');
   const [newLocationLongitude, setNewLocationLongitude] = useState<string>('');
+  const [newLocationAddress, setNewLocationAddress] = useState<string>('');
+  const [newLocationDescription, setNewLocationDescription] = useState<string>('');
+  const [newLocationSoilType, setNewLocationSoilType] = useState<NonNullable<Location['soil_type']> | ''>('');
+  const [newLocationExposure, setNewLocationExposure] = useState<NonNullable<Location['exposure']> | ''>('');
   const [newLocationNotes, setNewLocationNotes] = useState<string>('');
   const [createError, setCreateError] = useState<string>('');
 
@@ -96,6 +115,10 @@ function Locations(): React.ReactElement {
     setNewLocationName('');
     setNewLocationLatitude('');
     setNewLocationLongitude('');
+    setNewLocationAddress('');
+    setNewLocationDescription('');
+    setNewLocationSoilType('');
+    setNewLocationExposure('');
     setNewLocationNotes('');
     setCreateError('');
     setCreateDialogOpen(false);
@@ -128,6 +151,10 @@ function Locations(): React.ReactElement {
     try {
       await locationAPI.create({
         name: newLocationName.trim(),
+        address: newLocationAddress.trim(),
+        description: newLocationDescription.trim(),
+        soil_type: newLocationSoilType || undefined,
+        exposure: newLocationExposure || undefined,
         latitude: latitude ?? undefined,
         longitude: longitude ?? undefined,
         notes: newLocationNotes.trim(),
@@ -152,6 +179,14 @@ function Locations(): React.ReactElement {
     }
     const separator = i18n.language.startsWith('de') ? '; ' : ', ';
     return `${formatCoordinate(latitude)}${separator}${formatCoordinate(longitude)}`;
+  };
+
+  const formatOptionLabel = (
+    group: 'soilType' | 'exposure',
+    value: string | null | undefined,
+  ): string => {
+    if (!value) return '—';
+    return t(`locations:${group}.${value}`, { defaultValue: value });
   };
 
   const columns: GridColDef[] = [
@@ -181,12 +216,38 @@ function Locations(): React.ReactElement {
         if (typeof row.latitude !== 'number' || typeof row.longitude !== 'number') {
           return '—';
         }
-        const label = formatCoordinates(row.latitude, row.longitude);
+        return formatCoordinates(row.latitude, row.longitude);
+      },
+    },
+    {
+      field: 'googleMaps',
+      headerName: '',
+      width: 64,
+      sortable: false,
+      filterable: false,
+      editable: false,
+      disableColumnMenu: true,
+      align: 'center',
+      renderCell: (params) => {
+        const row = params.row as LocationRow;
+        if (typeof row.latitude !== 'number' || typeof row.longitude !== 'number') {
+          return null;
+        }
         const href = `https://www.google.com/maps?q=${row.latitude},${row.longitude}`;
         return (
-          <a href={href} target="_blank" rel="noreferrer">
-            {label}
-          </a>
+          <Tooltip title={t('locations:openInGoogleMaps')}>
+            <IconButton
+              size="small"
+              component="a"
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={t('locations:openInGoogleMaps')}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <OpenInNewIcon fontSize="inherit" />
+            </IconButton>
+          </Tooltip>
         );
       },
     },
@@ -209,6 +270,50 @@ function Locations(): React.ReactElement {
         if (typeof value !== 'number') return '';
         return formatCoordinate(value);
       },
+    },
+    {
+      field: 'address',
+      headerName: t('locations:columns.address'),
+      width: 220,
+      editable: true,
+    },
+    {
+      field: 'description',
+      headerName: t('locations:columns.description'),
+      width: 260,
+      editable: true,
+      renderCell: (params) => (
+        <Box
+          component="span"
+          sx={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            display: 'block',
+            width: '100%',
+          }}
+        >
+          {String(params.value || '—')}
+        </Box>
+      ),
+    },
+    {
+      field: 'soil_type',
+      headerName: t('locations:columns.soilType'),
+      width: 150,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: SOIL_TYPE_OPTIONS.map((option) => option.value),
+      valueFormatter: (value) => formatOptionLabel('soilType', typeof value === 'string' ? value : null),
+    },
+    {
+      field: 'exposure',
+      headerName: t('locations:columns.exposure'),
+      width: 140,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: EXPOSURE_OPTIONS.map((option) => option.value),
+      valueFormatter: (value) => formatOptionLabel('exposure', typeof value === 'string' ? value : null),
     },
     {
       field: 'notes',
@@ -261,6 +366,46 @@ function Locations(): React.ReactElement {
               placeholder={t('locations:placeholders.longitude')}
             />
             <TextField
+              label={t('locations:columns.address')}
+              value={newLocationAddress}
+              onChange={(event) => setNewLocationAddress(event.target.value)}
+            />
+            <TextField
+              label={t('locations:columns.description')}
+              value={newLocationDescription}
+              onChange={(event) => setNewLocationDescription(event.target.value)}
+              multiline
+              minRows={2}
+            />
+            <TextField
+              select
+              label={t('locations:columns.soilType')}
+              value={newLocationSoilType}
+              onChange={(event) => setNewLocationSoilType(event.target.value as NonNullable<Location['soil_type']> | '')}
+              helperText={t('locations:helpers.optionalField')}
+            >
+              <MenuItem value="">{t('common:messages.noData')}</MenuItem>
+              {SOIL_TYPE_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {t(`locations:soilType.${option.key}`)}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label={t('locations:columns.exposure')}
+              value={newLocationExposure}
+              onChange={(event) => setNewLocationExposure(event.target.value as NonNullable<Location['exposure']> | '')}
+              helperText={t('locations:helpers.optionalField')}
+            >
+              <MenuItem value="">{t('common:messages.noData')}</MenuItem>
+              {EXPOSURE_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {t(`locations:exposure.${option.key}`)}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
               label={t('common:fields.notes')}
               value={newLocationNotes}
               onChange={(event) => setNewLocationNotes(event.target.value)}
@@ -282,6 +427,10 @@ function Locations(): React.ReactElement {
           name: '',
           latitude: undefined,
           longitude: undefined,
+          address: '',
+          description: '',
+          soil_type: null,
+          exposure: null,
           notes: '',
           isNew: true,
         })}
@@ -291,6 +440,10 @@ function Locations(): React.ReactElement {
           name: loc.name || '',
           latitude: typeof loc.latitude === 'number' ? loc.latitude : undefined,
           longitude: typeof loc.longitude === 'number' ? loc.longitude : undefined,
+          address: loc.address || '',
+          description: loc.description || '',
+          soil_type: loc.soil_type ?? null,
+          exposure: loc.exposure ?? null,
           notes: loc.notes || '',
         })}
         mapToApiData={(row) => {
@@ -306,6 +459,10 @@ function Locations(): React.ReactElement {
             name: row.name,
             latitude: latitudeValue ?? undefined,
             longitude: longitudeValue ?? undefined,
+            address: row.address?.trim() || '',
+            description: row.description?.trim() || '',
+            soil_type: row.soil_type || null,
+            exposure: row.exposure || null,
             notes: row.notes || '',
             ...((row as LocationRow & { project?: number }).project
               ? { project: (row as LocationRow & { project?: number }).project }

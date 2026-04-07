@@ -397,8 +397,33 @@ def is_supplier_domain(url: str, supplier: Supplier | None) -> bool:
 
 class Location(TimestampedModel):
     """A physical farm location that can contain multiple fields."""
+    SOIL_TYPE_SAND = 'sand'
+    SOIL_TYPE_LOAM = 'loam'
+    SOIL_TYPE_CLAY = 'clay'
+    SOIL_TYPE_CHOICES = [
+        (SOIL_TYPE_SAND, 'Sand'),
+        (SOIL_TYPE_LOAM, 'Loam'),
+        (SOIL_TYPE_CLAY, 'Clay'),
+    ]
+
+    EXPOSURE_NORTH = 'north'
+    EXPOSURE_SOUTH = 'south'
+    EXPOSURE_EAST = 'east'
+    EXPOSURE_WEST = 'west'
+    EXPOSURE_FLAT = 'flat'
+    EXPOSURE_CHOICES = [
+        (EXPOSURE_NORTH, 'North'),
+        (EXPOSURE_SOUTH, 'South'),
+        (EXPOSURE_EAST, 'East'),
+        (EXPOSURE_WEST, 'West'),
+        (EXPOSURE_FLAT, 'Flat'),
+    ]
+
     name = models.CharField(max_length=200)
     address = models.TextField(blank=True)
+    description = models.TextField(blank=True)
+    soil_type = models.CharField(max_length=20, choices=SOIL_TYPE_CHOICES, null=True, blank=True)
+    exposure = models.CharField(max_length=20, choices=EXPOSURE_CHOICES, null=True, blank=True)
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     notes = models.TextField(blank=True)
