@@ -381,7 +381,7 @@ function GanttChartPage(): React.ReactElement {
       <div className="page-container">
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <h1>{t('ganttChart:title')}</h1>
-          <PageHelp pageKey="graphical" />
+          <PageHelp pageKey="calendar" />
         </Box>
         <p>{t('ganttChart:loading')}</p>
       </div>
@@ -392,7 +392,7 @@ function GanttChartPage(): React.ReactElement {
     <div className="page-container">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <h1>{t('ganttChart:title')}</h1>
-        <PageHelp pageKey="graphical" />
+        <PageHelp pageKey="calendar" />
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

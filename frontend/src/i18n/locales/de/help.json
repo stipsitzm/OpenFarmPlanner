@@ -1,6 +1,28 @@
 {
   "showTooltip": "Hilfe anzeigen",
-  "hideForPage": "Nicht mehr auf dieser Seite anzeigen",
+  "title": "Hilfe",
+  "heading": "So funktioniert OpenFarmPlanner",
+  "intro": "OpenFarmPlanner besteht aus mehreren Seiten, die zusammenarbeiten:",
+  "sections": [
+    {
+      "title": "Standorte / Anbauflächen",
+      "points": ["Hier legst du Standorte, Parzellen und Beete an."]
+    },
+    {
+      "title": "Anbaupläne",
+      "points": ["Hier planst du, welche Kultur auf welchem Beet angebaut wird."]
+    },
+    {
+      "title": "Anbaukalender",
+      "points": ["Hier siehst du die zeitliche Planung deiner Anbaupläne."]
+    },
+    {
+      "title": "Saatgutbedarf",
+      "points": ["Daraus wird berechnet, wie viel Saatgut du brauchst."]
+    }
+  ],
+  "workflowTitle": "Workflow",
+  "workflow": "Standorte → Beete → Anbaupläne → Anbaukalender → Saatgutbedarf",
   "pages": {
     "dashboard": {
       "title": "Hilfe: Übersicht",
@@ -39,49 +61,223 @@
       ]
     },
     "areas": {
-      "title": "Hilfe: Anbauflächen",
-      "points": [
-        "Hier verwaltest du Anbauflächen.",
-        "Anbauflächen verbinden Beete mit Kulturen oder Planungen.",
-        "Mit „Neu“ legst du eine Fläche an.",
-        "Tabellenzeilen sind anklickbar und können bearbeitet werden."
-      ]
+      "title": "Hilfe: Listenansicht der Anbauflächen",
+      "sections": [
+        {
+          "title": "Was sehe ich hier?",
+          "points": [
+            "Hier siehst du deine Standorte, Parzellen und Beete in einer übersichtlichen Listenansicht.",
+            "Die Einträge sind hierarchisch aufgebaut: Standorte enthalten Parzellen, Parzellen enthalten Beete.",
+            "Diese Ansicht ist besonders geeignet, um Flächen strukturiert zu verwalten und Eigenschaften schnell zu erfassen oder zu ändern."
+          ]
+        },
+        {
+          "title": "Bedienung",
+          "points": [
+            "Klicke auf den Pfeil vor einem Eintrag, um untergeordnete Elemente ein- oder auszuklappen.",
+            "Klicke auf einen Eintrag, um Details direkt zu sehen oder zu bearbeiten.",
+            "Über Plus-Symbole kannst du neue Standorte, Parzellen oder Beete anlegen.",
+            "Die Listenansicht eignet sich besonders gut für Verwaltung, Bearbeitung und den schnellen Überblick über viele Flächen."
+          ]
+        },
+        {
+          "title": "Zusammenhang mit anderen Seiten",
+          "points": [
+            "Hier legst du die Flächenstruktur fest, die später in anderen Bereichen verwendet wird.",
+            "In den Anbauplänen ordnest du Kulturen bestimmten Beeten zu.",
+            "Im Anbaukalender siehst du die zeitliche Planung dieser Anbaupläne.",
+            "Aus den Anbauplänen wird der Saatgutbedarf berechnet."
+          ]
+        }
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "expandToggle": "Pfeil-Symbol → Untergeordnete Elemente anzeigen oder ausblenden",
+        "add": "Plus-Symbol → Neues Element anlegen",
+        "delete": "Papierkorb-Symbol → Element löschen",
+        "createPlan": "Traktor-Symbol → Direkt einen Anbauplan für ein Beet anlegen",
+        "dimensions": "Längen-/Breiten-Symbole → Orientierung für Maßeingaben in den Spalten"
+      }
     },
     "cultures": {
       "title": "Hilfe: Kulturen",
-      "points": [
-        "Hier verwaltest du alle Kulturen.",
-        "Mit „Neu“ legst du eine Kultur an.",
-        "Tabellenzeilen sind anklickbar und können bearbeitet werden.",
-        "Nutze Filter oder Suche zum Eingrenzen."
-      ]
+      "sections": [
+        {
+          "title": "Was sehe ich hier?",
+          "points": [
+            "Hier verwaltest du alle Kulturen und ihre wichtigsten Eigenschaften.",
+            "Zu jeder Kultur kannst du zum Beispiel Name, Sorte, Abstände, Zeiträume sowie Saatgut- und Planungshinweise pflegen.",
+            "Diese Daten werden später in den Anbauplänen verwendet."
+          ]
+        },
+        {
+          "title": "Bedienung",
+          "points": [
+            "Wähle eine Kultur aus der Liste aus, um Details zu sehen oder zu bearbeiten.",
+            "Mit „Neu“ legst du eine neue Kultur an.",
+            "Bestehende Einträge kannst du bearbeiten, exportieren, löschen oder direkt für einen Anbauplan verwenden.",
+            "Über die Bibliothek kannst du Kulturen aus der öffentlichen Sammlung übernehmen."
+          ]
+        },
+        {
+          "title": "Zusammenhang mit anderen Seiten",
+          "points": [
+            "Kulturen liefern die fachlichen Eigenschaften für deine Planung.",
+            "In den Anbauplänen ordnest du Kulturen konkreten Beeten und Zeiträumen zu.",
+            "Der Anbaukalender und der Saatgutbedarf nutzen diese Daten für Zeit- und Mengenplanung."
+          ]
+        }
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "add": "Plus-Symbol → Neue Kultur anlegen",
+        "library": "Globus-Symbol → Öffentliche Kulturbibliothek öffnen",
+        "more": "Drei-Punkte-Symbol → Import/Export-Aktionen öffnen",
+        "edit": "Bearbeiten-Schaltfläche → Kulturdaten ändern",
+        "delete": "Löschen-Schaltfläche → Kultur entfernen"
+      }
     },
     "plantingPlans": {
-      "title": "Hilfe: Anbauplan",
-      "points": [
-        "Hier planst du den Anbau deiner Kulturen.",
-        "Mit „Neu“ legst du einen Eintrag an.",
-        "Tabellenzeilen sind anklickbar und können bearbeitet werden.",
-        "Die grafische Ansicht zeigt die Belegung der Beete."
-      ]
+      "title": "Hilfe: Anbaupläne",
+      "sections": [
+        {
+          "title": "Was sehe ich hier?",
+          "points": [
+            "Hier planst du, welche Kultur auf welchem Beet angebaut wird.",
+            "Jeder Eintrag verbindet Kultur, Beet und Zeitraum miteinander.",
+            "Damit legst du die Grundlage für Kalenderansicht und Saatgutbedarf fest."
+          ]
+        },
+        {
+          "title": "Bedienung",
+          "points": [
+            "Einträge kannst du direkt in der Tabelle erstellen und bearbeiten.",
+            "Mit „Neu“ legst du einen zusätzlichen Plan an.",
+            "Änderungen zu Fläche, Zeitraum oder Kultur werden direkt in der Planung übernommen.",
+            "Auf Mobilgeräten kannst du neue Einträge über den schwebenden Plus-Button anlegen."
+          ]
+        },
+        {
+          "title": "Zusammenhang mit anderen Seiten",
+          "points": [
+            "Anbaupläne verbinden die Flächenstruktur aus den Anbauflächen mit den Kulturdaten.",
+            "Im Anbaukalender siehst du daraus die zeitliche Abfolge.",
+            "Der Saatgutbedarf wird aus diesen Planungen berechnet."
+          ]
+        }
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "add": "Plus-Symbol → Neuen Anbauplan anlegen",
+        "mobileAdd": "Schwebender Plus-Button (mobil) → Schnell neuen Eintrag erfassen",
+        "notes": "Notiz-/Anhang-Symbol → Notizen und Anhänge pro Eintrag öffnen",
+        "edit": "Bearbeitungsmodus in der Tabelle → Werte direkt ändern"
+      }
+    },
+    "calendar": {
+      "title": "Hilfe: Anbaukalender",
+      "sections": [
+        {
+          "title": "Was sehe ich hier?",
+          "points": [
+            "Hier siehst du die zeitliche Planung deiner Anbaupläne als Kalenderansicht.",
+            "Die Ansicht zeigt, wann Kulturen geplant, vorgezogen, gepflanzt oder geerntet werden.",
+            "So erkennst du Engpässe und Überschneidungen frühzeitig."
+          ]
+        },
+        {
+          "title": "Bedienung",
+          "points": [
+            "Über die Tabs wechselst du zwischen Belegungs- und Anzuchtansicht.",
+            "Nutze den Schalter, um den Wochen-Ertragskalender ein- oder auszublenden.",
+            "Bewege dich durch die Zeitleiste, um kommende Zeiträume und Belegungen zu prüfen.",
+            "Fahre über Einträge, um Detailinformationen im Tooltip zu sehen."
+          ]
+        },
+        {
+          "title": "Zusammenhang mit anderen Seiten",
+          "points": [
+            "Der Kalender basiert auf den Daten aus den Anbauplänen.",
+            "Wenn du Zeiträume in den Anbauplänen änderst, aktualisiert sich diese Ansicht entsprechend.",
+            "Die Kalenderansicht unterstützt dich bei der operativen Saisonplanung."
+          ]
+        }
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "tabs": "Tab-Leiste → Zwischen Ansichten wechseln",
+        "switch": "Schalter → Wochen-Ertragskalender ein-/ausblenden",
+        "tooltip": "Tooltip bei Kalendereinträgen → Zusätzliche Detailinformationen anzeigen"
+      }
     },
     "seedDemand": {
       "title": "Hilfe: Saatgutbedarf",
-      "points": [
-        "Hier wird der Saatgutbedarf berechnet.",
-        "Die Daten basieren auf Kulturen und Anbauplanung.",
-        "Nutze Filter zum Eingrenzen der Anzeige.",
-        "Die Ansicht hilft dir bei der Bestellvorbereitung."
-      ]
+      "sections": [
+        {
+          "title": "Was sehe ich hier?",
+          "points": [
+            "Hier siehst du, wie viel Saatgut du für deine geplanten Anbaupläne benötigst.",
+            "Die Mengen werden aus Kulturdaten, Flächen und Planungseinträgen abgeleitet.",
+            "Die Tabelle hilft dir, den Einkauf gezielt vorzubereiten."
+          ]
+        },
+        {
+          "title": "Bedienung",
+          "points": [
+            "Wähle pro Kultur einen Lieferanten aus, um passende Packungsvorschläge zu erhalten.",
+            "Prüfe benötigte Mengen und vorgeschlagene Packungskombinationen direkt in der Tabelle.",
+            "Nutze die Ansicht, um Bestellungen konsistent mit deiner Planung abzustimmen."
+          ]
+        },
+        {
+          "title": "Zusammenhang mit anderen Seiten",
+          "points": [
+            "Die Grundlage kommt aus den Anbauplänen und den Kulturdaten.",
+            "Lieferanten- und Packungsinformationen ergänzen die Mengenplanung für den Einkauf.",
+            "Änderungen in Kultur oder Planung wirken sich direkt auf den Bedarf aus."
+          ]
+        }
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "supplierSelect": "Auswahlliste je Zeile → Lieferanten pro Kultur festlegen",
+        "packageInfo": "Packungsvorschlag-Spalte → Empfohlene Kombinationen für den Bedarf"
+      }
     },
     "suppliers": {
       "title": "Hilfe: Lieferanten",
-      "points": [
-        "Hier verwaltest du Saatgutlieferanten.",
-        "Lieferanten können Kulturen und Saatgutdaten zugeordnet werden.",
-        "Mit „Neu“ legst du einen Lieferanten an.",
-        "Tabellenzeilen sind anklickbar und können bearbeitet werden."
-      ]
+      "sections": [
+        {
+          "title": "Was sehe ich hier?",
+          "points": [
+            "Hier verwaltest du Saatgutlieferanten und Bezugsquellen.",
+            "Zu jedem Lieferanten kannst du wichtige Bezugsinformationen wie Name und Website hinterlegen.",
+            "Diese Daten werden später in Kulturen und Saatgutbedarf verwendet."
+          ]
+        },
+        {
+          "title": "Bedienung",
+          "points": [
+            "Mit „Neu“ legst du einen weiteren Lieferanten an.",
+            "Bestehende Einträge kannst du bearbeiten und speichern.",
+            "Nicht mehr benötigte Lieferanten kannst du direkt in der Tabelle entfernen."
+          ]
+        },
+        {
+          "title": "Zusammenhang mit anderen Seiten",
+          "points": [
+            "Lieferanten ergänzen Kulturen um Bezugs- und Einkaufsinformationen.",
+            "Im Saatgutbedarf helfen sie dir, passende Packungen und Quellen auszuwählen.",
+            "So verbindest du Planung und Einkauf an einer zentralen Stelle."
+          ]
+        }
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "add": "Schaltfläche „Neu“ → Lieferanten anlegen",
+        "edit": "Schaltfläche „Bearbeiten“ → Lieferantendaten ändern",
+        "delete": "Löschen-Symbol → Lieferanten entfernen"
+      }
     },
     "graphical": {
       "title": "Hilfe: Grafische Ansicht der Anbauflächen",
@@ -90,41 +286,34 @@
           "title": "Was sehe ich hier?",
           "points": [
             "Hier siehst du deine Standorte, Parzellen und Beete grafisch angeordnet.",
-            "Diese Ansicht hilft dir, deine Anbauflächen übersichtlich zu planen.",
-            "Die Positionen entsprechen der realen Anordnung deiner Beete."
+            "Diese Ansicht hilft dir, die Anbauflächen räumlich zu erfassen und die Planung übersichtlich zu halten.",
+            "Die Anordnung kann der realen Position deiner Beete entsprechen."
           ]
         },
         {
           "title": "Bedienung",
           "points": [
-            "Klick auf ein Beet → Details anzeigen oder bearbeiten",
-            "Ziehen im Bearbeitungsmodus → Beete verschieben",
-            "Leere Fläche ziehen → Ansicht verschieben (Pan)",
-            "Scrollrad / Pinch → Zoomen"
-          ]
-        },
-        {
-          "title": "Icons erklären",
-          "points": [
-            "Pfeile → Ansicht verschieben",
-            "+ → Hineinzoomen",
-            "− → Herauszoomen",
-            "Rahmen-Icon → Auf gesamte Fläche zoomen",
-            "Vollbild-Icon → Maximale Ansicht anzeigen",
-            "Ansicht → Nur betrachten",
-            "Bearbeiten → Elemente verschieben und anpassen"
-          ]
-        },
-        {
-          "title": "Zusammenhang mit anderen Seiten",
-          "points": [
-            "1. Anbauflächen → Hier definierst du deine Beete und Parzellen",
-            "2. Anbaupläne → Hier planst du, was auf welchem Beet wächst",
-            "3. Anbaukalender → Hier siehst du die zeitliche Planung",
-            "4. Saatgutbedarf → Hier wird automatisch berechnet, wie viel Saatgut benötigt wird"
+            "Klick auf ein Beet oder eine Parzelle um Details anzuzeigen.",
+            "Im Modus „Bearbeiten“ kannst du Elemente verschieben.",
+            "Leere Fläche ziehen → Ansicht verschieben",
+            "Scrollrad oder Pinch-Geste → Zoomen"
           ]
         }
-      ]
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "panArrows": "Pfeiltasten-Symbole → Ansicht nach oben, links, rechts oder unten verschieben",
+        "zoomIn": "Plus-Icon → Hineinzoomen",
+        "zoomOut": "Minus-Icon → Herauszoomen",
+        "fit": "Rahmen-Icon → Auf die gesamte Fläche einpassen",
+        "fullscreen": "Vollbild-Icon → Größtmögliche Ansicht anzeigen"
+      },
+      "modeTitle": "Modus",
+      "modeLabel": "Modus",
+      "modeView": "Ansicht",
+      "modeEdit": "Bearbeiten",
+      "modeViewDescription": "„Ansicht“ = nur ansehen und navigieren",
+      "modeEditDescription": "„Bearbeiten“ = Elemente verschieben und anordnen"
     }
   }
 }

@@ -892,7 +892,6 @@ function Cultures(): React.ReactElement {
       >
         <h1>{t('title')}</h1>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 'auto' }}>
-          <PageHelp pageKey="cultures" />
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNew}>
             {t('buttons.addNew')}
           </Button>
@@ -908,6 +907,7 @@ function Cultures(): React.ReactElement {
           >
             <MoreVertIcon />
           </IconButton>
+          <PageHelp pageKey="cultures" />
         </Box>
         <Menu
           id="culture-import-menu"
