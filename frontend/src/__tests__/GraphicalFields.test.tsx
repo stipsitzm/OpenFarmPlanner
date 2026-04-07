@@ -63,6 +63,18 @@ const createKonvaTarget = (positionRef: {
   y: () => positionRef.current.y,
 });
 
+const createTouchLikeEvent = (
+  type: string,
+  points: Array<{ clientX: number; clientY: number }>,
+): TouchEvent => {
+  const event = new Event(type, { bubbles: true, cancelable: true }) as TouchEvent;
+  Object.defineProperty(event, "touches", {
+    value: points,
+    configurable: true,
+  });
+  return event;
+};
+
 vi.mock("../components/hierarchy/hooks/useHierarchyData", () => ({
   useHierarchyData: () => mockUseHierarchyData(),
 }));
@@ -553,7 +565,7 @@ describe("GraphicalFields", () => {
     expect(Number(resetStage.getAttribute("data-y"))).not.toBe(movedY);
   }, 15000);
 
-  it("does not pan in edit mode and does not move stored object positions", async () => {
+  it("allows panning in edit mode when gesture starts on empty canvas and keeps object coordinates unchanged", async () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(screen.getByRole("button", { name: "Standort: Hof Nord" }));
@@ -582,15 +594,16 @@ describe("GraphicalFields", () => {
       });
     });
 
-    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-x"))).toBe(startX);
-    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-y"))).toBe(startY);
+    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-x"))).toBeGreaterThan(startX);
+    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-y"))).toBeGreaterThan(startY);
     expect(mockKonvaNodes["field-rect-10"].getPosition()).toEqual(fieldStartPosition);
   }, 15000);
 
-  it("does not start panning when pointer down starts on an interactive object", () => {
+  it("does not start panning in edit mode when pointer down starts on an interactive object", () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(screen.getByRole("button", { name: "Standort: Hof Nord" }));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
     const stage = screen.getByTestId("konva-stage");
@@ -618,6 +631,40 @@ describe("GraphicalFields", () => {
 
     expect(Number(screen.getByTestId("konva-stage").getAttribute("data-x"))).toBe(startX);
     expect(Number(screen.getByTestId("konva-stage").getAttribute("data-y"))).toBe(startY);
+  }, 15000);
+
+  it("supports one-finger touch panning on empty canvas in edit mode", () => {
+    render(<GraphicalFields />);
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Standort: Hof Nord" }));
+      fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    });
+
+    const stage = screen.getByTestId("konva-stage");
+    const startX = Number(stage.getAttribute("data-x"));
+    const startY = Number(stage.getAttribute("data-y"));
+    const stageTarget = {
+      getStage() {
+        return this;
+      },
+    };
+
+    act(() => {
+      mockStageApi.setPointer(80, 100);
+      mockStageApi.handlers.onTouchStart?.({
+        evt: createTouchLikeEvent("touchstart", [{ clientX: 80, clientY: 100 }]),
+        target: stageTarget,
+      });
+      mockStageApi.setPointer(140, 155);
+      mockStageApi.handlers.onTouchMove?.({
+        evt: createTouchLikeEvent("touchmove", [{ clientX: 140, clientY: 155 }]),
+        target: stageTarget,
+      });
+      mockStageApi.handlers.onTouchEnd?.();
+    });
+
+    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-x"))).toBeGreaterThan(startX);
+    expect(Number(screen.getByTestId("konva-stage").getAttribute("data-y"))).toBeGreaterThan(startY);
   }, 15000);
 
   it("prevents object dragging in view mode and keeps the object position unchanged", async () => {

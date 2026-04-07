@@ -706,9 +706,6 @@ export default function GraphicalFields({
   const canStartPanSession = (
     event: KonvaEventObject<MouseEvent | TouchEvent>,
   ): boolean => {
-    if (isEditMode) {
-      return false;
-    }
     const target = event.target;
     const stage = target?.getStage?.();
     if (!stage || target !== stage) {
@@ -766,7 +763,6 @@ export default function GraphicalFields({
 
   const handleStageTouchMove = (
     locationId: number,
-    viewport: ViewportState,
     event: KonvaEventObject<TouchEvent>,
   ): void => {
     const stage = stageRefs.current[locationId];
@@ -777,9 +773,7 @@ export default function GraphicalFields({
 
     if (touches.length === 1) {
       pinchStateRef.current[locationId] = null;
-      if (!panSessionRef.current[locationId]) {
-        beginPanSession(locationId, viewport, event);
-      }
+      if (!panSessionRef.current[locationId]) return;
       continuePanSession(locationId, event);
       return;
     }
@@ -1453,7 +1447,7 @@ export default function GraphicalFields({
                       handleStageTouchStart(locationId, viewport, event)
                     }
                     onTouchMove={(event) =>
-                      handleStageTouchMove(locationId, viewport, event)
+                      handleStageTouchMove(locationId, event)
                     }
                     onTouchEnd={() => handleStageTouchEnd(locationId)}
                     onMouseEnter={() => setActivePanLocationId(locationId)}
