@@ -12,17 +12,15 @@ import {
   DialogContent,
   DialogTitle,
   Grid,
-  IconButton,
+  Link,
   MenuItem,
   Stack,
   TextField,
-  Tooltip,
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, type Bed, type Culture, type Field, type Location, type PlantingPlan } from '../api/api';
 import PageHelp from '../components/help/PageHelp';
 import { useTranslation } from '../i18n';
@@ -273,30 +271,16 @@ function Locations(): React.ReactElement {
               <Grid key={location.id} item xs={12} sm={6} lg={4}>
                 <Card variant="outlined" sx={{ height: '100%' }}>
                   <CardContent>
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1}>
-                      <Typography variant="h6">{location.name}</Typography>
-                      {mapLink ? (
-                        <Tooltip title={t('locations:openInGoogleMaps')}>
-                          <IconButton
-                            size="small"
-                            component="a"
-                            href={mapLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            aria-label={t('locations:openInGoogleMaps')}
-                          >
-                            <OpenInNewIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      ) : null}
-                    </Stack>
+                    <Typography variant="h6" mb={1}>{location.name}</Typography>
 
                     <Stack spacing={1}>
                       <Typography variant="body2">
                         <strong>{t('locations:columns.coordinates')}:</strong>{' '}
-                        {hasCoordinates
-                          ? `${formatCoordinate(location.latitude!, numberLocale)}; ${formatCoordinate(location.longitude!, numberLocale)}`
-                          : '—'}
+                        {hasCoordinates && mapLink ? (
+                          <Link href={mapLink} target="_blank" rel="noreferrer" underline="hover">
+                            {`${formatCoordinate(location.latitude!, numberLocale)}; ${formatCoordinate(location.longitude!, numberLocale)}`}
+                          </Link>
+                        ) : '—'}
                       </Typography>
                       <Typography variant="body2"><strong>{t('locations:columns.address')}:</strong> {location.address || '—'}</Typography>
                       <Typography variant="body2"><strong>{t('locations:columns.soilType')}:</strong> {location.soil_type ? t(`locations:soilType.${location.soil_type}`) : '—'}</Typography>
