@@ -7,9 +7,9 @@
   },
   "validation": {
     "nameRequired": "Name ist ein Pflichtfeld",
-    "latitudeRange": "Latitude muss zwischen -90 und 90 liegen.",
-    "longitudeRange": "Longitude muss zwischen -180 und 180 liegen.",
-    "coordinateInvalid": "{{field}} muss eine gültige Zahl sein."
+    "latitudeRange": "Der Breitengrad muss zwischen -90 und 90 liegen.",
+    "longitudeRange": "Der Längengrad muss zwischen -180 und 180 liegen.",
+    "coordinateFormat": "Bitte Koordinaten im Format „Breitengrad, Längengrad“ eingeben."
   },
   "confirmDelete": "Möchten Sie diesen Standort wirklich löschen?",
   "addButton": "Neuen Standort hinzufügen",
@@ -34,7 +34,8 @@
     "exposure": "Exposition"
   },
   "helpers": {
-    "optionalField": "Optional"
+    "optionalField": "Optional",
+    "coordinatesExample": "Beispiel: 46.6473, 13.8688"
   },
   "soilType": {
     "sand": "Sand",
@@ -49,7 +50,6 @@
     "flat": "Eben"
   },
   "placeholders": {
-    "latitude": "z.B. 46,6145",
-    "longitude": "z.B. 13,8503"
+    "coordinates": "z.B. 46.6473, 13.8688"
   }
 }

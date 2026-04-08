@@ -1,4 +1,4 @@
-import { Box, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
