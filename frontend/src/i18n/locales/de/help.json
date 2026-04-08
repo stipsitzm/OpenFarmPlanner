@@ -43,12 +43,44 @@
     },
     "locations": {
       "title": "Hilfe: Standorte",
-      "points": [
-        "Hier verwaltest du deine Standorte.",
-        "Ein Standort kann mehrere Parzellen enthalten.",
-        "Mit „Neu“ legst du einen Standort an.",
-        "Tabellenzeilen sind anklickbar und können bearbeitet werden."
-      ]
+      "sections": [
+        {
+          "title": "Was sehe ich hier?",
+          "points": [
+            "Hier verwaltest du deine Standorte.",
+            "Ein Standort kann mehrere Parzellen und Beete enthalten.",
+            "Zu jedem Standort kannst du Informationen wie Koordinaten, Adresse, Bodenart oder Beschreibung speichern.",
+            "Anstehende Aufgaben werden direkt beim Standort angezeigt.",
+            "Diese Ansicht hilft dir, deine Flächen räumlich zu organisieren und den Überblick zu behalten."
+          ]
+        },
+        {
+          "title": "Bedienung",
+          "points": [
+            "Klicke auf einen Standort, um Details zu sehen oder zu bearbeiten.",
+            "Mit „Neuer Standort“ legst du einen neuen Standort an.",
+            "Bestehende Standorte kannst du bearbeiten oder löschen.",
+            "Aufgaben werden automatisch aus den Anbauplänen berechnet.",
+            "Koordinaten können direkt zu Google Maps führen."
+          ]
+        },
+        {
+          "title": "Zusammenhang mit anderen Seiten",
+          "points": [
+            "Standorte bilden die oberste Ebene deiner Flächenstruktur.",
+            "Parzellen und Beete aus den Anbauflächen greifen auf diese Struktur zurück.",
+            "Anbaupläne ordnen Kulturen den Beeten innerhalb deiner Standorte zu.",
+            "Der Anbaukalender und der Saatgutbedarf nutzen diese Zuordnungen für Zeit- und Mengenplanung."
+          ]
+        }
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "add": "Neuen Standort hinzufügen",
+        "edit": "Standort bearbeiten",
+        "delete": "Standort löschen",
+        "map": "Koordinaten in Google Maps öffnen"
+      }
     },
     "fields": {
       "title": "Hilfe: Parzellen",

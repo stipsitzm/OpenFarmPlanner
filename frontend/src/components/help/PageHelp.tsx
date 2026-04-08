@@ -3,7 +3,9 @@ import AgricultureIcon from '@mui/icons-material/Agriculture';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditIcon from '@mui/icons-material/Edit';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import FitScreenIcon from '@mui/icons-material/FitScreen';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -16,6 +18,7 @@ import NoteAltIcon from '@mui/icons-material/NoteAlt';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import PublicIcon from '@mui/icons-material/Public';
 import RemoveIcon from '@mui/icons-material/Remove';
+import RoomOutlinedIcon from '@mui/icons-material/RoomOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import TabIcon from '@mui/icons-material/Tab';
@@ -71,6 +74,12 @@ interface SymbolDefinition {
 }
 
 const PAGE_SYMBOL_DEFINITIONS: Partial<Record<HelpPageKey, SymbolDefinition[]>> = {
+  locations: [
+    { key: 'add', icon: <AddIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'edit', icon: <EditOutlinedIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'delete', icon: <DeleteOutlineIcon fontSize="small" sx={{ color: 'error.main' }} /> },
+    { key: 'map', icon: <RoomOutlinedIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+  ],
   areas: [
     { key: 'add', icon: <AddIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
     { key: 'createPlan', icon: <AgricultureIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
@@ -95,31 +104,31 @@ const PAGE_SYMBOL_DEFINITIONS: Partial<Record<HelpPageKey, SymbolDefinition[]>> 
     { key: 'delete', icon: <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} /> },
   ],
   cultures: [
-    { key: 'add', icon: <AddIcon fontSize="small" /> },
-    { key: 'library', icon: <PublicIcon fontSize="small" /> },
-    { key: 'edit', icon: <EditIcon fontSize="small" /> },
-    { key: 'more', icon: <MoreVertIcon fontSize="small" /> },
-    { key: 'delete', icon: <DeleteIcon fontSize="small" /> },
+    { key: 'add', icon: <AddIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'library', icon: <PublicIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'edit', icon: <EditIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'more', icon: <MoreVertIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'delete', icon: <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} /> },
   ],
   plantingPlans: [
-    { key: 'add', icon: <AddIcon fontSize="small" /> },
-    { key: 'mobileAdd', icon: <AddIcon fontSize="small" sx={{ bgcolor: 'action.hover', borderRadius: '50%' }} /> },
-    { key: 'edit', icon: <EditIcon fontSize="small" /> },
-    { key: 'notes', icon: <NoteAltIcon fontSize="small" /> },
+    { key: 'add', icon: <AddIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'mobileAdd', icon: <AddIcon fontSize="small" sx={{ color: 'primary.main', bgcolor: 'action.hover', borderRadius: '50%' }} /> },
+    { key: 'edit', icon: <EditIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'notes', icon: <NoteAltIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
   ],
   calendar: [
-    { key: 'tabs', icon: <TabIcon fontSize="small" /> },
-    { key: 'switch', icon: <ToggleOnIcon fontSize="small" /> },
-    { key: 'tooltip', icon: <InfoOutlinedIcon fontSize="small" /> },
+    { key: 'tabs', icon: <TabIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'switch', icon: <ToggleOnIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'tooltip', icon: <InfoOutlinedIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
   ],
   seedDemand: [
-    { key: 'supplierSelect', icon: <ArrowDropDownIcon fontSize="small" /> },
-    { key: 'packageInfo', icon: <OpenInFullIcon fontSize="small" /> },
+    { key: 'supplierSelect', icon: <ArrowDropDownIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'packageInfo', icon: <OpenInFullIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
   ],
   suppliers: [
-    { key: 'add', icon: <AddIcon fontSize="small" /> },
-    { key: 'edit', icon: <EditIcon fontSize="small" /> },
-    { key: 'delete', icon: <DeleteIcon fontSize="small" /> },
+    { key: 'add', icon: <AddIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'edit', icon: <EditIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'delete', icon: <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} /> },
   ],
   graphical: [
     {
