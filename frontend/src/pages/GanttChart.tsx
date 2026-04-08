@@ -445,9 +445,9 @@ function GanttChartPage(): React.ReactElement {
               showProgress={false}
               darkMode={false}
               onTaskUpdate={calendarMode === 'occupancy' ? handleTaskUpdate : undefined}
-              renderTooltip={({ task }) => (calendarMode === 'seedlings'
-                ? renderSeedlingTooltip({ task: task as GanttTask })
-                : renderOccupancyTooltip({ task: task as GanttTask }))}
+              renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
+                ? renderSeedlingTooltip({ task })
+                : renderOccupancyTooltip({ task }))}
               renderTask={calendarMode === 'seedlings'
                 ? ({ task, leftPx, widthPx, topPx }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
                     <Box
