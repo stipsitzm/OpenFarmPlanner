@@ -1348,7 +1348,6 @@ function PlantingPlans(): React.ReactElement {
           showDeleteAction={true}
           showFooterEditControls={false}
           showRowEditActions={true}
-          stretchToContainer={true}
           tableKey="plantingPlans"
           defaultSortModel={[{ field: "planting_date", sort: "asc" }]}
           persistSortInUrl={true}

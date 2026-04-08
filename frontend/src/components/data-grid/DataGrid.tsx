@@ -92,7 +92,6 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showFooterEditControls?: boolean;
   showRowEditActions?: boolean;
   onRowsStateChange?: (rows: T[]) => void;
-  stretchToContainer?: boolean;
 }
 
 export function EditableDataGrid<T extends EditableRow>({
@@ -120,7 +119,6 @@ export function EditableDataGrid<T extends EditableRow>({
   showFooterEditControls = true,
   showRowEditActions = false,
   onRowsStateChange,
-  stretchToContainer = false,
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -699,13 +697,7 @@ export function EditableDataGrid<T extends EditableRow>({
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
       <Box sx={{ width: '100%', overflowX: 'auto', overflowY: 'visible' }}>
-        <Box
-          sx={
-            stretchToContainer
-              ? { display: 'block', width: '100%', minWidth: 0 }
-              : { display: 'inline-block', width: 'fit-content', minWidth: 0 }
-          }
-        >
+        <Box sx={{ display: 'inline-block', width: 'fit-content', minWidth: 0 }}>
           <DataGrid
           rows={rows}
           columns={columnsWithActions}
@@ -726,7 +718,7 @@ export function EditableDataGrid<T extends EditableRow>({
           slots={{
             footer: CustomFooter,
           }}
-          sx={{ ...dataGridSx, width: stretchToContainer ? '100%' : 'auto' }}
+          sx={{ ...dataGridSx, width: 'auto' }}
           getRowClassName={(params) => {
             const rowKey = String(params.id);
             if (rowModesModel[params.id]?.mode === GridRowModes.Edit) {
