@@ -16,7 +16,6 @@ export default function ImprintPage(): React.ReactElement {
         <Typography variant="h3" component="h1">
           {t('legal.imprint.title')}
         </Typography>
-        <Typography color="text.secondary">{t('legal.imprint.disclaimer')}</Typography>
 
         {imprintSections.map((sectionKey) => (
           <Stack key={sectionKey} spacing={0.5}>
