@@ -11,7 +11,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Grid,
   Link,
   MenuItem,
   Stack,
@@ -258,7 +257,14 @@ function Locations(): React.ReactElement {
       {!loading && locations.length === 0 ? (
         <Alert severity="info">{t('locations:emptyState')}</Alert>
       ) : (
-        <Grid container spacing={2}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 2,
+            alignItems: 'flex-start',
+          }}
+        >
           {locations.map((location) => {
             const hasCoordinates =
               typeof location.latitude === 'number' && typeof location.longitude === 'number';
@@ -268,8 +274,15 @@ function Locations(): React.ReactElement {
             const taskPreview = (location.id ? tasksByLocation[location.id] : []) ?? [];
 
             return (
-              <Grid key={location.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                <Card variant="outlined" sx={{ height: '100%' }}>
+              <Box
+                key={location.id}
+                sx={{
+                  flex: '1 1 420px',
+                  minWidth: { xs: '100%', sm: 320 },
+                  maxWidth: 540,
+                }}
+              >
+                <Card variant="outlined">
                   <CardContent>
                     <Typography variant="h6" mb={1}>{location.name}</Typography>
 
@@ -331,10 +344,10 @@ function Locations(): React.ReactElement {
                     ) : null}
                   </CardActions>
                 </Card>
-              </Grid>
+              </Box>
             );
           })}
-        </Grid>
+        </Box>
       )}
 
       <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
