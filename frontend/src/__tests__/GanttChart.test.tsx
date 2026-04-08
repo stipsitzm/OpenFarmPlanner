@@ -100,7 +100,8 @@ describe('GanttChartPage', () => {
 
     await waitFor(() => expect(screen.getByText('Feldbelegung')).toBeInTheDocument());
     expect(screen.queryByText(/Belegung von Parzellen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('switch')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ansicht' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bearbeiten' })).toBeInTheDocument();
     expect(screen.getByText('Beet 1')).toBeInTheDocument();
     expect(mocks.ganttProps).toHaveBeenCalled();
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
@@ -160,7 +161,8 @@ describe('GanttChartPage', () => {
     expect(screen.getByText('Fläche: 8.00 m²')).toBeInTheDocument();
     expect(screen.getByText('Pflanzenanzahl: 24')).toBeInTheDocument();
     expect(screen.queryByText(/Anbauplan/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ansicht' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
   });
 
   it('toggles occupancy edit mode with Alt+E', async () => {
@@ -186,12 +188,12 @@ describe('GanttChartPage', () => {
       </CommandProvider>,
     );
 
-    const editSwitch = await screen.findByRole('switch');
-    expect(editSwitch).not.toBeChecked();
+    const editButton = await screen.findByRole('button', { name: 'Bearbeiten' });
+    expect(editButton).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.keyDown(window, { key: 'e', altKey: true });
 
-    await waitFor(() => expect(editSwitch).toBeChecked());
+    await waitFor(() => expect(editButton).toHaveAttribute('aria-pressed', 'true'));
   });
 
   it('fills empty yield weeks between available week entries', async () => {

@@ -14,8 +14,6 @@ import {
   IconButton,
   Paper,
   Stack,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -40,6 +38,7 @@ import {
 } from "../api/api";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useTranslation } from "../i18n";
+import ModeToggle from "../components/ModeToggle";
 import {
   clampInsideParent,
   getBedRectSizeWithinField,
@@ -1138,29 +1137,14 @@ export default function GraphicalFields({
           ) : null}
         </Box>
         <Stack spacing={0.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
-          <Stack direction="row" spacing={0.5} alignItems="center" justifyContent={{ xs: "space-between", sm: "flex-start" }}>
-            <Typography variant="subtitle2">{t("fields:graphical.viewMode")}</Typography>
-          </Stack>
-          <ToggleButtonGroup
+          <ModeToggle
+            label={t("fields:graphical.viewMode")}
+            ariaLabel={t("fields:graphical.modeAriaLabel")}
+            viewLabel={t("fields:graphical.viewModeOption")}
+            editLabel={t("fields:graphical.editModeOption")}
             value={interactionMode}
-            exclusive
-            size="small"
-            color="primary"
-            fullWidth
-            aria-label={t("fields:graphical.modeAriaLabel")}
-            onChange={(_, selectedMode: InteractionMode | null) => {
-              if (selectedMode !== null) {
-                setInteractionMode(selectedMode);
-              }
-            }}
-          >
-            <ToggleButton value="view" aria-label={t("fields:graphical.viewModeOption")}>
-              {t("fields:graphical.viewModeOption")}
-            </ToggleButton>
-            <ToggleButton value="edit" aria-label={t("fields:graphical.editModeOption")}>
-              {t("fields:graphical.editModeOption")}
-            </ToggleButton>
-          </ToggleButtonGroup>
+            onChange={setInteractionMode}
+          />
         </Stack>
       </Stack>
 

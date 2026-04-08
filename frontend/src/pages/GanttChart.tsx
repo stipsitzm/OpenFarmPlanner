@@ -12,9 +12,7 @@ import { useTranslation } from '../i18n';
 import {
   Alert,
   Box,
-  FormControlLabel,
   Paper,
-  Switch,
   Tab,
   Tabs,
   Tooltip,
@@ -39,6 +37,7 @@ import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import PageHelp from '../components/help/PageHelp';
+import ModeToggle from '../components/ModeToggle';
 import type { CommandSpec } from '../commands/types';
 import {
   buildFieldOccupancyTaskGroups,
@@ -410,15 +409,14 @@ function GanttChartPage(): React.ReactElement {
 
       {calendarMode === 'occupancy' ? (
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <FormControlLabel
-            control={(
-              <Switch
-                checked={editMode}
-                onChange={(event) => setEditMode(event.target.checked)}
-                color="primary"
-              />
-            )}
-            label={editMode ? t('ganttChart:editMode') : t('ganttChart:viewMode')}
+          <ModeToggle
+            label={t('ganttChart:modeLabel')}
+            ariaLabel={t('ganttChart:modeAriaLabel')}
+            viewLabel={t('ganttChart:modeViewOption')}
+            editLabel={t('ganttChart:modeEditOption')}
+            value={editMode ? 'edit' : 'view'}
+            onChange={(selectedMode) => setEditMode(selectedMode === 'edit')}
+            fullWidth={false}
           />
         </Box>
       ) : null}

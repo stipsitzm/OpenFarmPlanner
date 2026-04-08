@@ -51,6 +51,10 @@
     "notes": "Hinweis"
   },
   "noData": "Keine Anbaupläne vorhanden",
+  "modeLabel": "Modus",
+  "modeAriaLabel": "Modus auswählen",
+  "modeViewOption": "Ansicht",
+  "modeEditOption": "Bearbeiten",
   "viewMode": "Ansichtsmodus",
   "editMode": "Bearbeitungsmodus",
   "viewSelectorAriaLabel": "Kalenderansicht auswählen",
