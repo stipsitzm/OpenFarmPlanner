@@ -20,7 +20,7 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import TabIcon from '@mui/icons-material/Tab';
 import ToggleOnIcon from '@mui/icons-material/ToggleOn';
-import TooltipIcon from '@mui/icons-material/Tooltip';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {
   Box,
   Dialog,
@@ -110,7 +110,7 @@ const PAGE_SYMBOL_DEFINITIONS: Partial<Record<HelpPageKey, SymbolDefinition[]>> 
   calendar: [
     { key: 'tabs', icon: <TabIcon fontSize="small" /> },
     { key: 'switch', icon: <ToggleOnIcon fontSize="small" /> },
-    { key: 'tooltip', icon: <TooltipIcon fontSize="small" /> },
+    { key: 'tooltip', icon: <InfoOutlinedIcon fontSize="small" /> },
   ],
   seedDemand: [
     { key: 'supplierSelect', icon: <ArrowDropDownIcon fontSize="small" /> },
