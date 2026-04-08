@@ -132,7 +132,7 @@ body.hide-version-footer .app-version-footer {
 
 .content--workspace {
   width: 100%;
-  max-width: 1600px;
+  max-width: min(1800px, calc(100vw - 48px));
   box-sizing: border-box;
   padding: 0 24px;
   margin: 0 auto;
