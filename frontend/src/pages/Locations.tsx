@@ -22,6 +22,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, type Bed, type Culture, type Field, type Location, type PlantingPlan } from '../api/api';
 import PageHelp from '../components/help/PageHelp';
+import PageHeader from '../components/layout/PageHeader';
 import { useTranslation } from '../i18n';
 import { resolveLocaleFromLanguage } from '../utils/numberLocalization';
 import { deriveLocationTasks, type DerivedLocationTask } from './locationDerivedTasks';
@@ -241,31 +242,34 @@ function Locations(): React.ReactElement {
 
   return (
     <Box p={3}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h4">{t('locations:title')}</Typography>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
-            {t('locations:addButton')}
-          </Button>
-          <PageHelp pageKey="locations" />
-        </Stack>
-      </Stack>
+      <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+        <PageHeader
+          title={t('locations:title')}
+          actions={(
+            <>
+              <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
+                {t('locations:addButton')}
+              </Button>
+              <PageHelp pageKey="locations" />
+            </>
+          )}
+        />
 
-      {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
-      {loading ? <Typography>{t('common:messages.loading')}</Typography> : null}
+        {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
+        {loading ? <Typography>{t('common:messages.loading')}</Typography> : null}
 
-      {!loading && locations.length === 0 ? (
-        <Alert severity="info">{t('locations:emptyState')}</Alert>
-      ) : (
-        <Box
-          sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 2,
-            alignItems: 'flex-start',
-          }}
-        >
-          {locations.map((location) => {
+        {!loading && locations.length === 0 ? (
+          <Alert severity="info">{t('locations:emptyState')}</Alert>
+        ) : (
+          <Box
+            sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 2,
+              alignItems: 'flex-start',
+            }}
+          >
+            {locations.map((location) => {
             const hasCoordinates =
               typeof location.latitude === 'number' && typeof location.longitude === 'number';
             const mapLink = hasCoordinates
@@ -346,9 +350,10 @@ function Locations(): React.ReactElement {
                 </Card>
               </Box>
             );
-          })}
-        </Box>
-      )}
+            })}
+          </Box>
+        )}
+      </Box>
 
       <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
         <DialogTitle>
