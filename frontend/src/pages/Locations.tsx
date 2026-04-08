@@ -266,7 +266,7 @@ function Locations(): React.ReactElement {
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
               gap: 2,
-              alignItems: 'start',
+              alignItems: 'stretch',
               width: '100%',
             }}
           >
@@ -283,10 +283,14 @@ function Locations(): React.ReactElement {
                   key={location.id}
                   sx={{
                     width: '100%',
+                    height: '100%',
                   }}
                 >
-                  <Card variant="outlined" sx={{ width: '100%' }}>
-                    <CardContent>
+                  <Card
+                    variant="outlined"
+                    sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}
+                  >
+                    <CardContent sx={{ flexGrow: 1 }}>
                       <Typography variant="h6" mb={1}>{location.name}</Typography>
 
                       <Stack spacing={1}>
@@ -331,7 +335,7 @@ function Locations(): React.ReactElement {
                         )}
                       </Box>
                     </CardContent>
-                    <CardActions sx={{ justifyContent: 'flex-end' }}>
+                    <CardActions sx={{ justifyContent: 'flex-end', mt: 'auto' }}>
                       <Button size="small" startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(location)}>
                         {t('common:actions.edit')}
                       </Button>
