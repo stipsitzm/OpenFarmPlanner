@@ -1077,7 +1077,7 @@ function PlantingPlans(): React.ReactElement {
   };
 
   return (
-    <PageContainer variant="full">
+    <PageContainer variant="workspace">
       <PageHeader
         title={t("plantingPlans:title")}
         actions={(
