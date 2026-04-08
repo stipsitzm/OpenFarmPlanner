@@ -39,7 +39,7 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useMediaQuery } from '@mui/system';
-import { useMemo, useState, type ReactElement } from 'react';
+import { useMemo, useState, type MouseEvent, type ReactElement } from 'react';
 import { useTranslation } from '../../i18n';
 import HelpIconRow from './HelpIconRow';
 
@@ -206,7 +206,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
       .filter((item): item is { icon: ReactElement; text: string } => item !== null);
   }, [pageKey, t]);
 
-  const handleOpen = (event: React.MouseEvent<HTMLElement>): void => {
+  const handleOpen = (event: MouseEvent<HTMLElement>): void => {
     if (isMobile) {
       setMobileOpen(true);
       return;

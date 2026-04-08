@@ -6,120 +6,33 @@
   "sections": [
     {
       "title": "Locations / Growing areas",
-      "points": [
-        "Create locations, fields, and beds here."
-      ]
+      "points": ["Create locations, fields, and beds here."]
     },
     {
       "title": "Planting plans",
-      "points": [
-        "Plan which crop is grown in which bed here."
-      ]
+      "points": ["Plan which crop is grown in which bed here."]
     },
     {
       "title": "Planting calendar",
-      "points": [
-        "See the timeline for your planting plans here."
-      ]
+      "points": ["See the timeline for your planting plans here."]
     },
     {
       "title": "Seed demand",
-      "points": [
-        "This calculates how much seed you need."
-      ]
+      "points": ["This calculates how much seed you need."]
     }
   ],
   "workflowTitle": "Workflow",
   "workflow": "Locations → Beds → Planting plans → Planting calendar → Seed demand",
   "pages": {
-    "dashboard": {
-      "title": "Help: Overview",
-      "points": [
-        "Project overview.",
-        "Use navigation.",
-        "Quick actions.",
-        "Open pages to edit data."
-      ]
-    },
-    "locations": {
-      "title": "Help: Locations",
-      "points": [
-        "Manage locations.",
-        "A location can contain fields.",
-        "Use New to create.",
-        "Rows are clickable for editing."
-      ]
-    },
-    "fields": {
-      "title": "Help: Fields",
-      "points": [
-        "Manage fields.",
-        "A field contains beds.",
-        "Use New to create.",
-        "Rows are clickable for editing."
-      ]
-    },
-    "beds": {
-      "title": "Help: Beds",
-      "points": [
-        "Manage beds.",
-        "Beds belong to a field.",
-        "Use New to create.",
-        "Rows are clickable for editing."
-      ]
-    },
-    "areas": {
-      "title": "Help: Areas",
-      "points": [
-        "Manage growing areas.",
-        "Areas connect beds and plans.",
-        "Use New to create.",
-        "Rows are clickable for editing."
-      ],
-      "symbols": {
-        "expandToggle": "Expand or collapse nested elements",
-        "add": "Create a new element",
-        "delete": "Delete an element",
-        "createPlan": "Create a planting plan for a bed directly",
-        "dimensions": "Orientation for length and width columns"
-      }
-    },
-    "cultures": {
-      "title": "Help: Cultures",
-      "points": [
-        "Manage cultures.",
-        "Use New to create.",
-        "Rows are clickable for editing.",
-        "Use filter/search."
-      ]
-    },
-    "plantingPlans": {
-      "title": "Help: Planting plans",
-      "points": [
-        "Plan crop planting.",
-        "Use New to create.",
-        "Rows are clickable for editing.",
-        "Graphical mode shows occupancy."
-      ]
-    },
-    "seedDemand": {
-      "title": "Help: Seed demand",
-      "points": [
-        "Seed demand is calculated.",
-        "Based on cultures and plans.",
-        "Use filters.",
-        "Supports order planning."
-      ]
-    },
-    "suppliers": {
-      "title": "Help: Suppliers",
-      "points": [
-        "Manage suppliers.",
-        "Link suppliers to seed data.",
-        "Use New to create.",
-        "Rows are clickable for editing."
-      ]
-    },
+    "dashboard": {"title": "Help: Overview", "points": ["Project overview.", "Use navigation.", "Quick actions.", "Open pages to edit data."]},
+    "locations": {"title": "Help: Locations", "points": ["Manage locations.", "A location can contain fields.", "Use New to create.", "Rows are clickable for editing."]},
+    "fields": {"title": "Help: Fields", "points": ["Manage fields.", "A field contains beds.", "Use New to create.", "Rows are clickable for editing."]},
+    "beds": {"title": "Help: Beds", "points": ["Manage beds.", "Beds belong to a field.", "Use New to create.", "Rows are clickable for editing."]},
+    "areas": {"title": "Help: Areas", "points": ["Manage growing areas.", "Areas connect beds and plans.", "Use New to create.", "Rows are clickable for editing."]},
+    "cultures": {"title": "Help: Cultures", "points": ["Manage cultures.", "Use New to create.", "Rows are clickable for editing.", "Use filter/search."]},
+    "plantingPlans": {"title": "Help: Planting plans", "points": ["Plan crop planting.", "Use New to create.", "Rows are clickable for editing.", "Graphical mode shows occupancy."]},
+    "seedDemand": {"title": "Help: Seed demand", "points": ["Seed demand is calculated.", "Based on cultures and plans.", "Use filters.", "Supports order planning."]},
+    "suppliers": {"title": "Help: Suppliers", "points": ["Manage suppliers.", "Link suppliers to seed data.", "Use New to create.", "Rows are clickable for editing."]},
     "graphical": {
       "title": "Help: Graphical view of growing areas",
       "sections": [
@@ -152,11 +65,11 @@
       ],
       "symbolsTitle": "Icons and controls",
       "symbols": {
-        "panArrows": "Move the view up, left, right, or down",
-        "zoomIn": "Zoom in",
-        "zoomOut": "Zoom out",
-        "fit": "Fit the whole area",
-        "fullscreen": "Show the largest possible view"
+        "panArrows": "Arrow icons → Move view up, left, right or down",
+        "zoomIn": "Plus icon → Zoom in",
+        "zoomOut": "Minus icon → Zoom out",
+        "fit": "Frame icon → Fit whole area into the viewport",
+        "fullscreen": "Fullscreen icon → Show largest possible view"
       },
       "modeTitle": "Mode",
       "modeLabel": "Mode",
