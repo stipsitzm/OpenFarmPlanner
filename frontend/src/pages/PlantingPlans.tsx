@@ -1077,36 +1077,33 @@ function PlantingPlans(): React.ReactElement {
   };
 
   return (
-    <>
-      <PageContainer variant="full">
-        <PageHeader
-          title={t("plantingPlans:title")}
-          actions={(
-            <>
-              {!isMobile ? (
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => gridCommandApiRef.current?.addRow()}
-                  aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
-                >
-                  {t("plantingPlans:addButton")}
-                </Button>
-              ) : null}
-              <PageHelp pageKey="plantingPlans" />
-            </>
-          )}
-        />
-      </PageContainer>
+    <PageContainer variant="workspace">
+      <PageHeader
+        title={t("plantingPlans:title")}
+        actions={(
+          <>
+            {!isMobile ? (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => gridCommandApiRef.current?.addRow()}
+                aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
+              >
+                {t("plantingPlans:addButton")}
+              </Button>
+            ) : null}
+            <PageHelp pageKey="plantingPlans" />
+          </>
+        )}
+      />
 
-      <PageContainer variant="workspace">
-        {areaWarning ? (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            {areaWarning}
-          </Alert>
-        ) : null}
+      {areaWarning ? (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          {areaWarning}
+        </Alert>
+      ) : null}
 
-        <Box sx={{ width: "100%" }}>
+      <Box sx={{ width: "100%" }}>
 
         {isMobile ? (
           <Box sx={{ pb: 10 }}>
@@ -1517,8 +1514,7 @@ function PlantingPlans(): React.ReactElement {
         focusAttachments
         focusRequestId={mobileNotesTarget?.id ?? 0}
       />
-      </PageContainer>
-    </>
+    </PageContainer>
   );
 }
 

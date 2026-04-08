@@ -379,24 +379,17 @@ function GanttChartPage(): React.ReactElement {
 
   if (loading) {
     return (
-      <>
-        <PageContainer variant="full">
-          <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
-        </PageContainer>
-        <PageContainer variant="workspace">
-          <p>{t('ganttChart:loading')}</p>
-        </PageContainer>
-      </>
+      <PageContainer variant="workspace">
+        <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
+        <p>{t('ganttChart:loading')}</p>
+      </PageContainer>
     );
   }
 
   return (
-    <>
-      <PageContainer variant="full">
-        <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
-      </PageContainer>
-      <PageContainer variant="workspace">
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+    <PageContainer variant="workspace">
+      <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         <Box sx={{ mb: 2 }}>
           <Tabs
@@ -550,8 +543,7 @@ function GanttChartPage(): React.ReactElement {
             )}
           </Paper>
         ) : null}
-      </PageContainer>
-    </>
+    </PageContainer>
   );
 }
 
