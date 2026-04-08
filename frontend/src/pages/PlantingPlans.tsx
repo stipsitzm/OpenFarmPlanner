@@ -1077,14 +1077,8 @@ function PlantingPlans(): React.ReactElement {
   };
 
   return (
-    <PageContainer variant="full">
-      {areaWarning ? (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          {areaWarning}
-        </Alert>
-      ) : null}
-
-      <Box sx={{ width: "fit-content", maxWidth: "100%" }}>
+    <>
+      <PageContainer variant="full">
         <PageHeader
           title={t("plantingPlans:title")}
           actions={(
@@ -1103,6 +1097,16 @@ function PlantingPlans(): React.ReactElement {
             </>
           )}
         />
+      </PageContainer>
+
+      <PageContainer variant="workspace">
+        {areaWarning ? (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {areaWarning}
+          </Alert>
+        ) : null}
+
+        <Box sx={{ width: "100%" }}>
 
         {isMobile ? (
           <Box sx={{ pb: 10 }}>
@@ -1513,7 +1517,8 @@ function PlantingPlans(): React.ReactElement {
         focusAttachments
         focusRequestId={mobileNotesTarget?.id ?? 0}
       />
-    </PageContainer>
+      </PageContainer>
+    </>
   );
 }
 
