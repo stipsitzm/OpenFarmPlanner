@@ -1,16 +1,17 @@
 import { Alert, Box, Button, Container, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link as RouterLink, Navigate, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { projectAPI, type InvitationPublicStatus } from '../../api/api';
 import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
 import { getNextFromSearch, getTokenFromNextPath, storeInvitationRedirect } from '../invitationAcceptance';
 
 export default function RegisterPage(): React.ReactElement {
-  const { user, register, resendActivation } = useAuth();
+  const { user, register, resendActivation, logout } = useAuth();
   const { t } = useTranslation(['auth', 'projectInvitations']);
   const location = useLocation();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
@@ -20,6 +21,8 @@ export default function RegisterPage(): React.ReactElement {
   const [submitting, setSubmitting] = useState(false);
   const [pendingInvitation, setPendingInvitation] = useState<InvitationPublicStatus | null>(null);
   const nextPath = getNextFromSearch(location.search);
+  const isLoggedIn = user !== null;
+  const currentUserLabel = user?.display_label || user?.email || '–';
 
   useEffect(() => {
     const loadPendingInvitation = async (): Promise<void> => {
@@ -35,8 +38,6 @@ export default function RegisterPage(): React.ReactElement {
 
     void loadPendingInvitation();
   }, []);
-
-  if (user) return <Navigate to="/app" replace />;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -67,11 +68,38 @@ export default function RegisterPage(): React.ReactElement {
     setSuccess(await resendActivation(email.trim().toLowerCase()));
   };
 
+  const handleLogoutAndCreate = async (): Promise<void> => {
+    setError(null);
+    setSuccess(null);
+    try {
+      await logout();
+    } catch (logoutError) {
+      setError(logoutError instanceof Error ? logoutError.message : t('auth:register.logoutToCreateFailed'));
+    }
+  };
+
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>{t('auth:register.title')}</Typography>
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2}>
+          {isLoggedIn ? (
+            <Alert severity="info">
+              <Stack spacing={1.5}>
+                <Typography variant="body2">
+                  {t('auth:register.loggedInHint', { user: currentUserLabel })}
+                </Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+                  <Button type="button" variant="contained" onClick={() => void handleLogoutAndCreate()}>
+                    {t('auth:register.logoutAndCreate')}
+                  </Button>
+                  <Button type="button" variant="outlined" onClick={() => navigate('/app')}>
+                    {t('auth:register.backToApp')}
+                  </Button>
+                </Stack>
+              </Stack>
+            </Alert>
+          ) : null}
           {pendingInvitation ? (
             <Alert severity="info">
               {t('projectInvitations:registerHint', {
@@ -82,13 +110,13 @@ export default function RegisterPage(): React.ReactElement {
           ) : null}
           {error ? <Alert severity="error">{error}</Alert> : null}
           {success ? <Alert severity="success">{success}</Alert> : null}
-          <TextField label={t('auth:register.email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <TextField label={t('auth:register.displayName')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-          <TextField label={t('auth:register.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <TextField label={t('auth:register.passwordConfirm')} type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} required />
-          <Button type="submit" variant="contained" disabled={submitting}>{submitting ? t('auth:register.submitting') : t('auth:register.submit')}</Button>
-          <Button onClick={() => void handleResend()} disabled={!email}>{t('auth:register.resendActivation')}</Button>
-          <Button component={RouterLink} to={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'} state={location.state}>{t('auth:register.hasAccount')}</Button>
+          <TextField label={t('auth:register.email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isLoggedIn} />
+          <TextField label={t('auth:register.displayName')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={isLoggedIn} />
+          <TextField label={t('auth:register.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoggedIn} />
+          <TextField label={t('auth:register.passwordConfirm')} type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} required disabled={isLoggedIn} />
+          <Button type="submit" variant="contained" disabled={submitting || isLoggedIn}>{submitting ? t('auth:register.submitting') : t('auth:register.submit')}</Button>
+          <Button type="button" onClick={() => void handleResend()} disabled={!email || isLoggedIn}>{t('auth:register.resendActivation')}</Button>
+          <Button type="button" component={RouterLink} to={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'} state={location.state}>{t('auth:register.hasAccount')}</Button>
         </Stack>
       </Box>
     </Container>

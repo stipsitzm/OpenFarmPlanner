@@ -11,7 +11,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Grid,
   Link,
   MenuItem,
   Stack,
@@ -23,6 +22,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, type Bed, type Culture, type Field, type Location, type PlantingPlan } from '../api/api';
 import PageHelp from '../components/help/PageHelp';
+import PageHeader from '../components/layout/PageHeader';
 import { useTranslation } from '../i18n';
 import { resolveLocaleFromLanguage } from '../utils/numberLocalization';
 import { deriveLocationTasks, type DerivedLocationTask } from './locationDerivedTasks';
@@ -242,100 +242,121 @@ function Locations(): React.ReactElement {
 
   return (
     <Box p={3}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h4">{t('locations:title')}</Typography>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
-            {t('locations:addButton')}
-          </Button>
-          <PageHelp pageKey="locations" />
-        </Stack>
-      </Stack>
+      <Box sx={{ width: '100%', maxWidth: 1320 }}>
+        <PageHeader
+          title={t('locations:title')}
+          actions={(
+            <>
+              <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
+                {t('locations:addButton')}
+              </Button>
+              <PageHelp pageKey="locations" />
+            </>
+          )}
+        />
 
-      {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
-      {loading ? <Typography>{t('common:messages.loading')}</Typography> : null}
+        {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
+        {loading ? <Typography>{t('common:messages.loading')}</Typography> : null}
 
-      {!loading && locations.length === 0 ? (
-        <Alert severity="info">{t('locations:emptyState')}</Alert>
-      ) : (
-        <Grid container spacing={2}>
-          {locations.map((location) => {
-            const hasCoordinates =
-              typeof location.latitude === 'number' && typeof location.longitude === 'number';
-            const mapLink = hasCoordinates
-              ? `https://www.google.com/maps?q=${location.latitude},${location.longitude}`
-              : null;
-            const taskPreview = (location.id ? tasksByLocation[location.id] : []) ?? [];
+        {!loading && locations.length === 0 ? (
+          <Alert severity="info">{t('locations:emptyState')}</Alert>
+        ) : (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
+              gap: 2,
+              alignItems: 'stretch',
+              width: '100%',
+            }}
+          >
+            {locations.map((location) => {
+              const hasCoordinates =
+                typeof location.latitude === 'number' && typeof location.longitude === 'number';
+              const mapLink = hasCoordinates
+                ? `https://www.google.com/maps?q=${location.latitude},${location.longitude}`
+                : null;
+              const taskPreview = (location.id ? tasksByLocation[location.id] : []) ?? [];
 
-            return (
-              <Grid key={location.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                <Card variant="outlined" sx={{ height: '100%' }}>
-                  <CardContent>
-                    <Typography variant="h6" mb={1}>{location.name}</Typography>
+              return (
+                <Box
+                  key={location.id}
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                  }}
+                >
+                  <Card
+                    variant="outlined"
+                    sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}
+                  >
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6" mb={1}>{location.name}</Typography>
 
-                    <Stack spacing={1}>
-                      <Typography variant="body2">
-                        <strong>{t('locations:columns.coordinates')}:</strong>{' '}
-                        {hasCoordinates && mapLink ? (
-                          <Link href={mapLink} target="_blank" rel="noreferrer" underline="hover">
-                            {`${formatCoordinate(location.latitude!, numberLocale)}; ${formatCoordinate(location.longitude!, numberLocale)}`}
-                          </Link>
-                        ) : '—'}
-                      </Typography>
-                      <Typography variant="body2"><strong>{t('locations:columns.address')}:</strong> {location.address || '—'}</Typography>
-                      <Typography variant="body2"><strong>{t('locations:columns.soilType')}:</strong> {location.soil_type ? t(`locations:soilType.${location.soil_type}`) : '—'}</Typography>
-                      <Typography variant="body2"><strong>{t('locations:columns.exposure')}:</strong> {location.exposure ? t(`locations:exposure.${location.exposure}`) : '—'}</Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <strong>{t('locations:columns.description')}:</strong> {location.description || '—'}
-                      </Typography>
-                    </Stack>
-
-                    <Box mt={2}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        {t('locations:upcomingTasks')}
-                      </Typography>
-                      {taskPreview.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary">
-                          {t('locations:noUpcomingTasks')}
+                      <Stack spacing={1}>
+                        <Typography variant="body2">
+                          <strong>{t('locations:columns.coordinates')}:</strong>{' '}
+                          {hasCoordinates && mapLink ? (
+                            <Link href={mapLink} target="_blank" rel="noreferrer" underline="hover">
+                              {`${formatCoordinate(location.latitude!, numberLocale)}; ${formatCoordinate(location.longitude!, numberLocale)}`}
+                            </Link>
+                          ) : '—'}
                         </Typography>
-                      ) : (
-                        <Stack spacing={0.5}>
-                          {taskPreview.slice(0, 3).map((task) => (
-                            <Chip key={`${task.type}-${task.date}-${task.planId ?? 'na'}`} label={renderTaskLine(task)} size="small" />
-                          ))}
-                        </Stack>
-                      )}
-                    </Box>
-                  </CardContent>
-                  <CardActions sx={{ justifyContent: 'flex-end' }}>
-                    <Button size="small" startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(location)}>
-                      {t('common:actions.edit')}
-                    </Button>
-                    {location.id ? (
-                      <Button
-                        color="error"
-                        size="small"
-                        startIcon={<DeleteOutlineIcon />}
-                        onClick={() => void deleteLocation(location.id!)}
-                      >
-                        {t('common:actions.delete')}
+                        <Typography variant="body2"><strong>{t('locations:columns.address')}:</strong> {location.address || '—'}</Typography>
+                        <Typography variant="body2"><strong>{t('locations:columns.soilType')}:</strong> {location.soil_type ? t(`locations:soilType.${location.soil_type}`) : '—'}</Typography>
+                        <Typography variant="body2"><strong>{t('locations:columns.exposure')}:</strong> {location.exposure ? t(`locations:exposure.${location.exposure}`) : '—'}</Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <strong>{t('locations:columns.description')}:</strong> {location.description || '—'}
+                        </Typography>
+                      </Stack>
+
+                      <Box mt={2}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          {t('locations:upcomingTasks')}
+                        </Typography>
+                        {taskPreview.length === 0 ? (
+                          <Typography variant="body2" color="text.secondary">
+                            {t('locations:noUpcomingTasks')}
+                          </Typography>
+                        ) : (
+                          <Stack spacing={0.5}>
+                            {taskPreview.slice(0, 3).map((task) => (
+                              <Chip key={`${task.type}-${task.date}-${task.planId ?? 'na'}`} label={renderTaskLine(task)} size="small" />
+                            ))}
+                          </Stack>
+                        )}
+                      </Box>
+                    </CardContent>
+                    <CardActions sx={{ justifyContent: 'flex-end', mt: 'auto' }}>
+                      <Button size="small" startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(location)}>
+                        {t('common:actions.edit')}
                       </Button>
-                    ) : null}
-                  </CardActions>
-                </Card>
-              </Grid>
-            );
-          })}
-        </Grid>
-      )}
+                      {location.id ? (
+                        <Button
+                          color="error"
+                          size="small"
+                          startIcon={<DeleteOutlineIcon />}
+                          onClick={() => void deleteLocation(location.id!)}
+                        >
+                          {t('common:actions.delete')}
+                        </Button>
+                      ) : null}
+                    </CardActions>
+                  </Card>
+                </Box>
+              );
+            })}
+          </Box>
+        )}
+      </Box>
 
       <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
         <DialogTitle>

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "if [ ! -f node_modules/react-modern-gantt/dist/index.esm.js ]; then npm --prefix node_modules/react-modern-gantt install --no-audit --no-fund && npm --prefix node_modules/react-modern-gantt run build; fi",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -17,7 +18,7 @@
     "mutation:report": "open mutation-report/index.html",
     "lint:circular": "madge --circular src",
     "quality:frontend": "npm run lint && npm run lint:circular",
-    "postinstall": "if [ ! -f node_modules/react-modern-gantt/dist/index.css ]; then npm --prefix node_modules/react-modern-gantt install --no-audit --no-fund && npm --prefix node_modules/react-modern-gantt run build; fi"
+    "postinstall": "if [ ! -f node_modules/react-modern-gantt/dist/index.esm.js ]; then npm --prefix node_modules/react-modern-gantt install --no-audit --no-fund && npm --prefix node_modules/react-modern-gantt run build; fi"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -43,6 +44,7 @@
     "@stryker-mutator/core": "^9.5.1",
     "@stryker-mutator/typescript-checker": "^9.5.1",
     "@stryker-mutator/vitest-runner": "^9.5.1",
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",

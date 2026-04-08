@@ -666,6 +666,7 @@ function FieldsBedsHierarchy({
         if (
           row &&
           (row.type === "location" || row.type === "field") &&
+          row.hasChildren === true &&
           !expandedRows.has(row.id)
         ) {
           toggleExpand(row.id);

@@ -318,6 +318,10 @@ function RootLayout(): React.ReactElement {
     setShortcutsOpen(true);
   };
 
+  const openCurrentPageHelp = (): void => {
+    window.dispatchEvent(new CustomEvent('ofp:open-page-help'));
+  };
+
   const handleLogout = async (): Promise<void> => {
     try {
       await logout();
@@ -442,7 +446,7 @@ function RootLayout(): React.ReactElement {
     onOpenVersionHistory: () => { void handleOpenProjectHistory(); },
     onLogout: () => { void handleLogout(); },
     onOpenPalette: openPalette,
-    onOpenShortcuts: () => setShortcutsOpen(true),
+    onOpenShortcuts: openCurrentPageHelp,
     labels: {
       nextPage: t('commandPalette.commands.nextPage'),
       previousPage: t('commandPalette.commands.previousPage'),
@@ -456,7 +460,7 @@ function RootLayout(): React.ReactElement {
       openPalette: t('commandPalette.label'),
       openShortcuts: t('commandPalette.commands.openShortcuts'),
     },
-  }), [activeMembershipRole, activeProjectId, location.pathname, memberships, navigate, openPalette, t]);
+  }), [activeMembershipRole, activeProjectId, location.pathname, memberships, navigate, openCurrentPageHelp, openPalette, t]);
 
   useRegisterCommands('global-app', globalCommands);
   

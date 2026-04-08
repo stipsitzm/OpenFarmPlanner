@@ -22,6 +22,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import PageHelp from '../components/help/PageHelp';
+import PageHeader from '../components/layout/PageHeader';
 import type { Supplier } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -176,15 +177,17 @@ export default function Suppliers(): React.ReactElement {
   return (
     <div className="page-container">
       <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <h1>{t('title')}</h1>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-            <Button variant="contained" onClick={openCreate}>
-              + {t('create')}
-            </Button>
-            <PageHelp pageKey="suppliers" />
-          </Box>
-        </Box>
+        <PageHeader
+          title={t('title')}
+          actions={(
+            <>
+              <Button variant="contained" onClick={openCreate}>
+                + {t('create')}
+              </Button>
+              <PageHelp pageKey="suppliers" />
+            </>
+          )}
+        />
         <TableContainer sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
           <Table size="small" sx={{ width: 'auto' }}>
             <TableHead>

@@ -11,6 +11,7 @@ export interface HierarchyRow {
   type: 'location' | 'field' | 'bed';
   level: number;
   expanded?: boolean;
+  hasChildren?: boolean;
   parentId?: string | number;
   // Bed fields
   name?: string;
