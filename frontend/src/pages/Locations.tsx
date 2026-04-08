@@ -263,10 +263,11 @@ function Locations(): React.ReactElement {
         ) : (
           <Box
             sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 420px))',
               gap: 2,
-              alignItems: 'flex-start',
+              alignItems: 'start',
+              justifyContent: 'start',
             }}
           >
             {locations.map((location) => {
@@ -281,9 +282,8 @@ function Locations(): React.ReactElement {
                 <Box
                   key={location.id}
                   sx={{
-                    flex: '1 1 420px',
-                    minWidth: { xs: '100%', sm: 320 },
-                    maxWidth: 540,
+                    width: '100%',
+                    maxWidth: 420,
                   }}
                 >
                   <Card variant="outlined" sx={{ width: '100%' }}>
