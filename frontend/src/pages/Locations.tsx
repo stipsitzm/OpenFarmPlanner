@@ -242,7 +242,7 @@ function Locations(): React.ReactElement {
 
   return (
     <Box p={3}>
-      <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+      <Box sx={{ width: '100%', maxWidth: 1320 }}>
         <PageHeader
           title={t('locations:title')}
           actions={(
@@ -264,10 +264,10 @@ function Locations(): React.ReactElement {
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 420px))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
               gap: 2,
               alignItems: 'start',
-              justifyContent: 'start',
+              width: '100%',
             }}
           >
             {locations.map((location) => {
@@ -283,7 +283,6 @@ function Locations(): React.ReactElement {
                   key={location.id}
                   sx={{
                     width: '100%',
-                    maxWidth: 420,
                   }}
                 >
                   <Card variant="outlined" sx={{ width: '100%' }}>
