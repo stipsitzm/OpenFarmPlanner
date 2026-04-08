@@ -12,6 +12,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useTranslation } from '../i18n';
+import PageContainer from '../components/layout/PageContainer';
 import { cultureAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
 import type {
   CultivationType,
@@ -879,7 +880,7 @@ function Cultures(): React.ReactElement {
 
 
   return (
-    <div className="page-container">
+    <PageContainer>
       <Box
         sx={{
           display: 'flex',
@@ -1317,7 +1318,7 @@ function Cultures(): React.ReactElement {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </div>
+    </PageContainer>
   );
 }
 export default Cultures;

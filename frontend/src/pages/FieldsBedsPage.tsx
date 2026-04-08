@@ -6,6 +6,7 @@ import { useCommandContextTag, useRegisterCommands } from '../commands/useComman
 import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
 import PageHelp from '../components/help/PageHelp';
+import PageContainer from '../components/layout/PageContainer';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 
@@ -63,7 +64,7 @@ export default function FieldsBedsPage(): React.ReactElement {
   }, [viewMode]);
 
   return (
-    <div className="page-container">
+    <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <h1>{t('hierarchy:title')}</h1>
         <PageHelp pageKey={viewMode === 'graphical' ? 'graphical' : 'areas'} />
@@ -93,6 +94,6 @@ export default function FieldsBedsPage(): React.ReactElement {
       </Stack>
 
       {viewMode === 'graphical' ? <GraphicalFields showTitle={false} /> : <FieldsBedsHierarchy showTitle={false} />}
-    </div>
+    </PageContainer>
   );
 }

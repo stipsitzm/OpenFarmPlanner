@@ -21,6 +21,7 @@ import { seedDemandAPI, type SeedDemand } from '../api/api';
 import { useTranslation } from '../i18n';
 import { useCommandContextTag } from '../commands/useCommandContext';
 import PageHelp from '../components/help/PageHelp';
+import PageContainer from '../components/layout/PageContainer';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
@@ -73,7 +74,7 @@ export default function SeedDemandPage(): React.ReactElement {
   }, []);
 
   return (
-    <Box sx={{ p: 3 }}>
+    <PageContainer>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h4">
           {t('seedDemand.title')}
@@ -169,6 +170,6 @@ export default function SeedDemandPage(): React.ReactElement {
           </Table>
         </TableContainer>
       )}
-    </Box>
+    </PageContainer>
   );
 }

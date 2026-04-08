@@ -38,6 +38,7 @@ import './GanttChart.css';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import PageHelp from '../components/help/PageHelp';
 import ModeToggle from '../components/ModeToggle';
+import PageContainer from '../components/layout/PageContainer';
 import type { CommandSpec } from '../commands/types';
 import {
   buildFieldOccupancyTaskGroups,
@@ -377,18 +378,18 @@ function GanttChartPage(): React.ReactElement {
 
   if (loading) {
     return (
-      <div className="page-container">
+      <PageContainer variant="wide">
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <h1>{t('ganttChart:title')}</h1>
           <PageHelp pageKey="calendar" />
         </Box>
         <p>{t('ganttChart:loading')}</p>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="page-container">
+    <PageContainer variant="wide">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <h1>{t('ganttChart:title')}</h1>
         <PageHelp pageKey="calendar" />
@@ -548,7 +549,7 @@ function GanttChartPage(): React.ReactElement {
           )}
         </Paper>
       ) : null}
-    </div>
+    </PageContainer>
   );
 }
 

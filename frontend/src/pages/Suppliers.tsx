@@ -23,6 +23,7 @@ import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import PageHelp from '../components/help/PageHelp';
 import PageHeader from '../components/layout/PageHeader';
+import PageContainer from '../components/layout/PageContainer';
 import type { Supplier } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -175,7 +176,7 @@ export default function Suppliers(): React.ReactElement {
   };
 
   return (
-    <div className="page-container">
+    <PageContainer>
       <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
         <PageHeader
           title={t('title')}
@@ -247,6 +248,6 @@ export default function Suppliers(): React.ReactElement {
           <Button onClick={() => void saveSupplier()} disabled={!canSave} variant="contained">{t('save')}</Button>
         </DialogActions>
       </Dialog>
-    </div>
+    </PageContainer>
   );
 }

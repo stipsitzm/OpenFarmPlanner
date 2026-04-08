@@ -23,6 +23,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, type Bed, type Culture, type Field, type Location, type PlantingPlan } from '../api/api';
 import PageHelp from '../components/help/PageHelp';
 import PageHeader from '../components/layout/PageHeader';
+import PageContainer from '../components/layout/PageContainer';
 import { useTranslation } from '../i18n';
 import { resolveLocaleFromLanguage } from '../utils/numberLocalization';
 import { deriveLocationTasks, type DerivedLocationTask } from './locationDerivedTasks';
@@ -241,8 +242,8 @@ function Locations(): React.ReactElement {
   };
 
   return (
-    <Box p={3}>
-      <Box sx={{ width: '100%', maxWidth: 1320 }}>
+    <PageContainer>
+      <Box sx={{ width: '100%' }}>
         <PageHeader
           title={t('locations:title')}
           actions={(
@@ -437,7 +438,7 @@ function Locations(): React.ReactElement {
           <Button variant="contained" onClick={() => void saveLocation()}>{t('common:actions.save')}</Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </PageContainer>
   );
 }
 
