@@ -13,6 +13,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
+import CropSquareIcon from '@mui/icons-material/CropSquare';
+import SpaOutlinedIcon from '@mui/icons-material/SpaOutlined';
 import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
 import { getPlainExcerpt } from '../data-grid/markdown';
@@ -32,6 +35,19 @@ export const DEFAULT_HIERARCHY_COLUMN_WIDTHS: HierarchyColumnWidths = {
 };
 
 const EXPAND_ICON_SLOT_SIZE = 32;
+const TYPE_ICON_SIZE = 18;
+
+const getTypeIcon = (rowType: HierarchyRow['type']): ReactElement => {
+  if (rowType === 'location') {
+    return <PlaceOutlinedIcon fontSize="inherit" data-testid="location-type-icon" />;
+  }
+
+  if (rowType === 'field') {
+    return <CropSquareIcon fontSize="inherit" data-testid="field-type-icon" />;
+  }
+
+  return <SpaOutlinedIcon fontSize="inherit" data-testid="bed-type-icon" />;
+};
 
 interface NameCellCallbacks {
   onToggleExpand: (rowId: string | number) => void;
@@ -176,9 +192,28 @@ function renderNameCell(
 
       <Box sx={{ display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: 0.5 }}>
         <Box
+          sx={{
+            width: TYPE_ICON_SIZE,
+            minWidth: TYPE_ICON_SIZE,
+            height: TYPE_ICON_SIZE,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: row.type === 'bed' ? 'text.secondary' : 'text.primary',
+            fontSize: `${TYPE_ICON_SIZE}px`,
+          }}
+        >
+          {getTypeIcon(row.type)}
+        </Box>
+        <Box
           component="span"
           sx={{
-            fontWeight: row.type === 'location' ? 'bold' : 'normal',
+            fontWeight: row.type === 'location' ? 600 : 400,
+            fontSize: row.type === 'location' ? '1.02rem' : row.type === 'bed' ? '0.95rem' : '1rem',
+            color: row.type === 'bed' ? 'text.secondary' : 'text.primary',
+            bgcolor: row.type === 'bed' ? 'action.hover' : 'transparent',
+            borderRadius: 0.5,
+            px: row.type === 'bed' ? 0.5 : 0,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',

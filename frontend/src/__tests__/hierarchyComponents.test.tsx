@@ -105,6 +105,7 @@ describe('hierarchy components and behaviors', () => {
         } as never)}
       </>
     );
+    expect(screen.getByTestId('location-type-icon')).toBeInTheDocument();
     await user.click(screen.getByLabelText('Parzelle hinzufügen'));
     expect(addField).toHaveBeenCalledWith(2);
 
@@ -118,6 +119,7 @@ describe('hierarchy components and behaviors', () => {
         } as never)}
       </>
     );
+    expect(screen.getByTestId('field-type-icon')).toBeInTheDocument();
     await user.click(screen.getByLabelText('Beet hinzufügen'));
     await user.click(screen.getByLabelText('Löschen'));
     expect(addBed).toHaveBeenCalledWith(10);
@@ -133,6 +135,7 @@ describe('hierarchy components and behaviors', () => {
         } as never)}
       </>
     );
+    expect(screen.getByTestId('bed-type-icon')).toBeInTheDocument();
     await user.click(screen.getByLabelText('Pflanzplan erstellen'));
     await user.click(screen.getByLabelText('Löschen'));
     expect(createPlan).toHaveBeenCalledWith(100);
