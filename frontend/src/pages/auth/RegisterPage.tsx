@@ -90,10 +90,10 @@ export default function RegisterPage(): React.ReactElement {
                   {t('auth:register.loggedInHint', { user: currentUserLabel })}
                 </Typography>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
-                  <Button variant="contained" onClick={() => void handleLogoutAndCreate()}>
+                  <Button type="button" variant="contained" onClick={() => void handleLogoutAndCreate()}>
                     {t('auth:register.logoutAndCreate')}
                   </Button>
-                  <Button variant="outlined" onClick={() => navigate('/app')}>
+                  <Button type="button" variant="outlined" onClick={() => navigate('/app')}>
                     {t('auth:register.backToApp')}
                   </Button>
                 </Stack>
@@ -115,8 +115,8 @@ export default function RegisterPage(): React.ReactElement {
           <TextField label={t('auth:register.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoggedIn} />
           <TextField label={t('auth:register.passwordConfirm')} type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} required disabled={isLoggedIn} />
           <Button type="submit" variant="contained" disabled={submitting || isLoggedIn}>{submitting ? t('auth:register.submitting') : t('auth:register.submit')}</Button>
-          <Button onClick={() => void handleResend()} disabled={!email || isLoggedIn}>{t('auth:register.resendActivation')}</Button>
-          <Button component={RouterLink} to={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'} state={location.state}>{t('auth:register.hasAccount')}</Button>
+          <Button type="button" onClick={() => void handleResend()} disabled={!email || isLoggedIn}>{t('auth:register.resendActivation')}</Button>
+          <Button type="button" component={RouterLink} to={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'} state={location.state}>{t('auth:register.hasAccount')}</Button>
         </Stack>
       </Box>
     </Container>
