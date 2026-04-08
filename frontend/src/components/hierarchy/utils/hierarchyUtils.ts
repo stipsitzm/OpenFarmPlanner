@@ -98,6 +98,10 @@ export function buildHierarchyRows(
     sortedLocations.forEach(location => {
       const locationKey = `location-${location.id}`;
       const isExpanded = expandedRows.has(locationKey);
+      const locationFields = sortByConfig(
+        fields.filter(f => f.location === location.id),
+        sortConfig
+      );
       hierarchyRows.push({
         id: locationKey,
         type: 'location',
@@ -105,18 +109,19 @@ export function buildHierarchyRows(
         name: location.name,
         locationId: location.id,
         expanded: isExpanded,
+        hasChildren: locationFields.length > 0,
       });
 
       if (!isExpanded) return;
 
       // Add fields under this location
-      const locationFields = sortByConfig(
-        fields.filter(f => f.location === location.id),
-        sortConfig
-      );
       locationFields.forEach(field => {
         const fieldKey = `field-${field.id}`;
         const isFieldExpanded = expandedRows.has(fieldKey);
+        const fieldBeds = sortByConfig(
+          beds.filter(b => b.field === field.id),
+          sortConfig
+        );
         hierarchyRows.push({
           id: fieldKey,
           type: 'field',
@@ -126,6 +131,7 @@ export function buildHierarchyRows(
           locationId: location.id,
           fieldId: field.id,
           expanded: isFieldExpanded,
+          hasChildren: fieldBeds.length > 0,
           area_sqm: field.area_sqm,
           length_m: field.length_m,
           width_m: field.width_m,
@@ -135,10 +141,6 @@ export function buildHierarchyRows(
         if (!isFieldExpanded) return;
 
         // Add beds under this field
-        const fieldBeds = sortByConfig(
-          beds.filter(b => b.field === field.id),
-          sortConfig
-        );
         fieldBeds.forEach(bed => {
           hierarchyRows.push({
             id: bed.id!,
@@ -155,6 +157,7 @@ export function buildHierarchyRows(
             locationId: location.id,
             fieldId: field.id,
             bedId: bed.id,
+            hasChildren: false,
             isNew: bed.id! < 0, // Mark as new if ID is negative
           });
         });
@@ -166,6 +169,10 @@ export function buildHierarchyRows(
     sortedFields.forEach(field => {
       const fieldKey = `field-${field.id}`;
       const isFieldExpanded = expandedRows.has(fieldKey);
+      const fieldBeds = sortByConfig(
+        beds.filter(b => b.field === field.id),
+        sortConfig
+      );
       hierarchyRows.push({
         id: fieldKey,
         type: 'field',
@@ -173,6 +180,7 @@ export function buildHierarchyRows(
         name: field.name,
         fieldId: field.id,
         expanded: isFieldExpanded,
+        hasChildren: fieldBeds.length > 0,
         area_sqm: field.area_sqm,
         length_m: field.length_m,
         width_m: field.width_m,
@@ -182,10 +190,6 @@ export function buildHierarchyRows(
       if (!isFieldExpanded) return;
 
       // Add beds under this field
-      const fieldBeds = sortByConfig(
-        beds.filter(b => b.field === field.id),
-        sortConfig
-      );
       fieldBeds.forEach(bed => {
         hierarchyRows.push({
           id: bed.id!,
@@ -201,6 +205,7 @@ export function buildHierarchyRows(
           notes: bed.notes,
           fieldId: field.id,
           bedId: bed.id,
+          hasChildren: false,
           isNew: bed.id! < 0, // Mark as new if ID is negative
         });
       });

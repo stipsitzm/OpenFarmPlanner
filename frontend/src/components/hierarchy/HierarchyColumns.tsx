@@ -130,13 +130,12 @@ function renderNameCell(
 ) {
   const row = params.row;
   const baseIndent = row.level * 24;
-  const indent = row.type === 'bed' ? baseIndent + 34 : baseIndent;
-
-  const hasExpandToggle = row.type === 'location' || row.type === 'field';
+  const hasChildren = row.hasChildren === true;
+  const hasExpandToggle = (row.type === 'location' || row.type === 'field') && hasChildren;
   const showInlineActions = params.cellMode !== 'edit';
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', pl: `${indent}px`, width: '100%', gap: 0.5 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', pl: `${baseIndent}px`, width: '100%', gap: 0.5 }}>
       {hasExpandToggle && (
         <Tooltip title={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}><IconButton
           size="small"
@@ -150,8 +149,6 @@ function renderNameCell(
           {row.expanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
         </IconButton></Tooltip>
       )}
-
-      {!hasExpandToggle && <Box sx={{ width: 32 }} />}
 
       <Box sx={{ display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: 0.5 }}>
         <Box

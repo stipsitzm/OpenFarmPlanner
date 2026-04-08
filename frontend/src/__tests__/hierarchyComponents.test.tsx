@@ -37,6 +37,22 @@ describe('hierarchy components and behaviors', () => {
     expect(rows).toHaveLength(0);
   });
 
+  it('marks expandability only for rows with real children', () => {
+    const locations = [createLocation({ id: 1, name: 'A' }), createLocation({ id: 2, name: 'B' })];
+    const fields = [createField({ id: 10, location: 1, name: 'Field 10' })];
+    const beds = [createBed({ id: 100, field: 10, name: 'Bed 100' })];
+
+    const rows = buildHierarchyRows(locations, fields, beds, new Set(['location-1', 'field-10', 'location-2']));
+
+    const locationWithChildren = rows.find((row) => row.id === 'location-1');
+    const fieldWithChildren = rows.find((row) => row.id === 'field-10');
+    const bedLeaf = rows.find((row) => row.id === 100);
+
+    expect(locationWithChildren?.hasChildren).toBe(true);
+    expect(fieldWithChildren?.hasChildren).toBe(true);
+    expect(bedLeaf?.hasChildren).toBe(false);
+  });
+
   it('builds hierarchy inline action callbacks for field, bed and location rows', async () => {
     const user = userEvent.setup();
     const toggleExpand = vi.fn();
@@ -178,6 +194,48 @@ describe('hierarchy components and behaviors', () => {
 
     expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
+  });
+
+  it('renders chevron only for rows that actually have children', () => {
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+    );
+
+    const nameColumn = columns.find((column) => column.field === 'name');
+
+    const { rerender } = render(
+      <>
+        {nameColumn?.renderCell?.({
+          id: 'field-10',
+          field: 'name',
+          value: 'Parzelle 10',
+          row: { id: 'field-10', type: 'field', fieldId: 10, level: 1, hasChildren: false },
+        } as never)}
+      </>
+    );
+
+    expect(screen.queryByLabelText('Eintrag aufklappen')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Eintrag zuklappen')).not.toBeInTheDocument();
+
+    rerender(
+      <>
+        {nameColumn?.renderCell?.({
+          id: 'field-11',
+          field: 'name',
+          value: 'Parzelle 11',
+          row: { id: 'field-11', type: 'field', fieldId: 11, level: 1, expanded: false, hasChildren: true },
+        } as never)}
+      </>
+    );
+
+    expect(screen.getByLabelText('Eintrag aufklappen')).toBeInTheDocument();
   });
 
 
