@@ -753,7 +753,7 @@ function FieldsBedsHierarchy({
   ]);
 
   return (
-    <div className="page-container">
+    <div className={showTitle ? "page-container" : undefined}>
       <Box sx={{ width: "fit-content", maxWidth: "100%" }}>
         {showTitle && <h1>{t("title")}</h1>}
 

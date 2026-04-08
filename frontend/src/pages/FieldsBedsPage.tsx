@@ -7,6 +7,7 @@ import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
 import PageHelp from '../components/help/PageHelp';
 import PageContainer from '../components/layout/PageContainer';
+import PageHeader from '../components/layout/PageHeader';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 
@@ -64,36 +65,41 @@ export default function FieldsBedsPage(): React.ReactElement {
   }, [viewMode]);
 
   return (
-    <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <h1>{t('hierarchy:title')}</h1>
-        <PageHelp pageKey={viewMode === 'graphical' ? 'graphical' : 'areas'} />
-      </Box>
-      <Stack spacing={0.75} sx={{ mb: 2, width: { xs: '100%', sm: 'fit-content' } }}>
-        <Typography variant="subtitle2">{t('fields:representation.label')}</Typography>
-        <ToggleButtonGroup
-          value={viewMode}
-          exclusive
-          onChange={(_, selectedViewMode: ViewMode | null) => {
-            if (selectedViewMode !== null) {
-              setViewMode(selectedViewMode);
-            }
-          }}
-          size="small"
-          color="primary"
-          aria-label={t('fields:representation.ariaLabel')}
-          fullWidth
-        >
-          <ToggleButton value="table" aria-label={t('fields:representation.table')}>
-            {t('fields:representation.table')}
-          </ToggleButton>
-          <ToggleButton value="graphical" aria-label={t('fields:representation.graphical')}>
-            {t('fields:representation.graphical')}
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </Stack>
+    <>
+      <PageContainer variant="standard">
+        <PageHeader
+          title={t('hierarchy:title')}
+          actions={<PageHelp pageKey={viewMode === 'graphical' ? 'graphical' : 'areas'} />}
+          marginBottom={1}
+        />
+        <Stack spacing={0.75} sx={{ mb: 2, width: { xs: '100%', sm: 'fit-content' } }}>
+          <Typography variant="subtitle2">{t('fields:representation.label')}</Typography>
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={(_, selectedViewMode: ViewMode | null) => {
+              if (selectedViewMode !== null) {
+                setViewMode(selectedViewMode);
+              }
+            }}
+            size="small"
+            color="primary"
+            aria-label={t('fields:representation.ariaLabel')}
+            fullWidth
+          >
+            <ToggleButton value="table" aria-label={t('fields:representation.table')}>
+              {t('fields:representation.table')}
+            </ToggleButton>
+            <ToggleButton value="graphical" aria-label={t('fields:representation.graphical')}>
+              {t('fields:representation.graphical')}
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
+      </PageContainer>
 
-      {viewMode === 'graphical' ? <GraphicalFields showTitle={false} /> : <FieldsBedsHierarchy showTitle={false} />}
-    </PageContainer>
+      <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
+        {viewMode === 'graphical' ? <GraphicalFields showTitle={false} /> : <FieldsBedsHierarchy showTitle={false} />}
+      </PageContainer>
+    </>
   );
 }

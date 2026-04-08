@@ -1077,7 +1077,7 @@ function PlantingPlans(): React.ReactElement {
   };
 
   return (
-    <PageContainer variant="wide">
+    <PageContainer variant="full">
       {areaWarning ? (
         <Alert severity="warning" sx={{ mb: 2 }}>
           {areaWarning}

@@ -39,6 +39,7 @@ import { useCommandContextTag, useRegisterCommands } from '../commands/useComman
 import PageHelp from '../components/help/PageHelp';
 import ModeToggle from '../components/ModeToggle';
 import PageContainer from '../components/layout/PageContainer';
+import PageHeader from '../components/layout/PageHeader';
 import type { CommandSpec } from '../commands/types';
 import {
   buildFieldOccupancyTaskGroups,
@@ -378,22 +379,16 @@ function GanttChartPage(): React.ReactElement {
 
   if (loading) {
     return (
-      <PageContainer variant="wide">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <h1>{t('ganttChart:title')}</h1>
-          <PageHelp pageKey="calendar" />
-        </Box>
+      <PageContainer variant="full">
+        <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
         <p>{t('ganttChart:loading')}</p>
       </PageContainer>
     );
   }
 
   return (
-    <PageContainer variant="wide">
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <h1>{t('ganttChart:title')}</h1>
-        <PageHelp pageKey="calendar" />
-      </Box>
+    <PageContainer variant="full">
+      <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
