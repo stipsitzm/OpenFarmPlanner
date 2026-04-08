@@ -1086,7 +1086,7 @@ function PlantingPlans(): React.ReactElement {
         </Alert>
       ) : null}
 
-      <Box sx={{ width: "100%", maxWidth: "100%" }}>
+      <Box sx={{ width: "fit-content", maxWidth: "100%" }}>
         <PageHeader
           title={t("plantingPlans:title")}
           actions={(
