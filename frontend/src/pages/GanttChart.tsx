@@ -12,9 +12,7 @@ import { useTranslation } from '../i18n';
 import {
   Alert,
   Box,
-  FormControlLabel,
   Paper,
-  Switch,
   Tab,
   Tabs,
   Tooltip,
@@ -39,6 +37,9 @@ import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import PageHelp from '../components/help/PageHelp';
+import ModeToggle from '../components/ModeToggle';
+import PageContainer from '../components/layout/PageContainer';
+import PageHeader from '../components/layout/PageHeader';
 import type { CommandSpec } from '../commands/types';
 import {
   buildFieldOccupancyTaskGroups,
@@ -378,179 +379,171 @@ function GanttChartPage(): React.ReactElement {
 
   if (loading) {
     return (
-      <div className="page-container">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <h1>{t('ganttChart:title')}</h1>
-          <PageHelp pageKey="calendar" />
-        </Box>
+      <PageContainer variant="xwide">
+        <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
         <p>{t('ganttChart:loading')}</p>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="page-container">
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <h1>{t('ganttChart:title')}</h1>
-        <PageHelp pageKey="calendar" />
-      </Box>
-
+    <PageContainer variant="xwide">
+      <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <Box sx={{ mb: 2 }}>
-        <Tabs
-          value={calendarMode}
-          onChange={(_, value: CalendarMode) => setCalendarMode(value)}
-          aria-label={t('ganttChart:viewSelectorAriaLabel')}
-        >
-          <Tab label={t('ganttChart:modes.occupancy')} value="occupancy" />
-          <Tab label={t('ganttChart:modes.seedlings')} value="seedlings" />
-        </Tabs>
-      </Box>
-
-      {calendarMode === 'occupancy' ? (
-        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <FormControlLabel
-            control={(
-              <Switch
-                checked={editMode}
-                onChange={(event) => setEditMode(event.target.checked)}
-                color="primary"
-              />
-            )}
-            label={editMode ? t('ganttChart:editMode') : t('ganttChart:viewMode')}
-          />
+        <Box sx={{ mb: 2 }}>
+          <Tabs
+            value={calendarMode}
+            onChange={(_, value: CalendarMode) => setCalendarMode(value)}
+            aria-label={t('ganttChart:viewSelectorAriaLabel')}
+          >
+            <Tab label={t('ganttChart:modes.occupancy')} value="occupancy" />
+            <Tab label={t('ganttChart:modes.seedlings')} value="seedlings" />
+          </Tabs>
         </Box>
-      ) : null}
 
-      <Paper className="gantt-container-wrapper">
-        {activeTaskGroups.length === 0 ? (
-          <div className="gantt-no-data">
-            {calendarMode === 'occupancy'
-              ? t('ganttChart:noData')
-              : t('ganttChart:seedlings.emptyState')}
-          </div>
-        ) : (
-          <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
-            <GanttChart
-              tasks={activeTaskGroups}
-              locale={resolvedLocale}
-              localeText={ganttLocaleText}
-              viewMode={ViewMode.MONTH}
-              startDate={startDate}
-              endDate={endDate}
-              editMode={calendarMode === 'occupancy' ? editMode : false}
-              allowTaskResize={false}
-              allowTaskMove={calendarMode === 'occupancy'}
-              showProgress={false}
-              darkMode={false}
-              onTaskUpdate={calendarMode === 'occupancy' ? handleTaskUpdate : undefined}
-              renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
-                ? renderSeedlingTooltip({ task })
-                : renderOccupancyTooltip({ task }))}
-              renderTask={calendarMode === 'seedlings'
-                ? ({ task, leftPx, widthPx, topPx }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        left: `${leftPx}px`,
-                        top: `${topPx}px`,
-                        width: `${widthPx}px`,
-                        minWidth: `${widthPx}px`,
-                        height: 26,
-                        px: 1,
-                        borderRadius: 1,
-                        backgroundColor: task.color || '#3b82f6',
-                        color: '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        overflow: 'hidden',
-                        whiteSpace: 'nowrap',
-                        textOverflow: 'ellipsis',
-                        boxSizing: 'border-box',
-                        cursor: 'default',
-                      }}
-                    >
-                      <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {task.name}
-                      </Typography>
-                    </Box>
-                  )
-                : undefined}
+        {calendarMode === 'occupancy' ? (
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <ModeToggle
+              label={t('ganttChart:modeLabel')}
+              ariaLabel={t('ganttChart:modeAriaLabel')}
+              viewLabel={t('ganttChart:modeViewOption')}
+              editLabel={t('ganttChart:modeEditOption')}
+              value={editMode ? 'edit' : 'view'}
+              onChange={(selectedMode) => setEditMode(selectedMode === 'edit')}
+              fullWidth={false}
             />
-          </GanttRenderBoundary>
-        )}
-      </Paper>
+          </Box>
+        ) : null}
 
-      {calendarMode === 'occupancy' ? (
-        <Paper className="gantt-container-wrapper" sx={{ mt: 3, p: 2 }}>
-          <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
-            {t('ganttChart:yieldDistributionTitle')}
-          </Typography>
-          {chartData.length === 0 ? (
-            <div className="gantt-no-data">{t('ganttChart:noYieldData')}</div>
+        <Paper className="gantt-container-wrapper">
+          {activeTaskGroups.length === 0 ? (
+            <div className="gantt-no-data">
+              {calendarMode === 'occupancy'
+                ? t('ganttChart:noData')
+                : t('ganttChart:seedlings.emptyState')}
+            </div>
           ) : (
-            <Box sx={{ width: '100%' }}>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                {chartCultures.map((culture) => (
-                  <Box key={culture.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                    <Box sx={{ width: 12, height: 12, borderRadius: '2px', backgroundColor: culture.color }} />
-                    <Typography variant="body2">{culture.name}</Typography>
-                  </Box>
-                ))}
-              </Box>
-
-              <Box sx={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: 1, alignItems: 'start' }}>
-                <Box>
-                  <Box sx={{ display: 'flex', flexDirection: 'column-reverse', justifyContent: 'space-between', height: 260, pr: 1 }}>
-                    {yAxisTicks.map((tick, index) => (
-                      <Typography key={`${tick}-${index}`} variant="caption" sx={{ textAlign: 'right', color: 'text.secondary' }}>
-                        {tick.toFixed(1)} kg
-                      </Typography>
-                    ))}
-                  </Box>
-                  <Box sx={{ height: 44 }} />
-                </Box>
-
-                <Box sx={{ overflowX: 'auto', pb: 0.5 }}>
-                  <Box sx={{ width: Math.max(chartData.length * 40, 420) }}>
-                    <Box sx={{ borderLeft: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db', height: 260, px: 1, display: 'flex', alignItems: 'flex-end', gap: 0.75 }}>
-                      {chartData.map((week) => (
-                        <Box key={week.isoWeek} sx={{ width: 34, flex: '0 0 34px', height: '100%', display: 'flex', alignItems: 'flex-end' }}>
-                          <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column-reverse', justifyContent: 'flex-start' }}>
-                            {week.cultures.map((culture) => (
-                              <Tooltip key={`${week.isoWeek}-${culture.culture_id}`} title={`${culture.culture_name}: ${culture.yield.toFixed(2)} kg`}>
-                                <Box
-                                  sx={{
-                                    width: '100%',
-                                    height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
-                                    minHeight: culture.yield > 0 ? '2px' : 0,
-                                    backgroundColor: culture.color,
-                                  }}
-                                />
-                              </Tooltip>
-                            ))}
-                          </Box>
-                        </Box>
-                      ))}
-                    </Box>
-
-                    <Box sx={{ height: 44, px: 1, display: 'flex', gap: 0.75, alignItems: 'flex-start' }}>
-                      {chartData.map((week) => (
-                        <Box key={`${week.isoWeek}-axis`} sx={{ width: 34, flex: '0 0 34px', textAlign: 'center' }}>
-                          <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, lineHeight: 1.2 }}>{week.weekLabel}</Typography>
-                          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', lineHeight: 1.2 }}>{week.monthLabel}</Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
+            <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
+              <GanttChart
+                tasks={activeTaskGroups}
+                locale={resolvedLocale}
+                localeText={ganttLocaleText}
+                viewMode={ViewMode.MONTH}
+                startDate={startDate}
+                endDate={endDate}
+                editMode={calendarMode === 'occupancy' ? editMode : false}
+                allowTaskResize={false}
+                allowTaskMove={calendarMode === 'occupancy'}
+                showProgress={false}
+                darkMode={false}
+                onTaskUpdate={calendarMode === 'occupancy' ? handleTaskUpdate : undefined}
+                renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
+                  ? renderSeedlingTooltip({ task })
+                  : renderOccupancyTooltip({ task }))}
+                renderTask={calendarMode === 'seedlings'
+                  ? ({ task, leftPx, widthPx, topPx }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          left: `${leftPx}px`,
+                          top: `${topPx}px`,
+                          width: `${widthPx}px`,
+                          minWidth: `${widthPx}px`,
+                          height: 26,
+                          px: 1,
+                          borderRadius: 1,
+                          backgroundColor: task.color || '#3b82f6',
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          overflow: 'hidden',
+                          whiteSpace: 'nowrap',
+                          textOverflow: 'ellipsis',
+                          boxSizing: 'border-box',
+                          cursor: 'default',
+                        }}
+                      >
+                        <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {task.name}
+                        </Typography>
+                      </Box>
+                    )
+                  : undefined}
+              />
+            </GanttRenderBoundary>
           )}
         </Paper>
-      ) : null}
-    </div>
+
+        {calendarMode === 'occupancy' ? (
+          <Paper className="gantt-container-wrapper" sx={{ mt: 3, p: 2 }}>
+            <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
+              {t('ganttChart:yieldDistributionTitle')}
+            </Typography>
+            {chartData.length === 0 ? (
+              <div className="gantt-no-data">{t('ganttChart:noYieldData')}</div>
+            ) : (
+              <Box sx={{ width: '100%' }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                  {chartCultures.map((culture) => (
+                    <Box key={culture.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <Box sx={{ width: 12, height: 12, borderRadius: '2px', backgroundColor: culture.color }} />
+                      <Typography variant="body2">{culture.name}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: 1, alignItems: 'start' }}>
+                  <Box>
+                    <Box sx={{ display: 'flex', flexDirection: 'column-reverse', justifyContent: 'space-between', height: 260, pr: 1 }}>
+                      {yAxisTicks.map((tick, index) => (
+                        <Typography key={`${tick}-${index}`} variant="caption" sx={{ textAlign: 'right', color: 'text.secondary' }}>
+                          {tick.toFixed(1)} kg
+                        </Typography>
+                      ))}
+                    </Box>
+                    <Box sx={{ height: 44 }} />
+                  </Box>
+
+                  <Box sx={{ overflowX: 'auto', pb: 0.5 }}>
+                    <Box sx={{ width: Math.max(chartData.length * 40, 420) }}>
+                      <Box sx={{ borderLeft: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db', height: 260, px: 1, display: 'flex', alignItems: 'flex-end', gap: 0.75 }}>
+                        {chartData.map((week) => (
+                          <Box key={week.isoWeek} sx={{ width: 34, flex: '0 0 34px', height: '100%', display: 'flex', alignItems: 'flex-end' }}>
+                            <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column-reverse', justifyContent: 'flex-start' }}>
+                              {week.cultures.map((culture) => (
+                                <Tooltip key={`${week.isoWeek}-${culture.culture_id}`} title={`${culture.culture_name}: ${culture.yield.toFixed(2)} kg`}>
+                                  <Box
+                                    sx={{
+                                      width: '100%',
+                                      height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
+                                      minHeight: culture.yield > 0 ? '2px' : 0,
+                                      backgroundColor: culture.color,
+                                    }}
+                                  />
+                                </Tooltip>
+                              ))}
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+
+                      <Box sx={{ height: 44, px: 1, display: 'flex', gap: 0.75, alignItems: 'flex-start' }}>
+                        {chartData.map((week) => (
+                          <Box key={`${week.isoWeek}-axis`} sx={{ width: 34, flex: '0 0 34px', textAlign: 'center' }}>
+                            <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, lineHeight: 1.2 }}>{week.weekLabel}</Typography>
+                            <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', lineHeight: 1.2 }}>{week.monthLabel}</Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+            )}
+          </Paper>
+        ) : null}
+    </PageContainer>
   );
 }
 

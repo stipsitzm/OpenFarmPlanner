@@ -14,8 +14,6 @@ import {
   IconButton,
   Paper,
   Stack,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -40,6 +38,7 @@ import {
 } from "../api/api";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useTranslation } from "../i18n";
+import ModeToggle from "../components/ModeToggle";
 import {
   clampInsideParent,
   getBedRectSizeWithinField,
@@ -111,6 +110,9 @@ interface SelectedElement {
 
 interface GraphicalFieldsProps {
   showTitle?: boolean;
+  interactionMode?: InteractionMode;
+  onInteractionModeChange?: (mode: InteractionMode) => void;
+  showModeToggle?: boolean;
 }
 
 type InteractionMode = "view" | "edit";
@@ -236,6 +238,9 @@ const snapToNeighbors = (
 
 export default function GraphicalFields({
   showTitle = true,
+  interactionMode: controlledInteractionMode,
+  onInteractionModeChange,
+  showModeToggle = true,
 }: GraphicalFieldsProps): React.ReactElement {
   const { t } = useTranslation(["fields", "common"]);
   const { loading, error, locations, fields, beds } = useHierarchyData();
@@ -269,8 +274,15 @@ export default function GraphicalFields({
     ),
   );
   const [activeGuides, setActiveGuides] = useState<GuideLine[]>([]);
-  const [interactionMode, setInteractionMode] =
+  const [localInteractionMode, setLocalInteractionMode] =
     useState<InteractionMode>("view");
+  const interactionMode = controlledInteractionMode ?? localInteractionMode;
+  const setInteractionMode = (mode: InteractionMode): void => {
+    if (controlledInteractionMode === undefined) {
+      setLocalInteractionMode(mode);
+    }
+    onInteractionModeChange?.(mode);
+  };
   const isEditMode = interactionMode === "edit";
   const isViewMode = interactionMode === "view";
   const [viewportByLocation, setViewportByLocation] = useState<
@@ -435,9 +447,7 @@ export default function GraphicalFields({
         keys: { alt: true, key: "e" },
         contexts: [],
         action: () => {
-          setInteractionMode((previous) =>
-            previous === "edit" ? "view" : "edit",
-          );
+          setInteractionMode(interactionMode === "edit" ? "view" : "edit");
         },
       },
     ],
@@ -1137,31 +1147,18 @@ export default function GraphicalFields({
             </Typography>
           ) : null}
         </Box>
-        <Stack spacing={0.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
-          <Stack direction="row" spacing={0.5} alignItems="center" justifyContent={{ xs: "space-between", sm: "flex-start" }}>
-            <Typography variant="subtitle2">{t("fields:graphical.viewMode")}</Typography>
+        {showModeToggle ? (
+          <Stack spacing={0.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            <ModeToggle
+              label={t("fields:graphical.viewMode")}
+              ariaLabel={t("fields:graphical.modeAriaLabel")}
+              viewLabel={t("fields:graphical.viewModeOption")}
+              editLabel={t("fields:graphical.editModeOption")}
+              value={interactionMode}
+              onChange={setInteractionMode}
+            />
           </Stack>
-          <ToggleButtonGroup
-            value={interactionMode}
-            exclusive
-            size="small"
-            color="primary"
-            fullWidth
-            aria-label={t("fields:graphical.modeAriaLabel")}
-            onChange={(_, selectedMode: InteractionMode | null) => {
-              if (selectedMode !== null) {
-                setInteractionMode(selectedMode);
-              }
-            }}
-          >
-            <ToggleButton value="view" aria-label={t("fields:graphical.viewModeOption")}>
-              {t("fields:graphical.viewModeOption")}
-            </ToggleButton>
-            <ToggleButton value="edit" aria-label={t("fields:graphical.editModeOption")}>
-              {t("fields:graphical.editModeOption")}
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </Stack>
+        ) : null}
       </Stack>
 
       {isEditMode ? (

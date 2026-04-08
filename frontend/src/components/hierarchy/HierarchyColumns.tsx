@@ -31,6 +31,8 @@ export const DEFAULT_HIERARCHY_COLUMN_WIDTHS: HierarchyColumnWidths = {
   notes: 320,
 };
 
+const EXPAND_ICON_SLOT_SIZE = 32;
+
 interface NameCellCallbacks {
   onToggleExpand: (rowId: string | number) => void;
   onAddBed: (fieldId: number) => void;
@@ -136,25 +138,52 @@ function renderNameCell(
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', pl: `${baseIndent}px`, width: '100%', gap: 0.5 }}>
-      {hasExpandToggle && (
-        <Tooltip title={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}><IconButton
-          size="small"
-          aria-label={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}
-          onClick={(event) => {
-            event.stopPropagation();
-            callbacks.onToggleExpand(row.id);
-          }}
-          sx={{ mr: 1 }}
-        >
-          {row.expanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
-        </IconButton></Tooltip>
-      )}
+      <Box
+        sx={{
+          width: EXPAND_ICON_SLOT_SIZE,
+          minWidth: EXPAND_ICON_SLOT_SIZE,
+          height: EXPAND_ICON_SLOT_SIZE,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          mr: 1,
+          pointerEvents: hasExpandToggle ? 'auto' : 'none',
+        }}
+        data-testid="expand-icon-slot"
+      >
+        {hasExpandToggle ? (
+          <Tooltip title={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}>
+            <IconButton
+              size="small"
+              aria-label={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}
+              onClick={(event) => {
+                event.stopPropagation();
+                callbacks.onToggleExpand(row.id);
+              }}
+            >
+              {row.expanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
+            </IconButton>
+          </Tooltip>
+        ) : (
+          <Box
+            aria-hidden="true"
+            sx={{ width: EXPAND_ICON_SLOT_SIZE, height: EXPAND_ICON_SLOT_SIZE, visibility: 'hidden' }}
+          >
+            <ChevronRightIcon />
+          </Box>
+        )}
+      </Box>
 
       <Box sx={{ display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: 0.5 }}>
         <Box
           component="span"
           sx={{
-            fontWeight: row.type === 'location' ? 'bold' : 'normal',
+            fontWeight: row.type === 'location' ? 600 : 400,
+            fontSize: row.type === 'location' ? '1.02rem' : row.type === 'bed' ? '0.95rem' : '1rem',
+            color: 'text.primary',
+            bgcolor: 'transparent',
+            borderRadius: 0.5,
+            px: row.type === 'bed' ? 0.5 : 0,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',

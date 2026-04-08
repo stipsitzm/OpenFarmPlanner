@@ -7,7 +7,9 @@ vi.mock('../pages/FieldsBedsHierarchy', () => ({
 }));
 
 vi.mock('../pages/GraphicalFields', () => ({
-  default: () => <div>Editiermodus</div>,
+  default: ({ interactionMode }: { interactionMode?: 'view' | 'edit' }) => (
+    <div>{`Editiermodus-${interactionMode ?? 'none'}`}</div>
+  ),
 }));
 
 vi.mock('../commands/useCommandContext', () => ({
@@ -24,15 +26,23 @@ describe('FieldsBedsPage', () => {
     render(<FieldsBedsPage />);
 
     expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
-    expect(screen.queryByText('Editiermodus')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Editiermodus-/)).not.toBeInTheDocument();
+    expect(screen.getByText('Darstellung')).toBeInTheDocument();
+    expect(screen.queryByText('Modus')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ansicht' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Grafik' }));
 
-    expect(screen.getByText('Editiermodus')).toBeInTheDocument();
+    expect(screen.getByText('Editiermodus-view')).toBeInTheDocument();
+    expect(screen.getByText('Modus')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ansicht' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bearbeiten' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Liste' }));
 
     expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
-    expect(screen.queryByText('Editiermodus')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Editiermodus-/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Modus')).not.toBeInTheDocument();
   });
 });

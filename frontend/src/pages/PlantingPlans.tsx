@@ -34,6 +34,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTranslation } from "../i18n";
+import PageContainer from "../components/layout/PageContainer";
 import {
   plantingPlanAPI,
   cultureAPI,
@@ -1076,35 +1077,33 @@ function PlantingPlans(): React.ReactElement {
   };
 
   return (
-    <div
-      className="page-container"
-      style={{ maxWidth: "none", margin: 0, paddingLeft: 16, paddingRight: 16 }}
-    >
+    <PageContainer variant="xwide">
+      <PageHeader
+        title={t("plantingPlans:title")}
+        actions={(
+          <>
+            {!isMobile ? (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => gridCommandApiRef.current?.addRow()}
+                aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
+              >
+                {t("plantingPlans:addButton")}
+              </Button>
+            ) : null}
+            <PageHelp pageKey="plantingPlans" />
+          </>
+        )}
+      />
+
       {areaWarning ? (
         <Alert severity="warning" sx={{ mb: 2 }}>
           {areaWarning}
         </Alert>
       ) : null}
 
-      <Box sx={{ width: "fit-content", maxWidth: "100%" }}>
-        <PageHeader
-          title={t("plantingPlans:title")}
-          actions={(
-            <>
-              {!isMobile ? (
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => gridCommandApiRef.current?.addRow()}
-                  aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
-                >
-                  {t("plantingPlans:addButton")}
-                </Button>
-              ) : null}
-              <PageHelp pageKey="plantingPlans" />
-            </>
-          )}
-        />
+      <Box sx={{ width: "100%" }}>
 
         {isMobile ? (
           <Box sx={{ pb: 10 }}>
@@ -1515,7 +1514,7 @@ function PlantingPlans(): React.ReactElement {
         focusAttachments
         focusRequestId={mobileNotesTarget?.id ?? 0}
       />
-    </div>
+    </PageContainer>
   );
 }
 

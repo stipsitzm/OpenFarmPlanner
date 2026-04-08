@@ -23,6 +23,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, type Bed, type Culture, type Field, type Location, type PlantingPlan } from '../api/api';
 import PageHelp from '../components/help/PageHelp';
 import PageHeader from '../components/layout/PageHeader';
+import PageContainer from '../components/layout/PageContainer';
 import { useTranslation } from '../i18n';
 import { resolveLocaleFromLanguage } from '../utils/numberLocalization';
 import { deriveLocationTasks, type DerivedLocationTask } from './locationDerivedTasks';
@@ -32,8 +33,7 @@ type Exposure = NonNullable<Location['exposure']>;
 
 interface LocationFormState {
   name: string;
-  latitude: string;
-  longitude: string;
+  coordinates: string;
   address: string;
   description: string;
   soil_type: SoilType | '';
@@ -57,8 +57,7 @@ const EXPOSURE_OPTIONS: Array<{ value: Exposure; labelKey: string }> = [
 
 const emptyForm: LocationFormState = {
   name: '',
-  latitude: '',
-  longitude: '',
+  coordinates: '',
   address: '',
   description: '',
   soil_type: '',
@@ -66,11 +65,32 @@ const emptyForm: LocationFormState = {
   notes: '',
 };
 
-const parseCoordinateInput = (value: string): number | null => {
-  const normalized = value.trim().replace(',', '.');
+const parseCoordinateValue = (value: string): number | null => {
+  const normalized = value.trim();
   if (!normalized) return null;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const parseCoordinatesInput = (value: string): { latitude: number; longitude: number } | null => {
+  const normalized = value.trim();
+  if (!normalized) return null;
+
+  const rawParts = normalized.includes(',')
+    ? normalized.split(/\s*,\s*/)
+    : normalized.split(/\s+/);
+
+  if (rawParts.length !== 2) {
+    return null;
+  }
+
+  const latitude = parseCoordinateValue(rawParts[0]);
+  const longitude = parseCoordinateValue(rawParts[1]);
+  if (latitude === null || longitude === null) {
+    return null;
+  }
+
+  return { latitude, longitude };
 };
 
 const validateCoordinateRange = (value: number | null, min: number, max: number): boolean =>
@@ -87,8 +107,10 @@ const formatTaskDate = (value: string, locale: string): string => {
 
 const toFormState = (location: Location | null): LocationFormState => ({
   name: location?.name ?? '',
-  latitude: typeof location?.latitude === 'number' ? String(location.latitude) : '',
-  longitude: typeof location?.longitude === 'number' ? String(location.longitude) : '',
+  coordinates:
+    typeof location?.latitude === 'number' && typeof location?.longitude === 'number'
+      ? `${location.latitude}, ${location.longitude}`
+      : '',
   address: location?.address ?? '',
   description: location?.description ?? '',
   soil_type: location?.soil_type ?? '',
@@ -110,6 +132,7 @@ function Locations(): React.ReactElement {
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [formState, setFormState] = useState<LocationFormState>(emptyForm);
   const [formError, setFormError] = useState<string>('');
+  const [formErrorField, setFormErrorField] = useState<'name' | 'coordinates' | null>(null);
 
   const loadData = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -154,6 +177,7 @@ function Locations(): React.ReactElement {
     setEditingLocation(null);
     setFormState(emptyForm);
     setFormError('');
+    setFormErrorField(null);
     setDialogOpen(true);
   };
 
@@ -161,6 +185,7 @@ function Locations(): React.ReactElement {
     setEditingLocation(location);
     setFormState(toFormState(location));
     setFormError('');
+    setFormErrorField(null);
     setDialogOpen(true);
   };
 
@@ -169,31 +194,42 @@ function Locations(): React.ReactElement {
     setEditingLocation(null);
     setFormState(emptyForm);
     setFormError('');
+    setFormErrorField(null);
   };
 
   const validateForm = (): { latitude: number | null; longitude: number | null } | null => {
     if (!formState.name.trim()) {
       setFormError(t('locations:validation.nameRequired'));
+      setFormErrorField('name');
       return null;
     }
-    const latitude = parseCoordinateInput(formState.latitude);
-    const longitude = parseCoordinateInput(formState.longitude);
-    if (formState.latitude.trim() && latitude === null) {
-      setFormError(t('locations:validation.coordinateInvalid', { field: t('locations:columns.latitude') }));
+
+    if (!formState.coordinates.trim()) {
+      setFormError('');
+      setFormErrorField(null);
+      return { latitude: null, longitude: null };
+    }
+
+    const parsedCoordinates = parseCoordinatesInput(formState.coordinates);
+    if (!parsedCoordinates) {
+      setFormError(t('locations:validation.coordinateFormat'));
+      setFormErrorField('coordinates');
       return null;
     }
-    if (formState.longitude.trim() && longitude === null) {
-      setFormError(t('locations:validation.coordinateInvalid', { field: t('locations:columns.longitude') }));
-      return null;
-    }
+
+    const { latitude, longitude } = parsedCoordinates;
     if (!validateCoordinateRange(latitude, -90, 90)) {
       setFormError(t('locations:validation.latitudeRange'));
+      setFormErrorField('coordinates');
       return null;
     }
     if (!validateCoordinateRange(longitude, -180, 180)) {
       setFormError(t('locations:validation.longitudeRange'));
+      setFormErrorField('coordinates');
       return null;
     }
+    setFormError('');
+    setFormErrorField(null);
     return { latitude, longitude };
   };
 
@@ -221,6 +257,7 @@ function Locations(): React.ReactElement {
       await loadData();
     } catch {
       setFormError(t('locations:errors.save'));
+      setFormErrorField(null);
     }
   };
 
@@ -241,8 +278,8 @@ function Locations(): React.ReactElement {
   };
 
   return (
-    <Box p={3}>
-      <Box sx={{ width: '100%', maxWidth: 1320 }}>
+    <PageContainer>
+      <Box sx={{ width: '100%' }}>
         <PageHeader
           title={t('locations:title')}
           actions={(
@@ -369,20 +406,16 @@ function Locations(): React.ReactElement {
             label={t('common:fields.name')}
             value={formState.name}
             onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
-            error={Boolean(formError)}
-            helperText={formError || ' '}
+            error={formErrorField === 'name'}
+            helperText={formErrorField === 'name' ? formError : ' '}
           />
           <TextField
-            label={t('locations:columns.latitude')}
-            value={formState.latitude}
-            onChange={(event) => setFormState((prev) => ({ ...prev, latitude: event.target.value }))}
-            placeholder={t('locations:placeholders.latitude')}
-          />
-          <TextField
-            label={t('locations:columns.longitude')}
-            value={formState.longitude}
-            onChange={(event) => setFormState((prev) => ({ ...prev, longitude: event.target.value }))}
-            placeholder={t('locations:placeholders.longitude')}
+            label={t('locations:columns.coordinates')}
+            value={formState.coordinates}
+            onChange={(event) => setFormState((prev) => ({ ...prev, coordinates: event.target.value }))}
+            placeholder={t('locations:placeholders.coordinates')}
+            error={formErrorField === 'coordinates'}
+            helperText={formErrorField === 'coordinates' ? formError : t('locations:helpers.coordinatesExample')}
           />
           <TextField
             label={t('locations:columns.address')}
@@ -437,7 +470,7 @@ function Locations(): React.ReactElement {
           <Button variant="contained" onClick={() => void saveLocation()}>{t('common:actions.save')}</Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </PageContainer>
   );
 }
 

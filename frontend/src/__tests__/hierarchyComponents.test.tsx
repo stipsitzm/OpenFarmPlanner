@@ -221,8 +221,10 @@ describe('hierarchy components and behaviors', () => {
       </>
     );
 
+    expect(screen.getByTestId('expand-icon-slot')).toBeInTheDocument();
     expect(screen.queryByLabelText('Eintrag aufklappen')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Eintrag zuklappen')).not.toBeInTheDocument();
+    expect(screen.getByText('Parzelle 10')).toBeInTheDocument();
 
     rerender(
       <>
@@ -235,6 +237,7 @@ describe('hierarchy components and behaviors', () => {
       </>
     );
 
+    expect(screen.getByTestId('expand-icon-slot')).toBeInTheDocument();
     expect(screen.getByLabelText('Eintrag aufklappen')).toBeInTheDocument();
   });
 

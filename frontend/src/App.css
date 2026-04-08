@@ -113,12 +113,44 @@ body.hide-version-footer .app-version-footer {
 }
 
 /* Page Container */
+.content,
 .page-container {
   width: 100%;
   max-width: 1200px;
   box-sizing: border-box;
-  padding: 20px;
+  padding: 0 24px;
   margin: 0 auto;
+}
+
+.content--wide {
+  width: 100%;
+  max-width: 1800px;
+  box-sizing: border-box;
+  padding: 0 24px;
+  margin: 0 auto;
+}
+
+.content--workspace {
+  width: 100%;
+  max-width: min(1800px, calc(100vw - 48px));
+  box-sizing: border-box;
+  padding: 0 24px;
+  margin: 0 auto;
+}
+
+
+.content--xwide {
+  width: 100%;
+  max-width: 1900px;
+  box-sizing: border-box;
+  padding: 0 24px;
+  margin: 0 auto;
+}
+
+.content--full {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 24px;
 }
 
 /* Error Message */
