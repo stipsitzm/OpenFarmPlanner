@@ -270,86 +270,86 @@ function Locations(): React.ReactElement {
             }}
           >
             {locations.map((location) => {
-            const hasCoordinates =
-              typeof location.latitude === 'number' && typeof location.longitude === 'number';
-            const mapLink = hasCoordinates
-              ? `https://www.google.com/maps?q=${location.latitude},${location.longitude}`
-              : null;
-            const taskPreview = (location.id ? tasksByLocation[location.id] : []) ?? [];
+              const hasCoordinates =
+                typeof location.latitude === 'number' && typeof location.longitude === 'number';
+              const mapLink = hasCoordinates
+                ? `https://www.google.com/maps?q=${location.latitude},${location.longitude}`
+                : null;
+              const taskPreview = (location.id ? tasksByLocation[location.id] : []) ?? [];
 
-            return (
-              <Box
-                key={location.id}
-                sx={{
-                  flex: '1 1 420px',
-                  minWidth: { xs: '100%', sm: 320 },
-                  maxWidth: 540,
-                }}
-              >
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="h6" mb={1}>{location.name}</Typography>
+              return (
+                <Box
+                  key={location.id}
+                  sx={{
+                    flex: '1 1 420px',
+                    minWidth: { xs: '100%', sm: 320 },
+                    maxWidth: 540,
+                  }}
+                >
+                  <Card variant="outlined" sx={{ width: '100%' }}>
+                    <CardContent>
+                      <Typography variant="h6" mb={1}>{location.name}</Typography>
 
-                    <Stack spacing={1}>
-                      <Typography variant="body2">
-                        <strong>{t('locations:columns.coordinates')}:</strong>{' '}
-                        {hasCoordinates && mapLink ? (
-                          <Link href={mapLink} target="_blank" rel="noreferrer" underline="hover">
-                            {`${formatCoordinate(location.latitude!, numberLocale)}; ${formatCoordinate(location.longitude!, numberLocale)}`}
-                          </Link>
-                        ) : '—'}
-                      </Typography>
-                      <Typography variant="body2"><strong>{t('locations:columns.address')}:</strong> {location.address || '—'}</Typography>
-                      <Typography variant="body2"><strong>{t('locations:columns.soilType')}:</strong> {location.soil_type ? t(`locations:soilType.${location.soil_type}`) : '—'}</Typography>
-                      <Typography variant="body2"><strong>{t('locations:columns.exposure')}:</strong> {location.exposure ? t(`locations:exposure.${location.exposure}`) : '—'}</Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <strong>{t('locations:columns.description')}:</strong> {location.description || '—'}
-                      </Typography>
-                    </Stack>
-
-                    <Box mt={2}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        {t('locations:upcomingTasks')}
-                      </Typography>
-                      {taskPreview.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary">
-                          {t('locations:noUpcomingTasks')}
+                      <Stack spacing={1}>
+                        <Typography variant="body2">
+                          <strong>{t('locations:columns.coordinates')}:</strong>{' '}
+                          {hasCoordinates && mapLink ? (
+                            <Link href={mapLink} target="_blank" rel="noreferrer" underline="hover">
+                              {`${formatCoordinate(location.latitude!, numberLocale)}; ${formatCoordinate(location.longitude!, numberLocale)}`}
+                            </Link>
+                          ) : '—'}
                         </Typography>
-                      ) : (
-                        <Stack spacing={0.5}>
-                          {taskPreview.slice(0, 3).map((task) => (
-                            <Chip key={`${task.type}-${task.date}-${task.planId ?? 'na'}`} label={renderTaskLine(task)} size="small" />
-                          ))}
-                        </Stack>
-                      )}
-                    </Box>
-                  </CardContent>
-                  <CardActions sx={{ justifyContent: 'flex-end' }}>
-                    <Button size="small" startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(location)}>
-                      {t('common:actions.edit')}
-                    </Button>
-                    {location.id ? (
-                      <Button
-                        color="error"
-                        size="small"
-                        startIcon={<DeleteOutlineIcon />}
-                        onClick={() => void deleteLocation(location.id!)}
-                      >
-                        {t('common:actions.delete')}
+                        <Typography variant="body2"><strong>{t('locations:columns.address')}:</strong> {location.address || '—'}</Typography>
+                        <Typography variant="body2"><strong>{t('locations:columns.soilType')}:</strong> {location.soil_type ? t(`locations:soilType.${location.soil_type}`) : '—'}</Typography>
+                        <Typography variant="body2"><strong>{t('locations:columns.exposure')}:</strong> {location.exposure ? t(`locations:exposure.${location.exposure}`) : '—'}</Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <strong>{t('locations:columns.description')}:</strong> {location.description || '—'}
+                        </Typography>
+                      </Stack>
+
+                      <Box mt={2}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          {t('locations:upcomingTasks')}
+                        </Typography>
+                        {taskPreview.length === 0 ? (
+                          <Typography variant="body2" color="text.secondary">
+                            {t('locations:noUpcomingTasks')}
+                          </Typography>
+                        ) : (
+                          <Stack spacing={0.5}>
+                            {taskPreview.slice(0, 3).map((task) => (
+                              <Chip key={`${task.type}-${task.date}-${task.planId ?? 'na'}`} label={renderTaskLine(task)} size="small" />
+                            ))}
+                          </Stack>
+                        )}
+                      </Box>
+                    </CardContent>
+                    <CardActions sx={{ justifyContent: 'flex-end' }}>
+                      <Button size="small" startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(location)}>
+                        {t('common:actions.edit')}
                       </Button>
-                    ) : null}
-                  </CardActions>
-                </Card>
-              </Box>
-            );
+                      {location.id ? (
+                        <Button
+                          color="error"
+                          size="small"
+                          startIcon={<DeleteOutlineIcon />}
+                          onClick={() => void deleteLocation(location.id!)}
+                        >
+                          {t('common:actions.delete')}
+                        </Button>
+                      ) : null}
+                    </CardActions>
+                  </Card>
+                </Box>
+              );
             })}
           </Box>
         )}
