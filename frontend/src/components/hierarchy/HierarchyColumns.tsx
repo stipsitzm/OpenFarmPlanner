@@ -180,8 +180,8 @@ function renderNameCell(
           sx={{
             fontWeight: row.type === 'location' ? 600 : 400,
             fontSize: row.type === 'location' ? '1.02rem' : row.type === 'bed' ? '0.95rem' : '1rem',
-            color: row.type === 'bed' ? 'text.secondary' : 'text.primary',
-            bgcolor: row.type === 'bed' ? 'action.hover' : 'transparent',
+            color: 'text.primary',
+            bgcolor: 'transparent',
             borderRadius: 0.5,
             px: row.type === 'bed' ? 0.5 : 0,
             overflow: 'hidden',
