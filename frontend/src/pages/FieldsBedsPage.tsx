@@ -67,6 +67,12 @@ export default function FieldsBedsPage(): React.ReactElement {
     window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
   }, [viewMode]);
 
+  useEffect(() => {
+    if (viewMode === 'graphical') {
+      setInteractionMode('view');
+    }
+  }, [viewMode]);
+
   return (
     <>
       <PageContainer variant="standard">
@@ -104,15 +110,17 @@ export default function FieldsBedsPage(): React.ReactElement {
               </ToggleButton>
             </ToggleButtonGroup>
           </Stack>
-          <ModeToggle
-            label={t('fields:graphical.viewMode')}
-            ariaLabel={t('fields:graphical.modeAriaLabel')}
-            viewLabel={t('fields:graphical.viewModeOption')}
-            editLabel={t('fields:graphical.editModeOption')}
-            value={interactionMode}
-            onChange={setInteractionMode}
-            fullWidth={false}
-          />
+          {viewMode === 'graphical' ? (
+            <ModeToggle
+              label={t('fields:graphical.viewMode')}
+              ariaLabel={t('fields:graphical.modeAriaLabel')}
+              viewLabel={t('fields:graphical.viewModeOption')}
+              editLabel={t('fields:graphical.editModeOption')}
+              value={interactionMode}
+              onChange={setInteractionMode}
+              fullWidth={false}
+            />
+          ) : null}
         </Stack>
       </PageContainer>
 
