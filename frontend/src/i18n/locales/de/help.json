@@ -6,19 +6,27 @@
   "sections": [
     {
       "title": "Standorte / Anbauflächen",
-      "points": ["Hier legst du Standorte, Parzellen und Beete an."]
+      "points": [
+        "Hier legst du Standorte, Parzellen und Beete an."
+      ]
     },
     {
       "title": "Anbaupläne",
-      "points": ["Hier planst du, welche Kultur auf welchem Beet angebaut wird."]
+      "points": [
+        "Hier planst du, welche Kultur auf welchem Beet angebaut wird."
+      ]
     },
     {
       "title": "Anbaukalender",
-      "points": ["Hier siehst du die zeitliche Planung deiner Anbaupläne."]
+      "points": [
+        "Hier siehst du die zeitliche Planung deiner Anbaupläne."
+      ]
     },
     {
       "title": "Saatgutbedarf",
-      "points": ["Daraus wird berechnet, wie viel Saatgut du brauchst."]
+      "points": [
+        "Daraus wird berechnet, wie viel Saatgut du brauchst."
+      ]
     }
   ],
   "workflowTitle": "Workflow",
@@ -92,11 +100,11 @@
       ],
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
-        "expandToggle": "Pfeil-Symbol → Untergeordnete Elemente anzeigen oder ausblenden",
-        "add": "Plus-Symbol → Neues Element anlegen",
-        "delete": "Papierkorb-Symbol → Element löschen",
-        "createPlan": "Traktor-Symbol → Direkt einen Anbauplan für ein Beet anlegen",
-        "dimensions": "Längen-/Breiten-Symbole → Orientierung für Maßeingaben in den Spalten"
+        "expandToggle": "Untergeordnete Elemente ein- oder ausklappen",
+        "add": "Neues Element anlegen",
+        "delete": "Element löschen",
+        "createPlan": "Direkt einen Anbauplan für ein Beet anlegen",
+        "dimensions": "Orientierung für Länge und Breite in den Spalten"
       }
     },
     "cultures": {
@@ -130,11 +138,11 @@
       ],
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
-        "add": "Plus-Symbol → Neue Kultur anlegen",
-        "library": "Globus-Symbol → Öffentliche Kulturbibliothek öffnen",
-        "more": "Drei-Punkte-Symbol → Import/Export-Aktionen öffnen",
-        "edit": "Bearbeiten-Schaltfläche → Kulturdaten ändern",
-        "delete": "Löschen-Schaltfläche → Kultur entfernen"
+        "add": "Neue Kultur anlegen",
+        "library": "Öffentliche Kulturbibliothek öffnen",
+        "more": "Weitere Aktionen öffnen",
+        "edit": "Kulturdaten ändern",
+        "delete": "Kultur entfernen"
       }
     },
     "plantingPlans": {
@@ -168,10 +176,10 @@
       ],
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
-        "add": "Plus-Symbol → Neuen Anbauplan anlegen",
-        "mobileAdd": "Schwebender Plus-Button (mobil) → Schnell neuen Eintrag erfassen",
-        "notes": "Notiz-/Anhang-Symbol → Notizen und Anhänge pro Eintrag öffnen",
-        "edit": "Bearbeitungsmodus in der Tabelle → Werte direkt ändern"
+        "add": "Neuen Anbauplan anlegen",
+        "mobileAdd": "Auf Mobilgeräten schnell einen neuen Eintrag anlegen",
+        "notes": "Notizen und Anhänge pro Eintrag öffnen",
+        "edit": "Werte direkt in der Tabelle ändern"
       }
     },
     "calendar": {
@@ -205,9 +213,9 @@
       ],
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
-        "tabs": "Tab-Leiste → Zwischen Ansichten wechseln",
-        "switch": "Schalter → Wochen-Ertragskalender ein-/ausblenden",
-        "tooltip": "Tooltip bei Kalendereinträgen → Zusätzliche Detailinformationen anzeigen"
+        "tabs": "Zwischen Ansichten wechseln",
+        "switch": "Wochen-Ertragskalender ein- oder ausblenden",
+        "tooltip": "Zusätzliche Detailinformationen anzeigen"
       }
     },
     "seedDemand": {
@@ -240,8 +248,8 @@
       ],
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
-        "supplierSelect": "Auswahlliste je Zeile → Lieferanten pro Kultur festlegen",
-        "packageInfo": "Packungsvorschlag-Spalte → Empfohlene Kombinationen für den Bedarf"
+        "supplierSelect": "Lieferanten pro Kultur festlegen",
+        "packageInfo": "Empfohlene Packungskombinationen prüfen"
       }
     },
     "suppliers": {
@@ -274,9 +282,9 @@
       ],
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
-        "add": "Schaltfläche „Neu“ → Lieferanten anlegen",
-        "edit": "Schaltfläche „Bearbeiten“ → Lieferantendaten ändern",
-        "delete": "Löschen-Symbol → Lieferanten entfernen"
+        "add": "Lieferanten anlegen",
+        "edit": "Lieferantendaten ändern",
+        "delete": "Lieferanten entfernen"
       }
     },
     "graphical": {
@@ -302,11 +310,11 @@
       ],
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
-        "panArrows": "Pfeiltasten-Symbole → Ansicht nach oben, links, rechts oder unten verschieben",
-        "zoomIn": "Plus-Icon → Hineinzoomen",
-        "zoomOut": "Minus-Icon → Herauszoomen",
-        "fit": "Rahmen-Icon → Auf die gesamte Fläche einpassen",
-        "fullscreen": "Vollbild-Icon → Größtmögliche Ansicht anzeigen"
+        "panArrows": "Ansicht nach oben, links, rechts oder unten verschieben",
+        "zoomIn": "Hineinzoomen",
+        "zoomOut": "Herauszoomen",
+        "fit": "Gesamte Fläche einpassen",
+        "fullscreen": "Größtmögliche Ansicht anzeigen"
       },
       "modeTitle": "Modus",
       "modeLabel": "Modus",
