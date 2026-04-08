@@ -8,10 +8,12 @@ import { useTranslation } from '../i18n';
 import PageHelp from '../components/help/PageHelp';
 import PageContainer from '../components/layout/PageContainer';
 import PageHeader from '../components/layout/PageHeader';
+import ModeToggle from '../components/ModeToggle';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 
 type ViewMode = 'table' | 'graphical';
+type InteractionMode = 'view' | 'edit';
 
 export default function FieldsBedsPage(): React.ReactElement {
   const { t } = useTranslation(['fields', 'hierarchy']);
@@ -19,6 +21,7 @@ export default function FieldsBedsPage(): React.ReactElement {
     const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
     return stored === 'graphical' ? 'graphical' : 'table';
   });
+  const [interactionMode, setInteractionMode] = useState<InteractionMode>('view');
 
   useCommandContextTag('areas');
 
@@ -72,33 +75,58 @@ export default function FieldsBedsPage(): React.ReactElement {
           actions={<PageHelp pageKey={viewMode === 'graphical' ? 'graphical' : 'areas'} />}
           marginBottom={1}
         />
-        <Stack spacing={0.75} sx={{ mb: 2, width: { xs: '100%', sm: 'fit-content' } }}>
-          <Typography variant="subtitle2">{t('fields:representation.label')}</Typography>
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={(_, selectedViewMode: ViewMode | null) => {
-              if (selectedViewMode !== null) {
-                setViewMode(selectedViewMode);
-              }
-            }}
-            size="small"
-            color="primary"
-            aria-label={t('fields:representation.ariaLabel')}
-            fullWidth
-          >
-            <ToggleButton value="table" aria-label={t('fields:representation.table')}>
-              {t('fields:representation.table')}
-            </ToggleButton>
-            <ToggleButton value="graphical" aria-label={t('fields:representation.graphical')}>
-              {t('fields:representation.graphical')}
-            </ToggleButton>
-          </ToggleButtonGroup>
+        <Stack
+          direction={{ xs: 'column', lg: 'row' }}
+          spacing={2}
+          alignItems={{ xs: 'stretch', lg: 'flex-end' }}
+          sx={{ mb: 2 }}
+        >
+          <Stack spacing={0.75} sx={{ width: { xs: '100%', sm: 'fit-content' } }}>
+            <Typography variant="subtitle2">{t('fields:representation.label')}</Typography>
+            <ToggleButtonGroup
+              value={viewMode}
+              exclusive
+              onChange={(_, selectedViewMode: ViewMode | null) => {
+                if (selectedViewMode !== null) {
+                  setViewMode(selectedViewMode);
+                }
+              }}
+              size="small"
+              color="primary"
+              aria-label={t('fields:representation.ariaLabel')}
+              fullWidth
+            >
+              <ToggleButton value="table" aria-label={t('fields:representation.table')}>
+                {t('fields:representation.table')}
+              </ToggleButton>
+              <ToggleButton value="graphical" aria-label={t('fields:representation.graphical')}>
+                {t('fields:representation.graphical')}
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Stack>
+          <ModeToggle
+            label={t('fields:graphical.viewMode')}
+            ariaLabel={t('fields:graphical.modeAriaLabel')}
+            viewLabel={t('fields:graphical.viewModeOption')}
+            editLabel={t('fields:graphical.editModeOption')}
+            value={interactionMode}
+            onChange={setInteractionMode}
+            fullWidth={false}
+          />
         </Stack>
       </PageContainer>
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
-        {viewMode === 'graphical' ? <GraphicalFields showTitle={false} /> : <FieldsBedsHierarchy showTitle={false} />}
+        {viewMode === 'graphical' ? (
+          <GraphicalFields
+            showTitle={false}
+            interactionMode={interactionMode}
+            onInteractionModeChange={setInteractionMode}
+            showModeToggle={false}
+          />
+        ) : (
+          <FieldsBedsHierarchy showTitle={false} />
+        )}
       </PageContainer>
     </>
   );

@@ -25,6 +25,10 @@ describe('FieldsBedsPage', () => {
 
     expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
     expect(screen.queryByText('Editiermodus')).not.toBeInTheDocument();
+    expect(screen.getByText('Darstellung')).toBeInTheDocument();
+    expect(screen.getByText('Modus')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ansicht' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bearbeiten' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Grafik' }));
 
