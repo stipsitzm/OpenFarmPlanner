@@ -39,7 +39,7 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useMediaQuery } from '@mui/system';
-import { useMemo, useState, type MouseEvent, type ReactElement } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactElement } from 'react';
 import { useTranslation } from '../../i18n';
 import HelpIconRow from './HelpIconRow';
 
@@ -156,6 +156,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const points = useMemo(() => {
     const translated = t(`pages.${pageKey}.points`, { returnObjects: true });
@@ -218,6 +219,23 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
     setAnchorEl(null);
     setMobileOpen(false);
   };
+
+  useEffect(() => {
+    const handleOpenPageHelp = (): void => {
+      if (isMobile) {
+        setMobileOpen(true);
+        return;
+      }
+      if (triggerButtonRef.current) {
+        setAnchorEl(triggerButtonRef.current);
+      }
+    };
+
+    window.addEventListener('ofp:open-page-help', handleOpenPageHelp);
+    return () => {
+      window.removeEventListener('ofp:open-page-help', handleOpenPageHelp);
+    };
+  }, [isMobile]);
 
   const renderGraphicalHelpContent = (): ReactElement => (
     <Stack spacing={2}>
@@ -292,7 +310,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
   return (
     <>
       <Tooltip title={t('showTooltip')}>
-        <IconButton aria-label={t('showTooltip')} onClick={handleOpen} size="small" sx={{ color: 'text.secondary' }}>
+        <IconButton ref={triggerButtonRef} aria-label={t('showTooltip')} onClick={handleOpen} size="small" sx={{ color: 'text.secondary' }}>
           <HelpOutlineIcon fontSize="small" />
         </IconButton>
       </Tooltip>

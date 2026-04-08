@@ -30,6 +30,7 @@ function RootCommandFixture(props: {
   onPreviousPage?: () => void;
   onOpenPalette?: () => void;
   onOpenProjectSettings?: () => void;
+  onOpenShortcuts?: () => void;
 }): React.ReactElement {
   const { openPalette } = useCommandContext();
   const commands = useMemo(() => createRootCommands({
@@ -50,7 +51,7 @@ function RootCommandFixture(props: {
     onOpenVersionHistory: vi.fn(),
     onLogout: vi.fn(),
     onOpenPalette: props.onOpenPalette ?? openPalette,
-    onOpenShortcuts: vi.fn(),
+    onOpenShortcuts: props.onOpenShortcuts ?? vi.fn(),
     labels: {
       nextPage: 'Nächste Seite',
       previousPage: 'Vorherige Seite',
@@ -64,7 +65,7 @@ function RootCommandFixture(props: {
       openPalette: 'Aktionssuche',
       openShortcuts: 'Tastenkürzel',
     },
-  }), [openPalette, props.currentPath, props.onNextPage, props.onOpenPalette, props.onOpenProjectSettings, props.onPreviousPage]);
+  }), [openPalette, props.currentPath, props.onNextPage, props.onOpenPalette, props.onOpenProjectSettings, props.onOpenShortcuts, props.onPreviousPage]);
 
   useRegisterCommands('root', commands);
   return <div>root fixture</div>;
@@ -189,5 +190,18 @@ describe('CommandProvider', () => {
     fireEvent.keyDown(window, { key: 'P', altKey: true, shiftKey: true });
 
     expect(onOpenProjectSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs page help shortcut with Alt+H', () => {
+    const onOpenShortcuts = vi.fn();
+    render(
+      <CommandProvider>
+        <RootCommandFixture onOpenShortcuts={onOpenShortcuts} />
+      </CommandProvider>,
+    );
+
+    fireEvent.keyDown(window, { key: 'h', altKey: true });
+
+    expect(onOpenShortcuts).toHaveBeenCalledTimes(1);
   });
 });
