@@ -138,6 +138,15 @@ body.hide-version-footer .app-version-footer {
   margin: 0 auto;
 }
 
+
+.content--xwide {
+  width: 100%;
+  max-width: 2200px;
+  box-sizing: border-box;
+  padding: 0 24px;
+  margin: 0 auto;
+}
+
 .content--full {
   width: 100%;
   box-sizing: border-box;
