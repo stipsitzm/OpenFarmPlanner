@@ -158,7 +158,7 @@ describe('App', () => {
     expect(await screen.findByText('Projekt erstellen')).toBeInTheDocument();
   });
 
-  it('shows project-required empty state on project pages when no project exists', async () => {
+  it('shows project-required empty state on locations page when no project exists', async () => {
     authState.user = {
       id: 1,
       email: 'demo@example.com',
@@ -174,7 +174,7 @@ describe('App', () => {
       scheduled_deletion_at: null,
     };
     authState.activeProjectId = null;
-    window.history.pushState({}, '', '/app/anbauplaene');
+    window.history.pushState({}, '', '/app/locations');
 
     render(<CommandProvider><App /></CommandProvider>);
 

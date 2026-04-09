@@ -782,7 +782,7 @@ function createAppRouter(basename: string) {
               index: true,
               loader: () => redirect('/app/locations'),
             },
-            { path: 'locations', element: <Locations /> },
+            { path: 'locations', element: <ProjectRequired><Locations /></ProjectRequired> },
             { path: 'fields-beds', element: <ProjectRequired><FieldsBedsPage /></ProjectRequired> },
             { path: 'cultures', element: <ProjectRequired><Cultures /></ProjectRequired> },
             { path: 'anbauplaene', element: <ProjectRequired><PlantingPlans /></ProjectRequired> },
