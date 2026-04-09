@@ -729,7 +729,7 @@ function DjangoAdminRedirect(): React.ReactElement {
     window.location.assign('/admin/');
   }, []);
 
-  return null;
+  return <></>;
 }
 
 function createAppRouter(basename: string) {
