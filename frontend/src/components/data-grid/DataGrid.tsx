@@ -17,7 +17,7 @@
  * Navigation is blocked if there are unsaved changes (row in edit mode).
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo, type MutableRefObject } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, type MutableRefObject, type ReactNode } from 'react';
 import { DataGrid, GridRowModes } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
@@ -27,6 +27,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SearchOffOutlinedIcon from '@mui/icons-material/SearchOffOutlined';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
 import { useTranslation } from '../../i18n';
@@ -98,6 +99,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
     description: string;
     actionLabel?: string;
     onAction?: () => void;
+    icon?: ReactNode;
   };
 }
 
@@ -157,6 +159,7 @@ export function EditableDataGrid<T extends EditableRow>({
         description={emptyState?.description ?? t('messages.noData')}
         actionLabel={emptyState?.actionLabel}
         onAction={emptyState?.onAction}
+        icon={emptyState?.icon}
       />
     ),
     [emptyState, t],
@@ -166,6 +169,7 @@ export function EditableDataGrid<T extends EditableRow>({
       <DataGridEmptyState
         title={t('dataGrid.noResults')}
         description={t('dataGrid.noResultsDescription')}
+        icon={<SearchOffOutlinedIcon color="disabled" sx={{ fontSize: 36 }} />}
       />
     ),
     [t],

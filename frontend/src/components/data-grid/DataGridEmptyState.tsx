@@ -1,11 +1,12 @@
-import InboxOutlinedIcon from "@mui/icons-material/InboxOutlined";
 import { Box, Button, Stack, Typography } from "@mui/material";
+import type { ReactNode } from "react";
 
 interface DataGridEmptyStateProps {
   title: string;
   description: string;
   actionLabel?: string;
   onAction?: () => void;
+  icon?: ReactNode;
 }
 
 export function DataGridEmptyState({
@@ -13,6 +14,7 @@ export function DataGridEmptyState({
   description,
   actionLabel,
   onAction,
+  icon,
 }: DataGridEmptyStateProps): React.ReactElement {
   return (
     <Box
@@ -28,7 +30,7 @@ export function DataGridEmptyState({
       }}
     >
       <Stack spacing={1.25} alignItems="center" textAlign="center" sx={{ maxWidth: 440 }}>
-        <InboxOutlinedIcon color="disabled" sx={{ fontSize: 36 }} />
+        {icon ?? null}
         <Typography variant="h6">{title}</Typography>
         <Typography variant="body2" color="text.secondary">
           {description}
