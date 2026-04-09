@@ -50,6 +50,7 @@ vi.mock('../api/api', async (importOriginal) => {
 
 describe('App', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     authState.user = null;
     authState.isLoading = false;
     authState.activeProjectId = null;
@@ -197,4 +198,5 @@ describe('App', () => {
     render(<CommandProvider><App /></CommandProvider>);
     expect(await screen.findByRole('heading', { name: 'Anmelden' })).toBeInTheDocument();
   });
+
 });

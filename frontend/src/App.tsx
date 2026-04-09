@@ -724,6 +724,14 @@ function TokenInvitationRedirect(): React.ReactElement {
   return <Navigate to={buildInvitationAcceptPath(token)} replace />;
 }
 
+function DjangoAdminRedirect(): React.ReactElement {
+  useEffect(() => {
+    window.location.assign('/admin/');
+  }, []);
+
+  return null;
+}
+
 function createAppRouter(basename: string) {
   return createBrowserRouter([
     {
@@ -769,6 +777,10 @@ function createAppRouter(basename: string) {
     {
       path: '/invite/:token',
       element: <TokenInvitationRedirect />,
+    },
+    {
+      path: '/app/admin',
+      element: <DjangoAdminRedirect />,
     },
     {
       path: '/app',
