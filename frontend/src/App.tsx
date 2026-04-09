@@ -35,7 +35,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from './i18n';
 import { useCommandContext, useRegisterCommands } from './commands/useCommandContext';
 import { createRootCommands } from './commands/commands';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Locations from './pages/Locations';
 import FieldsBedsPage from './pages/FieldsBedsPage';
 import Cultures from './pages/Cultures';
@@ -70,6 +70,7 @@ import InvitationAcceptPage from './pages/InvitationAcceptPage';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
+import ProjectRequired, { OPEN_CREATE_PROJECT_EVENT } from './components/ProjectRequired';
 
 interface SnackbarState {
   open: boolean;
@@ -111,6 +112,12 @@ function ProjectMenu(props: ProjectMenuProps): React.ReactElement {
       open={open}
       onClose={onClose}
     >
+      <MenuItem onClick={onOpenCreateProject}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <AddIcon fontSize="small" />
+          <span>{t('project.create')}</span>
+        </Stack>
+      </MenuItem>
       {memberships.length === 0 ? (
         <MenuItem disabled>{t('projectSwitcher.zeroProjects')}</MenuItem>
       ) : (
@@ -131,13 +138,6 @@ function ProjectMenu(props: ProjectMenuProps): React.ReactElement {
       <Divider />
       <MenuItem onClick={onOpenProjectSettings}>
         {t('project.settings')}
-      </MenuItem>
-      <Divider />
-      <MenuItem onClick={onOpenCreateProject}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <AddIcon fontSize="small" />
-          <span>{t('project.create')}</span>
-        </Stack>
       </MenuItem>
     </Menu>
   );
@@ -338,12 +338,12 @@ function RootLayout(): React.ReactElement {
   const activeProjectLabel = activeMembership?.project_name ?? t('projectSwitcher.noProject');
 
 
-  const handleOpenCreateProject = (): void => {
+  const handleOpenCreateProject = useCallback((): void => {
     handleProjectMenuClose();
     setNewProjectName('');
     setNewProjectDescription('');
     setIsCreateProjectOpen(true);
-  };
+  }, []);
 
   const handleOpenProjectSettings = (): void => {
     handleProjectMenuClose();
@@ -463,6 +463,16 @@ function RootLayout(): React.ReactElement {
   }), [activeMembershipRole, activeProjectId, location.pathname, memberships, navigate, openCurrentPageHelp, openPalette, t]);
 
   useRegisterCommands('global-app', globalCommands);
+
+  useEffect(() => {
+    const openCreateProjectFromEvent = () => {
+      handleOpenCreateProject();
+    };
+    window.addEventListener(OPEN_CREATE_PROJECT_EVENT, openCreateProjectFromEvent);
+    return () => {
+      window.removeEventListener(OPEN_CREATE_PROJECT_EVENT, openCreateProjectFromEvent);
+    };
+  }, [handleOpenCreateProject]);
   
   return (
     <div className="app">
@@ -772,14 +782,14 @@ function createAppRouter(basename: string) {
               index: true,
               loader: () => redirect('/app/locations'),
             },
-            { path: 'locations', element: <Locations /> },
-            { path: 'fields-beds', element: <FieldsBedsPage /> },
-            { path: 'cultures', element: <Cultures /> },
-            { path: 'anbauplaene', element: <PlantingPlans /> },
-            { path: 'suppliers', element: <Suppliers /> },
-            { path: 'planting-plans', element: <PlantingPlans /> },
-            { path: 'gantt-chart', element: <GanttChart /> },
-            { path: 'seed-demand', element: <SeedDemandPage /> },
+            { path: 'locations', element: <ProjectRequired><Locations /></ProjectRequired> },
+            { path: 'fields-beds', element: <ProjectRequired><FieldsBedsPage /></ProjectRequired> },
+            { path: 'cultures', element: <ProjectRequired><Cultures /></ProjectRequired> },
+            { path: 'anbauplaene', element: <ProjectRequired><PlantingPlans /></ProjectRequired> },
+            { path: 'suppliers', element: <ProjectRequired><Suppliers /></ProjectRequired> },
+            { path: 'planting-plans', element: <ProjectRequired><PlantingPlans /></ProjectRequired> },
+            { path: 'gantt-chart', element: <ProjectRequired><GanttChart /></ProjectRequired> },
+            { path: 'seed-demand', element: <ProjectRequired><SeedDemandPage /></ProjectRequired> },
             { path: 'project-selection', element: <ProjectSelectionPage /> },
             { path: 'account-settings', element: <AccountSettingsPage /> },
             { path: 'project-settings', element: <ProjectSettingsPage /> },
