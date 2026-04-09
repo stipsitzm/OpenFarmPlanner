@@ -236,6 +236,11 @@ def accept_invitation(*, invitation: ProjectInvitation, user: User) -> Invitatio
             logger.warning('Invitation accept rejected because invitation was revoked', extra={'user_id': user.id, 'token': locked.token})
             raise InvitationFlowError('revoked', 'Invitation was revoked.')
         if locked.status == ProjectInvitation.STATUS_ACCEPTED:
+            user_is_original_acceptor = locked.accepted_by_id == user.id
+            user_has_membership = ProjectMembership.objects.filter(project=locked.project, user=user).exists()
+            if user_is_original_acceptor or user_has_membership:
+                logger.info('Invitation accept treated as already satisfied for accepting user', extra={'user_id': user.id, 'token': locked.token, 'project_id': locked.project_id})
+                return InvitationResult(code='already_member', invitation=locked, message='User is already a member.')
             logger.warning('Invitation accept rejected because invitation was already used', extra={'user_id': user.id, 'token': locked.token, 'project_id': locked.project_id})
             raise InvitationFlowError('accepted', 'Invitation has already been used.')
 
