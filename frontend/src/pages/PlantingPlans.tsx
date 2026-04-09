@@ -1345,6 +1345,12 @@ function PlantingPlans(): React.ReactElement {
           deleteErrorMessage={t("plantingPlans:errors.delete")}
           deleteConfirmMessage={t("plantingPlans:confirmDelete")}
           addButtonLabel={`${t("plantingPlans:addButton")} (Alt+N)`}
+          emptyState={{
+            title: t("plantingPlans:emptyState.title"),
+            description: t("plantingPlans:emptyState.description"),
+            actionLabel: t("plantingPlans:emptyState.action"),
+            onAction: () => gridCommandApiRef.current?.addRow(),
+          }}
           showDeleteAction={true}
           showFooterEditControls={false}
           showRowEditActions={true}

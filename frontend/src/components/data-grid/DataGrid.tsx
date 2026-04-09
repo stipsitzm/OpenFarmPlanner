@@ -35,6 +35,7 @@ import { NotesDrawer } from './NotesDrawer';
 import { getPlainExcerpt } from './markdown';
 import { useNotesEditor } from './useNotesEditor';
 import { extractApiErrorMessage } from '../../api/errors';
+import { DataGridEmptyState } from './DataGridEmptyState';
 
 export interface EditableRow {
   id: number;
@@ -92,6 +93,12 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showFooterEditControls?: boolean;
   showRowEditActions?: boolean;
   onRowsStateChange?: (rows: T[]) => void;
+  emptyState?: {
+    title: string;
+    description: string;
+    actionLabel?: string;
+    onAction?: () => void;
+  };
 }
 
 export function EditableDataGrid<T extends EditableRow>({
@@ -119,6 +126,7 @@ export function EditableDataGrid<T extends EditableRow>({
   showFooterEditControls = true,
   showRowEditActions = false,
   onRowsStateChange,
+  emptyState,
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -134,6 +142,34 @@ export function EditableDataGrid<T extends EditableRow>({
   const isMobile = useMediaQuery('(max-width:900px)');
   
   const { t } = useTranslation('common');
+  const dataGridLocaleText = useMemo(
+    () => ({
+      noRowsLabel: t('dataGrid.noRows'),
+      noResultsOverlayLabel: t('dataGrid.noResults'),
+      loadingOverlayLabel: t('dataGrid.loading'),
+    }),
+    [t],
+  );
+  const noRowsOverlay = useCallback(
+    () => (
+      <DataGridEmptyState
+        title={emptyState?.title ?? t('dataGrid.noRows')}
+        description={emptyState?.description ?? t('messages.noData')}
+        actionLabel={emptyState?.actionLabel}
+        onAction={emptyState?.onAction}
+      />
+    ),
+    [emptyState, t],
+  );
+  const noResultsOverlay = useCallback(
+    () => (
+      <DataGridEmptyState
+        title={t('dataGrid.noResults')}
+        description={t('dataGrid.noResultsDescription')}
+      />
+    ),
+    [t],
+  );
   const { sortModel, setSortModel } = usePersistentSortModel({
     tableKey: tableKey ?? 'editableDataGrid',
     defaultSortModel,
@@ -717,7 +753,10 @@ export function EditableDataGrid<T extends EditableRow>({
           onRowSelectionModelChange={(nextModel) => setSelectedRowIds(Array.from(nextModel.ids))}
           slots={{
             footer: CustomFooter,
+            noRowsOverlay,
+            noResultsOverlay,
           }}
+          localeText={dataGridLocaleText}
           sx={{ ...dataGridSx, width: 'auto' }}
           getRowClassName={(params) => {
             const rowKey = String(params.id);
