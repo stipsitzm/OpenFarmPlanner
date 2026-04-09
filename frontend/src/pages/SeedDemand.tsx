@@ -75,23 +75,24 @@ export default function SeedDemandPage(): React.ReactElement {
 
   return (
     <PageContainer>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4">
-          {t('seedDemand.title')}
-        </Typography>
-        <PageHelp pageKey="seedDemand" />
-      </Box>
+      <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, width: '100%' }}>
+          <Typography variant="h4">
+            {t('seedDemand.title')}
+          </Typography>
+          <PageHelp pageKey="seedDemand" />
+        </Box>
 
-      {isLoading && <CircularProgress />}
-      {error && <Alert severity="error">{error}</Alert>}
+        {isLoading && <CircularProgress />}
+        {error && <Alert severity="error">{error}</Alert>}
 
-      {!isLoading && !error && (
-        <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
-          <Table
-            sx={{
-              '& .MuiTableCell-root': { py: 1 },
-            }}
-          >
+        {!isLoading && !error && (
+          <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
+            <Table
+              sx={{
+                '& .MuiTableCell-root': { py: 1 },
+              }}
+            >
             <TableHead>
               <TableRow>
                 <TableCell>{t('seedDemand.columns.culture')}</TableCell>
@@ -167,9 +168,10 @@ export default function SeedDemandPage(): React.ReactElement {
                 );
               })}
             </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+            </Table>
+          </TableContainer>
+        )}
+      </Box>
     </PageContainer>
   );
 }

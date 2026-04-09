@@ -279,7 +279,7 @@ function Locations(): React.ReactElement {
 
   return (
     <PageContainer>
-      <Box sx={{ width: '100%' }}>
+      <Box sx={{ width: '100%', mx: 'auto' }}>
         <PageHeader
           title={t('locations:title')}
           actions={(
@@ -301,10 +301,11 @@ function Locations(): React.ReactElement {
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 360px))',
               gap: 2,
               alignItems: 'stretch',
               width: '100%',
+              justifyContent: 'center',
             }}
           >
             {locations.map((location) => {
