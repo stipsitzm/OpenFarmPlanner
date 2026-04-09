@@ -77,9 +77,6 @@ describe("InvitationAcceptPage", () => {
       "/invite/accept?token=abc123",
     );
   });
-
-
-
   it("shows an error for an anonymous already used invitation instead of redirecting to login", async () => {
     getInvitationStatusMock.mockResolvedValueOnce({
       data: { code: "accepted", requires_auth: false },
@@ -99,6 +96,33 @@ describe("InvitationAcceptPage", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/\/login\?next=/)).not.toBeInTheDocument();
     expect(acceptInvitationByTokenMock).not.toHaveBeenCalled();
+  });
+
+  it("shows a neutral informational message for an already consumed invitation", async () => {
+    mockAuthState.user = { id: 1, email: "invitee@example.com" };
+    acceptInvitationByTokenMock.mockRejectedValueOnce({
+      response: {
+        data: {
+          code: "accepted",
+        },
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/invite/accept?token=used123"]}>
+        <Routes>
+          <Route path="/invite/accept" element={<InvitationAcceptPage />} />
+          <Route path="/app/locations" element={<div>Standorte</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(acceptInvitationByTokenMock).toHaveBeenCalledWith("used123");
+    });
+    expect(
+      await screen.findByText("Diese Einladung wurde bereits verwendet."),
+    ).toBeInTheDocument();
   });
 
   it("waits for auth bootstrap before redirecting already logged-in invitees", async () => {
@@ -149,34 +173,6 @@ describe("InvitationAcceptPage", () => {
     });
   });
 
-  it("shows a terminal error for an already used invitation link", async () => {
-    mockAuthState.user = { id: 1, email: "invitee@example.com" };
-    acceptInvitationByTokenMock.mockRejectedValueOnce({
-      response: {
-        data: {
-          code: "accepted",
-        },
-      },
-    });
-
-    render(
-      <MemoryRouter initialEntries={["/invite/accept?token=used123"]}>
-        <Routes>
-          <Route path="/invite/accept" element={<InvitationAcceptPage />} />
-          <Route path="/app/locations" element={<div>Standorte</div>} />
-        </Routes>
-      </MemoryRouter>,
-    );
-
-    await waitFor(() => {
-      expect(acceptInvitationByTokenMock).toHaveBeenCalledWith("used123");
-    });
-    expect(
-      await screen.findByText("Diese Einladung wurde bereits verwendet."),
-    ).toBeInTheDocument();
-    expect(switchActiveProjectMock).not.toHaveBeenCalled();
-  });
-
   it("accepts the invitation for authenticated users and switches the active project", async () => {
     mockAuthState.user = { id: 1, email: "invitee@example.com" };
     acceptInvitationByTokenMock.mockResolvedValueOnce({
@@ -211,5 +207,57 @@ describe("InvitationAcceptPage", () => {
     expect(
       await screen.findByText("Du wurdest dem Projekt hinzugefügt."),
     ).toBeInTheDocument();
+  });
+
+  it("keeps the success state when an earlier status request resolves afterwards", async () => {
+    mockAuthState.user = null;
+    const statusPromise = new Promise<{
+      data: { code: string; requires_auth: boolean };
+    }>((resolve) => {
+      window.setTimeout(
+        () =>
+          resolve({
+            data: { code: "email_mismatch", requires_auth: false },
+          }),
+        20,
+      );
+    });
+    getInvitationStatusMock.mockImplementationOnce(() => statusPromise);
+
+    const { rerender } = render(
+      <MemoryRouter initialEntries={["/invite/accept?token=abc123"]}>
+        <Routes>
+          <Route path="/invite/accept" element={<InvitationAcceptPage />} />
+          <Route path="/app/locations" element={<div>Standorte</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    mockAuthState.user = { id: 1, email: "invitee@example.com" };
+    acceptInvitationByTokenMock.mockResolvedValueOnce({
+      data: {
+        code: "accepted",
+        project_id: 7,
+        project: { id: 7, name: "Projekt Nord", slug: "projekt-nord" },
+      },
+    });
+
+    rerender(
+      <MemoryRouter initialEntries={["/invite/accept?token=abc123"]}>
+        <Routes>
+          <Route path="/invite/accept" element={<InvitationAcceptPage />} />
+          <Route path="/app/locations" element={<div>Standorte</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByText("Du wurdest dem Projekt hinzugefügt."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Diese Einladung ist für eine andere E-Mail-Adresse bestimmt.",
+      ),
+    ).not.toBeInTheDocument();
   });
 });

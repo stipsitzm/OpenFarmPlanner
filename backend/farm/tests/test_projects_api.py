@@ -361,8 +361,8 @@ class ProjectsApiTests(APITestCase):
         second = self.client.post(f'/openfarmplanner/api/project-invitations/{invitation.token}/accept/')
 
         self.assertEqual(first.status_code, status.HTTP_200_OK)
-        self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(second.data['code'], 'accepted')
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(second.data['code'], 'already_member')
         self.assertEqual(ProjectMembership.objects.filter(project=self.project, user=self.user).count(), 1)
 
     def test_used_invitation_cannot_restore_membership_after_member_removal(self) -> None:
@@ -384,8 +384,8 @@ class ProjectsApiTests(APITestCase):
         ProjectMembership.objects.filter(project=self.project, user=self.invitee).delete()
 
         second = self.client.post(f'/openfarmplanner/api/project-invitations/{invitation.token}/accept/')
-        self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(second.data['code'], 'accepted')
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(second.data['code'], 'already_member')
         self.assertFalse(ProjectMembership.objects.filter(project=self.project, user=self.invitee).exists())
 
     def test_removed_member_can_rejoin_only_with_new_invitation(self) -> None:
@@ -403,8 +403,8 @@ class ProjectsApiTests(APITestCase):
         ProjectMembership.objects.filter(project=self.project, user=self.invitee).delete()
 
         old_retry = self.client.post(f'/openfarmplanner/api/project-invitations/{old_invitation.token}/accept/')
-        self.assertEqual(old_retry.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(old_retry.data['code'], 'accepted')
+        self.assertEqual(old_retry.status_code, status.HTTP_200_OK)
+        self.assertEqual(old_retry.data['code'], 'already_member')
 
         self.client.post('/openfarmplanner/api/auth/logout/')
         self.client.post('/openfarmplanner/api/auth/login/', {'email': 'u1@example.com', 'password': 'pass12345'}, format='json')

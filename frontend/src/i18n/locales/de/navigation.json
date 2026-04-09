@@ -13,7 +13,7 @@
   "project": {
     "settings": "Projekteinstellungen",
     "members": "Mitglieder verwalten",
-    "create": "Neues Projekt erstellen",
+    "create": "Projekt erstellen",
     "switch": "Projekt wechseln"
   },
   "projectSwitcher": {
@@ -22,8 +22,8 @@
     "zeroProjects": "Du hast aktuell keinen Projektzugriff.",
     "newProjectPlaceholder": "Neues Projekt (bald verfügbar)",
     "switchError": "Projekt konnte nicht gewechselt werden.",
-    "newProjectAction": "Neues Projekt erstellen",
-    "createDialogTitle": "Neues Projekt erstellen",
+    "newProjectAction": "Projekt erstellen",
+    "createDialogTitle": "Projekt erstellen",
     "createNameLabel": "Projektname",
     "createDescriptionLabel": "Beschreibung",
     "createCancel": "Abbrechen",
@@ -53,7 +53,7 @@
       "previousPage": "Vorherige Seite",
       "openProjectSettings": "Projekteinstellungen öffnen",
       "openProjectMembers": "Mitgliederbereich öffnen",
-      "createProject": "Neues Projekt erstellen",
+      "createProject": "Projekt erstellen",
       "switchProjectPrefix": "Projekt wechseln",
       "openAccountSettings": "Kontoeinstellungen öffnen",
       "openVersionHistory": "Versionsverlauf öffnen",
@@ -67,5 +67,10 @@
       "versionRestoreError": "Projektversion konnte nicht wiederhergestellt werden.",
       "logoutError": "Abmeldung fehlgeschlagen. Bitte versuche es erneut."
     }
+  },
+  "projectRequired": {
+    "title": "Noch kein Projekt vorhanden",
+    "description": "Du hast aktuell noch keinen Zugriff auf ein Projekt. Erstelle ein Projekt oder lasse dich zu einem bestehenden Projekt einladen.",
+    "createAction": "Projekt erstellen"
   }
 }
