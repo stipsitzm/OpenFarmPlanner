@@ -114,6 +114,30 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(response.data['name'], 'Neues Projekt')
         self.assertTrue(response.data['slug'])
 
+    def test_two_users_can_create_projects_with_same_name(self) -> None:
+        response_user_1 = self.client.post(
+            '/openfarmplanner/api/projects/',
+            {'name': 'Gemeinsamer Name', 'description': ''},
+            format='json',
+        )
+        self.assertEqual(response_user_1.status_code, status.HTTP_201_CREATED)
+
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.post(
+            '/openfarmplanner/api/auth/login/',
+            {'email': 'u2@example.com', 'password': 'pass12345'},
+            format='json',
+        )
+        response_user_2 = self.client.post(
+            '/openfarmplanner/api/projects/',
+            {'name': 'Gemeinsamer Name', 'description': ''},
+            format='json',
+        )
+        self.assertEqual(response_user_2.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response_user_2.data['name'], 'Gemeinsamer Name')
+        self.assertNotEqual(response_user_1.data['id'], response_user_2.data['id'])
+        self.assertNotEqual(response_user_1.data['slug'], response_user_2.data['slug'])
+
     def test_admin_can_invite_member(self) -> None:
         response = self.client.post(
             f'/openfarmplanner/api/projects/{self.project.id}/invitations/',

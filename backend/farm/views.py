@@ -16,7 +16,7 @@ from django.conf import settings
 from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q, Count
 from django.db.models.functions import Coalesce, Ceil, Cast
 from django.http import HttpResponseBadRequest, HttpResponseForbidden
@@ -2289,8 +2289,27 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Project.objects.filter(memberships__user=self.request.user, is_active=True).distinct()
 
+    @staticmethod
+    def _build_project_slug(name: str) -> str:
+        """Build a unique project slug while allowing duplicate project names."""
+        base_slug = slugify(name) or get_random_string(8).lower()
+        candidate = base_slug
+        while Project.objects.filter(slug=candidate).exists():
+            candidate = f'{base_slug}-{get_random_string(6).lower()}'
+        return candidate
+
     def perform_create(self, serializer):
-        project = serializer.save(slug=slugify(serializer.validated_data['name']) or get_random_string(8).lower())
+        name = serializer.validated_data['name']
+        project = None
+        for _ in range(3):
+            try:
+                project = serializer.save(slug=self._build_project_slug(name))
+                break
+            except IntegrityError:
+                continue
+
+        if project is None:
+            raise ValidationError({'detail': 'Project could not be created. Please try again.'})
         ProjectMembership.objects.get_or_create(
             user=self.request.user,
             project=project,
