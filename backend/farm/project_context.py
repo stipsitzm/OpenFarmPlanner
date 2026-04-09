@@ -10,6 +10,16 @@ from .models import Project, ProjectMembership
 PROJECT_HEADER = 'HTTP_X_PROJECT_ID'
 
 
+def _ensure_project_has_active_members(project_id: int) -> None:
+    has_active_members = ProjectMembership.objects.filter(
+        project_id=project_id,
+        project__is_active=True,
+        user__is_active=True,
+    ).exists()
+    if not has_active_members:
+        raise exceptions.PermissionDenied('This project currently has no active members and is not accessible.')
+
+
 def get_user_memberships(user) -> list[ProjectMembership]:
     """Return all project memberships for a user."""
     if not user.is_authenticated:
@@ -37,6 +47,9 @@ def resolve_project_for_user(user) -> tuple[Project | None, bool]:
 
 def get_active_project_or_400(request: Request) -> Project:
     """Resolve and validate active project from request header for authenticated users."""
+    if not request.user.is_active:
+        raise exceptions.PermissionDenied('Inactive users cannot access project data.')
+
     agent_mode = bool(request.session.get('agent_mode'))
     agent_project_id = request.session.get('agent_project_id')
 
@@ -49,7 +62,9 @@ def get_active_project_or_400(request: Request) -> Project:
         requested_header = request.META.get(PROJECT_HEADER)
         if requested_header and str(requested_header) != str(bound_project_id):
             raise exceptions.PermissionDenied('Agent session is restricted to a single project.')
-        return get_object_or_404(Project, id=bound_project_id, is_active=True)
+        project = get_object_or_404(Project, id=bound_project_id, is_active=True)
+        _ensure_project_has_active_members(project.id)
+        return project
 
     raw = request.META.get(PROJECT_HEADER)
     if not raw:
@@ -61,11 +76,13 @@ def get_active_project_or_400(request: Request) -> Project:
 
     membership = ProjectMembership.objects.select_related('project').filter(
         user=request.user,
+        user__is_active=True,
         project_id=project_id,
         project__is_active=True,
     ).first()
     if membership is None:
         raise exceptions.PermissionDenied('You are not a member of this project.')
+    _ensure_project_has_active_members(membership.project_id)
     return membership.project
 
 
@@ -76,14 +93,26 @@ def require_project_admin(user, project_id: int, request: Request | None = None)
 
     is_admin = ProjectMembership.objects.filter(
         user=user,
+        user__is_active=True,
         project_id=project_id,
+        project__is_active=True,
         role=ProjectMembership.ROLE_ADMIN,
     ).exists()
     if not is_admin:
         raise exceptions.PermissionDenied('Project admin role required.')
+    _ensure_project_has_active_members(project_id)
 
 
 def get_project_for_member(user, project_id: int) -> Project:
     """Return project for user membership or raise permission denied."""
-    membership = get_object_or_404(ProjectMembership.objects.select_related('project'), user=user, project_id=project_id)
+    if not user.is_active:
+        raise exceptions.PermissionDenied('Inactive users cannot access project data.')
+    membership = get_object_or_404(
+        ProjectMembership.objects.select_related('project'),
+        user=user,
+        user__is_active=True,
+        project_id=project_id,
+        project__is_active=True,
+    )
+    _ensure_project_has_active_members(project_id)
     return membership.project
