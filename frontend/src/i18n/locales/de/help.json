@@ -48,10 +48,8 @@
           "title": "Was sehe ich hier?",
           "points": [
             "Hier verwaltest du deine Standorte.",
-            "Ein Standort kann mehrere Parzellen und Beete enthalten.",
             "Zu jedem Standort kannst du Informationen wie Koordinaten, Adresse, Bodenart oder Beschreibung speichern.",
-            "Anstehende Aufgaben werden direkt beim Standort angezeigt.",
-            "Diese Ansicht hilft dir, deine Flächen räumlich zu organisieren und den Überblick zu behalten."
+            "Anstehende Aufgaben werden direkt beim Standort angezeigt."
           ]
         },
         {

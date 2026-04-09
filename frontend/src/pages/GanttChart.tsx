@@ -379,7 +379,7 @@ function GanttChartPage(): React.ReactElement {
 
   if (loading) {
     return (
-      <PageContainer variant="xwide">
+      <PageContainer variant="full">
         <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
         <p>{t('ganttChart:loading')}</p>
       </PageContainer>
@@ -387,7 +387,7 @@ function GanttChartPage(): React.ReactElement {
   }
 
   return (
-    <PageContainer variant="xwide">
+    <PageContainer variant="full">
       <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
