@@ -224,11 +224,14 @@ if not DEBUG:
 PROJECT_INVITATION_EXPIRY_DAYS = int(_env_str('PROJECT_INVITATION_EXPIRY_DAYS', '14') or '14')
 AGENT_LOGIN_ENABLED = _env_str('AGENT_LOGIN_ENABLED', 'False').lower() in ('true', '1', 'yes')
 
-# Email configuration (Uberspace SMTP in production, console backend in local development by default).
-EMAIL_BACKEND = _env_str(
-    'EMAIL_BACKEND',
-    'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend',
-)
+# Email configuration (console backend by default in development, SMTP in production).
+EMAIL_BACKEND = _env_str('EMAIL_BACKEND', '')
+if not EMAIL_BACKEND:
+    EMAIL_BACKEND = (
+        'django.core.mail.backends.console.EmailBackend'
+        if DJANGO_ENV == 'development'
+        else 'django.core.mail.backends.smtp.EmailBackend'
+    )
 EMAIL_HOST = _env_str('EMAIL_HOST', 'mail.uberspace.de')
 EMAIL_PORT = int(_env_str('EMAIL_PORT', '587') or '587')
 EMAIL_USE_TLS = _env_str('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
