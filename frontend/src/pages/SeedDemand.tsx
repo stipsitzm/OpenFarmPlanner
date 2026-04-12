@@ -37,6 +37,8 @@ const formatPackageSelection = (row: SeedDemand, t: (key: string) => string): st
     .join(' + ');
 };
 
+const getCultureEditPath = (cultureId: number): string => `/app/cultures?cultureId=${cultureId}`;
+
 export default function SeedDemandPage(): React.ReactElement {
   useCommandContextTag('seedDemand');
   const { t } = useTranslation('cultures');
@@ -116,7 +118,7 @@ export default function SeedDemandPage(): React.ReactElement {
                 return (
                   <TableRow key={row.culture_id}>
                     <TableCell>
-                      <Link component={RouterLink} to={`/cultures?cultureId=${row.culture_id}`} underline="hover">
+                      <Link component={RouterLink} to={getCultureEditPath(row.culture_id)} underline="hover">
                         {row.variety ? `${row.culture_name} (${row.variety})` : row.culture_name}
                       </Link>
                     </TableCell>
@@ -152,7 +154,7 @@ export default function SeedDemandPage(): React.ReactElement {
                           <Typography variant="body2" color="text.secondary">
                             {t('seedDemand.noSupplierData')}
                           </Typography>
-                          <Link component={RouterLink} to={`/cultures?cultureId=${row.culture_id}`} underline="hover" variant="caption">
+                          <Link component={RouterLink} to={getCultureEditPath(row.culture_id)} underline="hover" variant="caption">
                             {t('seedDemand.editCultureAction')}
                           </Link>
                         </Box>
