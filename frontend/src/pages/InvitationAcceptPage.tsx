@@ -35,6 +35,10 @@ export default function InvitationAcceptPage(): React.ReactElement {
   }, [searchParams]);
 
   useEffect(() => {
+    if (hasTerminalStateRef.current) {
+      return;
+    }
+
     const flowId = activeFlowIdRef.current + 1;
     activeFlowIdRef.current = flowId;
     const isStaleFlow = (): boolean =>
