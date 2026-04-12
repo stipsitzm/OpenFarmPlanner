@@ -34,7 +34,7 @@
     "react-i18next": "^16.4.0",
     "react-konva": "^19.2.3",
     "react-markdown": "^10.1.0",
-    "react-modern-gantt": "https://codeload.github.com/stipsitzm/React-Modern-Gantt/tar.gz/refs/heads/master",
+    "react-modern-gantt": "https://codeload.github.com/stipsitzm/React-Modern-Gantt/tar.gz/7b7d11ef5ec1e06de1a1697125ab186c57d356db",
     "react-router-dom": "^7.9.6",
     "remark-gfm": "^4.0.1"
   },
