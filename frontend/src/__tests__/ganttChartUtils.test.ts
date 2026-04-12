@@ -186,6 +186,71 @@ describe('buildSeedlingTaskGroups', () => {
     expect(groups[0].tasks[0].name).toBe('Salat (Bijella)');
   });
 
+  it('builds 2-level hierarchyPath (Field → Bed) when only one location is used', () => {
+    const groups = buildFieldOccupancyTaskGroups({
+      locations: [{ id: 1, name: 'Hof' }],
+      fields: [{ id: 10, name: 'Nordfeld', location: 1 }],
+      beds: [{ id: 100, name: 'Beet A', field: 10 }],
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [
+        {
+          id: 31,
+          culture: 42,
+          culture_name: 'Salat',
+          bed: 100,
+          planting_date: '2026-03-01',
+          harvest_date: '2026-04-15',
+        },
+      ],
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].name).toBe('Beet A');
+    expect(groups[0].hierarchyPath).toEqual(['Nordfeld', 'Beet A']);
+  });
+
+  it('builds 3-level hierarchyPath (Location → Field → Bed) when multiple locations are used', () => {
+    const groups = buildFieldOccupancyTaskGroups({
+      locations: [
+        { id: 1, name: 'Hof Nord' },
+        { id: 2, name: 'Hof Süd' },
+      ],
+      fields: [
+        { id: 10, name: 'Feld 1', location: 1 },
+        { id: 20, name: 'Feld 2', location: 2 },
+      ],
+      beds: [
+        { id: 100, name: 'Beet A', field: 10 },
+        { id: 200, name: 'Beet B', field: 20 },
+      ],
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [
+        {
+          id: 41,
+          culture: 7,
+          culture_name: 'Tomate',
+          bed: 100,
+          planting_date: '2026-03-10',
+          harvest_date: '2026-04-20',
+        },
+        {
+          id: 42,
+          culture: 8,
+          culture_name: 'Paprika',
+          bed: 200,
+          planting_date: '2026-03-15',
+          harvest_date: '2026-04-25',
+        },
+      ],
+    });
+
+    expect(groups).toHaveLength(2);
+    expect(groups[0].hierarchyPath).toEqual(['Hof Nord', 'Feld 1', 'Beet A']);
+    expect(groups[1].hierarchyPath).toEqual(['Hof Süd', 'Feld 2', 'Beet B']);
+  });
+
   it('shows variety in occupancy harvest labels', () => {
     const groups = buildFieldOccupancyTaskGroups({
       locations,
