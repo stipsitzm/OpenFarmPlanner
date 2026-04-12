@@ -1,14 +1,20 @@
 import * as React from "react";
 import GanttChart, { Task, TaskGroup } from "react-modern-gantt";
-import { hierarchyDemoData, hierarchySingleLocationDemoData } from "./data";
+import { createHierarchyDemoData } from "./data";
 
 interface DemoHierarchyProps {
   darkMode: boolean;
 }
 
 const DemoHierarchy: React.FC<DemoHierarchyProps> = ({ darkMode }) => {
-  const [tasks, setTasks] = React.useState<TaskGroup[]>(hierarchyDemoData);
-  const [demoMode, setDemoMode] = React.useState<"multi" | "single">("multi");
+  const [showLocationLevel, setShowLocationLevel] = React.useState(true);
+  const [tasks, setTasks] = React.useState<TaskGroup[]>(
+    createHierarchyDemoData(true),
+  );
+
+  React.useEffect(() => {
+    setTasks(createHierarchyDemoData(showLocationLevel));
+  }, [showLocationLevel]);
 
   const handleTaskUpdate = (groupId: string, updatedTask: Task) => {
     setTasks((prevTasks) =>
@@ -28,32 +34,18 @@ const DemoHierarchy: React.FC<DemoHierarchyProps> = ({ darkMode }) => {
   return (
     <div>
       <div className="control-panel">
+        <label style={{ display: "inline-flex", gap: "8px", marginRight: "8px" }}>
+          <input
+            type="checkbox"
+            checked={showLocationLevel}
+            onChange={(event) => setShowLocationLevel(event.target.checked)}
+          />
+          Show location level
+        </label>
         <button
-          onClick={() => {
-            setDemoMode("multi");
-            setTasks(hierarchyDemoData);
-          }}
+          onClick={() => setTasks(createHierarchyDemoData(showLocationLevel))}
         >
-          Multi-Location Demo
-        </button>
-        <button
-          onClick={() => {
-            setDemoMode("single");
-            setTasks(hierarchySingleLocationDemoData);
-          }}
-        >
-          Single-Location Demo
-        </button>
-        <button
-          onClick={() =>
-            setTasks(
-              demoMode === "single"
-                ? hierarchySingleLocationDemoData
-                : hierarchyDemoData,
-            )
-          }
-        >
-          Reset Current Demo
+          Reset Demo
         </button>
       </div>
 

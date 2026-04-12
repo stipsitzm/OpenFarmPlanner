@@ -14,13 +14,13 @@ describe("Demo hierarchy English copy", () => {
     const appSource = fs.readFileSync(appPath, "utf8");
     const dataSource = fs.readFileSync(dataPath, "utf8");
 
-    expect(demoHierarchySource).toContain("Multi-Location Demo");
-    expect(demoHierarchySource).toContain("Single-Location Demo");
-    expect(demoHierarchySource).toContain("Reset Current Demo");
+    expect(demoHierarchySource).toContain("Show location level");
+    expect(demoHierarchySource).toContain("Reset Demo");
     expect(demoHierarchySource).toContain('headerLabel="Fields"');
 
-    expect(appSource).toContain("multi-location and single-location dataset");
+    expect(appSource).toContain("include or exclude the location level");
 
+    expect(dataSource).toContain("createHierarchyDemoData");
     expect(dataSource).toContain("Location North Farm");
     expect(dataSource).toContain("Field A");
     expect(dataSource).toContain("Bed A1");

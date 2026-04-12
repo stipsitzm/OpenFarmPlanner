@@ -83,12 +83,40 @@ const TaskList: React.FC<TaskListProps> = ({
     return parseHierarchyFromDescription(taskGroup.description);
   };
 
-  const uniqueLocations = new Set(
-    validTasks
-      .map((group) => group.locationName)
-      .filter((location): location is string => Boolean(location)),
-  );
-  const showLocationLevel = uniqueLocations.size > 1;
+  const getHierarchyLevels = (taskGroup: TaskGroup): string[] | null => {
+    const explicitPath = Array.isArray(taskGroup.hierarchyPath)
+      ? taskGroup.hierarchyPath
+          .map((level) => level?.trim())
+          .filter((level): level is string => Boolean(level))
+      : [];
+
+    if (explicitPath.length >= 2) {
+      return explicitPath;
+    }
+
+    const metadataLevels = [
+      taskGroup.locationName,
+      taskGroup.fieldName,
+      taskGroup.name || taskGroup.bedName || "Unnamed",
+    ].filter((level): level is string => Boolean(level?.trim()));
+
+    if (metadataLevels.length >= 2) {
+      return metadataLevels;
+    }
+
+    const parsedHierarchy = getHierarchy(taskGroup);
+    if (!parsedHierarchy) {
+      return null;
+    }
+
+    const parsedLevels = [
+      parsedHierarchy.locationName,
+      parsedHierarchy.fieldName,
+      taskGroup.name || parsedHierarchy.bedName || "Unnamed",
+    ].filter((level): level is string => Boolean(level?.trim()));
+
+    return parsedLevels.length >= 2 ? parsedLevels : null;
+  };
 
   // Calculate height for each group based on tasks
   const getGroupHeight = (taskGroup: TaskGroup) => {
@@ -125,11 +153,8 @@ const TaskList: React.FC<TaskListProps> = ({
         if (!taskGroup) return null;
 
         const groupHeight = getGroupHeight(taskGroup);
-        const hierarchy = getHierarchy(taskGroup);
-        const hasHierarchy = Boolean(
-          hierarchy?.fieldName ||
-          (showLocationLevel && hierarchy?.locationName),
-        );
+        const hierarchyLevels = getHierarchyLevels(taskGroup);
+        const hasHierarchy = Boolean(hierarchyLevels);
 
         return (
           <div
@@ -156,37 +181,20 @@ const TaskList: React.FC<TaskListProps> = ({
                   className="rmg-task-group-hierarchy"
                   data-rmg-component="task-group-hierarchy"
                 >
-                  {showLocationLevel && hierarchy?.locationName && (
+                  {hierarchyLevels?.map((level, index) => (
                     <div
-                      className="rmg-task-group-level rmg-task-group-level-location"
-                      title={hierarchy.locationName}
+                      key={`task-group-${taskGroup.id}-level-${index}`}
+                      className={`rmg-task-group-level rmg-task-group-level-depth-${index}`}
+                      title={level}
+                      data-rmg-component={
+                        index === hierarchyLevels.length - 1
+                          ? "task-group-name"
+                          : undefined
+                      }
                     >
-                      {hierarchy.locationName}
+                      {level}
                     </div>
-                  )}
-
-                  {hierarchy?.fieldName && (
-                    <div
-                      className={`rmg-task-group-level rmg-task-group-level-field ${
-                        !showLocationLevel ? "rmg-task-group-level-top" : ""
-                      }`}
-                      title={hierarchy.fieldName}
-                    >
-                      {hierarchy.fieldName}
-                    </div>
-                  )}
-
-                  <div
-                    className={`rmg-task-group-level rmg-task-group-level-bed ${
-                      !showLocationLevel && hierarchy?.fieldName
-                        ? "rmg-task-group-level-bed-compact"
-                        : ""
-                    }`}
-                    title={taskGroup.name || hierarchy?.bedName || "Unnamed"}
-                    data-rmg-component="task-group-name"
-                  >
-                    {taskGroup.name || hierarchy?.bedName || "Unnamed"}
-                  </div>
+                  ))}
                 </div>
               ) : (
                 <div

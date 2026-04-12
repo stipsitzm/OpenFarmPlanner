@@ -1,6 +1,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { GanttChart, ViewMode, type TaskGroup } from "../src";
+import { createHierarchyDemoData } from "../example/src/data";
 
 const createTask = (id: string, name: string) => ({
   id,
@@ -10,77 +11,87 @@ const createTask = (id: string, name: string) => ({
 });
 
 describe("TaskList hierarchy location visibility", () => {
-  test("hides the location level when all groups share one structured location", () => {
-    const singleLocationTasks: TaskGroup[] = [
+  test("renders explicit three-level hierarchy path", () => {
+    const tasks: TaskGroup[] = [
       {
         id: "group-1",
         name: "Bed 1",
-        locationName: "Location Green Farm",
-        fieldName: "Field A",
+        hierarchyPath: ["Location North Farm", "Field A", "Bed 1"],
         tasks: [createTask("task-1", "Carrot")],
-      },
-      {
-        id: "group-2",
-        name: "Bed 2",
-        locationName: "Location Green Farm",
-        fieldName: "Field B",
-        tasks: [createTask("task-2", "Lettuce")],
-      },
-      {
-        id: "group-3",
-        name: "Bed 3",
-        locationName: "Location Green Farm",
-        fieldName: "Field C",
-        tasks: [createTask("task-3", "Onion")],
       },
     ];
 
     render(
-      <GanttChart
-        tasks={singleLocationTasks}
-        viewMode={ViewMode.MONTH}
-        viewModes={false}
-      />,
+      <GanttChart tasks={tasks} viewMode={ViewMode.MONTH} viewModes={false} />,
     );
 
-    expect(screen.queryByText("Location Green Farm")).not.toBeInTheDocument();
+    expect(screen.getByText("Location North Farm")).toBeInTheDocument();
     expect(screen.getByText("Field A")).toBeInTheDocument();
-    expect(screen.getByText("Field B")).toBeInTheDocument();
-    expect(screen.getByText("Field C")).toBeInTheDocument();
     expect(screen.getByText("Bed 1")).toBeInTheDocument();
-    expect(screen.getByText("Bed 2")).toBeInTheDocument();
-    expect(screen.getByText("Bed 3")).toBeInTheDocument();
   });
 
-  test("shows the location level when multiple locations exist", () => {
-    const multiLocationTasks: TaskGroup[] = [
+  test("renders explicit two-level hierarchy path", () => {
+    const tasks: TaskGroup[] = [
       {
         id: "group-1",
         name: "Bed 1",
-        locationName: "Location North Farm",
-        fieldName: "Field A",
+        hierarchyPath: ["Field North", "Bed 1"],
+        tasks: [createTask("task-1", "Carrot")],
+      },
+    ];
+
+    render(
+      <GanttChart tasks={tasks} viewMode={ViewMode.MONTH} viewModes={false} />,
+    );
+
+    expect(screen.queryByText("Location North Farm")).not.toBeInTheDocument();
+    expect(screen.getByText("Field North")).toBeInTheDocument();
+    expect(screen.getByText("Bed 1")).toBeInTheDocument();
+  });
+
+  test("does not infer visibility from dataset uniqueness when hierarchyPath includes location", () => {
+    const tasks: TaskGroup[] = [
+      {
+        id: "group-1",
+        name: "Bed 1",
+        hierarchyPath: ["Location Green Farm", "Field A", "Bed 1"],
         tasks: [createTask("task-1", "Carrot")],
       },
       {
         id: "group-2",
         name: "Bed 2",
-        locationName: "Location South Farm",
-        fieldName: "Field C",
+        hierarchyPath: ["Location Green Farm", "Field B", "Bed 2"],
         tasks: [createTask("task-2", "Lettuce")],
       },
     ];
 
     render(
+      <GanttChart tasks={tasks} viewMode={ViewMode.MONTH} viewModes={false} />,
+    );
+
+    expect(screen.getAllByText("Location Green Farm")).toHaveLength(2);
+  });
+
+  test("demo toggle changes input hierarchy shape and renderer output", () => {
+    const { rerender } = render(
       <GanttChart
-        tasks={multiLocationTasks}
+        tasks={createHierarchyDemoData(true)}
         viewMode={ViewMode.MONTH}
         viewModes={false}
       />,
     );
 
     expect(screen.getByText("Location North Farm")).toBeInTheDocument();
-    expect(screen.getByText("Location South Farm")).toBeInTheDocument();
+
+    rerender(
+      <GanttChart
+        tasks={createHierarchyDemoData(false)}
+        viewMode={ViewMode.MONTH}
+        viewModes={false}
+      />,
+    );
+
+    expect(screen.queryByText("Location North Farm")).not.toBeInTheDocument();
     expect(screen.getByText("Field A")).toBeInTheDocument();
-    expect(screen.getByText("Field C")).toBeInTheDocument();
   });
 });

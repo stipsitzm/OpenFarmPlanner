@@ -17,6 +17,7 @@ export interface TaskGroup {
    * Optional structured hierarchy metadata for rendering resource trees,
    * e.g. Location -> Field -> Bed.
    */
+  hierarchyPath?: string[];
   locationName?: string;
   fieldName?: string;
   bedName?: string;

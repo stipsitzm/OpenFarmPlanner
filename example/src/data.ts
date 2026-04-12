@@ -98,125 +98,63 @@ export const basicDemoData: TaskGroup[] = [
   },
 ];
 
-// Hierarchy demo data (Location -> Field -> Bed)
-export const hierarchyDemoData: TaskGroup[] = [
-  {
-    id: "bed-1",
-    name: "Bed A1",
-    locationName: "Location North Farm",
-    fieldName: "Field A",
-    tasks: [
-      {
-        id: "crop-1",
-        name: "Carrot",
-        startDate: relativeDate(-10),
-        endDate: relativeDate(12),
-        color: "#16A34A",
-        percent: 50,
-      },
-    ],
-  },
-  {
-    id: "bed-2",
-    name: "Bed A2",
-    locationName: "Location North Farm",
-    fieldName: "Field A",
-    tasks: [
-      {
-        id: "crop-2",
-        name: "Lettuce",
-        startDate: relativeDate(-3),
-        endDate: relativeDate(8),
-        color: "#22C55E",
-        percent: 30,
-      },
-    ],
-  },
-  {
-    id: "bed-legacy-1",
-    name: "Bed B1",
-    locationName: "Location South Slope",
-    fieldName: "Field B",
-    description: "Field B context",
-    tasks: [
-      {
-        id: "crop-3",
-        name: "Onion",
-        startDate: relativeDate(2),
-        endDate: relativeDate(21),
-        color: "#F59E0B",
-        percent: 10,
-      },
-    ],
-  },
-  {
-    id: "bed-flat-1",
-    name: "Bed C1",
-    description: "Legacy flat description fallback",
-    tasks: [
-      {
-        id: "crop-4",
-        name: "Beans",
-        startDate: relativeDate(-6),
-        endDate: relativeDate(16),
-        color: "#3B82F6",
-        percent: 45,
-      },
-    ],
-  },
-];
+// Hierarchy demo data builder (input-driven hierarchyPath)
+export const createHierarchyDemoData = (
+  includeLocationLevel: boolean,
+): TaskGroup[] => {
+  const withLocation = (field: string, bed: string, location: string) =>
+    includeLocationLevel
+      ? [location, field, bed]
+      : [field, bed];
 
-// Hierarchy demo data with a single location (Field -> Bed should be displayed)
-export const hierarchySingleLocationDemoData: TaskGroup[] = [
-  {
-    id: "single-bed-1",
-    name: "Bed S1",
-    locationName: "Location Green Farm",
-    fieldName: "Field North",
-    tasks: [
-      {
-        id: "single-crop-1",
-        name: "Spinach",
-        startDate: relativeDate(-8),
-        endDate: relativeDate(10),
-        color: "#0EA5E9",
-        percent: 35,
-      },
-    ],
-  },
-  {
-    id: "single-bed-2",
-    name: "Bed S2",
-    locationName: "Location Green Farm",
-    fieldName: "Field South",
-    tasks: [
-      {
-        id: "single-crop-2",
-        name: "Radish",
-        startDate: relativeDate(-2),
-        endDate: relativeDate(14),
-        color: "#14B8A6",
-        percent: 20,
-      },
-    ],
-  },
-  {
-    id: "single-bed-3",
-    name: "Bed S3",
-    locationName: "Location Green Farm",
-    fieldName: "Field West",
-    tasks: [
-      {
-        id: "single-crop-3",
-        name: "Chard",
-        startDate: relativeDate(3),
-        endDate: relativeDate(24),
-        color: "#8B5CF6",
-        percent: 5,
-      },
-    ],
-  },
-];
+  return [
+    {
+      id: "bed-1",
+      name: "Bed A1",
+      hierarchyPath: withLocation("Field A", "Bed A1", "Location North Farm"),
+      tasks: [
+        {
+          id: "crop-1",
+          name: "Carrot",
+          startDate: relativeDate(-10),
+          endDate: relativeDate(12),
+          color: "#16A34A",
+          percent: 50,
+        },
+      ],
+    },
+    {
+      id: "bed-2",
+      name: "Bed B1",
+      hierarchyPath: withLocation("Field B", "Bed B1", "Location South Farm"),
+      tasks: [
+        {
+          id: "crop-2",
+          name: "Lettuce",
+          startDate: relativeDate(-3),
+          endDate: relativeDate(8),
+          color: "#22C55E",
+          percent: 30,
+        },
+      ],
+    },
+    {
+      id: "bed-3",
+      name: "Bed C1",
+      hierarchyPath: withLocation("Field C", "Bed C1", "Location South Farm"),
+      tasks: [
+        {
+          id: "crop-3",
+          name: "Beans",
+          startDate: relativeDate(2),
+          endDate: relativeDate(21),
+          color: "#3B82F6",
+          percent: 10,
+        },
+      ],
+    },
+  ];
+};
 
 // Complex data with more tasks and dependencies
 export const complexDemoData: TaskGroup[] = [
