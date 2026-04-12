@@ -75,7 +75,7 @@ describe('SeedDemandPage', () => {
 
     expect(screen.getByRole('link', { name: 'Bohne (Canadian Wonder)' })).toHaveAttribute(
       'href',
-      '/cultures?cultureId=1'
+      '/app/cultures?cultureId=1'
     );
 
     expect(screen.getByText('25 seedDemand.unitGrams × 8')).toBeInTheDocument();
@@ -236,6 +236,10 @@ describe('SeedDemandPage', () => {
       expect(screen.getAllByText('seedDemand.noSupplierData').length).toBeGreaterThan(0);
       expect(screen.getByRole('link', { name: 'seedDemand.editCultureAction' })).toBeInTheDocument();
     });
+    expect(screen.getByRole('link', { name: 'seedDemand.editCultureAction' })).toHaveAttribute(
+      'href',
+      '/app/cultures?cultureId=4'
+    );
   });
 
   it('renders exactly one row per culture in seed demand table', async () => {

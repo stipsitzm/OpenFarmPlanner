@@ -28,9 +28,9 @@ export interface GanttTask {
 export interface GanttTaskGroup {
   id: string;
   name: string;
-  description?: string;
   icon?: string;
   tasks: GanttTask[];
+  hierarchyPath?: string[];
   locationId?: number;
   fieldId?: number;
   bedId?: number;
@@ -46,6 +46,42 @@ interface BuildTaskGroupsArgs {
   plantingPlans: PlantingPlan[];
   cultures: Culture[];
   displayYear: number;
+}
+
+function shouldShowLocationHierarchy(fields: Field[], beds: Bed[]): boolean {
+  const fieldsById = new Map<number, Field>();
+  fields.forEach((field) => {
+    if (field.id) {
+      fieldsById.set(field.id, field);
+    }
+  });
+
+  const usedLocationIds = new Set<number>();
+  beds.forEach((bed) => {
+    const field = fieldsById.get(bed.field);
+    if (field?.location) {
+      usedLocationIds.add(field.location);
+    }
+  });
+
+  return usedLocationIds.size > 1;
+}
+
+function buildBedHierarchyPath(
+  locationName: string | undefined,
+  fieldName: string | undefined,
+  bedName: string | undefined,
+  includeLocationLevel: boolean,
+): string[] {
+  const normalizedLocation = locationName?.trim();
+  const normalizedField = fieldName?.trim();
+  const normalizedBed = bedName?.trim();
+
+  if (includeLocationLevel) {
+    return [normalizedLocation, normalizedField, normalizedBed].filter((value): value is string => Boolean(value));
+  }
+
+  return [normalizedField, normalizedBed].filter((value): value is string => Boolean(value));
 }
 
 interface SeedlingTooltipDetail {
@@ -229,6 +265,7 @@ export function buildFieldOccupancyTaskGroups({
 
   const groups: GanttTaskGroup[] = [];
   const { start: visStart, end: visEnd } = getVisibleYearInterval(displayYear);
+  const includeLocationLevel = shouldShowLocationHierarchy(fields, beds);
 
   const bedsByField = beds.reduce<Record<number, Bed[]>>((accumulator, bed) => {
     const fieldId = bed.field;
@@ -328,7 +365,7 @@ export function buildFieldOccupancyTaskGroups({
         groups.push({
           id: `bed-${bedId}`,
           name: bed.name,
-          description: `${location.name} / ${field.name}`,
+          hierarchyPath: buildBedHierarchyPath(location.name, field.name, bed.name, includeLocationLevel),
           tasks,
           locationId,
           fieldId,
@@ -426,7 +463,6 @@ export function buildSeedlingTaskGroups({
     const group = groupsByCulture.get(groupId) ?? {
       id: groupId,
       name: cultureLabel,
-      description: targetDescription(location?.name, field?.name),
       tasks: [],
     };
 
@@ -460,11 +496,4 @@ export function buildSeedlingTaskGroups({
       tasks: [...group.tasks].sort((left, right) => left.startDate.getTime() - right.startDate.getTime()),
     }))
     .sort((left, right) => left.name.localeCompare(right.name, 'de'));
-}
-
-function targetDescription(locationName?: string, fieldName?: string): string | undefined {
-  if (locationName && fieldName) {
-    return `${locationName} / ${fieldName}`;
-  }
-  return locationName || fieldName;
 }

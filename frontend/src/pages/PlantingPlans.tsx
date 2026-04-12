@@ -33,6 +33,7 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
+import EventNoteOutlinedIcon from "@mui/icons-material/EventNoteOutlined";
 import { useTranslation } from "../i18n";
 import PageContainer from "../components/layout/PageContainer";
 import {
@@ -1345,6 +1346,11 @@ function PlantingPlans(): React.ReactElement {
           deleteErrorMessage={t("plantingPlans:errors.delete")}
           deleteConfirmMessage={t("plantingPlans:confirmDelete")}
           addButtonLabel={`${t("plantingPlans:addButton")} (Alt+N)`}
+          emptyState={{
+            title: t("plantingPlans:emptyState.title"),
+            description: t("plantingPlans:emptyState.description"),
+            icon: <EventNoteOutlinedIcon color="disabled" sx={{ fontSize: 36 }} />,
+          }}
           showDeleteAction={true}
           showFooterEditControls={false}
           showRowEditActions={true}

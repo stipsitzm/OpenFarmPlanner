@@ -4,7 +4,7 @@
 
 This project uses Conventional Commits for automated versioning and releases.
 
-All **commit messages** and **PR titles** must use Conventional Commits.
+All **commit messages** should use Conventional Commits.
 
 `type(scope): description`
 
@@ -39,7 +39,7 @@ Do not use free-form prefixes such as:
 - `Misc`
 - `Work in progress`
 
-PR titles are validated by GitHub Actions and must follow the same Conventional Commit format as commit messages.
+PR titles are recommended to follow Conventional Commit format for consistency.
 
 ### How to choose the correct type
 
@@ -100,3 +100,13 @@ Before creating a commit or PR title:
 3. Ensure the title starts with `type:` or `type(scope):`.
 4. Do not use arbitrary prefixes.
 5. Use `feat` and `fix` only when a release should be triggered.
+
+## Account deletion and project ownership
+
+When working on account-deletion flows, always protect project ownership:
+
+1. Do not allow deletion requests that would leave a project without active members.
+2. Do not allow deletion requests that would remove the last active admin from a project.
+3. Keep deletion reversible during the grace period (no forced role transfer).
+4. During irreversible purge, remove memberships for deleted users.
+5. If purge is forced and a project becomes orphaned, deactivate the project and log it for admin follow-up.

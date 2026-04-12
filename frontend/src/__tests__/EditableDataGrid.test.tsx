@@ -96,6 +96,7 @@ vi.mock('@mui/x-data-grid', async () => {
             </button>
           </div>
         ))}
+        {rows.length === 0 && slots?.noRowsOverlay ? <slots.noRowsOverlay /> : null}
         {slots?.footer ? <slots.footer /> : null}
       </div>
     );
@@ -134,6 +135,32 @@ describe('EditableDataGrid', () => {
     await waitFor(() => {
       expect(screen.getByTestId('row-count')).toHaveTextContent('1');
     });
+  });
+
+  it('renders custom empty state when there are no rows', async () => {
+    const props = baseProps();
+    props.api = {
+      ...props.api,
+      list: vi.fn(async () => ({ data: { results: [] } })),
+    };
+
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        emptyState={{
+          title: 'Noch keine Anbaupläne vorhanden',
+          description: 'Lege deinen ersten Anbauplan an, um mit der Planung zu beginnen.',
+          actionLabel: 'Anbauplan erstellen',
+          onAction: vi.fn(),
+        }}
+      />,
+    );
+
+    expect(await screen.findByText('Noch keine Anbaupläne vorhanden')).toBeInTheDocument();
+    expect(
+      screen.getByText('Lege deinen ersten Anbauplan an, um mit der Planung zu beginnen.'),
+    ).toBeInTheDocument();
   });
 
   it('supports add, blur/enter/tab commit flows and calls API save with payload', async () => {
