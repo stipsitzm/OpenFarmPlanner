@@ -61,6 +61,7 @@
   "chartLocaleText": {
     "title": "Feldplanung",
     "resources": "Beete",
+    "resourcesHierarchy": "Standort / Parzelle / Beet",
     "resourcesSeedlings": "Kulturen",
     "today": "Heute",
     "viewModes": {

@@ -32,6 +32,12 @@ vi.mock('react-modern-gantt', () => ({
   __esModule: true,
   default: (props: {
     tasks: Array<{ name: string; tasks: Array<Record<string, unknown> & { id: string; name: string }> }>;
+    renderTaskList?: (props: {
+      tasks: Array<Record<string, unknown>>;
+      headerLabel?: string;
+      onGroupClick?: (group: Record<string, unknown>) => void;
+      viewMode: string;
+    }) => ReactNode;
     renderTooltip?: ({ task }: { task: Record<string, unknown> }) => ReactNode;
     locale?: string;
     localeText?: Record<string, unknown>;
@@ -39,20 +45,31 @@ vi.mock('react-modern-gantt', () => ({
     mocks.ganttProps(props);
     return (
       <div data-testid="mock-gantt">
-        {props.tasks.map((group) => (
-        <div key={group.name}>
-          <span>{group.name}</span>
-          {group.tasks.map((task) => <span key={`${group.name}-${task.name}`}>{task.name}</span>)}
-          {group.tasks[0] && props.renderTooltip ? (
-            <div data-testid={`mock-tooltip-${group.name}`}>
-              {props.renderTooltip({ task: group.tasks[0] })}
+        {props.renderTaskList ? (
+          <div data-testid="mock-tasklist">
+            {props.renderTaskList({
+              tasks: props.tasks as Array<Record<string, unknown>>,
+              headerLabel: props.localeText?.resources as string | undefined,
+              viewMode: 'month',
+            })}
+          </div>
+        ) : (
+          props.tasks.map((group) => (
+            <div key={group.name}>
+              <span>{group.name}</span>
+              {group.tasks.map((task) => <span key={`${group.name}-${task.name}`}>{task.name}</span>)}
+              {group.tasks[0] && props.renderTooltip ? (
+                <div data-testid={`mock-tooltip-${group.name}`}>
+                  {props.renderTooltip({ task: group.tasks[0] })}
+                </div>
+              ) : null}
             </div>
-          ) : null}
-        </div>
-        ))}
+          ))
+        )}
       </div>
     );
   },
+  detectTaskOverlaps: (tasks: Array<unknown>) => [tasks],
   ViewMode: {
     MINUTE: 'minute',
     HOUR: 'hour',
@@ -108,9 +125,12 @@ describe('GanttChartPage', () => {
     expect(latestProps?.locale).toBe('de-DE');
     expect(latestProps?.localeText).toMatchObject({
       title: 'Feldplanung',
-      resources: 'Beete',
+      resources: 'Standort / Parzelle / Beet',
       today: 'Heute',
     });
+    expect(screen.getByText('Hof')).toBeInTheDocument();
+    expect(screen.getByText('Feld')).toBeInTheDocument();
+    expect(screen.getByText('Beet 1')).toBeInTheDocument();
   });
 
   it('switches to the seedling view and shows the seedling rows', async () => {

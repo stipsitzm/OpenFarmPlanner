@@ -31,6 +31,9 @@ export interface GanttTaskGroup {
   icon?: string;
   tasks: GanttTask[];
   hierarchyPath?: string[];
+  locationName?: string;
+  fieldName?: string;
+  bedName?: string;
   locationId?: number;
   fieldId?: number;
   bedId?: number;
@@ -48,40 +51,17 @@ interface BuildTaskGroupsArgs {
   displayYear: number;
 }
 
-function shouldShowLocationHierarchy(fields: Field[], beds: Bed[]): boolean {
-  const fieldsById = new Map<number, Field>();
-  fields.forEach((field) => {
-    if (field.id) {
-      fieldsById.set(field.id, field);
-    }
-  });
-
-  const usedLocationIds = new Set<number>();
-  beds.forEach((bed) => {
-    const field = fieldsById.get(bed.field);
-    if (field?.location) {
-      usedLocationIds.add(field.location);
-    }
-  });
-
-  return usedLocationIds.size > 1;
-}
-
 function buildBedHierarchyPath(
   locationName: string | undefined,
   fieldName: string | undefined,
   bedName: string | undefined,
-  includeLocationLevel: boolean,
 ): string[] {
   const normalizedLocation = locationName?.trim();
   const normalizedField = fieldName?.trim();
   const normalizedBed = bedName?.trim();
 
-  if (includeLocationLevel) {
-    return [normalizedLocation, normalizedField, normalizedBed].filter((value): value is string => Boolean(value));
-  }
-
-  return [normalizedField, normalizedBed].filter((value): value is string => Boolean(value));
+  return [normalizedLocation, normalizedField, normalizedBed]
+    .filter((value): value is string => Boolean(value));
 }
 
 interface SeedlingTooltipDetail {
@@ -265,7 +245,6 @@ export function buildFieldOccupancyTaskGroups({
 
   const groups: GanttTaskGroup[] = [];
   const { start: visStart, end: visEnd } = getVisibleYearInterval(displayYear);
-  const includeLocationLevel = shouldShowLocationHierarchy(fields, beds);
 
   const bedsByField = beds.reduce<Record<number, Bed[]>>((accumulator, bed) => {
     const fieldId = bed.field;
@@ -365,7 +344,10 @@ export function buildFieldOccupancyTaskGroups({
         groups.push({
           id: `bed-${bedId}`,
           name: bed.name,
-          hierarchyPath: buildBedHierarchyPath(location.name, field.name, bed.name, includeLocationLevel),
+          hierarchyPath: buildBedHierarchyPath(location.name, field.name, bed.name),
+          locationName: location.name,
+          fieldName: field.name,
+          bedName: bed.name,
           tasks,
           locationId,
           fieldId,

@@ -32,7 +32,7 @@ import {
   type PlantingPlan,
   type YieldCalendarWeek,
 } from '../api/api';
-import GanttChart, { ViewMode } from 'react-modern-gantt';
+import GanttChart, { ViewMode, detectTaskOverlaps, type GanttTaskGroupLike } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
@@ -268,7 +268,7 @@ function GanttChartPage(): React.ReactElement {
     title: t('ganttChart:chartLocaleText.title'),
     resources: calendarMode === 'seedlings'
       ? t('ganttChart:chartLocaleText.resourcesSeedlings')
-      : t('ganttChart:chartLocaleText.resources'),
+      : t('ganttChart:chartLocaleText.resourcesHierarchy'),
     today: t('ganttChart:chartLocaleText.today'),
     viewModes: {
       [ViewMode.MINUTE]: t('ganttChart:chartLocaleText.viewModes.minute'),
@@ -282,6 +282,57 @@ function GanttChartPage(): React.ReactElement {
   }), [calendarMode, t]);
 
   const activeTaskGroups = calendarMode === 'occupancy' ? occupancyTaskGroups : seedlingTaskGroups;
+
+  const renderOccupancyTaskList = useCallback(({ tasks, headerLabel, onGroupClick, viewMode }: {
+    tasks: GanttTaskGroupLike[];
+    headerLabel?: string;
+    onGroupClick?: (group: GanttTaskGroupLike) => void;
+    viewMode: ViewMode;
+  }) => (
+    <div className="rmg-task-list gantt-task-list" data-rmg-component="task-list">
+      <div className="rmg-task-list-header" data-show-timeline-header="true">
+        {headerLabel}
+      </div>
+      {tasks.map((group) => {
+        const hierarchy = (group.hierarchyPath ?? [group.locationName, group.fieldName, group.bedName, group.name])
+          .map((value) => value?.trim())
+          .filter((value): value is string => Boolean(value));
+        const visibleHierarchy = hierarchy.length >= 2 ? hierarchy : [group.name];
+        const rowHeight = Math.max(72, detectTaskOverlaps(group.tasks, viewMode).length * 40 + 20);
+
+        return (
+          <div
+            key={group.id}
+            className="rmg-task-group gantt-task-group"
+            style={{ height: `${rowHeight}px` }}
+            onClick={() => onGroupClick?.(group)}
+            data-testid={`task-group-${group.id}`}
+            data-rmg-component="task-group"
+            data-group-id={group.id}
+          >
+            <div className="rmg-task-group-content gantt-task-group-content">
+              <div className="rmg-task-group-hierarchy gantt-task-group-hierarchy">
+                {visibleHierarchy.map((part, index) => (
+                  <div
+                    key={`${group.id}-level-${index}`}
+                    className={`rmg-task-group-level rmg-task-group-level-depth-${index} gantt-task-group-level`}
+                    title={part}
+                  >
+                    {part}
+                  </div>
+                ))}
+              </div>
+              {group.description ? (
+                <div className="rmg-task-group-description" title={group.description}>
+                  {group.description}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  ), []);
 
   const renderOccupancyTooltip = useCallback(({ task }: { task: GanttTask }) => (
     <Box sx={{ p: 0.5 }}>
@@ -438,6 +489,7 @@ function GanttChartPage(): React.ReactElement {
                 showProgress={false}
                 darkMode={false}
                 onTaskUpdate={calendarMode === 'occupancy' ? handleTaskUpdate : undefined}
+                renderTaskList={calendarMode === 'occupancy' ? renderOccupancyTaskList : undefined}
                 renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
                   ? renderSeedlingTooltip({ task })
                   : renderOccupancyTooltip({ task }))}

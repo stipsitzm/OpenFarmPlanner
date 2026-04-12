@@ -186,7 +186,7 @@ describe('buildSeedlingTaskGroups', () => {
     expect(groups[0].tasks[0].name).toBe('Salat (Bijella)');
   });
 
-  it('builds 2-level hierarchyPath (Field → Bed) when only one location is used', () => {
+  it('builds 3-level hierarchyPath (Location → Field → Bed) when only one location is used', () => {
     const groups = buildFieldOccupancyTaskGroups({
       locations: [{ id: 1, name: 'Hof' }],
       fields: [{ id: 10, name: 'Nordfeld', location: 1 }],
@@ -207,7 +207,7 @@ describe('buildSeedlingTaskGroups', () => {
 
     expect(groups).toHaveLength(1);
     expect(groups[0].name).toBe('Beet A');
-    expect(groups[0].hierarchyPath).toEqual(['Nordfeld', 'Beet A']);
+    expect(groups[0].hierarchyPath).toEqual(['Hof', 'Nordfeld', 'Beet A']);
   });
 
   it('builds 3-level hierarchyPath (Location → Field → Bed) when multiple locations are used', () => {

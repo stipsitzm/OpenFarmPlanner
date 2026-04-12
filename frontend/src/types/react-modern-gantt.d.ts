@@ -26,6 +26,10 @@ declare module 'react-modern-gantt' {
     name: string;
     description?: string;
     icon?: string;
+    hierarchyPath?: string[];
+    locationName?: string;
+    fieldName?: string;
+    bedName?: string;
     tasks: GanttTaskLike[];
   }
 
@@ -64,11 +68,19 @@ declare module 'react-modern-gantt' {
     showProgress?: boolean;
     darkMode?: boolean;
     onTaskUpdate?: (groupId: string, task: GanttTaskLike) => void | Promise<void>;
+    renderTaskList?: (props: {
+      tasks: GanttTaskGroupLike[];
+      headerLabel?: string;
+      onGroupClick?: (group: GanttTaskGroupLike) => void;
+      viewMode: ViewMode;
+    }) => ReactNode;
     renderTooltip?: (props: GanttTooltipProps) => ReactNode;
     renderTask?: (props: GanttTaskRenderProps) => ReactNode;
   }
 
   const GanttChart: ComponentType<GanttChartProps>;
+
+  export function detectTaskOverlaps(tasks: GanttTaskLike[], viewMode?: ViewMode): GanttTaskLike[][];
 
   export default GanttChart;
 }
