@@ -26,10 +26,10 @@ export function DataGridEmptyState({
         width: "100%",
         display: "flex",
         alignItems: "center",
-        justifyContent: "flex-start",
+        justifyContent: "center",
+        transform: "translateY(-20px)",
         px: 2,
-        pt: 6,
-        pb: 4,
+        py: 3,
       }}
     >
       <Stack spacing={1.25} alignItems="center" textAlign="center" sx={{ maxWidth: 440 }}>
