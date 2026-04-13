@@ -7,6 +7,7 @@ interface DataGridEmptyStateProps {
   actionLabel?: string;
   onAction?: () => void;
   icon?: ReactNode;
+  minHeight?: number;
 }
 
 export function DataGridEmptyState({
@@ -15,12 +16,13 @@ export function DataGridEmptyState({
   actionLabel,
   onAction,
   icon,
+  minHeight = 280,
 }: DataGridEmptyStateProps): React.ReactElement {
   return (
     <Box
       sx={{
         height: "100%",
-        minHeight: 220,
+        minHeight,
         width: "100%",
         display: "flex",
         alignItems: "center",
@@ -36,7 +38,7 @@ export function DataGridEmptyState({
           {description}
         </Typography>
         {actionLabel && onAction ? (
-          <Button variant="outlined" onClick={onAction}>
+          <Button variant="contained" onClick={onAction}>
             {actionLabel}
           </Button>
         ) : null}

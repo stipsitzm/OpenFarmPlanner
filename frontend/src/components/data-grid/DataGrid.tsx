@@ -100,6 +100,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
     actionLabel?: string;
     onAction?: () => void;
     icon?: ReactNode;
+    minHeight?: number;
   };
 }
 
@@ -160,6 +161,7 @@ export function EditableDataGrid<T extends EditableRow>({
         actionLabel={emptyState?.actionLabel}
         onAction={emptyState?.onAction}
         icon={emptyState?.icon}
+        minHeight={emptyState?.minHeight}
       />
     ),
     [emptyState, t],
@@ -170,9 +172,10 @@ export function EditableDataGrid<T extends EditableRow>({
         title={t('dataGrid.noResults')}
         description={t('dataGrid.noResultsDescription')}
         icon={<SearchOffOutlinedIcon color="disabled" sx={{ fontSize: 36 }} />}
+        minHeight={emptyState?.minHeight}
       />
     ),
-    [t],
+    [emptyState?.minHeight, t],
   );
   const { sortModel, setSortModel } = usePersistentSortModel({
     tableKey: tableKey ?? 'editableDataGrid',
@@ -749,7 +752,7 @@ export function EditableDataGrid<T extends EditableRow>({
           loading={loading}
           editMode="row"
           density={isMobile ? 'standard' : 'compact'}
-          autoHeight
+          autoHeight={rows.length > 0}
           hideFooter={false}
           sortModel={sortModel}
           onSortModelChange={setSortModel}
@@ -761,7 +764,11 @@ export function EditableDataGrid<T extends EditableRow>({
             noResultsOverlay,
           }}
           localeText={dataGridLocaleText}
-          sx={{ ...dataGridSx, width: 'auto' }}
+          sx={{
+            ...dataGridSx,
+            width: 'auto',
+            ...(rows.length === 0 ? { minHeight: emptyState?.minHeight ?? 360 } : {}),
+          }}
           getRowClassName={(params) => {
             const rowKey = String(params.id);
             if (rowModesModel[params.id]?.mode === GridRowModes.Edit) {

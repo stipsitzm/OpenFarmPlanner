@@ -1349,7 +1349,10 @@ function PlantingPlans(): React.ReactElement {
           emptyState={{
             title: t("plantingPlans:emptyState.title"),
             description: t("plantingPlans:emptyState.description"),
+            actionLabel: t("plantingPlans:emptyState.action"),
+            onAction: () => gridCommandApiRef.current?.addRow(),
             icon: <EventNoteOutlinedIcon color="disabled" sx={{ fontSize: 36 }} />,
+            minHeight: 340,
           }}
           showDeleteAction={true}
           showFooterEditControls={false}

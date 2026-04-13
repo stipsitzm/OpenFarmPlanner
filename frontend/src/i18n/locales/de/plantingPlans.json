@@ -36,8 +36,8 @@
   "addButton": "Neuen Anbauplan hinzufügen",
   "emptyState": {
     "title": "Noch keine Anbaupläne vorhanden",
-    "description": "Lege deinen ersten Anbauplan an, um mit der Planung zu beginnen.",
-    "action": "Anbauplan erstellen"
+    "description": "Lege deinen ersten Anbauplan an, um Kulturen zeitlich und flächenbezogen zu planen.",
+    "action": "Ersten Anbauplan anlegen"
   },
   "cultivationTypes": {
     "directSowing": "Direktsaat",

@@ -139,6 +139,7 @@ describe('EditableDataGrid', () => {
 
   it('renders custom empty state when there are no rows', async () => {
     const props = baseProps();
+    const onAction = vi.fn();
     props.api = {
       ...props.api,
       list: vi.fn(async () => ({ data: { results: [] } })),
@@ -152,7 +153,7 @@ describe('EditableDataGrid', () => {
           title: 'Noch keine Anbaupläne vorhanden',
           description: 'Lege deinen ersten Anbauplan an, um mit der Planung zu beginnen.',
           actionLabel: 'Anbauplan erstellen',
-          onAction: vi.fn(),
+          onAction,
         }}
       />,
     );
@@ -161,6 +162,8 @@ describe('EditableDataGrid', () => {
     expect(
       screen.getByText('Lege deinen ersten Anbauplan an, um mit der Planung zu beginnen.'),
     ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Anbauplan erstellen' }));
+    expect(onAction).toHaveBeenCalledTimes(1);
   });
 
   it('supports add, blur/enter/tab commit flows and calls API save with payload', async () => {
