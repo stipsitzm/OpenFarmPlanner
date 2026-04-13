@@ -16,7 +16,7 @@ export function DataGridEmptyState({
   actionLabel,
   onAction,
   icon,
-  minHeight = 280,
+  minHeight = 260,
 }: DataGridEmptyStateProps): React.ReactElement {
   return (
     <Box
@@ -26,9 +26,10 @@ export function DataGridEmptyState({
         width: "100%",
         display: "flex",
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: "flex-start",
         px: 2,
-        py: 3,
+        pt: 6,
+        pb: 4,
       }}
     >
       <Stack spacing={1.25} alignItems="center" textAlign="center" sx={{ maxWidth: 440 }}>
