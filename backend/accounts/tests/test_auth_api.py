@@ -14,6 +14,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import AccountDeletionRequest, PendingActivation
+from farm.models import Project, ProjectMembership
 
 User = get_user_model()
 
@@ -307,6 +308,44 @@ class AuthApiTest(APITestCase):
         self.assertEqual(blocked.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(blocked.data.get('code'), 'account_pending_deletion')
 
+    def test_account_delete_request_is_blocked_when_user_is_sole_active_member(self) -> None:
+        project = Project.objects.create(name='Critical Project', slug='critical-project')
+        ProjectMembership.objects.create(user=self.user, project=project, role=ProjectMembership.ROLE_ADMIN)
+
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/delete-request/',
+            {'password': self.password},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get('code'), 'project_membership_blocking_deletion')
+        self.assertEqual(response.data['projects'][0]['reason'], 'sole_member')
+        self.assertEqual(response.data['projects'][0]['project_name'], 'Critical Project')
+
+    def test_account_delete_request_is_blocked_when_user_is_last_active_admin(self) -> None:
+        project = Project.objects.create(name='Admin Project', slug='admin-project')
+        other_member = User.objects.create_user(
+            username='member-user',
+            email='member@example.com',
+            password=self.password,
+            is_active=True,
+        )
+        ProjectMembership.objects.create(user=self.user, project=project, role=ProjectMembership.ROLE_ADMIN)
+        ProjectMembership.objects.create(user=other_member, project=project, role=ProjectMembership.ROLE_MEMBER)
+
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/delete-request/',
+            {'password': self.password},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get('code'), 'project_membership_blocking_deletion')
+        self.assertEqual(response.data['projects'][0]['reason'], 'sole_admin')
+
     def test_account_restore_within_grace_period(self) -> None:
         self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
         self.client.post('/openfarmplanner/api/auth/account/delete-request/', {'password': self.password}, format='json')
@@ -353,3 +392,45 @@ class AuthApiTest(APITestCase):
         second = StringIO()
         call_command('purge_deleted_accounts', stdout=second)
         self.assertIn('Finalized 0 accounts.', second.getvalue())
+
+    def test_purge_deleted_accounts_skips_orphaning_without_force(self) -> None:
+        project = Project.objects.create(name='Orphan Project', slug='orphan-project')
+        ProjectMembership.objects.create(user=self.user, project=project, role=ProjectMembership.ROLE_ADMIN)
+        AccountDeletionRequest.objects.create(
+            user=self.user,
+            deletion_requested_at=timezone.now() - timedelta(days=20),
+            scheduled_deletion_at=timezone.now() - timedelta(days=2),
+        )
+
+        output = StringIO()
+        call_command('purge_deleted_accounts', stdout=output)
+
+        self.user.refresh_from_db()
+        deletion = AccountDeletionRequest.objects.get(user=self.user)
+        self.assertIsNone(deletion.deleted_at)
+        self.assertFalse(self.user.email.startswith('deleted-user-'))
+        self.assertIn('Skipped 1', output.getvalue())
+        self.assertTrue(ProjectMembership.objects.filter(user=self.user, project=project).exists())
+        project.refresh_from_db()
+        self.assertTrue(project.is_active)
+
+    def test_purge_deleted_accounts_force_deactivates_orphan_projects_and_removes_memberships(self) -> None:
+        project = Project.objects.create(name='Orphan Force Project', slug='orphan-force-project')
+        ProjectMembership.objects.create(user=self.user, project=project, role=ProjectMembership.ROLE_ADMIN)
+        AccountDeletionRequest.objects.create(
+            user=self.user,
+            deletion_requested_at=timezone.now() - timedelta(days=20),
+            scheduled_deletion_at=timezone.now() - timedelta(days=2),
+        )
+
+        output = StringIO()
+        call_command('purge_deleted_accounts', '--force', stdout=output)
+
+        self.user.refresh_from_db()
+        deletion = AccountDeletionRequest.objects.get(user=self.user)
+        self.assertIsNotNone(deletion.deleted_at)
+        self.assertTrue(self.user.email.startswith('deleted-user-'))
+        self.assertFalse(ProjectMembership.objects.filter(user=self.user, project=project).exists())
+        project.refresh_from_db()
+        self.assertFalse(project.is_active)
+        self.assertIn('Deactivated', output.getvalue())

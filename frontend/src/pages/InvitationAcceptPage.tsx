@@ -11,7 +11,12 @@ import {
   storeInvitationRedirect,
 } from "./invitationAcceptance";
 
-type AcceptStatus = "loading" | "redirecting" | "success" | "error";
+type AcceptStatus =
+  | "loading"
+  | "redirecting"
+  | "success"
+  | "info"
+  | "error";
 
 export default function InvitationAcceptPage(): React.ReactElement {
   const { t } = useTranslation("projectInvitations");
@@ -21,6 +26,8 @@ export default function InvitationAcceptPage(): React.ReactElement {
   const [status, setStatus] = useState<AcceptStatus>("loading");
   const [message, setMessage] = useState<string>("");
   const processedTokenRef = useRef<string | null>(null);
+  const activeFlowIdRef = useRef(0);
+  const hasTerminalStateRef = useRef(false);
 
   const token = useMemo(() => {
     const tokenFromQuery = searchParams.get("token");
@@ -28,6 +35,15 @@ export default function InvitationAcceptPage(): React.ReactElement {
   }, [searchParams]);
 
   useEffect(() => {
+    if (hasTerminalStateRef.current) {
+      return;
+    }
+
+    const flowId = activeFlowIdRef.current + 1;
+    activeFlowIdRef.current = flowId;
+    const isStaleFlow = (): boolean =>
+      activeFlowIdRef.current !== flowId || hasTerminalStateRef.current;
+
     console.info("[InvitationAcceptPage] route reached", {
       path: window.location.pathname,
       search: window.location.search,
@@ -64,6 +80,10 @@ export default function InvitationAcceptPage(): React.ReactElement {
       try {
         console.info("[InvitationAcceptPage] calling accept API", { token });
         const response = await projectAPI.acceptInvitationByToken(token);
+        if (isStaleFlow()) {
+          return;
+        }
+        const responseCode = response.data.code ?? "accepted";
         const projectId = response.data.project?.id ?? response.data.project_id;
         if (projectId) {
           window.localStorage.setItem("activeProjectId", String(projectId));
@@ -73,15 +93,23 @@ export default function InvitationAcceptPage(): React.ReactElement {
         clearInvitationRedirectStorage();
         console.info(
           "[InvitationAcceptPage] invitation accepted successfully",
-          { projectId },
+          { projectId, responseCode },
         );
+        hasTerminalStateRef.current = true;
         setStatus("success");
-        setMessage(t("acceptPage.addedToProject"));
+        setMessage(
+          responseCode === "already_member"
+            ? t("result.already_member")
+            : t("acceptPage.addedToProject"),
+        );
         window.setTimeout(
           () => navigate("/app/locations", { replace: true }),
           1200,
         );
       } catch (acceptError: unknown) {
+        if (isStaleFlow()) {
+          return;
+        }
         console.error(
           "[InvitationAcceptPage] invitation acceptance failed",
           acceptError,
@@ -94,12 +122,21 @@ export default function InvitationAcceptPage(): React.ReactElement {
           console.info("[InvitationAcceptPage] invitation already satisfied", {
             code,
           });
+          hasTerminalStateRef.current = true;
           setStatus("success");
           setMessage(t(`result.${code}`));
           window.setTimeout(
             () => navigate("/app/locations", { replace: true }),
             1200,
           );
+          return;
+        }
+
+        if (code === "accepted") {
+          clearInvitationRedirectStorage();
+          hasTerminalStateRef.current = true;
+          setStatus("info");
+          setMessage(t("result.accepted"));
           return;
         }
 
@@ -112,6 +149,7 @@ export default function InvitationAcceptPage(): React.ReactElement {
           clearInvitationRedirectStorage();
         }
 
+        hasTerminalStateRef.current = true;
         setStatus("error");
         setMessage(
           t(`result.${code}`, { defaultValue: t("result.invalid_token") }),
@@ -127,9 +165,13 @@ export default function InvitationAcceptPage(): React.ReactElement {
 
       try {
         const statusResponse = await projectAPI.getInvitationStatus(token);
+        if (isStaleFlow()) {
+          return;
+        }
         if (statusResponse.data.code !== "pending") {
           clearInvitationRedirectStorage();
-          setStatus("error");
+          hasTerminalStateRef.current = true;
+          setStatus(statusResponse.data.code === "accepted" ? "info" : "error");
           setMessage(
             t(`result.${statusResponse.data.code}`, {
               defaultValue: t("result.invalid_token"),
@@ -138,10 +180,14 @@ export default function InvitationAcceptPage(): React.ReactElement {
           return;
         }
       } catch (statusError: unknown) {
+        if (isStaleFlow()) {
+          return;
+        }
         const code =
           (statusError as { response?: { data?: { code?: string } } })?.response
             ?.data?.code ?? "invalid_token";
         clearInvitationRedirectStorage();
+        hasTerminalStateRef.current = true;
         setStatus("error");
         setMessage(t(`result.${code}`, { defaultValue: t("result.invalid_token") }));
         return;
@@ -174,6 +220,7 @@ export default function InvitationAcceptPage(): React.ReactElement {
         {status === "success" ? (
           <Alert severity="success">{message}</Alert>
         ) : null}
+        {status === "info" ? <Alert severity="info">{message}</Alert> : null}
         {status === "error" ? <Alert severity="error">{message}</Alert> : null}
         <Button
           variant="outlined"

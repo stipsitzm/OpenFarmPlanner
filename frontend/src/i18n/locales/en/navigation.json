@@ -67,5 +67,10 @@
       "versionRestoreError": "Could not restore project version.",
       "logoutError": "Logout failed. Please try again."
     }
+  },
+  "projectRequired": {
+    "title": "No project available yet",
+    "description": "You currently do not have access to a project. Create a project or ask to be invited to an existing one.",
+    "createAction": "Create project"
   }
 }

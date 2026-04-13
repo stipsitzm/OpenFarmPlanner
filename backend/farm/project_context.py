@@ -37,6 +37,9 @@ def resolve_project_for_user(user) -> tuple[Project | None, bool]:
 
 def get_active_project_or_400(request: Request) -> Project:
     """Resolve and validate active project from request header for authenticated users."""
+    if not request.user.is_active:
+        raise exceptions.PermissionDenied('Inactive users cannot access project data.')
+
     agent_mode = bool(request.session.get('agent_mode'))
     agent_project_id = request.session.get('agent_project_id')
 
@@ -61,6 +64,7 @@ def get_active_project_or_400(request: Request) -> Project:
 
     membership = ProjectMembership.objects.select_related('project').filter(
         user=request.user,
+        user__is_active=True,
         project_id=project_id,
         project__is_active=True,
     ).first()
@@ -76,7 +80,9 @@ def require_project_admin(user, project_id: int, request: Request | None = None)
 
     is_admin = ProjectMembership.objects.filter(
         user=user,
+        user__is_active=True,
         project_id=project_id,
+        project__is_active=True,
         role=ProjectMembership.ROLE_ADMIN,
     ).exists()
     if not is_admin:
@@ -85,5 +91,13 @@ def require_project_admin(user, project_id: int, request: Request | None = None)
 
 def get_project_for_member(user, project_id: int) -> Project:
     """Return project for user membership or raise permission denied."""
-    membership = get_object_or_404(ProjectMembership.objects.select_related('project'), user=user, project_id=project_id)
+    if not user.is_active:
+        raise exceptions.PermissionDenied('Inactive users cannot access project data.')
+    membership = get_object_or_404(
+        ProjectMembership.objects.select_related('project'),
+        user=user,
+        user__is_active=True,
+        project_id=project_id,
+        project__is_active=True,
+    )
     return membership.project

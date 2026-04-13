@@ -16,7 +16,7 @@ vi.mock('../auth/useAuth', () => ({
 }));
 
 describe('LoginPage deletion flow', () => {
-  it('shows restore option for account_pending_deletion', async () => {
+  it('shows warning state with primary restore action for account_pending_deletion', async () => {
     loginMock.mockRejectedValueOnce(new AuthApiError('pending', 'account_pending_deletion', new Date().toISOString()));
     restoreMock.mockResolvedValueOnce({ memberships: [], needs_project_selection: true });
 
@@ -27,6 +27,14 @@ describe('LoginPage deletion flow', () => {
     fireEvent.change(passwordInput, { target: { value: 'secret' } });
     fireEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
 
-    expect(await screen.findByRole('button', { name: 'Konto wiederherstellen' })).toBeInTheDocument();
+    const restoreButton = await screen.findByRole('button', { name: 'Konto wiederherstellen' });
+    const loginButton = screen.getByRole('button', { name: 'Anmelden' });
+
+    expect(screen.queryByText('pending')).not.toBeInTheDocument();
+    expect(screen.getByText('Dein Konto ist zur Löschung vorgemerkt')).toBeInTheDocument();
+    expect(screen.getByText(/Du kannst es noch bis/)).toBeInTheDocument();
+    expect(screen.getByText('Nach der Wiederherstellung bleibt dein Konto unverändert erhalten.')).toBeInTheDocument();
+    expect(restoreButton.className).toContain('MuiButton-contained');
+    expect(loginButton.className).toContain('MuiButton-outlined');
   });
 });

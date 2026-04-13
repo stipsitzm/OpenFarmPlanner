@@ -24,6 +24,12 @@
     "unsavedChanges": "Sie haben ungespeicherte Änderungen in der Tabelle. Wenn Sie außerhalb einer Zeile klicken, wird gespeichert. Möchten Sie wirklich fortfahren?",
     "validationErrors": "Es gibt Validierungsfehler, die behoben werden müssen, bevor Sie fortfahren können. Bitte korrigieren Sie die Fehler oder brechen Sie die Bearbeitung ab (Escape-Taste)."
   },
+  "dataGrid": {
+    "noRows": "Keine Einträge vorhanden",
+    "noResults": "Keine passenden Ergebnisse gefunden",
+    "noResultsDescription": "Passe deine Such- oder Filterkriterien an, um wieder Einträge zu sehen.",
+    "loading": "Wird geladen…"
+  },
   "fields": {
     "name": "Name",
     "address": "Adresse",
