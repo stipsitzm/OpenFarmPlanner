@@ -15,6 +15,15 @@
   color: #999;
 }
 
+.ofp-gantt-wrapper .gantt-left-column,
+.ofp-gantt-wrapper .gantt-left-column *,
+.ofp-gantt-wrapper .rmg-left-column,
+.ofp-gantt-wrapper .rmg-left-column * {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /* Override React-Modern-Gantt default styles if needed */
 /* Keep the green theme consistent with the app */
 :root {

@@ -425,52 +425,54 @@ function GanttChartPage(): React.ReactElement {
             </div>
           ) : (
             <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
-              <GanttChart
-                tasks={activeTaskGroups}
-                locale={resolvedLocale}
-                localeText={ganttLocaleText}
-                viewMode={ViewMode.MONTH}
-                startDate={startDate}
-                endDate={endDate}
-                editMode={calendarMode === 'occupancy' ? editMode : false}
-                allowTaskResize={false}
-                allowTaskMove={calendarMode === 'occupancy'}
-                showProgress={false}
-                darkMode={false}
-                onTaskUpdate={calendarMode === 'occupancy' ? handleTaskUpdate : undefined}
-                renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
-                  ? renderSeedlingTooltip({ task })
-                  : renderOccupancyTooltip({ task }))}
-                renderTask={calendarMode === 'seedlings'
-                  ? ({ task, leftPx, widthPx, topPx }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          left: `${leftPx}px`,
-                          top: `${topPx}px`,
-                          width: `${widthPx}px`,
-                          minWidth: `${widthPx}px`,
-                          height: 26,
-                          px: 1,
-                          borderRadius: 1,
-                          backgroundColor: task.color || '#3b82f6',
-                          color: '#fff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          overflow: 'hidden',
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
-                          boxSizing: 'border-box',
-                          cursor: 'default',
-                        }}
-                      >
-                        <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {task.name}
-                        </Typography>
-                      </Box>
-                    )
-                  : undefined}
-              />
+              <div className="ofp-gantt-wrapper">
+                <GanttChart
+                  tasks={activeTaskGroups}
+                  locale={resolvedLocale}
+                  localeText={ganttLocaleText}
+                  viewMode={ViewMode.MONTH}
+                  startDate={startDate}
+                  endDate={endDate}
+                  editMode={calendarMode === 'occupancy' ? editMode : false}
+                  allowTaskResize={false}
+                  allowTaskMove={calendarMode === 'occupancy'}
+                  showProgress={false}
+                  darkMode={false}
+                  onTaskUpdate={calendarMode === 'occupancy' ? handleTaskUpdate : undefined}
+                  renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
+                    ? renderSeedlingTooltip({ task })
+                    : renderOccupancyTooltip({ task }))}
+                  renderTask={calendarMode === 'seedlings'
+                    ? ({ task, leftPx, widthPx, topPx }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            left: `${leftPx}px`,
+                            top: `${topPx}px`,
+                            width: `${widthPx}px`,
+                            minWidth: `${widthPx}px`,
+                            height: 26,
+                            px: 1,
+                            borderRadius: 1,
+                            backgroundColor: task.color || '#3b82f6',
+                            color: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                            textOverflow: 'ellipsis',
+                            boxSizing: 'border-box',
+                            cursor: 'default',
+                          }}
+                        >
+                          <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {task.name}
+                          </Typography>
+                        </Box>
+                      )
+                    : undefined}
+                />
+              </div>
             </GanttRenderBoundary>
           )}
         </Paper>
