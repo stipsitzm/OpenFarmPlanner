@@ -9,13 +9,11 @@ vi.mock('../i18n', () => ({
   }),
 }));
 
-const { navigateMock, supplierListMock } = vi.hoisted(() => ({
-  navigateMock: vi.fn(),
+const { supplierListMock, supplierCreateMock } = vi.hoisted(() => ({
   supplierListMock: vi.fn().mockResolvedValue({ data: { results: [] } }),
-}));
-
-vi.mock('react-router-dom', () => ({
-  useNavigate: () => navigateMock,
+  supplierCreateMock: vi.fn().mockResolvedValue({
+    data: { id: 101, name: 'Neu', homepage_url: 'https://example.com', allowed_domains: [] },
+  }),
 }));
 
 vi.mock('../api/api', async () => {
@@ -24,6 +22,7 @@ vi.mock('../api/api', async () => {
     ...actual,
     supplierAPI: {
       list: supplierListMock,
+      create: supplierCreateMock,
     },
   };
 });
@@ -77,9 +76,12 @@ const CULTURE_B: Culture = {
 
 describe('CultureForm', () => {
   beforeEach(() => {
-    navigateMock.mockReset();
     supplierListMock.mockReset();
+    supplierCreateMock.mockReset();
     supplierListMock.mockResolvedValue({ data: { results: [] } });
+    supplierCreateMock.mockResolvedValue({
+      data: { id: 101, name: 'Neu', homepage_url: 'https://example.com', allowed_domains: [] },
+    });
   });
 
   it('renders supplier selection states based on supplier availability', async () => {
@@ -94,10 +96,10 @@ describe('CultureForm', () => {
     );
 
     await waitFor(() => expect(supplierListMock).toHaveBeenCalled());
-    expect(screen.getByRole('combobox')).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByText('form.noSuppliersHint')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getByText('form.supplierDataEmptyStateDescription')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
-    expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
+    expect(screen.getByLabelText('form.supplierNameLabel')).toBeInTheDocument();
   });
 
   it('does not show create-supplier helper link when supplier options are available', async () => {
@@ -113,6 +115,32 @@ describe('CultureForm', () => {
 
     await waitFor(() => expect(screen.getByRole('combobox')).toBeInTheDocument());
     expect(screen.queryByRole('button', { name: 'form.createNewSupplierInline' })).not.toBeInTheDocument();
+  });
+
+  it('creates a supplier inline and keeps the culture form open', async () => {
+    supplierListMock
+      .mockResolvedValueOnce({ data: { results: [] } })
+      .mockResolvedValueOnce({ data: { results: [{ id: 101, name: 'Neu' }] } });
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ packaging_sizes: [] }] }}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onCancel={() => {}}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText('form.supplierDataEmptyStateDescription')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
+    fireEvent.change(screen.getByLabelText('form.supplierNameLabel'), { target: { value: 'Neu' } });
+    fireEvent.change(screen.getByLabelText('form.supplierHomepage'), { target: { value: 'neu.example.com' } });
+    const createButtons = screen.getAllByRole('button', { name: 'form.createSuppliers' });
+    fireEvent.click(createButtons[createButtons.length - 1]);
+
+    await waitFor(() => expect(supplierCreateMock).toHaveBeenCalledWith('Neu', 'https://neu.example.com', []));
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeInTheDocument());
+    expect(screen.getByRole('combobox')).toHaveTextContent('Neu');
   });
 
   it('falls back to empty supplier selection when saved supplier is not in options', async () => {

@@ -22,6 +22,7 @@ from rest_framework.views import APIView
 from config.frontend_urls import build_public_frontend_url
 
 from .models import AccountDeletionRequest, PendingActivation
+from farm.models import ProjectMembership
 from .serializers import (
     AccountDeleteRequestSerializer,
     AccountRestoreSerializer,
@@ -102,6 +103,15 @@ def _logout_all_user_sessions(user_id: int) -> None:
             continue
         if str(session_user_id) == str(user_id):
             session.delete()
+
+
+def get_user_project_roles(user: User) -> dict[int, str]:
+    """Return current active project roles for a user keyed by project id."""
+    rows = ProjectMembership.objects.filter(
+        user=user,
+        project__is_active=True,
+    ).values_list('project_id', 'role')
+    return {project_id: role for project_id, role in rows}
 
 
 def _send_activation_email(user: User) -> None:
@@ -250,6 +260,53 @@ class AccountDeleteRequestView(APIView):
         user = request.user
         if not user.check_password(serializer.validated_data['password']):
             return Response({'detail': _de(_('Invalid password.'))}, status=status.HTTP_400_BAD_REQUEST)
+
+        project_roles = get_user_project_roles(user)
+        blocking_projects: list[dict[str, str | int]] = []
+        for project_id, role in project_roles.items():
+            active_member_count = ProjectMembership.objects.filter(
+                project_id=project_id,
+                project__is_active=True,
+                user__is_active=True,
+            ).count()
+            active_admin_count = ProjectMembership.objects.filter(
+                project_id=project_id,
+                project__is_active=True,
+                user__is_active=True,
+                role=ProjectMembership.ROLE_ADMIN,
+            ).count()
+            membership = (
+                ProjectMembership.objects.select_related('project')
+                .filter(project_id=project_id, user=user)
+                .first()
+            )
+            if membership is None:
+                continue
+
+            if active_member_count <= 1:
+                blocking_projects.append({
+                    'project_id': project_id,
+                    'project_name': membership.project.name,
+                    'reason': 'sole_member',
+                })
+                continue
+
+            if role == ProjectMembership.ROLE_ADMIN and active_admin_count <= 1:
+                blocking_projects.append({
+                    'project_id': project_id,
+                    'project_name': membership.project.name,
+                    'reason': 'sole_admin',
+                })
+
+        if blocking_projects:
+            return Response(
+                {
+                    'code': 'project_membership_blocking_deletion',
+                    'detail': 'Please transfer the admin role or leave the listed projects before requesting account deletion.',
+                    'projects': blocking_projects,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         now = timezone.now()
         scheduled = now + timedelta(days=ACCOUNT_DELETION_GRACE_DAYS)

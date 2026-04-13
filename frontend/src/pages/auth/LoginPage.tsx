@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Container, Stack, TextField, Typography } from '@mui/material';
+import { Alert, AlertTitle, Box, Button, Container, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -55,7 +55,7 @@ export default function LoginPage(): React.ReactElement {
     } catch (err) {
       if (err instanceof AuthApiError && err.code === 'account_pending_deletion') {
         setPendingDeletionAt(err.scheduledDeletionAt ?? null);
-        setError(err.message);
+        setError(null);
       } else {
         setError(err instanceof Error ? err.message : t('auth:login.failed'));
       }
@@ -94,17 +94,25 @@ export default function LoginPage(): React.ReactElement {
           {error ? <Alert severity="error">{error}</Alert> : null}
           {pendingDeletionAt ? (
             <Alert severity="warning">
-              {t('auth:login.pendingDeletion', { date: new Date(pendingDeletionAt).toLocaleString('de-DE') })}
+              <AlertTitle>{t('auth:login.pendingDeletionTitle')}</AlertTitle>
+              {t('auth:login.pendingDeletionText', { date: new Date(pendingDeletionAt).toLocaleString('de-DE') })}
             </Alert>
           ) : null}
           <TextField label={t('auth:login.email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           <TextField label={t('auth:login.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <Button type="submit" variant="contained" disabled={submitting}>{submitting ? t('auth:login.submitting') : t('auth:login.submit')}</Button>
           {pendingDeletionAt ? (
-            <Button variant="outlined" disabled={submitting} onClick={() => void handleRestore()}>
-              {t('auth:login.restoreAccount')}
-            </Button>
+            <>
+              <Button variant="contained" disabled={submitting} onClick={() => void handleRestore()}>
+                {t('auth:login.restoreAccount')}
+              </Button>
+              <Typography variant="body2" color="text.secondary">
+                {t('auth:login.restoreHint')}
+              </Typography>
+            </>
           ) : null}
+          <Button type="submit" variant={pendingDeletionAt ? 'outlined' : 'contained'} disabled={submitting}>
+            {submitting ? t('auth:login.submitting') : t('auth:login.submit')}
+          </Button>
           <Button component={RouterLink} to={nextPath ? `/register?next=${encodeURIComponent(nextPath)}` : '/register'} state={location.state}>{t('auth:login.noAccount')}</Button>
           <Button component={RouterLink} to="/forgot-password">{t('auth:login.forgotPassword')}</Button>
         </Stack>

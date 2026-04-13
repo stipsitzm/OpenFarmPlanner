@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import axios from 'axios';
 import { useTranslation } from '../i18n';
 import type { Culture, Supplier } from '../api/types';
 import { extractApiErrorMessage } from '../api/errors';
@@ -31,7 +32,6 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { supplierAPI } from '../api/api';
-import { useNavigate } from 'react-router-dom';
 import { validateCulture } from './validation';
 import { BasicInfoSection } from './sections/BasicInfoSection';
 import { TimingSection } from './sections/TimingSection';
@@ -129,9 +129,12 @@ export function CultureForm({
   onCancel,
 }: CultureFormProps): React.ReactElement {
   const { t } = useTranslation('cultures');
-  const navigate = useNavigate();
   const isEdit = Boolean(culture);
   const [saveError, setSaveError] = useState<string>('');
+  const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
+  const [supplierDialogError, setSupplierDialogError] = useState('');
+  const [isCreatingSupplier, setIsCreatingSupplier] = useState(false);
+  const [supplierDraft, setSupplierDraft] = useState({ name: '', homepage_url: '' });
 
   // --- Validation now imported from ../cultures/validation ---
 
@@ -277,6 +280,91 @@ export function CultureForm({
     updateSupplierRow(supplierIndex, { packaging_sizes: currentPackages.filter((_pkg, index) => index !== packageIndex) });
   };
 
+  const openCreateSupplierDialog = () => {
+    setSupplierDraft({ name: '', homepage_url: '' });
+    setSupplierDialogError('');
+    setSupplierDialogOpen(true);
+  };
+
+  const normalizeUrl = (input: string): string => {
+    const trimmed = input.trim();
+    if (!trimmed) return trimmed;
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+    return `https://${trimmed}`;
+  };
+
+  const isValidUrl = (url: string): boolean => {
+    try {
+      const parsedUrl = new URL(url);
+      return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
+  const handleCreateSupplier = async (): Promise<void> => {
+    const normalizedName = supplierDraft.name.trim();
+    const normalizedUrl = normalizeUrl(supplierDraft.homepage_url);
+    if (!normalizedName || !normalizedUrl) {
+      return;
+    }
+    if (!isValidUrl(normalizedUrl)) {
+      setSupplierDialogError(t('form.supplierHomepageInvalid'));
+      return;
+    }
+
+    try {
+      setSupplierDialogError('');
+      setIsCreatingSupplier(true);
+      const response = await supplierAPI.create(normalizedName, normalizedUrl, []);
+      const createdSupplier = response.data;
+      await loadSuppliers();
+      setFormData((prev) => {
+        const rows = prev.supplier_data ?? [];
+        if (rows.length === 0) {
+          return {
+            ...prev,
+            supplier_data: [{
+              supplier_id: createdSupplier.id,
+              supplier_name: createdSupplier.name,
+              packaging_sizes: [],
+            }],
+          };
+        }
+
+        const nextRows = rows.map((row) => {
+          const hasSupplier = typeof row.supplier_id === 'number' || typeof row.supplier?.id === 'number';
+          if (hasSupplier) {
+            return row;
+          }
+          return {
+            ...row,
+            supplier_id: createdSupplier.id,
+            supplier_name: createdSupplier.name,
+            supplier_name_input: undefined,
+          };
+        });
+        return {
+          ...prev,
+          supplier_data: nextRows,
+        };
+      });
+      setIsDirty(true);
+      setSupplierDialogOpen(false);
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        const errorData = error.response.data as { homepage_url?: string; name?: string };
+        setSupplierDialogError(errorData.homepage_url || errorData.name || t('form.supplierCreateError'));
+      } else {
+        setSupplierDialogError(t('form.supplierCreateError'));
+      }
+    } finally {
+      setIsCreatingSupplier(false);
+    }
+  };
+
   const handleDialogContentScrollKey = (event: { key: string; altKey: boolean; ctrlKey: boolean; metaKey: boolean; preventDefault: () => void }, contentElement: HTMLDivElement) => {
     if (event.altKey || event.ctrlKey || event.metaKey) {
       return;
@@ -364,15 +452,26 @@ export function CultureForm({
             <ColorSection formData={formData} errors={errors} onChange={handleChange} t={t} defaultColor={DEFAULT_DISPLAY_COLOR} />
             <NotesSection formData={formData} onChange={handleChange} t={t} errors={errors} />
             <Typography variant="h6" sx={{ mt: 1 }}>{t('form.supplierDataSectionTitle')}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {t('form.supplierDataSectionDescription')}
-            </Typography>
-            {supplierRows.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                {t('form.noSupplierDataRows')}
-              </Typography>
-            ) : null}
-            {supplierRows.map((row, supplierIndex) => (
+            {supplierOptions.length === 0 ? (
+              <div style={{ border: '1px dashed #cfd8dc', borderRadius: 8, padding: 16 }}>
+                <Typography variant="body1" color="text.secondary">
+                  {t('form.supplierDataEmptyStateDescription')}
+                </Typography>
+                <Button variant="contained" sx={{ mt: 2 }} onClick={openCreateSupplierDialog}>
+                  {t('form.createSuppliers')}
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Typography variant="body2" color="text.secondary">
+                  {t('form.supplierDataSectionDescription')}
+                </Typography>
+                {supplierRows.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    {t('form.noSupplierDataRows')}
+                  </Typography>
+                ) : null}
+                {supplierRows.map((row, supplierIndex) => (
               <div key={`supplier-row-${supplierIndex}`} style={{ border: '1px solid #e0e0e0', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {(() => {
                   const selectedSupplierId = row.supplier_id ?? row.supplier?.id ?? null;
@@ -399,7 +498,7 @@ export function CultureForm({
                         }
 
                         if (selectedValue === '-1') {
-                          navigate('/app/suppliers?create=1');
+                          openCreateSupplierDialog();
                           return;
                         }
 
@@ -413,9 +512,8 @@ export function CultureForm({
                       }}
                       displayEmpty
                       size="small"
-                      disabled={supplierOptions.length === 0}
                     >
-                      <MenuItem value="">{supplierOptions.length > 0 ? t('form.supplierPlaceholder') : t('form.noSuppliers')}</MenuItem>
+                      <MenuItem value="">{t('form.supplierPlaceholder')}</MenuItem>
                       {supplierOptions.map((supplier) => (
                         <MenuItem key={supplier.id} value={String(supplier.id)}>{supplier.name}</MenuItem>
                       ))}
@@ -428,16 +526,6 @@ export function CultureForm({
                     </Select>
                   );
                 })()}
-                {supplierOptions.length === 0 ? (
-                  <>
-                    <Typography variant="body2" color="warning.main">
-                      {t('form.noSuppliersHint')}
-                    </Typography>
-                    <Button variant="outlined" onClick={() => navigate('/app/suppliers?create=1')}>
-                      {t('form.createSuppliers')}
-                    </Button>
-                  </>
-                ) : null}
                 <TextField
                   label={t('form.supplierProductNameLabel') }
                   value={row.supplier_product_name ?? ''}
@@ -478,8 +566,10 @@ export function CultureForm({
                   <Button variant="outlined" color="error" onClick={() => removeSupplierRow(supplierIndex)}>{t('form.removeSupplierData')}</Button>
                 </div>
               </div>
-            ))}
-            <Button variant="outlined" onClick={addSupplierRow}>{t('form.addSupplierData')}</Button>
+                ))}
+                <Button variant="outlined" onClick={addSupplierRow}>{t('form.addSupplierData')}</Button>
+              </>
+            )}
           </div>
         </DialogContent>
         <DialogActions sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center', mt: 1, flexWrap: 'wrap' }}>
@@ -509,6 +599,41 @@ export function CultureForm({
           </Button>
         </DialogActions>
       </form>
+
+      <Dialog open={supplierDialogOpen} onClose={() => setSupplierDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>{t('form.createSuppliers')}</DialogTitle>
+        <DialogContent>
+          <TextField
+            margin="dense"
+            fullWidth
+            label={t('form.supplierNameLabel')}
+            value={supplierDraft.name}
+            onChange={(event) =>
+              setSupplierDraft((prev) => ({ ...prev, name: event.target.value }))
+            }
+          />
+          <TextField
+            margin="dense"
+            fullWidth
+            label={t('form.supplierHomepage')}
+            value={supplierDraft.homepage_url}
+            onChange={(event) =>
+              setSupplierDraft((prev) => ({ ...prev, homepage_url: event.target.value }))
+            }
+          />
+          {supplierDialogError ? <Alert severity="error" sx={{ mt: 2 }}>{supplierDialogError}</Alert> : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSupplierDialogOpen(false)}>{t('form.cancel')}</Button>
+          <Button
+            variant="contained"
+            onClick={() => void handleCreateSupplier()}
+            disabled={!supplierDraft.name.trim() || !supplierDraft.homepage_url.trim() || isCreatingSupplier}
+          >
+            {t('form.createSuppliers')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 }

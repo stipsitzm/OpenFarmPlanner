@@ -28,7 +28,6 @@ export interface GanttTask {
 export interface GanttTaskGroup {
   id: string;
   name: string;
-  description?: string;
   icon?: string;
   tasks: GanttTask[];
   locationId?: number;
@@ -327,8 +326,7 @@ export function buildFieldOccupancyTaskGroups({
 
         groups.push({
           id: `bed-${bedId}`,
-          name: bed.name,
-          description: `${location.name} / ${field.name}`,
+          name: [location.name, field.name, bed.name].filter(Boolean).join(' / '),
           tasks,
           locationId,
           fieldId,
@@ -426,7 +424,6 @@ export function buildSeedlingTaskGroups({
     const group = groupsByCulture.get(groupId) ?? {
       id: groupId,
       name: cultureLabel,
-      description: targetDescription(location?.name, field?.name),
       tasks: [],
     };
 
@@ -460,11 +457,4 @@ export function buildSeedlingTaskGroups({
       tasks: [...group.tasks].sort((left, right) => left.startDate.getTime() - right.startDate.getTime()),
     }))
     .sort((left, right) => left.name.localeCompare(right.name, 'de'));
-}
-
-function targetDescription(locationName?: string, fieldName?: string): string | undefined {
-  if (locationName && fieldName) {
-    return `${locationName} / ${fieldName}`;
-  }
-  return locationName || fieldName;
 }
