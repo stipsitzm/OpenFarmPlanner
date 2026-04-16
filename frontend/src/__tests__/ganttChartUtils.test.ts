@@ -186,6 +186,76 @@ describe('buildSeedlingTaskGroups', () => {
     expect(groups[0].tasks[0].name).toBe('Salat (Bijella)');
   });
 
+  it('omits location level in occupancy hierarchy when only one used location exists', () => {
+    const groups = buildFieldOccupancyTaskGroups({
+      locations,
+      fields,
+      beds,
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [
+        {
+          id: 23,
+          culture: 13,
+          culture_name: 'Kohl',
+          bed: 100,
+          planting_date: '2026-03-10',
+          harvest_date: '2026-04-20',
+        },
+      ],
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].name).toBe('Nordfeld / Beet A');
+    expect(groups[0].description).toBe('Nordfeld / Beet A');
+    expect(groups[0].hierarchyPath).toEqual(['Nordfeld', 'Beet A']);
+  });
+
+  it('includes location level in occupancy hierarchy when multiple used locations exist', () => {
+    const groups = buildFieldOccupancyTaskGroups({
+      locations: [
+        { id: 1, name: 'Hof' },
+        { id: 2, name: 'Pacht' },
+      ],
+      fields: [
+        { id: 10, name: 'Nordfeld', location: 1 },
+        { id: 20, name: 'Südfeld', location: 2 },
+      ],
+      beds: [
+        { id: 100, name: 'Beet A', field: 10 },
+        { id: 200, name: 'Beet B', field: 20 },
+      ],
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [
+        {
+          id: 24,
+          culture: 7,
+          culture_name: 'Salat',
+          bed: 100,
+          planting_date: '2026-03-01',
+          harvest_date: '2026-04-15',
+        },
+        {
+          id: 25,
+          culture: 8,
+          culture_name: 'Tomate',
+          bed: 200,
+          planting_date: '2026-05-01',
+          harvest_date: '2026-07-01',
+        },
+      ],
+    });
+
+    expect(groups).toHaveLength(2);
+    expect(groups[0].hierarchyPath).toEqual(['Hof', 'Nordfeld', 'Beet A']);
+    expect(groups[0].name).toBe('Hof / Nordfeld / Beet A');
+    expect(groups[0].description).toBe('Hof / Nordfeld / Beet A');
+    expect(groups[1].hierarchyPath).toEqual(['Pacht', 'Südfeld', 'Beet B']);
+    expect(groups[1].name).toBe('Pacht / Südfeld / Beet B');
+    expect(groups[1].description).toBe('Pacht / Südfeld / Beet B');
+  });
+
   it('shows variety in occupancy harvest labels', () => {
     const groups = buildFieldOccupancyTaskGroups({
       locations,
