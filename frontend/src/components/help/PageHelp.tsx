@@ -39,9 +39,9 @@ import {
   ToggleButtonGroup,
   Tooltip,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { useMediaQuery } from '@mui/system';
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactElement } from 'react';
 import { useTranslation } from '../../i18n';
 import HelpIconRow from './HelpIconRow';

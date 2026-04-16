@@ -19,7 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../i18n";
 import { DataGrid, GridRowModes } from "@mui/x-data-grid";
 import type { GridRowsProp, GridRowModesModel } from "@mui/x-data-grid";
-import { Box, Alert, Button, Stack, Typography } from "@mui/material";
+import { Box, Alert } from "@mui/material";
 import { dataGridSx } from "../components/data-grid/styles";
 import {
   handleRowEditStop,
@@ -556,50 +556,6 @@ function FieldsBedsHierarchy({
     }
   }, [addField, handleAddBed, selectedRow]);
 
-  const handleCreateLocation = useCallback((): void => {
-    navigate("/app/locations");
-  }, [navigate]);
-
-  const handleAddFieldFromGlobalAction = useCallback((): void => {
-    if (locations.length === 0) {
-      handleCreateLocation();
-      return;
-    }
-
-    if (locations.length === 1) {
-      const singleLocation = locations[0];
-      if (singleLocation?.id !== undefined) {
-        void addField(singleLocation.id);
-      }
-      return;
-    }
-
-    const locationOptions = locations
-      .filter((location) => location.id !== undefined)
-      .map((location) => `${location.id}: ${location.name}`)
-      .join("\n");
-
-    const selectedLocationId = window.prompt(
-      t("prompts.selectLocationForField", { options: locationOptions }),
-    );
-
-    if (!selectedLocationId) {
-      return;
-    }
-
-    const parsedLocationId = Number.parseInt(selectedLocationId.trim(), 10);
-    const matchingLocation = locations.find(
-      (location) => location.id === parsedLocationId,
-    );
-
-    if (!matchingLocation?.id) {
-      setError(t("messages.invalidLocationSelection"));
-      return;
-    }
-
-    void addField(matchingLocation.id);
-  }, [addField, handleCreateLocation, locations, setError, t]);
-
   const handleEditSelected = useCallback(() => {
     if (!selectedRow) {
       return;
@@ -800,38 +756,6 @@ function FieldsBedsHierarchy({
     <div className={showTitle ? "page-container" : undefined}>
       <Box sx={{ width: "fit-content", maxWidth: "100%" }}>
         {showTitle && <h1>{t("title")}</h1>}
-
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={1.5}
-          alignItems={{ xs: "flex-start", sm: "center" }}
-          justifyContent="space-between"
-          sx={{ mb: 2 }}
-        >
-          {locations.length === 1 ? (
-            <Typography variant="body2" color="text.secondary">
-              {t("messages.singleLocationHint", {
-                name: locations[0]?.name ?? "",
-              })}
-            </Typography>
-          ) : (
-            <Box />
-          )}
-
-          <Button
-            variant="contained"
-            onClick={handleAddFieldFromGlobalAction}
-            aria-label={
-              locations.length === 0
-                ? t("actions.createLocation")
-                : t("actions.addField")
-            }
-          >
-            {locations.length === 0
-              ? t("actions.createLocation")
-              : t("actions.addField")}
-          </Button>
-        </Stack>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>

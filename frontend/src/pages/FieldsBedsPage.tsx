@@ -1,5 +1,6 @@
-import { Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
-import { useEffect, useMemo, useState } from 'react';
+import { Alert, Box, Button, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
@@ -9,6 +10,8 @@ import PageHelp from '../components/help/PageHelp';
 import PageContainer from '../components/layout/PageContainer';
 import PageHeader from '../components/layout/PageHeader';
 import ModeToggle from '../components/ModeToggle';
+import { locationAPI, type Location } from '../api/api';
+import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 
@@ -17,11 +20,15 @@ type InteractionMode = 'view' | 'edit';
 
 export default function FieldsBedsPage(): React.ReactElement {
   const { t } = useTranslation(['fields', 'hierarchy']);
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
     return stored === 'graphical' ? 'graphical' : 'table';
   });
   const [interactionMode, setInteractionMode] = useState<InteractionMode>('view');
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [globalActionError, setGlobalActionError] = useState<string>('');
+  const [hierarchyRenderKey, setHierarchyRenderKey] = useState(0);
 
   useCommandContextTag('areas');
 
@@ -41,6 +48,68 @@ export default function FieldsBedsPage(): React.ReactElement {
   ], []);
 
   useRegisterCommands('areas-view-switch', commands);
+
+  const loadLocations = useCallback(async (): Promise<void> => {
+    try {
+      const response = await locationAPI.list();
+      setLocations(response.data.results);
+    } catch (error) {
+      console.error('Error loading locations for global action:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === 'table') {
+      void loadLocations();
+    }
+  }, [loadLocations, viewMode]);
+
+  const reloadHierarchyAndLocations = useCallback(async (): Promise<void> => {
+    setHierarchyRenderKey((previous) => previous + 1);
+    await loadLocations();
+  }, [loadLocations]);
+
+  const { addField } = useFieldOperations(
+    locations,
+    setGlobalActionError,
+    reloadHierarchyAndLocations,
+    t as never,
+  );
+
+  const handleGlobalAddField = useCallback((): void => {
+    if (locations.length === 0) {
+      navigate('/app/locations');
+      return;
+    }
+
+    if (locations.length === 1 && locations[0]?.id !== undefined) {
+      void addField(locations[0].id);
+      return;
+    }
+
+    const locationOptions = locations
+      .filter((location) => location.id !== undefined)
+      .map((location) => `${location.id}: ${location.name}`)
+      .join('\n');
+
+    const selectedLocationId = window.prompt(
+      t('hierarchy:prompts.selectLocationForField', { options: locationOptions }),
+    );
+
+    if (!selectedLocationId) {
+      return;
+    }
+
+    const parsedLocationId = Number.parseInt(selectedLocationId.trim(), 10);
+    const matchingLocation = locations.find((location) => location.id === parsedLocationId);
+
+    if (!matchingLocation?.id) {
+      setGlobalActionError(t('hierarchy:messages.invalidLocationSelection'));
+      return;
+    }
+
+    void addField(matchingLocation.id);
+  }, [addField, locations, navigate, t]);
 
 
   useEffect(() => {
@@ -81,47 +150,65 @@ export default function FieldsBedsPage(): React.ReactElement {
           actions={<PageHelp pageKey={viewMode === 'graphical' ? 'graphical' : 'areas'} />}
           marginBottom={1}
         />
-        <Stack
-          direction={{ xs: 'column', lg: 'row' }}
-          spacing={2}
-          alignItems={{ xs: 'stretch', lg: 'flex-end' }}
-          sx={{ mb: 2 }}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: { xs: 'stretch', sm: 'center' },
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2,
+            mb: 2,
+          }}
         >
-          <Stack spacing={0.75} sx={{ width: { xs: '100%', sm: 'fit-content' } }}>
-            <Typography variant="subtitle2">{t('fields:representation.label')}</Typography>
-            <ToggleButtonGroup
-              value={viewMode}
-              exclusive
-              onChange={(_, selectedViewMode: ViewMode | null) => {
-                if (selectedViewMode !== null) {
-                  setViewMode(selectedViewMode);
-                }
-              }}
-              size="small"
-              color="primary"
-              aria-label={t('fields:representation.ariaLabel')}
-              fullWidth
-            >
-              <ToggleButton value="table" aria-label={t('fields:representation.table')}>
-                {t('fields:representation.table')}
-              </ToggleButton>
-              <ToggleButton value="graphical" aria-label={t('fields:representation.graphical')}>
-                {t('fields:representation.graphical')}
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Stack>
-          {viewMode === 'graphical' ? (
-            <ModeToggle
-              label={t('fields:graphical.viewMode')}
-              ariaLabel={t('fields:graphical.modeAriaLabel')}
-              viewLabel={t('fields:graphical.viewModeOption')}
-              editLabel={t('fields:graphical.editModeOption')}
-              value={interactionMode}
-              onChange={setInteractionMode}
-              fullWidth={false}
-            />
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+            <Stack spacing={0.75} sx={{ width: { xs: '100%', sm: 'fit-content' } }}>
+              <Typography variant="subtitle2">{t('fields:representation.label')}</Typography>
+              <ToggleButtonGroup
+                value={viewMode}
+                exclusive
+                onChange={(_, selectedViewMode: ViewMode | null) => {
+                  if (selectedViewMode !== null) {
+                    setViewMode(selectedViewMode);
+                  }
+                }}
+                size="small"
+                color="primary"
+                aria-label={t('fields:representation.ariaLabel')}
+                fullWidth
+              >
+                <ToggleButton value="table" aria-label={t('fields:representation.table')}>
+                  {t('fields:representation.table')}
+                </ToggleButton>
+                <ToggleButton value="graphical" aria-label={t('fields:representation.graphical')}>
+                  {t('fields:representation.graphical')}
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Stack>
+            {viewMode === 'graphical' ? (
+              <ModeToggle
+                label={t('fields:graphical.viewMode')}
+                ariaLabel={t('fields:graphical.modeAriaLabel')}
+                viewLabel={t('fields:graphical.viewModeOption')}
+                editLabel={t('fields:graphical.editModeOption')}
+                value={interactionMode}
+                onChange={setInteractionMode}
+                fullWidth={false}
+              />
+            ) : null}
+          </Box>
+          {viewMode === 'table' ? (
+            <Button variant="contained" onClick={handleGlobalAddField}>
+              {locations.length === 0
+                ? t('hierarchy:actions.createLocation')
+                : t('hierarchy:actions.addField')}
+            </Button>
           ) : null}
-        </Stack>
+        </Box>
+        {globalActionError ? (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {globalActionError}
+          </Alert>
+        ) : null}
       </PageContainer>
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
@@ -133,7 +220,7 @@ export default function FieldsBedsPage(): React.ReactElement {
             showModeToggle={false}
           />
         ) : (
-          <FieldsBedsHierarchy showTitle={false} />
+          <FieldsBedsHierarchy key={hierarchyRenderKey} showTitle={false} />
         )}
       </PageContainer>
     </>
