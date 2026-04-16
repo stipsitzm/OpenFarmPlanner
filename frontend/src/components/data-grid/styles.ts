@@ -26,6 +26,24 @@ export const dataGridSx = {
   '& .MuiDataGrid-cell--editing': {
     overflow: 'visible',
   },
+  '& .MuiDataGrid-cell--editing .MuiInputBase-root': {
+    minHeight: '100%',
+    height: 'auto',
+    alignItems: 'center',
+  },
+  '& .MuiDataGrid-cell--editing .MuiInputBase-input': {
+    lineHeight: 1.4,
+    paddingTop: '8px',
+    paddingBottom: '8px',
+  },
+  '& .MuiDataGrid-cell--editing .MuiSelect-select': {
+    minHeight: 'unset !important',
+    display: 'flex',
+    alignItems: 'center',
+    lineHeight: 1.4,
+    paddingTop: '8px',
+    paddingBottom: '8px',
+  },
   '& .MuiDataGrid-cell:focus-within': {
     overflow: 'visible',
   },

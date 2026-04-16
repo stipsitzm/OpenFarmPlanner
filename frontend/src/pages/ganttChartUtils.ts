@@ -29,6 +29,7 @@ export interface GanttTaskGroup {
   id: string;
   name: string;
   description?: string;
+  hierarchyPath?: string[];
   icon?: string;
   tasks: GanttTask[];
   locationId?: number;
@@ -46,6 +47,18 @@ interface BuildTaskGroupsArgs {
   plantingPlans: PlantingPlan[];
   cultures: Culture[];
   displayYear: number;
+}
+
+interface OccupancyBedGroupCandidate {
+  id: string;
+  locationId: number;
+  locationName: string;
+  fieldId: number;
+  fieldName: string;
+  bedId: number;
+  bedName: string;
+  tasks: GanttTask[];
+  area?: number;
 }
 
 interface SeedlingTooltipDetail {
@@ -227,7 +240,7 @@ export function buildFieldOccupancyTaskGroups({
     return [];
   }
 
-  const groups: GanttTaskGroup[] = [];
+  const candidates: OccupancyBedGroupCandidate[] = [];
   const { start: visStart, end: visEnd } = getVisibleYearInterval(displayYear);
 
   const bedsByField = beds.reduce<Record<number, Bed[]>>((accumulator, bed) => {
@@ -325,21 +338,43 @@ export function buildFieldOccupancyTaskGroups({
           }
         });
 
-        groups.push({
+        candidates.push({
           id: `bed-${bedId}`,
-          name: bed.name,
-          description: `${location.name} / ${field.name}`,
           tasks,
           locationId,
           fieldId,
           bedId,
+          locationName: location.name,
+          fieldName: field.name,
+          bedName: bed.name,
           area: bed.area_sqm ? Number(bed.area_sqm) : undefined,
         });
       });
     });
   });
 
-  return groups;
+  const usedLocationCount = new Set(candidates.map((candidate) => candidate.locationId))
+    .size;
+  const includeLocationInHierarchy = usedLocationCount > 1;
+
+  return candidates.map((candidate) => {
+    const hierarchyPath = includeLocationInHierarchy
+      ? [candidate.locationName, candidate.fieldName, candidate.bedName]
+      : [candidate.fieldName, candidate.bedName];
+    const hierarchyLabel = hierarchyPath.join(' / ');
+
+    return {
+      id: candidate.id,
+      name: hierarchyLabel,
+      description: hierarchyLabel,
+      hierarchyPath,
+      tasks: candidate.tasks,
+      locationId: candidate.locationId,
+      fieldId: candidate.fieldId,
+      bedId: candidate.bedId,
+      area: candidate.area,
+    };
+  });
 }
 
 export function buildSeedlingTaskGroups({

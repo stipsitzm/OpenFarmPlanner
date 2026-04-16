@@ -1,6 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import FieldsBedsPage from '../pages/FieldsBedsPage';
+
+const { locationListMock, addFieldMock, navigateMock } = vi.hoisted(() => ({
+  locationListMock: vi.fn(),
+  addFieldMock: vi.fn(),
+  navigateMock: vi.fn(),
+}));
 
 vi.mock('../pages/FieldsBedsHierarchy', () => ({
   default: () => <div>Hierarchieansicht</div>,
@@ -17,17 +23,52 @@ vi.mock('../commands/useCommandContext', () => ({
   useRegisterCommands: vi.fn(),
 }));
 
+vi.mock('../api/api', async () => {
+  const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
+  return {
+    ...actual,
+    locationAPI: {
+      list: locationListMock,
+    },
+  };
+});
+
+vi.mock('../components/hierarchy/hooks/useFieldOperations', () => ({
+  useFieldOperations: () => ({
+    addField: addFieldMock,
+    deleteField: vi.fn(),
+  }),
+}));
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
+
 describe('FieldsBedsPage', () => {
   beforeEach(() => {
+    locationListMock.mockResolvedValue({
+      data: {
+        results: [{ id: 1, name: 'Hofstelle' }],
+      },
+    });
+    addFieldMock.mockReset();
+    navigateMock.mockReset();
     window.localStorage.clear();
   });
 
-  it('switches between hierarchy and graphical view via representation buttons', () => {
+  it('switches between hierarchy and graphical view via representation buttons', async () => {
     render(<FieldsBedsPage />);
 
     expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
     expect(screen.queryByText(/Editiermodus-/)).not.toBeInTheDocument();
     expect(screen.getByText('Darstellung')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
+    });
     expect(screen.queryByText('Modus')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Ansicht' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();

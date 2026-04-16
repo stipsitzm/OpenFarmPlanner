@@ -9,7 +9,11 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { GridColDef, GridCellParams } from "@mui/x-data-grid";
+import type {
+  GridCellParams,
+  GridColDef,
+  GridValueOptionsParams,
+} from "@mui/x-data-grid";
 import {
   Alert,
   Box,
@@ -34,6 +38,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTranslation } from "../i18n";
+import { getAllowedCultivationTypesForCulture } from "./plantingPlansUtils";
 import PageContainer from "../components/layout/PageContainer";
 import {
   plantingPlanAPI,
@@ -301,6 +306,18 @@ function PlantingPlans(): React.ReactElement {
     [t],
   );
 
+  const getCultivationTypeOptionsForRow = useMemo(
+    () => (row: PlantingPlanRow) => {
+      const selectedCulture = cultures.find((culture) => culture.id === row.culture);
+      const allowedTypes = getAllowedCultivationTypesForCulture(selectedCulture);
+
+      return cultivationTypeOptions.filter((option) =>
+        allowedTypes.includes(option.value as CultivationType),
+      );
+    },
+    [cultivationTypeOptions, cultures],
+  );
+
   const dynamicWidths = useMemo(() => {
     const cultureWidth = estimateColumnWidth(
       [
@@ -362,7 +379,7 @@ function PlantingPlans(): React.ReactElement {
       ),
       notes: 260,
     };
-  }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, t]);
+  }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, numberLocale, t]);
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
@@ -503,16 +520,8 @@ function PlantingPlans(): React.ReactElement {
           const selectedCulture = cultures.find(
             (culture) => culture.id === numericValue,
           );
-          const availableTypes = (
-            selectedCulture?.cultivation_types?.length
-              ? selectedCulture.cultivation_types
-              : selectedCulture?.cultivation_type
-                ? [selectedCulture.cultivation_type]
-                : []
-          ).filter(
-            (value): value is CultivationType =>
-              value === "pre_cultivation" || value === "direct_sowing",
-          );
+          const availableTypes =
+            getAllowedCultivationTypesForCulture(selectedCulture);
 
           const currentType =
             nextRow.cultivation_type === "pre_cultivation" ||
@@ -540,7 +549,13 @@ function PlantingPlans(): React.ReactElement {
         minWidth: dynamicWidths.cultivationType,
         editable: true,
         type: "singleSelect",
-        valueOptions: cultivationTypeOptions,
+        valueOptions: (params: GridValueOptionsParams<PlantingPlanRow>) => {
+          const row = params.row as PlantingPlanRow | undefined;
+          if (!row) {
+            return cultivationTypeOptions;
+          }
+          return getCultivationTypeOptionsForRow(row);
+        },
         valueFormatter: (value) => {
           const stringValue = typeof value === "string" ? value : "";
           const option = cultivationTypeOptions.find(
@@ -548,10 +563,25 @@ function PlantingPlans(): React.ReactElement {
           );
           return option?.label ?? "";
         },
-        valueSetter: (value, row) => ({
-          ...row,
-          cultivation_type: value || "pre_cultivation",
-        }),
+        valueSetter: (value, row) => {
+          const nextRow = row as PlantingPlanRow;
+          const selectedCulture = cultures.find(
+            (culture) => culture.id === nextRow.culture,
+          );
+          const allowedTypes =
+            getAllowedCultivationTypesForCulture(selectedCulture);
+          const nextType: CultivationType =
+            value === "pre_cultivation" || value === "direct_sowing"
+              ? value
+              : "pre_cultivation";
+
+          return {
+            ...row,
+            cultivation_type: allowedTypes.includes(nextType)
+              ? nextType
+              : (allowedTypes[0] ?? "pre_cultivation"),
+          };
+        },
         preProcessEditCellProps: (params) => ({
           ...params.props,
           error: !params.props.value,
@@ -758,6 +788,7 @@ function PlantingPlans(): React.ReactElement {
       bedOptions,
       beds,
       cultivationTypeOptions,
+      getCultivationTypeOptionsForRow,
       cultureOptions,
       cultures,
       dynamicWidths,
