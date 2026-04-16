@@ -42,10 +42,17 @@
     "addField": "Parzelle hinzufügen"
   },
   "messages": {
-    "createLocationFirst": "Bitte erstellen Sie zuerst einen Standort."
+    "createLocationFirst": "Bitte erstellen Sie zuerst einen Standort.",
+    "singleLocationHint": "Standort: {{name}}",
+    "invalidLocationSelection": "Bitte wählen Sie einen gültigen Standort aus."
   },
   "prompts": {
-    "newFieldName": "Name der neuen Parzelle:"
+    "newFieldName": "Name der neuen Parzelle:",
+    "selectLocationForField": "Bitte Standort-ID für die neue Parzelle eingeben:\n{{options}}"
+  },
+  "actions": {
+    "addField": "Schlag hinzufügen",
+    "createLocation": "Standort anlegen"
   },
   "confirm": {
     "deleteFieldWithBeds": "Möchten Sie diese Parzelle wirklich löschen? Alle zugehörigen Beete werden ebenfalls gelöscht.",
