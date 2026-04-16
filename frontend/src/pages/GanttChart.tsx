@@ -451,21 +451,34 @@ function GanttChartPage(): React.ReactElement {
                             top: `${topPx}px`,
                             width: `${widthPx}px`,
                             minWidth: `${widthPx}px`,
-                            height: 26,
+                            minHeight: 26,
+                            maxHeight: 38,
                             px: 1,
+                            py: 0.25,
                             borderRadius: 1,
                             backgroundColor: task.color || '#3b82f6',
                             color: '#fff',
                             display: 'flex',
-                            alignItems: 'center',
+                            alignItems: 'flex-start',
                             overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                            textOverflow: 'ellipsis',
+                            whiteSpace: 'normal',
+                            textOverflow: 'clip',
                             boxSizing: 'border-box',
                             cursor: 'default',
                           }}
                         >
-                          <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: 'inherit',
+                              overflow: 'hidden',
+                              whiteSpace: 'normal',
+                              lineHeight: 1.15,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                            }}
+                          >
                             {task.name}
                           </Typography>
                         </Box>

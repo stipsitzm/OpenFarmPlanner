@@ -24,6 +24,25 @@
   word-break: break-word;
 }
 
+.ofp-gantt-wrapper .rmg-task-list,
+.ofp-gantt-wrapper .rmg-task-group,
+.ofp-gantt-wrapper .rmg-task-group-hierarchy {
+  min-width: 0;
+}
+
+.ofp-gantt-wrapper .rmg-task-group-name,
+.ofp-gantt-wrapper .rmg-task-group-level,
+.ofp-gantt-wrapper .rmg-task-group-description,
+.ofp-gantt-wrapper .rmg-task-group-name.truncate,
+.ofp-gantt-wrapper .rmg-task-group-level.truncate,
+.ofp-gantt-wrapper .rmg-task-group-description.truncate {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  overflow: visible;
+  text-overflow: clip;
+}
+
 /* Override React-Modern-Gantt default styles if needed */
 /* Keep the green theme consistent with the app */
 :root {
