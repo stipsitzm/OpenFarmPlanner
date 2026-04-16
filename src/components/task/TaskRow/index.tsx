@@ -36,6 +36,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
   renderTooltipInPortal = true,
   tooltipOffset = 12,
   getTaskColor,
+  rowHeight = 40,
 }) => {
   const hasValidTaskGroup = Boolean(
     taskGroup && taskGroup.id && Array.isArray(taskGroup.tasks),
@@ -129,7 +130,26 @@ const TaskRow: React.FC<TaskRowProps> = ({
     : CollisionService.detectOverlaps(groupTasks, viewMode);
 
   // Calculate row height based on task arrangement
-  const rowHeight = Math.max(60, taskRows.length * 40 + 20);
+  const laneHeight = Math.max(1, rowHeight);
+  const hierarchyPath = Array.isArray(taskGroup?.hierarchyPath)
+    ? taskGroup.hierarchyPath.filter(Boolean)
+    : [];
+  const labelLinesSource =
+    hierarchyPath.length > 0
+      ? hierarchyPath
+      : [taskGroup?.name || "Unnamed", taskGroup?.description || ""].filter(
+          Boolean,
+        );
+  const estimatedLabelLines = labelLinesSource.reduce((total, label) => {
+    const trimmedLabel = label.trim();
+    if (!trimmedLabel) return total;
+    return total + Math.max(1, Math.ceil(trimmedLabel.length / 26));
+  }, 0);
+  const estimatedLabelHeight = Math.max(60, estimatedLabelLines * 16 + 28);
+  const resolvedRowHeight = Math.max(
+    estimatedLabelHeight,
+    taskRows.length * laneHeight + 20,
+  );
 
   // Update timeline limits for auto-scrolling
   useEffect(() => {
@@ -868,7 +888,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
     <div
       className={`rmg-task-row ${className}`}
       style={{
-        height: `${rowHeight}px`,
+        minHeight: `${resolvedRowHeight}px`,
         minWidth: `${totalMonths * monthWidth}px`,
       }}
       onMouseMove={(e) => handleMouseMove(e)}
@@ -907,7 +927,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
 
               const isHovered = hoveredTask?.id === task.id;
               const isDragging = draggingTask?.id === task.id;
-              const topPx = rowIndex * 40 + 10;
+              const topPx = rowIndex * laneHeight + 10;
 
               return (
                 <TaskItem

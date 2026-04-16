@@ -1099,6 +1099,7 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
               className={getComponentClassName("taskList", "rmg-task-list")}
               viewMode={activeViewMode}
               showTimelineHeader={showTimelineHeader}
+              rowHeight={rowHeight}
             />
           )}
 
@@ -1128,7 +1129,10 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
                         group.tasks,
                         activeViewMode,
                       );
-                      return total + Math.max(60, taskRows.length * 40 + 20);
+                      return (
+                        total +
+                        Math.max(60, taskRows.length * Math.max(1, rowHeight) + 20)
+                      );
                     }, 0)}
                     label={resolvedTodayLabel}
                     dayOfMonth={currentDate.getDate()}
@@ -1170,6 +1174,7 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
                         "rmg-tooltip",
                       )}
                       viewMode={activeViewMode}
+                      rowHeight={rowHeight}
                       scrollContainerRef={scrollContainerRef}
                       smoothDragging={smoothDragging}
                       movementThreshold={movementThreshold}

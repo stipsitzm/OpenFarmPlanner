@@ -10,6 +10,7 @@ import DemoStickyHeaders from "./DemoStickyHeaders";
 import DemoTimelineHeader from "./DemoTimelineHeader";
 import DemoTooltipPortal from "./DemoTooltipPortal";
 import DemoHierarchy from "./DemoHierarchy";
+import DemoLongLabels from "./DemoLongLabels";
 
 const App: React.FC = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -117,6 +118,12 @@ const App: React.FC = () => {
         >
           Hierarchy Labels
         </div>
+        <div
+          className={`section-nav-link ${activeSection === "longlabels" ? "active" : ""}`}
+          onClick={() => setActiveSection("longlabels")}
+        >
+          Long Label Demo
+        </div>
       </nav>
 
       {/* Demo Sections */}
@@ -220,6 +227,15 @@ const App: React.FC = () => {
           <code>Location → Field → Bed</code> or <code>Field → Bed</code>.
         </p>
         <DemoHierarchy darkMode={darkMode} />
+      </div>
+
+      <div id="section-longlabels" className="demo-section">
+        <h2 className="demo-title">Long label demo</h2>
+        <p className="demo-description">
+          Shows long left-column labels wrapping to multiple lines while task
+          rows and bars stay aligned.
+        </p>
+        <DemoLongLabels darkMode={darkMode} />
       </div>
     </div>
   );

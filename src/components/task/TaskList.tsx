@@ -120,12 +120,28 @@ const TaskList: React.FC<TaskListProps> = ({
 
   // Calculate height for each group based on tasks
   const getGroupHeight = (taskGroup: TaskGroup) => {
+    const hierarchyLevels = getHierarchyLevels(taskGroup);
+    const hasHierarchy = Boolean(hierarchyLevels);
+    const labelLinesSource = hasHierarchy
+      ? hierarchyLevels || []
+      : [
+          taskGroup.name || "Unnamed",
+          showDescription ? (taskGroup.description ?? "") : "",
+        ].filter(Boolean);
+    const estimatedLabelLines = labelLinesSource.reduce((total, label) => {
+      const trimmedLabel = label.trim();
+      if (!trimmedLabel) return total;
+      return total + Math.max(1, Math.ceil(trimmedLabel.length / 26));
+    }, 0);
+    const estimatedLabelHeight = Math.max(60, estimatedLabelLines * 16 + 28);
+
     if (!taskGroup.tasks || !Array.isArray(taskGroup.tasks)) {
-      return 60; // Default height for empty groups
+      return estimatedLabelHeight;
     }
 
     const taskRows = CollisionService.detectOverlaps(taskGroup.tasks, viewMode);
-    return Math.max(60, taskRows.length * rowHeight + 20);
+    const taskHeight = Math.max(60, taskRows.length * rowHeight + 20);
+    return Math.max(taskHeight, estimatedLabelHeight);
   };
 
   // Handle group click
@@ -160,7 +176,7 @@ const TaskList: React.FC<TaskListProps> = ({
           <div
             key={`task-group-${taskGroup.id || "unknown"}`}
             className="rmg-task-group"
-            style={{ height: `${groupHeight}px` }}
+            style={{ minHeight: `${groupHeight}px` }}
             onClick={() => handleGroupClick(taskGroup)}
             data-testid={`task-group-${taskGroup.id || "unknown"}`}
             data-rmg-component="task-group"

@@ -229,9 +229,10 @@
 
 .rmg-task-group-name {
   font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .rmg-task-group-hierarchy {
@@ -239,9 +240,10 @@
 }
 
 .rmg-task-group-level {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   line-height: 1.1;
   font-size: 0.75rem;
 }
@@ -281,9 +283,10 @@
 .rmg-task-group-description {
   font-size: 0.75rem;
   color: var(--rmg-gray-500);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   margin-top: 4px;
 }
 

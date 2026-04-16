@@ -316,6 +316,62 @@ export const complexDemoData: TaskGroup[] = [
   },
 ];
 
+export const longLabelDemoData: TaskGroup[] = [
+  {
+    id: "long-label-1",
+    name: "Regenbogenland / 11 Frucht / 1 Lichtwurzel",
+    description: "Long hierarchy-like label to verify wrapping behavior",
+    tasks: [
+      {
+        id: "long-label-task-1",
+        name: "Planting Window",
+        startDate: relativeDate(-4),
+        endDate: relativeDate(14),
+        color: "#2563EB",
+        percent: 35,
+      },
+    ],
+  },
+  {
+    id: "long-label-2",
+    name: "Sehr sehr langer Standortname / Parzelle mit langem Namen / Beet 12",
+    description: "Second long label row for visual alignment checks",
+    tasks: [
+      {
+        id: "long-label-task-2",
+        name: "Irrigation Setup",
+        startDate: relativeDate(-10),
+        endDate: relativeDate(8),
+        color: "#16A34A",
+        percent: 55,
+      },
+      {
+        id: "long-label-task-3",
+        name: "Harvest Prep",
+        startDate: relativeDate(10),
+        endDate: relativeDate(26),
+        color: "#9333EA",
+        percent: 10,
+      },
+    ],
+  },
+  {
+    id: "short-label-reference",
+    name: "Short Label",
+    description: "Reference row to ensure short labels look unchanged",
+    tasks: [
+      {
+        id: "long-label-task-4",
+        name: "Control Task",
+        startDate: relativeDate(-2),
+        endDate: relativeDate(12),
+        color: "#EA580C",
+        percent: 65,
+      },
+    ],
+  },
+];
+
 // Year-long project data
 export const yearLongProjectData: TaskGroup[] = [
   {

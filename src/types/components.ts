@@ -162,6 +162,7 @@ export interface TaskRowProps {
   onTaskSelect?: (task: Task, isSelected: boolean) => void;
   onAutoScrollChange?: (isScrolling: boolean) => void;
   viewMode?: ViewMode;
+  rowHeight?: number;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
 
   // NEW: Infinite scroll support
