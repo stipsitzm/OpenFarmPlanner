@@ -102,7 +102,8 @@ describe('GanttChartPage', () => {
     expect(screen.queryByText(/Belegung von Parzellen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ansicht' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bearbeiten' })).toBeInTheDocument();
-    expect(screen.getByText('Beet 1')).toBeInTheDocument();
+    expect(screen.getByText('Feld / Beet 1')).toBeInTheDocument();
+    expect(screen.queryByText('Hof / Feld / Beet 1')).not.toBeInTheDocument();
     expect(mocks.ganttProps).toHaveBeenCalled();
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
     expect(latestProps?.locale).toBe('de-DE');
