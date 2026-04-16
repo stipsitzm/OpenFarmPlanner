@@ -428,6 +428,7 @@ function GanttChartPage(): React.ReactElement {
               <div className="ofp-gantt-wrapper">
                 <GanttChart
                   tasks={activeTaskGroups}
+                  leftColumnWidth={280}
                   locale={resolvedLocale}
                   localeText={ganttLocaleText}
                   viewMode={ViewMode.MONTH}
