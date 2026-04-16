@@ -51,7 +51,7 @@
     "selectLocationForField": "Bitte Standort-ID für die neue Parzelle eingeben:\n{{options}}"
   },
   "actions": {
-    "addField": "Schlag hinzufügen",
+    "addField": "Parzelle hinzufügen",
     "createLocation": "Standort anlegen"
   },
   "confirm": {

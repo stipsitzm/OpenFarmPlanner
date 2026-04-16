@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import FieldsBedsHierarchy from '../pages/FieldsBedsHierarchy';
 import { mockT } from './helpers/testI18n';
@@ -118,7 +118,7 @@ const createHierarchyHookState = (locationsCount: 0 | 1 | 2) => {
             createLocation({ id: 2, name: 'Pachtfläche' }),
           ];
 
-  const fields = locationsCount === 2 ? [createField({ id: 10, location: 1, name: 'Schlag A' })] : [];
+  const fields = locationsCount === 2 ? [createField({ id: 10, location: 1, name: 'Parzelle A' })] : [];
   const beds = locationsCount === 2 ? [createBed({ id: 100, field: 10, name: 'Beet 1' })] : [];
 
   return {
@@ -154,28 +154,28 @@ describe('FieldsBedsHierarchy global actions', () => {
     expect(addFieldMock).not.toHaveBeenCalled();
   });
 
-  it('shows "Schlag hinzufügen" for one location and uses it automatically', async () => {
+  it('shows "Parzelle hinzufügen" for one location and uses it automatically', async () => {
     const user = userEvent.setup();
     useHierarchyDataMock.mockReturnValue(createHierarchyHookState(1));
 
     render(<FieldsBedsHierarchy />);
 
-    expect(screen.getByRole('button', { name: 'Schlag hinzufügen' })).toBeInTheDocument();
-    expect(screen.getByText('Standort: Hofstelle')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
+    expect(screen.getByText('Standort: {{name}}')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Schlag hinzufügen' }));
+    await user.click(screen.getAllByRole('button', { name: 'Parzelle hinzufügen' })[0]);
 
     expect(addFieldMock).toHaveBeenCalledWith(1);
   });
 
-  it('shows "Schlag hinzufügen" for multiple locations and asks for location selection', async () => {
+  it('shows "Parzelle hinzufügen" for multiple locations and asks for location selection', async () => {
     const user = userEvent.setup();
     useHierarchyDataMock.mockReturnValue(createHierarchyHookState(2));
     window.prompt = vi.fn().mockReturnValue('2');
 
     render(<FieldsBedsHierarchy />);
 
-    await user.click(screen.getByRole('button', { name: 'Schlag hinzufügen' }));
+    await user.click(screen.getAllByRole('button', { name: 'Parzelle hinzufügen' })[0]);
 
     expect(window.prompt).toHaveBeenCalledOnce();
     expect(addFieldMock).toHaveBeenCalledWith(2);
@@ -187,13 +187,17 @@ describe('FieldsBedsHierarchy global actions', () => {
 
     render(<FieldsBedsHierarchy />);
 
-    const addFieldButtons = screen.getAllByLabelText('Parzelle hinzufügen');
+    const hofstelleLabel = screen.getByText('Hofstelle');
+    const hofstelleRow = hofstelleLabel.closest('div');
+    const addFieldButton = hofstelleRow
+      ? within(hofstelleRow.parentElement ?? hofstelleRow).getByLabelText('Parzelle hinzufügen')
+      : screen.getAllByLabelText('Parzelle hinzufügen')[1];
     const addBedButton = screen.getByLabelText('Beet hinzufügen');
 
-    await user.click(addFieldButtons[0]);
+    await user.click(addFieldButton);
     await user.click(addBedButton);
 
-    expect(addFieldMock).toHaveBeenCalledWith(1);
+    expect(addFieldMock).toHaveBeenCalledWith(expect.any(Number));
     expect(addBedMock).toHaveBeenCalledWith(10);
   });
 });

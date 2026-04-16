@@ -15,7 +15,7 @@ export const i18nMap: Record<string, string> = {
   'messages.invalidLocationSelection': 'Bitte wählen Sie einen gültigen Standort aus.',
   'prompts.newFieldName': 'Name der neuen Parzelle:',
   'prompts.selectLocationForField': 'Bitte Standort-ID für die neue Parzelle eingeben:\n{{options}}',
-  'actions.addField': 'Schlag hinzufügen',
+  'actions.addField': 'Parzelle hinzufügen',
   'actions.createLocation': 'Standort anlegen',
   'confirm.deleteFieldWithBeds': 'Parzelle löschen?',
   'confirm.deleteBed': 'Beet löschen?',
