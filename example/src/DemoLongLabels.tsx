@@ -8,6 +8,8 @@ interface DemoLongLabelsProps {
 
 const DemoLongLabels: React.FC<DemoLongLabelsProps> = ({ darkMode }) => {
   const [tasks, setTasks] = React.useState<TaskGroup[]>(longLabelDemoData);
+  const [leftColumnWidth, setLeftColumnWidth] = React.useState(160);
+  const [leftColumnMaxLines, setLeftColumnMaxLines] = React.useState(3);
 
   const handleTaskUpdate = (groupId: string, updatedTask: Task) => {
     setTasks((previousTasks) =>
@@ -25,14 +27,58 @@ const DemoLongLabels: React.FC<DemoLongLabelsProps> = ({ darkMode }) => {
   };
 
   return (
-    <GanttChart
-      tasks={tasks}
-      title="Long Label Demo"
-      headerLabel="Locations"
-      darkMode={darkMode}
-      showProgress={true}
-      onTaskUpdate={handleTaskUpdate}
-    />
+    <div>
+      <div
+        style={{
+          display: "flex",
+          gap: "12px",
+          alignItems: "center",
+          flexWrap: "wrap",
+          marginBottom: "12px",
+        }}
+      >
+        <label>
+          Left column width:&nbsp;
+          <input
+            type="number"
+            min={120}
+            max={420}
+            value={leftColumnWidth}
+            onChange={(event) =>
+              setLeftColumnWidth(
+                Math.max(120, Number(event.target.value) || 120),
+              )
+            }
+          />
+        </label>
+
+        <label>
+          Max label lines:&nbsp;
+          <input
+            type="number"
+            min={1}
+            max={6}
+            value={leftColumnMaxLines}
+            onChange={(event) =>
+              setLeftColumnMaxLines(
+                Math.max(1, Number(event.target.value) || 1),
+              )
+            }
+          />
+        </label>
+      </div>
+
+      <GanttChart
+        tasks={tasks}
+        title="Long Label Demo"
+        headerLabel="Locations"
+        darkMode={darkMode}
+        showProgress={true}
+        leftColumnWidth={leftColumnWidth}
+        leftColumnMaxLines={leftColumnMaxLines}
+        onTaskUpdate={handleTaskUpdate}
+      />
+    </div>
   );
 };
 

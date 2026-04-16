@@ -334,7 +334,7 @@ export const longLabelDemoData: TaskGroup[] = [
   },
   {
     id: "long-label-2",
-    name: "Sehr sehr langer Standortname / Parzelle mit langem Namen / Beet 12",
+    name: "Sehr langer Standortname / Parzelle mit langem Namen / Beet 12",
     description: "Second long label row for visual alignment checks",
     tasks: [
       {

@@ -37,6 +37,8 @@ const TaskRow: React.FC<TaskRowProps> = ({
   tooltipOffset = 12,
   getTaskColor,
   rowHeight = 40,
+  leftColumnWidth = 160,
+  leftColumnMaxLines = 3,
 }) => {
   const hasValidTaskGroup = Boolean(
     taskGroup && taskGroup.id && Array.isArray(taskGroup.tasks),
@@ -140,10 +142,20 @@ const TaskRow: React.FC<TaskRowProps> = ({
       : [taskGroup?.name || "Unnamed", taskGroup?.description || ""].filter(
           Boolean,
         );
+  const normalizedMaxLines = Math.max(1, Math.floor(leftColumnMaxLines));
+  const normalizedLeftColumnWidth = Math.max(120, Math.floor(leftColumnWidth));
+  const charsPerLine = Math.max(
+    12,
+    Math.floor((normalizedLeftColumnWidth - 24) / 7),
+  );
   const estimatedLabelLines = labelLinesSource.reduce((total, label) => {
     const trimmedLabel = label.trim();
     if (!trimmedLabel) return total;
-    return total + Math.max(1, Math.ceil(trimmedLabel.length / 26));
+    const wrappedLines = Math.max(
+      1,
+      Math.ceil(trimmedLabel.length / charsPerLine),
+    );
+    return total + Math.min(normalizedMaxLines, wrappedLines);
   }, 0);
   const estimatedLabelHeight = Math.max(60, estimatedLabelLines * 16 + 28);
   const resolvedRowHeight = Math.max(

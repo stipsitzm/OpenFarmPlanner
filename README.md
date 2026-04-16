@@ -580,10 +580,20 @@ function App() {
 | `showCurrentDateMarker` | `boolean`         | `true`               | Show/hide the current time indicator line                                              |
 | `todayLabel`            | `string`          | `"Today"`            | Label for the current time marker; overrides `localeText.today`                        |
 | `headerLabel`           | `string`          | `"Resources"`        | Left column header; overrides `localeText.resources`                                   |
+| `leftColumnWidth`       | `number`          | `160`                | Fixed width (px) of the left resource column.                                          |
+| `leftColumnMaxLines`    | `number`          | `3`                  | Maximum visible lines per left-column label before clamping.                           |
 | `title`                 | `string`          | `"Project Timeline"` | Header title; overrides `localeText.title`                                             |
 | `localeText`            | `GanttLocaleText` | `{}`                 | Optional UI translations/overrides for title, resources, today, and view mode labels   |
 | `renderTooltipInPortal` | `boolean`         | `true`               | Render task tooltips into `document.body` to avoid clipping inside overflow containers |
 | `tooltipOffset`         | `number`          | `12`                 | Space in pixels between the hovered task and the tooltip                               |
+
+#### Left Column Layout Example
+
+```tsx
+<GanttChart tasks={tasks} leftColumnWidth={260} leftColumnMaxLines={3} />
+```
+
+Long labels keep wrapping (`white-space: normal`) and are clamped by line count while preserving the full text in the native tooltip (`title`).
 
 ### Programmatic Scrolling
 

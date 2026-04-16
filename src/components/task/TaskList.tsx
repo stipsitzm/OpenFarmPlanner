@@ -16,6 +16,8 @@ const TaskList: React.FC<TaskListProps> = ({
   onGroupClick,
   viewMode,
   showTimelineHeader = true,
+  leftColumnWidth = 160,
+  leftColumnMaxLines = 3,
 }) => {
   type ParsedHierarchy = {
     locationName?: string;
@@ -26,6 +28,26 @@ const TaskList: React.FC<TaskListProps> = ({
   // Validate task groups array
   const validTasks = Array.isArray(tasks) ? tasks : [];
 
+  const normalizedMaxLines = Math.max(1, Math.floor(leftColumnMaxLines));
+  const normalizedLeftColumnWidth = Math.max(120, Math.floor(leftColumnWidth));
+
+  const estimateLabelHeight = (labels: string[]) => {
+    const charsPerLine = Math.max(
+      12,
+      Math.floor((normalizedLeftColumnWidth - 24) / 7),
+    );
+    const estimatedLabelLines = labels.reduce((total, label) => {
+      const trimmedLabel = label.trim();
+      if (!trimmedLabel) return total;
+      const wrappedLines = Math.max(
+        1,
+        Math.ceil(trimmedLabel.length / charsPerLine),
+      );
+      return total + Math.min(normalizedMaxLines, wrappedLines);
+    }, 0);
+
+    return Math.max(60, estimatedLabelLines * 16 + 28);
+  };
   const parseHierarchyFromDescription = (
     description?: string,
   ): ParsedHierarchy | null => {
@@ -128,12 +150,7 @@ const TaskList: React.FC<TaskListProps> = ({
           taskGroup.name || "Unnamed",
           showDescription ? (taskGroup.description ?? "") : "",
         ].filter(Boolean);
-    const estimatedLabelLines = labelLinesSource.reduce((total, label) => {
-      const trimmedLabel = label.trim();
-      if (!trimmedLabel) return total;
-      return total + Math.max(1, Math.ceil(trimmedLabel.length / 26));
-    }, 0);
-    const estimatedLabelHeight = Math.max(60, estimatedLabelLines * 16 + 28);
+    const estimatedLabelHeight = estimateLabelHeight(labelLinesSource);
 
     if (!taskGroup.tasks || !Array.isArray(taskGroup.tasks)) {
       return estimatedLabelHeight;
@@ -155,6 +172,12 @@ const TaskList: React.FC<TaskListProps> = ({
     <div
       className={`rmg-task-list ${className}`}
       data-rmg-component="task-list"
+      style={{
+        width: `${normalizedLeftColumnWidth}px`,
+        minWidth: `${normalizedLeftColumnWidth}px`,
+        maxWidth: `${normalizedLeftColumnWidth}px`,
+        ["--rmg-left-column-max-lines" as string]: String(normalizedMaxLines),
+      }}
     >
       {/* Header - CSS handles the height adjustment based on view mode */}
       <div
@@ -171,6 +194,11 @@ const TaskList: React.FC<TaskListProps> = ({
         const groupHeight = getGroupHeight(taskGroup);
         const hierarchyLevels = getHierarchyLevels(taskGroup);
         const hasHierarchy = Boolean(hierarchyLevels);
+        const fullLabelTitle = (
+          taskGroup.name ||
+          hierarchyLevels?.join(" / ") ||
+          "Unnamed"
+        ).trim();
 
         return (
           <div
@@ -196,12 +224,13 @@ const TaskList: React.FC<TaskListProps> = ({
                 <div
                   className="rmg-task-group-hierarchy"
                   data-rmg-component="task-group-hierarchy"
+                  title={fullLabelTitle}
                 >
                   {hierarchyLevels?.map((level, index) => (
                     <div
                       key={`task-group-${taskGroup.id}-level-${index}`}
                       className={`rmg-task-group-level rmg-task-group-level-depth-${index}`}
-                      title={level}
+                      title={fullLabelTitle || level}
                       data-rmg-component={
                         index === hierarchyLevels.length - 1
                           ? "task-group-name"
@@ -216,7 +245,7 @@ const TaskList: React.FC<TaskListProps> = ({
                 <div
                   className="rmg-task-group-name"
                   data-rmg-component="task-group-name"
-                  title={taskGroup.name || "Unnamed"}
+                  title={fullLabelTitle}
                 >
                   {taskGroup.name || "Unnamed"}
                 </div>

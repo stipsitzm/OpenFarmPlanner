@@ -7,6 +7,8 @@ export interface TaskListRenderProps {
   headerLabel?: string;
   onGroupClick?: (group: TaskGroup) => void;
   viewMode: ViewMode;
+  leftColumnWidth?: number;
+  leftColumnMaxLines?: number;
 }
 
 export interface TaskRenderProps {
@@ -80,6 +82,8 @@ export interface GanttChartProps {
   allowTaskResize?: boolean; // Allow task resizing (default: true, requires editMode=true)
   allowTaskMove?: boolean; // Allow task movement (default: true, requires editMode=true)
   headerLabel?: string;
+  leftColumnWidth?: number;
+  leftColumnMaxLines?: number;
   showProgress?: boolean;
   darkMode?: boolean;
   locale?: string;
@@ -163,6 +167,8 @@ export interface TaskRowProps {
   onAutoScrollChange?: (isScrolling: boolean) => void;
   viewMode?: ViewMode;
   rowHeight?: number;
+  leftColumnWidth?: number;
+  leftColumnMaxLines?: number;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
 
   // NEW: Infinite scroll support
@@ -192,6 +198,8 @@ export interface TaskListProps {
   onGroupClick?: (group: TaskGroup) => void;
   viewMode?: ViewMode;
   showTimelineHeader?: boolean; // Pass through for styling adjustments
+  leftColumnWidth?: number;
+  leftColumnMaxLines?: number;
 }
 
 export interface TimelineProps {

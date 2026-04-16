@@ -50,6 +50,8 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
       allowTaskResize = true, // Default true
       allowTaskMove = true, // Default true
       headerLabel,
+      leftColumnWidth = 160,
+      leftColumnMaxLines = 3,
       showProgress = false,
       darkMode = false,
       locale = "default",
@@ -1090,6 +1092,8 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
               headerLabel: resolvedHeaderLabel,
               onGroupClick,
               viewMode: activeViewMode,
+              leftColumnWidth,
+              leftColumnMaxLines,
             })
           ) : (
             <TaskList
@@ -1100,6 +1104,8 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
               viewMode={activeViewMode}
               showTimelineHeader={showTimelineHeader}
               rowHeight={rowHeight}
+              leftColumnWidth={leftColumnWidth}
+              leftColumnMaxLines={leftColumnMaxLines}
             />
           )}
 
@@ -1131,7 +1137,10 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
                       );
                       return (
                         total +
-                        Math.max(60, taskRows.length * Math.max(1, rowHeight) + 20)
+                        Math.max(
+                          60,
+                          taskRows.length * Math.max(1, rowHeight) + 20,
+                        )
                       );
                     }, 0)}
                     label={resolvedTodayLabel}
@@ -1175,6 +1184,8 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
                       )}
                       viewMode={activeViewMode}
                       rowHeight={rowHeight}
+                      leftColumnWidth={leftColumnWidth}
+                      leftColumnMaxLines={leftColumnMaxLines}
                       scrollContainerRef={scrollContainerRef}
                       smoothDragging={smoothDragging}
                       movementThreshold={movementThreshold}
