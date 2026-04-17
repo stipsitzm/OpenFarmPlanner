@@ -55,6 +55,7 @@ import {
   parseLocalizedNumber,
   resolveLocaleFromLanguage,
 } from "../utils/numberLocalization";
+import { UI_LABEL_SEPARATOR } from "../utils/uiLabelSeparator";
 import { AreaM2EditCell } from "../components/data-grid/AreaM2EditCell";
 import {
   EditableDataGrid,
@@ -162,7 +163,7 @@ const buildBedDisplayLabel = (
   const normalizedFieldName = (fieldName ?? "").trim();
   const combinedName = [normalizedFieldName, normalizedBedName]
     .filter((part) => part.length > 0)
-    .join(" - ");
+    .join(UI_LABEL_SEPARATOR);
 
   if (!combinedName) {
     return "—";
@@ -306,6 +307,11 @@ function PlantingPlans(): React.ReactElement {
     [t],
   );
 
+  const fieldBedColumnLabel = useMemo(
+    () => t("plantingPlans:columns.fieldBed", { separator: UI_LABEL_SEPARATOR }),
+    [t],
+  );
+
   const getCultivationTypeOptionsForRow = useMemo(
     () => (row: PlantingPlanRow) => {
       const selectedCulture = cultures.find((culture) => culture.id === row.culture);
@@ -329,7 +335,7 @@ function PlantingPlans(): React.ReactElement {
     );
     const bedWidth = estimateColumnWidth(
       [
-        t("plantingPlans:columns.fieldBed"),
+        fieldBedColumnLabel,
         ...bedOptions.map((option) => option.label),
       ],
       260,
@@ -379,7 +385,7 @@ function PlantingPlans(): React.ReactElement {
       ),
       notes: 260,
     };
-  }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, numberLocale, t]);
+  }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, fieldBedColumnLabel, numberLocale, t]);
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
@@ -590,7 +596,7 @@ function PlantingPlans(): React.ReactElement {
       {
         ...createSingleSelectColumn<PlantingPlanRow>({
           field: "bed",
-          headerName: t("plantingPlans:columns.fieldBed"),
+          headerName: fieldBedColumnLabel,
           flex: 0,
           minWidth: dynamicWidths.bed,
           maxWidth: BED_COLUMN_MAX_WIDTH,
@@ -792,6 +798,7 @@ function PlantingPlans(): React.ReactElement {
       cultureOptions,
       cultures,
       dynamicWidths,
+      fieldBedColumnLabel,
       areaWarning,
       t,
     ],

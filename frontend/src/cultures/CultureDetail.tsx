@@ -44,6 +44,7 @@ import {
 import type { Culture } from '../api/api';
 import { SearchableSelect } from '../components/inputs/SearchableSelect';
 import type { SearchableSelectOption } from '../components/inputs/SearchableSelect';
+import { UI_LABEL_SEPARATOR } from '../utils/uiLabelSeparator';
 
 interface CultureDetailProps {
   cultures: Culture[];
@@ -331,7 +332,7 @@ export function CultureDetail({
         .filter((culture) => culture.id !== undefined)
         .map((culture) => ({
         value: culture.id!,
-        label: `${culture.name}${culture.variety ? ` - ${culture.variety}` : ''}${culture.seed_supplier ? ` | ${culture.seed_supplier}` : ''}`,
+        label: `${culture.name}${culture.variety ? `${UI_LABEL_SEPARATOR}${culture.variety}` : ''}${culture.seed_supplier ? ` | ${culture.seed_supplier}` : ''}`,
         data: culture,
       }));
     },
