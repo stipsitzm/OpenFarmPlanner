@@ -39,6 +39,9 @@ jobs:
       - name: Install PDM
         run: python -m pip install --upgrade pip pdm
 
+      - name: Install gettext
+        run: sudo apt-get update && sudo apt-get install -y gettext
+
       - name: Ensure pdm.lock exists
         run: |
           test -f backend/pdm.lock || (echo 'backend/pdm.lock is missing' >&2; exit 1)
@@ -51,6 +54,7 @@ jobs:
       - name: Run backend tests
         run: |
           cd backend
+          pdm run compilemessages
           pdm run test
 
   quality:

@@ -63,7 +63,7 @@ test.describe('project invitation flow', () => {
 
     await loginViaUi(page, fixture.invitee.email, fixture.invitee.password);
 
-    await expect(page).toHaveURL(/\/app\/anbauplaene/);
+    await expect(page).toHaveURL(/\/app\/(?:locations|anbauplaene)/);
     await expect(page.getByText(fixture.projectName)).toBeVisible();
   });
 
@@ -73,7 +73,7 @@ test.describe('project invitation flow', () => {
 
     await page.goto(fixture.inviteUrl);
     await loginViaUi(page, fixture.invitee.email, fixture.invitee.password);
-    await expect(page).toHaveURL(/\/app\/anbauplaene/);
+    await expect(page).toHaveURL(/\/app\/(?:locations|anbauplaene)/);
     await expect(page.getByText(fixture.projectName)).toBeVisible();
 
     await page.goto(fixture.inviteUrl);
@@ -86,7 +86,7 @@ test.describe('project invitation flow', () => {
 
     await page.goto(fixture.inviteUrl);
     await loginViaUi(page, fixture.invitee.email, fixture.invitee.password);
-    await expect(page).toHaveURL(/\/app\/anbauplaene/);
+    await expect(page).toHaveURL(/\/app\/(?:locations|anbauplaene)/);
     await expect(page.getByText(fixture.projectName)).toBeVisible();
 
     await removeInviteeMembership(request, scenarioId);

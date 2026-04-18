@@ -65,55 +65,63 @@ msgstr ""
 msgid "If the account exists, an email has been sent."
 msgstr "Falls das Konto existiert, wurde eine E-Mail gesendet."
 
-#: accounts/views.py:58
+#: accounts/views.py:46
+msgid "Registration successful. Please check your email to activate your account."
+msgstr "Registrierung erfolgreich. Bitte pruefe deine E-Mails, um dein Konto zu aktivieren."
+
+#: accounts/views.py:49
+msgid ""
+"Registration successful. In local development, the activation email is "
+"written to the server log/terminal and is not delivered to an inbox."
+msgstr ""
+"Registrierung erfolgreich. In der lokalen Entwicklungsumgebung wird die "
+"Aktivierungs-E-Mail im Server-Log/Terminal ausgegeben und nicht in ein "
+"Postfach zugestellt."
+
+#: accounts/views.py:72
 msgid "Activate your OpenFarmPlanner account"
 msgstr "OpenFarmPlanner-Konto aktivieren"
 
-#: accounts/views.py:71
+#: accounts/views.py:85
 msgid "Reset your OpenFarmPlanner password"
 msgstr "OpenFarmPlanner-Passwort zurücksetzen"
 
-#: accounts/views.py:91
+#: accounts/views.py:105
 msgid "CSRF cookie set"
 msgstr "CSRF-Cookie gesetzt"
 
-#: accounts/views.py:102
-msgid ""
-"Registration successful. Please check your email to activate your account."
-msgstr "Registrierung erfolgreich. Bitte pruefe deine E-Mails, um dein Konto zu aktivieren."
-
-#: accounts/views.py:113
+#: accounts/views.py:128
 msgid "Invalid activation link."
 msgstr "Ungueltiger Aktivierungslink."
 
-#: accounts/views.py:118
+#: accounts/views.py:133
 msgid "Invalid or expired activation token."
 msgstr "Ungueltiges oder abgelaufenes Aktivierungs-Token."
 
-#: accounts/views.py:138
+#: accounts/views.py:153
 msgid "Invalid credentials."
 msgstr "Ungueltige Zugangsdaten."
 
-#: accounts/views.py:141
+#: accounts/views.py:156
 msgid "Account is not activated yet."
 msgstr "Das Konto ist noch nicht aktiviert."
 
-#: accounts/views.py:150
+#: accounts/views.py:165
 msgid "Logged out."
 msgstr "Abgemeldet."
 
-#: accounts/views.py:158
+#: accounts/views.py:173
 msgid "Authentication credentials were not provided."
 msgstr "Authentifizierungsdaten wurden nicht bereitgestellt."
 
-#: accounts/views.py:200 accounts/views.py:204
+#: accounts/views.py:215 accounts/views.py:219
 msgid "Invalid reset link."
 msgstr "Ungueltiger Zuruecksetzungslink."
 
-#: accounts/views.py:208
+#: accounts/views.py:223
 msgid "Invalid or expired reset token."
 msgstr "Ungueltiges oder abgelaufenes Zuruecksetzungs-Token."
 
-#: accounts/views.py:212
+#: accounts/views.py:227
 msgid "Password has been reset successfully."
 msgstr "Das Passwort wurde erfolgreich zurueckgesetzt."

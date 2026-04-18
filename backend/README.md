@@ -31,6 +31,7 @@ pdm run makemigrations
 pdm run migrate
 pdm run test
 pdm run createsuperuser
+pdm run compilemessages
 ```
 
 ### Making Model Changes
@@ -86,6 +87,17 @@ For local development you can keep email output in the terminal:
 ```env
 EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 ```
+
+### Translation compilation
+
+Compiled Django translation binaries (`*.mo`) are generated artifacts and are not committed.
+Compile them during build/deploy (or locally after editing `.po` files):
+
+```bash
+pdm run compilemessages
+```
+
+The `compilemessages` script uses `config.settings_test` so it can run without production-only secrets.
 
 ### Authentication endpoints
 
