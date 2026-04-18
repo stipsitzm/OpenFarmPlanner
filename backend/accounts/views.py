@@ -45,7 +45,19 @@ def _de(message: str) -> str:
         return _(message)
 
 
-GENERIC_EMAIL_SENT_MESSAGE = _de(_('If the account exists, an email has been sent.'))
+GENERIC_EMAIL_SENT_MESSAGE = _de('If the account exists, an email has been sent.')
+REGISTRATION_EMAIL_SENT_MESSAGE = _de('Registration successful. Please check your email to activate your account.')
+REGISTRATION_LOCAL_EMAIL_MESSAGE = _de(
+    'Registration successful. In local development, the activation email is written to the server log/terminal and is not delivered to an inbox.'
+)
+
+
+def _uses_local_non_delivery_email_backend() -> bool:
+    return settings.EMAIL_BACKEND in {
+        'django.core.mail.backends.console.EmailBackend',
+        'django.core.mail.backends.filebased.EmailBackend',
+        'django.core.mail.backends.dummy.EmailBackend',
+    }
 
 
 def _normalize_email(email: str) -> str:
@@ -88,6 +100,16 @@ def _build_frontend_link(path_with_query: str) -> str:
     return build_public_frontend_url(path_with_query)
 
 
+def _build_frontend_token_link(path: str, user: User) -> str:
+    uid = urlsafe_base64_encode(str(user.pk).encode('utf-8'))
+    token = default_token_generator.make_token(user)
+    return _build_frontend_link(f'{path}?uid={uid}&token={token}')
+
+
+def _registration_success_message() -> str:
+    return REGISTRATION_LOCAL_EMAIL_MESSAGE if _uses_local_non_delivery_email_backend() else REGISTRATION_EMAIL_SENT_MESSAGE
+
+
 def _logout_all_user_sessions(user_id: int) -> None:
     """
     Delete all active sessions for a specific user.
@@ -105,9 +127,7 @@ def _logout_all_user_sessions(user_id: int) -> None:
 
 
 def _send_activation_email(user: User) -> None:
-    uid = urlsafe_base64_encode(str(user.pk).encode('utf-8'))
-    token = default_token_generator.make_token(user)
-    activation_link = _build_frontend_link(f'/activate?uid={uid}&token={token}')
+    activation_link = _build_frontend_token_link('/activate', user)
     with translation.override('de'):
         subject = _('Activate your OpenFarmPlanner account')
         body = render_to_string('accounts/emails/activation_email.txt', {
@@ -118,9 +138,7 @@ def _send_activation_email(user: User) -> None:
 
 
 def _send_password_reset_email(user: User) -> None:
-    uid = urlsafe_base64_encode(str(user.pk).encode('utf-8'))
-    token = default_token_generator.make_token(user)
-    reset_link = _build_frontend_link(f'/reset-password?uid={uid}&token={token}')
+    reset_link = _build_frontend_token_link('/reset-password', user)
     with translation.override('de'):
         subject = _('Reset your OpenFarmPlanner password')
         body = render_to_string('accounts/emails/password_reset_email.txt', {
@@ -161,7 +179,8 @@ class RegisterView(APIView):
         user = serializer.save()
         _set_activation_expiry(user)
         _send_activation_email(user)
-        return Response({'detail': _de(_('Registration successful. Please check your email to activate your account.'))}, status=status.HTTP_201_CREATED)
+        detail_message = _registration_success_message()
+        return Response({'detail': detail_message}, status=status.HTTP_201_CREATED)
 
 
 class ActivateView(APIView):
