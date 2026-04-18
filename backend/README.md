@@ -97,6 +97,8 @@ Compile them during build/deploy (or locally after editing `.po` files):
 pdm run compilemessages
 ```
 
+The `compilemessages` script uses `config.settings_test` so it can run without production-only secrets.
+
 ### Authentication endpoints
 
 Auth endpoints are available under `/api/auth/`:
