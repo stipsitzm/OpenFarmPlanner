@@ -100,11 +100,14 @@ import { useCultureImportState } from './useCultureImportState';
 import { useEnrichmentLoadingProgress } from './useEnrichmentLoadingProgress';
 import { CulturesImportDialog } from './CulturesImportDialog';
 import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
+import { useProjectRequirement } from '../hooks/useProjectRequirement';
+import ProjectRequiredState from '../components/project/ProjectRequiredState';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const { selectedCultureId, updateSelectedCultureId } = useSelectedCultureSync();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
 
@@ -182,9 +185,14 @@ function Cultures(): React.ReactElement {
 
   // Fetch cultures on mount
   useEffect(() => {
+    if (shouldShowProjectRequiredState) {
+      setCultures([]);
+      setIsCulturesLoading(false);
+      return;
+    }
     // eslint-disable-next-line -- Data fetching on mount is intentional
     fetchCultures();
-  }, [fetchCultures]);
+  }, [fetchCultures, shouldShowProjectRequiredState]);
 
 
   useEffect(() => {
@@ -878,6 +886,27 @@ function Cultures(): React.ReactElement {
   }, [aiEnrichmentEnabled, handleEnrichAll, handleEnrichCurrent, selectedCultureNeedsCompletion]);
 
 
+
+  if (shouldShowProjectRequiredState && missingProjectReason) {
+    return (
+      <PageContainer>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            flexWrap: 'wrap',
+            gap: 1.5,
+            mb: 2,
+          }}
+        >
+          <h1>{t('title')}</h1>
+          <PageHelp pageKey="cultures" />
+        </Box>
+        <ProjectRequiredState reason={missingProjectReason} />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>
