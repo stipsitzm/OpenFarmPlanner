@@ -2,6 +2,7 @@ import { Alert, Box, Button, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import type { MissingProjectReason } from "../../hooks/useProjectRequirement";
 import { useTranslation } from "../../i18n";
+import { openProjectCreationFlow } from "../../projects/projectCreationFlow";
 
 interface ProjectRequiredStateProps {
   reason: MissingProjectReason;
@@ -34,7 +35,13 @@ export default function ProjectRequiredState({
         <Box>
           <Button
             variant="contained"
-            onClick={() => navigate("/app/project-selection")}
+            onClick={() => {
+              if (isCreateFlow) {
+                openProjectCreationFlow();
+                return;
+              }
+              navigate("/app/project-selection");
+            }}
           >
             {t(actionLabelKey)}
           </Button>

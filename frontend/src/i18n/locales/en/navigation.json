@@ -13,7 +13,7 @@
   "project": {
     "settings": "Project settings",
     "members": "Manage members",
-    "create": "Create new project",
+    "create": "New project",
     "switch": "Switch project"
   },
   "projectSwitcher": {
@@ -22,8 +22,9 @@
     "zeroProjects": "You currently do not have access to any projects.",
     "newProjectPlaceholder": "New project (coming soon)",
     "switchError": "Project could not be switched.",
-    "newProjectAction": "Create new project",
-    "createDialogTitle": "Create new project",
+    "newProjectAction": "New project",
+    "openProjectAction": "Open",
+    "createDialogTitle": "Create project",
     "createNameLabel": "Project name",
     "createDescriptionLabel": "Description",
     "createCancel": "Cancel",
@@ -53,7 +54,7 @@
       "previousPage": "Previous page",
       "openProjectSettings": "Open project settings",
       "openProjectMembers": "Open members area",
-      "createProject": "Create new project",
+      "createProject": "New project",
       "switchProjectPrefix": "Switch project",
       "openAccountSettings": "Open account settings",
       "openVersionHistory": "Open version history",

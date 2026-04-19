@@ -35,7 +35,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from './i18n';
 import { useCommandContext, useRegisterCommands } from './commands/useCommandContext';
 import { createRootCommands } from './commands/commands';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Locations from './pages/Locations';
 import FieldsBedsPage from './pages/FieldsBedsPage';
 import Cultures from './pages/Cultures';
@@ -70,6 +70,7 @@ import InvitationAcceptPage from './pages/InvitationAcceptPage';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
+import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 
 interface SnackbarState {
   open: boolean;
@@ -338,12 +339,20 @@ function RootLayout(): React.ReactElement {
   const activeProjectLabel = activeMembership?.project_name ?? t('projectSwitcher.noProject');
 
 
-  const handleOpenCreateProject = (): void => {
-    handleProjectMenuClose();
+  const handleOpenCreateProject = useCallback((): void => {
+    setProjectMenuAnchor(null);
     setNewProjectName('');
     setNewProjectDescription('');
     setIsCreateProjectOpen(true);
-  };
+  }, []);
+
+  useEffect(() => {
+    const handleCreateProjectRequest = (): void => {
+      handleOpenCreateProject();
+    };
+    window.addEventListener(OPEN_CREATE_PROJECT_EVENT, handleCreateProjectRequest);
+    return () => window.removeEventListener(OPEN_CREATE_PROJECT_EVENT, handleCreateProjectRequest);
+  }, [handleOpenCreateProject]);
 
   const handleOpenProjectSettings = (): void => {
     handleProjectMenuClose();

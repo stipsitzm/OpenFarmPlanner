@@ -105,7 +105,7 @@ describe('FieldsBedsPage', () => {
     render(<FieldsBedsPage />);
 
     expect(await screen.findByText('Du hast noch kein Projekt.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Projekt erstellen' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Erstes Projekt anlegen' })).toBeInTheDocument();
     expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
     expect(locationListMock).not.toHaveBeenCalled();
   });

@@ -57,7 +57,7 @@ describe("PlantingPlans project requirement state", () => {
     );
 
     expect(await screen.findByText("Du hast noch kein Projekt.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Projekt erstellen" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Erstes Projekt anlegen" })).toBeInTheDocument();
     expect(apiMocks.cultureList).not.toHaveBeenCalled();
     expect(apiMocks.bedList).not.toHaveBeenCalled();
   });
