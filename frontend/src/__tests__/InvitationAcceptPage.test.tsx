@@ -212,4 +212,56 @@ describe("InvitationAcceptPage", () => {
       await screen.findByText("Du wurdest dem Projekt hinzugefügt."),
     ).toBeInTheDocument();
   });
+
+  it("keeps a successful state on remount and does not overwrite it with a later invalid error", async () => {
+    mockAuthState.user = { id: 1, email: "invitee@example.com" };
+    acceptInvitationByTokenMock.mockResolvedValueOnce({
+      data: {
+        code: "accepted",
+        detail: "Invitation accepted.",
+        project_id: 13,
+        project: { id: 13, name: "Projekt West", slug: "projekt-west" },
+      },
+    });
+    acceptInvitationByTokenMock.mockRejectedValueOnce({
+      response: {
+        data: {
+          code: "invalid_token",
+        },
+      },
+    });
+
+    const firstRender = render(
+      <MemoryRouter initialEntries={["/invite/accept?token=stable123"]}>
+        <Routes>
+          <Route path="/invite/accept" element={<InvitationAcceptPage />} />
+          <Route path="/app/locations" element={<div>Standorte</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByText("Du wurdest dem Projekt hinzugefügt."),
+    ).toBeInTheDocument();
+    expect(acceptInvitationByTokenMock).toHaveBeenCalledTimes(1);
+
+    firstRender.unmount();
+
+    render(
+      <MemoryRouter initialEntries={["/invite/accept?token=stable123"]}>
+        <Routes>
+          <Route path="/invite/accept" element={<InvitationAcceptPage />} />
+          <Route path="/app/locations" element={<div>Standorte</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByText("Du wurdest dem Projekt hinzugefügt."),
+    ).toBeInTheDocument();
+    expect(acceptInvitationByTokenMock).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByText("Ungültiger Einladungslink."),
+    ).not.toBeInTheDocument();
+  });
 });

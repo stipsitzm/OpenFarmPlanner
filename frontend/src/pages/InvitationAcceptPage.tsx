@@ -13,6 +13,8 @@ import {
 
 type AcceptStatus = "loading" | "redirecting" | "success" | "error";
 
+const acceptedInvitationTokens = new Set<string>();
+
 export default function InvitationAcceptPage(): React.ReactElement {
   const { t } = useTranslation("projectInvitations");
   const navigate = useNavigate();
@@ -21,6 +23,7 @@ export default function InvitationAcceptPage(): React.ReactElement {
   const [status, setStatus] = useState<AcceptStatus>("loading");
   const [message, setMessage] = useState<string>("");
   const processedTokenRef = useRef<string | null>(null);
+  const terminalSuccessRef = useRef<boolean>(false);
 
   const token = useMemo(() => {
     const tokenFromQuery = searchParams.get("token");
@@ -44,6 +47,13 @@ export default function InvitationAcceptPage(): React.ReactElement {
     console.info("[InvitationAcceptPage] parsed token", { token });
     const nextPath = buildInvitationAcceptPath(token);
     storeInvitationRedirect(nextPath, token);
+
+    if (acceptedInvitationTokens.has(token)) {
+      terminalSuccessRef.current = true;
+      setStatus("success");
+      setMessage(t("acceptPage.addedToProject"));
+      return;
+    }
 
     if (isLoading) {
       queueMicrotask(() => {
@@ -71,6 +81,8 @@ export default function InvitationAcceptPage(): React.ReactElement {
           await refreshUser();
         }
         clearInvitationRedirectStorage();
+        acceptedInvitationTokens.add(token);
+        terminalSuccessRef.current = true;
         console.info(
           "[InvitationAcceptPage] invitation accepted successfully",
           { projectId },
@@ -82,6 +94,9 @@ export default function InvitationAcceptPage(): React.ReactElement {
           1200,
         );
       } catch (acceptError: unknown) {
+        if (terminalSuccessRef.current || acceptedInvitationTokens.has(token)) {
+          return;
+        }
         console.error(
           "[InvitationAcceptPage] invitation acceptance failed",
           acceptError,
@@ -127,6 +142,9 @@ export default function InvitationAcceptPage(): React.ReactElement {
 
       try {
         const statusResponse = await projectAPI.getInvitationStatus(token);
+        if (terminalSuccessRef.current || acceptedInvitationTokens.has(token)) {
+          return;
+        }
         if (statusResponse.data.code !== "pending") {
           clearInvitationRedirectStorage();
           setStatus("error");
@@ -138,6 +156,9 @@ export default function InvitationAcceptPage(): React.ReactElement {
           return;
         }
       } catch (statusError: unknown) {
+        if (terminalSuccessRef.current || acceptedInvitationTokens.has(token)) {
+          return;
+        }
         const code =
           (statusError as { response?: { data?: { code?: string } } })?.response
             ?.data?.code ?? "invalid_token";
