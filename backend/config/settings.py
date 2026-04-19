@@ -121,27 +121,67 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Use SQLite if DB_ENGINE is not set or set to 'sqlite', otherwise use PostgreSQL
-db_engine = os.getenv('DB_ENGINE', 'sqlite')
+def _build_postgresql_databases() -> dict[str, dict[str, str]]:
+    """Build PostgreSQL database settings and validate required keys.
 
-if db_engine == 'sqlite':
+    :return: Django DATABASES configuration for a PostgreSQL default connection.
+    """
+    db_name = _env_str('DB_NAME', '')
+    db_user = _env_str('DB_USER', '')
+    db_password = _env_str('DB_PASSWORD', '')
+    db_host = _env_str('DB_HOST', '')
+    db_port = _env_str('DB_PORT', '')
+
+    if DJANGO_ENV == 'production':
+        missing = [
+            key
+            for key, value in [
+                ('DB_NAME', db_name),
+                ('DB_USER', db_user),
+                ('DB_PASSWORD', db_password),
+                ('DB_HOST', db_host),
+                ('DB_PORT', db_port),
+            ]
+            if not value
+        ]
+        if missing:
+            raise ImproperlyConfigured(
+                f"Missing required PostgreSQL settings for production: {', '.join(missing)}"
+            )
+
+    return {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': db_name or 'farmplanner_db',
+            'USER': db_user or 'farmplanner',
+            'PASSWORD': db_password or 'farmplanner',
+            'HOST': db_host or 'localhost',
+            'PORT': db_port or '5432',
+        }
+    }
+
+
+db_engine = _env_str('DB_ENGINE', '').lower()
+
+if DJANGO_ENV == 'production':
+    if db_engine in ('', 'sqlite', 'sqlite3'):
+        raise ImproperlyConfigured(
+            'Production requires PostgreSQL. Set DB_ENGINE=postgresql and provide DB_* settings.'
+        )
+    if db_engine not in ('postgres', 'postgresql'):
+        raise ImproperlyConfigured(f"Unsupported DB_ENGINE for production: {db_engine}")
+    DATABASES = _build_postgresql_databases()
+elif db_engine in ('', 'sqlite', 'sqlite3'):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+elif db_engine in ('postgres', 'postgresql'):
+    DATABASES = _build_postgresql_databases()
 else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DB_NAME', 'farmplanner_db'),
-            'USER': os.getenv('DB_USER', 'farmplanner'),
-            'PASSWORD': os.getenv('DB_PASSWORD', 'farmplanner'),
-            'HOST': os.getenv('DB_HOST', 'localhost'),
-            'PORT': os.getenv('DB_PORT', '5432'),
-        }
-    }
+    raise ImproperlyConfigured(f"Unsupported DB_ENGINE value: {db_engine}")
 
 
 # Password validation
