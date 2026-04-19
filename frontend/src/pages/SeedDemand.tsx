@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
@@ -22,6 +22,8 @@ import { useTranslation } from '../i18n';
 import { useCommandContextTag } from '../commands/useCommandContext';
 import PageHelp from '../components/help/PageHelp';
 import PageContainer from '../components/layout/PageContainer';
+import { useProjectRequirement } from '../hooks/useProjectRequirement';
+import ProjectRequiredState from '../components/project/ProjectRequiredState';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
@@ -40,9 +42,11 @@ const formatPackageSelection = (row: SeedDemand, t: (key: string) => string): st
 export default function SeedDemandPage(): React.ReactElement {
   useCommandContextTag('seedDemand');
   const { t } = useTranslation('cultures');
+  const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const [rows, setRows] = useState<SeedDemand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const autoSelectingCultureIdsRef = useRef<Set<number>>(new Set());
 
   const loadRows = async () => {
     setIsLoading(true);
@@ -70,8 +74,62 @@ export default function SeedDemandPage(): React.ReactElement {
   };
 
   useEffect(() => {
+    if (shouldShowProjectRequiredState) {
+      setRows([]);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
     void loadRows();
-  }, []);
+  }, [shouldShowProjectRequiredState]);
+
+  useEffect(() => {
+    if (shouldShowProjectRequiredState || rows.length === 0) {
+      return;
+    }
+
+    const rowToAutoSelect = rows.find((row) => {
+      const supplierOptions = row.supplier_options ?? [];
+      if (supplierOptions.length !== 1) {
+        return false;
+      }
+
+      const onlySupplierId = supplierOptions[0].supplier_id;
+      return row.selected_supplier_id !== onlySupplierId;
+    });
+
+    if (!rowToAutoSelect || autoSelectingCultureIdsRef.current.has(rowToAutoSelect.culture_id)) {
+      return;
+    }
+
+    autoSelectingCultureIdsRef.current.add(rowToAutoSelect.culture_id);
+    const onlySupplierId = rowToAutoSelect.supplier_options?.[0]?.supplier_id;
+    if (typeof onlySupplierId !== 'number') {
+      autoSelectingCultureIdsRef.current.delete(rowToAutoSelect.culture_id);
+      return;
+    }
+
+    void handleSupplierChange(rowToAutoSelect.culture_id, onlySupplierId)
+      .finally(() => {
+        autoSelectingCultureIdsRef.current.delete(rowToAutoSelect.culture_id);
+      });
+  }, [rows, shouldShowProjectRequiredState]);
+
+  if (shouldShowProjectRequiredState && missingProjectReason) {
+    return (
+      <PageContainer>
+        <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, width: '100%' }}>
+            <Typography variant="h4">
+              {t('seedDemand.title')}
+            </Typography>
+            <PageHelp pageKey="seedDemand" />
+          </Box>
+          <ProjectRequiredState reason={missingProjectReason} />
+        </Box>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>
@@ -103,15 +161,19 @@ export default function SeedDemandPage(): React.ReactElement {
             </TableHead>
             <TableBody>
               {rows.map((row) => {
-                const hasSupplierOptions = Boolean(row.supplier_options && row.supplier_options.length > 0);
+                const supplierOptions = row.supplier_options ?? [];
+                const supplierCount = supplierOptions.length;
+                const hasSupplierOptions = supplierCount > 0;
                 const packageInfo = hasSupplierOptions
                   ? formatPackageSelection(row, t)
                   : t('seedDemand.noPackageCalculationPossible');
-                const supplierOptionValues = new Set((row.supplier_options ?? []).map((option) => String(option.supplier_id)));
+                const supplierOptionValues = new Set(supplierOptions.map((option) => String(option.supplier_id)));
                 const selectedSupplierValue = row.selected_supplier_id !== null && row.selected_supplier_id !== undefined
                   ? String(row.selected_supplier_id)
                   : '';
                 const selectValue = supplierOptionValues.has(selectedSupplierValue) ? selectedSupplierValue : '';
+                const singleSupplierOption = supplierCount === 1 ? supplierOptions[0] : null;
+                const singleSupplierValue = singleSupplierOption ? String(singleSupplierOption.supplier_id) : '';
 
                 return (
                   <TableRow key={row.culture_id}>
@@ -121,7 +183,7 @@ export default function SeedDemandPage(): React.ReactElement {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      {hasSupplierOptions ? (
+                      {supplierCount > 1 ? (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                           <FormControl size="small" sx={{ minWidth: 220 }}>
                             <Select
@@ -138,8 +200,8 @@ export default function SeedDemandPage(): React.ReactElement {
                               }}
                               displayEmpty
                             >
-                              <MenuItem value="">{t('seedDemand.selectSupplier')}</MenuItem>
-                              {(row.supplier_options ?? []).map((option) => (
+                              {selectValue === '' ? <MenuItem value="">{t('seedDemand.selectSupplier')}</MenuItem> : null}
+                              {supplierOptions.map((option) => (
                                 <MenuItem key={option.supplier_id} value={String(option.supplier_id)}>
                                   {option.supplier_name}
                                 </MenuItem>
@@ -147,10 +209,24 @@ export default function SeedDemandPage(): React.ReactElement {
                             </Select>
                           </FormControl>
                         </Box>
+                      ) : supplierCount === 1 && singleSupplierOption ? (
+                        <FormControl size="small" sx={{ minWidth: 220 }}>
+                          <Select
+                            value={singleSupplierValue}
+                            disabled
+                            sx={{
+                              '& .MuiSelect-select': { py: 0.75 },
+                            }}
+                          >
+                            <MenuItem value={singleSupplierValue}>
+                              {singleSupplierOption.supplier_name}
+                            </MenuItem>
+                          </Select>
+                        </FormControl>
                       ) : (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                           <Typography variant="body2" color="text.secondary">
-                            {t('seedDemand.noSupplierData')}
+                            {t('seedDemand.noSupplierAvailable')}
                           </Typography>
                           <Link component={RouterLink} to={`/cultures?cultureId=${row.culture_id}`} underline="hover" variant="caption">
                             {t('seedDemand.editCultureAction')}

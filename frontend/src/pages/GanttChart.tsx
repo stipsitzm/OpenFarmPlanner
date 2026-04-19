@@ -40,7 +40,9 @@ import PageHelp from '../components/help/PageHelp';
 import ModeToggle from '../components/ModeToggle';
 import PageContainer from '../components/layout/PageContainer';
 import PageHeader from '../components/layout/PageHeader';
+import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import type { CommandSpec } from '../commands/types';
+import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import {
   buildFieldOccupancyTaskGroups,
   buildOccupancyTooltipDetails,
@@ -111,6 +113,7 @@ function formatIsoWeek(date: Date): string {
 
 function GanttChartPage(): React.ReactElement {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
+  const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   useCommandContextTag('calendar');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,6 +148,17 @@ function GanttChartPage(): React.ReactElement {
   const [displayYear] = useState(currentYear);
 
   useEffect(() => {
+    if (shouldShowProjectRequiredState) {
+      setLoading(false);
+      setError(null);
+      setLocations([]);
+      setFields([]);
+      setBeds([]);
+      setPlantingPlans([]);
+      setCultures([]);
+      setWeeklyYield([]);
+      return;
+    }
     const fetchData = async (): Promise<void> => {
       try {
         setLoading(true);
@@ -174,7 +188,7 @@ function GanttChartPage(): React.ReactElement {
     };
 
     void fetchData();
-  }, [displayYear, t]);
+  }, [displayYear, shouldShowProjectRequiredState, t]);
 
   const refreshWeeklyYield = useCallback(async (): Promise<void> => {
     try {
@@ -265,7 +279,9 @@ function GanttChartPage(): React.ReactElement {
     return language;
   }, [i18n.language, i18n.resolvedLanguage]);
   const ganttLocaleText = useMemo(() => ({
-    title: t('ganttChart:chartLocaleText.title'),
+    title: calendarMode === 'seedlings'
+      ? t('ganttChart:chartLocaleText.titleSeedlings')
+      : t('ganttChart:chartLocaleText.titleOccupancy'),
     resources: calendarMode === 'seedlings'
       ? t('ganttChart:chartLocaleText.resourcesSeedlings')
       : t('ganttChart:chartLocaleText.resources'),
@@ -386,6 +402,15 @@ function GanttChartPage(): React.ReactElement {
     );
   }
 
+  if (shouldShowProjectRequiredState && missingProjectReason) {
+    return (
+      <PageContainer variant="full">
+        <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
+        <ProjectRequiredState reason={missingProjectReason} />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer variant="full">
       <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
@@ -409,6 +434,8 @@ function GanttChartPage(): React.ReactElement {
               ariaLabel={t('ganttChart:modeAriaLabel')}
               viewLabel={t('ganttChart:modeViewOption')}
               editLabel={t('ganttChart:modeEditOption')}
+              viewTooltip={t('ganttChart:modeViewTooltip')}
+              editTooltip={t('ganttChart:modeEditTooltip')}
               value={editMode ? 'edit' : 'view'}
               onChange={(selectedMode) => setEditMode(selectedMode === 'edit')}
               fullWidth={false}

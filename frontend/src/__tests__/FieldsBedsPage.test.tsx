@@ -7,6 +7,10 @@ const { locationListMock, addFieldMock, navigateMock } = vi.hoisted(() => ({
   addFieldMock: vi.fn(),
   navigateMock: vi.fn(),
 }));
+const projectRequirementState = vi.hoisted(() => ({
+  shouldShowProjectRequiredState: false,
+  missingProjectReason: null as null | 'no_projects' | 'no_active_project',
+}));
 
 vi.mock('../pages/FieldsBedsHierarchy', () => ({
   default: () => <div>Hierarchieansicht</div>,
@@ -40,6 +44,10 @@ vi.mock('../components/hierarchy/hooks/useFieldOperations', () => ({
   }),
 }));
 
+vi.mock('../hooks/useProjectRequirement', () => ({
+  useProjectRequirement: () => projectRequirementState,
+}));
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
@@ -50,6 +58,9 @@ vi.mock('react-router-dom', async () => {
 
 describe('FieldsBedsPage', () => {
   beforeEach(() => {
+    locationListMock.mockReset();
+    projectRequirementState.shouldShowProjectRequiredState = false;
+    projectRequirementState.missingProjectReason = null;
     locationListMock.mockResolvedValue({
       data: {
         results: [{ id: 1, name: 'Hofstelle' }],
@@ -85,5 +96,17 @@ describe('FieldsBedsPage', () => {
     expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
     expect(screen.queryByText(/Editiermodus-/)).not.toBeInTheDocument();
     expect(screen.queryByText('Modus')).not.toBeInTheDocument();
+  });
+
+  it('shows a neutral project-required state when no project is available', async () => {
+    projectRequirementState.shouldShowProjectRequiredState = true;
+    projectRequirementState.missingProjectReason = 'no_projects';
+
+    render(<FieldsBedsPage />);
+
+    expect(await screen.findByText('Du hast noch kein Projekt.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Erstes Projekt anlegen' })).toBeInTheDocument();
+    expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
+    expect(locationListMock).not.toHaveBeenCalled();
   });
 });

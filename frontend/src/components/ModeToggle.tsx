@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Stack, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
 
 export type ModeToggleValue = 'view' | 'edit';
 
@@ -8,6 +8,8 @@ interface ModeToggleProps {
   ariaLabel: string;
   viewLabel: string;
   editLabel: string;
+  viewTooltip?: string;
+  editTooltip?: string;
   value: ModeToggleValue;
   onChange: (value: ModeToggleValue) => void;
   fullWidth?: boolean;
@@ -18,6 +20,8 @@ function ModeToggle({
   ariaLabel,
   viewLabel,
   editLabel,
+  viewTooltip,
+  editTooltip,
   value,
   onChange,
   fullWidth = true,
@@ -40,12 +44,16 @@ function ModeToggle({
           }
         }}
       >
-        <ToggleButton value="view" aria-label={viewLabel}>
-          {viewLabel}
-        </ToggleButton>
-        <ToggleButton value="edit" aria-label={editLabel}>
-          {editLabel}
-        </ToggleButton>
+        <Tooltip title={viewTooltip ?? ''}>
+          <ToggleButton value="view" aria-label={viewLabel}>
+            {viewLabel}
+          </ToggleButton>
+        </Tooltip>
+        <Tooltip title={editTooltip ?? ''}>
+          <ToggleButton value="edit" aria-label={editLabel}>
+            {editLabel}
+          </ToggleButton>
+        </Tooltip>
       </ToggleButtonGroup>
     </Stack>
   );

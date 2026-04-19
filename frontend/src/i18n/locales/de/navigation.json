@@ -13,7 +13,7 @@
   "project": {
     "settings": "Projekteinstellungen",
     "members": "Mitglieder verwalten",
-    "create": "Neues Projekt erstellen",
+    "create": "Neues Projekt",
     "switch": "Projekt wechseln"
   },
   "projectSwitcher": {
@@ -22,12 +22,13 @@
     "zeroProjects": "Du hast aktuell keinen Projektzugriff.",
     "newProjectPlaceholder": "Neues Projekt (bald verfügbar)",
     "switchError": "Projekt konnte nicht gewechselt werden.",
-    "newProjectAction": "Neues Projekt erstellen",
-    "createDialogTitle": "Neues Projekt erstellen",
+    "newProjectAction": "Neues Projekt",
+    "openProjectAction": "Öffnen",
+    "createDialogTitle": "Projekt anlegen",
     "createNameLabel": "Projektname",
     "createDescriptionLabel": "Beschreibung",
     "createCancel": "Abbrechen",
-    "createSubmit": "Projekt erstellen",
+    "createSubmit": "Projekt anlegen",
     "createError": "Projekt konnte nicht erstellt werden."
   },
   "projectRoles": {
@@ -53,7 +54,7 @@
       "previousPage": "Vorherige Seite",
       "openProjectSettings": "Projekteinstellungen öffnen",
       "openProjectMembers": "Mitgliederbereich öffnen",
-      "createProject": "Neues Projekt erstellen",
+      "createProject": "Neues Projekt",
       "switchProjectPrefix": "Projekt wechseln",
       "openAccountSettings": "Kontoeinstellungen öffnen",
       "openVersionHistory": "Versionsverlauf öffnen",

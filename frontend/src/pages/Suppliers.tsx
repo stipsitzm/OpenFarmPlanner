@@ -26,6 +26,8 @@ import PageHeader from '../components/layout/PageHeader';
 import PageContainer from '../components/layout/PageContainer';
 import type { Supplier } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useProjectRequirement } from '../hooks/useProjectRequirement';
+import ProjectRequiredState from '../components/project/ProjectRequiredState';
 
 interface SupplierDraft {
   id?: number;
@@ -59,6 +61,7 @@ export default function Suppliers(): React.ReactElement {
   const { t } = useTranslation('suppliers');
   const location = useLocation();
   const navigate = useNavigate();
+  const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState('');
@@ -70,12 +73,16 @@ export default function Suppliers(): React.ReactElement {
   };
 
   useEffect(() => {
+    if (shouldShowProjectRequiredState) {
+      setSuppliers([]);
+      return;
+    }
     const timeoutId = window.setTimeout(() => {
       void loadSuppliers();
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, []);
+  }, [shouldShowProjectRequiredState]);
 
   const openCreate = (): void => {
     setDraft({ name: '', homepage_url: '' });
@@ -83,6 +90,9 @@ export default function Suppliers(): React.ReactElement {
   };
 
   useEffect(() => {
+    if (shouldShowProjectRequiredState) {
+      return;
+    }
     const searchParams = new URLSearchParams(location.search);
     if (searchParams.get('create') !== '1') {
       return;
@@ -99,7 +109,7 @@ export default function Suppliers(): React.ReactElement {
       },
       { replace: true },
     );
-  }, [location.pathname, location.search, navigate]);
+  }, [location.pathname, location.search, navigate, shouldShowProjectRequiredState]);
 
   const openEdit = (supplier: Supplier): void => {
     setDraft({
@@ -174,6 +184,20 @@ export default function Suppliers(): React.ReactElement {
       setError(t('deleteError'));
     }
   };
+
+  if (shouldShowProjectRequiredState && missingProjectReason) {
+    return (
+      <PageContainer>
+        <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+          <PageHeader
+            title={t('title')}
+            actions={<PageHelp pageKey="suppliers" />}
+          />
+          <ProjectRequiredState reason={missingProjectReason} />
+        </Box>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>

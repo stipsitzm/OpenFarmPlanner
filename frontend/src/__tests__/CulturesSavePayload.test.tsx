@@ -73,6 +73,13 @@ vi.mock('../auth/useAuth', () => ({
   }),
 }));
 
+vi.mock('../hooks/useProjectRequirement', () => ({
+  useProjectRequirement: () => ({
+    shouldShowProjectRequiredState: false,
+    missingProjectReason: null,
+  }),
+}));
+
 describe('Cultures save payload', () => {
   beforeEach(() => {
     vi.clearAllMocks();

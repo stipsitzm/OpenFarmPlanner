@@ -27,6 +27,8 @@ import PageContainer from '../components/layout/PageContainer';
 import { useTranslation } from '../i18n';
 import { resolveLocaleFromLanguage } from '../utils/numberLocalization';
 import { deriveLocationTasks, type DerivedLocationTask } from './locationDerivedTasks';
+import { useProjectRequirement } from '../hooks/useProjectRequirement';
+import ProjectRequiredState from '../components/project/ProjectRequiredState';
 
 type SoilType = NonNullable<Location['soil_type']>;
 type Exposure = NonNullable<Location['exposure']>;
@@ -120,6 +122,7 @@ const toFormState = (location: Location | null): LocationFormState => ({
 
 function Locations(): React.ReactElement {
   const { t, i18n } = useTranslation(['locations', 'common']);
+  const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const [locations, setLocations] = useState<Location[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
@@ -158,8 +161,13 @@ function Locations(): React.ReactElement {
   }, [t]);
 
   useEffect(() => {
+    if (shouldShowProjectRequiredState) {
+      setLoading(false);
+      setError('');
+      return;
+    }
     void loadData();
-  }, [loadData]);
+  }, [loadData, shouldShowProjectRequiredState]);
 
   const tasksByLocation = useMemo(
     () =>
@@ -284,9 +292,11 @@ function Locations(): React.ReactElement {
           title={t('locations:title')}
           actions={(
             <>
-              <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
-                {t('locations:addButton')}
-              </Button>
+              {!shouldShowProjectRequiredState ? (
+                <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
+                  {t('locations:addButton')}
+                </Button>
+              ) : null}
               <PageHelp pageKey="locations" />
             </>
           )}
@@ -294,10 +304,14 @@ function Locations(): React.ReactElement {
 
         {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
         {loading ? <Typography>{t('common:messages.loading')}</Typography> : null}
+        {!loading && shouldShowProjectRequiredState && missingProjectReason ? (
+          <ProjectRequiredState reason={missingProjectReason} />
+        ) : null}
 
-        {!loading && locations.length === 0 ? (
+        {!loading && !shouldShowProjectRequiredState && locations.length === 0 ? (
           <Alert severity="info">{t('locations:emptyState')}</Alert>
         ) : (
+          !shouldShowProjectRequiredState && (
           <Box
             sx={{
               display: 'grid',
@@ -393,6 +407,7 @@ function Locations(): React.ReactElement {
               );
             })}
           </Box>
+          )
         )}
       </Box>
 

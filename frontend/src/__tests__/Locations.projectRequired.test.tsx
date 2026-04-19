@@ -1,0 +1,91 @@
+import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import Locations from "../pages/Locations";
+
+const apiMocks = vi.hoisted(() => ({
+  locationList: vi.fn(),
+  fieldList: vi.fn(),
+  bedList: vi.fn(),
+  planList: vi.fn(),
+  cultureList: vi.fn(),
+}));
+
+const projectRequirementState = vi.hoisted(() => ({
+  shouldShowProjectRequiredState: false,
+  missingProjectReason: null as null | "no_projects" | "no_active_project",
+}));
+
+vi.mock("../hooks/useProjectRequirement", () => ({
+  useProjectRequirement: () => projectRequirementState,
+}));
+
+vi.mock("../api/api", async () => {
+  const actual = await vi.importActual<typeof import("../api/api")>("../api/api");
+  return {
+    ...actual,
+    locationAPI: {
+      ...actual.locationAPI,
+      list: apiMocks.locationList,
+    },
+    fieldAPI: {
+      ...actual.fieldAPI,
+      list: apiMocks.fieldList,
+    },
+    bedAPI: {
+      ...actual.bedAPI,
+      list: apiMocks.bedList,
+    },
+    plantingPlanAPI: {
+      ...actual.plantingPlanAPI,
+      list: apiMocks.planList,
+    },
+    cultureAPI: {
+      ...actual.cultureAPI,
+      list: apiMocks.cultureList,
+    },
+  };
+});
+
+describe("Locations project requirement state", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    projectRequirementState.shouldShowProjectRequiredState = false;
+    projectRequirementState.missingProjectReason = null;
+    apiMocks.locationList.mockResolvedValue({ data: { results: [] } });
+    apiMocks.fieldList.mockResolvedValue({ data: { results: [] } });
+    apiMocks.bedList.mockResolvedValue({ data: { results: [] } });
+    apiMocks.planList.mockResolvedValue({ data: { results: [] } });
+    apiMocks.cultureList.mockResolvedValue({ data: { results: [] } });
+  });
+
+  it("shows friendly info instead of an error when the user has no project", async () => {
+    projectRequirementState.shouldShowProjectRequiredState = true;
+    projectRequirementState.missingProjectReason = "no_projects";
+
+    render(
+      <MemoryRouter>
+        <Locations />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Du hast noch kein Projekt.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Erstes Projekt anlegen" })).toBeInTheDocument();
+    expect(screen.queryByText("Fehler beim Laden der Standorte")).not.toBeInTheDocument();
+    expect(apiMocks.locationList).not.toHaveBeenCalled();
+  });
+
+  it("still shows a red error for real loading failures with an active project", async () => {
+    apiMocks.locationList.mockRejectedValueOnce(new Error("network failed"));
+
+    render(
+      <MemoryRouter>
+        <Locations />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Fehler beim Laden der Standorte")).toBeInTheDocument();
+    });
+  });
+});

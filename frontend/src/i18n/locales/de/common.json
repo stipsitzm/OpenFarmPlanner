@@ -79,5 +79,15 @@
     "required": "Dieses Feld ist erforderlich.",
     "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
     "minLength": "Mindestens {{count}} Zeichen erforderlich."
+  },
+  "projectRequired": {
+    "noProjectsTitle": "Du hast noch kein Projekt.",
+    "noProjectsDescription": "Erstelle zuerst ein Projekt, um Standorte, Anbauflächen, Anbaupläne und Kalender zu verwalten.",
+    "noProjectsSelectionDescription": "Lege dein erstes Projekt an, um mit der Planung zu starten.",
+    "noActiveProjectTitle": "Es ist aktuell kein Projekt ausgewählt.",
+    "noActiveProjectDescription": "Wähle ein Projekt aus, um Standorte, Anbauflächen, Anbaupläne und Kalender zu verwalten.",
+    "createProjectAction": "Erstes Projekt anlegen",
+    "createFirstProjectAction": "Erstes Projekt anlegen",
+    "selectProjectAction": "Projekt auswählen"
   }
 }

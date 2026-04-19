@@ -155,7 +155,81 @@ describe('App', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
     expect(await screen.findByText('Projekteinstellungen')).toBeInTheDocument();
     expect(screen.queryByText('Mitglieder verwalten')).not.toBeInTheDocument();
-    expect(await screen.findByText('Neues Projekt erstellen')).toBeInTheDocument();
+    expect(await screen.findByText('Neues Projekt')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Neues Projekt'));
+    expect(await screen.findByRole('heading', { name: 'Projekt anlegen' })).toBeInTheDocument();
+  });
+
+  it('opens the same create-project dialog from empty-state CTA for users without projects', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: null,
+      last_project_id: null,
+      resolved_project_id: null,
+      needs_project_selection: false,
+      memberships: [],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+    };
+    authState.activeProjectId = null;
+    window.history.pushState({}, '', '/app/fields-beds');
+
+    render(<CommandProvider><App /></CommandProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Erstes Projekt anlegen' }));
+    expect(await screen.findByRole('heading', { name: 'Projekt anlegen' })).toBeInTheDocument();
+  });
+
+  it('does not show cultures load error for users without projects and shows project-required CTA', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: null,
+      last_project_id: null,
+      resolved_project_id: null,
+      needs_project_selection: false,
+      memberships: [],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+    };
+    authState.activeProjectId = null;
+    window.history.pushState({}, '', '/app/cultures');
+
+    render(<CommandProvider><App /></CommandProvider>);
+
+    expect(await screen.findByRole('button', { name: 'Erstes Projekt anlegen' })).toBeInTheDocument();
+    expect(screen.queryByText('Fehler beim Laden der Kulturen')).not.toBeInTheDocument();
+  });
+
+  it('shows project-required state on suppliers page for users without projects', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: null,
+      last_project_id: null,
+      resolved_project_id: null,
+      needs_project_selection: false,
+      memberships: [],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+    };
+    authState.activeProjectId = null;
+    window.history.pushState({}, '', '/app/suppliers?create=1');
+
+    render(<CommandProvider><App /></CommandProvider>);
+
+    expect(await screen.findByRole('button', { name: 'Erstes Projekt anlegen' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Lieferant anlegen' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Speichern' })).not.toBeInTheDocument();
   });
 
 

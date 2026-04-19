@@ -8,6 +8,10 @@ const { listMock, saveSelectionMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   saveSelectionMock: vi.fn(),
 }));
+const projectRequirementState = vi.hoisted(() => ({
+  shouldShowProjectRequiredState: false,
+  missingProjectReason: null as null | 'no_projects' | 'no_active_project',
+}));
 
 vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
@@ -26,10 +30,52 @@ vi.mock('../i18n', () => ({
   }),
 }));
 
+vi.mock('../hooks/useProjectRequirement', () => ({
+  useProjectRequirement: () => projectRequirementState,
+}));
+
 describe('SeedDemandPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    projectRequirementState.shouldShowProjectRequiredState = false;
+    projectRequirementState.missingProjectReason = null;
     saveSelectionMock.mockResolvedValue({ data: { culture_id: 1, selected_supplier_id: 10 } });
+  });
+
+  it('shows project-required info instead of a technical error when no project exists', async () => {
+    projectRequirementState.shouldShowProjectRequiredState = true;
+    projectRequirementState.missingProjectReason = 'no_projects';
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('projectRequired.noProjectsTitle')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: 'projectRequired.createProjectAction' })).toBeInTheDocument();
+    expect(screen.queryByText('seedDemand.loadError')).not.toBeInTheDocument();
+    expect(listMock).not.toHaveBeenCalled();
+  });
+
+  it('still shows a load error for real API failures with active project context', async () => {
+    listMock.mockRejectedValueOnce(new Error('network failed'));
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('seedDemand.loadError')).toBeInTheDocument();
+    });
   });
 
   it('shows culture with variety in parentheses', async () => {
@@ -201,7 +247,7 @@ describe('SeedDemandPage', () => {
     });
   });
 
-  it('shows empty-state supplier text when no supplier data exists', async () => {
+  it('shows read-only supplier state when no suppliers are available', async () => {
     listMock.mockResolvedValue({
       data: {
         count: 1,
@@ -233,9 +279,122 @@ describe('SeedDemandPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getAllByText('seedDemand.noSupplierData').length).toBeGreaterThan(0);
+      expect(screen.getByText('seedDemand.noSupplierAvailable')).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'seedDemand.editCultureAction' })).toBeInTheDocument();
     });
+
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('auto-selects the only available supplier and keeps package calculation updated', async () => {
+    listMock
+      .mockResolvedValueOnce({
+        data: {
+          count: 1,
+          next: null,
+          previous: null,
+          results: [
+            {
+              culture_id: 5,
+              culture_name: 'Spinat',
+              supplier: '',
+              selected_supplier_id: null,
+              supplier_options: [{ supplier_id: 22, supplier_name: 'Reinsaat' }],
+              required_amount_value: 12,
+              required_amount_unit: 'g',
+              total_grams: 12,
+              package_suggestion: null,
+              warning: null,
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          count: 1,
+          next: null,
+          previous: null,
+          results: [
+            {
+              culture_id: 5,
+              culture_name: 'Spinat',
+              supplier: 'Reinsaat',
+              selected_supplier_id: 22,
+              supplier_options: [{ supplier_id: 22, supplier_name: 'Reinsaat' }],
+              required_amount_value: 12,
+              required_amount_unit: 'g',
+              total_grams: 12,
+              package_suggestion: {
+                selection: [{ size_value: 25, size_unit: 'g', count: 1 }],
+                total_amount: 25,
+                overage: 13,
+                pack_count: 1,
+              },
+              warning: null,
+            },
+          ],
+        },
+      });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(saveSelectionMock).toHaveBeenCalledWith(5, 22);
+    });
+
+    expect(await screen.findByText('25 seedDemand.unitGrams')).toBeInTheDocument();
+    expect(screen.getByText('Reinsaat')).toBeInTheDocument();
+    expect(screen.queryByText('seedDemand.selectSupplier')).not.toBeInTheDocument();
+    const supplierSelect = screen.getByRole('combobox');
+    expect(supplierSelect).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('shows placeholder only for rows with multiple suppliers and no selected supplier', async () => {
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 6,
+            culture_name: 'Rote Bete',
+            supplier: '',
+            selected_supplier_id: null,
+            supplier_options: [
+              { supplier_id: 30, supplier_name: 'Supplier A' },
+              { supplier_id: 31, supplier_name: 'Supplier B' },
+            ],
+            required_amount_value: 18,
+            required_amount_unit: 'g',
+            total_grams: 18,
+            package_suggestion: null,
+            warning: null,
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox')).toBeInTheDocument();
+    });
+
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    expect(screen.getByRole('option', { name: 'seedDemand.selectSupplier' })).toBeInTheDocument();
   });
 
   it('renders exactly one row per culture in seed demand table', async () => {
