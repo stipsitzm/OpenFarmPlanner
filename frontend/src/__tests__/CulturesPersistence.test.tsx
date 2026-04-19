@@ -48,6 +48,13 @@ vi.mock('../auth/useAuth', () => ({
   }),
 }));
 
+vi.mock('../hooks/useProjectRequirement', () => ({
+  useProjectRequirement: () => ({
+    shouldShowProjectRequiredState: false,
+    missingProjectReason: null,
+  }),
+}));
+
 function SearchIndicator(): ReactElement {
   const location = useLocation();
   return <span data-testid="location-search">{location.search}</span>;
