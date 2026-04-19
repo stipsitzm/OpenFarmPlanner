@@ -22,6 +22,8 @@ import { useTranslation } from '../i18n';
 import { useCommandContextTag } from '../commands/useCommandContext';
 import PageHelp from '../components/help/PageHelp';
 import PageContainer from '../components/layout/PageContainer';
+import { useProjectRequirement } from '../hooks/useProjectRequirement';
+import ProjectRequiredState from '../components/project/ProjectRequiredState';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
@@ -40,6 +42,7 @@ const formatPackageSelection = (row: SeedDemand, t: (key: string) => string): st
 export default function SeedDemandPage(): React.ReactElement {
   useCommandContextTag('seedDemand');
   const { t } = useTranslation('cultures');
+  const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const [rows, setRows] = useState<SeedDemand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,8 +73,30 @@ export default function SeedDemandPage(): React.ReactElement {
   };
 
   useEffect(() => {
+    if (shouldShowProjectRequiredState) {
+      setRows([]);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
     void loadRows();
-  }, []);
+  }, [shouldShowProjectRequiredState]);
+
+  if (shouldShowProjectRequiredState && missingProjectReason) {
+    return (
+      <PageContainer>
+        <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, width: '100%' }}>
+            <Typography variant="h4">
+              {t('seedDemand.title')}
+            </Typography>
+            <PageHelp pageKey="seedDemand" />
+          </Box>
+          <ProjectRequiredState reason={missingProjectReason} />
+        </Box>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>

@@ -8,6 +8,10 @@ const { listMock, saveSelectionMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   saveSelectionMock: vi.fn(),
 }));
+const projectRequirementState = vi.hoisted(() => ({
+  shouldShowProjectRequiredState: false,
+  missingProjectReason: null as null | 'no_projects' | 'no_active_project',
+}));
 
 vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
@@ -26,10 +30,52 @@ vi.mock('../i18n', () => ({
   }),
 }));
 
+vi.mock('../hooks/useProjectRequirement', () => ({
+  useProjectRequirement: () => projectRequirementState,
+}));
+
 describe('SeedDemandPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    projectRequirementState.shouldShowProjectRequiredState = false;
+    projectRequirementState.missingProjectReason = null;
     saveSelectionMock.mockResolvedValue({ data: { culture_id: 1, selected_supplier_id: 10 } });
+  });
+
+  it('shows project-required info instead of a technical error when no project exists', async () => {
+    projectRequirementState.shouldShowProjectRequiredState = true;
+    projectRequirementState.missingProjectReason = 'no_projects';
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('projectRequired.noProjectsTitle')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: 'projectRequired.createProjectAction' })).toBeInTheDocument();
+    expect(screen.queryByText('seedDemand.loadError')).not.toBeInTheDocument();
+    expect(listMock).not.toHaveBeenCalled();
+  });
+
+  it('still shows a load error for real API failures with active project context', async () => {
+    listMock.mockRejectedValueOnce(new Error('network failed'));
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('seedDemand.loadError')).toBeInTheDocument();
+    });
   });
 
   it('shows culture with variety in parentheses', async () => {
