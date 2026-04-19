@@ -56,6 +56,11 @@ interface FieldsBedsHierarchyProps {
 function FieldsBedsHierarchy({
   showTitle = true,
 }: FieldsBedsHierarchyProps): React.ReactElement {
+  const LOCATION_ROW_HEIGHT = 46;
+  const FIELD_ROW_HEIGHT = 42;
+  const BED_ROW_HEIGHT = 36;
+  const HEADER_ROW_HEIGHT = 40;
+
   const { t } = useTranslation("hierarchy");
   const navigate = useNavigate();
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -771,6 +776,17 @@ function FieldsBedsHierarchy({
           <DataGrid
             rows={rows}
             columns={columns}
+            columnHeaderHeight={HEADER_ROW_HEIGHT}
+            getRowHeight={(params) => {
+              if (params.model.type === "location") {
+                return LOCATION_ROW_HEIGHT;
+              }
+              if (params.model.type === "field") {
+                return FIELD_ROW_HEIGHT;
+              }
+              return BED_ROW_HEIGHT;
+            }}
+            getRowClassName={(params) => `ofp-hierarchy-row-${params.row.type}`}
             rowModesModel={rowModesModel}
             onRowModesModelChange={setRowModesModel}
             onRowEditStop={handleRowEditStop}
@@ -804,6 +820,45 @@ function FieldsBedsHierarchy({
             sx={{
               ...dataGridSx,
               width: "100%",
+              "& .MuiDataGrid-columnHeader": {
+                py: 0.25,
+              },
+              "& .MuiDataGrid-cell": {
+                py: 0,
+              },
+              "& .ofp-hierarchy-row-location .MuiDataGrid-cell": {
+                py: 0.5,
+              },
+              "& .ofp-hierarchy-row-field .MuiDataGrid-cell": {
+                py: 0.25,
+              },
+              "& .ofp-hierarchy-row-bed .MuiDataGrid-cell": {
+                py: 0,
+              },
+              "& .MuiDataGrid-row--editing .MuiDataGrid-cell": {
+                py: 0,
+              },
+              "& .MuiDataGrid-row--editing .MuiInputBase-root": {
+                minHeight: "30px",
+                height: "30px",
+                fontSize: "0.875rem",
+              },
+              "& .MuiDataGrid-row--editing .MuiInputBase-input": {
+                py: 0.5,
+              },
+              "& .MuiDataGrid-row--editing .MuiSelect-select": {
+                minHeight: "unset !important",
+                py: 0.5,
+              },
+              "& .MuiDataGrid-row--editing .MuiIconButton-root": {
+                width: 28,
+                height: 28,
+              },
+              "& .MuiDataGrid-row--editing .MuiDataGrid-cell[data-field='name'] .MuiInputBase-root":
+                {
+                  minHeight: "32px",
+                  height: "32px",
+                },
             }}
             rowSelectionModel={{
               type: "include",
