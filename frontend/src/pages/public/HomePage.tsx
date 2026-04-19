@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Container,
@@ -35,6 +36,26 @@ export default function HomePage(): React.ReactElement {
               <Typography variant="h2" component="h1" sx={{ fontSize: { xs: '2rem', md: '2.75rem' } }}>
                 {t('landing.title')}
               </Typography>
+              <Stack direction="row" spacing={1} justifyContent={{ xs: 'flex-start', sm: 'center' }}>
+                <Typography
+                  component="span"
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    px: 1.25,
+                    py: 0.5,
+                    borderRadius: 10,
+                    bgcolor: 'warning.light',
+                    color: 'warning.contrastText',
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    letterSpacing: 0.4,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {t('landing.betaBadge')}
+                </Typography>
+              </Stack>
               <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
                 {t('landing.subtitle')}
               </Typography>
@@ -42,12 +63,33 @@ export default function HomePage(): React.ReactElement {
             <Typography color="text.secondary" sx={{ maxWidth: 720 }}>
               {t('landing.description')}
             </Typography>
+            <Alert severity="info" variant="outlined" sx={{ width: '100%', maxWidth: 720, textAlign: 'left' }}>
+              <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                {t('betaNote.title')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('betaNote.description')}
+              </Typography>
+            </Alert>
             <Stack spacing={1.5} sx={{ width: { xs: '100%', sm: 'auto' }, minWidth: { sm: 260 } }}>
               <Button component={RouterLink} to="/app" variant="contained" size="large" sx={{ minWidth: 220 }}>
                 {t('landing.actions.openApp')}
               </Button>
               <Button component={RouterLink} to="/register" variant="outlined" size="large" sx={{ minWidth: 220 }}>
                 {t('landing.actions.register')}
+              </Button>
+              <Button
+                component={Link}
+                href={t('landing.actions.githubUrl')}
+                target="_blank"
+                rel="noopener noreferrer"
+                underline="none"
+                color="inherit"
+                variant="text"
+                size="large"
+                sx={{ minWidth: 220 }}
+              >
+                {t('landing.actions.github')}
               </Button>
             </Stack>
           </Stack>
@@ -74,6 +116,31 @@ export default function HomePage(): React.ReactElement {
             </Box>
           </Stack>
 
+          <Stack spacing={1.5}>
+            <Typography variant="h5">{t('feedback.title')}</Typography>
+            <Typography color="text.secondary">{t('feedback.description')}</Typography>
+            <Typography color="text.secondary">{t('feedback.contactHint')}</Typography>
+            <Link href={`mailto:${t('footer.contactEmail')}`} underline="hover" sx={{ width: 'fit-content' }}>
+              {t('feedback.contactCta', { email: t('footer.contactEmail') })}
+            </Link>
+          </Stack>
+
+          <Stack spacing={1.5}>
+            <Typography variant="h5">{t('openSource.title')}</Typography>
+            <Typography color="text.secondary">{t('openSource.description')}</Typography>
+            <Button
+              component={Link}
+              href={t('openSource.githubUrl')}
+              target="_blank"
+              rel="noopener noreferrer"
+              underline="none"
+              variant="outlined"
+              sx={{ width: 'fit-content' }}
+            >
+              {t('openSource.cta')}
+            </Button>
+          </Stack>
+
           <Typography color="text.secondary">{t('statusNote')}</Typography>
         </Stack>
       </Container>
@@ -92,6 +159,9 @@ export default function HomePage(): React.ReactElement {
               </Link>
               <Link component={RouterLink} to="/datenschutz" underline="hover">
                 {t('footer.privacy')}
+              </Link>
+              <Link href={t('footer.githubUrl')} target="_blank" rel="noopener noreferrer" underline="hover">
+                {t('footer.github')}
               </Link>
             </Stack>
             <Link href={`mailto:${t('footer.contactEmail')}`} underline="hover">

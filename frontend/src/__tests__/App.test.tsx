@@ -61,8 +61,13 @@ describe('App', () => {
 
     expect(await screen.findByText('OpenFarmPlanner')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'OpenFarmPlanner öffnen' })).toBeInTheDocument();
+    expect(screen.getByText('Beta-Version mit laufenden Verbesserungen')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'GitHub ansehen' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Feedback und Ideen willkommen' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Zum GitHub-Repository' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Impressum' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Datenschutzerklärung' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'GitHub' })).toHaveLength(1);
   });
 
   it('renders imprint route', async () => {

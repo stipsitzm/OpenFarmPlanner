@@ -2,12 +2,18 @@
   "landing": {
     "title": "OpenFarmPlanner",
     "betaBadge": "Beta",
-    "subtitle": "Einfache Anbauplanung für Gemüsebau, CSA und kleine landwirtschaftliche Betriebe.",
-    "description": "OpenFarmPlanner hilft dabei, Kulturen, Anbauflächen und Anbauzeiträume übersichtlich zu verwalten. So bleiben Anbaupläne, Flächen und wichtige Informationen an einem Ort organisiert.",
+    "subtitle": "Anbauplanung klar strukturieren – für Gemüsebau, CSA und kleine landwirtschaftliche Betriebe.",
+    "description": "OpenFarmPlanner unterstützt Sie dabei, Kulturen, Flächen und Anbauzeiträume übersichtlich zu planen. Die Anwendung wird aktiv weiterentwickelt, damit Planung und Zusammenarbeit im Alltag immer besser funktionieren.",
     "actions": {
       "openApp": "OpenFarmPlanner öffnen",
-      "register": "Registrieren"
+      "register": "Registrieren",
+      "github": "GitHub ansehen",
+      "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
     }
+  },
+  "betaNote": {
+    "title": "Beta-Version mit laufenden Verbesserungen",
+    "description": "OpenFarmPlanner befindet sich in einer offenen Beta-Phase. Funktionen werden kontinuierlich verbessert und mit Ihrem Feedback gezielt weiterentwickelt."
   },
   "featureOverview": {
     "title": "Funktionsübersicht",
@@ -28,9 +34,23 @@
     }
   },
   "statusNote": "OpenFarmPlanner befindet sich aktuell in der Beta-Phase und wird laufend weiterentwickelt.",
+  "feedback": {
+    "title": "Feedback und Ideen willkommen",
+    "description": "Rückmeldungen aus der Praxis helfen uns besonders: Hinweise zu Problemen, Verbesserungsvorschläge und neue Ideen sind ausdrücklich willkommen.",
+    "contactHint": "Wenn Ihnen etwas auffällt oder Sie einen Wunsch für die Weiterentwicklung haben, schreiben Sie uns gerne.",
+    "contactCta": "Feedback senden an {{email}}"
+  },
+  "openSource": {
+    "title": "Open Source und Mitgestaltung",
+    "description": "Der Quellcode von OpenFarmPlanner ist öffentlich einsehbar. Beiträge, Issues und Pull Requests zur Weiterentwicklung sind willkommen.",
+    "cta": "Zum GitHub-Repository",
+    "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
+  },
   "footer": {
     "imprint": "Impressum",
     "privacy": "Datenschutzerklärung",
+    "github": "GitHub",
+    "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner",
     "contactLabel": "Kontakt: {{email}}",
     "contactEmail": "info@openfarmplanner.org"
   },

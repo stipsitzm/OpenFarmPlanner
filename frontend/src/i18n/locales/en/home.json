@@ -2,12 +2,18 @@
   "landing": {
     "title": "OpenFarmPlanner",
     "betaBadge": "Beta",
-    "subtitle": "Simple crop planning for vegetable production, CSA, and small farms.",
-    "description": "OpenFarmPlanner helps manage crops, growing areas, and cultivation periods in a clear way. Keep plans, fields, and key information organized in one place.",
+    "subtitle": "Keep crop planning structured for vegetable production, CSA, and small farms.",
+    "description": "OpenFarmPlanner helps you plan crops, areas, and cultivation periods in one clear workspace. The app is actively developed to continuously improve planning and collaboration.",
     "actions": {
       "openApp": "Open OpenFarmPlanner",
-      "register": "Register"
+      "register": "Register",
+      "github": "View GitHub",
+      "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
     }
+  },
+  "betaNote": {
+    "title": "Beta version with ongoing improvements",
+    "description": "OpenFarmPlanner is currently in an open beta phase. Features are continuously refined, and your feedback helps shape the roadmap."
   },
   "featureOverview": {
     "title": "Feature overview",
@@ -28,9 +34,23 @@
     }
   },
   "statusNote": "OpenFarmPlanner is currently in beta and is being continuously improved.",
+  "feedback": {
+    "title": "Feedback and ideas are welcome",
+    "description": "Practical feedback is especially valuable: issue reports, suggestions, and ideas for improvement are always welcome.",
+    "contactHint": "If you notice something or have an idea for further development, feel free to contact us.",
+    "contactCta": "Send feedback to {{email}}"
+  },
+  "openSource": {
+    "title": "Open source and collaboration",
+    "description": "The OpenFarmPlanner source code is publicly available. Contributions, issues, and pull requests are welcome.",
+    "cta": "Go to the GitHub repository",
+    "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
+  },
   "footer": {
     "imprint": "Imprint",
     "privacy": "Privacy policy",
+    "github": "GitHub",
+    "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner",
     "contactLabel": "Contact: {{email}}",
     "contactEmail": "info@openfarmplanner.org"
   },
