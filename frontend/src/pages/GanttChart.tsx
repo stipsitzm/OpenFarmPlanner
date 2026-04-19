@@ -279,7 +279,9 @@ function GanttChartPage(): React.ReactElement {
     return language;
   }, [i18n.language, i18n.resolvedLanguage]);
   const ganttLocaleText = useMemo(() => ({
-    title: t('ganttChart:chartLocaleText.title'),
+    title: calendarMode === 'seedlings'
+      ? t('ganttChart:chartLocaleText.titleSeedlings')
+      : t('ganttChart:chartLocaleText.titleOccupancy'),
     resources: calendarMode === 'seedlings'
       ? t('ganttChart:chartLocaleText.resourcesSeedlings')
       : t('ganttChart:chartLocaleText.resources'),
@@ -432,6 +434,8 @@ function GanttChartPage(): React.ReactElement {
               ariaLabel={t('ganttChart:modeAriaLabel')}
               viewLabel={t('ganttChart:modeViewOption')}
               editLabel={t('ganttChart:modeEditOption')}
+              viewTooltip={t('ganttChart:modeViewTooltip')}
+              editTooltip={t('ganttChart:modeEditTooltip')}
               value={editMode ? 'edit' : 'view'}
               onChange={(selectedMode) => setEditMode(selectedMode === 'edit')}
               fullWidth={false}

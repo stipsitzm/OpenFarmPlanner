@@ -197,6 +197,12 @@ describe('GanttChartPage', () => {
     expect(screen.queryByText(/Anbauplan/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Ansicht' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
+    const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
+    expect(latestProps?.localeText).toMatchObject({
+      title: 'Anzuchtplanung',
+      resources: 'Kulturen',
+      today: 'Heute',
+    });
   });
 
   it('toggles occupancy edit mode with Alt+E', async () => {
@@ -276,5 +282,39 @@ describe('GanttChartPage', () => {
     );
 
     expect(await screen.findByText('Fehler beim Laden der Daten')).toBeInTheDocument();
+  });
+
+  it('shows helpful mode tooltips on hover in occupancy mode', async () => {
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-01',
+            harvest_date: '2026-05-01',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    const viewButton = await screen.findByRole('button', { name: 'Ansicht' });
+    fireEvent.mouseOver(viewButton);
+    expect(await screen.findByText('Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.')).toBeInTheDocument();
+
+    const editButton = screen.getByRole('button', { name: 'Bearbeiten' });
+    fireEvent.mouseOver(editButton);
+    expect(await screen.findByText('Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.')).toBeInTheDocument();
   });
 });
