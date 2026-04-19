@@ -42,6 +42,13 @@ vi.mock('../auth/useAuth', () => ({
   }),
 }));
 
+vi.mock('../hooks/useProjectRequirement', () => ({
+  useProjectRequirement: () => ({
+    shouldShowProjectRequiredState: false,
+    missingProjectReason: null,
+  }),
+}));
+
 function renderCultures(initialPath = '/cultures'): void {
   render(
     <MemoryRouter initialEntries={[initialPath]}>
