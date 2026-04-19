@@ -69,11 +69,13 @@ import { MobileCardList } from "../components/mobile/MobileCardList";
 import { NotesDrawer } from "../components/data-grid/NotesDrawer";
 import PageHelp from "../components/help/PageHelp";
 import PageHeader from "../components/layout/PageHeader";
+import ProjectRequiredState from "../components/project/ProjectRequiredState";
 import {
   useCommandContextTag,
   useRegisterCommands,
 } from "../commands/useCommandContext";
 import type { CommandSpec } from "../commands/types";
+import { useProjectRequirement } from "../hooks/useProjectRequirement";
 
 /**
  * Row data type for Data Grid
@@ -221,6 +223,7 @@ export const buildMobileCreateForm = (
 function PlantingPlans(): React.ReactElement {
   const { t } = useTranslation(["plantingPlans", "common"]);
   const { i18n } = useTranslation();
+  const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -442,6 +445,11 @@ function PlantingPlans(): React.ReactElement {
    * Fetch cultures and beds for dropdowns
    */
   useEffect(() => {
+    if (shouldShowProjectRequiredState) {
+      setCultures([]);
+      setBeds([]);
+      return;
+    }
     const fetchData = async (): Promise<void> => {
       try {
         const [culturesResponse, bedsResponse] = await Promise.all([
@@ -460,7 +468,7 @@ function PlantingPlans(): React.ReactElement {
       }
     };
     fetchData();
-  }, []);
+  }, [shouldShowProjectRequiredState]);
 
   /**
    * Define columns for the Data Grid with inline editing
@@ -506,6 +514,15 @@ function PlantingPlans(): React.ReactElement {
   );
 
   useRegisterCommands("plans-page", commands);
+
+  if (shouldShowProjectRequiredState && missingProjectReason) {
+    return (
+      <PageContainer>
+        <PageHeader title={t("plantingPlans:title")} actions={<PageHelp pageKey="plans" />} />
+        <ProjectRequiredState reason={missingProjectReason} />
+      </PageContainer>
+    );
+  }
 
   const columns: GridColDef[] = useMemo(
     () => [

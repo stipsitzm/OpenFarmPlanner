@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommandProvider } from '../commands/CommandProvider';
 import GanttChartPage from '../pages/GanttChart';
@@ -14,6 +15,10 @@ const mocks = vi.hoisted(() => ({
   planUpdate: vi.fn(),
   ganttProps: vi.fn(),
 }));
+const projectRequirementState = vi.hoisted(() => ({
+  shouldShowProjectRequiredState: false,
+  missingProjectReason: null as null | 'no_projects' | 'no_active_project',
+}));
 
 vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
@@ -27,6 +32,10 @@ vi.mock('../api/api', async () => {
     yieldCalendarAPI: { list: mocks.yieldList },
   };
 });
+
+vi.mock('../hooks/useProjectRequirement', () => ({
+  useProjectRequirement: () => projectRequirementState,
+}));
 
 vi.mock('react-modern-gantt', () => ({
   __esModule: true,
@@ -66,6 +75,8 @@ vi.mock('react-modern-gantt', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  projectRequirementState.shouldShowProjectRequiredState = false;
+  projectRequirementState.missingProjectReason = null;
 
   mocks.locationList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hof' }] } });
   mocks.fieldList.mockResolvedValue({ data: { results: [{ id: 2, name: 'Feld', location: 1 }] } });
@@ -75,6 +86,24 @@ beforeEach(() => {
 });
 
 describe('GanttChartPage', () => {
+  it('shows project-required info instead of a red load error when no project is active', async () => {
+    projectRequirementState.shouldShowProjectRequiredState = true;
+    projectRequirementState.missingProjectReason = 'no_active_project';
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Es ist aktuell kein Projekt ausgewählt.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Projekt auswählen' })).toBeInTheDocument();
+    expect(screen.queryByText('Fehler beim Laden der Daten')).not.toBeInTheDocument();
+    expect(mocks.locationList).not.toHaveBeenCalled();
+  });
+
   it('keeps the occupancy view active by default', async () => {
     mocks.planList.mockResolvedValue({
       data: {
@@ -93,9 +122,11 @@ describe('GanttChartPage', () => {
     mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
 
     render(
-      <CommandProvider>
-        <GanttChartPage />
-      </CommandProvider>,
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
     );
 
     await waitFor(() => expect(screen.getByText('Feldbelegung')).toBeInTheDocument());
@@ -145,9 +176,11 @@ describe('GanttChartPage', () => {
     });
 
     render(
-      <CommandProvider>
-        <GanttChartPage />
-      </CommandProvider>,
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
     );
 
     await waitFor(() => expect(screen.getByText('Jungpflanzen')).toBeInTheDocument());
@@ -184,9 +217,11 @@ describe('GanttChartPage', () => {
     mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
 
     render(
-      <CommandProvider>
-        <GanttChartPage />
-      </CommandProvider>,
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
     );
 
     const editButton = await screen.findByRole('button', { name: 'Bearbeiten' });
@@ -216,14 +251,30 @@ describe('GanttChartPage', () => {
     });
 
     render(
-      <CommandProvider>
-        <GanttChartPage />
-      </CommandProvider>,
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
     );
 
     await waitFor(() => expect(screen.getByText('Ertragsverteilung')).toBeInTheDocument());
     expect(screen.getByText('W13')).toBeInTheDocument();
     expect(screen.getByText('W14')).toBeInTheDocument();
     expect(screen.getByText('W15')).toBeInTheDocument();
+  });
+
+  it('still shows a red load error for real API failures', async () => {
+    mocks.locationList.mockRejectedValueOnce(new Error('network failed'));
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Fehler beim Laden der Daten')).toBeInTheDocument();
   });
 });

@@ -12,6 +12,8 @@ import PageHeader from '../components/layout/PageHeader';
 import ModeToggle from '../components/ModeToggle';
 import { locationAPI, type Location } from '../api/api';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
+import { useProjectRequirement } from '../hooks/useProjectRequirement';
+import ProjectRequiredState from '../components/project/ProjectRequiredState';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 
@@ -29,6 +31,7 @@ export default function FieldsBedsPage(): React.ReactElement {
   const [locations, setLocations] = useState<Location[]>([]);
   const [globalActionError, setGlobalActionError] = useState<string>('');
   const [hierarchyRenderKey, setHierarchyRenderKey] = useState(0);
+  const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
 
   useCommandContextTag('areas');
 
@@ -50,19 +53,26 @@ export default function FieldsBedsPage(): React.ReactElement {
   useRegisterCommands('areas-view-switch', commands);
 
   const loadLocations = useCallback(async (): Promise<void> => {
+    if (shouldShowProjectRequiredState) {
+      setLocations([]);
+      return;
+    }
     try {
       const response = await locationAPI.list();
       setLocations(response.data.results);
     } catch (error) {
       console.error('Error loading locations for global action:', error);
     }
-  }, []);
+  }, [shouldShowProjectRequiredState]);
 
   useEffect(() => {
+    if (shouldShowProjectRequiredState) {
+      return;
+    }
     if (viewMode === 'table') {
       void loadLocations();
     }
-  }, [loadLocations, viewMode]);
+  }, [loadLocations, shouldShowProjectRequiredState, viewMode]);
 
   const reloadHierarchyAndLocations = useCallback(async (): Promise<void> => {
     setHierarchyRenderKey((previous) => previous + 1);
@@ -196,7 +206,7 @@ export default function FieldsBedsPage(): React.ReactElement {
               />
             ) : null}
           </Box>
-          {viewMode === 'table' ? (
+          {viewMode === 'table' && !shouldShowProjectRequiredState ? (
             <Button variant="contained" onClick={handleGlobalAddField}>
               {locations.length === 0
                 ? t('hierarchy:actions.createLocation')
@@ -209,19 +219,23 @@ export default function FieldsBedsPage(): React.ReactElement {
             {globalActionError}
           </Alert>
         ) : null}
+        {shouldShowProjectRequiredState && missingProjectReason ? (
+          <ProjectRequiredState reason={missingProjectReason} />
+        ) : null}
       </PageContainer>
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
-        {viewMode === 'graphical' ? (
+        {!shouldShowProjectRequiredState && viewMode === 'graphical' ? (
           <GraphicalFields
             showTitle={false}
             interactionMode={interactionMode}
             onInteractionModeChange={setInteractionMode}
             showModeToggle={false}
           />
-        ) : (
+        ) : null}
+        {!shouldShowProjectRequiredState && viewMode !== 'graphical' ? (
           <FieldsBedsHierarchy key={hierarchyRenderKey} showTitle={false} />
-        )}
+        ) : null}
       </PageContainer>
     </>
   );

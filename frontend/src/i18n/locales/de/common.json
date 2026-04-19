@@ -79,5 +79,13 @@
     "required": "Dieses Feld ist erforderlich.",
     "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
     "minLength": "Mindestens {{count}} Zeichen erforderlich."
+  },
+  "projectRequired": {
+    "noProjectsTitle": "Du hast noch kein Projekt.",
+    "noProjectsDescription": "Erstelle zuerst ein Projekt, um Standorte, Anbauflächen, Anbaupläne und Kalender zu verwalten.",
+    "noActiveProjectTitle": "Es ist aktuell kein Projekt ausgewählt.",
+    "noActiveProjectDescription": "Wähle ein Projekt aus, um Standorte, Anbauflächen, Anbaupläne und Kalender zu verwalten.",
+    "createProjectAction": "Projekt erstellen",
+    "selectProjectAction": "Projekt auswählen"
   }
 }
