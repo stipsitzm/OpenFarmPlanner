@@ -2,51 +2,90 @@
   "landing": {
     "title": "OpenFarmPlanner",
     "betaBadge": "Beta",
-    "subtitle": "Anbauplanung klar strukturieren – für Gemüsebau, CSA und kleine landwirtschaftliche Betriebe.",
-    "description": "OpenFarmPlanner unterstützt Sie dabei, Kulturen, Flächen und Anbauzeiträume übersichtlich zu planen. Die Anwendung wird aktiv weiterentwickelt, damit Planung und Zusammenarbeit im Alltag immer besser funktionieren.",
+    "statusLine": "Aktive Beta • laufende Weiterentwicklung • Feedback willkommen",
+    "headline": "Digitale Anbauplanung für den Gemüsebau – klar, praxisnah und gemeinsam weitergedacht.",
+    "subtitle": "Für Gemüsebaubetriebe, CSA und kleine landwirtschaftliche Teams.",
+    "description": "Planen Sie Kulturen, Flächen und Zeiträume an einem Ort. OpenFarmPlanner schafft Übersicht im Anbaualltag und wird kontinuierlich gemeinsam mit Nutzerinnen und Nutzern verbessert.",
     "actions": {
-      "openApp": "OpenFarmPlanner öffnen",
+      "openApp": "Jetzt starten",
       "register": "Registrieren",
       "github": "GitHub ansehen",
       "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
     }
   },
-  "betaNote": {
-    "title": "Beta-Version mit laufenden Verbesserungen",
-    "description": "OpenFarmPlanner befindet sich in einer offenen Beta-Phase. Funktionen werden kontinuierlich verbessert und mit Ihrem Feedback gezielt weiterentwickelt."
+  "heroHighlights": {
+    "title": "Was Sie direkt planen können",
+    "items": {
+      "cultureManagement": "Kulturen strukturiert verwalten",
+      "fieldOrganization": "Flächen und Beete eindeutig organisieren",
+      "planningPeriods": "Anbauzeiträume verlässlich koordinieren",
+      "projectCollaboration": "Im Projektteam abgestimmt zusammenarbeiten"
+    }
   },
   "featureOverview": {
-    "title": "Funktionsübersicht",
-    "items": {
-      "cultureManagement": "Kulturen zentral verwalten",
-      "fieldOrganization": "Beete und Anbauflächen organisieren",
-      "planningPeriods": "Anbauzeiträume planen",
-      "structuredDocumentation": "Anbauinformationen strukturiert dokumentieren",
-      "projectCollaboration": "Projektbezogen zusammenarbeiten"
+    "title": "Planung ohne Tabellenchaos",
+    "subtitle": "Die wichtigsten Funktionen sind auf schnelle Orientierung und tägliche Arbeit ausgelegt.",
+    "cards": {
+      "cultureManagement": {
+        "title": "Kulturen im Blick",
+        "description": "Alle relevanten Kulturdaten zentral erfassen und laufend pflegen."
+      },
+      "fieldPlanning": {
+        "title": "Flächen klar zugeordnet",
+        "description": "Beete und Anbauflächen nachvollziehbar planen und dokumentieren."
+      },
+      "timePlanning": {
+        "title": "Zeiträume strukturiert",
+        "description": "Aussaat, Pflanzung und weitere Schritte sauber über Zeiträume abbilden."
+      },
+      "projectCollaboration": {
+        "title": "Gemeinsam weiterarbeiten",
+        "description": "Projekte transparent organisieren und Informationen im Team teilen."
+      }
     }
   },
   "audiences": {
     "title": "Geeignet für",
     "items": {
-      "smallVegetableFarms": "kleine Gemüsebaubetriebe",
+      "smallVegetableFarms": "Kleine Gemüsebaubetriebe",
       "csaOperations": "CSA / solidarische Landwirtschaft",
-      "digitalPlanningProjects": "Projekte, die ihre Anbauplanung digital organisieren möchten"
+      "digitalPlanningProjects": "Teams mit digitaler Anbauplanung"
     }
   },
-  "statusNote": "OpenFarmPlanner befindet sich aktuell in der Beta-Phase und wird laufend weiterentwickelt.",
+  "statusNote": "OpenFarmPlanner befindet sich in einer aktiven Beta-Phase und wird laufend verbessert.",
   "feedback": {
-    "title": "Feedback und Ideen willkommen",
-    "description": "Rückmeldungen aus der Praxis helfen uns besonders: Hinweise zu Problemen, Verbesserungsvorschläge und neue Ideen sind ausdrücklich willkommen.",
-    "contactHint": "Wenn Ihnen etwas auffällt oder Sie einen Wunsch für die Weiterentwicklung haben, schreiben Sie uns gerne.",
-    "contactCta": "Feedback senden an {{email}}"
+    "title": "Feedback, Ideen und Fehlermeldungen",
+    "description": "Ihre Rückmeldungen helfen direkt bei der Priorisierung der nächsten Verbesserungen.",
+    "items": {
+      "feedback": "Rückmeldungen aus der Praxis",
+      "ideas": "Ideen für neue Funktionen",
+      "bugReports": "Hinweise auf Fehler oder Unklarheiten"
+    },
+    "cta": "Feedback senden an {{email}}"
   },
   "openSource": {
-    "title": "Open Source und Mitgestaltung",
-    "description": "Der Quellcode von OpenFarmPlanner ist öffentlich einsehbar. Beiträge, Issues und Pull Requests zur Weiterentwicklung sind willkommen.",
+    "title": "Open Source als Vertrauensbasis",
+    "description": "OpenFarmPlanner wird offen entwickelt. Der Quellcode ist öffentlich, Fortschritte sind nachvollziehbar und Beiträge sind willkommen.",
+    "items": {
+      "publicCode": "Öffentlich einsehbarer Quellcode",
+      "issues": "Issues für Fragen, Ideen und Bugs",
+      "contributions": "Beiträge per Pull Request ausdrücklich erwünscht"
+    },
     "cta": "Zum GitHub-Repository",
     "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
   },
+  "finalCta": {
+    "title": "OpenFarmPlanner ausprobieren",
+    "description": "Starten Sie direkt mit der Planung oder registrieren Sie sich für die gemeinsame Weiterentwicklung.",
+    "openApp": "OpenFarmPlanner öffnen",
+    "register": "Konto erstellen"
+  },
   "footer": {
+    "brandTitle": "OpenFarmPlanner",
+    "brandText": "Ruhige, transparente und praxisorientierte Anbauplanung in aktiver Entwicklung.",
+    "linksTitle": "Rechtliches und Projekt",
+    "contactTitle": "Kontakt",
+    "contactText": "Für Fragen, Feedback und Hinweise erreichen Sie uns per E-Mail.",
     "imprint": "Impressum",
     "privacy": "Datenschutzerklärung",
     "github": "GitHub",
