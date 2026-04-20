@@ -59,14 +59,13 @@ describe('App', () => {
   it('renders public home page on root path', async () => {
     render(<CommandProvider><App /></CommandProvider>);
 
-    expect(await screen.findByText('OpenFarmPlanner')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Jetzt starten' })).toBeInTheDocument();
-    expect(screen.getByText('Aktive Beta • laufende Weiterentwicklung • Feedback willkommen')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Digitale Anbauplanung für den Gemüsebau – klar, praxisnah und gemeinsam weitergedacht.' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Anbauplanung für Gemüsebau ohne Tabellenchaos.' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'OpenFarmPlanner öffnen' })).toHaveLength(2);
+    expect(screen.getByText('Aktive Beta • laufende Verbesserungen • Feedback willkommen')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'GitHub ansehen' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Feedback, Ideen und Fehlermeldungen' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Feedback aus der Praxis' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Zum GitHub-Repository' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Planung ohne Tabellenchaos' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Was OpenFarmPlanner konkret unterstützt' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Impressum' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Datenschutzerklärung' })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'GitHub' })).toHaveLength(1);
