@@ -105,28 +105,39 @@ export default function HomePage(): React.ReactElement {
               <Typography color="text.secondary" sx={{ lineHeight: 1.5 }}>
                 {t('statusNote')}
               </Typography>
+              <Typography color="text.secondary" sx={{ fontSize: { xs: '0.84rem', md: '0.9rem' }, lineHeight: 1.45 }}>
+                {t('statusOpenSource.text')}
+              </Typography>
               <Link
                 href={t('statusOpenSource.githubUrl')}
                 target="_blank"
                 rel="noopener noreferrer"
                 underline="hover"
-                color="text.secondary"
+                color="primary"
                 sx={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: { xs: 'flex-start', sm: 'center' },
-                  gap: 0.65,
-                  fontSize: { xs: '0.84rem', md: '0.9rem' },
-                  lineHeight: 1.45,
-                  textDecorationColor: 'rgba(0, 0, 0, 0.26)',
+                  gap: 0.55,
+                  px: 0.4,
+                  py: 0.2,
+                  mt: 0.1,
+                  borderRadius: 1,
+                  cursor: 'pointer',
+                  fontSize: { xs: '0.86rem', md: '0.92rem' },
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  textDecorationColor: 'rgba(25, 118, 210, 0.5)',
+                  transition: 'color 180ms ease, text-decoration-color 180ms ease, background-color 180ms ease',
                   '&:hover': {
-                    color: 'text.primary',
+                    color: 'primary.dark',
                     textDecorationColor: 'currentColor',
+                    bgcolor: 'action.hover',
                   },
                 }}
               >
                 <GitHubIcon sx={{ fontSize: { xs: '0.95rem', md: '1rem' }, flexShrink: 0 }} />
-                {t('statusOpenSource.text')}
+                {t('statusOpenSource.linkLabel')}
               </Link>
             </Stack>
           </Stack>

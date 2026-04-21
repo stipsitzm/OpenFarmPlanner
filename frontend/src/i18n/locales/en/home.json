@@ -11,7 +11,8 @@
   },
   "statusNote": "Currently in beta - continuously improved.",
   "statusOpenSource": {
-    "text": "Open source on GitHub · Contributions welcome",
+    "text": "As an open-source project, we welcome feedback, ideas, and contributions.",
+    "linkLabel": "Project on GitHub",
     "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
   },
   "footer": {

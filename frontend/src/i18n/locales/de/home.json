@@ -11,7 +11,8 @@
   },
   "statusNote": "OpenFarmPlanner befindet sich aktuell in der Beta-Phase und wird laufend weiterentwickelt.",
   "statusOpenSource": {
-    "text": "Als Open-Source-Projekt freuen wir uns über Feedback, Ideen und Mitentwicklung auf GitHub.",
+    "text": "Als Open-Source-Projekt freuen wir uns über Feedback, Ideen und Mitentwicklung.",
+    "linkLabel": "Projekt auf GitHub",
     "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
   },
   "footer": {
