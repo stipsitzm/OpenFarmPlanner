@@ -3,7 +3,7 @@
     "title": "OpenFarmPlanner",
     "betaBadge": "Beta",
     "subtitle": "Einfache Anbauplanung für Gemüsebau, CSA und kleine landwirtschaftliche Betriebe.",
-    "description": "OpenFarmPlanner hilft dabei, Kulturen, Anbauflächen und Anbauzeiträume übersichtlich zu verwalten. So bleiben Anbaupläne, Flächen und wichtige Informationen an einem Ort organisiert.",
+    "description": "OpenFarmPlanner hilft dabei, Kulturen, Anbauflächen und Anbauzeiträume übersichtlich zu verwalten.",
     "actions": {
       "openApp": "OpenFarmPlanner öffnen",
       "register": "Registrieren"
