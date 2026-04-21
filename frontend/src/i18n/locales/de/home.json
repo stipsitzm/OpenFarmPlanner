@@ -2,10 +2,9 @@
   "landing": {
     "title": "OpenFarmPlanner",
     "betaBadge": "Beta",
-    "statusLine": "Aktive Beta • laufende Verbesserungen • Feedback willkommen",
-    "headline": "Anbauplanung für Gemüsebau ohne Tabellenchaos.",
-    "subtitle": "Kulturen, Flächen und Zeiträume übersichtlich planen – für Betriebe, CSA und kleine Teams.",
-    "description": "OpenFarmPlanner unterstützt Sie bei der täglichen Planung und Dokumentation. Die Anwendung wird aktiv weiterentwickelt, transparent gebaut und konsequent mit Nutzerfeedback verbessert.",
+    "statusLine": "Aktive Beta • laufende Weiterentwicklung • Feedback willkommen",
+    "headline": "Digitale Anbauplanung für Gemüsebau, CSA und kleine Betriebe.",
+    "subtitle": "Kulturen, Flächen und Zeiträume an einem Ort planen – klar und teamfähig.",
     "actions": {
       "openApp": "OpenFarmPlanner öffnen",
       "register": "Registrieren",
@@ -13,106 +12,27 @@
       "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
     }
   },
-  "audiences": {
-    "items": {
-      "smallVegetableFarms": "Kleine Gemüsebaubetriebe",
-      "csaOperations": "CSA / solidarische Landwirtschaft",
-      "digitalPlanningProjects": "Teams mit digitaler Anbauplanung"
-    }
-  },
-  "preview": {
-    "title": "Produktvorschau",
-    "subtitle": "So wirkt die Planung im Arbeitsalltag",
-    "tabs": {
-      "cultures": "Kulturen",
-      "areas": "Flächen",
-      "timeline": "Zeiträume"
-    },
-    "rows": {
-      "row1": "Salat • Frühjahrssatz",
-      "row2": "Karotten • Beet Nord 2",
-      "row3": "Mangold • Staffel 3",
-      "row4": "Spinat • Herbstfenster"
-    },
-    "status": {
-      "row1": "In Planung",
-      "row2": "Bestätigt",
-      "row3": "In Arbeit",
-      "row4": "Vorgemerkt"
-    },
-    "note": "Vorschau-Platzhalter: Hier kann später ein echter Screenshot aus der Anwendung eingebunden werden."
-  },
-  "benefits": {
-    "items": {
-      "clarity": {
-        "title": "Mehr Übersicht",
-        "description": "Wichtige Planungsinformationen sind zentral und schnell erfassbar."
-      },
-      "collaboration": {
-        "title": "Bessere Abstimmung",
-        "description": "Teams arbeiten mit derselben Datenbasis und weniger Missverständnissen."
-      },
-      "continuousImprovement": {
-        "title": "Aktive Weiterentwicklung",
-        "description": "Rückmeldungen aus der Praxis fließen direkt in die nächsten Verbesserungen ein."
-      }
-    }
-  },
   "features": {
-    "title": "Was OpenFarmPlanner konkret unterstützt",
-    "subtitle": "Die Funktionen sind auf praktische Planungsschritte ausgelegt – klar strukturiert und schnell verständlich.",
+    "title": "Wofür OpenFarmPlanner gedacht ist",
     "items": {
-      "cultures": {
-        "title": "Kulturen verwalten",
-        "description": "Kulturdaten zentral pflegen und einheitlich im Projekt nutzbar machen."
-      },
-      "areas": {
-        "title": "Flächen organisieren",
-        "description": "Beete und Anbauflächen nachvollziehbar strukturieren und zuordnen."
-      },
-      "timelines": {
-        "title": "Zeiträume planen",
-        "description": "Aussaat, Pflanzung und weitere Schritte entlang realistischer Zeitfenster koordinieren."
-      },
-      "teams": {
-        "title": "Im Team arbeiten",
-        "description": "Planungsstände transparent teilen und gemeinsam weiterentwickeln."
-      }
+      "cultures": "Kulturen verwalten",
+      "areas": "Flächen organisieren",
+      "timelines": "Zeiträume planen",
+      "teams": "Im Team arbeiten"
     }
-  },
-  "feedback": {
-    "title": "Feedback aus der Praxis",
-    "description": "Hinweise aus dem Alltag helfen besonders: Ideen, Fehlermeldungen und Verbesserungsvorschläge sind ausdrücklich willkommen.",
-    "items": {
-      "item1": "Rückmeldungen zur Bedienung und Planung",
-      "item2": "Konkrete Ideen für neue Funktionen",
-      "item3": "Fehlermeldungen mit kurzem Kontext"
-    },
-    "cta": "Feedback senden an {{email}}"
   },
   "openSource": {
-    "title": "Open Source schafft Vertrauen",
-    "description": "Der Quellcode ist öffentlich einsehbar. Entwicklungsschritte sind transparent und Beiträge via Issues oder Pull Requests sind willkommen.",
-    "items": {
-      "item1": "Öffentliches Repository auf GitHub",
-      "item2": "Offene Diskussion über Issues",
-      "item3": "Mitentwicklung durch Beiträge möglich"
-    },
-    "cta": "Zum GitHub-Repository",
+    "title": "Open Source",
+    "description": "Der Quellcode ist öffentlich. Beiträge und Feedback sind willkommen.",
+    "cta": "Repository auf GitHub",
     "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
   },
   "finalCta": {
-    "title": "Jetzt mit der Planung starten",
-    "description": "Testen Sie OpenFarmPlanner direkt im Browser oder erstellen Sie ein Konto für die gemeinsame Weiterentwicklung.",
+    "title": "Jetzt ausprobieren",
     "openApp": "OpenFarmPlanner öffnen",
     "register": "Konto erstellen"
   },
   "footer": {
-    "brandTitle": "OpenFarmPlanner",
-    "brandText": "Sachliche, moderne und transparente Anbauplanung in aktiver Beta-Phase.",
-    "linksTitle": "Projekt & Rechtliches",
-    "contactTitle": "Kontakt",
-    "contactText": "Fragen, Feedback und Fehlermeldungen nehmen wir gerne per E-Mail entgegen.",
     "imprint": "Impressum",
     "privacy": "Datenschutzerklärung",
     "github": "GitHub",

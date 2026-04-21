@@ -2,10 +2,9 @@
   "landing": {
     "title": "OpenFarmPlanner",
     "betaBadge": "Beta",
-    "statusLine": "Active beta • continuous improvements • feedback welcome",
-    "headline": "Crop planning for vegetable farms without spreadsheet chaos.",
-    "subtitle": "Plan crops, areas, and timelines with clarity — for farms, CSA, and small teams.",
-    "description": "OpenFarmPlanner supports daily planning and documentation. The app is actively developed, transparently maintained, and continuously improved with user feedback.",
+    "statusLine": "Active beta • continuously improved • feedback welcome",
+    "headline": "Digital crop planning for vegetable farms, CSA, and small operations.",
+    "subtitle": "Plan crops, areas, and timelines in one place — clear and team-ready.",
     "actions": {
       "openApp": "Open OpenFarmPlanner",
       "register": "Register",
@@ -13,106 +12,27 @@
       "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
     }
   },
-  "audiences": {
-    "items": {
-      "smallVegetableFarms": "Small vegetable farms",
-      "csaOperations": "CSA / community-supported agriculture",
-      "digitalPlanningProjects": "Teams with digital crop planning"
-    }
-  },
-  "preview": {
-    "title": "Product preview",
-    "subtitle": "How planning looks in day-to-day work",
-    "tabs": {
-      "cultures": "Crops",
-      "areas": "Areas",
-      "timeline": "Timelines"
-    },
-    "rows": {
-      "row1": "Lettuce • Spring set",
-      "row2": "Carrots • Bed North 2",
-      "row3": "Chard • Batch 3",
-      "row4": "Spinach • Autumn window"
-    },
-    "status": {
-      "row1": "Planned",
-      "row2": "Confirmed",
-      "row3": "In progress",
-      "row4": "Scheduled"
-    },
-    "note": "Preview placeholder: a real in-app screenshot can be embedded here later."
-  },
-  "benefits": {
-    "items": {
-      "clarity": {
-        "title": "More clarity",
-        "description": "Key planning information is centralized and easy to scan."
-      },
-      "collaboration": {
-        "title": "Better collaboration",
-        "description": "Teams work from the same source of truth with fewer misunderstandings."
-      },
-      "continuousImprovement": {
-        "title": "Active improvement",
-        "description": "Field feedback directly informs upcoming improvements."
-      }
-    }
-  },
   "features": {
-    "title": "What OpenFarmPlanner supports",
-    "subtitle": "Functions are designed around practical planning steps — structured and easy to understand.",
+    "title": "What OpenFarmPlanner is built for",
     "items": {
-      "cultures": {
-        "title": "Manage crops",
-        "description": "Maintain crop data centrally and use it consistently across the project."
-      },
-      "areas": {
-        "title": "Organize areas",
-        "description": "Structure beds and growing areas clearly and traceably."
-      },
-      "timelines": {
-        "title": "Plan timelines",
-        "description": "Coordinate sowing, planting, and further steps along realistic windows."
-      },
-      "teams": {
-        "title": "Work as a team",
-        "description": "Share planning status transparently and improve it together."
-      }
+      "cultures": "Manage crops",
+      "areas": "Organize areas",
+      "timelines": "Plan timelines",
+      "teams": "Work as a team"
     }
-  },
-  "feedback": {
-    "title": "Practical feedback",
-    "description": "Real-world input matters most: ideas, bug reports, and improvement suggestions are always welcome.",
-    "items": {
-      "item1": "Feedback on usability and planning flow",
-      "item2": "Concrete ideas for new features",
-      "item3": "Bug reports with short context"
-    },
-    "cta": "Send feedback to {{email}}"
   },
   "openSource": {
-    "title": "Open source builds trust",
-    "description": "Source code is publicly available. Progress is transparent, and contributions via issues or pull requests are welcome.",
-    "items": {
-      "item1": "Public GitHub repository",
-      "item2": "Open discussion via issues",
-      "item3": "Contributions to development are possible"
-    },
-    "cta": "Go to the GitHub repository",
+    "title": "Open source",
+    "description": "Source code is public. Contributions and feedback are welcome.",
+    "cta": "Repository on GitHub",
     "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
   },
   "finalCta": {
-    "title": "Start planning now",
-    "description": "Try OpenFarmPlanner directly in the browser or create an account to join ongoing development.",
+    "title": "Try it now",
     "openApp": "Open OpenFarmPlanner",
     "register": "Create account"
   },
   "footer": {
-    "brandTitle": "OpenFarmPlanner",
-    "brandText": "Calm, modern, and transparent crop planning in active beta.",
-    "linksTitle": "Project & legal",
-    "contactTitle": "Contact",
-    "contactText": "Questions, feedback, and bug reports are welcome via email.",
     "imprint": "Imprint",
     "privacy": "Privacy policy",
     "github": "GitHub",
