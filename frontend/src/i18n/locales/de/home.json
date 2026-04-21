@@ -9,25 +9,11 @@
       "register": "Registrieren"
     }
   },
-  "featureOverview": {
-    "title": "Funktionsübersicht",
-    "items": {
-      "cultureManagement": "Kulturen zentral verwalten",
-      "fieldOrganization": "Beete und Anbauflächen organisieren",
-      "planningPeriods": "Anbauzeiträume planen",
-      "structuredDocumentation": "Anbauinformationen strukturiert dokumentieren",
-      "projectCollaboration": "Projektbezogen zusammenarbeiten"
-    }
-  },
-  "audiences": {
-    "title": "Geeignet für",
-    "items": {
-      "smallVegetableFarms": "kleine Gemüsebaubetriebe",
-      "csaOperations": "CSA / solidarische Landwirtschaft",
-      "digitalPlanningProjects": "Projekte, die ihre Anbauplanung digital organisieren möchten"
-    }
-  },
   "statusNote": "OpenFarmPlanner befindet sich aktuell in der Beta-Phase und wird laufend weiterentwickelt.",
+  "statusOpenSource": {
+    "text": "Als Open-Source-Projekt freuen wir uns über Feedback, Ideen und Mitentwicklung auf GitHub.",
+    "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
+  },
   "footer": {
     "imprint": "Impressum",
     "privacy": "Datenschutzerklärung",

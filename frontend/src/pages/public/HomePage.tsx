@@ -1,3 +1,4 @@
+import GitHubIcon from '@mui/icons-material/GitHub';
 import {
   Box,
   Button,
@@ -9,20 +10,6 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
 
-const featureItems = [
-  'cultureManagement',
-  'fieldOrganization',
-  'planningPeriods',
-  'structuredDocumentation',
-  'projectCollaboration',
-] as const;
-
-const audienceItems = [
-  'smallVegetableFarms',
-  'csaOperations',
-  'digitalPlanningProjects',
-] as const;
-
 export default function HomePage(): React.ReactElement {
   const { t } = useTranslation('home');
 
@@ -32,6 +19,18 @@ export default function HomePage(): React.ReactElement {
         <Stack spacing={{ xs: 6, md: 8 }}>
           <Stack spacing={3} alignItems={{ xs: 'flex-start', sm: 'center' }} textAlign={{ xs: 'left', sm: 'center' }}>
             <Stack spacing={1.5}>
+              <Box
+                component="img"
+                src="/favicon.png"
+                alt=""
+                aria-hidden
+                sx={{
+                  width: { xs: 42, md: 52 },
+                  height: 'auto',
+                  alignSelf: { xs: 'flex-start', sm: 'center' },
+                  opacity: 0.92,
+                }}
+              />
               <Typography variant="h2" component="h1" sx={{ fontSize: { xs: '2rem', md: '2.75rem' } }}>
                 {t('landing.title')}
               </Typography>
@@ -52,29 +51,28 @@ export default function HomePage(): React.ReactElement {
             </Stack>
           </Stack>
 
-          <Stack spacing={2}>
-            <Typography variant="h5">{t('featureOverview.title')}</Typography>
-            <Box component="ul" sx={{ m: 0, pl: 3, display: 'grid', gap: 1.2 }}>
-              {featureItems.map((itemKey) => (
-                <Typography component="li" key={itemKey} color="text.secondary">
-                  {t(`featureOverview.items.${itemKey}`)}
-                </Typography>
-              ))}
-            </Box>
+          <Stack spacing={0.6} alignItems="center" textAlign="center" sx={{ pt: { xs: 0.5, md: 1 }, pb: { xs: 0.5, md: 1 } }}>
+            <Typography color="text.secondary">
+              {t('statusNote')}
+            </Typography>
+            <Link
+              href={t('statusOpenSource.githubUrl')}
+              target="_blank"
+              rel="noopener noreferrer"
+              underline="hover"
+              color="text.secondary"
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 0.7,
+                lineHeight: 1.5,
+              }}
+            >
+              <GitHubIcon sx={{ fontSize: { xs: '0.95rem', md: '1rem' } }} />
+              {t('statusOpenSource.text')}
+            </Link>
           </Stack>
-
-          <Stack spacing={2}>
-            <Typography variant="h5">{t('audiences.title')}</Typography>
-            <Box component="ul" sx={{ m: 0, pl: 3, display: 'grid', gap: 1.2 }}>
-              {audienceItems.map((itemKey) => (
-                <Typography component="li" key={itemKey} color="text.secondary">
-                  {t(`audiences.items.${itemKey}`)}
-                </Typography>
-              ))}
-            </Box>
-          </Stack>
-
-          <Typography color="text.secondary">{t('statusNote')}</Typography>
         </Stack>
       </Container>
 

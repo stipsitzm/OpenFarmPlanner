@@ -9,25 +9,11 @@
       "register": "Register"
     }
   },
-  "featureOverview": {
-    "title": "Feature overview",
-    "items": {
-      "cultureManagement": "Manage crops centrally",
-      "fieldOrganization": "Organize beds and growing areas",
-      "planningPeriods": "Plan cultivation periods",
-      "structuredDocumentation": "Document cultivation data in a structured way",
-      "projectCollaboration": "Collaborate across projects"
-    }
+  "statusNote": "Currently in beta - continuously improved.",
+  "statusOpenSource": {
+    "text": "Open source on GitHub · Contributions welcome",
+    "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
   },
-  "audiences": {
-    "title": "Suitable for",
-    "items": {
-      "smallVegetableFarms": "small vegetable farms",
-      "csaOperations": "CSA / community-supported agriculture",
-      "digitalPlanningProjects": "projects that want to organize cultivation planning digitally"
-    }
-  },
-  "statusNote": "OpenFarmPlanner is currently in beta and is being continuously improved.",
   "footer": {
     "imprint": "Imprint",
     "privacy": "Privacy policy",
