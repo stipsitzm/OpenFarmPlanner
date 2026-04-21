@@ -518,7 +518,7 @@ function PlantingPlans(): React.ReactElement {
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
       <PageContainer>
-        <PageHeader title={t("plantingPlans:title")} actions={<PageHelp pageKey="plans" />} />
+        <PageHeader title={t("plantingPlans:title")} actions={<PageHelp pageKey="plantingPlans" />} />
         <ProjectRequiredState reason={missingProjectReason} />
       </PageContainer>
     );
