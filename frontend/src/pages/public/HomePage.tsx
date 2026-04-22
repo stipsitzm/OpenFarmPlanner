@@ -22,8 +22,8 @@ export default function HomePage(): React.ReactElement {
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
       <Box component="main" sx={{ flex: 1, display: 'flex', alignItems: 'center' }}>
         <Container maxWidth="md" sx={{ width: '100%', py: { xs: 5, md: 7 } }}>
-          <Stack spacing={{ xs: 3.5, md: 4.5 }}>
-            <Stack spacing={{ xs: 2.25, md: 2.6 }} alignItems={{ xs: 'flex-start', sm: 'center' }} textAlign={{ xs: 'left', sm: 'center' }}>
+          <Stack spacing={{ xs: 3.5, md: 4.5 }} alignItems="center">
+            <Stack spacing={{ xs: 2.25, md: 2.6 }} alignItems="center" textAlign="center">
               <Stack spacing={1.1} sx={{ width: '100%' }}>
               <Box
                 component="img"
@@ -33,7 +33,7 @@ export default function HomePage(): React.ReactElement {
                 sx={{
                   width: { xs: 46, md: 56 },
                   height: 'auto',
-                  alignSelf: { xs: 'flex-start', sm: 'center' },
+                  alignSelf: 'center',
                   opacity: 0.95,
                 }}
               />
@@ -101,7 +101,7 @@ export default function HomePage(): React.ReactElement {
               </Button>
             </Stack>
 
-            <Stack spacing={0.4} alignItems={{ xs: 'flex-start', sm: 'center' }} textAlign={{ xs: 'left', sm: 'center' }} sx={{ pt: { xs: 0.2, md: 0.4 } }}>
+            <Stack spacing={0.4} alignItems="center" textAlign="center" sx={{ pt: { xs: 0.2, md: 0.4 } }}>
               <Typography color="text.secondary" sx={{ lineHeight: 1.5 }}>
                 {t('statusNote')}
               </Typography>
@@ -117,7 +117,7 @@ export default function HomePage(): React.ReactElement {
                 sx={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  justifyContent: { xs: 'flex-start', sm: 'center' },
+                  justifyContent: 'center',
                   gap: 0.55,
                   px: 0.4,
                   py: 0.2,
