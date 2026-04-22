@@ -38,6 +38,24 @@ def _env_str(name: str, default: str = "") -> str:
     return str(value).strip()
 
 
+def _env_bool(name: str, default: str = "False") -> bool:
+    return _env_str(name, default).lower() in ('true', '1', 'yes')
+
+
+def _env_proxy_ssl_header(name: str = 'SECURE_PROXY_SSL_HEADER') -> tuple[str, str] | None:
+    raw_value = _env_str(name, '')
+    if not raw_value:
+        return None
+
+    parts = [part.strip() for part in raw_value.split(',', 1)]
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        raise ImproperlyConfigured(
+            f'{name} must be set as "HEADER_NAME,header-value" when provided.'
+        )
+
+    return parts[0], parts[1]
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -256,10 +274,12 @@ CSRF_COOKIE_SAMESITE = _env_str('CSRF_COOKIE_SAMESITE', 'Lax')
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = _env_str('SECURE_SSL_REDIRECT', 'True').lower() in ('true', '1', 'yes')
+    SECURE_SSL_REDIRECT = _env_bool('SECURE_SSL_REDIRECT', 'True')
+    SECURE_PROXY_SSL_HEADER = _env_proxy_ssl_header()
+    USE_X_FORWARDED_HOST = _env_bool('USE_X_FORWARDED_HOST', 'False')
     SECURE_HSTS_SECONDS = int(_env_str('SECURE_HSTS_SECONDS', '31536000') or '31536000')
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_str('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'True').lower() in ('true', '1', 'yes')
-    SECURE_HSTS_PRELOAD = _env_str('SECURE_HSTS_PRELOAD', 'True').lower() in ('true', '1', 'yes')
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'True')
+    SECURE_HSTS_PRELOAD = _env_bool('SECURE_HSTS_PRELOAD', 'True')
     SECURE_REFERRER_POLICY = _env_str('SECURE_REFERRER_POLICY', 'strict-origin-when-cross-origin')
     X_FRAME_OPTIONS = _env_str('X_FRAME_OPTIONS', 'DENY')
     SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -292,8 +312,8 @@ REST_FRAMEWORK = {
 CSRF_COOKIE_SAMESITE = _env_str('CSRF_COOKIE_SAMESITE', CSRF_COOKIE_SAMESITE)
 SESSION_COOKIE_SAMESITE = _env_str('SESSION_COOKIE_SAMESITE', SESSION_COOKIE_SAMESITE)
 if DEBUG:
-    CSRF_COOKIE_SECURE = _env_str('CSRF_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
-    SESSION_COOKIE_SECURE = _env_str('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 'yes')
+    CSRF_COOKIE_SECURE = _env_bool('CSRF_COOKIE_SECURE', 'False')
+    SESSION_COOKIE_SECURE = _env_bool('SESSION_COOKIE_SECURE', 'False')
 
 
 

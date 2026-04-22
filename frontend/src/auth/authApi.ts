@@ -1,8 +1,9 @@
 import type { AccountDeleteResponse, AuthUser, ProjectSwitchResponse } from './types';
 import i18n from '../i18n';
+import { computeProdApiPath } from '../api/httpClient';
 
 const API_BASE = import.meta.env.PROD
-  ? '/api'
+  ? computeProdApiPath(import.meta.env.BASE_URL)
   : import.meta.env.VITE_API_BASE_URL || '/api';
 
 export class AuthApiError extends Error {

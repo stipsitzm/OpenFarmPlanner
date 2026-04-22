@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { computeBaseURL, validateBaseURL } from '../api/httpClient';
+import { computeBaseURL, computeProdApiPath, validateBaseURL } from '../api/httpClient';
 
 describe('httpClient', () => {
   describe('computeBaseURL', () => {
@@ -15,6 +15,11 @@ describe('httpClient', () => {
     it('should always return PROD_API_PATH in production regardless of VITE_API_BASE_URL', () => {
       const baseUrl = computeBaseURL(true, 'https://api.example.com');
       expect(baseUrl).toBe('/api');
+    });
+
+    it('should use base path prefix in production when app is hosted under subpath', () => {
+      const baseUrl = computeBaseURL(true, undefined, '/openfarmplanner/');
+      expect(baseUrl).toBe('/openfarmplanner/api');
     });
 
     it('should return VITE_API_BASE_URL in development when set', () => {
@@ -30,6 +35,16 @@ describe('httpClient', () => {
     it('should return PROD_API_PATH in development when VITE_API_BASE_URL is empty', () => {
       const baseUrl = computeBaseURL(false, '');
       expect(baseUrl).toBe('/api');
+    });
+  });
+
+  describe('computeProdApiPath', () => {
+    it('should return /api for root base path', () => {
+      expect(computeProdApiPath('/')).toBe('/api');
+    });
+
+    it('should return prefixed api path for subpath base', () => {
+      expect(computeProdApiPath('/openfarmplanner/')).toBe('/openfarmplanner/api');
     });
   });
 

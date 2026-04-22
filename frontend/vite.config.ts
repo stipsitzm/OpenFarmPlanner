@@ -2,9 +2,18 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+function normalizeBasePath(input?: string): string {
+  const value = input && input.trim().length > 0 ? input.trim() : '/'
+  const withLeadingSlash = value.startsWith('/') ? value : `/${value}`
+
+  return withLeadingSlash.endsWith('/') ? withLeadingSlash : `${withLeadingSlash}/`
+}
+
+const basePath = normalizeBasePath(process.env.VITE_BASE_PATH)
+
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/',
+  base: basePath,
   plugins: [react()],
   resolve: {
     alias: {

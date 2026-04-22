@@ -2,6 +2,20 @@ import axios from 'axios';
 
 const PROD_API_PATH = '/api';
 
+function normalizeBasePath(basePath?: string): string {
+  const value = basePath && basePath.trim().length > 0 ? basePath.trim() : '/';
+  const withLeadingSlash = value.startsWith('/') ? value : `/${value}`;
+  return withLeadingSlash.endsWith('/') ? withLeadingSlash : `${withLeadingSlash}/`;
+}
+
+export function computeProdApiPath(viteBasePath?: string): string {
+  const normalizedBasePath = normalizeBasePath(viteBasePath);
+  if (normalizedBasePath === '/') {
+    return PROD_API_PATH;
+  }
+  return `${normalizedBasePath.slice(0, -1)}${PROD_API_PATH}`;
+}
+
 /**
  * Computes the baseURL based on environment flags and API base URL configuration.
  *
@@ -10,11 +24,12 @@ const PROD_API_PATH = '/api';
  *
  * @param isProd - Whether the build is production.
  * @param viteApiBaseUrl - Base URL from VITE_API_BASE_URL environment variable (dev only).
+ * @param viteBasePath - Base path from Vite (import.meta.env.BASE_URL), used in production.
  * @returns The computed base URL.
  */
-export function computeBaseURL(isProd: boolean, viteApiBaseUrl?: string): string {
+export function computeBaseURL(isProd: boolean, viteApiBaseUrl?: string, viteBasePath?: string): string {
   if (isProd) {
-    return PROD_API_PATH;
+    return computeProdApiPath(viteBasePath);
   }
   return viteApiBaseUrl || PROD_API_PATH;
 }
@@ -36,7 +51,7 @@ function getCookie(name: string): string | null {
   return null;
 }
 
-const baseURL = computeBaseURL(import.meta.env.PROD, import.meta.env.VITE_API_BASE_URL);
+const baseURL = computeBaseURL(import.meta.env.PROD, import.meta.env.VITE_API_BASE_URL, import.meta.env.BASE_URL);
 validateBaseURL(import.meta.env.PROD, baseURL);
 
 const httpClient = axios.create({

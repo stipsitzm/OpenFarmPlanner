@@ -11,6 +11,12 @@
       ]
     },
     {
+      "title": "Kulturen",
+      "points": [
+        "Hier trägst du deine Kulturdaten ein."
+      ]
+    },
+    {
       "title": "Anbaupläne",
       "points": [
         "Hier planst du, welche Kultur auf welchem Beet angebaut wird."
@@ -30,7 +36,7 @@
     }
   ],
   "workflowTitle": "Workflow",
-  "workflow": "Standorte → Beete → Anbaupläne → Anbaukalender → Saatgutbedarf",
+  "workflow": "Standorte → Anbauflächen → Kulturen → Anbaupläne → Anbaukalender → Saatgutbedarf",
   "pages": {
     "dashboard": {
       "title": "Hilfe: Übersicht",

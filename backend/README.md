@@ -62,6 +62,12 @@ For production, configure these environment variables:
 - `SECRET_KEY` - Django secret key
 - `DEBUG` - Set to `False` in production
 - `ALLOWED_HOSTS` - Comma-separated list of allowed hosts
+- `SECURE_SSL_REDIRECT` - Enable HTTPS redirects only if the proxy chain is configured correctly
+- `SECURE_PROXY_SSL_HEADER` - Proxy header tuple, for example `HTTP_X_FORWARDED_PROTO,https`
+- `USE_X_FORWARDED_HOST` - Trust the forwarded host from the reverse proxy
+- `SESSION_COOKIE_SECURE` - Secure session cookies in HTTPS deployments
+- `CSRF_COOKIE_SECURE` - Secure CSRF cookies in HTTPS deployments
+- `SECURE_HSTS_SECONDS` - HSTS max-age for production
 - `EMAIL_HOST_PASSWORD` - SMTP password for `noreply@zwiebelzopf.at`
 - `PUBLIC_FRONTEND_URL` - Public frontend base URL used in activation, password reset, and invitation links
 - `FRONTEND_URL` - Optional local/development fallback for frontend links
@@ -118,6 +124,8 @@ Auth endpoints are available under `/api/auth/`:
 
 - Auth endpoints: `/api/auth/*`
 - API endpoints: `/api/*`
+- Legacy prefixed auth/API endpoints: `/openfarmplanner/api/*`
+- Agent login consume endpoint: `/agent-login/<token>/` and legacy `/openfarmplanner/agent-login/<token>/`
 - Session authentication with CSRF protection is enabled.
 - Most API endpoints require authentication by default.
 
