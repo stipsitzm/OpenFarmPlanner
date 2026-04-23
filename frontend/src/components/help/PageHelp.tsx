@@ -106,6 +106,7 @@ const PAGE_SYMBOL_DEFINITIONS: Partial<Record<HelpPageKey, SymbolDefinition[]>> 
   cultures: [
     { key: 'add', icon: <AddIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
     { key: 'library', icon: <PublicIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'createPlan', icon: <AgricultureIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
     { key: 'edit', icon: <EditIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
     { key: 'more', icon: <MoreVertIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
     { key: 'delete', icon: <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} /> },
