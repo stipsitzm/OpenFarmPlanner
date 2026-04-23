@@ -519,6 +519,7 @@ export default function GraphicalFields({
       if (!location.id) return [];
       const locationFields = fieldsByLocation.get(location.id) ?? [];
       const padding = 20;
+      const fieldGap = stageWidth < 600 ? 12 : 24;
       const sizedFields = locationFields.map((field) => {
         const fieldPxPerMeter = Math.max(
           12,
@@ -539,7 +540,7 @@ export default function GraphicalFields({
       });
       const totalFieldsHeight =
         sizedFields.reduce((sum, entry) => sum + entry.height, 0) +
-        Math.max(0, sizedFields.length - 1) * 24;
+        Math.max(0, sizedFields.length - 1) * fieldGap;
       let fieldY = Math.max(
         padding,
         Math.round(WORKSPACE_MIN_HEIGHT / 2 - totalFieldsHeight / 2),
@@ -547,7 +548,7 @@ export default function GraphicalFields({
 
       const defaultFieldRects = sizedFields.map((entry) => {
         const y = fieldY;
-        fieldY += entry.height + 24;
+        fieldY += entry.height + fieldGap;
         return {
           ...entry,
           defaultX: Math.max(
