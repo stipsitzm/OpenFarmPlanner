@@ -25,6 +25,20 @@ const DEFAULT_OPTIONS: Required<AreaToRectOptions> = {
   minHeight: 36,
   scaleFactor: 2.2,
 };
+const DIMENSIONAL_RECT_MIN_SIDE = 72;
+
+function enforceMinimumSide(size: RectSize, minSide: number): RectSize {
+  const currentMinSide = Math.min(size.width, size.height);
+  if (currentMinSide >= minSide) {
+    return size;
+  }
+
+  const scaleFactor = minSide / Math.max(currentMinSide, 1);
+  return {
+    width: Math.round(size.width * scaleFactor),
+    height: Math.round(size.height * scaleFactor),
+  };
+}
 
 export function areaToRectSize(areaSqm: number | undefined, options: AreaToRectOptions = {}): RectSize {
   const config = { ...DEFAULT_OPTIONS, ...options };
@@ -44,10 +58,11 @@ export function getFieldRectSize(
   options: AreaToRectOptions = {}
 ): RectSize {
   if (typeof field.length_m === 'number' && typeof field.width_m === 'number') {
-    return {
-      width: Math.max(120, Math.round(field.width_m * pxPerMeter)),
-      height: Math.max(120, Math.round(field.length_m * pxPerMeter)),
+    const dimensionalSize = {
+      width: Math.max(1, Math.round(field.width_m * pxPerMeter)),
+      height: Math.max(1, Math.round(field.length_m * pxPerMeter)),
     };
+    return enforceMinimumSide(dimensionalSize, DIMENSIONAL_RECT_MIN_SIDE);
   }
 
   return areaToRectSize(Number(field.area_sqm ?? 1), options);
