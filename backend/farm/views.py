@@ -222,6 +222,18 @@ def _apply_invitation_project_settings(*, user, project: Project) -> dict[str, i
 
 
 
+
+
+def _build_unique_project_slug(name: str) -> str:
+    """Generate a unique project slug from a project name."""
+    base_slug = slugify(name) or get_random_string(8).lower()
+    candidate = base_slug
+    suffix = 2
+    while Project.objects.filter(slug=candidate).exists():
+        candidate = f'{base_slug}-{suffix}'
+        suffix += 1
+    return candidate
+
 def _supplier_enrichment_requirement_error(code: str, message: str) -> Response:
     """Return standardized supplier enrichment requirement errors."""
     return Response(
@@ -2283,6 +2295,7 @@ class ProjectSwitchView(APIView):
 class ProjectViewSet(viewsets.ModelViewSet):
     """Project CRUD for authenticated users."""
 
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
     queryset = Project.objects.filter(is_active=True)
 
@@ -2290,7 +2303,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return Project.objects.filter(memberships__user=self.request.user, is_active=True).distinct()
 
     def perform_create(self, serializer):
-        project = serializer.save(slug=slugify(serializer.validated_data['name']) or get_random_string(8).lower())
+        project = serializer.save(slug=_build_unique_project_slug(serializer.validated_data['name']))
         ProjectMembership.objects.get_or_create(
             user=self.request.user,
             project=project,

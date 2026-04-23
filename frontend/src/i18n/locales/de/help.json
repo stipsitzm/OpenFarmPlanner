@@ -53,28 +53,15 @@
         {
           "title": "Was sehe ich hier?",
           "points": [
-            "Hier verwaltest du deine Standorte.",
-            "Zu jedem Standort kannst du Informationen wie Koordinaten, Adresse, Bodenart oder Beschreibung speichern.",
-            "Anstehende Aufgaben werden direkt beim Standort angezeigt."
-          ]
-        },
-        {
-          "title": "Bedienung",
-          "points": [
-            "Klicke auf einen Standort, um Details zu sehen oder zu bearbeiten.",
-            "Mit „Neuer Standort“ legst du einen neuen Standort an.",
-            "Bestehende Standorte kannst du bearbeiten oder löschen.",
-            "Aufgaben werden automatisch aus den Anbauplänen berechnet.",
-            "Koordinaten können direkt zu Google Maps führen."
+            "Hier kannst du Standorte hinzufügen und optional Informationen wie Koordinaten, Adresse, Bodenart oder Beschreibung hinzufügen."
           ]
         },
         {
           "title": "Zusammenhang mit anderen Seiten",
           "points": [
             "Standorte bilden die oberste Ebene deiner Flächenstruktur.",
-            "Parzellen und Beete aus den Anbauflächen greifen auf diese Struktur zurück.",
-            "Anbaupläne ordnen Kulturen den Beeten innerhalb deiner Standorte zu.",
-            "Der Anbaukalender und der Saatgutbedarf nutzen diese Zuordnungen für Zeit- und Mengenplanung."
+            "Für jeden Standort kannst du auf der Seite Anbauflächen Parzellen und Beete hinzufügen.",
+            "Aufgaben werden automatisch aus den Anbauplänen ermittelt."
           ]
         }
       ],
@@ -82,8 +69,7 @@
       "symbols": {
         "add": "Neuen Standort hinzufügen",
         "edit": "Standort bearbeiten",
-        "delete": "Standort löschen",
-        "map": "Koordinaten in Google Maps öffnen"
+        "delete": "Standort löschen"
       }
     },
     "fields": {
@@ -105,42 +91,39 @@
       ]
     },
     "areas": {
-      "title": "Hilfe: Listenansicht der Anbauflächen",
+      "title": "Anbauflächen – Listenansicht",
       "sections": [
         {
           "title": "Was sehe ich hier?",
           "points": [
-            "Hier siehst du deine Standorte, Parzellen und Beete in einer übersichtlichen Listenansicht.",
-            "Die Einträge sind hierarchisch aufgebaut: Standorte enthalten Parzellen, Parzellen enthalten Beete.",
-            "Diese Ansicht ist besonders geeignet, um Flächen strukturiert zu verwalten und Eigenschaften schnell zu erfassen oder zu ändern."
+            "Hier verwaltest du die Struktur deiner Flächen – vom Standort bis zum Beet.",
+            "Standorte, Parzellen und Beete werden übersichtlich hierarchisch dargestellt.",
+            "Diese Ansicht eignet sich besonders gut, um neue Flächen anzulegen oder bestehende zu bearbeiten."
           ]
         },
         {
           "title": "Bedienung",
           "points": [
-            "Klicke auf den Pfeil vor einem Eintrag, um untergeordnete Elemente ein- oder auszuklappen.",
-            "Klicke auf einen Eintrag, um Details direkt zu sehen oder zu bearbeiten.",
-            "Über Plus-Symbole kannst du neue Standorte, Parzellen oder Beete anlegen.",
-            "Die Listenansicht eignet sich besonders gut für Verwaltung, Bearbeitung und den schnellen Überblick über viele Flächen."
+            "Klicke in eine Zelle, um Einträge direkt zu bearbeiten.",
+            "Klicke auf Tabellenüberschriften, um zu sortieren oder zu filtern."
           ]
         },
         {
           "title": "Zusammenhang mit anderen Seiten",
           "points": [
-            "Hier legst du die Flächenstruktur fest, die später in anderen Bereichen verwendet wird.",
-            "In den Anbauplänen ordnest du Kulturen bestimmten Beeten zu.",
-            "Im Anbaukalender siehst du die zeitliche Planung dieser Anbaupläne.",
-            "Aus den Anbauplänen wird der Saatgutbedarf berechnet."
+            "Die hier angelegte Flächenstruktur bildet die Grundlage für deine weitere Planung.",
+            "In den Anbauplänen ordnest du Kulturen einzelnen Beeten zu.",
+            "In der grafischen Ansicht werden dieselben Flächen visuell dargestellt."
           ]
         }
       ],
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
-        "expandToggle": "Untergeordnete Elemente ein- oder ausklappen",
+        "expandToggle": "Bereich ein- oder ausklappen",
         "add": "Neues Element anlegen",
         "delete": "Element löschen",
-        "createPlan": "Direkt einen Anbauplan für ein Beet anlegen",
-        "dimensions": "Orientierung für Länge und Breite in den Spalten"
+        "createPlan": "Anbauplan für dieses Beet anlegen",
+        "dimensions": "Ausrichtung von Länge und Breite für die grafische Ansicht"
       }
     },
     "cultures": {
@@ -150,7 +133,6 @@
           "title": "Was sehe ich hier?",
           "points": [
             "Hier verwaltest du alle Kulturen und ihre wichtigsten Eigenschaften.",
-            "Zu jeder Kultur kannst du zum Beispiel Name, Sorte, Abstände, Zeiträume sowie Saatgut- und Planungshinweise pflegen.",
             "Diese Daten werden später in den Anbauplänen verwendet."
           ]
         },
@@ -158,15 +140,13 @@
           "title": "Bedienung",
           "points": [
             "Wähle eine Kultur aus der Liste aus, um Details zu sehen oder zu bearbeiten.",
-            "Mit „Neu“ legst du eine neue Kultur an.",
             "Bestehende Einträge kannst du bearbeiten, exportieren, löschen oder direkt für einen Anbauplan verwenden.",
-            "Über die Bibliothek kannst du Kulturen aus der öffentlichen Sammlung übernehmen."
+            "Du kannst deine Kulturdaten in die Öffentliche Kulturbibliothek hochladen um sie mit anderen zu teilen oder Kulturen aus der Bibliothek zu übernehmen."
           ]
         },
         {
           "title": "Zusammenhang mit anderen Seiten",
           "points": [
-            "Kulturen liefern die fachlichen Eigenschaften für deine Planung.",
             "In den Anbauplänen ordnest du Kulturen konkreten Beeten und Zeiträumen zu.",
             "Der Anbaukalender und der Saatgutbedarf nutzen diese Daten für Zeit- und Mengenplanung."
           ]
@@ -176,8 +156,9 @@
       "symbols": {
         "add": "Neue Kultur anlegen",
         "library": "Öffentliche Kulturbibliothek öffnen",
+        "createPlan": "Anbauplan für diese Kultur anlegen",
         "more": "Weitere Aktionen öffnen",
-        "edit": "Kulturdaten ändern",
+        "edit": "Kulturdaten bearbeiten",
         "delete": "Kultur entfernen"
       }
     },
@@ -324,23 +305,27 @@
       }
     },
     "graphical": {
-      "title": "Hilfe: Grafische Ansicht der Anbauflächen",
+      "title": "Anbauflächen – Grafische Ansicht",
       "sections": [
         {
           "title": "Was sehe ich hier?",
           "points": [
-            "Hier siehst du deine Standorte, Parzellen und Beete grafisch angeordnet.",
-            "Diese Ansicht hilft dir, die Anbauflächen räumlich zu erfassen und die Planung übersichtlich zu halten.",
-            "Die Anordnung kann der realen Position deiner Beete entsprechen."
+            "Hier siehst du deine Standorte, Parzellen und Beete grafisch angeordnet."
           ]
         },
         {
           "title": "Bedienung",
           "points": [
-            "Klick auf ein Beet oder eine Parzelle um Details anzuzeigen.",
+            "Klicke auf ein Beet oder eine Parzelle, um Details anzuzeigen.",
             "Im Modus „Bearbeiten“ kannst du Elemente verschieben.",
-            "Leere Fläche ziehen → Ansicht verschieben",
-            "Scrollrad oder Pinch-Geste → Zoomen"
+            "Ziehe auf eine freie Fläche, um die Ansicht zu verschieben.",
+            "Mit dem Mausrad oder einer Pinch-Geste kannst du zoomen."
+          ]
+        },
+        {
+          "title": "Zusammenhang mit anderen Seiten",
+          "points": [
+            "Diese Ansicht zeigt dieselben Flächen wie die Listenansicht – nur grafisch dargestellt."
           ]
         }
       ],
@@ -349,15 +334,15 @@
         "panArrows": "Ansicht nach oben, links, rechts oder unten verschieben",
         "zoomIn": "Hineinzoomen",
         "zoomOut": "Herauszoomen",
-        "fit": "Gesamte Fläche einpassen",
-        "fullscreen": "Größtmögliche Ansicht anzeigen"
+        "fit": "Gesamte Ansicht einpassen",
+        "fullscreen": "Im Vollbild anzeigen"
       },
       "modeTitle": "Modus",
       "modeLabel": "Modus",
       "modeView": "Ansicht",
       "modeEdit": "Bearbeiten",
-      "modeViewDescription": "„Ansicht“ = nur ansehen und navigieren",
-      "modeEditDescription": "„Bearbeiten“ = Elemente verschieben und anordnen"
+      "modeViewDescription": "Nur ansehen, navigieren und zoomen",
+      "modeEditDescription": "Elemente verschieben und anordnen"
     }
   }
 }

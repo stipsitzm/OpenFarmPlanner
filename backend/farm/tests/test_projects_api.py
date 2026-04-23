@@ -114,6 +114,32 @@ class ProjectsApiTests(APITestCase):
         self.assertEqual(response.data['name'], 'Neues Projekt')
         self.assertTrue(response.data['slug'])
 
+    def test_create_project_with_duplicate_name_assigns_unique_slug(self) -> None:
+        Project.objects.create(name='Neues Projekt', slug='neues-projekt')
+
+        response = self.client.post('/openfarmplanner/api/projects/', {'name': 'Neues Projekt', 'description': ''}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['slug'], 'neues-projekt-2')
+        self.assertTrue(ProjectMembership.objects.filter(user=self.user, project_id=response.data['id'], role='admin').exists())
+
+    def test_superuser_can_create_project(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        superuser = User.objects.create_superuser(username='admin', email='admin@example.com', password='pass12345')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': superuser.email, 'password': 'pass12345'}, format='json')
+
+        response = self.client.post('/openfarmplanner/api/projects/', {'name': 'Admin Project', 'description': ''}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(ProjectMembership.objects.filter(user=superuser, project_id=response.data['id'], role='admin').exists())
+
+    def test_unauthenticated_user_cannot_create_project(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/logout/')
+
+        response = self.client.post('/openfarmplanner/api/projects/', {'name': 'Denied', 'description': ''}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_admin_can_invite_member(self) -> None:
         response = self.client.post(
             f'/openfarmplanner/api/projects/{self.project.id}/invitations/',

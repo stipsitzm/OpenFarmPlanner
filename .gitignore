@@ -9,6 +9,10 @@ backend/.env
 # IDE
 .vscode/
 .idea/
+.codex
+.codex/
+frontend/dist-production/
+frontend/dist-staging/
 
 # OS
 .DS_Store
