@@ -33,7 +33,7 @@ import { useFieldOperations } from "../components/hierarchy/hooks/useFieldOperat
 import { fieldAPI, bedAPI } from "../api/api";
 import {
   buildHierarchyIndex,
-  buildHierarchyRowsFromIndex,
+  createHierarchyRowsProjector,
   type HierarchySortConfig,
 } from "../components/hierarchy/utils/hierarchyUtils";
 import {
@@ -53,6 +53,50 @@ import { isTypingInEditableElement } from "../hooks/useKeyboardShortcuts";
 interface FieldsBedsHierarchyProps {
   showTitle?: boolean;
 }
+
+const HIERARCHY_DATA_GRID_SX = {
+  ...dataGridSx,
+  width: "100%",
+  "& .MuiDataGrid-columnHeader": {
+    py: 0.25,
+  },
+  "& .MuiDataGrid-cell": {
+    py: 0,
+  },
+  "& .ofp-hierarchy-row-location .MuiDataGrid-cell": {
+    py: 0.5,
+  },
+  "& .ofp-hierarchy-row-field .MuiDataGrid-cell": {
+    py: 0.25,
+  },
+  "& .ofp-hierarchy-row-bed .MuiDataGrid-cell": {
+    py: 0,
+  },
+  "& .MuiDataGrid-row--editing .MuiDataGrid-cell": {
+    py: 0,
+  },
+  "& .MuiDataGrid-row--editing .MuiInputBase-root": {
+    minHeight: "30px",
+    height: "30px",
+    fontSize: "0.875rem",
+  },
+  "& .MuiDataGrid-row--editing .MuiInputBase-input": {
+    py: 0.5,
+  },
+  "& .MuiDataGrid-row--editing .MuiSelect-select": {
+    minHeight: "unset !important",
+    py: 0.5,
+  },
+  "& .MuiDataGrid-row--editing .MuiIconButton-root": {
+    width: 28,
+    height: 28,
+  },
+  "& .MuiDataGrid-row--editing .MuiDataGrid-cell[data-field='name'] .MuiInputBase-root":
+    {
+      minHeight: "32px",
+      height: "32px",
+    },
+};
 
 function FieldsBedsHierarchy({
   showTitle = true,
@@ -129,9 +173,14 @@ function FieldsBedsHierarchy({
     [locations, fields, beds, hierarchySortConfig],
   );
 
+  const projectRows = useMemo(
+    () => createHierarchyRowsProjector(hierarchyIndex),
+    [hierarchyIndex],
+  );
+
   const rows = useMemo<GridRowsProp<HierarchyRow>>(
-    () => buildHierarchyRowsFromIndex(hierarchyIndex, expandedRows),
-    [hierarchyIndex, expandedRows],
+    () => projectRows(expandedRows),
+    [projectRows, expandedRows],
   );
 
   // Notes editor - must be after rows definition
@@ -716,17 +765,41 @@ function FieldsBedsHierarchy({
     const INDENT_PER_LEVEL_PX = 24;
     const EXTRA_BED_INDENT_PX = 34;
 
-    const measuredWidth = rows.reduce((maxWidth, row) => {
+    const hierarchyEntries: Array<{ name: string; level: number; type: string }> =
+      [];
+    if (hierarchyIndex.hasMultipleLocations) {
+      hierarchyIndex.sortedLocations.forEach((location) => {
+        hierarchyEntries.push({ name: location.name, level: 0, type: "location" });
+        const locationFields =
+          hierarchyIndex.fieldsByLocation.get(location.id) ?? [];
+        locationFields.forEach((field) => {
+          hierarchyEntries.push({ name: field.name, level: 1, type: "field" });
+          const fieldBeds = hierarchyIndex.bedsByField.get(field.id) ?? [];
+          fieldBeds.forEach((bed) => {
+            hierarchyEntries.push({ name: bed.name, level: 2, type: "bed" });
+          });
+        });
+      });
+    } else {
+      hierarchyIndex.sortedTopLevelFields.forEach((field) => {
+        hierarchyEntries.push({ name: field.name, level: 0, type: "field" });
+        const fieldBeds = hierarchyIndex.bedsByField.get(field.id) ?? [];
+        fieldBeds.forEach((bed) => {
+          hierarchyEntries.push({ name: bed.name, level: 1, type: "bed" });
+        });
+      });
+    }
+
+    const measuredWidth = hierarchyEntries.reduce((maxWidth, row) => {
       const nameLength = typeof row.name === "string" ? row.name.length : 0;
       const indent =
         row.level * INDENT_PER_LEVEL_PX +
         (row.type === "bed" ? EXTRA_BED_INDENT_PX : 0);
-      const rowWidth = indent + ICON_GROUP_PX + nameLength * CHAR_WIDTH_PX;
-      return Math.max(maxWidth, rowWidth);
+      return Math.max(maxWidth, indent + ICON_GROUP_PX + nameLength * CHAR_WIDTH_PX);
     }, MIN_NAME_WIDTH);
 
     return Math.min(520, Math.max(MIN_NAME_WIDTH, measuredWidth));
-  }, [rows]);
+  }, [hierarchyIndex]);
 
   /**
    * Create columns with callbacks
@@ -758,6 +831,35 @@ function FieldsBedsHierarchy({
     nameColumnWidth,
   ]);
 
+  const getRowHeight = useCallback((params: { model: HierarchyRow }) => {
+    if (params.model.type === "location") {
+      return LOCATION_ROW_HEIGHT;
+    }
+    if (params.model.type === "field") {
+      return FIELD_ROW_HEIGHT;
+    }
+    return BED_ROW_HEIGHT;
+  }, []);
+
+  const isCellEditable = useCallback((params: { row: HierarchyRow; field: string }) => {
+    if (params.row.type === "field" || params.row.type === "bed") {
+      return (
+        params.field === "name" ||
+        params.field === "length_m" ||
+        params.field === "width_m"
+      );
+    }
+    return false;
+  }, []);
+
+  const rowSelectionModel = useMemo(
+    () => ({
+      type: "include" as const,
+      ids: new Set(selectedRowId ? [selectedRowId] : []),
+    }),
+    [selectedRowId],
+  );
+
   return (
     <div className={showTitle ? "page-container" : undefined}>
       <Box sx={{ width: "fit-content", maxWidth: "100%" }}>
@@ -778,15 +880,7 @@ function FieldsBedsHierarchy({
             rows={rows}
             columns={columns}
             columnHeaderHeight={HEADER_ROW_HEIGHT}
-            getRowHeight={(params) => {
-              if (params.model.type === "location") {
-                return LOCATION_ROW_HEIGHT;
-              }
-              if (params.model.type === "field") {
-                return FIELD_ROW_HEIGHT;
-              }
-              return BED_ROW_HEIGHT;
-            }}
+            getRowHeight={getRowHeight}
             getRowClassName={(params) => `ofp-hierarchy-row-${params.row.type}`}
             rowModesModel={rowModesModel}
             onRowModesModelChange={setRowModesModel}
@@ -801,70 +895,9 @@ function FieldsBedsHierarchy({
             sortModel={sortModel}
             onSortModelChange={setSortModel}
             isRowSelectable={() => true}
-            isCellEditable={(params) => {
-              if (params.row.type === "field") {
-                return (
-                  params.field === "name" ||
-                  params.field === "length_m" ||
-                  params.field === "width_m"
-                );
-              }
-              if (params.row.type === "bed") {
-                return (
-                  params.field === "name" ||
-                  params.field === "length_m" ||
-                  params.field === "width_m"
-                );
-              }
-              return false;
-            }}
-            sx={{
-              ...dataGridSx,
-              width: "100%",
-              "& .MuiDataGrid-columnHeader": {
-                py: 0.25,
-              },
-              "& .MuiDataGrid-cell": {
-                py: 0,
-              },
-              "& .ofp-hierarchy-row-location .MuiDataGrid-cell": {
-                py: 0.5,
-              },
-              "& .ofp-hierarchy-row-field .MuiDataGrid-cell": {
-                py: 0.25,
-              },
-              "& .ofp-hierarchy-row-bed .MuiDataGrid-cell": {
-                py: 0,
-              },
-              "& .MuiDataGrid-row--editing .MuiDataGrid-cell": {
-                py: 0,
-              },
-              "& .MuiDataGrid-row--editing .MuiInputBase-root": {
-                minHeight: "30px",
-                height: "30px",
-                fontSize: "0.875rem",
-              },
-              "& .MuiDataGrid-row--editing .MuiInputBase-input": {
-                py: 0.5,
-              },
-              "& .MuiDataGrid-row--editing .MuiSelect-select": {
-                minHeight: "unset !important",
-                py: 0.5,
-              },
-              "& .MuiDataGrid-row--editing .MuiIconButton-root": {
-                width: 28,
-                height: 28,
-              },
-              "& .MuiDataGrid-row--editing .MuiDataGrid-cell[data-field='name'] .MuiInputBase-root":
-                {
-                  minHeight: "32px",
-                  height: "32px",
-                },
-            }}
-            rowSelectionModel={{
-              type: "include",
-              ids: new Set(selectedRowId ? [selectedRowId] : []),
-            }}
+            isCellEditable={isCellEditable}
+            sx={HIERARCHY_DATA_GRID_SX}
+            rowSelectionModel={rowSelectionModel}
             onRowSelectionModelChange={(nextModel) =>
               setSelectedRowId(Array.from(nextModel.ids)[0] ?? null)
             }
