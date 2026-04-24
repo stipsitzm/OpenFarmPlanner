@@ -151,7 +151,7 @@ export function buildHierarchyRowsFromIndex(
       const locationKey = `location-${location.id}`;
       const isExpanded = expandedRows.has(locationKey);
       const locationFields =
-        hierarchyIndex.fieldsByLocation.get(location.id) ?? [];
+        hierarchyIndex.fieldsByLocation.get(location.id!) ?? [];
       hierarchyRows.push({
         id: locationKey,
         type: 'location',
@@ -167,7 +167,7 @@ export function buildHierarchyRowsFromIndex(
       locationFields.forEach((field) => {
         const fieldKey = `field-${field.id}`;
         const isFieldExpanded = expandedRows.has(fieldKey);
-        const fieldBeds = hierarchyIndex.bedsByField.get(field.id) ?? [];
+        const fieldBeds = hierarchyIndex.bedsByField.get(field.id!) ?? [];
         hierarchyRows.push({
           id: fieldKey,
           type: 'field',
@@ -215,7 +215,7 @@ export function buildHierarchyRowsFromIndex(
   hierarchyIndex.sortedTopLevelFields.forEach((field) => {
     const fieldKey = `field-${field.id}`;
     const isFieldExpanded = expandedRows.has(fieldKey);
-    const fieldBeds = hierarchyIndex.bedsByField.get(field.id) ?? [];
+    const fieldBeds = hierarchyIndex.bedsByField.get(field.id!) ?? [];
     hierarchyRows.push({
       id: fieldKey,
       type: 'field',
@@ -366,7 +366,7 @@ export function createHierarchyRowsProjector(hierarchyIndex: HierarchyIndex) {
         const locationKey = `location-${location.id}`;
         const isExpanded = expandedRows.has(locationKey);
         const locationFields =
-          hierarchyIndex.fieldsByLocation.get(location.id) ?? [];
+          hierarchyIndex.fieldsByLocation.get(location.id!) ?? [];
 
         hierarchyRows.push(
           getLocationRow(location, locationFields.length > 0, isExpanded),
@@ -379,7 +379,7 @@ export function createHierarchyRowsProjector(hierarchyIndex: HierarchyIndex) {
         locationFields.forEach((field) => {
           const fieldKey = `field-${field.id}`;
           const isFieldExpanded = expandedRows.has(fieldKey);
-          const fieldBeds = hierarchyIndex.bedsByField.get(field.id) ?? [];
+          const fieldBeds = hierarchyIndex.bedsByField.get(field.id!) ?? [];
 
           hierarchyRows.push(
             getFieldRow(
@@ -417,7 +417,7 @@ export function createHierarchyRowsProjector(hierarchyIndex: HierarchyIndex) {
     hierarchyIndex.sortedTopLevelFields.forEach((field) => {
       const fieldKey = `field-${field.id}`;
       const isFieldExpanded = expandedRows.has(fieldKey);
-      const fieldBeds = hierarchyIndex.bedsByField.get(field.id) ?? [];
+      const fieldBeds = hierarchyIndex.bedsByField.get(field.id!) ?? [];
 
       hierarchyRows.push(
         getFieldRow(

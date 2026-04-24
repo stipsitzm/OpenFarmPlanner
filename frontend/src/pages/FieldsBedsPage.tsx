@@ -85,6 +85,9 @@ export default function FieldsBedsPage(): React.ReactElement {
     reloadHierarchyAndLocations,
     t as never,
   );
+  const shouldShowGlobalAddButton = viewMode === 'table'
+    && !shouldShowProjectRequiredState
+    && locations.length <= 1;
 
   const handleGlobalAddField = useCallback((): void => {
     if (locations.length === 0) {
@@ -206,8 +209,12 @@ export default function FieldsBedsPage(): React.ReactElement {
               />
             ) : null}
           </Box>
-          {viewMode === 'table' && !shouldShowProjectRequiredState ? (
-            <Button variant="contained" onClick={handleGlobalAddField}>
+          {shouldShowGlobalAddButton ? (
+            <Button
+              variant="contained"
+              onClick={handleGlobalAddField}
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
+            >
               {locations.length === 0
                 ? t('hierarchy:actions.createLocation')
                 : t('hierarchy:actions.addField')}

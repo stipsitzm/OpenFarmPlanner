@@ -4,6 +4,8 @@
 
 import { describe, it, expect } from 'vitest';
 import i18n from '../i18n';
+import helpDE from '../i18n/locales/de/help.json';
+import helpEN from '../i18n/locales/en/help.json';
 
 describe('i18n Configuration', () => {
   it('should be configured with German as default language', () => {
@@ -49,6 +51,24 @@ describe('i18n Configuration', () => {
     
     namespaces.forEach(ns => {
       expect(i18n.hasResourceBundle('de', ns)).toBe(true);
+    });
+  });
+
+  it('uses compact page help introductions instead of "what do I see here" sections', () => {
+    const helpResources = [helpDE, helpEN];
+    const deprecatedTitles = new Set(['Was sehe ich hier?', 'What do I see here?']);
+
+    helpResources.forEach((helpResource) => {
+      Object.values(helpResource.pages).forEach((page) => {
+        expect(page.intro).toEqual(expect.any(String));
+        expect(page.intro.trim().length).toBeGreaterThan(0);
+        expect(page.intro).not.toContain('•');
+
+        page.sections?.forEach((section) => {
+          expect(deprecatedTitles.has(section.title)).toBe(false);
+          expect(section.points.length).toBeGreaterThan(0);
+        });
+      });
     });
   });
 });

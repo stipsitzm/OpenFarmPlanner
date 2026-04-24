@@ -40,28 +40,33 @@
   "pages": {
     "dashboard": {
       "title": "Hilfe: Übersicht",
-      "points": [
-        "Hier siehst du eine Übersicht über dein Projekt.",
-        "Nutze die Navigation, um zu den Bereichen zu wechseln.",
-        "Wichtige Aktionen sind schnell erreichbar.",
-        "Öffne Seiten, um Daten zu bearbeiten oder zu planen."
+      "intro": "Die Übersicht zeigt den aktuellen Stand deines Projekts und führt dich schnell zu den wichtigsten Bereichen.",
+      "sections": [
+        {
+          "title": "Bedienung",
+          "points": [
+            "Nutze die Navigation, um Daten zu bearbeiten oder Planungen zu öffnen.",
+            "Verwende Schnellaktionen für häufige Aufgaben."
+          ]
+        }
       ]
     },
     "locations": {
       "title": "Hilfe: Standorte",
+      "intro": "Hier verwaltest du die Standorte deines Projekts. Sie bilden die oberste Ebene deiner Flächenstruktur.",
       "sections": [
         {
-          "title": "Was sehe ich hier?",
+          "title": "Bedienung",
           "points": [
-            "Hier kannst du Standorte hinzufügen und optional Informationen wie Koordinaten, Adresse, Bodenart oder Beschreibung hinzufügen."
+            "Lege neue Standorte an und ergänze Koordinaten, Adresse, Bodenart oder Beschreibung.",
+            "Bearbeite bestehende Standorte über die Aktionen in der Liste."
           ]
         },
         {
           "title": "Zusammenhang mit anderen Seiten",
           "points": [
-            "Standorte bilden die oberste Ebene deiner Flächenstruktur.",
-            "Für jeden Standort kannst du auf der Seite Anbauflächen Parzellen und Beete hinzufügen.",
-            "Aufgaben werden automatisch aus den Anbauplänen ermittelt."
+            "Auf der Seite Anbauflächen legst du zu jedem Standort Parzellen und Beete an.",
+            "Aufgaben werden aus den Anbauplänen ermittelt."
           ]
         }
       ],
@@ -74,32 +79,40 @@
     },
     "fields": {
       "title": "Hilfe: Parzellen",
-      "points": [
-        "Hier verwaltest du Parzellen innerhalb eines Standorts.",
-        "Eine Parzelle enthält mehrere Beete.",
-        "Mit „Neu“ legst du eine Parzelle an.",
-        "Tabellenzeilen sind anklickbar und können bearbeitet werden."
+      "intro": "Hier verwaltest du Parzellen innerhalb eines Standorts. Eine Parzelle fasst mehrere Beete zusammen.",
+      "sections": [
+        {
+          "title": "Bedienung",
+          "points": [
+            "Lege mit „Neu“ eine Parzelle an.",
+            "Klicke Tabellenzeilen an, um Einträge zu bearbeiten."
+          ]
+        }
       ]
     },
     "beds": {
       "title": "Hilfe: Beete",
-      "points": [
-        "Hier verwaltest du deine Beete.",
-        "Beete gehören immer zu einer Parzelle.",
-        "Mit „Neu“ legst du ein Beet an.",
-        "Tabellenzeilen sind anklickbar und können bearbeitet werden."
+      "intro": "Hier verwaltest du deine Beete. Jedes Beet gehört zu einer Parzelle und kann später in Anbauplänen verwendet werden.",
+      "sections": [
+        {
+          "title": "Bedienung",
+          "points": [
+            "Lege mit „Neu“ ein Beet an.",
+            "Klicke Tabellenzeilen an, um Einträge zu bearbeiten."
+          ]
+        },
+        {
+          "title": "Zusammenhang mit anderen Seiten",
+          "points": [
+            "In den Anbauplänen ordnest du Kulturen konkreten Beeten zu."
+          ]
+        }
       ]
     },
     "areas": {
-      "title": "Anbauflächen – Listenansicht",
+      "title": "Hilfe: Anbauflächen – Listenansicht",
+      "intro": "Hier verwaltest du deine Flächenstruktur vom Standort bis zum Beet. Die hierarchische Liste eignet sich besonders zum Anlegen und Bearbeiten von Flächen.",
       "sections": [
-        {
-          "title": "Was sehe ich hier?",
-          "points": [
-            "Standorte, Parzellen und Beete werden hierarchisch dargestellt.",
-            "Diese Ansicht eignet sich besonders gut, um neue Flächen anzulegen oder bestehende zu bearbeiten."
-          ]
-        },
         {
           "title": "Bedienung",
           "points": [
@@ -110,7 +123,7 @@
         {
           "title": "Zusammenhang mit anderen Seiten",
           "points": [
-            "Die hier angelegte Flächenstruktur bildet die Grundlage für deine weitere Planung.",
+            "Die Flächenstruktur bildet die Grundlage für deine weitere Planung.",
             "In den Anbauplänen ordnest du Kulturen einzelnen Beeten zu.",
             "In der grafischen Ansicht werden dieselben Flächen visuell dargestellt."
           ]
@@ -127,27 +140,21 @@
     },
     "cultures": {
       "title": "Hilfe: Kulturen",
+      "intro": "Hier verwaltest du Kulturen und ihre wichtigsten Eigenschaften. Diese Daten werden in Anbauplänen, Kalender und Saatgutbedarf verwendet.",
       "sections": [
-        {
-          "title": "Was sehe ich hier?",
-          "points": [
-            "Hier verwaltest du alle Kulturen und ihre wichtigsten Eigenschaften.",
-            "Diese Daten werden später in den Anbauplänen verwendet."
-          ]
-        },
         {
           "title": "Bedienung",
           "points": [
-            "Wähle eine Kultur aus der Liste aus, um Details zu sehen oder zu bearbeiten.",
-            "Bestehende Einträge kannst du bearbeiten, exportieren, löschen oder direkt für einen Anbauplan verwenden.",
-            "Du kannst deine Kulturdaten in die Öffentliche Kulturbibliothek hochladen um sie mit anderen zu teilen oder Kulturen aus der Bibliothek zu übernehmen."
+            "Wähle eine Kultur aus, um Details zu sehen oder zu bearbeiten.",
+            "Erstelle, exportiere, lösche oder verwende Kulturen direkt für einen Anbauplan.",
+            "Nutze die öffentliche Kulturbibliothek, um Kulturen zu teilen oder zu übernehmen."
           ]
         },
         {
           "title": "Zusammenhang mit anderen Seiten",
           "points": [
             "In den Anbauplänen ordnest du Kulturen konkreten Beeten und Zeiträumen zu.",
-            "Der Anbaukalender und der Saatgutbedarf nutzen diese Daten für Zeit- und Mengenplanung."
+            "Anbaukalender und Saatgutbedarf nutzen diese Daten für Zeit- und Mengenplanung."
           ]
         }
       ],
@@ -163,29 +170,22 @@
     },
     "plantingPlans": {
       "title": "Hilfe: Anbaupläne",
+      "intro": "Hier planst du, welche Kultur wann auf welchem Beet angebaut wird. Die Seite verbindet deine Anbauflächen mit den Kulturdaten und bildet die Grundlage für Anbaukalender und Saatgutbedarf.",
       "sections": [
-        {
-          "title": "Was sehe ich hier?",
-          "points": [
-            "Hier planst du, welche Kultur auf welchem Beet angebaut wird.",
-            "Jeder Eintrag verbindet Kultur, Beet und Zeitraum miteinander.",
-            "Damit legst du die Grundlage für Kalenderansicht und Saatgutbedarf fest."
-          ]
-        },
         {
           "title": "Bedienung",
           "points": [
-            "Einträge kannst du direkt in der Tabelle erstellen und bearbeiten.",
-            "Mit „Neu“ legst du einen zusätzlichen Plan an.",
-            "Änderungen zu Fläche, Zeitraum oder Kultur werden direkt in der Planung übernommen.",
-            "Auf Mobilgeräten kannst du neue Einträge über den schwebenden Plus-Button anlegen."
+            "Einträge direkt in der Tabelle erstellen und bearbeiten.",
+            "Mit „Neu“ einen zusätzlichen Plan anlegen.",
+            "Änderungen an Fläche, Zeitraum oder Kultur werden direkt in der Planung übernommen.",
+            "Auf Mobilgeräten neue Einträge über den schwebenden Plus-Button anlegen."
           ]
         },
         {
           "title": "Zusammenhang mit anderen Seiten",
           "points": [
-            "Anbaupläne verbinden die Flächenstruktur aus den Anbauflächen mit den Kulturdaten.",
-            "Im Anbaukalender siehst du daraus die zeitliche Abfolge.",
+            "Anbaupläne nutzen die Flächenstruktur aus den Anbauflächen.",
+            "Im Anbaukalender wird daraus die zeitliche Abfolge sichtbar.",
             "Der Saatgutbedarf wird aus diesen Planungen berechnet."
           ]
         }
@@ -200,99 +200,51 @@
     },
     "calendar": {
       "title": "Hilfe: Anbaukalender",
+      "intro": "Der Anbaukalender zeigt die zeitliche Planung deiner Anbaupläne (Anzuchtzeitraum, Wachstumszeitraum und Erntezeitraum). So erkennst du Belegungen, Anzuchtphasen und mögliche Überschneidungen.",
       "sections": [
-        {
-          "title": "Was sehe ich hier?",
-          "points": [
-            "Hier siehst du die zeitliche Planung deiner Anbaupläne als Kalenderansicht.",
-            "Die Ansicht zeigt, wann Kulturen geplant, vorgezogen, gepflanzt oder geerntet werden.",
-            "So erkennst du Engpässe und Überschneidungen frühzeitig."
-          ]
-        },
         {
           "title": "Bedienung",
           "points": [
-            "Über die Tabs wechselst du zwischen Belegungs- und Anzuchtansicht.",
-            "Nutze den Schalter, um den Wochen-Ertragskalender ein- oder auszublenden.",
-            "Bewege dich durch die Zeitleiste, um kommende Zeiträume und Belegungen zu prüfen.",
-            "Fahre über Einträge, um Detailinformationen im Tooltip zu sehen."
+            "Fahre über Einträge, um Details im Tooltip zu sehen.",
+            "Im Bearbeitungsmodus kannst du Zeiträume direkt im Kalender per Drag & Drop anpassen."
           ]
         },
         {
           "title": "Zusammenhang mit anderen Seiten",
           "points": [
             "Der Kalender basiert auf den Daten aus den Anbauplänen.",
-            "Wenn du Zeiträume in den Anbauplänen änderst, aktualisiert sich diese Ansicht entsprechend.",
-            "Die Kalenderansicht unterstützt dich bei der operativen Saisonplanung."
+            "Änderungen an Zeiträumen in den Anbauplänen aktualisieren diese Ansicht."
           ]
         }
-      ],
-      "symbolsTitle": "Symbole und Bedienelemente",
-      "symbols": {
-        "tabs": "Zwischen Ansichten wechseln",
-        "switch": "Wochen-Ertragskalender ein- oder ausblenden",
-        "tooltip": "Zusätzliche Detailinformationen anzeigen"
-      }
+      ]
     },
     "seedDemand": {
       "title": "Hilfe: Saatgutbedarf",
+      "intro": "Hier siehst du, wie viel Saatgut du für deine geplanten Anbaupläne benötigst. Die Mengen werden aus Kulturdaten, Flächen und Planungseinträgen berechnet.",
       "sections": [
-        {
-          "title": "Was sehe ich hier?",
-          "points": [
-            "Hier siehst du, wie viel Saatgut du für deine geplanten Anbaupläne benötigst.",
-            "Die Mengen werden aus Kulturdaten, Flächen und Planungseinträgen abgeleitet.",
-            "Die Tabelle hilft dir, den Einkauf gezielt vorzubereiten."
-          ]
-        },
         {
           "title": "Bedienung",
           "points": [
-            "Wähle pro Kultur einen Lieferanten aus, um passende Packungsvorschläge zu erhalten.",
-            "Prüfe benötigte Mengen und vorgeschlagene Packungskombinationen direkt in der Tabelle.",
-            "Nutze die Ansicht, um Bestellungen konsistent mit deiner Planung abzustimmen."
+            "Wähle pro Kultur einen Lieferanten aus, um passende Packungsvorschläge zu erhalten."
           ]
         },
         {
           "title": "Zusammenhang mit anderen Seiten",
           "points": [
-            "Die Grundlage kommt aus den Anbauplänen und den Kulturdaten.",
-            "Lieferanten- und Packungsinformationen ergänzen die Mengenplanung für den Einkauf.",
-            "Änderungen in Kultur oder Planung wirken sich direkt auf den Bedarf aus."
+            "Die Daten kommen aus den Anbauplänen und Kulturdaten.",
+            "Änderungen an Kultur oder Planung wirken sich direkt auf den Bedarf aus."
           ]
         }
-      ],
-      "symbolsTitle": "Symbole und Bedienelemente",
-      "symbols": {
-        "supplierSelect": "Lieferanten pro Kultur festlegen",
-        "packageInfo": "Empfohlene Packungskombinationen prüfen"
-      }
+      ]
     },
     "suppliers": {
       "title": "Hilfe: Lieferanten",
+      "intro": "Wenn du hier Saatgutlieferanten anlegst, kannst du bei den Kulturen Lieferantespezifische Informationen ergänzen, wie z.B. die Packungsgrößen.",
       "sections": [
-        {
-          "title": "Was sehe ich hier?",
-          "points": [
-            "Hier verwaltest du Saatgutlieferanten und Bezugsquellen.",
-            "Zu jedem Lieferanten kannst du wichtige Bezugsinformationen wie Name und Website hinterlegen.",
-            "Diese Daten werden später in Kulturen und Saatgutbedarf verwendet."
-          ]
-        },
         {
           "title": "Bedienung",
           "points": [
-            "Mit „Neu“ legst du einen weiteren Lieferanten an.",
-            "Bestehende Einträge kannst du bearbeiten und speichern.",
-            "Nicht mehr benötigte Lieferanten kannst du direkt in der Tabelle entfernen."
-          ]
-        },
-        {
-          "title": "Zusammenhang mit anderen Seiten",
-          "points": [
-            "Lieferanten ergänzen Kulturen um Bezugs- und Einkaufsinformationen.",
-            "Im Saatgutbedarf helfen sie dir, passende Packungen und Quellen auszuwählen.",
-            "So verbindest du Planung und Einkauf an einer zentralen Stelle."
+            "Bearbeite bestehende Einträge direkt in der Liste."
           ]
         }
       ],
@@ -304,27 +256,22 @@
       }
     },
     "graphical": {
-      "title": "Anbauflächen – Grafische Ansicht",
+      "title": "Hilfe: Anbauflächen – Grafische Ansicht",
+      "intro": "Hier siehst du Standorte, Parzellen und Beete räumlich angeordnet. Die grafische Ansicht hilft, die Flächenstruktur visuell zu prüfen und anzupassen.",
       "sections": [
-        {
-          "title": "Was sehe ich hier?",
-          "points": [
-            "Hier siehst du deine Standorte, Parzellen und Beete grafisch angeordnet."
-          ]
-        },
         {
           "title": "Bedienung",
           "points": [
             "Klicke auf ein Beet oder eine Parzelle, um Details anzuzeigen.",
-            "Im Modus „Bearbeiten“ kannst du Elemente verschieben.",
+            "Verschiebe Elemente im Modus „Bearbeiten“.",
             "Ziehe auf eine freie Fläche, um die Ansicht zu verschieben.",
-            "Mit dem Mausrad oder einer Pinch-Geste kannst du zoomen."
+            "Zoome mit Mausrad oder Pinch-Geste."
           ]
         },
         {
           "title": "Zusammenhang mit anderen Seiten",
           "points": [
-            "Diese Ansicht zeigt dieselben Flächen wie die Listenansicht – nur grafisch dargestellt."
+            "Die grafische Ansicht zeigt dieselben Flächen wie die Listenansicht."
           ]
         }
       ],

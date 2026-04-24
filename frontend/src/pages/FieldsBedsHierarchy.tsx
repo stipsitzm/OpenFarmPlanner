@@ -18,7 +18,7 @@ import React, {
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../i18n";
 import { DataGrid, GridRowModes } from "@mui/x-data-grid";
-import type { GridRowsProp, GridRowModesModel } from "@mui/x-data-grid";
+import type { GridRowsProp, GridRowModesModel, GridRowHeightParams } from "@mui/x-data-grid";
 import { Box, Alert } from "@mui/material";
 import { dataGridSx } from "../components/data-grid/styles";
 import {
@@ -771,10 +771,10 @@ function FieldsBedsHierarchy({
       hierarchyIndex.sortedLocations.forEach((location) => {
         hierarchyEntries.push({ name: location.name, level: 0, type: "location" });
         const locationFields =
-          hierarchyIndex.fieldsByLocation.get(location.id) ?? [];
+          hierarchyIndex.fieldsByLocation.get(location.id!) ?? [];
         locationFields.forEach((field) => {
           hierarchyEntries.push({ name: field.name, level: 1, type: "field" });
-          const fieldBeds = hierarchyIndex.bedsByField.get(field.id) ?? [];
+          const fieldBeds = hierarchyIndex.bedsByField.get(field.id!) ?? [];
           fieldBeds.forEach((bed) => {
             hierarchyEntries.push({ name: bed.name, level: 2, type: "bed" });
           });
@@ -783,7 +783,7 @@ function FieldsBedsHierarchy({
     } else {
       hierarchyIndex.sortedTopLevelFields.forEach((field) => {
         hierarchyEntries.push({ name: field.name, level: 0, type: "field" });
-        const fieldBeds = hierarchyIndex.bedsByField.get(field.id) ?? [];
+        const fieldBeds = hierarchyIndex.bedsByField.get(field.id!) ?? [];
         fieldBeds.forEach((bed) => {
           hierarchyEntries.push({ name: bed.name, level: 1, type: "bed" });
         });
@@ -831,11 +831,12 @@ function FieldsBedsHierarchy({
     nameColumnWidth,
   ]);
 
-  const getRowHeight = useCallback((params: { model: HierarchyRow }) => {
-    if (params.model.type === "location") {
+  const getRowHeight = useCallback((params: GridRowHeightParams) => {
+    const row = params.model as HierarchyRow;
+    if (row.type === "location") {
       return LOCATION_ROW_HEIGHT;
     }
-    if (params.model.type === "field") {
+    if (row.type === "field") {
       return FIELD_ROW_HEIGHT;
     }
     return BED_ROW_HEIGHT;
