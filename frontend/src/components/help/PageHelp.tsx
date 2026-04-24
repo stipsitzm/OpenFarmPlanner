@@ -6,6 +6,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditIcon from '@mui/icons-material/Edit';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FitScreenIcon from '@mui/icons-material/FitScreen';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -88,7 +89,7 @@ const PAGE_SYMBOL_DEFINITIONS: Partial<Record<HelpPageKey, SymbolDefinition[]>> 
       icon: (
         <Stack direction="row" spacing={0.1} alignItems="center">
           <ChevronRightIcon fontSize="small" />
-          <ArrowDropDownIcon fontSize="small" />
+          <ExpandMoreIcon fontSize="small" />
         </Stack>
       ),
     },
@@ -257,7 +258,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
           <List dense disablePadding>
             {section.points.map((point, pointIndex) => (
               <ListItem key={`${pageKey}-graphical-${sectionIndex}-${pointIndex}`} sx={{ py: 0.2, px: 0 }}>
-                <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
+                <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
               </ListItem>
             ))}
           </List>
@@ -294,10 +295,10 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
         </Box>
         <List dense disablePadding sx={{ mt: 1 }}>
           <ListItem sx={{ py: 0.2, px: 0 }}>
-            <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${t('pages.graphical.modeViewDescription')}`} />
+            <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${t('pages.graphical.modeViewDescription')}`} />
           </ListItem>
           <ListItem sx={{ py: 0.2, px: 0 }}>
-            <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${t('pages.graphical.modeEditDescription')}`} />
+            <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${t('pages.graphical.modeEditDescription')}`} />
           </ListItem>
         </List>
       </Box>
@@ -343,7 +344,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
                   </Typography>
                   {section.points.map((point, pointIndex) => (
                     <ListItem key={`${pageKey}-${sectionIndex}-${pointIndex}`} sx={{ py: 0.15, px: 0 }}>
-                      <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
+                      <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
                     </ListItem>
                   ))}
                 </Box>
@@ -360,7 +361,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
               <List dense disablePadding>
                 {points.map((point, index) => (
                   <ListItem key={`${pageKey}-${index}`} sx={{ py: 0.25, px: 0 }}>
-                    <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
+                    <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
                   </ListItem>
                 ))}
               </List>
@@ -394,7 +395,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
                   </Typography>
                   {section.points.map((point, pointIndex) => (
                     <ListItem key={`${pageKey}-mobile-${sectionIndex}-${pointIndex}`} sx={{ py: 0.15, px: 0 }}>
-                      <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
+                      <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
                     </ListItem>
                   ))}
                 </Box>
@@ -411,7 +412,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
               <List dense disablePadding>
                 {points.map((point, index) => (
                   <ListItem key={`${pageKey}-mobile-${index}`} sx={{ py: 0.25, px: 0 }}>
-                    <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
+                    <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
                   </ListItem>
                 ))}
               </List>

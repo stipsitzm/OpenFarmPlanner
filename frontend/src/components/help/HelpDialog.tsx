@@ -66,11 +66,12 @@ export function HelpDialog({ open, onClose }: HelpDialogProps): ReactElement {
       open={open}
       onClose={onClose}
       fullWidth
-      maxWidth="sm"
+      maxWidth="md"
       fullScreen={isMobile}
       PaperProps={{
         sx: {
           borderRadius: isMobile ? 0 : 3,
+          width: isMobile ? '100%' : 880,
         },
       }}
     >
@@ -109,7 +110,7 @@ export function HelpDialog({ open, onClose }: HelpDialogProps): ReactElement {
                 <List dense disablePadding>
                   {section.points.map((point) => (
                     <ListItem key={`${section.title}-${point}`} disableGutters sx={{ py: 0.125 }}>
-                      <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`• ${point}`} />
+                      <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
                     </ListItem>
                   ))}
                 </List>
@@ -129,9 +130,10 @@ export function HelpDialog({ open, onClose }: HelpDialogProps): ReactElement {
                 px: 2,
                 py: 1.25,
                 backgroundColor: 'action.hover',
+                overflowX: 'auto',
               }}
             >
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
                 {t('workflow')}
               </Typography>
             </Box>
