@@ -168,9 +168,10 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
+  const hasI18nKey = (key: string): boolean => (typeof i18n.exists === 'function' ? i18n.exists(key) : false);
 
   const points = useMemo(() => {
-    if (!i18n.exists(`help:pages.${pageKey}.points`)) {
+    if (!hasI18nKey(`help:pages.${pageKey}.points`)) {
       return [];
     }
     const translated = t(`pages.${pageKey}.points`, { returnObjects: true });
@@ -178,12 +179,12 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
       return [];
     }
     return translated.map((point) => String(point));
-  }, [i18n, pageKey, t]);
+  }, [hasI18nKey, pageKey, t]);
 
   const intro = t(`pages.${pageKey}.intro`, { defaultValue: '' });
 
   const sections = useMemo(() => {
-    if (!i18n.exists(`help:pages.${pageKey}.sections`)) {
+    if (!hasI18nKey(`help:pages.${pageKey}.sections`)) {
       return null;
     }
     const translated = t(`pages.${pageKey}.sections`, { returnObjects: true });
@@ -205,7 +206,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
         return { title: item.title, points: sectionPoints } as HelpSection;
       })
       .filter((section): section is HelpSection => section !== null);
-  }, [i18n, pageKey, t]);
+  }, [hasI18nKey, pageKey, t]);
 
   const title = t(`pages.${pageKey}.title`);
   const symbolsTitle = t(`pages.${pageKey}.symbolsTitle`, { defaultValue: '' });
@@ -217,7 +218,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
 
     return symbolDefinitions
       .map((definition) => {
-        if (!i18n.exists(`help:pages.${pageKey}.symbols.${definition.key}`)) {
+        if (!hasI18nKey(`help:pages.${pageKey}.symbols.${definition.key}`)) {
           return null;
         }
         const translated = t(`pages.${pageKey}.symbols.${definition.key}`);
@@ -227,7 +228,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
         return { icon: definition.icon, text: translated };
       })
       .filter((item): item is { icon: ReactElement; text: string } => item !== null);
-  }, [i18n, pageKey, t]);
+  }, [hasI18nKey, pageKey, t]);
 
   const handleOpen = (event: MouseEvent<HTMLElement>): void => {
     if (isMobile) {
