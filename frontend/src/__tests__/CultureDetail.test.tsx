@@ -235,6 +235,52 @@ describe('CultureDetail Component', () => {
     expect(screen.getByText('4 g')).toBeInTheDocument();
   });
 
+  it('formats supplier TKG values in German number style', () => {
+    const mockOnSelect = vi.fn();
+    const culturesWithDecimalTkg: Culture[] = [
+      {
+        id: 17,
+        name: 'Dill',
+        supplier_data: [
+          {
+            supplier_name: 'ReinSaat',
+            thousand_kernel_weight_g: 3.9,
+            packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
+          },
+        ],
+      },
+      {
+        id: 18,
+        name: 'Koriander',
+        supplier_data: [
+          {
+            supplier_name: 'ReinSaat',
+            thousand_kernel_weight_g: 3.85,
+            packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
+          },
+        ],
+      },
+    ];
+
+    const { rerender } = render(
+      <CultureDetail
+        cultures={culturesWithDecimalTkg}
+        selectedCultureId={17}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+    expect(screen.getByText('3,9 g')).toBeInTheDocument();
+
+    rerender(
+      <CultureDetail
+        cultures={culturesWithDecimalTkg}
+        selectedCultureId={18}
+        onCultureSelect={mockOnSelect}
+      />
+    );
+    expect(screen.getByText('3,85 g')).toBeInTheDocument();
+  });
+
   it('renders no-data state when supplier package sizes are empty or invalid', () => {
     const mockOnSelect = vi.fn();
     const culturesWithEmptySupplierPackages: Culture[] = [

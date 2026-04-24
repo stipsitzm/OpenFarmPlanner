@@ -820,7 +820,9 @@ class Culture(TimestampedModel):
         blank=True,
         help_text="Safety margin for pre-cultivation/transplanting in percent (0-100)"
     )
-    thousand_kernel_weight_g = models.FloatField(
+    thousand_kernel_weight_g = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
         null=True,
         blank=True,
         help_text="Weight of 1000 kernels in grams"
@@ -1119,7 +1121,7 @@ class CultureSupplierData(TimestampedModel):
     supplier_product_name = models.CharField(max_length=255, blank=True)
     supplier_product_url = models.URLField(blank=True)
     packaging_sizes = models.JSONField(default=list, blank=True)
-    thousand_kernel_weight_g = models.FloatField(null=True, blank=True)
+    thousand_kernel_weight_g = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     germination_rate = models.FloatField(null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     notes = models.TextField(blank=True)
@@ -1182,7 +1184,7 @@ class PublicCulture(TimestampedModel):
     seed_rate_unit = models.CharField(max_length=30, null=True, blank=True)
     seed_rate_by_cultivation = models.JSONField(null=True, blank=True)
     sowing_calculation_safety_percent = models.FloatField(null=True, blank=True)
-    thousand_kernel_weight_g = models.FloatField(null=True, blank=True)
+    thousand_kernel_weight_g = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     seeding_requirement = models.FloatField(null=True, blank=True)
     seeding_requirement_type = models.CharField(max_length=30, blank=True)
     display_color = models.CharField(max_length=7, blank=True)

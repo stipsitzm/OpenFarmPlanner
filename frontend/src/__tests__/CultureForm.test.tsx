@@ -284,4 +284,49 @@ describe('CultureForm', () => {
 
     expect(scrollByMock).toHaveBeenCalled();
   });
+
+  it('normalizes comma decimals for supplier TKG before save', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    supplierListMock.mockResolvedValueOnce({ data: { results: [{ id: 10, name: 'Bingenheimer' }] } });
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ supplier_id: 10, packaging_sizes: [] }] }}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+
+    const tkgInput = await screen.findByLabelText('form.thousandKernelWeightLabel');
+    fireEvent.change(tkgInput, { target: { value: '3,9' } });
+    fireEvent.blur(tkgInput);
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      supplier_data: [expect.objectContaining({ thousand_kernel_weight_g: 3.9 })],
+    }));
+  });
+
+  it('shows invalid supplier TKG message and blocks save for non-numeric input', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    supplierListMock.mockResolvedValueOnce({ data: { results: [{ id: 10, name: 'Bingenheimer' }] } });
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ supplier_id: 10, packaging_sizes: [] }] }}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+
+    const tkgInput = await screen.findByLabelText('form.thousandKernelWeightLabel');
+    fireEvent.change(tkgInput, { target: { value: 'abc' } });
+    fireEvent.blur(tkgInput);
+
+    expect(await screen.findByText('form.thousandKernelWeightInvalidNumber')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'form.save' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+    expect(onSave).not.toHaveBeenCalled();
+  });
 });

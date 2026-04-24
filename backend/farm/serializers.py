@@ -82,6 +82,26 @@ class CentimetersField(serializers.FloatField):
         return cm_value / 100.0
 
 
+class LocalizedDecimalField(serializers.DecimalField):
+    """Decimal field that accepts comma decimals and returns float JSON values."""
+
+    default_error_messages = {
+        'invalid': 'Please enter a valid numeric value, e.g. 3.9.',
+    }
+
+    def to_internal_value(self, data):
+        normalized = data
+        if isinstance(data, str):
+            normalized = data.strip().replace(',', '.')
+        return super().to_internal_value(normalized)
+
+    def to_representation(self, value):
+        decimal_value = super().to_representation(value)
+        if decimal_value is None:
+            return None
+        return float(decimal_value)
+
+
 
 class LocationSerializer(serializers.ModelSerializer):
     @staticmethod
@@ -397,6 +417,12 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     supplier_name_input = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
+    thousand_kernel_weight_g = LocalizedDecimalField(
+        max_digits=6,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = CultureSupplierData
@@ -613,7 +639,9 @@ class CultureSerializer(serializers.ModelSerializer):
     seed_rate_pre_cultivation_value = serializers.FloatField(required=False, allow_null=True)
     seed_rate_pre_cultivation_unit = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     sowing_calculation_safety_percent_pre_cultivation = serializers.FloatField(required=False, allow_null=True)
-    thousand_kernel_weight_g = serializers.FloatField(
+    thousand_kernel_weight_g = LocalizedDecimalField(
+        max_digits=6,
+        decimal_places=2,
         required=False,
         allow_null=True,
         help_text='Weight of 1000 kernels in grams'

@@ -78,13 +78,10 @@ function formatNumber(value: number | null | undefined, t: (key: string) => stri
   
   // Round to 2 decimal places to avoid floating point precision issues
   const rounded = Math.round(value * 100) / 100;
-  
-  // If the result is a whole number, return as integer
-  if (rounded === Math.floor(rounded)) {
-    return rounded.toString();
-  }
-  
-  return rounded.toString();
+  return new Intl.NumberFormat('de-DE', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(rounded);
 }
 
 /**

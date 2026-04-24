@@ -159,6 +159,7 @@
     "seedPackagesLabel": "Packungsgrößen",
     "thousandKernelWeightHelp": "Gewicht von 1000 Körnern in Gramm.",
     "thousandKernelWeightError": "Tausendkorngewicht muss > 0 sein",
+    "thousandKernelWeightInvalidNumber": "Bitte gib einen gültigen Zahlenwert ein, z. B. 3,9",
     "packageSizeLabel": "Packungsgröße",
     "addSeedPackage": "Packung hinzufügen",
     "packageSizeHelp": "Packungsgröße in Gramm.",
