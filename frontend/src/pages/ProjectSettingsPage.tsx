@@ -30,11 +30,16 @@ export default function ProjectSettingsPage(): React.ReactElement {
   const isProjectAdmin = activeMembership?.role === 'admin';
   const canManageMembers = isProjectAdmin;
 
-  const extractErrorPayload = (error: unknown): { code: string | null; detail: string | null } => {
-    const payload = (error as { response?: { data?: { code?: string; detail?: string } } })?.response?.data;
+  const extractErrorPayload = (error: unknown): { code: string | null; detail: string | null; message: string | null } => {
+    const payload = (error as { response?: { data?: { code?: string; detail?: string; message?: string } } })?.response?.data;
+    const detail = payload?.detail ?? null;
+    const message = payload?.message ?? null;
+    const sanitizedDetail = typeof detail === 'string' && /^<!doctype html|^<html|<body[\s>]/i.test(detail.trim()) ? null : detail;
+    const sanitizedMessage = typeof message === 'string' && /^<!doctype html|^<html|<body[\s>]/i.test(message.trim()) ? null : message;
     return {
       code: payload?.code ?? null,
-      detail: payload?.detail ?? null,
+      detail: sanitizedDetail,
+      message: sanitizedMessage,
     };
   };
 
@@ -113,8 +118,8 @@ export default function ProjectSettingsPage(): React.ReactElement {
     } catch (inviteError: unknown) {
       const payload = extractErrorPayload(inviteError);
       const message = payload.code
-        ? t(`error.${payload.code}`, { defaultValue: payload.detail ?? t('inviteFailed') })
-        : (payload.detail ?? t('inviteFailed'));
+        ? t(`error.${payload.code}`, { defaultValue: payload.message ?? payload.detail ?? t('inviteFailed') })
+        : (payload.message ?? payload.detail ?? t('inviteFailed'));
       setFeedback({ severity: 'error', text: message });
     }
   };
@@ -142,8 +147,8 @@ export default function ProjectSettingsPage(): React.ReactElement {
     } catch (memberError: unknown) {
       const payload = extractErrorPayload(memberError);
       const message = payload.code
-        ? t(`error.${payload.code}`, { defaultValue: payload.detail ?? t('memberRoleUpdateFailed') })
-        : (payload.detail ?? t('memberRoleUpdateFailed'));
+        ? t(`error.${payload.code}`, { defaultValue: payload.message ?? payload.detail ?? t('memberRoleUpdateFailed') })
+        : (payload.message ?? payload.detail ?? t('memberRoleUpdateFailed'));
       setFeedback({ severity: 'error', text: message });
     }
   };
@@ -161,8 +166,8 @@ export default function ProjectSettingsPage(): React.ReactElement {
     } catch (memberError: unknown) {
       const payload = extractErrorPayload(memberError);
       const message = payload.code
-        ? t(`error.${payload.code}`, { defaultValue: payload.detail ?? t('memberRemoveFailed') })
-        : (payload.detail ?? t('memberRemoveFailed'));
+        ? t(`error.${payload.code}`, { defaultValue: payload.message ?? payload.detail ?? t('memberRemoveFailed') })
+        : (payload.message ?? payload.detail ?? t('memberRemoveFailed'));
       setFeedback({ severity: 'error', text: message });
     }
   };

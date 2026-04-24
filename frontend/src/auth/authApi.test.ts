@@ -84,4 +84,38 @@ describe('authApi error mapping', () => {
       expect(authError.message).toContain('Passwort: Dieses Passwort ist zu kurz.');
     }
   });
+
+  it('uses structured message field for email_send_failed responses', async () => {
+    installFetchMock([
+      { ok: true, status: 200, body: { detail: 'ok' } },
+      {
+        ok: false,
+        status: 503,
+        body: {
+          code: 'email_send_failed',
+          message: 'Dein Konto wurde erstellt, aber die Aktivierungs-E-Mail konnte nicht gesendet werden.',
+        },
+      },
+    ]);
+
+    await expect(register('bad-email', '123', '123')).rejects.toMatchObject({
+      message: 'Dein Konto wurde erstellt, aber die Aktivierungs-E-Mail konnte nicht gesendet werden.',
+      code: 'email_send_failed',
+    });
+  });
+
+  it('does not expose raw HTML error responses', async () => {
+    installFetchMock([
+      { ok: true, status: 200, body: { detail: 'ok' } },
+      {
+        ok: false,
+        status: 500,
+        body: '<!DOCTYPE html><html><body><h1>500 Internal Server Error</h1><pre>SMTP stack</pre></body></html>',
+      },
+    ]);
+
+    await expect(login('demo@example.com', 'secret')).rejects.toMatchObject({
+      message: 'Anfrage fehlgeschlagen.',
+    });
+  });
 });

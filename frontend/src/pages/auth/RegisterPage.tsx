@@ -65,7 +65,12 @@ export default function RegisterPage(): React.ReactElement {
 
   const handleResend = async (): Promise<void> => {
     setError(null);
-    setSuccess(await resendActivation(email.trim().toLowerCase()));
+    setSuccess(null);
+    try {
+      setSuccess(await resendActivation(email.trim().toLowerCase()));
+    } catch (resendError) {
+      setError(resendError instanceof Error ? resendError.message : t('auth:register.failed'));
+    }
   };
 
   const handleLogoutAndCreate = async (): Promise<void> => {

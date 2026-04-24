@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout
@@ -38,6 +39,7 @@ from .serializers import (
 User = get_user_model()
 ACTIVATION_EXPIRY_DAYS = 7
 ACCOUNT_DELETION_GRACE_DAYS = 14
+logger = logging.getLogger(__name__)
 
 
 def _de(message: str) -> str:
@@ -49,6 +51,15 @@ GENERIC_EMAIL_SENT_MESSAGE = _de('If the account exists, an email has been sent.
 REGISTRATION_EMAIL_SENT_MESSAGE = _de('Registration successful. Please check your email to activate your account.')
 REGISTRATION_LOCAL_EMAIL_MESSAGE = _de(
     'Registration successful. In local development, the activation email is written to the server log/terminal and is not delivered to an inbox.'
+)
+REGISTRATION_EMAIL_SEND_FAILED_MESSAGE = (
+    f'Dein Konto wurde erstellt, aber die Aktivierungs-E-Mail konnte nicht gesendet werden. '
+    f'Bitte kontaktiere [{settings.SUPPORT_CONTACT_EMAIL}](mailto:{settings.SUPPORT_CONTACT_EMAIL}), '
+    'damit wir dein Konto aktivieren oder dir den Link erneut senden können.'
+)
+GENERIC_EMAIL_SEND_FAILED_MESSAGE = (
+    f'Die E-Mail konnte nicht gesendet werden. '
+    f'Bitte kontaktiere [{settings.SUPPORT_CONTACT_EMAIL}](mailto:{settings.SUPPORT_CONTACT_EMAIL}).'
 )
 
 
@@ -178,7 +189,18 @@ class RegisterView(APIView):
         _validate_serializer_in_german(serializer)
         user = serializer.save()
         _set_activation_expiry(user)
-        _send_activation_email(user)
+        try:
+            _send_activation_email(user)
+        except Exception:  # noqa: BLE001
+            logger.exception('Failed to send activation email after registration', extra={'user_id': user.id, 'email': user.email})
+            return Response(
+                {
+                    'code': 'email_send_failed',
+                    'message': REGISTRATION_EMAIL_SEND_FAILED_MESSAGE,
+                    'detail': REGISTRATION_EMAIL_SEND_FAILED_MESSAGE,
+                },
+                status=status.HTTP_201_CREATED,
+            )
         detail_message = _registration_success_message()
         return Response({'detail': detail_message}, status=status.HTTP_201_CREATED)
 
@@ -348,7 +370,18 @@ class ResendActivationView(APIView):
         user = User.objects.filter(email__iexact=email).first()
         if user is not None and not user.is_active:
             _set_activation_expiry(user)
-            _send_activation_email(user)
+            try:
+                _send_activation_email(user)
+            except Exception:  # noqa: BLE001
+                logger.exception('Failed to resend activation email', extra={'user_id': user.id, 'email': user.email})
+                return Response(
+                    {
+                        'code': 'email_send_failed',
+                        'message': GENERIC_EMAIL_SEND_FAILED_MESSAGE,
+                        'detail': GENERIC_EMAIL_SEND_FAILED_MESSAGE,
+                    },
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
 
         return Response({'detail': GENERIC_EMAIL_SENT_MESSAGE})
 
@@ -364,7 +397,18 @@ class PasswordResetRequestView(APIView):
 
         user = User.objects.filter(email__iexact=email, is_active=True).first()
         if user is not None:
-            _send_password_reset_email(user)
+            try:
+                _send_password_reset_email(user)
+            except Exception:  # noqa: BLE001
+                logger.exception('Failed to send password reset email', extra={'user_id': user.id, 'email': user.email})
+                return Response(
+                    {
+                        'code': 'email_send_failed',
+                        'message': GENERIC_EMAIL_SEND_FAILED_MESSAGE,
+                        'detail': GENERIC_EMAIL_SEND_FAILED_MESSAGE,
+                    },
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
 
         return Response({'detail': GENERIC_EMAIL_SENT_MESSAGE})
 
