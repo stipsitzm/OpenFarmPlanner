@@ -42,12 +42,29 @@ vi.mock('react-modern-gantt', () => ({
   default: (props: {
     tasks: Array<{ name: string; tasks: Array<Record<string, unknown> & { id: string; name: string }> }>;
     renderTooltip?: ({ task }: { task: Record<string, unknown> }) => ReactNode;
+    onTaskUpdate?: (groupId: string, task: { id: string; startDate: Date }) => void | Promise<void>;
     locale?: string;
     localeText?: Record<string, unknown>;
   }) => {
     mocks.ganttProps(props);
+    const firstTask = props.tasks[0]?.tasks[0];
+    const firstGroupName = props.tasks[0]?.name ?? '';
     return (
       <div data-testid="mock-gantt">
+        {firstTask && props.onTaskUpdate ? (
+          <button
+            type="button"
+            data-testid="mock-update-task"
+            onClick={() => {
+              void props.onTaskUpdate(firstGroupName, {
+                id: String(firstTask.id),
+                startDate: new Date('2026-04-05'),
+              });
+            }}
+          >
+            update-task
+          </button>
+        ) : null}
         {props.tasks.map((group) => (
         <div key={group.name}>
           <span>{group.name}</span>
@@ -316,5 +333,80 @@ describe('GanttChartPage', () => {
     const editButton = screen.getByRole('button', { name: 'Bearbeiten' });
     fireEvent.mouseOver(editButton);
     expect(await screen.findByText('Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.')).toBeInTheDocument();
+  });
+
+  it('shows backend validation errors and reloads plans after failed task update', async () => {
+    const initialPlan = {
+      id: 10,
+      culture: 5,
+      culture_name: 'Salat',
+      bed: 3,
+      planting_date: '2026-04-01',
+      harvest_date: '2026-05-01',
+    };
+    const reloadedPlan = {
+      ...initialPlan,
+      planting_date: '2026-04-01',
+    };
+    mocks.planList
+      .mockResolvedValueOnce({ data: { results: [initialPlan] } })
+      .mockResolvedValueOnce({ data: { results: [reloadedPlan] } });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+    mocks.planUpdate.mockRejectedValue({
+      isAxiosError: true,
+      response: {
+        status: 400,
+        data: {
+          area_usage_sqm: ['Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten.'],
+        },
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Feld / Beet 1');
+    fireEvent.click(screen.getByTestId('mock-update-task'));
+
+    expect(await screen.findByText('Fläche (m²): Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten.')).toBeInTheDocument();
+    await waitFor(() => expect(mocks.planList).toHaveBeenCalledTimes(2));
+  });
+
+  it('keeps successful task updates working', async () => {
+    const initialPlan = {
+      id: 10,
+      culture: 5,
+      culture_name: 'Salat',
+      bed: 3,
+      planting_date: '2026-04-01',
+      harvest_date: '2026-05-01',
+    };
+    mocks.planList.mockResolvedValue({ data: { results: [initialPlan] } });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+    mocks.planUpdate.mockResolvedValue({
+      data: {
+        ...initialPlan,
+        planting_date: '2026-04-05',
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Feld / Beet 1');
+    fireEvent.click(screen.getByTestId('mock-update-task'));
+
+    await waitFor(() => expect(mocks.planUpdate).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText('Fehler beim Aktualisieren des Anbauplans')).not.toBeInTheDocument();
   });
 });
