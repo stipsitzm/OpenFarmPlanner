@@ -136,6 +136,14 @@ const PAN_STEP = 80;
 const PAN_FAST_STEP = 180;
 const WORKSPACE_MIN_WIDTH = 20000;
 const WORKSPACE_MIN_HEIGHT = 20000;
+const LOCATION_LAYOUT_PADDING = 20;
+const LOCATION_FIELD_GAP = 24;
+const FIELD_WORLD_PX_PER_METER = 18;
+const FIELD_WORLD_BASE_WIDTH = 560;
+const FIELD_WORLD_MIN_WIDTH = 560;
+const FIELD_WORLD_MAX_WIDTH = 920;
+const FIELD_WORLD_MIN_HEIGHT = 220;
+const FIELD_WORLD_SCALE_FACTOR = 12;
 
 const getFitViewportPadding = (stageWidth: number): ViewportPadding => ({
   top: stageWidth < 600 ? MOBILE_VIEWPORT_PADDING : VIEWPORT_PADDING,
@@ -519,19 +527,13 @@ export default function GraphicalFields({
     return locations.flatMap((location) => {
       if (!location.id) return [];
       const locationFields = fieldsByLocation.get(location.id) ?? [];
-      const padding = 20;
-      const fieldGap = stageWidth < 600 ? 12 : 24;
       const sizedFields = locationFields.map((field) => {
-        const fieldPxPerMeter = Math.max(
-          12,
-          Math.min(30, (stageWidth - 2 * padding) / 40),
-        );
-        const size = getFieldRectSize(field, fieldPxPerMeter, {
-          baseWidth: 560,
-          minWidth: 560,
-          maxWidth: Math.max(560, stageWidth - 2 * padding),
-          minHeight: 220,
-          scaleFactor: 12,
+        const size = getFieldRectSize(field, FIELD_WORLD_PX_PER_METER, {
+          baseWidth: FIELD_WORLD_BASE_WIDTH,
+          minWidth: FIELD_WORLD_MIN_WIDTH,
+          maxWidth: FIELD_WORLD_MAX_WIDTH,
+          minHeight: FIELD_WORLD_MIN_HEIGHT,
+          scaleFactor: FIELD_WORLD_SCALE_FACTOR,
         });
         return {
           field,
@@ -541,19 +543,19 @@ export default function GraphicalFields({
       });
       const totalFieldsHeight =
         sizedFields.reduce((sum, entry) => sum + entry.height, 0) +
-        Math.max(0, sizedFields.length - 1) * fieldGap;
+        Math.max(0, sizedFields.length - 1) * LOCATION_FIELD_GAP;
       let fieldY = Math.max(
-        padding,
+        LOCATION_LAYOUT_PADDING,
         Math.round(WORKSPACE_MIN_HEIGHT / 2 - totalFieldsHeight / 2),
       );
 
       const defaultFieldRects = sizedFields.map((entry) => {
         const y = fieldY;
-        fieldY += entry.height + fieldGap;
+        fieldY += entry.height + LOCATION_FIELD_GAP;
         return {
           ...entry,
           defaultX: Math.max(
-            padding,
+            LOCATION_LAYOUT_PADDING,
             Math.round(WORKSPACE_MIN_WIDTH / 2 - entry.width / 2),
           ),
           defaultY: y,
@@ -567,9 +569,9 @@ export default function GraphicalFields({
       );
       const contentWidth = Math.max(
         WORKSPACE_MIN_WIDTH,
-        stageWidth,
         ...defaultFieldRects.map(
-          (rect) => rect.width + rect.defaultX + padding,
+          (rect) =>
+            rect.width + rect.defaultX + LOCATION_LAYOUT_PADDING,
         ),
       );
       const fieldViewModels: RectViewModel[] = defaultFieldRects.map(
@@ -605,7 +607,47 @@ export default function GraphicalFields({
         },
       ];
     });
-  }, [fieldsByLocation, layoutsByField, locations, stageWidth]);
+  }, [fieldsByLocation, layoutsByField, locations]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
+    locationLayouts.forEach((layout) => {
+      const locationId = layout.location.id;
+      if (!locationId) {
+        return;
+      }
+      const contentBounds = getContentBoundsForLocation(locationId);
+      const viewport =
+        viewportByLocation[locationId] ??
+        fitBoundsToStage(
+          contentBounds,
+          { width: stageWidth, height: stageHeight },
+          getFitViewportPadding(stageWidth),
+        );
+      const sampleRects = layout.fieldViewModels.slice(0, 5).map((rect) => ({
+        id: rect.id,
+        world: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        scaled: {
+          x: rect.x * viewport.scale + viewport.x,
+          y: rect.y * viewport.scale + viewport.y,
+          width: rect.width * viewport.scale,
+          height: rect.height * viewport.scale,
+        },
+      }));
+
+      console.debug("[GraphicalFields] viewport debug", {
+        locationId,
+        stage: { width: stageWidth, height: stageHeight },
+        contentBounds,
+        viewport,
+        fitPadding: getFitViewportPadding(stageWidth),
+        sampleRects,
+      });
+    });
+  }, [locationLayouts, viewportByLocation, stageWidth, stageHeight]);
 
   const getContentBoundsForLocation = (locationId: number): ContentBounds => {
     const layout = locationLayouts.find((item) => item.location.id === locationId);

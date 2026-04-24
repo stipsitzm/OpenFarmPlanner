@@ -276,7 +276,22 @@ vi.mock("react-konva", async () => {
 });
 
 describe("GraphicalFields", () => {
+  const setViewportSize = (width: number, height: number): void => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: width,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: height,
+    });
+    window.dispatchEvent(new Event("resize"));
+  };
+
   beforeEach(() => {
+    setViewportSize(1280, 900);
     mockStageApi.setPointer(0, 0);
     mockStageApi.handlers = {};
     listByLocationMock.mockClear();
@@ -307,6 +322,43 @@ describe("GraphicalFields", () => {
         },
       ],
     });
+  });
+
+  it("keeps field world geometry identical between desktop and mobile viewport sizes", async () => {
+    setViewportSize(1280, 900);
+    const desktopRender = render(<GraphicalFields />);
+    act(() => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+      );
+    });
+
+    const desktopField = await screen.findByTestId("field-rect-10");
+    const desktopGeometry = {
+      x: desktopField.getAttribute("data-x"),
+      y: desktopField.getAttribute("data-y"),
+      width: desktopField.getAttribute("width"),
+      height: desktopField.getAttribute("height"),
+    };
+    desktopRender.unmount();
+
+    setViewportSize(375, 812);
+    render(<GraphicalFields />);
+    act(() => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+      );
+    });
+
+    const mobileField = await screen.findByTestId("field-rect-10");
+    const mobileGeometry = {
+      x: mobileField.getAttribute("data-x"),
+      y: mobileField.getAttribute("data-y"),
+      width: mobileField.getAttribute("width"),
+      height: mobileField.getAttribute("height"),
+    };
+
+    expect(mobileGeometry).toEqual(desktopGeometry);
   });
 
   it("renders the edit mode toggle and allows toggling it by click", async () => {
