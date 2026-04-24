@@ -7,6 +7,7 @@ import {
   buildHierarchyIndex,
   buildHierarchyRows,
   buildHierarchyRowsFromIndex,
+  createHierarchyRowsProjector,
 } from '../components/hierarchy/utils/hierarchyUtils';
 import type { Location, Field, Bed } from '../api/api';
 
@@ -464,5 +465,106 @@ describe('buildHierarchyRows', () => {
     const reuseDuration = performance.now() - reuseStart;
 
     expect(reuseDuration).toBeLessThan(rebuildDuration);
+  });
+
+  it('reuses row object references for unchanged visible rows across expand toggles', () => {
+    const hierarchyIndex = buildHierarchyIndex(
+      mockLocations,
+      mockFields,
+      mockBeds,
+      { field: 'name', direction: 'asc' },
+    );
+    const projectRows = createHierarchyRowsProjector(hierarchyIndex);
+
+    const initiallyExpanded = new Set<string | number>(['location-1']);
+    const initialRows = projectRows(initiallyExpanded);
+
+    const withExpandedField = new Set<string | number>(['location-1', 'field-1']);
+    const rowsAfterExpand = projectRows(withExpandedField);
+
+    const locationInitial = initialRows.find((row) => row.id === 'location-1');
+    const locationAfterExpand = rowsAfterExpand.find((row) => row.id === 'location-1');
+    const unchangedFieldInitial = initialRows.find((row) => row.id === 'field-2');
+    const unchangedFieldAfterExpand = rowsAfterExpand.find((row) => row.id === 'field-2');
+    const toggledFieldInitial = initialRows.find((row) => row.id === 'field-1');
+    const toggledFieldAfterExpand = rowsAfterExpand.find((row) => row.id === 'field-1');
+
+    expect(locationInitial).toBeDefined();
+    expect(locationAfterExpand).toBeDefined();
+    expect(unchangedFieldInitial).toBeDefined();
+    expect(unchangedFieldAfterExpand).toBeDefined();
+    expect(toggledFieldInitial).toBeDefined();
+    expect(toggledFieldAfterExpand).toBeDefined();
+
+    expect(locationInitial).toBe(locationAfterExpand);
+    expect(unchangedFieldInitial).toBe(unchangedFieldAfterExpand);
+    expect(toggledFieldInitial).not.toBe(toggledFieldAfterExpand);
+  });
+
+  it('projects rows with lower row-object churn during repeated expand/collapse toggles', () => {
+    const largeLocations = Array.from({ length: 15 }, (_, locationOffset) => ({
+      id: locationOffset + 1,
+      name: `Location ${locationOffset + 1}`,
+    })) as Location[];
+    const largeFields = largeLocations.flatMap((location) =>
+      Array.from({ length: 20 }, (_, fieldOffset) => ({
+        id: location.id! * 1000 + fieldOffset,
+        name: `Field ${location.id}-${fieldOffset}`,
+        location: location.id!,
+        area_sqm: 100 + fieldOffset,
+      })),
+    ) as Field[];
+    const largeBeds = largeFields.flatMap((field) =>
+      Array.from({ length: 12 }, (_, bedOffset) => ({
+        id: field.id! * 1000 + bedOffset,
+        name: `Bed ${field.id}-${bedOffset}`,
+        field: field.id!,
+        area_sqm: 10 + bedOffset,
+      })),
+    ) as Bed[];
+
+    const hierarchyIndex = buildHierarchyIndex(
+      largeLocations,
+      largeFields,
+      largeBeds,
+      { field: 'name', direction: 'asc' },
+    );
+    const projector = createHierarchyRowsProjector(hierarchyIndex);
+
+    const expanded = new Set<string | number>(
+      largeLocations.map((location) => `location-${location.id}`),
+    );
+
+    const toggledFieldIds = largeFields.slice(0, 30).map((field) => `field-${field.id}`);
+
+    const directReferences = new Set<object>();
+    for (let iteration = 0; iteration < 40; iteration += 1) {
+      toggledFieldIds.forEach((fieldId, index) => {
+        if ((iteration + index) % 2 === 0) {
+          expanded.add(fieldId);
+        } else {
+          expanded.delete(fieldId);
+        }
+      });
+      buildHierarchyRowsFromIndex(hierarchyIndex, expanded).forEach((row) => {
+        directReferences.add(row);
+      });
+    }
+
+    const projectedReferences = new Set<object>();
+    for (let iteration = 0; iteration < 40; iteration += 1) {
+      toggledFieldIds.forEach((fieldId, index) => {
+        if ((iteration + index) % 2 === 0) {
+          expanded.add(fieldId);
+        } else {
+          expanded.delete(fieldId);
+        }
+      });
+      projector(expanded).forEach((row) => {
+        projectedReferences.add(row);
+      });
+    }
+
+    expect(projectedReferences.size).toBeLessThan(directReferences.size);
   });
 });

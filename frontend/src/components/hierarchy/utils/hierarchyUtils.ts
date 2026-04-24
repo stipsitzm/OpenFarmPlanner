@@ -255,3 +255,192 @@ export function buildHierarchyRowsFromIndex(
 
   return hierarchyRows;
 }
+
+/**
+ * Creates a reusable projector that materializes hierarchy rows while reusing row objects
+ * for unchanged nodes. This reduces object churn on frequent expand/collapse toggles.
+ */
+export function createHierarchyRowsProjector(hierarchyIndex: HierarchyIndex) {
+  const locationRows = new Map<string, HierarchyRow>();
+  const fieldRows = new Map<string, HierarchyRow>();
+  const bedRows = new Map<number, HierarchyRow>();
+
+  const getLocationRow = (
+    location: Location,
+    hasChildren: boolean,
+    expanded: boolean,
+  ): HierarchyRow => {
+    const key = `${location.id}:${expanded ? '1' : '0'}`;
+    const cached = locationRows.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    const row: HierarchyRow = {
+      id: `location-${location.id}`,
+      type: 'location',
+      level: 0,
+      name: location.name,
+      locationId: location.id,
+      expanded,
+      hasChildren,
+    };
+    locationRows.set(key, row);
+    return row;
+  };
+
+  const getFieldRow = (
+    field: Field,
+    level: 0 | 1,
+    parentId: string | undefined,
+    locationId: number | undefined,
+    hasChildren: boolean,
+    expanded: boolean,
+  ): HierarchyRow => {
+    const key = `${field.id}:${level}:${parentId ?? ''}:${locationId ?? ''}:${expanded ? '1' : '0'}`;
+    const cached = fieldRows.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    const row: HierarchyRow = {
+      id: `field-${field.id}`,
+      type: 'field',
+      level,
+      name: field.name,
+      fieldId: field.id,
+      expanded,
+      hasChildren,
+      area_sqm: field.area_sqm,
+      length_m: field.length_m,
+      width_m: field.width_m,
+      notes: field.notes,
+      ...(parentId ? { parentId } : {}),
+      ...(locationId !== undefined ? { locationId } : {}),
+    };
+    fieldRows.set(key, row);
+    return row;
+  };
+
+  const getBedRow = (
+    bed: Bed,
+    level: 1 | 2,
+    parentId: string,
+    fieldId: number,
+    fieldName: string,
+    locationId: number | undefined,
+  ): HierarchyRow => {
+    const bedId = bed.id!;
+    const cached = bedRows.get(bedId);
+    if (cached) {
+      return cached;
+    }
+
+    const row: HierarchyRow = {
+      id: bedId,
+      type: 'bed',
+      level,
+      parentId,
+      name: bed.name,
+      field: bed.field,
+      field_name: fieldName,
+      area_sqm: bed.area_sqm,
+      length_m: bed.length_m,
+      width_m: bed.width_m,
+      notes: bed.notes,
+      fieldId,
+      bedId,
+      hasChildren: false,
+      isNew: bedId < 0,
+      ...(locationId !== undefined ? { locationId } : {}),
+    };
+    bedRows.set(bedId, row);
+    return row;
+  };
+
+  return (expandedRows: Set<string | number>): HierarchyRow[] => {
+    const hierarchyRows: HierarchyRow[] = [];
+
+    if (hierarchyIndex.hasMultipleLocations) {
+      hierarchyIndex.sortedLocations.forEach((location) => {
+        const locationKey = `location-${location.id}`;
+        const isExpanded = expandedRows.has(locationKey);
+        const locationFields =
+          hierarchyIndex.fieldsByLocation.get(location.id) ?? [];
+
+        hierarchyRows.push(
+          getLocationRow(location, locationFields.length > 0, isExpanded),
+        );
+
+        if (!isExpanded) {
+          return;
+        }
+
+        locationFields.forEach((field) => {
+          const fieldKey = `field-${field.id}`;
+          const isFieldExpanded = expandedRows.has(fieldKey);
+          const fieldBeds = hierarchyIndex.bedsByField.get(field.id) ?? [];
+
+          hierarchyRows.push(
+            getFieldRow(
+              field,
+              1,
+              locationKey,
+              location.id,
+              fieldBeds.length > 0,
+              isFieldExpanded,
+            ),
+          );
+
+          if (!isFieldExpanded) {
+            return;
+          }
+
+          fieldBeds.forEach((bed) => {
+            hierarchyRows.push(
+              getBedRow(
+                bed,
+                2,
+                fieldKey,
+                field.id!,
+                field.name,
+                location.id,
+              ),
+            );
+          });
+        });
+      });
+
+      return hierarchyRows;
+    }
+
+    hierarchyIndex.sortedTopLevelFields.forEach((field) => {
+      const fieldKey = `field-${field.id}`;
+      const isFieldExpanded = expandedRows.has(fieldKey);
+      const fieldBeds = hierarchyIndex.bedsByField.get(field.id) ?? [];
+
+      hierarchyRows.push(
+        getFieldRow(
+          field,
+          0,
+          undefined,
+          undefined,
+          fieldBeds.length > 0,
+          isFieldExpanded,
+        ),
+      );
+
+      if (!isFieldExpanded) {
+        return;
+      }
+
+      fieldBeds.forEach((bed) => {
+        hierarchyRows.push(
+          getBedRow(bed, 1, fieldKey, field.id!, field.name, undefined),
+        );
+      });
+    });
+
+    return hierarchyRows;
+  };
+}

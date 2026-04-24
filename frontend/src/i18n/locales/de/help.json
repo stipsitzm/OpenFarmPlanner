@@ -96,8 +96,7 @@
         {
           "title": "Was sehe ich hier?",
           "points": [
-            "Hier verwaltest du die Struktur deiner Flächen – vom Standort bis zum Beet.",
-            "Standorte, Parzellen und Beete werden übersichtlich hierarchisch dargestellt.",
+            "Standorte, Parzellen und Beete werden hierarchisch dargestellt.",
             "Diese Ansicht eignet sich besonders gut, um neue Flächen anzulegen oder bestehende zu bearbeiten."
           ]
         },

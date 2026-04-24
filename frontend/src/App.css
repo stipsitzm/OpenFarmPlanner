@@ -14,29 +14,6 @@
   min-height: 100vh;
 }
 
-.app-version-footer {
-  position: fixed;
-  right: 12px;
-  bottom: 8px;
-  font-size: 12px;
-  color: #666;
-  background-color: rgba(255, 255, 255, 0.9);
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid #e0e0e0;
-  z-index: 1200;
-}
-
-@media (max-width: 900px) {
-  .app-version-footer {
-    display: none;
-  }
-}
-
-body.hide-version-footer .app-version-footer {
-  display: none;
-}
-
 /* Navigation Styles */
 .nav {
   width: 100%;
