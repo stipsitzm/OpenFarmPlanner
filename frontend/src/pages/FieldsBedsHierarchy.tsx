@@ -32,7 +32,8 @@ import { usePersistentSortModel } from "../hooks/usePersistentSortModel";
 import { useFieldOperations } from "../components/hierarchy/hooks/useFieldOperations";
 import { fieldAPI, bedAPI } from "../api/api";
 import {
-  buildHierarchyRows,
+  buildHierarchyIndex,
+  buildHierarchyRowsFromIndex,
   type HierarchySortConfig,
 } from "../components/hierarchy/utils/hierarchyUtils";
 import {
@@ -123,15 +124,15 @@ function FieldsBedsHierarchy({
     t,
   );
 
-  const rows = useMemo<GridRowsProp<HierarchyRow>>(() => {
-    return buildHierarchyRows(
-      locations,
-      fields,
-      beds,
-      expandedRows,
-      hierarchySortConfig,
-    );
-  }, [locations, fields, beds, expandedRows, hierarchySortConfig]);
+  const hierarchyIndex = useMemo(
+    () => buildHierarchyIndex(locations, fields, beds, hierarchySortConfig),
+    [locations, fields, beds, hierarchySortConfig],
+  );
+
+  const rows = useMemo<GridRowsProp<HierarchyRow>>(
+    () => buildHierarchyRowsFromIndex(hierarchyIndex, expandedRows),
+    [hierarchyIndex, expandedRows],
+  );
 
   // Notes editor - must be after rows definition
   const notesEditor = useNotesEditor<HierarchyRow>({

@@ -3,7 +3,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { buildHierarchyRows } from '../components/hierarchy/utils/hierarchyUtils';
+import {
+  buildHierarchyIndex,
+  buildHierarchyRows,
+  buildHierarchyRowsFromIndex,
+} from '../components/hierarchy/utils/hierarchyUtils';
 import type { Location, Field, Bed } from '../api/api';
 
 describe('buildHierarchyRows', () => {
@@ -67,7 +71,6 @@ describe('buildHierarchyRows', () => {
     ];
 
     expandedRows = new Set();
-    vi.spyOn(console, 'debug').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -380,5 +383,86 @@ describe('buildHierarchyRows', () => {
 
     const bed1 = result.find((r) => r.type === 'bed' && r.name === 'Bed 1');
     expect(bed1?.field_name).toBe('Field 1');
+  });
+
+  it('returns the same rows when materializing from a precomputed hierarchy index', () => {
+    expandedRows.add('location-1');
+    expandedRows.add('location-2');
+    expandedRows.add('field-1');
+
+    const directRows = buildHierarchyRows(
+      mockLocations,
+      mockFields,
+      mockBeds,
+      expandedRows,
+      { field: 'name', direction: 'asc' },
+    );
+    const hierarchyIndex = buildHierarchyIndex(
+      mockLocations,
+      mockFields,
+      mockBeds,
+      { field: 'name', direction: 'asc' },
+    );
+    const indexedRows = buildHierarchyRowsFromIndex(hierarchyIndex, expandedRows);
+
+    expect(indexedRows).toEqual(directRows);
+  });
+
+  it('materializing rows from a reused index is faster than rebuilding from raw arrays', () => {
+    const largeLocations = Array.from({ length: 20 }, (_, locationOffset) => ({
+      id: locationOffset + 1,
+      name: `Location ${locationOffset + 1}`,
+    })) as Location[];
+    const largeFields = largeLocations.flatMap((location) =>
+      Array.from({ length: 20 }, (_, fieldOffset) => ({
+        id: location.id! * 1000 + fieldOffset,
+        name: `Field ${location.id}-${fieldOffset}`,
+        location: location.id!,
+        area_sqm: 100 + fieldOffset,
+      })),
+    ) as Field[];
+    const largeBeds = largeFields.flatMap((field) =>
+      Array.from({ length: 20 }, (_, bedOffset) => ({
+        id: field.id! * 1000 + bedOffset,
+        name: `Bed ${field.id}-${bedOffset}`,
+        field: field.id!,
+        area_sqm: 10 + bedOffset,
+      })),
+    ) as Bed[];
+
+    const expanded = new Set<string | number>(
+      largeLocations.map((location) => `location-${location.id}`),
+    );
+    largeFields.forEach((field) => {
+      expanded.add(`field-${field.id}`);
+    });
+
+    const sortConfig = { field: 'name', direction: 'asc' } as const;
+
+    const rebuildStart = performance.now();
+    for (let index = 0; index < 10; index += 1) {
+      buildHierarchyRows(
+        largeLocations,
+        largeFields,
+        largeBeds,
+        expanded,
+        sortConfig,
+      );
+    }
+    const rebuildDuration = performance.now() - rebuildStart;
+
+    const hierarchyIndex = buildHierarchyIndex(
+      largeLocations,
+      largeFields,
+      largeBeds,
+      sortConfig,
+    );
+    const reuseStart = performance.now();
+    for (let index = 0; index < 10; index += 1) {
+      buildHierarchyRowsFromIndex(hierarchyIndex, expanded);
+    }
+    const reuseDuration = performance.now() - reuseStart;
+
+    expect(reuseDuration).toBeLessThan(rebuildDuration);
   });
 });

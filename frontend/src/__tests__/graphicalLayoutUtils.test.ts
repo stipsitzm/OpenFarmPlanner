@@ -30,6 +30,11 @@ describe('graphicalLayoutUtils', () => {
     expect(fallbackSize.height).toBeGreaterThan(0);
   });
 
+  it('preserves dimensional aspect ratio for narrow fields while applying minimum size', () => {
+    const narrowField = getFieldRectSize({ length_m: 10, width_m: 3, area_sqm: 30 }, 12);
+    expect(narrowField).toEqual({ width: 72, height: 240 });
+  });
+
   it('derives bed scale from field dimensions when available', () => {
     const scale = getBedScaleFromField({ length_m: 20, width_m: 10 }, { width: 400, height: 150 });
     expect(scale).toBe(7.5);

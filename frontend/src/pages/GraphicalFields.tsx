@@ -119,12 +119,8 @@ type InteractionMode = "view" | "edit";
 
 const VIEWPORT_PADDING = 24;
 const VIEWPORT_CONTROL_SAFE_AREA_RIGHT = 120;
-const FIT_VIEWPORT_PADDING: ViewportPadding = {
-  top: VIEWPORT_PADDING,
-  right: VIEWPORT_PADDING + VIEWPORT_CONTROL_SAFE_AREA_RIGHT,
-  bottom: VIEWPORT_PADDING,
-  left: VIEWPORT_PADDING,
-};
+const MOBILE_VIEWPORT_PADDING = 12;
+const MOBILE_VIEWPORT_CONTROL_SAFE_AREA_RIGHT = 8;
 const FIELD_INNER_OFFSET_X = 10;
 const FIELD_LABEL_HEIGHT = 24;
 const FIELD_INNER_OFFSET_Y = FIELD_INNER_OFFSET_X + FIELD_LABEL_HEIGHT;
@@ -140,6 +136,17 @@ const PAN_STEP = 80;
 const PAN_FAST_STEP = 180;
 const WORKSPACE_MIN_WIDTH = 20000;
 const WORKSPACE_MIN_HEIGHT = 20000;
+
+const getFitViewportPadding = (stageWidth: number): ViewportPadding => ({
+  top: stageWidth < 600 ? MOBILE_VIEWPORT_PADDING : VIEWPORT_PADDING,
+  right:
+    (stageWidth < 600 ? MOBILE_VIEWPORT_PADDING : VIEWPORT_PADDING) +
+    (stageWidth < 600
+      ? MOBILE_VIEWPORT_CONTROL_SAFE_AREA_RIGHT
+      : VIEWPORT_CONTROL_SAFE_AREA_RIGHT),
+  bottom: stageWidth < 600 ? MOBILE_VIEWPORT_PADDING : VIEWPORT_PADDING,
+  left: stageWidth < 600 ? MOBILE_VIEWPORT_PADDING : VIEWPORT_PADDING,
+});
 const snapToNeighbors = (
   currentId: number,
   position: Point,
@@ -513,6 +520,7 @@ export default function GraphicalFields({
       if (!location.id) return [];
       const locationFields = fieldsByLocation.get(location.id) ?? [];
       const padding = 20;
+      const fieldGap = stageWidth < 600 ? 12 : 24;
       const sizedFields = locationFields.map((field) => {
         const fieldPxPerMeter = Math.max(
           12,
@@ -533,7 +541,7 @@ export default function GraphicalFields({
       });
       const totalFieldsHeight =
         sizedFields.reduce((sum, entry) => sum + entry.height, 0) +
-        Math.max(0, sizedFields.length - 1) * 24;
+        Math.max(0, sizedFields.length - 1) * fieldGap;
       let fieldY = Math.max(
         padding,
         Math.round(WORKSPACE_MIN_HEIGHT / 2 - totalFieldsHeight / 2),
@@ -541,7 +549,7 @@ export default function GraphicalFields({
 
       const defaultFieldRects = sizedFields.map((entry) => {
         const y = fieldY;
-        fieldY += entry.height + 24;
+        fieldY += entry.height + fieldGap;
         return {
           ...entry,
           defaultX: Math.max(
@@ -618,12 +626,13 @@ export default function GraphicalFields({
   const resetViewport = (locationId: number): void => {
     setViewportByLocation((prev) => {
       const contentBounds = getContentBoundsForLocation(locationId);
+      const fitPadding = getFitViewportPadding(stageWidth);
       return {
         ...prev,
         [locationId]: fitBoundsToStage(
           contentBounds,
           { width: stageWidth, height: stageHeight },
-          FIT_VIEWPORT_PADDING,
+          fitPadding,
         ),
       };
     });
@@ -635,12 +644,13 @@ export default function GraphicalFields({
   ): void => {
     setViewportByLocation((prev) => {
       const contentBounds = getContentBoundsForLocation(locationId);
+      const fitPadding = getFitViewportPadding(stageWidth);
       const current =
         prev[locationId] ??
         fitBoundsToStage(
           contentBounds,
           { width: stageWidth, height: stageHeight },
-          FIT_VIEWPORT_PADDING,
+          fitPadding,
         );
       const nextRaw = updater(current);
       const nextClamped = clampViewportToStage(
@@ -1187,7 +1197,7 @@ export default function GraphicalFields({
             fitBoundsToStage(
               contentBounds,
               { width: stageWidth, height: stageHeight },
-              FIT_VIEWPORT_PADDING,
+              getFitViewportPadding(stageWidth),
             );
           const visibility = getVisibleElements(viewport.scale);
 
