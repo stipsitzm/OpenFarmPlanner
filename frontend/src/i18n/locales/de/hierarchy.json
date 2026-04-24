@@ -37,8 +37,6 @@
   "tooltips": {
     "expand": "Eintrag aufklappen",
     "collapse": "Eintrag zuklappen",
-    "length": "Länge in Metern",
-    "width": "Breite in Metern",
     "addField": "Parzelle hinzufügen"
   },
   "messages": {

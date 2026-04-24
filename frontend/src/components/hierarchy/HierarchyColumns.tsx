@@ -257,7 +257,7 @@ export function createHierarchyColumns(
       headerName: t('columns.length'),
       renderHeader: () => (
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-          <Tooltip title={t('tooltips.length')}><SwapVertIcon fontSize="small" aria-label={t('tooltips.length')} /></Tooltip>
+          <SwapVertIcon fontSize="small" aria-hidden="true" />
           <span>{t('columns.length')}</span>
         </Box>
       ),
@@ -271,7 +271,7 @@ export function createHierarchyColumns(
       headerName: t('columns.width'),
       renderHeader: () => (
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-          <Tooltip title={t('tooltips.width')}><SwapHorizIcon fontSize="small" aria-label={t('tooltips.width')} /></Tooltip>
+          <SwapHorizIcon fontSize="small" aria-hidden="true" />
           <span>{t('columns.width')}</span>
         </Box>
       ),
