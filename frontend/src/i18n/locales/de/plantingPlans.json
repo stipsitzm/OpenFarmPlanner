@@ -17,8 +17,8 @@
     "coupled": "gekoppelt"
   },
   "tooltips": {
-    "coupledFields": "Fläche und Pflanzenzahl sind gekoppelt. Änderungen in einem Feld aktualisieren automatisch das andere.",
-    "plantsFromSpacing": "Berechnung aus Pflanzabständen der Kultur"
+    "coupledFields": "Genutzte Fläche: Mit Pflanzenanzahl gekoppelt. Änderungen aktualisieren automatisch den anderen Wert.",
+    "plantsFromSpacing": "Pflanzenanzahl: Mit genutzter Fläche gekoppelt. Änderungen aktualisieren automatisch den anderen Wert."
   },
   "errors": {
     "load": "Fehler beim Laden der Anbaupläne",
