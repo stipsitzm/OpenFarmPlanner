@@ -496,12 +496,6 @@ describe("GraphicalFields", () => {
     expect(
       screen.getByRole("button", { name: "Alles einpassen" }),
     ).toBeInTheDocument();
-
-    const controls = screen.getByTestId("graphical-controls-1");
-    expect(controls).toHaveStyle({
-      left: "50%",
-      transform: "translateX(-50%)",
-    });
   }, 15000);
 
   it("allows viewport panning in view mode when dragging on empty canvas", () => {
