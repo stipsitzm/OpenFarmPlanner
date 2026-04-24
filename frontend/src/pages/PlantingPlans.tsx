@@ -681,7 +681,7 @@ function PlantingPlans(): React.ReactElement {
         editable: true,
         type: "number",
         renderHeader: () => (
-          <Tooltip title={t("plantingPlans:tooltips.coupledFields")}>
+          <Tooltip title={t("plantingPlans:tooltips.areaCoupled")}>
             <div>{t("plantingPlans:columns.areaM2")}</div>
           </Tooltip>
         ),
@@ -772,7 +772,7 @@ function PlantingPlans(): React.ReactElement {
         editable: true,
         type: "number",
         renderHeader: () => (
-          <Tooltip title={t("plantingPlans:tooltips.plantsFromSpacing")}>
+          <Tooltip title={t("plantingPlans:tooltips.plantsCountCoupled")}>
             <div>{t("plantingPlans:columns.plantsCount")}</div>
           </Tooltip>
         ),

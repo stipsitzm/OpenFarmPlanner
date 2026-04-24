@@ -15,6 +15,21 @@ interface ModeToggleProps {
   fullWidth?: boolean;
 }
 
+function renderToggleButtonWithOptionalTooltip(
+  button: ReactElement,
+  tooltip?: string,
+): ReactElement {
+  if (!tooltip) {
+    return button;
+  }
+
+  return (
+    <Tooltip title={tooltip}>
+      {button}
+    </Tooltip>
+  );
+}
+
 function ModeToggle({
   label,
   ariaLabel,
@@ -44,16 +59,18 @@ function ModeToggle({
           }
         }}
       >
-        <Tooltip title={viewTooltip ?? ''}>
+        {renderToggleButtonWithOptionalTooltip(
           <ToggleButton value="view" aria-label={viewLabel}>
             {viewLabel}
-          </ToggleButton>
-        </Tooltip>
-        <Tooltip title={editTooltip ?? ''}>
+          </ToggleButton>,
+          viewTooltip,
+        )}
+        {renderToggleButtonWithOptionalTooltip(
           <ToggleButton value="edit" aria-label={editLabel}>
             {editLabel}
-          </ToggleButton>
-        </Tooltip>
+          </ToggleButton>,
+          editTooltip,
+        )}
       </ToggleButtonGroup>
     </Stack>
   );

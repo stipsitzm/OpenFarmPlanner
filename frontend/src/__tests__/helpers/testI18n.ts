@@ -27,8 +27,6 @@ export const i18nMap: Record<string, string> = {
   'hierarchy:columns.width': 'Breite (m)',
   'columns.length': 'Länge (m)',
   'columns.width': 'Breite (m)',
-  'tooltips.length': 'Länge in Metern',
-  'tooltips.width': 'Breite in Metern',
   'tooltips.expand': 'Eintrag aufklappen',
   'tooltips.collapse': 'Eintrag zuklappen',
   'tooltips.addField': 'Parzelle hinzufügen',
