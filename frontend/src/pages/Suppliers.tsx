@@ -19,6 +19,7 @@ import {
   TextField,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import PageHelp from '../components/help/PageHelp';
@@ -234,7 +235,14 @@ export default function Suppliers(): React.ReactElement {
                     ) : null}
                   </TableCell>
                   <TableCell align="right">
-                    <Button size="small" onClick={() => openEdit(supplier)}>{t('editAction')}</Button>
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      aria-label={t('editAction')}
+                      onClick={() => openEdit(supplier)}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
                     <IconButton
                       size="small"
                       color="error"

@@ -656,19 +656,23 @@ function PlantingPlans(): React.ReactElement {
       {
         field: "harvest_date",
         headerName: t("plantingPlans:columns.harvestStartDate"),
+        description: "",
         flex: 0,
         minWidth: dynamicWidths.harvestDate,
         editable: false,
         type: "date",
+        renderHeader: () => <span>{t("plantingPlans:columns.harvestStartDate")}</span>,
         valueGetter: (value) => (value ? new Date(value) : null),
       },
       {
         field: "harvest_end_date",
         headerName: t("plantingPlans:columns.harvestEndDate"),
+        description: "",
         flex: 0,
         minWidth: dynamicWidths.harvestEndDate,
         editable: false,
         type: "date",
+        renderHeader: () => <span>{t("plantingPlans:columns.harvestEndDate")}</span>,
         valueGetter: (value) => (value ? new Date(value) : null),
       },
       {
@@ -681,7 +685,7 @@ function PlantingPlans(): React.ReactElement {
         editable: true,
         type: "number",
         renderHeader: () => (
-          <Tooltip title={t("plantingPlans:tooltips.areaCoupled")}>
+          <Tooltip title={t("plantingPlans:tooltips.coupledFields")}>
             <div>{t("plantingPlans:columns.areaM2")}</div>
           </Tooltip>
         ),
@@ -772,7 +776,7 @@ function PlantingPlans(): React.ReactElement {
         editable: true,
         type: "number",
         renderHeader: () => (
-          <Tooltip title={t("plantingPlans:tooltips.plantsCountCoupled")}>
+          <Tooltip title={t("plantingPlans:tooltips.plantsFromSpacing")}>
             <div>{t("plantingPlans:columns.plantsCount")}</div>
           </Tooltip>
         ),

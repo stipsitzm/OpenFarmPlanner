@@ -162,7 +162,7 @@ const PAGE_SYMBOL_DEFINITIONS: Partial<Record<HelpPageKey, SymbolDefinition[]>> 
  * @returns JSX element with the page help entry point and content.
  */
 export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | null {
-  const { t } = useTranslation('help');
+  const { t, i18n } = useTranslation('help');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -170,14 +170,22 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
   const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const points = useMemo(() => {
+    if (!i18n.exists(`help:pages.${pageKey}.points`)) {
+      return [];
+    }
     const translated = t(`pages.${pageKey}.points`, { returnObjects: true });
     if (!Array.isArray(translated)) {
       return [];
     }
     return translated.map((point) => String(point));
-  }, [pageKey, t]);
+  }, [i18n, pageKey, t]);
+
+  const intro = t(`pages.${pageKey}.intro`, { defaultValue: '' });
 
   const sections = useMemo(() => {
+    if (!i18n.exists(`help:pages.${pageKey}.sections`)) {
+      return null;
+    }
     const translated = t(`pages.${pageKey}.sections`, { returnObjects: true });
     if (!Array.isArray(translated)) {
       return null;
@@ -197,10 +205,10 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
         return { title: item.title, points: sectionPoints } as HelpSection;
       })
       .filter((section): section is HelpSection => section !== null);
-  }, [pageKey, t]);
+  }, [i18n, pageKey, t]);
 
   const title = t(`pages.${pageKey}.title`);
-  const symbolsTitle = t(`pages.${pageKey}.symbolsTitle`);
+  const symbolsTitle = t(`pages.${pageKey}.symbolsTitle`, { defaultValue: '' });
   const symbolRows = useMemo(() => {
     const symbolDefinitions = PAGE_SYMBOL_DEFINITIONS[pageKey];
     if (!symbolDefinitions || symbolDefinitions.length === 0) {
@@ -209,14 +217,17 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
 
     return symbolDefinitions
       .map((definition) => {
+        if (!i18n.exists(`help:pages.${pageKey}.symbols.${definition.key}`)) {
+          return null;
+        }
         const translated = t(`pages.${pageKey}.symbols.${definition.key}`);
-        if (!translated || translated === `pages.${pageKey}.symbols.${definition.key}`) {
+        if (!translated) {
           return null;
         }
         return { icon: definition.icon, text: translated };
       })
       .filter((item): item is { icon: ReactElement; text: string } => item !== null);
-  }, [pageKey, t]);
+  }, [i18n, pageKey, t]);
 
   const handleOpen = (event: MouseEvent<HTMLElement>): void => {
     if (isMobile) {
@@ -229,6 +240,49 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
   const handleClose = (): void => {
     setAnchorEl(null);
     setMobileOpen(false);
+  };
+
+  const renderIntro = (): ReactElement | null => {
+    if (!intro) {
+      return null;
+    }
+
+    return (
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+        {intro}
+      </Typography>
+    );
+  };
+
+  const renderSection = (section: HelpSection, key: string): ReactElement => (
+    <Box key={key} sx={{ mb: 1.25 }}>
+      <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+        {section.title}
+      </Typography>
+      <List dense disablePadding>
+        {section.points.map((point, pointIndex) => (
+          <ListItem key={`${key}-${pointIndex}`} sx={{ py: 0.15, px: 0 }}>
+            <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
+          </ListItem>
+        ))}
+      </List>
+    </Box>
+  );
+
+  const renderFallbackPoints = (keyPrefix: string): ReactElement | null => {
+    if (points.length === 0) {
+      return null;
+    }
+
+    return (
+      <List dense disablePadding>
+        {points.map((point, index) => (
+          <ListItem key={`${keyPrefix}-${index}`} sx={{ py: 0.25, px: 0 }}>
+            <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
+          </ListItem>
+        ))}
+      </List>
+    );
   };
 
   useEffect(() => {
@@ -250,19 +304,9 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
 
   const renderGraphicalHelpContent = (): ReactElement => (
     <Stack spacing={2}>
+      {renderIntro()}
       {sections?.map((section, sectionIndex) => (
-        <Box key={`${pageKey}-graphical-section-${sectionIndex}`}>
-          <Typography variant="body1" sx={{ fontWeight: 700, mb: 0.75 }}>
-            {section.title}
-          </Typography>
-          <List dense disablePadding>
-            {section.points.map((point, pointIndex) => (
-              <ListItem key={`${pageKey}-graphical-${sectionIndex}-${pointIndex}`} sx={{ py: 0.2, px: 0 }}>
-                <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
-              </ListItem>
-            ))}
-          </List>
-        </Box>
+        renderSection(section, `${pageKey}-graphical-section-${sectionIndex}`)
       ))}
 
       <Box>
@@ -336,20 +380,12 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
         <Box sx={{ maxWidth: 720, width: { xs: 1, sm: 680 }, p: 2.5 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{title}</Typography>
           {pageKey === 'graphical' ? renderGraphicalHelpContent() : sections && sections.length > 0 ? (
-            <List dense disablePadding>
+            <>
+              {renderIntro()}
               {sections.map((section, sectionIndex) => (
-                <Box key={`${pageKey}-section-${sectionIndex}`} sx={{ mb: 1.25 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                    {section.title}
-                  </Typography>
-                  {section.points.map((point, pointIndex) => (
-                    <ListItem key={`${pageKey}-${sectionIndex}-${pointIndex}`} sx={{ py: 0.15, px: 0 }}>
-                      <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
-                    </ListItem>
-                  ))}
-                </Box>
+                renderSection(section, `${pageKey}-section-${sectionIndex}`)
               ))}
-            </List>
+            </>
           ) : null}
 
           {sections && sections.length > 0 && pageKey !== 'graphical' && symbolRows.length > 0 ? (
@@ -358,13 +394,10 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
             </Box>
           ) : (
             pageKey !== 'graphical' && (!sections || sections.length === 0) ? (
-              <List dense disablePadding>
-                {points.map((point, index) => (
-                  <ListItem key={`${pageKey}-${index}`} sx={{ py: 0.25, px: 0 }}>
-                    <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
-                  </ListItem>
-                ))}
-              </List>
+              <>
+                {renderIntro()}
+                {renderFallbackPoints(pageKey)}
+              </>
             ) : null
           )}
         </Box>
@@ -387,20 +420,12 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
         <DialogTitle>{title}</DialogTitle>
         <DialogContent>
           {pageKey === 'graphical' ? renderGraphicalHelpContent() : sections && sections.length > 0 ? (
-            <List dense disablePadding>
+            <>
+              {renderIntro()}
               {sections.map((section, sectionIndex) => (
-                <Box key={`${pageKey}-mobile-section-${sectionIndex}`} sx={{ mb: 1.25 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                    {section.title}
-                  </Typography>
-                  {section.points.map((point, pointIndex) => (
-                    <ListItem key={`${pageKey}-mobile-${sectionIndex}-${pointIndex}`} sx={{ py: 0.15, px: 0 }}>
-                      <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
-                    </ListItem>
-                  ))}
-                </Box>
+                renderSection(section, `${pageKey}-mobile-section-${sectionIndex}`)
               ))}
-            </List>
+            </>
           ) : null}
 
           {sections && sections.length > 0 && pageKey !== 'graphical' && symbolRows.length > 0 ? (
@@ -409,13 +434,10 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
             </Box>
           ) : (
             pageKey !== 'graphical' && (!sections || sections.length === 0) ? (
-              <List dense disablePadding>
-                {points.map((point, index) => (
-                  <ListItem key={`${pageKey}-mobile-${index}`} sx={{ py: 0.25, px: 0 }}>
-                    <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
-                  </ListItem>
-                ))}
-              </List>
+              <>
+                {renderIntro()}
+                {renderFallbackPoints(`${pageKey}-mobile`)}
+              </>
             ) : null
           )}
         </DialogContent>
