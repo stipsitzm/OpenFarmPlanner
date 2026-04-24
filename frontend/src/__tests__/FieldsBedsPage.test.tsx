@@ -109,4 +109,35 @@ describe('FieldsBedsPage', () => {
     expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
     expect(locationListMock).not.toHaveBeenCalled();
   });
+
+  it('shows the global add button when exactly one location exists', async () => {
+    locationListMock.mockResolvedValue({
+      data: {
+        results: [{ id: 1, name: 'Hofstelle' }],
+      },
+    });
+
+    render(<FieldsBedsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
+    });
+  });
+
+  it('hides the global add button when more than one location exists', async () => {
+    locationListMock.mockResolvedValue({
+      data: {
+        results: [
+          { id: 1, name: 'Hofstelle' },
+          { id: 2, name: 'Obstgarten' },
+        ],
+      },
+    });
+
+    render(<FieldsBedsPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
+    });
+  });
 });
