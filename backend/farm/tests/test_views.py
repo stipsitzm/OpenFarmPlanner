@@ -437,6 +437,33 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], 'Updated Culture')
         self.assertEqual(response.data['crop_family'], 'Updated Family')
+
+    def test_culture_update_persists_thousand_kernel_weight_on_culture(self):
+        data = {
+            'name': self.culture.name,
+            'variety': self.culture.variety,
+            'growth_duration_days': self.culture.growth_duration_days,
+            'harvest_duration_days': self.culture.harvest_duration_days,
+            'harvest_method': self.culture.harvest_method,
+            'thousand_kernel_weight_g': 4.2,
+            'project': self.project.id,
+        }
+        response = self.client.put(f'/openfarmplanner/api/cultures/{self.culture.id}/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['thousand_kernel_weight_g'], 4.2)
+        self.culture.refresh_from_db()
+        self.assertEqual(float(self.culture.thousand_kernel_weight_g), 4.2)
+
+    def test_culture_partial_update_persists_thousand_kernel_weight_on_culture(self):
+        response = self.client.patch(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/',
+            {'thousand_kernel_weight_g': 3.8},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['thousand_kernel_weight_g'], 3.8)
+        self.culture.refresh_from_db()
+        self.assertEqual(float(self.culture.thousand_kernel_weight_g), 3.8)
     
     def test_culture_update_with_seed_packages_payload_from_get(self):
         """PUT with seed package objects (including id/culture) should stay valid."""

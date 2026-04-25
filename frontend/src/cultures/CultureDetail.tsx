@@ -907,7 +907,7 @@ export function CultureDetail({
                     </Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Tausendkorngewicht
+                        1000-Korn-Gewicht (g)
                       </Typography>
                       <Typography variant="body1">
                         {selectedCulture.thousand_kernel_weight_g !== null && selectedCulture.thousand_kernel_weight_g !== undefined
