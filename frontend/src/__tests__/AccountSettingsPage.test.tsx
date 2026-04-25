@@ -33,12 +33,17 @@ vi.mock('../auth/authApi', () => ({
 }));
 
 describe('AccountSettingsPage', () => {
-  it('renders all sections and keeps delete disabled until confirmation phrase is present', async () => {
+  it('renders compact sections and keeps delete disabled until confirmation phrase is present', async () => {
     render(<MemoryRouter><AccountSettingsPage /></MemoryRouter>);
 
     expect(screen.getByText('Profil')).toBeInTheDocument();
     expect(screen.getByText('Login & Sicherheit')).toBeInTheDocument();
-    expect(screen.getByText('Gefährlicher Bereich')).toBeInTheDocument();
+    expect(screen.getByText('Konto')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Anzeigename ändern' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'E-Mail-Adresse ändern' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Passwort ändern' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Neue E-Mail-Adresse')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Neues Passwort')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Konto löschen' }));
     const dialog = await screen.findByRole('dialog');

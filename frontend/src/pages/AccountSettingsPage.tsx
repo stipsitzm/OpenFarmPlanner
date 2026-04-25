@@ -4,10 +4,12 @@ import {
   Button,
   Card,
   CardContent,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   Stack,
   TextField,
   Typography,
@@ -46,9 +48,31 @@ export default function AccountSettingsPage(): React.ReactElement {
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [activeEditor, setActiveEditor] = useState<'displayName' | 'email' | 'password' | null>(null);
 
   const requiresDeletePhrase = deleteConfirmationText.trim() === 'LÖSCHEN';
   const canDelete = deletePassword.trim().length > 0 && requiresDeletePhrase;
+
+  const closeDisplayNameEditor = (): void => {
+    setActiveEditor(null);
+    setDisplayName(user?.display_name ?? '');
+    setProfileError(null);
+  };
+
+  const closeEmailEditor = (): void => {
+    setActiveEditor(null);
+    setNewEmail('');
+    setEmailPassword('');
+    setEmailError(null);
+  };
+
+  const closePasswordEditor = (): void => {
+    setActiveEditor(null);
+    setCurrentPassword('');
+    setNewPassword('');
+    setRepeatPassword('');
+    setPasswordError(null);
+  };
 
   const handleProfileSave = async (): Promise<void> => {
     setProfileSubmitting(true);
@@ -58,6 +82,7 @@ export default function AccountSettingsPage(): React.ReactElement {
       const response = await updateProfile(displayName);
       setProfileMessage(response.detail);
       await refreshUser();
+      setActiveEditor(null);
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : t('errors.generic'));
     } finally {
@@ -72,8 +97,7 @@ export default function AccountSettingsPage(): React.ReactElement {
     try {
       const response = await requestEmailChange(newEmail, emailPassword);
       setEmailMessage(response.detail);
-      setNewEmail('');
-      setEmailPassword('');
+      closeEmailEditor();
     } catch (error) {
       setEmailError(error instanceof Error ? error.message : t('errors.generic'));
     } finally {
@@ -88,9 +112,7 @@ export default function AccountSettingsPage(): React.ReactElement {
     try {
       const response = await changePassword(currentPassword, newPassword, repeatPassword);
       setPasswordMessage(response.detail);
-      setCurrentPassword('');
-      setNewPassword('');
-      setRepeatPassword('');
+      closePasswordEditor();
     } catch (error) {
       setPasswordError(error instanceof Error ? error.message : t('errors.generic'));
     } finally {
@@ -131,20 +153,48 @@ export default function AccountSettingsPage(): React.ReactElement {
               <Typography>
                 <strong>{t('displayName')}:</strong> {user?.display_name || t('noDisplayName')}
               </Typography>
-              <TextField
-                label={t('displayName')}
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
-                fullWidth
-                inputProps={{ maxLength: 255 }}
-              />
               {profileMessage ? <Alert severity="success">{profileMessage}</Alert> : null}
               {profileError ? <Alert severity="error">{profileError}</Alert> : null}
               <Box>
-                <Button variant="contained" onClick={() => void handleProfileSave()} disabled={profileSubmitting}>
-                  {t('actions.saveProfile')}
-                </Button>
+                {activeEditor !== 'displayName' ? (
+                  <Button
+                    variant="outlined"
+                    onClick={() => setActiveEditor('displayName')}
+                    sx={{ width: { xs: '100%', sm: 'auto' } }}
+                  >
+                    {t('actions.editDisplayName')}
+                  </Button>
+                ) : null}
               </Box>
+              <Collapse in={activeEditor === 'displayName'} unmountOnExit>
+                <Stack spacing={2}>
+                  <TextField
+                    label={t('displayName')}
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    fullWidth
+                    inputProps={{ maxLength: 255 }}
+                  />
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                    <Button
+                      variant="contained"
+                      onClick={() => void handleProfileSave()}
+                      disabled={profileSubmitting}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
+                    >
+                      {t('actions.save')}
+                    </Button>
+                    <Button
+                      variant="text"
+                      onClick={closeDisplayNameEditor}
+                      disabled={profileSubmitting}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
+                    >
+                      {t('cancel')}
+                    </Button>
+                  </Stack>
+                </Stack>
+              </Collapse>
             </Stack>
           </CardContent>
         </Card>
@@ -155,79 +205,117 @@ export default function AccountSettingsPage(): React.ReactElement {
               {t('sections.security')}
             </Typography>
 
-            <Stack spacing={2} sx={{ mb: 3 }}>
-              <Typography variant="subtitle1">{t('security.changeEmailTitle')}</Typography>
-              <TextField
-                label={t('security.newEmail')}
-                type="email"
-                fullWidth
-                value={newEmail}
-                onChange={(event) => setNewEmail(event.target.value)}
-              />
-              <TextField
-                label={t('currentPassword')}
-                type="password"
-                fullWidth
-                value={emailPassword}
-                onChange={(event) => setEmailPassword(event.target.value)}
-              />
-              {emailMessage ? <Alert severity="success">{emailMessage}</Alert> : null}
-              {emailError ? <Alert severity="error">{emailError}</Alert> : null}
-              <Box>
-                <Button
-                  variant="contained"
-                  onClick={() => void handleEmailChangeRequest()}
-                  disabled={emailSubmitting || !newEmail.trim() || !emailPassword.trim()}
-                >
-                  {t('actions.requestEmailChange')}
-                </Button>
-              </Box>
+            {emailMessage ? <Alert severity="success">{emailMessage}</Alert> : null}
+            {passwordMessage ? <Alert severity="success">{passwordMessage}</Alert> : null}
+            {emailError ? <Alert severity="error">{emailError}</Alert> : null}
+            {passwordError ? <Alert severity="error">{passwordError}</Alert> : null}
+
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
+              <Button
+                variant={activeEditor === 'email' ? 'contained' : 'outlined'}
+                onClick={() => setActiveEditor('email')}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
+                {t('security.changeEmailTitle')}
+              </Button>
+              <Button
+                variant={activeEditor === 'password' ? 'contained' : 'outlined'}
+                onClick={() => setActiveEditor('password')}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
+                {t('security.changePasswordTitle')}
+              </Button>
             </Stack>
 
-            <Stack spacing={2}>
-              <Typography variant="subtitle1">{t('security.changePasswordTitle')}</Typography>
-              <TextField
-                label={t('currentPassword')}
-                type="password"
-                fullWidth
-                value={currentPassword}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-              />
-              <TextField
-                label={t('security.newPassword')}
-                type="password"
-                fullWidth
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-              />
-              <TextField
-                label={t('security.repeatNewPassword')}
-                type="password"
-                fullWidth
-                value={repeatPassword}
-                onChange={(event) => setRepeatPassword(event.target.value)}
-              />
-              {passwordMessage ? <Alert severity="success">{passwordMessage}</Alert> : null}
-              {passwordError ? <Alert severity="error">{passwordError}</Alert> : null}
-              <Box>
-                <Button
-                  variant="contained"
-                  onClick={() => void handlePasswordChange()}
-                  disabled={passwordSubmitting || !currentPassword || !newPassword || !repeatPassword}
-                >
-                  {t('actions.changePassword')}
-                </Button>
-              </Box>
-            </Stack>
+            <Collapse in={activeEditor === 'email'} unmountOnExit>
+              <Stack spacing={2} sx={{ mb: 2 }}>
+                <TextField
+                  label={t('security.newEmail')}
+                  type="email"
+                  fullWidth
+                  value={newEmail}
+                  onChange={(event) => setNewEmail(event.target.value)}
+                />
+                <TextField
+                  label={t('currentPassword')}
+                  type="password"
+                  fullWidth
+                  value={emailPassword}
+                  onChange={(event) => setEmailPassword(event.target.value)}
+                />
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                  <Button
+                    variant="contained"
+                    onClick={() => void handleEmailChangeRequest()}
+                    disabled={emailSubmitting || !newEmail.trim() || !emailPassword.trim()}
+                    sx={{ width: { xs: '100%', sm: 'auto' } }}
+                  >
+                    {t('actions.sendConfirmationLink')}
+                  </Button>
+                  <Button
+                    variant="text"
+                    onClick={closeEmailEditor}
+                    disabled={emailSubmitting}
+                    sx={{ width: { xs: '100%', sm: 'auto' } }}
+                  >
+                    {t('cancel')}
+                  </Button>
+                </Stack>
+              </Stack>
+            </Collapse>
+
+            <Collapse in={activeEditor === 'password'} unmountOnExit>
+              <Stack spacing={2}>
+                <TextField
+                  label={t('currentPassword')}
+                  type="password"
+                  fullWidth
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                />
+                <TextField
+                  label={t('security.newPassword')}
+                  type="password"
+                  fullWidth
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                />
+                <TextField
+                  label={t('security.repeatNewPassword')}
+                  type="password"
+                  fullWidth
+                  value={repeatPassword}
+                  onChange={(event) => setRepeatPassword(event.target.value)}
+                />
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                  <Button
+                    variant="contained"
+                    onClick={() => void handlePasswordChange()}
+                    disabled={passwordSubmitting || !currentPassword || !newPassword || !repeatPassword}
+                    sx={{ width: { xs: '100%', sm: 'auto' } }}
+                  >
+                    {t('actions.savePassword')}
+                  </Button>
+                  <Button
+                    variant="text"
+                    onClick={closePasswordEditor}
+                    disabled={passwordSubmitting}
+                    sx={{ width: { xs: '100%', sm: 'auto' } }}
+                  >
+                    {t('cancel')}
+                  </Button>
+                </Stack>
+              </Stack>
+            </Collapse>
           </CardContent>
         </Card>
 
-        <Card sx={{ borderColor: 'error.main', borderWidth: 1, borderStyle: 'solid' }}>
+        <Card>
           <CardContent>
-            <Typography variant="h6" color="error.main" sx={{ mb: 1 }}>
-              {t('dangerZone')}
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              {t('sections.account')}
             </Typography>
-            <Typography sx={{ mb: 2 }}>{t('deleteDescription')}</Typography>
+            <Divider sx={{ mb: 2 }} />
             <Button color="error" variant="outlined" onClick={() => setDeleteDialogOpen(true)}>
               {t('deleteButton')}
             </Button>
@@ -240,6 +328,8 @@ export default function AccountSettingsPage(): React.ReactElement {
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Alert severity="warning">{t('dialogWarning')}</Alert>
+            <Typography>{t('deleteDescription')}</Typography>
+            <Typography>{t('restoreDescription')}</Typography>
             <TextField
               fullWidth
               type="password"

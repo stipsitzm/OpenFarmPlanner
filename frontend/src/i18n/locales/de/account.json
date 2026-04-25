@@ -4,12 +4,17 @@
   "displayName": "Anzeigename",
   "sections": {
     "profile": "Profil",
-    "security": "Login & Sicherheit"
+    "security": "Login & Sicherheit",
+    "account": "Konto"
   },
   "actions": {
     "saveProfile": "Profil speichern",
     "requestEmailChange": "E-Mail-Änderung anfordern",
-    "changePassword": "Passwort ändern"
+    "changePassword": "Passwort ändern",
+    "editDisplayName": "Anzeigename ändern",
+    "save": "Speichern",
+    "sendConfirmationLink": "Bestätigungslink senden",
+    "savePassword": "Passwort speichern"
   },
   "security": {
     "changeEmailTitle": "E-Mail-Adresse ändern",
