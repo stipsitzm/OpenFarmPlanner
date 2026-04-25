@@ -874,6 +874,16 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    1000-Korn-Gewicht (g)
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedCulture.thousand_kernel_weight_g !== null && selectedCulture.thousand_kernel_weight_g !== undefined
+                      ? `${formatNumber(selectedCulture.thousand_kernel_weight_g, t)} g`
+                      : t('noData')}
+                  </Typography>
+                </Box>
               </Box>
               <Box sx={{ mt: 3, ml: { xs: 0, sm: 2 } }}>
                 <Typography variant="subtitle1" component="h3" gutterBottom>
@@ -903,16 +913,6 @@ export function CultureDetail({
                       </Typography>
                       <Typography variant="body1">
                         {formatPackageSizes(selectedSupplierRow.packaging_sizes, t)}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        1000-Korn-Gewicht (g)
-                      </Typography>
-                      <Typography variant="body1">
-                        {selectedCulture.thousand_kernel_weight_g !== null && selectedCulture.thousand_kernel_weight_g !== undefined
-                          ? `${formatNumber(selectedCulture.thousand_kernel_weight_g, t)} g`
-                          : t('noData')}
                       </Typography>
                     </Box>
                   </Stack>

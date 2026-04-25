@@ -368,6 +368,7 @@ describe('CultureDetail Component', () => {
     );
 
     expect(screen.getByText('25 g')).toBeInTheDocument();
+    expect(screen.getAllByText('1000-Korn-Gewicht (g)')).toHaveLength(1);
     expect(screen.getByText('99 g')).toBeInTheDocument();
     expect(screen.queryByText('999 g')).not.toBeInTheDocument();
   });
