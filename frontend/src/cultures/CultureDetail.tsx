@@ -893,7 +893,7 @@ export function CultureDetail({
                 </Typography>
                 {hasMultipleSupplierRows && (
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Diese Angaben werden je Lieferant dargestellt. Das Tausendkorngewicht ist kulturweit.
+                    Diese Angaben werden je Lieferant dargestellt.
                   </Typography>
                 )}
                 {orderedSupplierRows.length === 0 ? (

@@ -339,7 +339,7 @@ describe('CultureDetail Component', () => {
     );
 
     expect(screen.getByRole('heading', { level: 3, name: 'Saatgutdaten je Lieferant' })).toBeInTheDocument();
-    expect(screen.getByText('Diese Angaben werden je Lieferant dargestellt. Das Tausendkorngewicht ist kulturweit.')).toBeInTheDocument();
+    expect(screen.getByText('Diese Angaben werden je Lieferant dargestellt.')).toBeInTheDocument();
     expect(screen.getByText('Alpha Seeds')).toBeInTheDocument();
     expect(screen.getByText('Beta Seeds')).toBeInTheDocument();
     expect(screen.getByText('5 g')).toBeInTheDocument();
