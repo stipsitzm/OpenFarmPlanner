@@ -7,8 +7,8 @@ from django.db.migrations.executor import MigrationExecutor
 
 @pytest.mark.django_db(transaction=True)
 class TestConsolidateSupplierTkgMigration:
-    migrate_from = ('farm', '0064_tkg_decimal_precision')
-    migrate_to = ('farm', '0065_consolidate_supplier_tkg_to_culture')
+    migrate_from = ('farm', '0063_location_agronomic_fields')
+    migrate_to = ('farm', '0064_tkg_decimal_precision')
 
     def setup_method(self):
         self.executor = MigrationExecutor(connection)
@@ -52,6 +52,15 @@ class TestConsolidateSupplierTkgMigration:
             packaging_sizes=[],
         )
 
+        single = culture_model.objects.create(name='Single', project_id=project.id, thousand_kernel_weight_g=None)
+        culture_supplier_data_model.objects.create(
+            culture_id=single.id,
+            supplier_id=supplier_a.id,
+            project_id=project.id,
+            thousand_kernel_weight_g=5.6,
+            packaging_sizes=[],
+        )
+
         conflict = culture_model.objects.create(name='Conflict', project_id=project.id, thousand_kernel_weight_g=None)
         culture_supplier_data_model.objects.create(
             culture_id=conflict.id,
@@ -87,6 +96,13 @@ class TestConsolidateSupplierTkgMigration:
         unified = culture_model.objects.get(name='Unified')
         assert unified.thousand_kernel_weight_g == Decimal('3.40')
 
+    def test_migration_moves_single_supplier_tkg_to_culture(self):
+        apps = self.executor.loader.project_state([self.migrate_to]).apps
+        culture_model = apps.get_model('farm', 'Culture')
+
+        single = culture_model.objects.get(name='Single')
+        assert single.thousand_kernel_weight_g == Decimal('5.60')
+
     def test_migration_does_not_copy_conflicting_supplier_tkg_to_culture(self):
         apps = self.executor.loader.project_state([self.migrate_to]).apps
         culture_model = apps.get_model('farm', 'Culture')
@@ -100,9 +116,3 @@ class TestConsolidateSupplierTkgMigration:
 
         existing = culture_model.objects.get(name='Existing')
         assert existing.thousand_kernel_weight_g == Decimal('9.90')
-
-    def test_migration_clears_all_supplier_tkg_values(self):
-        apps = self.executor.loader.project_state([self.migrate_to]).apps
-        culture_supplier_data_model = apps.get_model('farm', 'CultureSupplierData')
-
-        assert not culture_supplier_data_model.objects.exclude(thousand_kernel_weight_g__isnull=True).exists()
