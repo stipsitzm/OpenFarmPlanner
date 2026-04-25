@@ -149,6 +149,28 @@ describe('ProjectSettingsPage', () => {
     expect(alertElement?.className).toContain('MuiAlert-colorWarning');
   });
 
+  it('prefers structured backend message for invitation errors and hides HTML details', async () => {
+    inviteMock.mockRejectedValueOnce({
+      response: {
+        data: {
+          code: 'email_send_failed',
+          message: 'Die E-Mail konnte nicht gesendet werden. Bitte kontaktiere info@openfarmplanner.org.',
+          detail: '<!DOCTYPE html><html><body>500 Internal Server Error</body></html>',
+        },
+      },
+    });
+
+    render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+    await waitFor(() => expect(listMock).toHaveBeenCalledWith(1));
+
+    fireEvent.change(screen.getByLabelText('E-Mail'), { target: { value: 'invitee@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einladung senden' }));
+
+    expect(await screen.findByText(/Die E-Mail konnte nicht gesendet werden\./)).toBeInTheDocument();
+    expect(screen.getByText(/info@openfarmplanner.org/)).toBeInTheDocument();
+    expect(screen.queryByText(/Internal Server Error/)).not.toBeInTheDocument();
+  });
+
   it('sorts invitations by expiry date descending', async () => {
     listMock.mockResolvedValueOnce({
       data: [

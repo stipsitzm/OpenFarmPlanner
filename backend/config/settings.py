@@ -253,6 +253,7 @@ EMAIL_USE_TLS = _env_str('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes'
 EMAIL_HOST_USER = _env_str('EMAIL_HOST_USER', 'noreply@zwiebelzopf.at')
 EMAIL_HOST_PASSWORD = _env_str('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = _env_str('DEFAULT_FROM_EMAIL', 'OpenFarmPlanner <noreply@zwiebelzopf.at>')
+SUPPORT_CONTACT_EMAIL = _env_str('SUPPORT_CONTACT_EMAIL', 'info@openfarmplanner.org')
 SERVER_EMAIL = _env_str('SERVER_EMAIL', EMAIL_HOST_USER)
 
 # CORS and CSRF origins are intentionally configured independently via environment variables.

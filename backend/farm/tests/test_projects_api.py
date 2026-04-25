@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import override_settings
@@ -196,6 +197,22 @@ class ProjectsApiTests(APITestCase):
         self.assertFalse(response.data['mail_sent'])
         self.assertIn('invite_link', response.data)
         self.assertIn('/invite/accept?token=', response.data['invite_link'])
+        self.assertEqual(response.data.get('mail_error_code'), 'email_send_failed')
+        self.assertIn('Die E-Mail konnte nicht gesendet werden.', response.data.get('mail_error', ''))
+        self.assertNotIn('email_backend', response.data)
+
+    @patch('farm.views.send_mail', side_effect=RuntimeError('SMTP stacktrace details'))
+    def test_invitation_mail_failure_returns_safe_warning(self, _mocked_send_mail) -> None:
+        response = self.client.post(
+            f'/openfarmplanner/api/projects/{self.project.id}/invitations/',
+            {'email': 'invitee@example.com', 'role': 'member'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(response.data['mail_sent'])
+        self.assertEqual(response.data.get('mail_error_code'), 'email_send_failed')
+        self.assertIn('Die E-Mail konnte nicht gesendet werden.', response.data.get('mail_error', ''))
+        self.assertNotIn('SMTP stacktrace details', response.data.get('mail_error', ''))
 
     @override_settings(
         EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend',

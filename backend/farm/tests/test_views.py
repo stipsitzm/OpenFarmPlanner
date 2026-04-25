@@ -329,6 +329,31 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
 
+    def test_culture_detail_returns_all_supplier_data_rows(self):
+        supplier_a = Supplier.objects.create(name='Supplier A', homepage_url='https://supplier-a.example', project=self.project)
+        supplier_b = Supplier.objects.create(name='Supplier B', homepage_url='https://supplier-b.example', project=self.project)
+        CultureSupplierData.objects.create(
+            culture=self.culture,
+            supplier=supplier_a,
+            project=self.project,
+            supplier_product_name='Alpha Product',
+            packaging_sizes=[{'size_value': 5, 'size_unit': 'g'}],
+        )
+        CultureSupplierData.objects.create(
+            culture=self.culture,
+            supplier=supplier_b,
+            project=self.project,
+            supplier_product_name='Beta Product',
+            packaging_sizes=[{'size_value': 10, 'size_unit': 'g'}],
+        )
+
+        response = self.client.get(f'/openfarmplanner/api/cultures/{self.culture.id}/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['supplier_data']), 2)
+        supplier_names = {entry['supplier']['name'] for entry in response.data['supplier_data']}
+        self.assertEqual(supplier_names, {'Supplier A', 'Supplier B'})
+
     def test_culture_create(self):
         data = {
             'name': 'New Culture',
@@ -437,6 +462,33 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], 'Updated Culture')
         self.assertEqual(response.data['crop_family'], 'Updated Family')
+
+    def test_culture_update_persists_thousand_kernel_weight_on_culture(self):
+        data = {
+            'name': self.culture.name,
+            'variety': self.culture.variety,
+            'growth_duration_days': self.culture.growth_duration_days,
+            'harvest_duration_days': self.culture.harvest_duration_days,
+            'harvest_method': self.culture.harvest_method,
+            'thousand_kernel_weight_g': 4.2,
+            'project': self.project.id,
+        }
+        response = self.client.put(f'/openfarmplanner/api/cultures/{self.culture.id}/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['thousand_kernel_weight_g'], 4.2)
+        self.culture.refresh_from_db()
+        self.assertEqual(float(self.culture.thousand_kernel_weight_g), 4.2)
+
+    def test_culture_partial_update_persists_thousand_kernel_weight_on_culture(self):
+        response = self.client.patch(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/',
+            {'thousand_kernel_weight_g': 3.8},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['thousand_kernel_weight_g'], 3.8)
+        self.culture.refresh_from_db()
+        self.assertEqual(float(self.culture.thousand_kernel_weight_g), 3.8)
     
     def test_culture_update_with_seed_packages_payload_from_get(self):
         """PUT with seed package objects (including id/culture) should stay valid."""

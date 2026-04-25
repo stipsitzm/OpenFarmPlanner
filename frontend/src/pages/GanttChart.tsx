@@ -43,6 +43,7 @@ import PageHeader from '../components/layout/PageHeader';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import type { CommandSpec } from '../commands/types';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
+import { extractApiErrorMessage } from '../api/errors';
 import {
   buildFieldOccupancyTaskGroups,
   buildOccupancyTooltipDetails,
@@ -124,6 +125,7 @@ function GanttChartPage(): React.ReactElement {
   const [plantingPlans, setPlantingPlans] = useState<PlantingPlan[]>([]);
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [weeklyYield, setWeeklyYield] = useState<YieldCalendarWeek[]>([]);
+  const [ganttRenderKey, setGanttRenderKey] = useState(0);
 
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('occupancy');
   const [editMode, setEditMode] = useState(false);
@@ -199,6 +201,11 @@ function GanttChartPage(): React.ReactElement {
     }
   }, [displayYear]);
 
+  const refreshPlantingPlans = useCallback(async (): Promise<void> => {
+    const plansRes = await plantingPlanAPI.list();
+    setPlantingPlans(plansRes.data.results);
+  }, []);
+
   const handleTaskUpdate = async (_groupId: string, updatedTask: GanttTask) => {
     try {
       const planIdMatch = updatedTask.id.match(/^plan-(\d+)-/);
@@ -240,11 +247,18 @@ function GanttChartPage(): React.ReactElement {
       setPlantingPlans((previous) => previous.map((entry) => (
         entry.id === planId ? response.data : entry
       )));
+      setError(null);
 
       await refreshWeeklyYield();
     } catch (err) {
       console.error('Error updating planting plan:', err);
-      setError(t('ganttChart:errors.updatePlan'));
+      setError(extractApiErrorMessage(err, t, t('ganttChart:errors.updatePlan')));
+      try {
+        await refreshPlantingPlans();
+      } catch (refreshError) {
+        console.error('Error reloading planting plans after failed update:', refreshError);
+      }
+      setGanttRenderKey((value) => value + 1);
     }
   };
 
@@ -453,6 +467,7 @@ function GanttChartPage(): React.ReactElement {
           ) : (
             <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
               <GanttChart
+                key={ganttRenderKey}
                 tasks={activeTaskGroups}
                 locale={resolvedLocale}
                 localeText={ganttLocaleText}

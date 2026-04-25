@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
@@ -46,7 +46,6 @@ export default function SeedDemandPage(): React.ReactElement {
   const [rows, setRows] = useState<SeedDemand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const autoSelectingCultureIdsRef = useRef<Set<number>>(new Set());
 
   const loadRows = async () => {
     setIsLoading(true);
@@ -82,38 +81,6 @@ export default function SeedDemandPage(): React.ReactElement {
     }
     void loadRows();
   }, [shouldShowProjectRequiredState]);
-
-  useEffect(() => {
-    if (shouldShowProjectRequiredState || rows.length === 0) {
-      return;
-    }
-
-    const rowToAutoSelect = rows.find((row) => {
-      const supplierOptions = row.supplier_options ?? [];
-      if (supplierOptions.length !== 1) {
-        return false;
-      }
-
-      const onlySupplierId = supplierOptions[0].supplier_id;
-      return row.selected_supplier_id !== onlySupplierId;
-    });
-
-    if (!rowToAutoSelect || autoSelectingCultureIdsRef.current.has(rowToAutoSelect.culture_id)) {
-      return;
-    }
-
-    autoSelectingCultureIdsRef.current.add(rowToAutoSelect.culture_id);
-    const onlySupplierId = rowToAutoSelect.supplier_options?.[0]?.supplier_id;
-    if (typeof onlySupplierId !== 'number') {
-      autoSelectingCultureIdsRef.current.delete(rowToAutoSelect.culture_id);
-      return;
-    }
-
-    void handleSupplierChange(rowToAutoSelect.culture_id, onlySupplierId)
-      .finally(() => {
-        autoSelectingCultureIdsRef.current.delete(rowToAutoSelect.culture_id);
-      });
-  }, [rows, shouldShowProjectRequiredState]);
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
@@ -178,7 +145,7 @@ export default function SeedDemandPage(): React.ReactElement {
                 return (
                   <TableRow key={row.culture_id}>
                     <TableCell>
-                      <Link component={RouterLink} to={`/cultures?cultureId=${row.culture_id}`} underline="hover">
+                      <Link component={RouterLink} to={`/app/cultures?cultureId=${row.culture_id}`} underline="hover">
                         {row.variety ? `${row.culture_name} (${row.variety})` : row.culture_name}
                       </Link>
                     </TableCell>
@@ -228,7 +195,7 @@ export default function SeedDemandPage(): React.ReactElement {
                           <Typography variant="body2" color="text.secondary">
                             {t('seedDemand.noSupplierAvailable')}
                           </Typography>
-                          <Link component={RouterLink} to={`/cultures?cultureId=${row.culture_id}`} underline="hover" variant="caption">
+                          <Link component={RouterLink} to={`/app/cultures?cultureId=${row.culture_id}`} underline="hover" variant="caption">
                             {t('seedDemand.editCultureAction')}
                           </Link>
                         </Box>

@@ -98,6 +98,10 @@ describe('culture form UI sections', () => {
     fireEvent.change(safetyInput, { target: { value: '10' } });
     expect(onChange).toHaveBeenCalledWith('sowing_calculation_safety_percent_direct', 10);
 
+    const tkgInput = screen.getByLabelText('1000-Korn-Gewicht (g)');
+    fireEvent.change(tkgInput, { target: { value: '3,9' } });
+    expect(onChange).toHaveBeenCalledWith('thousand_kernel_weight_g', 3.9);
+
     expect(screen.getByText('Bitte wählen')).toBeInTheDocument();
   });
 

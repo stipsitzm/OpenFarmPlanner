@@ -97,6 +97,19 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
   const cultivationTypes = formData.cultivation_types ?? (formData.cultivation_type ? [formData.cultivation_type] : []);
   const showsDirect = cultivationTypes.includes('direct_sowing');
   const showsPreCultivation = cultivationTypes.includes('pre_cultivation');
+  const handleThousandKernelWeightChange = (rawValue: string): void => {
+    const normalized = rawValue.trim().replace(',', '.');
+    if (!normalized) {
+      onChange('thousand_kernel_weight_g', undefined);
+      return;
+    }
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed)) {
+      onChange('thousand_kernel_weight_g', undefined);
+      return;
+    }
+    onChange('thousand_kernel_weight_g', parsed);
+  };
 
   return (
     <>
@@ -127,6 +140,21 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
           t={t}
         />
       )}
+
+      <Box sx={fieldRowSx}>
+        <Tooltip title={t('form.thousandKernelWeightHelp', { defaultValue: 'Gewicht von 1000 Körnern in Gramm.' })} arrow>
+          <TextField
+            sx={fieldSx}
+            type="text"
+            inputMode="decimal"
+            label={t('form.thousandKernelWeightLabel', { defaultValue: '1000-Korn-Gewicht (g)' })}
+            value={formData.thousand_kernel_weight_g ?? ''}
+            onChange={(event) => handleThousandKernelWeightChange(event.target.value)}
+            error={Boolean(errors.thousand_kernel_weight_g)}
+            helperText={errors.thousand_kernel_weight_g}
+          />
+        </Tooltip>
+      </Box>
 
     </>
   );

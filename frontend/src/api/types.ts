@@ -101,7 +101,6 @@ export interface CultureSupplierData {
   supplier_product_name?: string;
   supplier_product_url?: string;
   packaging_sizes?: SeedPackage[];
-  thousand_kernel_weight_g?: number | null;
   germination_rate?: number | null;
   price?: number | null;
   notes?: string;
@@ -117,7 +116,6 @@ export interface CultureSupplierDataInput {
   supplier_product_name?: string;
   supplier_product_url?: string;
   packaging_sizes?: SeedPackage[];
-  thousand_kernel_weight_g?: number | null;
   germination_rate?: number | null;
   price?: number | null;
   notes?: string;

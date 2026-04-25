@@ -78,13 +78,10 @@ function formatNumber(value: number | null | undefined, t: (key: string) => stri
   
   // Round to 2 decimal places to avoid floating point precision issues
   const rounded = Math.round(value * 100) / 100;
-  
-  // If the result is a whole number, return as integer
-  if (rounded === Math.floor(rounded)) {
-    return rounded.toString();
-  }
-  
-  return rounded.toString();
+  return new Intl.NumberFormat('de-DE', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(rounded);
 }
 
 /**
@@ -346,20 +343,22 @@ export function CultureDetail({
 
   const selectedCulture = selectedOption?.data ?? null;
   const supplierRows = selectedCulture?.supplier_data ?? [];
-  const selectedSupplierRow = useMemo(() => {
-    if (supplierRows.length === 0) {
-      return null;
+  const orderedSupplierRows = useMemo(() => {
+    if (supplierRows.length <= 1) {
+      return supplierRows;
     }
 
     const preferredSupplierId = selectedCulture?.supplier?.id ?? selectedCulture?.selected_seed_demand_supplier ?? null;
-    if (typeof preferredSupplierId === 'number') {
-      const match = supplierRows.find((row) => (row.supplier?.id ?? row.supplier_id ?? null) === preferredSupplierId);
-      if (match) {
-        return match;
-      }
+    if (typeof preferredSupplierId !== 'number') {
+      return supplierRows;
     }
 
-    return supplierRows[0];
+    const preferredIndex = supplierRows.findIndex((row) => (row.supplier?.id ?? row.supplier_id ?? null) === preferredSupplierId);
+    if (preferredIndex <= 0) {
+      return supplierRows;
+    }
+
+    return [supplierRows[preferredIndex], ...supplierRows.filter((_row, index) => index !== preferredIndex)];
   }, [selectedCulture?.selected_seed_demand_supplier, selectedCulture?.supplier?.id, supplierRows]);
   const hasMultipleSupplierRows = supplierRows.length > 1;
   const activeCultivationTypes = useMemo(
@@ -877,6 +876,16 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    1000-Korn-Gewicht (g)
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedCulture.thousand_kernel_weight_g !== null && selectedCulture.thousand_kernel_weight_g !== undefined
+                      ? `${formatNumber(selectedCulture.thousand_kernel_weight_g, t)} g`
+                      : t('noData')}
+                  </Typography>
+                </Box>
               </Box>
               <Box sx={{ mt: 3, ml: { xs: 0, sm: 2 } }}>
                 <Typography variant="subtitle1" component="h3" gutterBottom>
@@ -884,40 +893,40 @@ export function CultureDetail({
                 </Typography>
                 {hasMultipleSupplierRows && (
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.
+                    Diese Angaben werden je Lieferant dargestellt.
                   </Typography>
                 )}
-                {selectedSupplierRow === null ? (
+                {orderedSupplierRows.length === 0 ? (
                   <Typography variant="body2" color="text.secondary">Keine Lieferantendaten vorhanden.</Typography>
                 ) : (
-                  <Stack spacing={1}>
-                    <Typography variant="subtitle2">{selectedSupplierRow.supplier?.name || selectedSupplierRow.supplier_name || 'Lieferant'}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {selectedSupplierRow.supplier_product_name || '-'}
-                    </Typography>
-                    {selectedSupplierRow.supplier_product_url && (
-                      <Link href={selectedSupplierRow.supplier_product_url} target="_blank" rel="noopener noreferrer" underline="hover">
-                        {selectedSupplierRow.supplier_product_url}
-                      </Link>
-                    )}
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Packungsgrößen
-                      </Typography>
-                      <Typography variant="body1">
-                        {formatPackageSizes(selectedSupplierRow.packaging_sizes, t)}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Tausendkorngewicht
-                      </Typography>
-                      <Typography variant="body1">
-                        {selectedSupplierRow.thousand_kernel_weight_g !== null && selectedSupplierRow.thousand_kernel_weight_g !== undefined
-                          ? `${formatNumber(selectedSupplierRow.thousand_kernel_weight_g, t)} g`
-                          : t('noData')}
-                      </Typography>
-                    </Box>
+                  <Stack spacing={2}>
+                    {orderedSupplierRows.map((row, index) => (
+                      <Box key={row.id ?? `${row.supplier?.id ?? row.supplier_id ?? 'supplier'}-${index}`}>
+                        {hasMultipleSupplierRows && index > 0 ? <Divider sx={{ mb: 2 }} /> : null}
+                        <Stack spacing={1}>
+                          <Typography variant="subtitle2">{row.supplier?.name || row.supplier_name || 'Lieferant'}</Typography>
+                          {row.supplier_product_name ? (
+                            <Box>
+                              <Typography variant="body2" color="text.secondary">Artikelbezeichnung</Typography>
+                              <Typography variant="body1">{row.supplier_product_name}</Typography>
+                            </Box>
+                          ) : null}
+                          {row.supplier_product_url && (
+                            <Link href={row.supplier_product_url} target="_blank" rel="noopener noreferrer" underline="hover">
+                              {row.supplier_product_url}
+                            </Link>
+                          )}
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              Packungsgrößen
+                            </Typography>
+                            <Typography variant="body1">
+                              {formatPackageSizes(row.packaging_sizes, t)}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Box>
+                    ))}
                   </Stack>
                 )}
               </Box>

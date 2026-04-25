@@ -26,7 +26,6 @@ class CultureSupplierDataApiTest(APITestCase):
             'supplier_product_name': 'Nantaise fein',
             'supplier_product_url': 'https://reinsaat.example/karotte',
             'packaging_sizes': [{'size_value': 25, 'size_unit': 'g'}],
-            'thousand_kernel_weight_g': 0.9,
         }
 
         response = self.client.post('/openfarmplanner/api/culture-supplier-data/', payload, format='json')
@@ -57,3 +56,17 @@ class CultureSupplierDataApiTest(APITestCase):
             response.data['supplier_data'][0]['packaging_sizes'],
             [{'size_value': 5, 'size_unit': 'g'}, {'size_value': 25, 'size_unit': 'g'}],
         )
+
+    def test_supplier_tkg_input_is_rejected(self):
+        payload = {
+            'culture': self.culture.id,
+            'supplier_id': self.supplier.id,
+            'supplier_product_name': 'Nantaise fein',
+            'packaging_sizes': [{'size_value': 25, 'size_unit': 'g'}],
+            'thousand_kernel_weight_g': 3.9,
+        }
+
+        response = self.client.post('/openfarmplanner/api/culture-supplier-data/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('thousand_kernel_weight_g', response.data)

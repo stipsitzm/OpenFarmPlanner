@@ -41,6 +41,7 @@ const backendMessageMap: Record<string, string> = {
   'bed not found.': 'errors.bedNotFound',
   'uploaded file exceeds the 10mb size limit.': 'errors.fileTooLarge',
   'uploaded file is not a valid image.': 'errors.invalidImage',
+  'please enter a valid numeric value, e.g. 3.9.': 'validation.invalidNumberExample',
 };
 
 function localizeBackendMessage(message: string, t: TFunction): string {
