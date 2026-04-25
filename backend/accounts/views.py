@@ -5,6 +5,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sessions.models import Session
 from django.core.mail import send_mail
@@ -22,9 +23,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from config.frontend_urls import build_public_frontend_url
 
-from .models import AccountDeletionRequest, PendingActivation
+from .models import AccountDeletionRequest, AccountEmailChangeRequest, PendingActivation
 from .serializers import (
+    AccountEmailChangeConfirmSerializer,
+    AccountEmailChangeRequestSerializer,
     AccountDeleteRequestSerializer,
+    AccountPasswordChangeSerializer,
+    AccountProfileSerializer,
     AccountRestoreSerializer,
     ActivateSerializer,
     LoginSerializer,
@@ -61,6 +66,14 @@ GENERIC_EMAIL_SEND_FAILED_MESSAGE = (
     f'Die E-Mail konnte nicht gesendet werden. '
     f'Bitte kontaktiere [{settings.SUPPORT_CONTACT_EMAIL}](mailto:{settings.SUPPORT_CONTACT_EMAIL}).'
 )
+EMAIL_CHANGE_CONFIRMATION_SENT_MESSAGE = _de(
+    'Wir haben dir einen Bestätigungslink an die neue E-Mail-Adresse gesendet. '
+    'Deine aktuelle Login-E-Mail bleibt aktiv, bis du den Link bestätigst.'
+)
+EMAIL_CHANGE_CONFIRMATION_SUCCESS_MESSAGE = _de('Deine E-Mail-Adresse wurde erfolgreich aktualisiert.')
+EMAIL_CHANGE_INVALID_LINK_MESSAGE = _de('Der Bestätigungslink ist ungültig oder abgelaufen.')
+PASSWORD_UPDATED_MESSAGE = _de('Dein Passwort wurde erfolgreich geändert.')
+PROFILE_UPDATED_MESSAGE = _de('Dein Profil wurde erfolgreich gespeichert.')
 
 
 def _uses_local_non_delivery_email_backend() -> bool:
@@ -157,6 +170,22 @@ def _send_password_reset_email(user: User) -> None:
             'user': user,
         })
     send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email])
+
+
+def _send_email_change_confirmation_email(user: User, request_obj: AccountEmailChangeRequest) -> None:
+    confirmation_link = _build_frontend_link(
+        f'/confirm-email-change?uid={urlsafe_base64_encode(str(user.pk).encode("utf-8"))}'
+        f'&token={default_token_generator.make_token(user)}'
+        f'&request_id={request_obj.id}'
+    )
+    with translation.override('de'):
+        subject = _('Confirm your OpenFarmPlanner email change')
+        body = render_to_string('accounts/emails/email_change_confirmation_email.txt', {
+            'confirmation_link': confirmation_link,
+            'new_email': request_obj.new_email,
+            'user': user,
+        })
+    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [request_obj.new_email])
 
 
 def _decode_uid(uid: str) -> int | None:
@@ -279,6 +308,104 @@ class MeView(APIView):
         if not request.user.is_authenticated:
             return Response({'detail': _de(_('Authentication credentials were not provided.'))}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(UserSerializer(request.user).data)
+
+
+class AccountProfileView(APIView):
+    def patch(self, request: Request) -> Response:
+        serializer = AccountProfileSerializer(data=request.data)
+        _validate_serializer_in_german(serializer)
+        display_name = serializer.validated_data['display_name'].strip()
+        request.user.first_name = display_name
+        request.user.save(update_fields=['first_name'])
+        return Response({'detail': PROFILE_UPDATED_MESSAGE, 'user': UserSerializer(request.user).data})
+
+
+class AccountEmailChangeRequestView(APIView):
+    throttle_scope = 'auth_password_reset_request'
+
+    def post(self, request: Request) -> Response:
+        serializer = AccountEmailChangeRequestSerializer(data=request.data, context={'request': request})
+        _validate_serializer_in_german(serializer)
+
+        if not request.user.check_password(serializer.validated_data['current_password']):
+            return Response({'detail': _de(_('Invalid password.'))}, status=status.HTTP_400_BAD_REQUEST)
+
+        AccountEmailChangeRequest.objects.filter(user=request.user, confirmed_at__isnull=True).delete()
+        email_change_request = AccountEmailChangeRequest.objects.create(
+            user=request.user,
+            new_email=serializer.validated_data['new_email'],
+            expires_at=timezone.now() + timedelta(hours=24),
+        )
+
+        try:
+            _send_email_change_confirmation_email(request.user, email_change_request)
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                'Failed to send email change confirmation',
+                extra={'user_id': request.user.id, 'new_email': email_change_request.new_email},
+            )
+            email_change_request.delete()
+            return Response(
+                {
+                    'code': 'email_send_failed',
+                    'message': GENERIC_EMAIL_SEND_FAILED_MESSAGE,
+                    'detail': GENERIC_EMAIL_SEND_FAILED_MESSAGE,
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response({'detail': EMAIL_CHANGE_CONFIRMATION_SENT_MESSAGE})
+
+
+class AccountEmailChangeConfirmView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'auth_password_reset_confirm'
+
+    def post(self, request: Request) -> Response:
+        serializer = AccountEmailChangeConfirmSerializer(data=request.data)
+        _validate_serializer_in_german(serializer)
+
+        uid = _decode_uid(serializer.validated_data['uid'])
+        if uid is None:
+            return Response({'detail': EMAIL_CHANGE_INVALID_LINK_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.filter(pk=uid, is_active=True).first()
+        if user is None:
+            return Response({'detail': EMAIL_CHANGE_INVALID_LINK_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
+
+        request_obj = AccountEmailChangeRequest.objects.filter(
+            id=serializer.validated_data['request_id'],
+            user=user,
+            confirmed_at__isnull=True,
+        ).first()
+        if request_obj is None or request_obj.expires_at <= timezone.now():
+            return Response({'detail': EMAIL_CHANGE_INVALID_LINK_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not default_token_generator.check_token(user, serializer.validated_data['token']):
+            return Response({'detail': EMAIL_CHANGE_INVALID_LINK_MESSAGE}, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(email__iexact=request_obj.new_email).exclude(pk=user.pk).exists():
+            return Response({'detail': _de(_('An account with this email already exists.'))}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.email = request_obj.new_email
+        user.save(update_fields=['email'])
+        request_obj.confirmed_at = timezone.now()
+        request_obj.save(update_fields=['confirmed_at', 'updated_at'])
+        return Response({'detail': EMAIL_CHANGE_CONFIRMATION_SUCCESS_MESSAGE})
+
+
+class AccountPasswordChangeView(APIView):
+    def post(self, request: Request) -> Response:
+        serializer = AccountPasswordChangeSerializer(data=request.data, context={'request': request})
+        _validate_serializer_in_german(serializer)
+
+        if not request.user.check_password(serializer.validated_data['current_password']):
+            return Response({'detail': _de(_('Invalid password.'))}, status=status.HTTP_400_BAD_REQUEST)
+
+        request.user.set_password(serializer.validated_data['new_password'])
+        request.user.save(update_fields=['password'])
+        update_session_auth_hash(request, request.user)
+        return Response({'detail': PASSWORD_UPDATED_MESSAGE})
 
 
 class AccountDeleteRequestView(APIView):

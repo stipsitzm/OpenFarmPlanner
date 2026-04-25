@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 from io import StringIO
+import re
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -14,7 +15,7 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.models import AccountDeletionRequest, PendingActivation
+from accounts.models import AccountDeletionRequest, AccountEmailChangeRequest, PendingActivation
 
 User = get_user_model()
 
@@ -550,6 +551,104 @@ class AuthApiTest(APITestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_profile_update_changes_display_name(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.patch('/openfarmplanner/api/auth/account/profile/', {'display_name': 'Neuer Name'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'Neuer Name')
+
+    def test_email_change_rejects_wrong_password(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/change-email/',
+            {'new_email': 'neu@example.com', 'current_password': 'wrong'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(AccountEmailChangeRequest.objects.exists())
+
+    def test_email_change_sends_confirmation_mail_without_immediate_update(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/change-email/',
+            {'new_email': 'neu@example.com', 'current_password': self.password},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'demo@example.com')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('/confirm-email-change?uid=', mail.outbox[0].body)
+        self.assertIn('&request_id=', mail.outbox[0].body)
+
+    def test_confirm_email_change_updates_user_email(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        self.client.post(
+            '/openfarmplanner/api/auth/account/change-email/',
+            {'new_email': 'neu@example.com', 'current_password': self.password},
+            format='json',
+        )
+        body = mail.outbox[-1].body
+        uid_match = re.search(r'uid=([^&\n]+)', body)
+        token_match = re.search(r'token=([^&\n]+)', body)
+        request_id_match = re.search(r'request_id=([0-9a-fA-F-]+)', body)
+        self.assertIsNotNone(uid_match)
+        self.assertIsNotNone(token_match)
+        self.assertIsNotNone(request_id_match)
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/confirm-email-change/',
+            {
+                'uid': uid_match.group(1),
+                'token': token_match.group(1),
+                'request_id': request_id_match.group(1),
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'neu@example.com')
+
+    def test_confirm_email_change_rejects_invalid_or_expired_token(self) -> None:
+        request_obj = AccountEmailChangeRequest.objects.create(
+            user=self.user,
+            new_email='neu@example.com',
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+        uid = urlsafe_base64_encode(str(self.user.pk).encode('utf-8'))
+        token = default_token_generator.make_token(self.user)
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/confirm-email-change/',
+            {'uid': uid, 'token': token, 'request_id': str(request_obj.id)},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_password_change_rejects_wrong_current_password(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/change-password/',
+            {'current_password': 'wrong', 'new_password': 'New-safe-password-1234', 'new_password_confirm': 'New-safe-password-1234'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_password_change_with_valid_data(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/change-password/',
+            {'current_password': self.password, 'new_password': 'New-safe-password-1234', 'new_password_confirm': 'New-safe-password-1234'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.client.post('/openfarmplanner/api/auth/logout/', {}, format='json')
+        login_with_new = self.client.post(
+            '/openfarmplanner/api/auth/login/',
+            {'email': self.user.email, 'password': 'New-safe-password-1234'},
+            format='json',
+        )
+        self.assertEqual(login_with_new.status_code, status.HTTP_200_OK)
 
     def test_purge_deleted_accounts_anonymizes_and_is_idempotent(self) -> None:
         AccountDeletionRequest.objects.create(

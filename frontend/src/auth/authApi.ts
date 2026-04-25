@@ -1,4 +1,4 @@
-import type { AccountDeleteResponse, AuthUser, ProjectSwitchResponse } from './types';
+import type { AccountActionResponse, AccountDeleteResponse, AuthUser, ProjectSwitchResponse } from './types';
 import i18n from '../i18n';
 import { computeProdApiPath } from '../api/httpClient';
 
@@ -226,6 +226,46 @@ export async function requestAccountDeletion(password: string): Promise<AccountD
     method: 'POST',
     headers: csrfHeader(),
     body: JSON.stringify({ password }),
+  });
+}
+
+export async function updateProfile(displayName: string): Promise<{ detail: string; user: AuthUser }> {
+  await ensureCsrfCookie();
+  return request<{ detail: string; user: AuthUser }>('/auth/account/profile/', {
+    method: 'PATCH',
+    headers: csrfHeader(),
+    body: JSON.stringify({ display_name: displayName }),
+  });
+}
+
+export async function requestEmailChange(newEmail: string, currentPassword: string): Promise<AccountActionResponse> {
+  await ensureCsrfCookie();
+  return request<AccountActionResponse>('/auth/account/change-email/', {
+    method: 'POST',
+    headers: csrfHeader(),
+    body: JSON.stringify({ new_email: newEmail, current_password: currentPassword }),
+  });
+}
+
+export async function confirmEmailChange(uid: string, token: string, requestId: string): Promise<AccountActionResponse> {
+  await ensureCsrfCookie();
+  return request<AccountActionResponse>('/auth/account/confirm-email-change/', {
+    method: 'POST',
+    headers: csrfHeader(),
+    body: JSON.stringify({ uid, token, request_id: requestId }),
+  });
+}
+
+export async function changePassword(currentPassword: string, newPassword: string, newPasswordConfirm: string): Promise<AccountActionResponse> {
+  await ensureCsrfCookie();
+  return request<AccountActionResponse>('/auth/account/change-password/', {
+    method: 'POST',
+    headers: csrfHeader(),
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+      new_password_confirm: newPasswordConfirm,
+    }),
   });
 }
 

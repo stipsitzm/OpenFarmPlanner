@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AccountSettingsPage from '../pages/AccountSettingsPage';
 
@@ -19,18 +19,34 @@ const authState = {
     scheduled_deletion_at: null,
   },
   requestAccountDeletion: vi.fn(async () => ({ detail: 'ok', scheduled_deletion_at: new Date().toISOString() })),
+  refreshUser: vi.fn(async () => authState.user),
 };
 
 vi.mock('../auth/useAuth', () => ({
   useAuth: () => authState,
 }));
 
+vi.mock('../auth/authApi', () => ({
+  updateProfile: vi.fn(async () => ({ detail: 'Profil aktualisiert.', user: authState.user })),
+  requestEmailChange: vi.fn(async () => ({ detail: 'Bestätigungslink gesendet.' })),
+  changePassword: vi.fn(async () => ({ detail: 'Passwort geändert.' })),
+}));
+
 describe('AccountSettingsPage', () => {
-  it('renders and opens delete dialog with password required', async () => {
+  it('renders all sections and keeps delete disabled until confirmation phrase is present', async () => {
     render(<MemoryRouter><AccountSettingsPage /></MemoryRouter>);
-    expect(screen.getByText('Kontoeinstellungen')).toBeInTheDocument();
+
+    expect(screen.getByText('Profil')).toBeInTheDocument();
+    expect(screen.getByText('Login & Sicherheit')).toBeInTheDocument();
+    expect(screen.getByText('Gefährlicher Bereich')).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('button', { name: 'Konto löschen' }));
-    expect(await screen.findByRole('heading', { name: 'Konto zur Löschung vormerken' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Konto zur Löschung vormerken' })).toBeDisabled();
+    const dialog = await screen.findByRole('dialog');
+    const confirmButton = within(dialog).getByRole('button', { name: 'Konto zur Löschung vormerken' });
+    expect(confirmButton).toBeDisabled();
+
+    fireEvent.change(within(dialog).getByLabelText('Aktuelles Passwort'), { target: { value: 'secret' } });
+    fireEvent.change(within(dialog).getByLabelText('Bestätigungstext'), { target: { value: 'LÖSCHEN' } });
+    expect(confirmButton).toBeEnabled();
   });
 });
