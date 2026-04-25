@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
@@ -19,8 +21,20 @@ class TestConsolidateSupplierTkgMigration:
         culture_supplier_data_model = old_apps.get_model('farm', 'CultureSupplierData')
 
         project = project_model.objects.create(name='TKG Consolidation Project', slug='tkg-consolidation-project')
-        supplier_a = supplier_model.objects.create(name='Supplier A', homepage_url='https://a.example', project_id=project.id)
-        supplier_b = supplier_model.objects.create(name='Supplier B', homepage_url='https://b.example', project_id=project.id)
+        supplier_a = supplier_model.objects.create(
+            name='Supplier A',
+            name_normalized='supplier a',
+            homepage_url='https://a.example',
+            slug='supplier-a',
+            project_id=project.id,
+        )
+        supplier_b = supplier_model.objects.create(
+            name='Supplier B',
+            name_normalized='supplier b',
+            homepage_url='https://b.example',
+            slug='supplier-b',
+            project_id=project.id,
+        )
 
         unified = culture_model.objects.create(name='Unified', project_id=project.id, thousand_kernel_weight_g=None)
         culture_supplier_data_model.objects.create(
@@ -71,7 +85,7 @@ class TestConsolidateSupplierTkgMigration:
         culture_model = apps.get_model('farm', 'Culture')
 
         unified = culture_model.objects.get(name='Unified')
-        assert unified.thousand_kernel_weight_g == 3.4
+        assert unified.thousand_kernel_weight_g == Decimal('3.40')
 
     def test_migration_does_not_copy_conflicting_supplier_tkg_to_culture(self):
         apps = self.executor.loader.project_state([self.migrate_to]).apps
@@ -85,7 +99,7 @@ class TestConsolidateSupplierTkgMigration:
         culture_model = apps.get_model('farm', 'Culture')
 
         existing = culture_model.objects.get(name='Existing')
-        assert existing.thousand_kernel_weight_g == 9.9
+        assert existing.thousand_kernel_weight_g == Decimal('9.90')
 
     def test_migration_clears_all_supplier_tkg_values(self):
         apps = self.executor.loader.project_state([self.migrate_to]).apps

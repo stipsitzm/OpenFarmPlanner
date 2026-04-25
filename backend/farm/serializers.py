@@ -467,6 +467,11 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        raw_initial_data = getattr(self, 'initial_data', None)
+        if isinstance(raw_initial_data, dict) and 'thousand_kernel_weight_g' in raw_initial_data:
+            raise serializers.ValidationError({
+                'thousand_kernel_weight_g': 'Supplier-specific thousand-kernel weight is no longer supported.',
+            })
         project = _resolve_active_project_from_serializer(self)
         culture = self._resolve_culture_for_validation(attrs)
         supplier = attrs.get('supplier') or (self.instance.supplier if self.instance is not None else None)
