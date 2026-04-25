@@ -168,7 +168,7 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
-  const hasI18nKey = (key: string): boolean => (typeof i18n.exists === 'function' ? i18n.exists(key) : false);
+  const hasI18nKey = (key: string): boolean => (typeof i18n?.exists === 'function' ? i18n.exists(key) : false);
 
   const points = useMemo(() => {
     if (!hasI18nKey(`help:pages.${pageKey}.points`)) {
