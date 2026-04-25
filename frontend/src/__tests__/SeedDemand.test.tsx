@@ -165,6 +165,44 @@ describe('SeedDemandPage', () => {
     });
   });
 
+  it('does not trigger supplier auto-save on initial load', async () => {
+    listMock.mockResolvedValueOnce({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 5,
+            culture_name: 'Spinat',
+            supplier: 'Only Supplier',
+            supplier_options: [{ supplier_id: 10, supplier_name: 'Only Supplier' }],
+            selected_supplier_id: 10,
+            required_amount_value: 12,
+            required_amount_unit: 'g',
+            total_grams: 12,
+            package_suggestion: null,
+            warning: null,
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Spinat')).toBeInTheDocument();
+    });
+    expect(saveSelectionMock).not.toHaveBeenCalled();
+    expect(listMock).toHaveBeenCalledTimes(1);
+  });
+
   it('shows supplier dropdown when multiple suppliers are available', async () => {
     listMock
       .mockResolvedValueOnce({
@@ -286,55 +324,28 @@ describe('SeedDemandPage', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
-  it('auto-selects the only available supplier and keeps package calculation updated', async () => {
-    listMock
-      .mockResolvedValueOnce({
-        data: {
-          count: 1,
-          next: null,
-          previous: null,
-          results: [
-            {
-              culture_id: 5,
-              culture_name: 'Spinat',
-              supplier: '',
-              selected_supplier_id: null,
-              supplier_options: [{ supplier_id: 22, supplier_name: 'Reinsaat' }],
-              required_amount_value: 12,
-              required_amount_unit: 'g',
-              total_grams: 12,
-              package_suggestion: null,
-              warning: null,
-            },
-          ],
-        },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          count: 1,
-          next: null,
-          previous: null,
-          results: [
-            {
-              culture_id: 5,
-              culture_name: 'Spinat',
-              supplier: 'Reinsaat',
-              selected_supplier_id: 22,
-              supplier_options: [{ supplier_id: 22, supplier_name: 'Reinsaat' }],
-              required_amount_value: 12,
-              required_amount_unit: 'g',
-              total_grams: 12,
-              package_suggestion: {
-                selection: [{ size_value: 25, size_unit: 'g', count: 1 }],
-                total_amount: 25,
-                overage: 13,
-                pack_count: 1,
-              },
-              warning: null,
-            },
-          ],
-        },
-      });
+  it('shows single supplier as read-only without auto-saving selection', async () => {
+    listMock.mockResolvedValueOnce({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 5,
+            culture_name: 'Spinat',
+            supplier: '',
+            selected_supplier_id: null,
+            supplier_options: [{ supplier_id: 22, supplier_name: 'Reinsaat' }],
+            required_amount_value: 12,
+            required_amount_unit: 'g',
+            total_grams: 12,
+            package_suggestion: null,
+            warning: null,
+          },
+        ],
+      },
+    });
 
     render(
       <MemoryRouter>
@@ -345,10 +356,11 @@ describe('SeedDemandPage', () => {
     );
 
     await waitFor(() => {
-      expect(saveSelectionMock).toHaveBeenCalledWith(5, 22);
+      expect(screen.getByText('Spinat')).toBeInTheDocument();
     });
-
-    expect(await screen.findByText('25 seedDemand.unitGrams')).toBeInTheDocument();
+    expect(saveSelectionMock).not.toHaveBeenCalled();
+    expect(listMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('seedDemand.noPackagesAvailable')).toBeInTheDocument();
     expect(screen.getByText('Reinsaat')).toBeInTheDocument();
     expect(screen.queryByText('seedDemand.selectSupplier')).not.toBeInTheDocument();
     const supplierSelect = screen.getByRole('combobox');
