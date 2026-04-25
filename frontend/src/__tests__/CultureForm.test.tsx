@@ -141,6 +141,38 @@ describe('CultureForm', () => {
     expect(screen.getByRole('combobox')).toHaveTextContent('form.supplierPlaceholder');
   });
 
+  it('loads all existing supplier rows when editing a culture', async () => {
+    supplierListMock.mockResolvedValueOnce({
+      data: {
+        results: [
+          { id: 10, name: 'Bingenheimer' },
+          { id: 11, name: 'Dreschflegel' },
+        ],
+      },
+    });
+
+    render(
+      <CultureForm
+        culture={{
+          ...CULTURE_A,
+          supplier_data: [
+            { supplier_id: 10, supplier_name: 'Bingenheimer', packaging_sizes: [{ size_value: 25, size_unit: 'g' }] },
+            { supplier_id: 11, supplier_name: 'Dreschflegel', packaging_sizes: [{ size_value: 50, size_unit: 'g' }] },
+          ],
+        }}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Bingenheimer')).toBeInTheDocument();
+      expect(screen.getByText('Dreschflegel')).toBeInTheDocument();
+    });
+    expect(screen.getByDisplayValue('25')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('50')).toBeInTheDocument();
+  });
+
   it('renders separated general and supplier-specific sections', () => {
     render(<CultureForm culture={CULTURE_A} onSave={vi.fn().mockResolvedValue(undefined)} onCancel={() => {}} />);
 

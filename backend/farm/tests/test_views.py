@@ -329,6 +329,31 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
 
+    def test_culture_detail_returns_all_supplier_data_rows(self):
+        supplier_a = Supplier.objects.create(name='Supplier A', homepage_url='https://supplier-a.example', project=self.project)
+        supplier_b = Supplier.objects.create(name='Supplier B', homepage_url='https://supplier-b.example', project=self.project)
+        CultureSupplierData.objects.create(
+            culture=self.culture,
+            supplier=supplier_a,
+            project=self.project,
+            supplier_product_name='Alpha Product',
+            packaging_sizes=[{'size_value': 5, 'size_unit': 'g'}],
+        )
+        CultureSupplierData.objects.create(
+            culture=self.culture,
+            supplier=supplier_b,
+            project=self.project,
+            supplier_product_name='Beta Product',
+            packaging_sizes=[{'size_value': 10, 'size_unit': 'g'}],
+        )
+
+        response = self.client.get(f'/openfarmplanner/api/cultures/{self.culture.id}/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['supplier_data']), 2)
+        supplier_names = {entry['supplier']['name'] for entry in response.data['supplier_data']}
+        self.assertEqual(supplier_names, {'Supplier A', 'Supplier B'})
+
     def test_culture_create(self):
         data = {
             'name': 'New Culture',

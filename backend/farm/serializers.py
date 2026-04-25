@@ -679,7 +679,7 @@ class CultureSerializer(serializers.ModelSerializer):
         }
 
     def get_supplier_data(self, obj):
-        rows = obj.supplier_data.select_related('supplier').all()
+        rows = obj.supplier_data.all()
         return CultureSupplierDataSerializer(rows, many=True).data
 
     class Meta:
