@@ -178,7 +178,7 @@ export default function SeedDemandPage(): React.ReactElement {
                 return (
                   <TableRow key={row.culture_id}>
                     <TableCell>
-                      <Link component={RouterLink} to={`/cultures?cultureId=${row.culture_id}`} underline="hover">
+                      <Link component={RouterLink} to={`/app/cultures?cultureId=${row.culture_id}`} underline="hover">
                         {row.variety ? `${row.culture_name} (${row.variety})` : row.culture_name}
                       </Link>
                     </TableCell>
@@ -228,7 +228,7 @@ export default function SeedDemandPage(): React.ReactElement {
                           <Typography variant="body2" color="text.secondary">
                             {t('seedDemand.noSupplierAvailable')}
                           </Typography>
-                          <Link component={RouterLink} to={`/cultures?cultureId=${row.culture_id}`} underline="hover" variant="caption">
+                          <Link component={RouterLink} to={`/app/cultures?cultureId=${row.culture_id}`} underline="hover" variant="caption">
                             {t('seedDemand.editCultureAction')}
                           </Link>
                         </Box>

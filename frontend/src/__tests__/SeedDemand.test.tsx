@@ -121,7 +121,7 @@ describe('SeedDemandPage', () => {
 
     expect(screen.getByRole('link', { name: 'Bohne (Canadian Wonder)' })).toHaveAttribute(
       'href',
-      '/cultures?cultureId=1'
+      '/app/cultures?cultureId=1'
     );
 
     expect(screen.getByText('25 seedDemand.unitGrams × 8')).toBeInTheDocument();
