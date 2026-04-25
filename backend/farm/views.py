@@ -2077,7 +2077,6 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
         suppliers_map: dict[int, list[CultureSupplierData]] = defaultdict(list)
         for row in supplier_rows:
             suppliers_map[row.culture_id].append(row)
-        pending_selection_updates: list[Culture] = []
         rows: list[dict] = []
         for culture_id, entry in grouped.items():
             required_amount = entry['required_amount_value']
@@ -2094,13 +2093,6 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
             if selected_supplier is None and len(supplier_options) == 1:
                 selected_supplier = supplier_options[0]
                 selected_supplier_id = selected_supplier.supplier_id
-
-            if selected_supplier and culture.selected_seed_demand_supplier_id != selected_supplier.supplier_id:
-                culture.selected_seed_demand_supplier_id = selected_supplier.supplier_id
-                pending_selection_updates.append(culture)
-            if selected_supplier is None and culture.selected_seed_demand_supplier_id is not None and not supplier_options:
-                culture.selected_seed_demand_supplier = None
-                pending_selection_updates.append(culture)
 
             packages_raw = selected_supplier.packaging_sizes if selected_supplier else []
             packages = []
@@ -2191,9 +2183,6 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                 }
                 row['packages_needed'] = suggestion.pack_count
             rows.append(row)
-
-        if pending_selection_updates:
-            Culture.objects.bulk_update(pending_selection_updates, ['selected_seed_demand_supplier'])
 
         rows.sort(key=lambda item: (item['culture_name'] or '', item['variety'] or ''))
         serializer = self.get_serializer(rows, many=True)

@@ -199,6 +199,40 @@ def test_seed_demand_ignores_inactive_method_rates(api_client: APIClient, bed: B
 
 
 @pytest.mark.django_db
+def test_seed_demand_single_supplier_selection_does_not_write_on_get(api_client: APIClient, bed: Bed):
+    culture = Culture.objects.create(
+        name='NoWriteSelection',
+        growth_duration_days=60,
+        harvest_duration_days=10,
+        cultivation_types=['direct_sowing'],
+        seed_rate_direct_value=5,
+        seed_rate_direct_unit='g_per_m2',
+        project=bed.project,
+    )
+    _create_plan(culture, bed, 10)
+    supplier = Supplier.objects.create(
+        name='Single Supplier',
+        homepage_url='https://single.example',
+        project=bed.project,
+    )
+    CultureSupplierData.objects.create(
+        culture=culture,
+        supplier=supplier,
+        project=bed.project,
+        packaging_sizes=[{'size_value': 25, 'size_unit': 'g'}],
+    )
+
+    response = api_client.get('/openfarmplanner/api/seed-demand/')
+    assert response.status_code == 200
+
+    row = next(item for item in response.json()['results'] if item['culture_name'] == 'NoWriteSelection')
+    assert row['selected_supplier_id'] == supplier.id
+
+    culture.refresh_from_db()
+    assert culture.selected_seed_demand_supplier_id is None
+
+
+@pytest.mark.django_db
 def test_seed_rate_unit_legacy_value_is_normalized(api_client: APIClient, project_context):
     payload = {
         'name': 'Bean',
