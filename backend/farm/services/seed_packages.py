@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_CEILING
-from itertools import product
 from typing import Iterable
 
 
@@ -83,48 +82,66 @@ def compute_seed_package_suggestion(required_amount: Decimal, packages: Iterable
     if required_amount <= 0:
         return SeedPackageSuggestion(selection=[], total_amount=Decimal('0'), overage=Decimal('0'), pack_count=0)
 
-    normalized = [p for p in packages if p.size_unit == unit and p.size_value > 0]
-    if not normalized:
-        return SeedPackageSuggestion(selection=[], total_amount=Decimal('0'), overage=Decimal('0'), pack_count=0)
+    min_pack_count = int((required_amount / normalized[-1].size_value).to_integral_value(rounding=ROUND_CEILING))
+    max_pack_count = int((required_amount / normalized[0].size_value).to_integral_value(rounding=ROUND_CEILING)) + 2
+    def count_vectors(total_count: int, dimension_count: int) -> Iterable[list[int]]:
+        current = [0] * dimension_count
 
-    normalized.sort(key=lambda p: p.size_value)
-    bounds: list[range] = []
-    for pkg in normalized:
-        upper = int((required_amount / pkg.size_value).to_integral_value(rounding=ROUND_CEILING)) + 2
-        bounds.append(range(0, upper + 1))
+        def build(index: int, remaining: int) -> Iterable[list[int]]:
+            if index == dimension_count - 1:
+                current[index] = remaining
+                yield current.copy()
+                return
+            for count in range(remaining + 1):
+                current[index] = count
+                yield from build(index + 1, remaining - count)
 
-    smallest_size = normalized[0].size_value
-    best: SeedPackageSuggestion | None = None
-    best_metrics: _SuggestionMetrics | None = None
-    for counts in product(*bounds):
-        total = sum((normalized[i].size_value * Decimal(counts[i]) for i in range(len(normalized))), Decimal('0'))
-        if total < required_amount:
-            continue
-        overage = total - required_amount
-        selection = [
-            PackageSelection(size_value=normalized[i].size_value, size_unit=normalized[i].size_unit, count=counts[i])
-            for i in range(len(normalized)) if counts[i] > 0
-        ]
-        pack_count = sum(item.count for item in selection)
-        candidate = SeedPackageSuggestion(selection=selection, total_amount=total, overage=overage, pack_count=pack_count)
-        metrics = _build_metrics(selection=selection, overage=overage, smallest_size=smallest_size)
-        if best is None:
-            best = candidate
-            best_metrics = metrics
-            continue
+        yield from build(0, total_count)
 
-        cand_key = (
-            metrics.weighted_score,
-            metrics.pack_count,
-            metrics.excessive_small_pack_count,
-            metrics.small_pack_count,
-            metrics.distinct_sizes,
-            metrics.overage,
-            tuple(-v for v in metrics.larger_pack_bias),
-        )
-        assert best_metrics is not None  # for type checkers; best and best_metrics are paired.
-        best_key = (
-            best_metrics.weighted_score,
+    for pack_count in range(max(1, min_pack_count), max_pack_count + 1):
+        for counts in count_vectors(pack_count, len(normalized)):
+            total = sum((normalized[i].size_value * Decimal(counts[i]) for i in range(len(normalized))), Decimal('0'))
+            if total < required_amount:
+                continue
+            overage = total - required_amount
+            selection = [
+                PackageSelection(size_value=normalized[i].size_value, size_unit=normalized[i].size_unit, count=counts[i])
+                for i in range(len(normalized)) if counts[i] > 0
+            ]
+            candidate = SeedPackageSuggestion(selection=selection, total_amount=total, overage=overage, pack_count=pack_count)
+            metrics = _build_metrics(selection=selection, overage=overage, smallest_size=smallest_size)
+            if best is None:
+                best = candidate
+                best_metrics = metrics
+                continue
+
+            cand_key = (
+                metrics.weighted_score,
+                metrics.pack_count,
+                metrics.excessive_small_pack_count,
+                metrics.small_pack_count,
+                metrics.distinct_sizes,
+                metrics.overage,
+                tuple(-v for v in metrics.larger_pack_bias),
+            )
+            assert best_metrics is not None  # for type checkers; best and best_metrics are paired.
+            best_key = (
+                best_metrics.weighted_score,
+                best_metrics.pack_count,
+                best_metrics.excessive_small_pack_count,
+                best_metrics.small_pack_count,
+                best_metrics.distinct_sizes,
+                best_metrics.overage,
+                tuple(-v for v in best_metrics.larger_pack_bias),
+            )
+            if cand_key < best_key:
+                best = candidate
+                best_metrics = metrics
+
+        if best_metrics is not None:
+            lower_bound_next_pack_count = Decimal((pack_count + 1) * 4 + 1)
+            if lower_bound_next_pack_count > best_metrics.weighted_score:
+                break
             best_metrics.pack_count,
             best_metrics.excessive_small_pack_count,
             best_metrics.small_pack_count,
