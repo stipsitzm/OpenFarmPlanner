@@ -881,7 +881,7 @@ export function CultureDetail({
                 </Typography>
                 {hasMultipleSupplierRows && (
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.
+                    Diese Angaben beziehen sich auf den ausgewählten Saatgutlieferanten. Das Tausendkorngewicht ist kulturweit.
                   </Typography>
                 )}
                 {selectedSupplierRow === null ? (
@@ -910,8 +910,8 @@ export function CultureDetail({
                         Tausendkorngewicht
                       </Typography>
                       <Typography variant="body1">
-                        {selectedSupplierRow.thousand_kernel_weight_g !== null && selectedSupplierRow.thousand_kernel_weight_g !== undefined
-                          ? `${formatNumber(selectedSupplierRow.thousand_kernel_weight_g, t)} g`
+                        {selectedCulture.thousand_kernel_weight_g !== null && selectedCulture.thousand_kernel_weight_g !== undefined
+                          ? `${formatNumber(selectedCulture.thousand_kernel_weight_g, t)} g`
                           : t('noData')}
                       </Typography>
                     </Box>

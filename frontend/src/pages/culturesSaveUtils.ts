@@ -14,24 +14,6 @@ export type CultureSavePayload = Culture & {
   supplier?: undefined;
 };
 
-function normalizeOptionalDecimal(value: unknown): number | null {
-  if (value === null || value === undefined || value === '') {
-    return null;
-  }
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : null;
-  }
-  if (typeof value === 'string') {
-    const normalized = value.trim().replace(',', '.');
-    if (!normalized) {
-      return null;
-    }
-    const parsed = Number(normalized);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-}
-
 export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
   const supplierPayloadRows: CultureSupplierDataInput[] = [];
   if (Array.isArray(culture.supplier_data) && culture.supplier_data.length > 0) {
@@ -43,7 +25,6 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
       supplier_product_name: row.supplier_product_name,
       supplier_product_url: row.supplier_product_url,
       packaging_sizes: row.packaging_sizes ?? [],
-      thousand_kernel_weight_g: normalizeOptionalDecimal(row.thousand_kernel_weight_g),
       germination_rate: row.germination_rate ?? null,
       price: row.price ?? null,
       notes: row.notes ?? '',
@@ -56,7 +37,6 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
       supplier_name: culture.supplier.name,
       supplier_product_url: culture.supplier_product_url ?? '',
       packaging_sizes: [],
-      thousand_kernel_weight_g: null,
     });
   }
 

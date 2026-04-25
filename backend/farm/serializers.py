@@ -417,12 +417,6 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     supplier_name_input = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
-    thousand_kernel_weight_g = LocalizedDecimalField(
-        max_digits=6,
-        decimal_places=2,
-        required=False,
-        allow_null=True,
-    )
 
     class Meta:
         model = CultureSupplierData
@@ -438,7 +432,6 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
             'supplier_product_name',
             'supplier_product_url',
             'packaging_sizes',
-            'thousand_kernel_weight_g',
             'germination_rate',
             'price',
             'notes',

@@ -209,12 +209,12 @@ describe('CultureDetail Component', () => {
       {
         id: 13,
         name: 'Rote Bete',
+        thousand_kernel_weight_g: 4,
         supplier: { id: 9, name: 'ReinSaat', allowed_domains: [] },
         supplier_data: [
           {
             supplier: { id: 9, name: 'ReinSaat', allowed_domains: [] },
             packaging_sizes: [{ size_value: 5, size_unit: 'g' }, { size_value: 10, size_unit: 'g' }, { size_value: 25, size_unit: 'g' }],
-            thousand_kernel_weight_g: 4,
           },
         ],
       },
@@ -229,22 +229,22 @@ describe('CultureDetail Component', () => {
     );
 
     expect(screen.getByRole('heading', { level: 3, name: 'Lieferant' })).toBeInTheDocument();
-    expect(screen.queryByText('Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Diese Angaben beziehen sich auf den ausgewählten Saatgutlieferanten. Das Tausendkorngewicht ist kulturweit.')).not.toBeInTheDocument();
     expect(screen.getByText('ReinSaat')).toBeInTheDocument();
     expect(screen.getByText('5 g, 10 g, 25 g')).toBeInTheDocument();
     expect(screen.getByText('4 g')).toBeInTheDocument();
   });
 
-  it('formats supplier TKG values in German number style', () => {
+  it('formats culture TKG values in German number style', () => {
     const mockOnSelect = vi.fn();
     const culturesWithDecimalTkg: Culture[] = [
       {
         id: 17,
         name: 'Dill',
+        thousand_kernel_weight_g: 3.9,
         supplier_data: [
           {
             supplier_name: 'ReinSaat',
-            thousand_kernel_weight_g: 3.9,
             packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
           },
         ],
@@ -252,10 +252,10 @@ describe('CultureDetail Component', () => {
       {
         id: 18,
         name: 'Koriander',
+        thousand_kernel_weight_g: 3.85,
         supplier_data: [
           {
             supplier_name: 'ReinSaat',
-            thousand_kernel_weight_g: 3.85,
             packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
           },
         ],
@@ -339,10 +339,10 @@ describe('CultureDetail Component', () => {
     );
 
     expect(screen.getByRole('heading', { level: 3, name: 'Saatgutdaten je Lieferant' })).toBeInTheDocument();
-    expect(screen.getByText('Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.')).toBeInTheDocument();
+    expect(screen.getByText('Diese Angaben beziehen sich auf den ausgewählten Saatgutlieferanten. Das Tausendkorngewicht ist kulturweit.')).toBeInTheDocument();
   });
 
-  it('does not render legacy culture-level package and TKW values in seed section', () => {
+  it('uses culture-level TKG and supplier package data in seed section', () => {
     const mockOnSelect = vi.fn();
     const culturesWithLegacyValues: Culture[] = [
       {
@@ -353,7 +353,6 @@ describe('CultureDetail Component', () => {
         supplier_data: [
           {
             supplier_name: 'ReinSaat',
-            thousand_kernel_weight_g: 4,
             packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
           },
         ],
@@ -369,9 +368,8 @@ describe('CultureDetail Component', () => {
     );
 
     expect(screen.getByText('25 g')).toBeInTheDocument();
-    expect(screen.getByText('4 g')).toBeInTheDocument();
+    expect(screen.getByText('99 g')).toBeInTheDocument();
     expect(screen.queryByText('999 g')).not.toBeInTheDocument();
-    expect(screen.queryByText('99 g')).not.toBeInTheDocument();
   });
 
   it('keeps selected culture visible even when active search filter does not match', () => {

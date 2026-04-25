@@ -33,7 +33,6 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { supplierAPI } from '../api/api';
 import { useNavigate } from 'react-router-dom';
 import { validateCulture } from './validation';
-import { formatLocalizedNumber, parseLocalizedNumber, resolveLocaleFromLanguage } from '../utils/numberLocalization';
 import { BasicInfoSection } from './sections/BasicInfoSection';
 import { TimingSection } from './sections/TimingSection';
 import { HarvestSection } from './sections/HarvestSection';
@@ -129,7 +128,7 @@ export function CultureForm({
   onSave,
   onCancel,
 }: CultureFormProps): React.ReactElement {
-  const { t, i18n } = useTranslation('cultures');
+  const { t } = useTranslation('cultures');
   const navigate = useNavigate();
   const isEdit = Boolean(culture);
   const [saveError, setSaveError] = useState<string>('');
@@ -152,11 +151,8 @@ export function CultureForm({
   const [supplierOptions, setSupplierOptions] = useState<Supplier[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
-  const [supplierTkgRawValues, setSupplierTkgRawValues] = useState<Record<number, string>>({});
-  const [supplierTkgErrors, setSupplierTkgErrors] = useState<Record<number, string>>({});
   const dialogContentRef = useRef<HTMLDivElement | null>(null);
   const supplierOptionsRef = useRef<Supplier[]>([]);
-  const locale = resolveLocaleFromLanguage(i18n?.resolvedLanguage || i18n?.language || 'de');
 
   const loadSuppliers = useCallback(async () => {
     try {
@@ -208,8 +204,6 @@ export function CultureForm({
     setIsDirty(false);
     setIsValid(true);
     setSaveError('');
-    setSupplierTkgRawValues({});
-    setSupplierTkgErrors({});
   }, [culture]);
 
   useEffect(() => {
@@ -259,73 +253,6 @@ export function CultureForm({
   };
 
   const supplierRows = formData.supplier_data ?? [];
-  const formatSupplierTkg = (value: number | null | undefined): string => {
-    if (value === null || value === undefined || !Number.isFinite(value)) {
-      return '';
-    }
-    return formatLocalizedNumber(value, locale, {
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 0,
-    });
-  };
-
-  const handleSupplierTkgChange = (index: number, rawValue: string) => {
-    setSupplierTkgRawValues((previous) => ({ ...previous, [index]: rawValue }));
-    setSupplierTkgErrors((previous) => {
-      if (!(index in previous)) {
-        return previous;
-      }
-      const next = { ...previous };
-      delete next[index];
-      return next;
-    });
-    setIsDirty(true);
-  };
-
-  const handleSupplierTkgBlur = (index: number, rawValue: string) => {
-    const trimmed = rawValue.trim();
-    if (!trimmed) {
-      updateSupplierRow(index, { thousand_kernel_weight_g: null });
-      setSupplierTkgRawValues((previous) => ({ ...previous, [index]: '' }));
-      setSupplierTkgErrors((previous) => {
-        if (!(index in previous)) {
-          return previous;
-        }
-        const next = { ...previous };
-        delete next[index];
-        return next;
-      });
-      return;
-    }
-
-    const parsed = parseLocalizedNumber(trimmed, locale);
-    if (parsed === null) {
-      setSupplierTkgErrors((previous) => ({
-        ...previous,
-        [index]: t('form.thousandKernelWeightInvalidNumber'),
-      }));
-      return;
-    }
-
-    if (parsed <= 0) {
-      setSupplierTkgErrors((previous) => ({
-        ...previous,
-        [index]: t('form.thousandKernelWeightError'),
-      }));
-      return;
-    }
-
-    updateSupplierRow(index, { thousand_kernel_weight_g: parsed });
-    setSupplierTkgRawValues((previous) => ({ ...previous, [index]: formatSupplierTkg(parsed) }));
-    setSupplierTkgErrors((previous) => {
-      if (!(index in previous)) {
-        return previous;
-      }
-      const next = { ...previous };
-      delete next[index];
-      return next;
-    });
-  };
 
   const updateSupplierRow = (index: number, patch: Record<string, unknown>) => {
     const nextRows = supplierRows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row));
@@ -336,8 +263,6 @@ export function CultureForm({
   };
   const removeSupplierRow = (index: number) => {
     handleChange('supplier_data', supplierRows.filter((_row, rowIndex) => rowIndex !== index));
-    setSupplierTkgRawValues({});
-    setSupplierTkgErrors({});
   };
   const addPackageRow = (supplierIndex: number) => {
     const currentPackages = supplierRows[supplierIndex]?.packaging_sizes ?? [];
@@ -352,8 +277,6 @@ export function CultureForm({
     const currentPackages = supplierRows[supplierIndex]?.packaging_sizes ?? [];
     updateSupplierRow(supplierIndex, { packaging_sizes: currentPackages.filter((_pkg, index) => index !== packageIndex) });
   };
-  const hasSupplierTkgErrors = Object.keys(supplierTkgErrors).length > 0;
-
   const handleDialogContentScrollKey = (event: { key: string; altKey: boolean; ctrlKey: boolean; metaKey: boolean; preventDefault: () => void }, contentElement: HTMLDivElement) => {
     if (event.altKey || event.ctrlKey || event.metaKey) {
       return;
@@ -521,17 +444,6 @@ export function CultureForm({
                   onChange={(event) => updateSupplierRow(supplierIndex, { supplier_product_name: event.target.value })}
                   fullWidth
                 />
-                <TextField
-                  label={t('form.thousandKernelWeightLabel')}
-                  type="text"
-                  inputMode="decimal"
-                  value={supplierTkgRawValues[supplierIndex] ?? formatSupplierTkg(row.thousand_kernel_weight_g)}
-                  onChange={(event) => handleSupplierTkgChange(supplierIndex, event.target.value)}
-                  onBlur={(event) => handleSupplierTkgBlur(supplierIndex, event.target.value)}
-                  error={Boolean(supplierTkgErrors[supplierIndex])}
-                  helperText={supplierTkgErrors[supplierIndex]}
-                  fullWidth
-                />
                 <Typography variant="subtitle2">{t('form.seedPackagesLabel')}</Typography>
                 {(row.packaging_sizes ?? []).map((pkg, packageIndex) => (
                   <div key={`pkg-${supplierIndex}-${packageIndex}`} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -571,7 +483,7 @@ export function CultureForm({
           ) : null}
           {isDirty && (
             <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
-              {isValid && !hasSupplierTkgErrors
+              {isValid
                 ? t('messages.unsavedChanges', { defaultValue: 'Ungespeicherte Änderungen' })
                 : t('messages.fixErrors', { defaultValue: 'Bitte beheben Sie die Validierungsfehler' })}
             </Typography>
@@ -582,7 +494,7 @@ export function CultureForm({
           <Button
             type="submit"
             variant="contained"
-            disabled={isSaving || !isValid || hasSupplierTkgErrors}
+            disabled={isSaving || !isValid}
           >
             {isSaving
               ? t('messages.saving', { defaultValue: 'Speichern...' })

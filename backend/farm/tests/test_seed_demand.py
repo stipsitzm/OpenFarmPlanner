@@ -46,7 +46,7 @@ def _create_plan(culture: Culture, bed: Bed, area: float, quantity: int | None =
     )
 
 
-def _create_supplier_data(culture: Culture, package_size: float, package_unit: str) -> None:
+def _create_supplier_data(culture: Culture, package_size: float, package_unit: str, thousand_kernel_weight_g: float | None = None) -> None:
     supplier = Supplier.objects.create(
         name=f'Supplier {culture.name}',
         homepage_url=f'https://{culture.name.lower()}.example',
@@ -57,6 +57,7 @@ def _create_supplier_data(culture: Culture, package_size: float, package_unit: s
         supplier=supplier,
         project=culture.project,
         packaging_sizes=[{'size_value': package_size, 'size_unit': package_unit}],
+        thousand_kernel_weight_g=thousand_kernel_weight_g,
     )
 
 
@@ -120,7 +121,7 @@ def test_seed_demand_converts_grams_to_seed_packages_with_tkg(api_client: APICli
         project=bed.project,
     )
     _create_plan(culture, bed, 5)
-    _create_supplier_data(culture, 5000, 'seeds')
+    _create_supplier_data(culture, 5000, 'seeds', thousand_kernel_weight_g=2)
 
     response = api_client.get('/openfarmplanner/api/seed-demand/')
     assert response.status_code == 200

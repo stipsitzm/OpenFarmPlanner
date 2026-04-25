@@ -2112,7 +2112,6 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                 if not isinstance(size_value, (int, float)) or size_unit not in {SEED_PACKAGE_UNIT_GRAMS, SEED_PACKAGE_UNIT_SEEDS}:
                     continue
                 packages.append({'size_value': float(size_value), 'size_unit': size_unit})
-            row_tkg = Decimal(str(selected_supplier.thousand_kernel_weight_g)) if (selected_supplier and selected_supplier.thousand_kernel_weight_g) else entry['tkg']
             row = {
                 'culture_id': entry['culture_id'],
                 'culture_name': entry['culture_name'],
@@ -2160,7 +2159,7 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                     requirement_value=required_amount,
                     requirement_unit=required_unit,
                     target_unit=preferred_unit,
-                    tkg=row_tkg,
+                    tkg=entry['tkg'],
                 )
                 if converted is None:
                     row['warning'] = conversion_warning or 'Cannot convert required amount to package units.'
