@@ -2,6 +2,8 @@
   "title": "Anbaupläne",
   "columns": {
     "culture": "Kultur",
+    "location": "Standort",
+    "field": "Parzelle",
     "bed": "Beet",
     "fieldBed": "Parzelle{{separator}}Beet",
     "plantingDate": "Pflanzdatum",
@@ -37,6 +39,12 @@
   "cultivationTypes": {
     "directSowing": "Direktsaat",
     "preCultivation": "Pflanzung"
+  },
+  "areaAssignment": {
+    "title": "Anbaufläche ändern",
+    "editButton": "Anbaufläche bearbeiten",
+    "apply": "Übernehmen",
+    "cancel": "Abbrechen"
   },
   "mobile": {
     "showDetails": "Details anzeigen",
