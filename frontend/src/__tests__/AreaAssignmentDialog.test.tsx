@@ -210,4 +210,44 @@ describe('AreaAssignmentDialog', () => {
 
     expect(onApply).toHaveBeenCalledWith(101);
   });
+
+  it('supports reverse tab order with Shift+Tab', async () => {
+    const user = userEvent.setup();
+    render(
+      <AreaAssignmentDialog bedId={101} beds={beds} fields={fields} locations={locations} locale="de-DE" compactLabel="x" onApply={vi.fn()} />,
+    );
+
+    await openDialog();
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Übernehmen' })).toHaveFocus();
+
+    await user.keyboard('{Shift>}{Tab}{/Shift}');
+    expect(screen.getByRole('button', { name: 'Abbrechen' })).toHaveFocus();
+    await user.keyboard('{Shift>}{Tab}{/Shift}');
+    expect(screen.getByRole('combobox', { name: 'Beet' })).toHaveFocus();
+    await user.keyboard('{Shift>}{Tab}{/Shift}');
+    expect(screen.getByRole('combobox', { name: 'Parzelle' })).toHaveFocus();
+    await user.keyboard('{Shift>}{Tab}{/Shift}');
+    expect(screen.getByRole('combobox', { name: 'Standort' })).toHaveFocus();
+  });
+
+  it('keeps tab navigation working after confirming a dropdown option with Enter', async () => {
+    const user = userEvent.setup();
+    render(
+      <AreaAssignmentDialog bedId={101} beds={beds} fields={fields} locations={locations} locale="de-DE" compactLabel="x" onApply={vi.fn()} />,
+    );
+
+    await openDialog();
+    const locationSelect = screen.getByRole('combobox', { name: 'Standort' });
+    await user.click(locationSelect);
+    await user.keyboard('{ArrowDown}{Enter}');
+
+    expect(screen.getByRole('combobox', { name: 'Standort' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('combobox', { name: 'Parzelle' })).toHaveFocus();
+  });
 });

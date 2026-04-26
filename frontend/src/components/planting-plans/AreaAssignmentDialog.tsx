@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   Box,
   Button,
@@ -78,6 +78,15 @@ export function AreaAssignmentDialog({
   const { t } = useTranslation('plantingPlans');
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState<AssignmentState>({ locationId: null, fieldId: null, bedId: bedId ?? null });
+  const locationSelectRef = useRef<HTMLDivElement | null>(null);
+  const fieldSelectRef = useRef<HTMLDivElement | null>(null);
+  const bedSelectRef = useRef<HTMLDivElement | null>(null);
+
+  const stopGridEnterPropagation = (event: KeyboardEvent): void => {
+    if (event.key === 'Enter' || event.key === 'Escape') {
+      event.stopPropagation();
+    }
+  };
 
   const fieldsById = useMemo(() => new Map(fields.filter((item) => item.id !== undefined).map((item) => [item.id as number, item])), [fields]);
 
@@ -195,22 +204,7 @@ export function AreaAssignmentDialog({
           <EditIcon fontSize="small" />
         </IconButton>
       </Stack>
-      <Dialog
-        open={isOpen}
-        onClose={() => setIsOpen(false)}
-        fullWidth
-        maxWidth="sm"
-        onKeyDown={(event) => {
-          if (event.key !== 'Enter') {
-            return;
-          }
-          const target = event.target as HTMLElement | null;
-          const isDialogAction = Boolean(target?.closest('button[data-dialog-action="cancel"], button[data-dialog-action="apply"]'));
-          if (!isDialogAction) {
-            event.stopPropagation();
-          }
-        }}
-      >
+      <Dialog open={isOpen} onClose={() => setIsOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t('areaAssignment.title')}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
@@ -219,11 +213,21 @@ export function AreaAssignmentDialog({
                 <FormControl fullWidth size="small">
                   <InputLabel id="assignment-location-label">{t('columns.location')}</InputLabel>
                   <Select
+                    ref={locationSelectRef}
                     id="assignment-location"
                     labelId="assignment-location-label"
                     value={draft.locationId ?? ''}
                     label={t('columns.location')}
-                    onChange={(event) => handleLocationChange(Number(event.target.value))}
+                    onKeyDown={stopGridEnterPropagation}
+                    onChange={(event) => {
+                      handleLocationChange(Number(event.target.value));
+                      requestAnimationFrame(() => locationSelectRef.current?.focus());
+                    }}
+                    MenuProps={{
+                      MenuListProps: {
+                        onKeyDown: stopGridEnterPropagation,
+                      },
+                    }}
                   >
                     {selectableLocations.map((item) => (
                       <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>
@@ -235,11 +239,21 @@ export function AreaAssignmentDialog({
               <FormControl fullWidth size="small">
                 <InputLabel id="assignment-field-label">{t('columns.field')}</InputLabel>
                 <Select
+                  ref={fieldSelectRef}
                   id="assignment-field"
                   labelId="assignment-field-label"
                   value={draft.fieldId ?? ''}
                   label={t('columns.field')}
-                  onChange={(event) => handleFieldChange(Number(event.target.value))}
+                  onKeyDown={stopGridEnterPropagation}
+                  onChange={(event) => {
+                    handleFieldChange(Number(event.target.value));
+                    requestAnimationFrame(() => fieldSelectRef.current?.focus());
+                  }}
+                  MenuProps={{
+                    MenuListProps: {
+                      onKeyDown: stopGridEnterPropagation,
+                    },
+                  }}
                 >
                   {selectableFields.map((item) => (
                     <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>
@@ -250,11 +264,21 @@ export function AreaAssignmentDialog({
               <FormControl fullWidth size="small">
                 <InputLabel id="assignment-bed-label">{t('columns.bed')}</InputLabel>
                 <Select
+                  ref={bedSelectRef}
                   id="assignment-bed"
                   labelId="assignment-bed-label"
                   value={draft.bedId ?? ''}
                   label={t('columns.bed')}
-                  onChange={(event) => handleBedChange(Number(event.target.value))}
+                  onKeyDown={stopGridEnterPropagation}
+                  onChange={(event) => {
+                    handleBedChange(Number(event.target.value));
+                    requestAnimationFrame(() => bedSelectRef.current?.focus());
+                  }}
+                  MenuProps={{
+                    MenuListProps: {
+                      onKeyDown: stopGridEnterPropagation,
+                    },
+                  }}
                 >
                   {selectableBeds.map((item) => {
                     const areaSqm = toNumericValue(item.area_sqm);
