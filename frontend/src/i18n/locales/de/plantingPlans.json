@@ -2,6 +2,8 @@
   "title": "Anbaupläne",
   "columns": {
     "culture": "Kultur",
+    "location": "Standort",
+    "field": "Parzelle",
     "bed": "Beet",
     "fieldBed": "Parzelle{{separator}}Beet",
     "plantingDate": "Pflanzdatum",
