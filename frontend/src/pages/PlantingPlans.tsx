@@ -246,6 +246,32 @@ export const normalizeSelectionAfterBedChange = (
   };
 };
 
+interface HierarchyAvailability {
+  fieldIdsWithBeds: Set<number>;
+  locationIdsWithBeds: Set<number>;
+}
+
+export const collectHierarchyAvailability = (
+  fields: Field[],
+  beds: Bed[],
+): HierarchyAvailability => {
+  const fieldIdsWithBeds = new Set<number>();
+  beds.forEach((bed) => {
+    if (typeof bed.field === "number") {
+      fieldIdsWithBeds.add(bed.field);
+    }
+  });
+
+  const locationIdsWithBeds = new Set<number>();
+  fields.forEach((field) => {
+    if (field.id !== undefined && fieldIdsWithBeds.has(field.id)) {
+      locationIdsWithBeds.add(field.location);
+    }
+  });
+
+  return { fieldIdsWithBeds, locationIdsWithBeds };
+};
+
 const buildBedDisplayLabel = (
   bedName: string | null | undefined,
   areaSqm: number | null,
@@ -386,32 +412,40 @@ function PlantingPlans(): React.ReactElement {
     [beds],
   );
 
+  const hierarchyAvailability = useMemo(
+    () => collectHierarchyAvailability(fields, beds),
+    [fields, beds],
+  );
+
   const locationOptions: SearchableSelectOption[] = useMemo(
     () =>
       locations
         .filter((location) => location.id !== undefined)
+        .filter((location) => hierarchyAvailability.locationIdsWithBeds.has(location.id!))
         .map((location) => ({
           value: location.id!,
           label: location.name,
         })),
-    [locations],
+    [hierarchyAvailability.locationIdsWithBeds, locations],
   );
 
   const fieldOptions: SearchableSelectOption[] = useMemo(
     () =>
       fields
         .filter((field) => field.id !== undefined)
+        .filter((field) => hierarchyAvailability.fieldIdsWithBeds.has(field.id!))
         .map((field) => ({
           value: field.id!,
           label: field.name,
         })),
-    [fields],
+    [fields, hierarchyAvailability.fieldIdsWithBeds],
   );
 
   const bedOptions: SearchableSelectOption[] = useMemo(
     () =>
       beds
         .filter((b) => b.id !== undefined)
+        .filter((bed) => hierarchyAvailability.fieldIdsWithBeds.has(bed.field))
         .map((b) => {
           const normalizedAreaSqm = toNumericValue(b.area_sqm);
           return {
@@ -423,17 +457,8 @@ function PlantingPlans(): React.ReactElement {
             ),
           };
         }),
-    [beds, numberLocale],
+    [beds, hierarchyAvailability.fieldIdsWithBeds, numberLocale],
   );
-
-  const bedNameUsageCount = useMemo(() => {
-    const counts = new Map<string, number>();
-    beds.forEach((bed) => {
-      const key = bed.name.trim().toLocaleLowerCase();
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    });
-    return counts;
-  }, [beds]);
 
   const cultivationTypeOptions = useMemo(
     () =>
@@ -463,7 +488,7 @@ function PlantingPlans(): React.ReactElement {
         }
       }
     }
-    return locations[0]?.id ?? null;
+    return locationOptions[0]?.value ?? null;
   };
 
   const resolveFieldIdForRow = (row: PlantingPlanRow): number | null => {
@@ -527,29 +552,29 @@ function PlantingPlans(): React.ReactElement {
         t("plantingPlans:columns.culture"),
         ...cultureOptions.map((option) => option.label),
       ],
-      200,
-      CULTURE_COLUMN_MAX_WIDTH,
+      170,
+      240,
     );
     const bedWidth = estimateColumnWidth(
       [
         t("plantingPlans:columns.bed"),
         ...bedOptions.map((option) => option.label),
       ],
-      180,
-      BED_COLUMN_MAX_WIDTH,
+      145,
+      210,
     );
 
     return {
       culture: cultureWidth,
       location: estimateColumnWidth(
         [t("plantingPlans:columns.location"), ...locationOptions.map((option) => option.label)],
-        140,
-        210,
+        110,
+        165,
       ),
       field: estimateColumnWidth(
         [t("plantingPlans:columns.field"), ...fieldOptions.map((option) => option.label)],
-        140,
-        210,
+        115,
+        175,
       ),
       bed: bedWidth,
       cultivationType: estimateColumnWidth(
@@ -557,23 +582,23 @@ function PlantingPlans(): React.ReactElement {
           t("plantingPlans:columns.cultivationType"),
           ...cultivationTypeOptions.map((option) => option.label),
         ],
-        140,
-        190,
+        110,
+        150,
       ),
       plantingDate: estimateColumnWidth(
         [t("plantingPlans:columns.plantingDate"), "2026-12-31"],
-        140,
-        180,
+        110,
+        130,
       ),
       harvestDate: estimateColumnWidth(
         [t("plantingPlans:columns.harvestStartDate"), "2026-12-31"],
-        145,
-        190,
+        112,
+        135,
       ),
       harvestEndDate: estimateColumnWidth(
         [t("plantingPlans:columns.harvestEndDate"), "2026-12-31"],
-        145,
-        190,
+        112,
+        135,
       ),
       area: estimateColumnWidth(
         [
@@ -582,15 +607,15 @@ function PlantingPlans(): React.ReactElement {
             .filter((bed) => typeof bed.area_sqm === "number")
             .map((bed) => formatAreaM2(bed.area_sqm as number, numberLocale)),
         ],
-        112,
-        150,
+        95,
+        120,
       ),
       plants: estimateColumnWidth(
         [t("plantingPlans:columns.plantsCount"), "≈ 9999"],
-        120,
-        150,
+        96,
+        122,
       ),
-      notes: 260,
+      notes: 180,
     };
   }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, fieldOptions, locationOptions, numberLocale, t]);
 
@@ -895,8 +920,18 @@ function PlantingPlans(): React.ReactElement {
           const bedId = typeof row.bed === "number" ? row.bed : Number(row.bed);
           const selectedBed = bedById.get(bedId);
           const text = String(params.formattedValue ?? "");
+          const scopedOptions = getBedOptionsForRow(row);
+          const scopedNameCount = scopedOptions.reduce((accumulator, option) => {
+            const scopedBed = bedById.get(option.value);
+            if (!scopedBed) {
+              return accumulator;
+            }
+            const normalizedName = scopedBed.name.trim().toLocaleLowerCase();
+            accumulator.set(normalizedName, (accumulator.get(normalizedName) ?? 0) + 1);
+            return accumulator;
+          }, new Map<string, number>());
           const hasNameConflict = selectedBed
-            ? (bedNameUsageCount.get(selectedBed.name.trim().toLocaleLowerCase()) ?? 0) > 1
+            ? (scopedNameCount.get(selectedBed.name.trim().toLocaleLowerCase()) ?? 0) > 1
             : false;
 
           if (!hasNameConflict || !selectedBed) {
@@ -1111,13 +1146,13 @@ function PlantingPlans(): React.ReactElement {
       {
         field: "notes",
         headerName: t("common:fields.notes"),
-        width: dynamicWidths.notes,
+        flex: 1,
+        minWidth: dynamicWidths.notes,
         // Notes field will be overridden by NotesCell in EditableDataGrid
       },
     ],
     [
       bedById,
-      bedNameUsageCount,
       bedOptions,
       beds,
       cultivationTypeOptions,
@@ -1551,7 +1586,7 @@ function PlantingPlans(): React.ReactElement {
             id: -Date.now(),
             culture: 0,
             cultivation_type: "pre_cultivation",
-            location_id: locations[0]?.id,
+            location_id: locationOptions[0]?.value,
             field_id: undefined,
             bed: 0,
             planting_date: "",
