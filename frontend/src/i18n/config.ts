@@ -40,7 +40,7 @@ i18n
     fallbackLng: 'de',
     
     // Enable debug mode in development
-    debug: import.meta.env.DEV,
+    debug: import.meta.env.DEV && import.meta.env.MODE !== 'test',
     
     // Namespaces for organizing translations
     ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart', 'suppliers', 'help', 'auth', 'account', 'projectInvitations'],

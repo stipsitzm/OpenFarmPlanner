@@ -21,8 +21,6 @@ export function PlantsCountEditCell(props: PlantsCountEditCellProps): React.Reac
   const { id, value, field, hasFocus, onLastEditedFieldChange } = props;
   const apiRef = useGridApiContext();
   
-  console.log('[DEBUG] PlantsCountEditCell mounted for row', id, 'with value:', value);
-  
   // Track initial value to prevent premature updates that steal focus
   const initialValueRef = useRef(value);
   
@@ -33,7 +31,6 @@ export function PlantsCountEditCell(props: PlantsCountEditCellProps): React.Reac
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    console.log('[DEBUG] PlantsCountEditCell input changed to:', val);
     setInputValue(val);
     
     // Immediately update DataGrid with the new value
@@ -42,7 +39,6 @@ export function PlantsCountEditCell(props: PlantsCountEditCellProps): React.Reac
     // Only call setEditCellValue if value actually changed from initial
     // This prevents premature grid updates on mount that can steal focus
     if (numValue !== initialValueRef.current) {
-      console.log('[DEBUG] PlantsCountEditCell calling setEditCellValue with:', numValue);
       apiRef.current.setEditCellValue({
         id,
         field,
