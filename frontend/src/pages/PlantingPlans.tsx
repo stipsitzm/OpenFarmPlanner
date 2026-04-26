@@ -78,6 +78,7 @@ import {
 import type { CommandSpec } from "../commands/types";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
+import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
 
 const AREA_LABEL_SEPARATOR = " · ";
 
@@ -707,7 +708,7 @@ function PlantingPlans(): React.ReactElement {
           const row = params.row as PlantingPlanRow;
           const fallback = bedOptions.find((option) => option.value === row.bed);
           const label = fallback?.label ?? "—";
-          return <Typography variant="body2" noWrap>{label}</Typography>;
+          return <CompactAreaCell label={label} />;
         },
         renderEditCell: (params) => {
           const row = params.row as PlantingPlanRow;
