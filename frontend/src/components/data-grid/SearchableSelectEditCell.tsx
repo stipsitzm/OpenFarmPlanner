@@ -9,7 +9,7 @@
  * @returns Autocomplete-based edit cell.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
 import { SearchableSelect } from '../inputs/SearchableSelect';
@@ -28,7 +28,6 @@ export function SearchableSelectEditCell({
   onValueChange,
 }: SearchableSelectEditCellProps): React.ReactElement {
   const apiRef = useGridApiContext();
-  const initialValueRef = useRef(value);
   const [inputValue, setInputValue] = useState('');
 
   const selectedOption = useMemo(
@@ -48,7 +47,7 @@ export function SearchableSelectEditCell({
     setCurrentOption(newValue);
     const nextValue = newValue?.value ?? null;
 
-    if (nextValue !== initialValueRef.current) {
+    if (nextValue !== value) {
       await apiRef.current.setEditCellValue({
         id,
         field,

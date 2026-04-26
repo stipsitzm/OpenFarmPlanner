@@ -106,6 +106,12 @@ interface MobileCreateFormState {
   notes: string;
 }
 
+interface HierarchyDraftState {
+  location_id: number | null;
+  field_id: number | null;
+  bed: number;
+}
+
 const CULTIVATION_TYPE_OPTIONS = [
   {
     value: "direct_sowing",
@@ -397,11 +403,17 @@ function PlantingPlans(): React.ReactElement {
   const [mobileLastEditedField, setMobileLastEditedField] = useState<
     "area_m2" | "plants_count" | null
   >(null);
+  const [hierarchyDraftByRowId, setHierarchyDraftByRowId] = useState<Record<string, HierarchyDraftState>>({});
+  const hierarchyDraftByRowIdRef = useRef<Record<string, HierarchyDraftState>>({});
   const [isMobileNotesOpen, setIsMobileNotesOpen] = useState(false);
   const [mobileNotesTarget, setMobileNotesTarget] = useState<PlantingPlanRow | null>(null);
   const [mobileNotesDraft, setMobileNotesDraft] = useState("");
   const [isMobileNotesSaving, setIsMobileNotesSaving] = useState(false);
   const mobilePrefillHandledRef = useRef(false);
+
+  useEffect(() => {
+    hierarchyDraftByRowIdRef.current = hierarchyDraftByRowId;
+  }, [hierarchyDraftByRowId]);
 
   useEffect(() => {
     if (isMobile) {
@@ -572,22 +584,30 @@ function PlantingPlans(): React.ReactElement {
     return bedOptions.filter((option) => allowedBedIds.has(option.value));
   };
 
-  const getDraftRowForEditCell = (
-    params: GridRenderEditCellParams<PlantingPlanRow>,
+  const buildDraftRow = (
+    rowId: number | string,
+    fallbackRow: PlantingPlanRow,
   ): PlantingPlanRow => {
-    const apiWithDraft = params.api as unknown as {
-      getRowWithUpdatedValues?: (id: number | string, field: string) => PlantingPlanRow;
-      getRow?: (id: number | string) => PlantingPlanRow;
-    };
-    const draftRow = apiWithDraft.getRowWithUpdatedValues?.(
-      params.id,
-      String(params.field),
-    );
-    if (draftRow) {
-      return draftRow;
+    const draft = hierarchyDraftByRowIdRef.current[String(rowId)];
+    if (!draft) {
+      return fallbackRow;
     }
-    const persistedRow = apiWithDraft.getRow?.(params.id);
-    return persistedRow ?? (params.row as PlantingPlanRow);
+    return {
+      ...fallbackRow,
+      location_id: draft.location_id ?? undefined,
+      field_id: draft.field_id ?? undefined,
+      bed: draft.bed,
+    };
+  };
+
+  const setDraftForRow = (
+    rowId: number | string,
+    nextDraft: HierarchyDraftState,
+  ): void => {
+    setHierarchyDraftByRowId((previous) => ({
+      ...previous,
+      [String(rowId)]: nextDraft,
+    }));
   };
 
   const getCultivationTypeOptionsForRow = useMemo(
@@ -917,7 +937,6 @@ function PlantingPlans(): React.ReactElement {
               return row ? locationOptions : [];
             },
             renderEditCell: (params: GridRenderEditCellParams<PlantingPlanRow>) => {
-              const draftRow = getDraftRowForEditCell(params);
               return (
                 <SearchableSelectEditCell
                   {...params}
@@ -925,11 +944,16 @@ function PlantingPlans(): React.ReactElement {
                   onValueChange={async (nextValue) => {
                     const nextLocationId = typeof nextValue === "number" ? nextValue : 0;
                     const normalized = normalizeSelectionAfterLocationChange(
-                      draftRow,
+                      buildDraftRow(params.id, params.row as PlantingPlanRow),
                       nextLocationId,
                       fields,
                       beds,
                     );
+                    setDraftForRow(params.id, {
+                      location_id: normalized.location_id ?? null,
+                      field_id: normalized.field_id ?? null,
+                      bed: normalized.bed ?? 0,
+                    });
                     await params.api.setEditCellValue({
                       id: params.id,
                       field: "field_id",
@@ -973,9 +997,9 @@ function PlantingPlans(): React.ReactElement {
         valueOptions: (params: GridValueOptionsParams<PlantingPlanRow>) => {
           const row = params.row as PlantingPlanRow | undefined;
           return row ? getFieldOptionsForRow(row) : fieldOptions;
-        },
-        renderEditCell: (params: GridRenderEditCellParams<PlantingPlanRow>) => {
-          const draftRow = getDraftRowForEditCell(params);
+            },
+            renderEditCell: (params: GridRenderEditCellParams<PlantingPlanRow>) => {
+          const draftRow = buildDraftRow(params.id, params.row as PlantingPlanRow);
           const options = getFieldOptionsForRow(draftRow);
           return (
             <SearchableSelectEditCell
@@ -984,11 +1008,16 @@ function PlantingPlans(): React.ReactElement {
               onValueChange={async (nextValue) => {
                 const nextFieldId = typeof nextValue === "number" ? nextValue : 0;
                 const normalized = normalizeSelectionAfterFieldChange(
-                  draftRow,
+                  buildDraftRow(params.id, params.row as PlantingPlanRow),
                   nextFieldId,
                   fields,
                   beds,
                 );
+                setDraftForRow(params.id, {
+                  location_id: normalized.location_id ?? null,
+                  field_id: normalized.field_id ?? null,
+                  bed: normalized.bed ?? 0,
+                });
                 await params.api.setEditCellValue({
                   id: params.id,
                   field: "location_id",
@@ -1029,7 +1058,7 @@ function PlantingPlans(): React.ReactElement {
           return row ? getBedOptionsForRow(row) : bedOptions;
         },
         renderEditCell: (params: GridRenderEditCellParams<PlantingPlanRow>) => {
-          const draftRow = getDraftRowForEditCell(params);
+          const draftRow = buildDraftRow(params.id, params.row as PlantingPlanRow);
           const options = getBedOptionsForRow(draftRow);
           return (
             <SearchableSelectEditCell
@@ -1038,11 +1067,16 @@ function PlantingPlans(): React.ReactElement {
               onValueChange={async (nextValue) => {
                 const nextBedId = typeof nextValue === "number" ? nextValue : 0;
                 const normalized = normalizeSelectionAfterBedChange(
-                  draftRow,
+                  buildDraftRow(params.id, params.row as PlantingPlanRow),
                   nextBedId,
                   fields,
                   beds,
                 );
+                setDraftForRow(params.id, {
+                  location_id: normalized.location_id ?? null,
+                  field_id: normalized.field_id ?? null,
+                  bed: normalized.bed ?? 0,
+                });
                 await params.api.setEditCellValue({
                   id: params.id,
                   field: "location_id",
@@ -1723,7 +1757,16 @@ function PlantingPlans(): React.ReactElement {
             api={plantingPlanAPI as unknown as DataGridAPI<PlantingPlanRow>}
             commandApiRef={gridCommandApiRef}
             onSelectedRowChange={setSelectedPlan}
-            onRowsStateChange={(rows) => setMobileRows(rows)}
+            onRowsStateChange={(rows) => {
+              setMobileRows(rows);
+              setHierarchyDraftByRowId((previous) => {
+                const rowIds = new Set(rows.map((row) => String(row.id)));
+                const prunedEntries = Object.entries(previous).filter(([key]) =>
+                  rowIds.has(key),
+                );
+                return Object.fromEntries(prunedEntries);
+              });
+            }}
             createNewRow={() => ({
             id: -Date.now(),
             culture: 0,
