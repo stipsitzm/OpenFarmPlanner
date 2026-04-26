@@ -163,4 +163,51 @@ describe('AreaAssignmentDialog', () => {
     expect(screen.queryByRole('combobox', { name: 'Standort' })).not.toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Parzelle' })).toBeInTheDocument();
   });
+
+  it('does not apply the dialog when Enter is used inside an opened dropdown', async () => {
+    const onApply = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <AreaAssignmentDialog bedId={101} beds={beds} fields={fields} locations={locations} locale="de-DE" compactLabel="x" onApply={onApply} />,
+    );
+
+    await openDialog();
+    await user.click(screen.getByRole('combobox', { name: 'Standort' }));
+    await user.keyboard('{ArrowDown}{Enter}');
+
+    expect(onApply).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Anbaufläche ändern' })).toBeInTheDocument();
+  });
+
+  it('follows logical tab order and supports Enter on action buttons', async () => {
+    const onApply = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <AreaAssignmentDialog bedId={101} beds={beds} fields={fields} locations={locations} locale="de-DE" compactLabel="x" onApply={onApply} />,
+    );
+
+    await openDialog();
+    await user.tab();
+    expect(screen.getByRole('combobox', { name: 'Standort' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('combobox', { name: 'Parzelle' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('combobox', { name: 'Beet' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Abbrechen' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Anbaufläche ändern' })).not.toBeInTheDocument();
+    });
+
+    await openDialog();
+    const applyButton = screen.getByRole('button', { name: 'Übernehmen' });
+    for (let i = 0; i < 6 && document.activeElement !== applyButton; i += 1) {
+      await user.tab();
+    }
+    expect(applyButton).toHaveFocus();
+    await user.keyboard('{Enter}');
+
+    expect(onApply).toHaveBeenCalledWith(101);
+  });
 });

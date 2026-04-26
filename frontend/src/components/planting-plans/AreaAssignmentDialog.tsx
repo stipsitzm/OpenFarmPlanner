@@ -17,7 +17,8 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import { useTranslation } from '../../i18n';
 import type { Bed, Field, Location } from '../../api/types';
-import { UI_LABEL_SEPARATOR } from '../../utils/uiLabelSeparator';
+
+const AREA_LABEL_SEPARATOR = ' · ';
 
 interface AreaAssignmentDialogProps {
   bedId: number | null;
@@ -194,7 +195,22 @@ export function AreaAssignmentDialog({
           <EditIcon fontSize="small" />
         </IconButton>
       </Stack>
-      <Dialog open={isOpen} onClose={() => setIsOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={isOpen}
+        onClose={() => setIsOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter') {
+            return;
+          }
+          const target = event.target as HTMLElement | null;
+          const isDialogAction = Boolean(target?.closest('button[data-dialog-action="cancel"], button[data-dialog-action="apply"]'));
+          if (!isDialogAction) {
+            event.stopPropagation();
+          }
+        }}
+      >
         <DialogTitle>{t('areaAssignment.title')}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
@@ -242,7 +258,7 @@ export function AreaAssignmentDialog({
                 >
                   {selectableBeds.map((item) => {
                     const areaSqm = toNumericValue(item.area_sqm);
-                    const prefix = item.field_name ? `${item.field_name}${UI_LABEL_SEPARATOR}` : '';
+                    const prefix = item.field_name ? `${item.field_name}${AREA_LABEL_SEPARATOR}` : '';
                     const label = areaSqm === null
                       ? `${prefix}${item.name}`
                       : `${prefix}${item.name} (${formatArea(areaSqm, locale)})`;
@@ -256,8 +272,8 @@ export function AreaAssignmentDialog({
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsOpen(false)}>{t('areaAssignment.cancel')}</Button>
-          <Button variant="contained" onClick={handleApply} disabled={!draft.bedId}>{t('areaAssignment.apply')}</Button>
+          <Button type="button" data-dialog-action="cancel" onClick={() => setIsOpen(false)}>{t('areaAssignment.cancel')}</Button>
+          <Button type="button" data-dialog-action="apply" variant="contained" onClick={handleApply} disabled={!draft.bedId}>{t('areaAssignment.apply')}</Button>
         </DialogActions>
       </Dialog>
     </>

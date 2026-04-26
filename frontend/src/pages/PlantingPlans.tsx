@@ -57,7 +57,6 @@ import {
   parseLocalizedNumber,
   resolveLocaleFromLanguage,
 } from "../utils/numberLocalization";
-import { UI_LABEL_SEPARATOR } from "../utils/uiLabelSeparator";
 import { AreaM2EditCell } from "../components/data-grid/AreaM2EditCell";
 import {
   EditableDataGrid,
@@ -79,6 +78,18 @@ import {
 import type { CommandSpec } from "../commands/types";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
+
+const AREA_LABEL_SEPARATOR = " · ";
+
+export const buildAreaColumnHeaderLabel = (
+  includeLocation: boolean,
+  locationLabel: string,
+  fieldLabel: string,
+  bedLabel: string,
+): string =>
+  includeLocation
+    ? `${locationLabel}${AREA_LABEL_SEPARATOR}${fieldLabel}${AREA_LABEL_SEPARATOR}${bedLabel}`
+    : `${fieldLabel}${AREA_LABEL_SEPARATOR}${bedLabel}`;
 
 /**
  * Row data type for Data Grid
@@ -175,7 +186,7 @@ const buildBedDisplayLabel = (
     normalizedBedName,
   ]
     .filter((part) => part.length > 0)
-    .join(UI_LABEL_SEPARATOR);
+    .join(AREA_LABEL_SEPARATOR);
 
   if (!combinedName) {
     return "—";
@@ -349,8 +360,38 @@ function PlantingPlans(): React.ReactElement {
   );
 
   const fieldBedColumnLabel = useMemo(
-    () => t("plantingPlans:columns.fieldBed", { separator: UI_LABEL_SEPARATOR }),
+    () =>
+      t("plantingPlans:columns.fieldBed", {
+        separator: AREA_LABEL_SEPARATOR,
+      }),
     [t],
+  );
+
+  const hasMultipleLocationsWithBeds = useMemo(() => {
+    const fieldById = new Map(
+      fields
+        .filter((item) => item.id !== undefined)
+        .map((item) => [item.id as number, item]),
+    );
+    const locationIdsWithBeds = new Set<number>();
+    beds.forEach((bed) => {
+      const field = fieldById.get(bed.field);
+      if (field) {
+        locationIdsWithBeds.add(field.location);
+      }
+    });
+    return locationIdsWithBeds.size > 1;
+  }, [beds, fields]);
+
+  const areaColumnLabel = useMemo(
+    () =>
+      buildAreaColumnHeaderLabel(
+        hasMultipleLocationsWithBeds,
+        t("plantingPlans:columns.location"),
+        t("plantingPlans:columns.field"),
+        t("plantingPlans:columns.bed"),
+      ),
+    [hasMultipleLocationsWithBeds, t],
   );
 
   const getCultivationTypeOptionsForRow = useMemo(
@@ -656,7 +697,7 @@ function PlantingPlans(): React.ReactElement {
       },
       {
         field: "bed",
-        headerName: fieldBedColumnLabel,
+          headerName: areaColumnLabel,
         flex: 0,
         minWidth: dynamicWidths.bed,
         maxWidth: BED_COLUMN_MAX_WIDTH,
@@ -891,6 +932,7 @@ function PlantingPlans(): React.ReactElement {
       cultureOptions,
       cultures,
       dynamicWidths,
+      areaColumnLabel,
       fieldBedColumnLabel,
       numberLocale,
       areaWarning,
