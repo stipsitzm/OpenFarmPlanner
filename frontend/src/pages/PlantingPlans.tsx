@@ -1322,8 +1322,9 @@ function PlantingPlans(): React.ReactElement {
       {
         field: "notes",
         headerName: t("common:fields.notes"),
-        flex: 1,
+        width: 220,
         minWidth: dynamicWidths.notes,
+        maxWidth: 260,
         // Notes field will be overridden by NotesCell in EditableDataGrid
       },
     ],
@@ -1660,7 +1661,7 @@ function PlantingPlans(): React.ReactElement {
   };
 
   return (
-    <PageContainer variant="full">
+    <PageContainer variant="xwide">
       <PageHeader
         title={t("plantingPlans:title")}
         actions={(
@@ -1751,7 +1752,13 @@ function PlantingPlans(): React.ReactElement {
           </Box>
         ) : null}
 
-        <Box sx={{ display: isMobile ? "none" : "block" }}>
+        <Box
+          sx={{
+            display: isMobile ? "none" : "block",
+            width: "100%",
+            maxWidth: "1520px",
+          }}
+        >
           <EditableDataGrid<PlantingPlanRow>
             columns={columns}
             api={plantingPlanAPI as unknown as DataGridAPI<PlantingPlanRow>}
