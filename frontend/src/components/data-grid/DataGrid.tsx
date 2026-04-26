@@ -697,7 +697,7 @@ export function EditableDataGrid<T extends EditableRow>({
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
       <Box sx={{ width: '100%', overflowX: 'auto', overflowY: 'visible' }}>
-        <Box sx={{ display: 'inline-block', width: 'fit-content', minWidth: 0 }}>
+        <Box sx={{ display: 'block', width: '100%', minWidth: 0 }}>
           <DataGrid
           rows={rows}
           columns={columnsWithActions}
@@ -718,7 +718,7 @@ export function EditableDataGrid<T extends EditableRow>({
           slots={{
             footer: CustomFooter,
           }}
-          sx={{ ...dataGridSx, width: 'auto' }}
+          sx={{ ...dataGridSx, width: '100%' }}
           getRowClassName={(params) => {
             const rowKey = String(params.id);
             if (rowModesModel[params.id]?.mode === GridRowModes.Edit) {
