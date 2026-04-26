@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { Bed, Field } from "../api/types";
 import {
   collectHierarchyAvailability,
+  filterBedOptionsBySelection,
+  filterFieldOptionsByLocation,
   normalizeSelectionAfterBedChange,
   normalizeSelectionAfterFieldChange,
   normalizeSelectionAfterLocationChange,
@@ -29,6 +31,24 @@ describe("PlantingPlans hierarchy normalization", () => {
     expect(Array.from(availability.locationIdsWithBeds).sort()).toEqual([1, 2]);
     expect(availability.locationIdsWithBeds.has(3)).toBe(false);
     expect(availability.fieldIdsWithBeds.has(30)).toBe(false);
+  });
+
+  it("filters field options immediately from the locally selected location", () => {
+    const allFields: Field[] = [
+      ...fields,
+      { id: 30, name: "Parzelle Ost", location: 1 },
+    ];
+    const availability = collectHierarchyAvailability(allFields, beds);
+    const filtered = filterFieldOptionsByLocation(2, allFields, availability.fieldIdsWithBeds);
+
+    expect(filtered.map((field) => field.id)).toEqual([20]);
+  });
+
+  it("filters bed options immediately from local field selection", () => {
+    const availability = collectHierarchyAvailability(fields, beds);
+    const filtered = filterBedOptionsBySelection(1, 10, fields, beds, availability.fieldIdsWithBeds);
+
+    expect(filtered.map((bed) => bed.id)).toEqual([100]);
   });
 
   it("resets field and bed when location no longer matches", () => {
