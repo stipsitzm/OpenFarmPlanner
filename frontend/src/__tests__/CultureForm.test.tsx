@@ -57,7 +57,15 @@ vi.mock('../cultures/sections/SpacingSection', () => ({
 
 vi.mock('../cultures/sections/TimingSection', () => ({ TimingSection: () => null }));
 vi.mock('../cultures/sections/HarvestSection', () => ({ HarvestSection: () => null }));
-vi.mock('../cultures/sections/SeedingSection', () => ({ SeedingSection: () => null }));
+vi.mock('../cultures/sections/SeedingSection', () => ({
+  SeedingSection: ({ formData, onChange }: { formData: Partial<Culture>; onChange: <K extends keyof Culture>(name: K, value: Culture[K]) => void }) => (
+    <input
+      aria-label="thousand-kernel-input"
+      value={formData.thousand_kernel_weight_g ?? ''}
+      onChange={(event) => onChange('thousand_kernel_weight_g', event.target.value === '' ? undefined : Number(event.target.value))}
+    />
+  ),
+}));
 vi.mock('../cultures/sections/ColorSection', () => ({ ColorSection: () => null }));
 vi.mock('../cultures/sections/NotesSection', () => ({ NotesSection: () => null }));
 
@@ -133,6 +141,38 @@ describe('CultureForm', () => {
     expect(screen.getByRole('combobox')).toHaveTextContent('form.supplierPlaceholder');
   });
 
+  it('loads all existing supplier rows when editing a culture', async () => {
+    supplierListMock.mockResolvedValueOnce({
+      data: {
+        results: [
+          { id: 10, name: 'Bingenheimer' },
+          { id: 11, name: 'Dreschflegel' },
+        ],
+      },
+    });
+
+    render(
+      <CultureForm
+        culture={{
+          ...CULTURE_A,
+          supplier_data: [
+            { supplier_id: 10, supplier_name: 'Bingenheimer', packaging_sizes: [{ size_value: 25, size_unit: 'g' }] },
+            { supplier_id: 11, supplier_name: 'Dreschflegel', packaging_sizes: [{ size_value: 50, size_unit: 'g' }] },
+          ],
+        }}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Bingenheimer')).toBeInTheDocument();
+      expect(screen.getByText('Dreschflegel')).toBeInTheDocument();
+    });
+    expect(screen.getByDisplayValue('25')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('50')).toBeInTheDocument();
+  });
+
   it('renders separated general and supplier-specific sections', () => {
     render(<CultureForm culture={CULTURE_A} onSave={vi.fn().mockResolvedValue(undefined)} onCancel={() => {}} />);
 
@@ -172,6 +212,21 @@ describe('CultureForm', () => {
       variety: 'Batavia',
       row_spacing_cm: 35,
       supplier: { id: 11, name: 'Dreschflegel' },
+    }));
+  });
+
+  it('saves thousand-kernel weight directly on culture data', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+
+    fireEvent.change(screen.getByLabelText('thousand-kernel-input'), { target: { value: '4.2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      id: 1,
+      thousand_kernel_weight_g: 4.2,
     }));
   });
 
@@ -284,4 +339,5 @@ describe('CultureForm', () => {
 
     expect(scrollByMock).toHaveBeenCalled();
   });
+
 });

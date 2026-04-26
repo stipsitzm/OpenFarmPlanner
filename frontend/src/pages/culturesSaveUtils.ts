@@ -25,7 +25,6 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
       supplier_product_name: row.supplier_product_name,
       supplier_product_url: row.supplier_product_url,
       packaging_sizes: row.packaging_sizes ?? [],
-      thousand_kernel_weight_g: row.thousand_kernel_weight_g ?? null,
       germination_rate: row.germination_rate ?? null,
       price: row.price ?? null,
       notes: row.notes ?? '',
@@ -38,7 +37,6 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
       supplier_name: culture.supplier.name,
       supplier_product_url: culture.supplier_product_url ?? '',
       packaging_sizes: [],
-      thousand_kernel_weight_g: null,
     });
   }
 

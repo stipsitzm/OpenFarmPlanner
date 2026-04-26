@@ -78,7 +78,8 @@
   "validation": {
     "required": "Dieses Feld ist erforderlich.",
     "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
-    "minLength": "Mindestens {{count}} Zeichen erforderlich."
+    "minLength": "Mindestens {{count}} Zeichen erforderlich.",
+    "invalidNumberExample": "Bitte gib einen gültigen Zahlenwert ein, z. B. 3,9"
   },
   "projectRequired": {
     "noProjectsTitle": "Du hast noch kein Projekt.",

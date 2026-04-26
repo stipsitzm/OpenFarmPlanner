@@ -91,7 +91,7 @@ class SeedDemandSupplierSelectionApiTest(APITestCase):
         self.assertEqual(row['warning'], 'Keine Lieferantendaten vorhanden.')
         self.assertEqual(row['supplier_options'], [])
 
-    def test_seed_demand_auto_selects_single_supplier(self):
+    def test_seed_demand_uses_single_supplier_for_response_without_persisting_selection(self):
         culture = Culture.objects.create(
             name='Petersilie',
             cultivation_types=['direct_sowing'],
@@ -114,4 +114,4 @@ class SeedDemandSupplierSelectionApiTest(APITestCase):
         self.assertEqual(row['selected_supplier_id'], supplier.id)
 
         culture.refresh_from_db()
-        self.assertEqual(culture.selected_seed_demand_supplier_id, supplier.id)
+        self.assertIsNone(culture.selected_seed_demand_supplier_id)

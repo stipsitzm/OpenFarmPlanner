@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -92,3 +94,27 @@ class AccountDeletionRequest(models.Model):
         """
         identifier = getattr(self.user, 'email', '') or getattr(self.user, 'username', '')
         return f'Account deletion state for {identifier}'
+
+
+class AccountEmailChangeRequest(models.Model):
+    """Stores pending email-change requests that require token confirmation."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='email_change_requests',
+    )
+    new_email = models.EmailField()
+    expires_at = models.DateTimeField(db_index=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def is_active(self) -> bool:
+        return self.confirmed_at is None
+
+    def __str__(self) -> str:
+        identifier = getattr(self.user, 'email', '') or getattr(self.user, 'username', '')
+        return f'Email change request for {identifier} -> {self.new_email}'

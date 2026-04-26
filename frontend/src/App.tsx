@@ -63,6 +63,7 @@ import RegisterPage from './pages/auth/RegisterPage';
 import ActivatePage from './pages/auth/ActivatePage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import ConfirmEmailChangePage from './pages/auth/ConfirmEmailChangePage';
 import ProjectSelectionPage from './pages/ProjectSelectionPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import ProjectSettingsPage from './pages/ProjectSettingsPage';
@@ -732,6 +733,10 @@ function createAppRouter(basename: string) {
     {
       path: '/reset-password',
       element: <ResetPasswordPage />,
+    },
+    {
+      path: '/confirm-email-change',
+      element: <ConfirmEmailChangePage />,
     },
     {
       path: '/invitation',

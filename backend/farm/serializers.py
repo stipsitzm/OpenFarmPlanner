@@ -82,6 +82,26 @@ class CentimetersField(serializers.FloatField):
         return cm_value / 100.0
 
 
+class LocalizedDecimalField(serializers.DecimalField):
+    """Decimal field that accepts comma decimals and returns float JSON values."""
+
+    default_error_messages = {
+        'invalid': 'Please enter a valid numeric value, e.g. 3.9.',
+    }
+
+    def to_internal_value(self, data):
+        normalized = data
+        if isinstance(data, str):
+            normalized = data.strip().replace(',', '.')
+        return super().to_internal_value(normalized)
+
+    def to_representation(self, value):
+        decimal_value = super().to_representation(value)
+        if decimal_value is None:
+            return None
+        return float(decimal_value)
+
+
 
 class LocationSerializer(serializers.ModelSerializer):
     @staticmethod
@@ -412,7 +432,6 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
             'supplier_product_name',
             'supplier_product_url',
             'packaging_sizes',
-            'thousand_kernel_weight_g',
             'germination_rate',
             'price',
             'notes',
@@ -448,6 +467,11 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        raw_initial_data = getattr(self, 'initial_data', None)
+        if isinstance(raw_initial_data, dict) and 'thousand_kernel_weight_g' in raw_initial_data:
+            raise serializers.ValidationError({
+                'thousand_kernel_weight_g': 'Supplier-specific thousand-kernel weight is no longer supported.',
+            })
         project = _resolve_active_project_from_serializer(self)
         culture = self._resolve_culture_for_validation(attrs)
         supplier = attrs.get('supplier') or (self.instance.supplier if self.instance is not None else None)
@@ -613,7 +637,9 @@ class CultureSerializer(serializers.ModelSerializer):
     seed_rate_pre_cultivation_value = serializers.FloatField(required=False, allow_null=True)
     seed_rate_pre_cultivation_unit = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     sowing_calculation_safety_percent_pre_cultivation = serializers.FloatField(required=False, allow_null=True)
-    thousand_kernel_weight_g = serializers.FloatField(
+    thousand_kernel_weight_g = LocalizedDecimalField(
+        max_digits=6,
+        decimal_places=2,
         required=False,
         allow_null=True,
         help_text='Weight of 1000 kernels in grams'
@@ -653,7 +679,7 @@ class CultureSerializer(serializers.ModelSerializer):
         }
 
     def get_supplier_data(self, obj):
-        rows = obj.supplier_data.select_related('supplier').all()
+        rows = obj.supplier_data.all()
         return CultureSupplierDataSerializer(rows, many=True).data
 
     class Meta:

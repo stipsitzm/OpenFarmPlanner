@@ -31,3 +31,7 @@ export interface AccountDeleteResponse {
   detail: string;
   scheduled_deletion_at: string;
 }
+
+export interface AccountActionResponse {
+  detail: string;
+}

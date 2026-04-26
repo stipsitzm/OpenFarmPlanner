@@ -107,3 +107,19 @@ def test_seed_package_suggestion_handles_empty_package_options():
     assert result.selection == []
     assert result.total_amount == Decimal('0')
     assert result.pack_count == 0
+
+
+def test_seed_package_suggestion_ignores_duplicate_package_sizes():
+    result = compute_seed_package_suggestion(
+        required_amount=Decimal('26'),
+        packages=[
+            PackageOption(size_value=Decimal('25'), size_unit='g'),
+            PackageOption(size_value=Decimal('25'), size_unit='g'),
+            PackageOption(size_value=Decimal('25'), size_unit='g'),
+            PackageOption(size_value=Decimal('10'), size_unit='g'),
+        ],
+        unit='g',
+    )
+    assert result.total_amount == Decimal('35')
+    assert result.pack_count == 2
+    assert _selection_dict(result) == {Decimal('25'): 1, Decimal('10'): 1}

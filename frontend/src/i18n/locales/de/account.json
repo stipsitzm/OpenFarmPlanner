@@ -2,15 +2,47 @@
   "title": "Kontoeinstellungen",
   "email": "E-Mail",
   "displayName": "Anzeigename",
+  "sections": {
+    "profile": "Profil",
+    "security": "Login & Sicherheit",
+    "account": "Konto"
+  },
+  "actions": {
+    "saveProfile": "Profil speichern",
+    "requestEmailChange": "E-Mail-Änderung anfordern",
+    "changePassword": "Passwort ändern",
+    "editDisplayName": "Anzeigename ändern",
+    "save": "Speichern",
+    "sendConfirmationLink": "Bestätigungslink senden",
+    "savePassword": "Passwort speichern"
+  },
+  "security": {
+    "changeEmailTitle": "E-Mail-Adresse ändern",
+    "newEmail": "Neue E-Mail-Adresse",
+    "changePasswordTitle": "Passwort ändern",
+    "newPassword": "Neues Passwort",
+    "repeatNewPassword": "Neues Passwort wiederholen"
+  },
   "dangerZone": "Gefährlicher Bereich",
   "deleteDescription": "Wenn du dein Konto löschst, wird es sofort deaktiviert und nach 14 Tagen endgültig anonymisiert oder gelöscht.",
   "restoreDescription": "Innerhalb dieser Frist kannst du die Löschung rückgängig machen.",
   "deleteButton": "Konto löschen",
   "dialogTitle": "Konto zur Löschung vormerken",
-  "dialogWarning": "Bitte bestätige mit deinem aktuellen Passwort. Dein Konto wird deaktiviert und nach 14 Tagen endgültig anonymisiert.",
+  "dialogWarning": "Bitte bestätige mit deinem aktuellen Passwort und dem Text „LÖSCHEN“. Dein Konto wird deaktiviert und nach 14 Tagen endgültig anonymisiert.",
   "currentPassword": "Aktuelles Passwort",
+  "deletePhraseLabel": "Bestätigungstext",
+  "deletePhraseHelper": "Bitte gib zur Bestätigung genau „LÖSCHEN“ ein.",
   "cancel": "Abbrechen",
   "confirmDelete": "Konto zur Löschung vormerken",
   "deletionScheduled": "Dein Konto wurde zur Löschung vorgemerkt. Endgültige Löschung am {{date}}.",
-  "noDisplayName": "—"
+  "noDisplayName": "—",
+  "errors": {
+    "generic": "Aktion konnte nicht ausgeführt werden.",
+    "delete": "Fehler beim Vormerken der Löschung."
+  },
+  "emailConfirm": {
+    "title": "E-Mail-Änderung bestätigen",
+    "loading": "Bestätigung wird geprüft …",
+    "invalid": "Der Bestätigungslink ist ungültig oder abgelaufen."
+  }
 }

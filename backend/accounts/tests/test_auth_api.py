@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 from io import StringIO
+import re
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
@@ -13,7 +15,7 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.models import AccountDeletionRequest, PendingActivation
+from accounts.models import AccountDeletionRequest, AccountEmailChangeRequest, PendingActivation
 
 User = get_user_model()
 
@@ -66,6 +68,25 @@ class AuthApiTest(APITestCase):
             format='json',
         )
         self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch('accounts.views.send_mail', side_effect=RuntimeError('SMTP 500: trace details'))
+    def test_registration_returns_safe_message_when_activation_mail_fails(self, mocked_send_mail) -> None:
+        response = self.client.post(
+            '/openfarmplanner/api/auth/register/',
+            {
+                'email': 'mail-fail@example.com',
+                'password': 'new-safe-password-123',
+                'password_confirm': 'new-safe-password-123',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data.get('code'), 'email_send_failed')
+        self.assertIn('Aktivierungs-E-Mail konnte nicht gesendet werden', response.data.get('message', ''))
+        self.assertNotIn('SMTP 500', response.data.get('message', ''))
+        self.assertTrue(User.objects.filter(email='mail-fail@example.com').exists())
+        self.assertEqual(mocked_send_mail.call_count, 1)
 
     @override_settings(PUBLIC_FRONTEND_URL='https://zwiebelzopf.at/openfarmplanner')
     def test_activation_email_uses_public_frontend_url(self) -> None:
@@ -361,6 +382,21 @@ class AuthApiTest(APITestCase):
         self.assertIn('/activate?uid=', mail.outbox[0].body)
         self.assertIn('&token=', mail.outbox[0].body)
 
+    @patch('accounts.views.send_mail', side_effect=RuntimeError('SMTP exploded'))
+    def test_resend_activation_returns_safe_error_when_mail_fails(self, _mocked_send_mail) -> None:
+        inactive = User.objects.create_user(
+            username='pending_mail_failed',
+            email='pending-mail-failed@example.com',
+            password=self.password,
+            is_active=False,
+        )
+
+        response = self.client.post('/openfarmplanner/api/auth/resend-activation/', {'email': inactive.email}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.data.get('code'), 'email_send_failed')
+        self.assertIn('Die E-Mail konnte nicht gesendet werden.', response.data.get('message', ''))
+        self.assertNotIn('SMTP exploded', response.data.get('message', ''))
+
     def test_resend_activation_skips_active_accounts(self) -> None:
         active_user = User.objects.create_user(
             username='already_active',
@@ -389,6 +425,14 @@ class AuthApiTest(APITestCase):
         self.assertEqual(unknown_response.status_code, status.HTTP_200_OK)
         self.assertEqual(inactive_response.data.get('detail'), unknown_response.data.get('detail'))
         self.assertEqual(len(mail.outbox), 0)
+
+    @patch('accounts.views.send_mail', side_effect=RuntimeError('SMTP timeout detail'))
+    def test_password_reset_returns_safe_error_when_mail_fails(self, _mocked_send_mail) -> None:
+        response = self.client.post('/openfarmplanner/api/auth/password-reset/', {'email': self.user.email}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.data.get('code'), 'email_send_failed')
+        self.assertIn('Die E-Mail konnte nicht gesendet werden.', response.data.get('message', ''))
+        self.assertNotIn('SMTP timeout detail', response.data.get('message', ''))
 
     def test_cleanup_command_keeps_non_expired_inactive_user(self) -> None:
         inactive = User.objects.create_user(
@@ -507,6 +551,104 @@ class AuthApiTest(APITestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_profile_update_changes_display_name(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.patch('/openfarmplanner/api/auth/account/profile/', {'display_name': 'Neuer Name'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'Neuer Name')
+
+    def test_email_change_rejects_wrong_password(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/change-email/',
+            {'new_email': 'neu@example.com', 'current_password': 'wrong'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(AccountEmailChangeRequest.objects.exists())
+
+    def test_email_change_sends_confirmation_mail_without_immediate_update(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/change-email/',
+            {'new_email': 'neu@example.com', 'current_password': self.password},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'demo@example.com')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('/confirm-email-change?uid=', mail.outbox[0].body)
+        self.assertIn('&request_id=', mail.outbox[0].body)
+
+    def test_confirm_email_change_updates_user_email(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        self.client.post(
+            '/openfarmplanner/api/auth/account/change-email/',
+            {'new_email': 'neu@example.com', 'current_password': self.password},
+            format='json',
+        )
+        body = mail.outbox[-1].body
+        uid_match = re.search(r'uid=([^&\n]+)', body)
+        token_match = re.search(r'token=([^&\n]+)', body)
+        request_id_match = re.search(r'request_id=([0-9a-fA-F-]+)', body)
+        self.assertIsNotNone(uid_match)
+        self.assertIsNotNone(token_match)
+        self.assertIsNotNone(request_id_match)
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/confirm-email-change/',
+            {
+                'uid': uid_match.group(1),
+                'token': token_match.group(1),
+                'request_id': request_id_match.group(1),
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'neu@example.com')
+
+    def test_confirm_email_change_rejects_invalid_or_expired_token(self) -> None:
+        request_obj = AccountEmailChangeRequest.objects.create(
+            user=self.user,
+            new_email='neu@example.com',
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+        uid = urlsafe_base64_encode(str(self.user.pk).encode('utf-8'))
+        token = default_token_generator.make_token(self.user)
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/confirm-email-change/',
+            {'uid': uid, 'token': token, 'request_id': str(request_obj.id)},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_password_change_rejects_wrong_current_password(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/change-password/',
+            {'current_password': 'wrong', 'new_password': 'New-safe-password-1234', 'new_password_confirm': 'New-safe-password-1234'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_password_change_with_valid_data(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.post(
+            '/openfarmplanner/api/auth/account/change-password/',
+            {'current_password': self.password, 'new_password': 'New-safe-password-1234', 'new_password_confirm': 'New-safe-password-1234'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.client.post('/openfarmplanner/api/auth/logout/', {}, format='json')
+        login_with_new = self.client.post(
+            '/openfarmplanner/api/auth/login/',
+            {'email': self.user.email, 'password': 'New-safe-password-1234'},
+            format='json',
+        )
+        self.assertEqual(login_with_new.status_code, status.HTTP_200_OK)
 
     def test_purge_deleted_accounts_anonymizes_and_is_idempotent(self) -> None:
         AccountDeletionRequest.objects.create(

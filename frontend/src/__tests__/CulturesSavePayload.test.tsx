@@ -194,6 +194,49 @@ describe('Cultures save payload', () => {
     expect(payload.supplier_data_input?.[0]?.id).toBe(77);
   });
 
+  it('sends all supplier rows in supplier_data_input when saving', async () => {
+    saveCultureMock.mockReturnValue({
+      id: 1,
+      name: 'Karotte',
+      variety: 'Nantaise',
+      supplier_data: [
+        {
+          id: 77,
+          supplier_id: 10,
+          supplier_name: 'Bingenheimer',
+          supplier_product_name: 'Karotten-Saatgut',
+          packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
+        },
+        {
+          id: 78,
+          supplier_id: 11,
+          supplier_name: 'Dreschflegel',
+          supplier_product_name: 'Möhren Premium',
+          packaging_sizes: [{ size_value: 50, size_unit: 'g' }],
+        },
+      ],
+      thousand_kernel_weight_g: 3.5,
+    } as unknown as Culture);
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <Cultures />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'select-culture' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Kultur bearbeiten (Alt+E)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'submit-edit' }));
+
+    await waitFor(() => expect(updateMock).toHaveBeenCalledTimes(1));
+    const payload = updateMock.mock.calls[0][1] as { supplier_data_input?: Array<{ id?: number }>; thousand_kernel_weight_g?: number };
+    expect(payload.supplier_data_input).toHaveLength(2);
+    expect(payload.supplier_data_input?.map((row) => row.id)).toEqual([77, 78]);
+    expect(payload.thousand_kernel_weight_g).toBe(3.5);
+  });
+
   it('shows and selects newly created culture immediately after save', async () => {
     listMock
       .mockResolvedValueOnce({

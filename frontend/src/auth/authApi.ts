@@ -1,4 +1,4 @@
-import type { AccountDeleteResponse, AuthUser, ProjectSwitchResponse } from './types';
+import type { AccountActionResponse, AccountDeleteResponse, AuthUser, ProjectSwitchResponse } from './types';
 import i18n from '../i18n';
 import { computeProdApiPath } from '../api/httpClient';
 
@@ -18,14 +18,19 @@ export class AuthApiError extends Error {
 }
 
 function extractError(raw: string): AuthApiError {
+  const fallbackMessage = translateOrFallback('auth:error.requestFailed', 'Anfrage fehlgeschlagen.');
+  const looksLikeHtml = /^\s*<!doctype html/i.test(raw) || /^\s*<html/i.test(raw) || /<body[\s>]/i.test(raw);
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const detail = toUserFriendlyErrorMessage(parsed);
     const code = typeof parsed.code === 'string' ? parsed.code : undefined;
     const scheduledDeletionAt = typeof parsed.scheduled_deletion_at === 'string' ? parsed.scheduled_deletion_at : undefined;
-    return new AuthApiError(detail || 'Request failed.', code, scheduledDeletionAt);
+    return new AuthApiError(detail || fallbackMessage, code, scheduledDeletionAt);
   } catch {
-    return new AuthApiError(raw || 'Request failed.');
+    if (looksLikeHtml) {
+      return new AuthApiError(fallbackMessage);
+    }
+    return new AuthApiError(fallbackMessage);
   }
 }
 
@@ -47,6 +52,8 @@ const knownValidationMessageKeys: Record<string, string> = {
   'This password is too short.': 'passwordTooShort',
   'This password is entirely numeric.': 'passwordEntirelyNumeric',
   'Unable to log in with provided credentials.': 'invalidCredentials',
+  'Die E-Mail konnte nicht gesendet werden. Bitte kontaktiere [info@openfarmplanner.org](mailto:info@openfarmplanner.org).': 'emailSendFailed',
+  'Dein Konto wurde erstellt, aber die Aktivierungs-E-Mail konnte nicht gesendet werden. Bitte kontaktiere [info@openfarmplanner.org](mailto:info@openfarmplanner.org), damit wir dein Konto aktivieren oder dir den Link erneut senden können.': 'activationEmailSendFailed',
 };
 
 function translateOrFallback(key: string, fallback: string, options?: Record<string, unknown>): string {
@@ -56,6 +63,10 @@ function translateOrFallback(key: string, fallback: string, options?: Record<str
 
 function localizeBackendMessage(message: string): string {
   const trimmed = message.trim();
+  const looksLikeHtml = /^<!doctype html/i.test(trimmed) || /^<html/i.test(trimmed) || /<body[\s>]/i.test(trimmed);
+  if (looksLikeHtml) {
+    return translateOrFallback('auth:error.requestFailed', 'Anfrage fehlgeschlagen.');
+  }
   const mappedKey = knownValidationMessageKeys[trimmed];
   if (mappedKey) {
     return translateOrFallback(`auth:error.messages.${mappedKey}`, trimmed);
@@ -96,11 +107,12 @@ function resolveFieldLabel(field: string): string {
 }
 
 function toUserFriendlyErrorMessage(payload: Record<string, unknown>): string {
+  const explicitMessage = typeof payload.message === 'string' ? localizeBackendMessage(payload.message) : '';
   const explicitDetail = typeof payload.detail === 'string' ? localizeBackendMessage(payload.detail) : '';
   const formattedErrors: string[] = [];
 
   for (const [field, value] of Object.entries(payload)) {
-    if (field === 'code' || field === 'scheduled_deletion_at' || field === 'detail') {
+    if (field === 'code' || field === 'scheduled_deletion_at' || field === 'detail' || field === 'message') {
       continue;
     }
     const localizedMessages = flattenErrorStrings(value).map((message) => localizeBackendMessage(message));
@@ -119,6 +131,9 @@ function toUserFriendlyErrorMessage(payload: Record<string, unknown>): string {
 
   if (formattedErrors.length > 0) {
     return formattedErrors.join('\n');
+  }
+  if (explicitMessage) {
+    return explicitMessage;
   }
   if (explicitDetail) {
     return explicitDetail;
@@ -211,6 +226,46 @@ export async function requestAccountDeletion(password: string): Promise<AccountD
     method: 'POST',
     headers: csrfHeader(),
     body: JSON.stringify({ password }),
+  });
+}
+
+export async function updateProfile(displayName: string): Promise<{ detail: string; user: AuthUser }> {
+  await ensureCsrfCookie();
+  return request<{ detail: string; user: AuthUser }>('/auth/account/profile/', {
+    method: 'PATCH',
+    headers: csrfHeader(),
+    body: JSON.stringify({ display_name: displayName }),
+  });
+}
+
+export async function requestEmailChange(newEmail: string, currentPassword: string): Promise<AccountActionResponse> {
+  await ensureCsrfCookie();
+  return request<AccountActionResponse>('/auth/account/change-email/', {
+    method: 'POST',
+    headers: csrfHeader(),
+    body: JSON.stringify({ new_email: newEmail, current_password: currentPassword }),
+  });
+}
+
+export async function confirmEmailChange(uid: string, token: string, requestId: string): Promise<AccountActionResponse> {
+  await ensureCsrfCookie();
+  return request<AccountActionResponse>('/auth/account/confirm-email-change/', {
+    method: 'POST',
+    headers: csrfHeader(),
+    body: JSON.stringify({ uid, token, request_id: requestId }),
+  });
+}
+
+export async function changePassword(currentPassword: string, newPassword: string, newPasswordConfirm: string): Promise<AccountActionResponse> {
+  await ensureCsrfCookie();
+  return request<AccountActionResponse>('/auth/account/change-password/', {
+    method: 'POST',
+    headers: csrfHeader(),
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+      new_password_confirm: newPasswordConfirm,
+    }),
   });
 }
 

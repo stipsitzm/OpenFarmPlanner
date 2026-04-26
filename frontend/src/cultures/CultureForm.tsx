@@ -253,6 +253,7 @@ export function CultureForm({
   };
 
   const supplierRows = formData.supplier_data ?? [];
+
   const updateSupplierRow = (index: number, patch: Record<string, unknown>) => {
     const nextRows = supplierRows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row));
     handleChange('supplier_data', nextRows);
@@ -276,7 +277,6 @@ export function CultureForm({
     const currentPackages = supplierRows[supplierIndex]?.packaging_sizes ?? [];
     updateSupplierRow(supplierIndex, { packaging_sizes: currentPackages.filter((_pkg, index) => index !== packageIndex) });
   };
-
   const handleDialogContentScrollKey = (event: { key: string; altKey: boolean; ctrlKey: boolean; metaKey: boolean; preventDefault: () => void }, contentElement: HTMLDivElement) => {
     if (event.altKey || event.ctrlKey || event.metaKey) {
       return;
@@ -442,13 +442,6 @@ export function CultureForm({
                   label={t('form.supplierProductNameLabel') }
                   value={row.supplier_product_name ?? ''}
                   onChange={(event) => updateSupplierRow(supplierIndex, { supplier_product_name: event.target.value })}
-                  fullWidth
-                />
-                <TextField
-                  label={t('form.thousandKernelWeightLabel')}
-                  type="number"
-                  value={row.thousand_kernel_weight_g ?? ''}
-                  onChange={(event) => updateSupplierRow(supplierIndex, { thousand_kernel_weight_g: event.target.value ? Number(event.target.value) : null })}
                   fullWidth
                 />
                 <Typography variant="subtitle2">{t('form.seedPackagesLabel')}</Typography>

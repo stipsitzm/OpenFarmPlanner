@@ -119,6 +119,7 @@ def _invitation_error_response(exc: InvitationFlowError) -> Response:
 
 def _send_project_invitation_email(*, invitation: ProjectInvitation, project_name: str, invited_by: object) -> tuple[bool, str]:
     """Send invitation email and return delivery result plus diagnostic message."""
+    support_mail = settings.SUPPORT_CONTACT_EMAIL
     invite_link = build_public_frontend_url(f'/invite/accept?token={invitation.token}')
     with translation.override('de'):
         subject = _('Einladung zu OpenFarmPlanner: %(project)s') % {'project': project_name}
@@ -139,16 +140,32 @@ def _send_project_invitation_email(*, invitation: ProjectInvitation, project_nam
 
     if not backend_is_delivery_capable:
         logger.info('Project invitation created without outbound email delivery because backend=%s', settings.EMAIL_BACKEND)
-        return False, 'EMAIL_BACKEND is not configured for outbound delivery.'
+        return False, (
+            'Die E-Mail konnte nicht gesendet werden. '
+            f'Bitte kontaktiere [{support_mail}](mailto:{support_mail}).'
+        )
 
     try:
         sent_count = send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [invitation.email], fail_silently=False)
         if sent_count > 0:
             return True, ''
-        return False, 'Mail backend accepted request but returned zero deliveries.'
+        logger.error(
+            'Project invitation email backend accepted request but returned zero deliveries',
+            extra={'project_id': invitation.project_id, 'invitation_id': invitation.id, 'email': invitation.email},
+        )
+        return False, (
+            'Die E-Mail konnte nicht gesendet werden. '
+            f'Bitte kontaktiere [{support_mail}](mailto:{support_mail}).'
+        )
     except Exception as exc:  # noqa: BLE001
-        logger.warning('Project invitation email could not be sent: %s', exc)
-        return False, str(exc)
+        logger.exception(
+            'Project invitation email could not be sent',
+            extra={'project_id': invitation.project_id, 'invitation_id': invitation.id, 'email': invitation.email},
+        )
+        return False, (
+            'Die E-Mail konnte nicht gesendet werden. '
+            f'Bitte kontaktiere [{support_mail}](mailto:{support_mail}).'
+        )
 
 
 def _coerce_request_string(value, default='') -> str:
@@ -2060,7 +2077,6 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
         suppliers_map: dict[int, list[CultureSupplierData]] = defaultdict(list)
         for row in supplier_rows:
             suppliers_map[row.culture_id].append(row)
-        pending_selection_updates: list[Culture] = []
         rows: list[dict] = []
         for culture_id, entry in grouped.items():
             required_amount = entry['required_amount_value']
@@ -2078,13 +2094,6 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                 selected_supplier = supplier_options[0]
                 selected_supplier_id = selected_supplier.supplier_id
 
-            if selected_supplier and culture.selected_seed_demand_supplier_id != selected_supplier.supplier_id:
-                culture.selected_seed_demand_supplier_id = selected_supplier.supplier_id
-                pending_selection_updates.append(culture)
-            if selected_supplier is None and culture.selected_seed_demand_supplier_id is not None and not supplier_options:
-                culture.selected_seed_demand_supplier = None
-                pending_selection_updates.append(culture)
-
             packages_raw = selected_supplier.packaging_sizes if selected_supplier else []
             packages = []
             for item in packages_raw or []:
@@ -2095,7 +2104,6 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                 if not isinstance(size_value, (int, float)) or size_unit not in {SEED_PACKAGE_UNIT_GRAMS, SEED_PACKAGE_UNIT_SEEDS}:
                     continue
                 packages.append({'size_value': float(size_value), 'size_unit': size_unit})
-            row_tkg = Decimal(str(selected_supplier.thousand_kernel_weight_g)) if (selected_supplier and selected_supplier.thousand_kernel_weight_g) else entry['tkg']
             row = {
                 'culture_id': entry['culture_id'],
                 'culture_name': entry['culture_name'],
@@ -2143,7 +2151,7 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                     requirement_value=required_amount,
                     requirement_unit=required_unit,
                     target_unit=preferred_unit,
-                    tkg=row_tkg,
+                    tkg=entry['tkg'],
                 )
                 if converted is None:
                     row['warning'] = conversion_warning or 'Cannot convert required amount to package units.'
@@ -2175,9 +2183,6 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                 }
                 row['packages_needed'] = suggestion.pack_count
             rows.append(row)
-
-        if pending_selection_updates:
-            Culture.objects.bulk_update(pending_selection_updates, ['selected_seed_demand_supplier'])
 
         rows.sort(key=lambda item: (item['culture_name'] or '', item['variety'] or ''))
         serializer = self.get_serializer(rows, many=True)
@@ -2395,8 +2400,9 @@ class ProjectInvitationView(APIView):
         payload['code'] = result.code
         payload['mail_sent'] = mail_sent
         payload['invite_link'] = invite_link
-        payload['mail_error'] = mail_error
-        payload['email_backend'] = settings.EMAIL_BACKEND
+        if not mail_sent and mail_error:
+            payload['mail_error'] = mail_error
+            payload['mail_error_code'] = 'email_send_failed'
         status_code = status.HTTP_201_CREATED if result.code == 'invitation_sent' else status.HTTP_200_OK
         return Response(payload, status=status_code)
 

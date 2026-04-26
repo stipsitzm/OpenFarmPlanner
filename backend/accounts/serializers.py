@@ -195,3 +195,39 @@ class AccountDeleteRequestSerializer(serializers.Serializer):
 class AccountRestoreSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+
+
+class AccountProfileSerializer(serializers.Serializer):
+    display_name = serializers.CharField(max_length=255, allow_blank=True, required=True)
+
+
+class AccountEmailChangeRequestSerializer(serializers.Serializer):
+    new_email = serializers.EmailField()
+    current_password = serializers.CharField(write_only=True)
+
+    def validate_new_email(self, value: str) -> str:
+        normalized = normalize_email_lower(value)
+        user: User = self.context['request'].user
+        if normalized == normalize_email_lower(user.email):
+            raise serializers.ValidationError('Die neue E-Mail-Adresse muss sich von der aktuellen unterscheiden.')
+        if User.objects.filter(email__iexact=normalized).exclude(pk=user.pk).exists():
+            raise serializers.ValidationError(_de(_('An account with this email already exists.')))
+        return normalized
+
+
+class AccountEmailChangeConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    request_id = serializers.UUIDField()
+
+
+class AccountPasswordChangeSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(**_password_field_kwargs)
+    new_password_confirm = serializers.CharField(**_password_field_kwargs)
+
+    def validate(self, attrs: dict[str, str]) -> dict[str, str]:
+        if attrs['new_password'] != attrs['new_password_confirm']:
+            raise serializers.ValidationError({'new_password_confirm': _de(_('Passwords do not match.'))})
+        validate_password(attrs['new_password'], user=self.context['request'].user)
+        return attrs
