@@ -241,7 +241,12 @@
             "Änderungen an Kultur oder Planung wirken sich direkt auf den Bedarf aus."
           ]
         }
-      ]
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "supplierSelect": "Lieferant pro Kultur festlegen",
+        "packageInfo": "Empfohlene Packungskombinationen prüfen"
+      }
     },
     "suppliers": {
       "title": "Hilfe: Lieferanten",
