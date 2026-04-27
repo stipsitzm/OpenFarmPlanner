@@ -51,8 +51,6 @@ import {
   type PlantingPlan,
   type Culture,
   type Bed,
-  type Field,
-  type Location,
 } from "../api/api";
 import type { CultivationType, Field, Location } from "../api/types";
 import { extractApiErrorMessage } from "../api/errors";
@@ -410,8 +408,6 @@ function PlantingPlans(): React.ReactElement {
   const [locations, setLocations] = useState<Location[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
-  const [fields, setFields] = useState<Field[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
   const [areaWarning, setAreaWarning] = useState<string>("");
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
