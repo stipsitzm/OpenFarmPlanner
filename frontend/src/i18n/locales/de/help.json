@@ -216,7 +216,13 @@
             "Änderungen an Zeiträumen in den Anbauplänen aktualisieren diese Ansicht."
           ]
         }
-      ]
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "tabs": "Zwischen Ansichten wechseln",
+        "switch": "Wöchentlichen Ertragskalender ein- oder ausblenden",
+        "tooltip": "Zusätzliche Details anzeigen"
+      }
     },
     "seedDemand": {
       "title": "Hilfe: Saatgutbedarf",

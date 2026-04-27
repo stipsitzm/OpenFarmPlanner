@@ -863,7 +863,7 @@ function FieldsBedsHierarchy({
 
   return (
     <div className={showTitle ? "page-container" : undefined}>
-      <Box sx={{ width: "fit-content", maxWidth: "100%" }}>
+      <Box sx={{ width: "100%", minWidth: 0 }}>
         {showTitle && <h1>{t("title")}</h1>}
 
         {error && (
@@ -874,7 +874,7 @@ function FieldsBedsHierarchy({
 
         <Box
           ref={tableWrapperRef}
-          sx={{ width: "100%", overflowX: "auto" }}
+          sx={{ width: "100%", minWidth: 0, overflowX: "auto" }}
           onClick={() => setTreeActive(true)}
         >
           <DataGrid
