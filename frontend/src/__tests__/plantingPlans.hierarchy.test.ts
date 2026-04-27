@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Bed, Field } from "../api/types";
 import {
+  buildAreaColumnHeaderLabel,
   collectHierarchyAvailability,
   filterBedOptionsBySelection,
   filterFieldOptionsByLocation,
@@ -20,6 +21,15 @@ const beds: Bed[] = [
 ];
 
 describe("PlantingPlans hierarchy normalization", () => {
+  it("builds combined area column header labels with pipe separators", () => {
+    expect(
+      buildAreaColumnHeaderLabel(true, "Standort", "Parzelle", "Beet"),
+    ).toBe("Standort | Parzelle | Beet");
+    expect(
+      buildAreaColumnHeaderLabel(false, "Standort", "Parzelle", "Beet"),
+    ).toBe("Parzelle | Beet");
+  });
+
   it("excludes locations and fields without beds from availability", () => {
     const allFields: Field[] = [
       ...fields,

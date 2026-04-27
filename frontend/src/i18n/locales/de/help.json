@@ -216,7 +216,13 @@
             "Änderungen an Zeiträumen in den Anbauplänen aktualisieren diese Ansicht."
           ]
         }
-      ]
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "tabs": "Zwischen Ansichten wechseln",
+        "switch": "Wöchentlichen Ertragskalender ein- oder ausblenden",
+        "tooltip": "Zusätzliche Details anzeigen"
+      }
     },
     "seedDemand": {
       "title": "Hilfe: Saatgutbedarf",
@@ -235,7 +241,12 @@
             "Änderungen an Kultur oder Planung wirken sich direkt auf den Bedarf aus."
           ]
         }
-      ]
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "supplierSelect": "Lieferant pro Kultur festlegen",
+        "packageInfo": "Empfohlene Packungskombinationen prüfen"
+      }
     },
     "suppliers": {
       "title": "Hilfe: Lieferanten",

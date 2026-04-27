@@ -46,12 +46,12 @@ describe("PlantingPlans mobile create helpers", () => {
   it("builds area column header with location for multi-location projects", () => {
     expect(
       buildAreaColumnHeaderLabel(true, "Standort", "Parzelle", "Beet"),
-    ).toBe("Standort · Parzelle · Beet");
+    ).toBe("Standort | Parzelle | Beet");
   });
 
   it("builds area column header without location for single-location projects", () => {
     expect(
       buildAreaColumnHeaderLabel(false, "Standort", "Parzelle", "Beet"),
-    ).toBe("Parzelle · Beet");
+    ).toBe("Parzelle | Beet");
   });
 });
