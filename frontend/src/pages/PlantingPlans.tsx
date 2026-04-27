@@ -80,7 +80,7 @@ import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
 
-const AREA_LABEL_SEPARATOR = " · ";
+const AREA_LABEL_SEPARATOR = " | ";
 
 export const buildAreaColumnHeaderLabel = (
   includeLocation: boolean,
@@ -477,6 +477,11 @@ function PlantingPlans(): React.ReactElement {
     [cultures],
   );
 
+  const locationById = useMemo(
+    () => new Map(locations.filter((location) => location.id !== undefined).map((location) => [location.id!, location])),
+    [locations],
+  );
+
   const fieldById = useMemo(
     () => new Map(fields.filter((field) => field.id !== undefined).map((field) => [field.id!, field])),
     [fields],
@@ -492,42 +497,8 @@ function PlantingPlans(): React.ReactElement {
     [fields, beds],
   );
 
-  const locationOptions: SearchableSelectOption[] = useMemo(
-    () =>
-      locations
-        .filter((location) => location.id !== undefined)
-        .filter((location) => hierarchyAvailability.locationIdsWithBeds.has(location.id!))
-        .map((location) => ({
-          value: location.id!,
-          label: location.name,
-        })),
-    [hierarchyAvailability.locationIdsWithBeds, locations],
-  );
-
-  const fieldOptions: SearchableSelectOption[] = useMemo(
-    () =>
-      fields
-        .filter((field) => field.id !== undefined)
-        .filter((field) => hierarchyAvailability.fieldIdsWithBeds.has(field.id!))
-        .map((field) => ({
-          value: field.id!,
-          label: field.name,
-        })),
-    [fields, hierarchyAvailability.fieldIdsWithBeds],
-  );
-
   const bedOptions: SearchableSelectOption[] = useMemo(
     () => {
-      const fieldById = new Map(
-        fields
-          .filter((item) => item.id !== undefined)
-          .map((item) => [item.id as number, item]),
-      );
-      const locationById = new Map(
-        locations
-          .filter((item) => item.id !== undefined)
-          .map((item) => [item.id as number, item]),
-      );
       const locationIdsWithBeds = new Set<number>();
       beds.forEach((bed) => {
         const field = fieldById.get(bed.field);
@@ -550,8 +521,8 @@ function PlantingPlans(): React.ReactElement {
             value: b.id!,
             label: buildBedDisplayLabel(
               locationName,
-              b.name,
               b.field_name ?? field?.name,
+              b.name,
               normalizedAreaSqm,
               includeLocation,
               numberLocale,
@@ -559,7 +530,12 @@ function PlantingPlans(): React.ReactElement {
           };
         });
     },
-    [beds, fields, locations, numberLocale],
+    [beds, fieldById, hierarchyAvailability.fieldIdsWithBeds, locationById, numberLocale],
+  );
+
+  const bedLabelById = useMemo(
+    () => new Map(bedOptions.map((option) => [option.value as number, option.label])),
+    [bedOptions],
   );
 
   const cultivationTypeOptions = useMemo(
@@ -638,16 +614,6 @@ function PlantingPlans(): React.ReactElement {
 
     return {
       culture: cultureWidth,
-      location: estimateColumnWidth(
-        [t("plantingPlans:columns.location"), ...locationOptions.map((option) => option.label)],
-        110,
-        165,
-      ),
-      field: estimateColumnWidth(
-        [t("plantingPlans:columns.field"), ...fieldOptions.map((option) => option.label)],
-        115,
-        175,
-      ),
       bed: bedWidth,
       cultivationType: estimateColumnWidth(
         [
@@ -689,7 +655,7 @@ function PlantingPlans(): React.ReactElement {
       ),
       notes: 220,
     };
-  }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, fieldOptions, locationOptions, numberLocale, t]);
+  }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, numberLocale, t]);
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
@@ -927,14 +893,12 @@ function PlantingPlans(): React.ReactElement {
         sortable: false,
         renderCell: (params) => {
           const row = params.row as PlantingPlanRow;
-          const fallback = bedOptions.find((option) => option.value === row.bed);
-          const label = fallback?.label ?? "—";
+          const label = bedLabelById.get(row.bed) ?? "—";
           return <CompactAreaCell label={label} />;
         },
         renderEditCell: (params) => {
           const row = params.row as PlantingPlanRow;
-          const fallback = bedOptions.find((option) => option.value === row.bed);
-          const label = fallback?.label ?? "—";
+          const label = bedLabelById.get(row.bed) ?? "—";
           return (
             <AreaAssignmentDialog
               bedId={typeof row.bed === "number" ? row.bed : Number(row.bed)}
@@ -1146,6 +1110,7 @@ function PlantingPlans(): React.ReactElement {
     ],
     [
       bedById,
+      bedLabelById,
       bedOptions,
       beds,
       fields,
@@ -1217,10 +1182,9 @@ function PlantingPlans(): React.ReactElement {
       );
     }
     if (row.bed_name) {
-      return buildBedDisplayLabel(null, row.bed_name, null, null, includeLocation, numberLocale);
+      return buildBedDisplayLabel(null, null, row.bed_name, null, includeLocation, numberLocale);
     }
-    const fallback = bedOptions.find((option) => option.value === row.bed);
-    return fallback?.label ?? "—";
+    return bedLabelById.get(row.bed) ?? "—";
   };
 
   const getDisplayArea = (row: PlantingPlanRow): string => {
@@ -1608,7 +1572,7 @@ function PlantingPlans(): React.ReactElement {
             id: -Date.now(),
             culture: 0,
             cultivation_type: "pre_cultivation",
-            location_id: locationOptions[0]?.value,
+            location_id: undefined,
             field_id: undefined,
             bed: 0,
             planting_date: "",

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   Box,
   Button,
@@ -18,7 +18,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import { useTranslation } from '../../i18n';
 import type { Bed, Field, Location } from '../../api/types';
 
-const AREA_LABEL_SEPARATOR = ' · ';
+const AREA_LABEL_SEPARATOR = ' | ';
 
 interface AreaAssignmentDialogProps {
   bedId: number | null;
@@ -114,6 +114,37 @@ export function AreaAssignmentDialog({
     () => new Set(fields.filter((item) => item.id !== undefined && eligibleFieldIds.has(item.id)).map((item) => item.location)),
     [eligibleFieldIds, fields],
   );
+  const fieldsByLocationId = useMemo(() => {
+    const grouped = new Map<number, Field[]>();
+    fields
+      .filter((item): item is Field & { id: number } => item.id !== undefined && eligibleFieldIds.has(item.id))
+      .forEach((item) => {
+        const list = grouped.get(item.location) ?? [];
+        list.push(item);
+        grouped.set(item.location, list);
+      });
+    return grouped;
+  }, [eligibleFieldIds, fields]);
+
+  const bedsByFieldId = useMemo(() => {
+    const grouped = new Map<number, Array<Bed & { id: number; fieldId: number; locationId: number }>>();
+    bedsWithLocation.forEach((item) => {
+      const list = grouped.get(item.fieldId) ?? [];
+      list.push(item);
+      grouped.set(item.fieldId, list);
+    });
+    return grouped;
+  }, [bedsWithLocation]);
+
+  const bedsByLocationId = useMemo(() => {
+    const grouped = new Map<number, Array<Bed & { id: number; fieldId: number; locationId: number }>>();
+    bedsWithLocation.forEach((item) => {
+      const list = grouped.get(item.locationId) ?? [];
+      list.push(item);
+      grouped.set(item.locationId, list);
+    });
+    return grouped;
+  }, [bedsWithLocation]);
 
   const selectableLocations = useMemo(
     () => locations.filter((item) => item.id !== undefined && eligibleLocationIds.has(item.id)),
@@ -137,23 +168,23 @@ export function AreaAssignmentDialog({
     if (!draft.locationId) {
       return fields.filter((item) => item.id !== undefined && eligibleFieldIds.has(item.id));
     }
-    return fields.filter((item) => item.id !== undefined && item.location === draft.locationId && eligibleFieldIds.has(item.id));
-  }, [draft.locationId, eligibleFieldIds, fields]);
+    return fieldsByLocationId.get(draft.locationId) ?? [];
+  }, [draft.locationId, eligibleFieldIds, fields, fieldsByLocationId]);
 
   const selectableBeds = useMemo(() => {
     if (draft.fieldId) {
-      return bedsWithLocation.filter((item) => item.fieldId === draft.fieldId);
+      return bedsByFieldId.get(draft.fieldId) ?? [];
     }
     if (draft.locationId) {
-      return bedsWithLocation.filter((item) => item.locationId === draft.locationId);
+      return bedsByLocationId.get(draft.locationId) ?? [];
     }
     return bedsWithLocation;
-  }, [bedsWithLocation, draft.fieldId, draft.locationId]);
+  }, [bedsByFieldId, bedsByLocationId, bedsWithLocation, draft.fieldId, draft.locationId]);
 
-  const handleLocationChange = (value: number): void => {
-    const nextFields = fields.filter((item) => item.id !== undefined && item.location === value && eligibleFieldIds.has(item.id));
+  const handleLocationChange = useCallback((value: number): void => {
+    const nextFields = fieldsByLocationId.get(value) ?? [];
     const nextFieldIds = new Set(nextFields.map((item) => item.id as number));
-    const nextBeds = bedsWithLocation.filter((item) => item.locationId === value);
+    const nextBeds = bedsByLocationId.get(value) ?? [];
     const nextBedIds = new Set(nextBeds.map((item) => item.id));
 
     setDraft((previous) => ({
@@ -161,11 +192,11 @@ export function AreaAssignmentDialog({
       fieldId: previous.fieldId && nextFieldIds.has(previous.fieldId) ? previous.fieldId : null,
       bedId: previous.bedId && nextBedIds.has(previous.bedId) ? previous.bedId : null,
     }));
-  };
+  }, [bedsByLocationId, fieldsByLocationId]);
 
-  const handleFieldChange = (value: number): void => {
+  const handleFieldChange = useCallback((value: number): void => {
     const selectedField = fieldsById.get(value);
-    const nextBeds = bedsWithLocation.filter((item) => item.fieldId === value);
+    const nextBeds = bedsByFieldId.get(value) ?? [];
     const nextBedIds = new Set(nextBeds.map((item) => item.id));
 
     setDraft((previous) => ({
@@ -173,16 +204,16 @@ export function AreaAssignmentDialog({
       fieldId: value,
       bedId: previous.bedId && nextBedIds.has(previous.bedId) ? previous.bedId : null,
     }));
-  };
+  }, [bedsByFieldId, fieldsById]);
 
-  const handleBedChange = (value: number): void => {
+  const handleBedChange = useCallback((value: number): void => {
     const selectedBed = bedsWithLocation.find((item) => item.id === value);
     setDraft((previous) => ({
       locationId: selectedBed?.locationId ?? previous.locationId,
       fieldId: selectedBed?.fieldId ?? previous.fieldId,
       bedId: value,
     }));
-  };
+  }, [bedsWithLocation]);
 
   const handleApply = async (): Promise<void> => {
     if (!draft.bedId) {

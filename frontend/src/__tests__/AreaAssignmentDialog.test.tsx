@@ -86,6 +86,17 @@ describe('AreaAssignmentDialog', () => {
     expect(within(listbox).queryByRole('option', { name: /8 Karotte \+ Zwiebel.*5 \(10,00 m²\)/ })).not.toBeInTheDocument();
   });
 
+  it('shows bed option labels with pipe separators', async () => {
+    render(
+      <AreaAssignmentDialog bedId={101} beds={beds} fields={fields} locations={locations} locale="de-DE" compactLabel="x" onApply={vi.fn()} />,
+    );
+
+    await openDialog();
+    await openSelect('Beet');
+    const listbox = await screen.findByRole('listbox');
+    expect(within(listbox).getByRole('option', { name: '8 Karotte + Zwiebel | 5 (10,00 m²)' })).toBeInTheDocument();
+  });
+
   it('sets location and field automatically when bed changes', async () => {
     render(
       <AreaAssignmentDialog bedId={101} beds={beds} fields={fields} locations={locations} locale="de-DE" compactLabel="x" onApply={vi.fn()} />,
