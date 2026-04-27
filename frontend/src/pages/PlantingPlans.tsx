@@ -54,7 +54,7 @@ import {
   type Field,
   type Location,
 } from "../api/api";
-import type { CultivationType } from "../api/types";
+import type { CultivationType, Field, Location } from "../api/types";
 import { extractApiErrorMessage } from "../api/errors";
 import {
   formatLocalizedNumber,
@@ -82,6 +82,20 @@ import {
 } from "../commands/useCommandContext";
 import type { CommandSpec } from "../commands/types";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
+import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
+import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
+
+const AREA_LABEL_SEPARATOR = " · ";
+
+export const buildAreaColumnHeaderLabel = (
+  includeLocation: boolean,
+  locationLabel: string,
+  fieldLabel: string,
+  bedLabel: string,
+): string =>
+  includeLocation
+    ? `${locationLabel}${AREA_LABEL_SEPARATOR}${fieldLabel}${AREA_LABEL_SEPARATOR}${bedLabel}`
+    : `${fieldLabel}${AREA_LABEL_SEPARATOR}${bedLabel}`;
 
 /**
  * Row data type for Data Grid
@@ -314,12 +328,24 @@ export const filterBedOptionsBySelection = (
   });
 
 const buildBedDisplayLabel = (
+  locationName: string | null | undefined,
   bedName: string | null | undefined,
   areaSqm: number | null,
+  includeLocation: boolean,
   locale: string,
 ): string => {
+  const normalizedLocationName = (locationName ?? "").trim();
   const normalizedBedName = (bedName ?? "").trim();
-  if (!normalizedBedName) {
+  const normalizedFieldName = (fieldName ?? "").trim();
+  const combinedName = [
+    includeLocation ? normalizedLocationName : "",
+    normalizedFieldName,
+    normalizedBedName,
+  ]
+    .filter((part) => part.length > 0)
+    .join(AREA_LABEL_SEPARATOR);
+
+  if (!combinedName) {
     return "—";
   }
 
@@ -384,6 +410,8 @@ function PlantingPlans(): React.ReactElement {
   const [locations, setLocations] = useState<Location[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
+  const [fields, setFields] = useState<Field[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [areaWarning, setAreaWarning] = useState<string>("");
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
@@ -489,22 +517,49 @@ function PlantingPlans(): React.ReactElement {
   );
 
   const bedOptions: SearchableSelectOption[] = useMemo(
-    () =>
-      beds
+    () => {
+      const fieldById = new Map(
+        fields
+          .filter((item) => item.id !== undefined)
+          .map((item) => [item.id as number, item]),
+      );
+      const locationById = new Map(
+        locations
+          .filter((item) => item.id !== undefined)
+          .map((item) => [item.id as number, item]),
+      );
+      const locationIdsWithBeds = new Set<number>();
+      beds.forEach((bed) => {
+        const field = fieldById.get(bed.field);
+        if (field) {
+          locationIdsWithBeds.add(field.location);
+        }
+      });
+      const includeLocation = locationIdsWithBeds.size > 1;
+
+      return beds
         .filter((b) => b.id !== undefined)
         .filter((bed) => hierarchyAvailability.fieldIdsWithBeds.has(bed.field))
         .map((b) => {
+          const field = fieldById.get(b.field);
+          const locationName = field
+            ? locationById.get(field.location)?.name
+            : null;
           const normalizedAreaSqm = toNumericValue(b.area_sqm);
           return {
             value: b.id!,
             label: buildBedDisplayLabel(
+              locationName,
               b.name,
+              b.field_name ?? field?.name,
               normalizedAreaSqm,
+              includeLocation,
               numberLocale,
             ),
           };
-        }),
-    [beds, hierarchyAvailability.fieldIdsWithBeds, numberLocale],
+        });
+    },
+    [beds, fields, locations, numberLocale],
   );
 
   const cultivationTypeOptions = useMemo(
@@ -516,99 +571,40 @@ function PlantingPlans(): React.ReactElement {
     [t],
   );
 
-  const resolveLocationIdForRow = (row: PlantingPlanRow): number | null => {
-    if (typeof row.location_id === "number" && locationById.has(row.location_id)) {
-      return row.location_id;
-    }
-    if (typeof row.field_id === "number") {
-      const linkedField = fieldById.get(row.field_id);
-      if (linkedField?.location) {
-        return linkedField.location;
+  const fieldBedColumnLabel = useMemo(
+    () =>
+      t("plantingPlans:columns.fieldBed", {
+        separator: AREA_LABEL_SEPARATOR,
+      }),
+    [t],
+  );
+
+  const hasMultipleLocationsWithBeds = useMemo(() => {
+    const fieldById = new Map(
+      fields
+        .filter((item) => item.id !== undefined)
+        .map((item) => [item.id as number, item]),
+    );
+    const locationIdsWithBeds = new Set<number>();
+    beds.forEach((bed) => {
+      const field = fieldById.get(bed.field);
+      if (field) {
+        locationIdsWithBeds.add(field.location);
       }
-    }
-    if (typeof row.bed === "number") {
-      const linkedBed = bedById.get(row.bed);
-      if (linkedBed) {
-        const linkedField = fieldById.get(linkedBed.field);
-        if (linkedField?.location) {
-          return linkedField.location;
-        }
-      }
-    }
-    return locationOptions[0]?.value ?? null;
-  };
+    });
+    return locationIdsWithBeds.size > 1;
+  }, [beds, fields]);
 
-  const resolveFieldIdForRow = (row: PlantingPlanRow): number | null => {
-    if (typeof row.field_id === "number" && fieldById.has(row.field_id)) {
-      return row.field_id;
-    }
-    if (typeof row.bed === "number") {
-      const linkedBed = bedById.get(row.bed);
-      if (linkedBed && fieldById.has(linkedBed.field)) {
-        return linkedBed.field;
-      }
-    }
-    return null;
-  };
-
-  const getFieldOptionsForRow = (row: PlantingPlanRow): SearchableSelectOption[] => {
-    const rowLocationId = resolveLocationIdForRow(row);
-    const filteredFields = filterFieldOptionsByLocation(
-      rowLocationId,
-      fields,
-      hierarchyAvailability.fieldIdsWithBeds,
-    );
-    const allowedFieldIds = new Set(
-      filteredFields
-        .filter((field) => field.id !== undefined)
-        .map((field) => field.id!),
-    );
-    return fieldOptions.filter((option) => allowedFieldIds.has(option.value));
-  };
-
-  const getBedOptionsForRow = (row: PlantingPlanRow): SearchableSelectOption[] => {
-    const rowLocationId = resolveLocationIdForRow(row);
-    const rowFieldId = resolveFieldIdForRow(row);
-    const filteredBeds = filterBedOptionsBySelection(
-      rowLocationId,
-      rowFieldId,
-      fields,
-      beds,
-      hierarchyAvailability.fieldIdsWithBeds,
-    );
-    const allowedBedIds = new Set(
-      filteredBeds
-        .filter((bed) => bed.id !== undefined)
-        .map((bed) => bed.id!),
-    );
-    return bedOptions.filter((option) => allowedBedIds.has(option.value));
-  };
-
-  const buildDraftRow = (
-    rowId: number | string,
-    fallbackRow: PlantingPlanRow,
-  ): PlantingPlanRow => {
-    const draft = hierarchyDraftByRowIdRef.current[String(rowId)];
-    if (!draft) {
-      return fallbackRow;
-    }
-    return {
-      ...fallbackRow,
-      location_id: draft.location_id ?? undefined,
-      field_id: draft.field_id ?? undefined,
-      bed: draft.bed,
-    };
-  };
-
-  const setDraftForRow = (
-    rowId: number | string,
-    nextDraft: HierarchyDraftState,
-  ): void => {
-    setHierarchyDraftByRowId((previous) => ({
-      ...previous,
-      [String(rowId)]: nextDraft,
-    }));
-  };
+  const areaColumnLabel = useMemo(
+    () =>
+      buildAreaColumnHeaderLabel(
+        hasMultipleLocationsWithBeds,
+        t("plantingPlans:columns.location"),
+        t("plantingPlans:columns.field"),
+        t("plantingPlans:columns.bed"),
+      ),
+    [hasMultipleLocationsWithBeds, t],
+  );
 
   const getCultivationTypeOptionsForRow = useMemo(
     () => (row: PlantingPlanRow) => {
@@ -691,7 +687,7 @@ function PlantingPlans(): React.ReactElement {
         96,
         122,
       ),
-      notes: 180,
+      notes: 220,
     };
   }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, fieldOptions, locationOptions, numberLocale, t]);
 
@@ -755,15 +751,19 @@ function PlantingPlans(): React.ReactElement {
       setLocations([]);
       setFields([]);
       setBeds([]);
+      setFields([]);
+      setLocations([]);
       return;
     }
     const fetchData = async (): Promise<void> => {
       try {
-        const [culturesResponse, locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
+        const [culturesResponse, bedsResponse, fieldsResponse, locationsResponse] = await Promise.all([
           cultureAPI.list(),
           locationAPI.list(),
           fieldAPI.list(),
           bedAPI.list(),
+          fieldAPI.list(),
+          locationAPI.list(),
         ]);
         setCultures(culturesResponse.data.results);
         setLocations(locationsResponse.data.results);
@@ -774,6 +774,8 @@ function PlantingPlans(): React.ReactElement {
             area_sqm: toNumericValue(bed.area_sqm) ?? undefined,
           })),
         );
+        setFields(fieldsResponse.data.results);
+        setLocations(locationsResponse.data.results);
       } catch (err) {
         console.error("Error fetching hierarchy data:", err);
       }
@@ -1044,97 +1046,39 @@ function PlantingPlans(): React.ReactElement {
         },
       },
       {
-        ...createSingleSelectColumn<PlantingPlanRow>({
-          field: "bed",
-          headerName: t("plantingPlans:columns.bed"),
-          flex: 0,
-          minWidth: dynamicWidths.bed,
-          maxWidth: BED_COLUMN_MAX_WIDTH,
-          truncateCellText: true,
-          options: bedOptions,
-        }),
-        valueOptions: (params: GridValueOptionsParams<PlantingPlanRow>) => {
-          const row = params.row as PlantingPlanRow | undefined;
-          return row ? getBedOptionsForRow(row) : bedOptions;
+        field: "bed",
+          headerName: areaColumnLabel,
+        flex: 0,
+        minWidth: dynamicWidths.bed,
+        maxWidth: BED_COLUMN_MAX_WIDTH,
+        editable: true,
+        sortable: false,
+        renderCell: (params) => {
+          const row = params.row as PlantingPlanRow;
+          const fallback = bedOptions.find((option) => option.value === row.bed);
+          const label = fallback?.label ?? "—";
+          return <CompactAreaCell label={label} />;
         },
-        renderEditCell: (params: GridRenderEditCellParams<PlantingPlanRow>) => {
-          const draftRow = buildDraftRow(params.id, params.row as PlantingPlanRow);
-          const options = getBedOptionsForRow(draftRow);
+        renderEditCell: (params) => {
+          const row = params.row as PlantingPlanRow;
+          const fallback = bedOptions.find((option) => option.value === row.bed);
+          const label = fallback?.label ?? "—";
           return (
-            <SearchableSelectEditCell
-              {...params}
-              options={options}
-              onValueChange={async (nextValue) => {
-                const nextBedId = typeof nextValue === "number" ? nextValue : 0;
-                const normalized = normalizeSelectionAfterBedChange(
-                  buildDraftRow(params.id, params.row as PlantingPlanRow),
-                  nextBedId,
-                  fields,
-                  beds,
-                );
-                setDraftForRow(params.id, {
-                  location_id: normalized.location_id ?? null,
-                  field_id: normalized.field_id ?? null,
-                  bed: normalized.bed ?? 0,
-                });
+            <AreaAssignmentDialog
+              bedId={typeof row.bed === "number" ? row.bed : Number(row.bed)}
+              beds={beds}
+              fields={fields}
+              locations={locations}
+              locale={numberLocale}
+              compactLabel={label}
+              onApply={async (nextBedId) => {
                 await params.api.setEditCellValue({
                   id: params.id,
-                  field: "location_id",
-                  value: normalized.location_id ?? null,
-                });
-                await params.api.setEditCellValue({
-                  id: params.id,
-                  field: "field_id",
-                  value: normalized.field_id ?? null,
+                  field: "bed",
+                  value: nextBedId,
                 });
               }}
             />
-          );
-        },
-        renderCell: (params: GridRenderCellParams<PlantingPlanRow>) => {
-          const row = params.row as PlantingPlanRow;
-          const bedId = typeof row.bed === "number" ? row.bed : Number(row.bed);
-          const selectedBed = bedById.get(bedId);
-          const text = String(params.formattedValue ?? "");
-          const scopedOptions = getBedOptionsForRow(row);
-          const scopedNameCount = scopedOptions.reduce((accumulator, option) => {
-            const scopedBed = bedById.get(option.value);
-            if (!scopedBed) {
-              return accumulator;
-            }
-            const normalizedName = scopedBed.name.trim().toLocaleLowerCase();
-            accumulator.set(normalizedName, (accumulator.get(normalizedName) ?? 0) + 1);
-            return accumulator;
-          }, new Map<string, number>());
-          const hasNameConflict = selectedBed
-            ? (scopedNameCount.get(selectedBed.name.trim().toLocaleLowerCase()) ?? 0) > 1
-            : false;
-
-          if (!hasNameConflict || !selectedBed) {
-            return text;
-          }
-
-          const selectedField = fieldById.get(selectedBed.field);
-          const selectedLocation = selectedField ? locationById.get(selectedField.location) : undefined;
-          const tooltipText = [selectedLocation?.name, selectedField?.name, selectedBed.name]
-            .filter((part): part is string => Boolean(part))
-            .join(" / ");
-
-          return (
-            <Tooltip title={tooltipText}>
-              <Box
-                component="span"
-                sx={{
-                  display: "block",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  width: "100%",
-                }}
-              >
-                {text}
-              </Box>
-            </Tooltip>
           );
         },
         valueSetter: (value, row) => {
@@ -1332,20 +1276,16 @@ function PlantingPlans(): React.ReactElement {
       bedById,
       bedOptions,
       beds,
+      fields,
+      locations,
       cultivationTypeOptions,
       getCultivationTypeOptionsForRow,
       cultureOptions,
       cultures,
       dynamicWidths,
-      fieldById,
-      fieldOptions,
-      getBedOptionsForRow,
-      getFieldOptionsForRow,
-      hasMultipleLocations,
-      locationById,
-      locationOptions,
-      resolveFieldIdForRow,
-      resolveLocationIdForRow,
+      areaColumnLabel,
+      fieldBedColumnLabel,
+      numberLocale,
       areaWarning,
       t,
     ],
@@ -1375,16 +1315,37 @@ function PlantingPlans(): React.ReactElement {
   };
 
   const getBedLabel = (row: PlantingPlanRow): string => {
+    const fieldById = new Map(
+      fields.filter((item) => item.id !== undefined).map((item) => [item.id as number, item]),
+    );
+    const locationById = new Map(
+      locations.filter((item) => item.id !== undefined).map((item) => [item.id as number, item]),
+    );
+    const locationIdsWithBeds = new Set<number>();
+    beds.forEach((item) => {
+      const field = fieldById.get(item.field);
+      if (field) {
+        locationIdsWithBeds.add(field.location);
+      }
+    });
+    const includeLocation = locationIdsWithBeds.size > 1;
     const linkedBed = beds.find((bed) => bed.id === row.bed);
     if (linkedBed) {
+      const linkedField = fieldById.get(linkedBed.field);
+      const locationName = linkedField
+        ? locationById.get(linkedField.location)?.name
+        : null;
       return buildBedDisplayLabel(
+        locationName,
         linkedBed.name,
+        linkedBed.field_name ?? linkedField?.name,
         toNumericValue(linkedBed.area_sqm),
+        includeLocation,
         numberLocale,
       );
     }
     if (row.bed_name) {
-      return buildBedDisplayLabel(row.bed_name, null, numberLocale);
+      return buildBedDisplayLabel(null, row.bed_name, null, null, includeLocation, numberLocale);
     }
     const fallback = bedOptions.find((option) => option.value === row.bed);
     return fallback?.label ?? "—";

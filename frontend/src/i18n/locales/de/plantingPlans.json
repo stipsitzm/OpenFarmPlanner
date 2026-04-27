@@ -40,6 +40,12 @@
     "directSowing": "Direktsaat",
     "preCultivation": "Pflanzung"
   },
+  "areaAssignment": {
+    "title": "Anbaufläche ändern",
+    "editButton": "Anbaufläche bearbeiten",
+    "apply": "Übernehmen",
+    "cancel": "Abbrechen"
+  },
   "mobile": {
     "showDetails": "Details anzeigen",
     "hideDetails": "Details ausblenden",

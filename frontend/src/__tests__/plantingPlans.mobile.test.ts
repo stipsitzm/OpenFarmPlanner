@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Bed } from "../api/types";
-import { buildMobileCreateForm, getVisibleMobileRows } from "../pages/PlantingPlans";
+import {
+  buildAreaColumnHeaderLabel,
+  buildMobileCreateForm,
+  getVisibleMobileRows,
+} from "../pages/PlantingPlans";
 
 describe("PlantingPlans mobile create helpers", () => {
   it("prefills selected bed and area in the mobile create form", () => {
@@ -37,5 +41,17 @@ describe("PlantingPlans mobile create helpers", () => {
 
     expect(visibleRows).toHaveLength(1);
     expect(visibleRows[0].id).toBe(1);
+  });
+
+  it("builds area column header with location for multi-location projects", () => {
+    expect(
+      buildAreaColumnHeaderLabel(true, "Standort", "Parzelle", "Beet"),
+    ).toBe("Standort · Parzelle · Beet");
+  });
+
+  it("builds area column header without location for single-location projects", () => {
+    expect(
+      buildAreaColumnHeaderLabel(false, "Standort", "Parzelle", "Beet"),
+    ).toBe("Parzelle · Beet");
   });
 });

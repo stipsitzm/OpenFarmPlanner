@@ -610,7 +610,7 @@ export default function GraphicalFields({
   }, [fieldsByLocation, layoutsByField, locations]);
 
   useEffect(() => {
-    if (!import.meta.env.DEV) {
+    if (!import.meta.env.DEV || import.meta.env.MODE === 'test') {
       return;
     }
 
