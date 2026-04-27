@@ -12,7 +12,6 @@ import { useSearchParams } from "react-router-dom";
 import type {
   GridCellParams,
   GridColDef,
-  GridRenderCellParams,
   GridRenderEditCellParams,
   GridValueOptionsParams,
 } from "@mui/x-data-grid";
@@ -327,6 +326,7 @@ export const filterBedOptionsBySelection = (
 
 const buildBedDisplayLabel = (
   locationName: string | null | undefined,
+  fieldName: string | null | undefined,
   bedName: string | null | undefined,
   areaSqm: number | null,
   includeLocation: boolean,
@@ -348,10 +348,10 @@ const buildBedDisplayLabel = (
   }
 
   if (areaSqm === null) {
-    return normalizedBedName;
+    return combinedName;
   }
 
-  return `${normalizedBedName} (${formatAreaM2(areaSqm, locale)})`;
+  return `${combinedName} (${formatAreaM2(areaSqm, locale)})`;
 };
 
 const createEmptyMobileCreateForm = (): MobileCreateFormState => ({
@@ -467,11 +467,6 @@ function PlantingPlans(): React.ReactElement {
   );
 
   const hasMultipleLocations = locations.length > 1;
-
-  const locationById = useMemo(
-    () => new Map(locations.filter((location) => location.id !== undefined).map((location) => [location.id!, location])),
-    [locations],
-  );
 
   const fieldById = useMemo(
     () => new Map(fields.filter((field) => field.id !== undefined).map((field) => [field.id!, field])),
@@ -614,6 +609,81 @@ function PlantingPlans(): React.ReactElement {
     [cultivationTypeOptions, cultures],
   );
 
+  const buildDraftRow = (rowId: string | number, row: PlantingPlanRow): PlantingPlanRow => {
+    const draft = hierarchyDraftByRowIdRef.current[String(rowId)];
+    if (!draft) {
+      return row;
+    }
+    const normalizedDraft: Partial<PlantingPlanRow> = {
+      ...draft,
+      location_id: draft.location_id ?? undefined,
+      field_id: draft.field_id ?? undefined,
+    };
+    return {
+      ...row,
+      ...normalizedDraft,
+    };
+  };
+
+  const setDraftForRow = (
+    rowId: string | number,
+    draft: Partial<HierarchyDraftState>,
+  ): void => {
+    setHierarchyDraftByRowId((previous) => ({
+      ...previous,
+      [String(rowId)]: {
+        ...previous[String(rowId)],
+        ...draft,
+      },
+    }));
+  };
+
+  const resolveLocationIdForRow = (row: PlantingPlanRow): number | null => {
+    if (typeof row.location_id === "number") {
+      return row.location_id;
+    }
+
+    if (typeof row.field_id === "number") {
+      const linkedField = fieldById.get(row.field_id);
+      if (linkedField) {
+        return linkedField.location;
+      }
+    }
+
+    if (typeof row.bed === "number" && row.bed > 0) {
+      const linkedBed = bedById.get(row.bed);
+      if (linkedBed) {
+        return fieldById.get(linkedBed.field)?.location ?? null;
+      }
+    }
+
+    return null;
+  };
+
+  const resolveFieldIdForRow = (row: PlantingPlanRow): number | null => {
+    if (typeof row.field_id === "number") {
+      return row.field_id;
+    }
+
+    if (typeof row.bed === "number" && row.bed > 0) {
+      return bedById.get(row.bed)?.field ?? null;
+    }
+
+    return null;
+  };
+
+  const getFieldOptionsForRow = (row: PlantingPlanRow): SearchableSelectOption[] => {
+    const rowLocationId = resolveLocationIdForRow(row);
+    return filterFieldOptionsByLocation(
+      rowLocationId,
+      fields,
+      hierarchyAvailability.fieldIdsWithBeds,
+    ).map((field) => ({
+      value: field.id as number,
+      label: field.name,
+    }));
+  };
+
   const dynamicWidths = useMemo(() => {
     const cultureWidth = estimateColumnWidth(
       [
@@ -747,19 +817,15 @@ function PlantingPlans(): React.ReactElement {
       setLocations([]);
       setFields([]);
       setBeds([]);
-      setFields([]);
-      setLocations([]);
       return;
     }
     const fetchData = async (): Promise<void> => {
       try {
-        const [culturesResponse, bedsResponse, fieldsResponse, locationsResponse] = await Promise.all([
+        const [culturesResponse, locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
           cultureAPI.list(),
           locationAPI.list(),
           fieldAPI.list(),
           bedAPI.list(),
-          fieldAPI.list(),
-          locationAPI.list(),
         ]);
         setCultures(culturesResponse.data.results);
         setLocations(locationsResponse.data.results);
@@ -770,8 +836,6 @@ function PlantingPlans(): React.ReactElement {
             area_sqm: toNumericValue(bed.area_sqm) ?? undefined,
           })),
         );
-        setFields(fieldsResponse.data.results);
-        setLocations(locationsResponse.data.results);
       } catch (err) {
         console.error("Error fetching hierarchy data:", err);
       }
