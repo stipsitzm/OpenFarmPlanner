@@ -9,7 +9,7 @@
  * @returns Autocomplete-based edit cell.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
 import { SearchableSelect } from '../inputs/SearchableSelect';
@@ -17,6 +17,7 @@ import type { SearchableSelectOption } from '../inputs/SearchableSelect';
 
 export interface SearchableSelectEditCellProps extends GridRenderEditCellParams {
   options: SearchableSelectOption[];
+  onValueChange?: (nextValue: number | null) => Promise<void> | void;
 }
 
 export function SearchableSelectEditCell({
@@ -24,9 +25,9 @@ export function SearchableSelectEditCell({
   value,
   field,
   options,
+  onValueChange,
 }: SearchableSelectEditCellProps): React.ReactElement {
   const apiRef = useGridApiContext();
-  const initialValueRef = useRef(value);
   const [inputValue, setInputValue] = useState('');
 
   const selectedOption = useMemo(
@@ -42,16 +43,17 @@ export function SearchableSelectEditCell({
     setCurrentOption(selectedOption);
   }, [selectedOption]);
 
-  const handleChange = (_: unknown, newValue: SearchableSelectOption | null) => {
+  const handleChange = async (_: unknown, newValue: SearchableSelectOption | null) => {
     setCurrentOption(newValue);
     const nextValue = newValue?.value ?? null;
 
-    if (nextValue !== initialValueRef.current) {
-      apiRef.current.setEditCellValue({
+    if (nextValue !== value) {
+      await apiRef.current.setEditCellValue({
         id,
         field,
         value: nextValue,
       });
+      await onValueChange?.(nextValue);
     }
   };
 
@@ -61,7 +63,9 @@ export function SearchableSelectEditCell({
       value={currentOption}
       inputValue={inputValue}
       onInputChange={setInputValue}
-      onChange={(newValue) => handleChange(undefined, newValue)}
+      onChange={(newValue) => {
+        void handleChange(undefined, newValue);
+      }}
       size="small"
       textFieldSx={{ '& .MuiInputBase-root': { height: '100%' } }}
     />
