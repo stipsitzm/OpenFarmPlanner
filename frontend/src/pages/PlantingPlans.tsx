@@ -1553,7 +1553,7 @@ function PlantingPlans(): React.ReactElement {
           sx={{
             display: isMobile ? "none" : "block",
             width: "100%",
-            maxWidth: "1520px",
+            maxWidth: "1575px",
           }}
         >
           <EditableDataGrid<PlantingPlanRow>

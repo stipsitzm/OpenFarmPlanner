@@ -1,1 +1,1 @@
-export const UI_LABEL_SEPARATOR = ' → ';
+export const UI_LABEL_SEPARATOR = ' – ';
