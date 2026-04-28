@@ -46,7 +46,7 @@ export function CompactAreaCell({ label }: CompactAreaCellProps): React.ReactEle
       enterTouchDelay={450}
     >
       <Box
-        sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}
+        sx={{ width: '100%', minWidth: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', height: '100%' }}
         tabIndex={showTooltip ? 0 : -1}
         aria-label={showTooltip ? label : undefined}
       >
