@@ -1258,6 +1258,9 @@ class ProjectRevision(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['project', '-created_at']),
+        ]
 
 
 
@@ -1462,6 +1465,11 @@ class PlantingPlan(TimestampedModel):
 
     class Meta:
         ordering = ['-planting_date']
+        indexes = [
+            models.Index(fields=['project', '-planting_date']),
+            models.Index(fields=['project', 'bed', 'planting_date', 'harvest_end_date']),
+            models.Index(fields=['project', 'culture']),
+        ]
 
 
 class Task(TimestampedModel):
