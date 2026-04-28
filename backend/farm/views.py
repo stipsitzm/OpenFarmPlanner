@@ -884,7 +884,7 @@ class FieldViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewS
         queryset: All Field objects ordered by location and name
         serializer_class: FieldSerializer for serialization
     """
-    queryset = Field.objects.all()
+    queryset = Field.objects.select_related('location').all()
     serializer_class = FieldSerializer
 
     def perform_create(self, serializer):
@@ -912,7 +912,7 @@ class BedViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet
         queryset: All Bed objects ordered by field and name
         serializer_class: BedSerializer for serialization
     """
-    queryset = Bed.objects.all()
+    queryset = Bed.objects.select_related('field', 'field__location').all()
     serializer_class = BedSerializer
 
     def perform_create(self, serializer):
@@ -1698,7 +1698,7 @@ class TaskViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSe
         queryset: All Task objects ordered by due_date and created_at
         serializer_class: TaskSerializer for serialization
     """
-    queryset = Task.objects.all()
+    queryset = Task.objects.select_related('planting_plan', 'planting_plan__culture', 'planting_plan__bed').all()
     serializer_class = TaskSerializer
 
     def perform_create(self, serializer):
