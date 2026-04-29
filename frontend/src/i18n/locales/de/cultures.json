@@ -225,6 +225,33 @@
         "editCultures": "Kulturen bearbeiten"
       }
     },
+    "progressive": {
+      "locations": {
+        "title": "Noch kein Saatgutbedarf berechenbar",
+        "description": "Lege zuerst einen Standort an, damit du Flächen und Beete planen kannst.",
+        "action": "Standort anlegen"
+      },
+      "beds": {
+        "title": "Noch kein Saatgutbedarf berechenbar",
+        "description": "Lege als Nächstes Beete an, damit Kulturen einer Fläche zugeordnet werden können.",
+        "action": "Beete anlegen"
+      },
+      "cultures": {
+        "title": "Noch kein Saatgutbedarf berechenbar",
+        "description": "Lege jetzt deine ersten Kulturen an, damit daraus ein Saatgutbedarf berechnet werden kann.",
+        "action": "Kultur anlegen"
+      },
+      "plans": {
+        "title": "Noch kein Saatgutbedarf berechenbar",
+        "description": "Erstelle als Nächstes einen Anbauplan, damit ein konkreter Saatgutbedarf entsteht.",
+        "action": "Anbauplan erstellen"
+      },
+      "seedData": {
+        "title": "Noch kein Saatgutbedarf berechenbar",
+        "description": "Ergänze Saatgutdaten bei deinen Kulturen, damit der Bedarf berechnet werden kann.",
+        "action": "Saatgutdaten ergänzen"
+      }
+    },
     "selectSupplier": "Lieferant auswählen",
     "createSupplierAction": "Neuen Lieferanten anlegen",
     "editCultureAction": "Kultur bearbeiten",

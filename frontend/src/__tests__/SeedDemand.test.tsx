@@ -4,11 +4,13 @@ import { MemoryRouter } from 'react-router-dom';
 import SeedDemandPage from '../pages/SeedDemand';
 import { CommandProvider } from '../commands/CommandProvider';
 
-const { listMock, saveSelectionMock, cultureListMock, planListMock } = vi.hoisted(() => ({
+const { listMock, saveSelectionMock, cultureListMock, planListMock, locationListMock, bedListMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   saveSelectionMock: vi.fn(),
   cultureListMock: vi.fn(),
   planListMock: vi.fn(),
+  locationListMock: vi.fn(),
+  bedListMock: vi.fn(),
 }));
 const projectRequirementState = vi.hoisted(() => ({
   shouldShowProjectRequiredState: false,
@@ -28,6 +30,12 @@ vi.mock('../api/api', async () => {
     },
     plantingPlanAPI: {
       list: planListMock,
+    },
+    locationAPI: {
+      list: locationListMock,
+    },
+    bedAPI: {
+      list: bedListMock,
     },
   };
 });
@@ -52,9 +60,32 @@ describe('SeedDemandPage', () => {
       data: { results: [{ id: 1, name: 'Basis', seed_rate_value: 1, seed_rate_direct_value: null, seed_rate_pre_cultivation_value: null }] },
     });
     planListMock.mockResolvedValue({ data: { results: [{ id: 1 }] } });
+    locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hof' }] } });
+    bedListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Beet 1' }] } });
   });
 
-  it('shows requirements checklist and no table header when planting plans are missing', async () => {
+  it('shows location-first progressive requirement and no table header when no locations exist', async () => {
+    listMock.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
+    locationListMock.mockResolvedValue({ data: { results: [] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('seedDemand.progressive.locations.title')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('seedDemand.columns.culture')).not.toBeInTheDocument();
+    expect(screen.queryByText('Keine Einträge vorhanden')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'seedDemand.progressive.locations.action' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'seedDemand.progressive.beds.action' })).not.toBeInTheDocument();
+  });
+
+  it('shows culture-step requirement when locations and beds exist but cultures are missing', async () => {
     listMock.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
     cultureListMock.mockResolvedValue({ data: { results: [] } });
     planListMock.mockResolvedValue({ data: { results: [] } });
@@ -68,21 +99,17 @@ describe('SeedDemandPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('seedDemand.requirements.plantingPlans.missing')).toBeInTheDocument();
+      expect(screen.getByText('seedDemand.progressive.cultures.title')).toBeInTheDocument();
     });
-    expect(screen.getByText('seedDemand.requirements.seedData.missing')).toBeInTheDocument();
-    expect(screen.queryByText('seedDemand.columns.culture')).not.toBeInTheDocument();
-    expect(screen.queryByText('Keine Einträge vorhanden')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'seedDemand.emptyStates.actions.createPlan' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'seedDemand.emptyStates.actions.editCultures' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'seedDemand.progressive.cultures.action' })).toBeInTheDocument();
   });
 
-  it('shows seed-data missing state with matching actions when plans exist', async () => {
+  it('shows plan-step requirement when cultures exist but plans are missing', async () => {
     listMock.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
     cultureListMock.mockResolvedValue({
-      data: { results: [{ id: 1, name: 'Karotte', seed_rate_value: null, seed_rate_direct_value: null, seed_rate_pre_cultivation_value: null }] },
+      data: { results: [{ id: 1, name: 'Karotte', seed_rate_value: 2, seed_rate_direct_value: null, seed_rate_pre_cultivation_value: null }] },
     });
-    planListMock.mockResolvedValue({ data: { results: [{ id: 1 }] } });
+    planListMock.mockResolvedValue({ data: { results: [] } });
 
     render(
       <MemoryRouter>
@@ -93,11 +120,9 @@ describe('SeedDemandPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('seedDemand.requirements.plantingPlans.done')).toBeInTheDocument();
+      expect(screen.getByText('seedDemand.progressive.plans.title')).toBeInTheDocument();
     });
-    expect(screen.getByText('seedDemand.requirements.seedData.missing')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'seedDemand.emptyStates.actions.createPlan' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'seedDemand.emptyStates.actions.editCultures' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'seedDemand.progressive.plans.action' })).toBeInTheDocument();
   });
 
   it('shows no-results empty state when requirements are fulfilled but no rows are calculated', async () => {
