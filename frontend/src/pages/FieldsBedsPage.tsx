@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
@@ -31,6 +31,9 @@ export default function FieldsBedsPage(): React.ReactElement {
   const [locations, setLocations] = useState<Location[]>([]);
   const [globalActionError, setGlobalActionError] = useState<string>('');
   const [hierarchyRenderKey, setHierarchyRenderKey] = useState(0);
+  const [addFieldDialogOpen, setAddFieldDialogOpen] = useState(false);
+  const [newFieldName, setNewFieldName] = useState('');
+  const [targetLocationId, setTargetLocationId] = useState<number | ''>('');
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
 
   useCommandContextTag('areas');
@@ -96,33 +99,25 @@ export default function FieldsBedsPage(): React.ReactElement {
     }
 
     if (locations.length === 1 && locations[0]?.id !== undefined) {
-      void addField(locations[0].id);
+      setTargetLocationId(locations[0].id);
+      setNewFieldName(`Parzelle ${2}`);
+      setAddFieldDialogOpen(true);
       return;
     }
-
-    const locationOptions = locations
-      .filter((location) => location.id !== undefined)
-      .map((location) => `${location.id}: ${location.name}`)
-      .join('\n');
-
-    const selectedLocationId = window.prompt(
-      t('hierarchy:prompts.selectLocationForField', { options: locationOptions }),
-    );
-
-    if (!selectedLocationId) {
-      return;
-    }
-
-    const parsedLocationId = Number.parseInt(selectedLocationId.trim(), 10);
-    const matchingLocation = locations.find((location) => location.id === parsedLocationId);
-
-    if (!matchingLocation?.id) {
-      setGlobalActionError(t('hierarchy:messages.invalidLocationSelection'));
-      return;
-    }
-
-    void addField(matchingLocation.id);
+    const firstLocation = locations.find((location) => location.id !== undefined);
+    setTargetLocationId(firstLocation?.id ?? '');
+    setNewFieldName(`Parzelle ${2}`);
+    setAddFieldDialogOpen(true);
   }, [addField, locations, navigate, t]);
+
+  const handleConfirmAddField = useCallback((): void => {
+    if (typeof targetLocationId !== 'number' || !newFieldName.trim()) {
+      return;
+    }
+    void addField(targetLocationId, newFieldName.trim());
+    setAddFieldDialogOpen(false);
+    setNewFieldName('');
+  }, [addField, newFieldName, targetLocationId]);
 
 
   useEffect(() => {
@@ -244,6 +239,38 @@ export default function FieldsBedsPage(): React.ReactElement {
           <FieldsBedsHierarchy key={hierarchyRenderKey} showTitle={false} />
         ) : null}
       </PageContainer>
+      <Dialog open={addFieldDialogOpen} onClose={() => setAddFieldDialogOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>{t('hierarchy:dialogs.addField.title')}</DialogTitle>
+        <DialogContent>
+          {locations.length > 1 ? (
+            <TextField
+              select
+              margin="dense"
+              fullWidth
+              label={t('hierarchy:columns.location')}
+              value={targetLocationId}
+              onChange={(event) => setTargetLocationId(Number(event.target.value))}
+            >
+              {locations.filter((location) => location.id !== undefined).map((location) => (
+                <MenuItem key={location.id} value={location.id}>{location.name}</MenuItem>
+              ))}
+            </TextField>
+          ) : null}
+          <TextField
+            margin="dense"
+            fullWidth
+            label={t('hierarchy:dialogs.addField.nameLabel')}
+            value={newFieldName}
+            onChange={(event) => setNewFieldName(event.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddFieldDialogOpen(false)}>{t('common:actions.cancel')}</Button>
+          <Button onClick={handleConfirmAddField} variant="contained" disabled={!newFieldName.trim() || typeof targetLocationId !== 'number'}>
+            {t('hierarchy:dialogs.addField.submit')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

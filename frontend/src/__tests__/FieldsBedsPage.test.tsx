@@ -124,6 +124,28 @@ describe('FieldsBedsPage', () => {
     });
   });
 
+  it('opens a translated add-field dialog instead of native prompt', async () => {
+    const promptSpy = vi.spyOn(window, 'prompt');
+    render(<FieldsBedsPage />);
+
+    const addButton = await screen.findByRole('button', { name: 'Parzelle hinzufügen' });
+    fireEvent.click(addButton);
+
+    expect(screen.getByRole('heading', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Name der Parzelle')).toBeInTheDocument();
+    expect(promptSpy).not.toHaveBeenCalled();
+    promptSpy.mockRestore();
+  });
+
+  it('prevents saving an empty field name in add-field dialog', async () => {
+    render(<FieldsBedsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Parzelle hinzufügen' }));
+
+    const nameInput = screen.getByLabelText('Name der Parzelle');
+    fireEvent.change(nameInput, { target: { value: '   ' } });
+    expect(screen.getByRole('button', { name: 'Hinzufügen' })).toBeDisabled();
+  });
+
   it('hides the global add button when more than one location exists', async () => {
     locationListMock.mockResolvedValue({
       data: {
