@@ -22,6 +22,9 @@ describe('Empty state components', () => {
     const primary = screen.getByRole('link', { name: 'Primäre Aktion' });
     const secondary = screen.getByRole('link', { name: 'Sekundäre Aktion' });
 
+    expect(screen.getByTestId('InfoOutlinedIcon')).toBeInTheDocument();
+    expect(screen.getByText('Noch keine Daten')).toBeInTheDocument();
+    expect(screen.getByText('Lege zuerst Daten an.')).toBeInTheDocument();
     expect(primary.className).toContain('MuiButton-contained');
     expect(secondary.className).toContain('MuiButton-outlined');
   });
