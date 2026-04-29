@@ -55,6 +55,7 @@ import {
   type GanttTask,
   type GanttTaskGroup,
 } from './ganttChartUtils';
+import { getFirstMissingRequirement } from './requirementFlow';
 
 interface WeeklyYieldCultureMeta {
   id: number;
@@ -316,7 +317,13 @@ function GanttChartPage(): React.ReactElement {
   const hasCultures = cultures.length > 0;
   const hasBeds = beds.length > 0;
   const hasPlantingPlans = plantingPlans.length > 0;
-  const hasCalendarRequirements = hasCultures && hasBeds && hasPlantingPlans;
+  const firstMissingRequirement = getFirstMissingRequirement({
+    hasLocations: locations.length > 0,
+    hasBeds,
+    hasCultures,
+    hasPlans: hasPlantingPlans,
+  });
+  const hasCalendarRequirements = firstMissingRequirement === null;
 
   const renderOccupancyTooltip = useCallback(({ task }: { task: GanttTask }) => (
     <Box sx={{ p: 0.5 }}>
@@ -471,15 +478,11 @@ function GanttChartPage(): React.ReactElement {
               <EmptyStateCard
                 title={t('ganttChart:emptyStates.requirementsTitle')}
                 description={t('ganttChart:emptyStates.requirementsDescription')}
-                checklist={[
-                  { label: t('ganttChart:requirements.culture.label'), done: hasCultures, doneLabel: t('ganttChart:requirements.culture.done'), missingLabel: t('ganttChart:requirements.culture.missing') },
-                  { label: t('ganttChart:requirements.bed.label'), done: hasBeds, doneLabel: t('ganttChart:requirements.bed.done'), missingLabel: t('ganttChart:requirements.bed.missing') },
-                  { label: t('ganttChart:requirements.plan.label'), done: hasPlantingPlans, doneLabel: t('ganttChart:requirements.plan.done'), missingLabel: t('ganttChart:requirements.plan.missing') },
-                ]}
                 actions={[
-                  ...(!hasCultures ? [{ label: t('ganttChart:emptyStates.actions.createCulture'), to: '/app/cultures' }] : []),
-                  ...(!hasBeds ? [{ label: t('ganttChart:emptyStates.actions.createAreas'), to: '/app/fields' }] : []),
-                  ...(hasCultures && hasBeds && !hasPlantingPlans ? [{ label: t('ganttChart:emptyStates.actions.createPlan'), to: '/app/planting-plans' }] : []),
+                  ...(firstMissingRequirement === 'locations' ? [{ label: t('ganttChart:emptyStates.actions.createLocation'), to: '/app/locations' }] : []),
+                  ...(firstMissingRequirement === 'beds' ? [{ label: t('ganttChart:emptyStates.actions.createAreas'), to: '/app/fields' }] : []),
+                  ...(firstMissingRequirement === 'cultures' ? [{ label: t('ganttChart:emptyStates.actions.createCulture'), to: '/app/cultures' }] : []),
+                  ...(firstMissingRequirement === 'plans' ? [{ label: t('ganttChart:emptyStates.actions.createPlan'), to: '/app/planting-plans' }] : []),
                 ]}
               />
             </Box>
