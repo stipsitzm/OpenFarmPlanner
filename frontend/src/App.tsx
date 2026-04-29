@@ -68,6 +68,7 @@ import ProjectSelectionPage from './pages/ProjectSelectionPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import ProjectSettingsPage from './pages/ProjectSettingsPage';
 import InvitationAcceptPage from './pages/InvitationAcceptPage';
+import AppLogo from './components/layout/AppLogo';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
@@ -485,10 +486,11 @@ function RootLayout(): React.ReactElement {
             >
               <MenuIcon fontSize="small" />
             </IconButton>
-            <span className="mobile-nav-title">OpenFarmPlanner</span>
+            <AppLogo size={24} showText />
           </div>
         ) : (
           <div className="nav-links">
+            <AppLogo size={28} showText />
             {navItems.map((item) => (
               <NavLink
                 key={item.to}

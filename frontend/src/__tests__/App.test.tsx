@@ -92,6 +92,7 @@ describe('App', () => {
     render(<CommandProvider><App /></CommandProvider>);
 
     expect(await screen.findByText(translations.navigation.locations)).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'OpenFarmPlanner' }).length).toBeGreaterThan(0);
     expect(screen.getByText(translations.navigation.cultures)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: translations.navigation.plantingPlans })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Aktives Projekt wechseln' })).toBeInTheDocument();
