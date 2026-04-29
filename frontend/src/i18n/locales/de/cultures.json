@@ -203,6 +203,28 @@
     "title": "Saatgutbedarf",
     "loadError": "Saatgutbedarf konnte nicht geladen werden.",
     "saveError": "Lieferantenauswahl konnte nicht gespeichert werden.",
+    "requirements": {
+      "plantingPlans": {
+        "label": "Anbaupläne",
+        "missing": "Anbaupläne fehlen",
+        "done": "Anbaupläne vorhanden"
+      },
+      "seedData": {
+        "label": "Saatgutdaten",
+        "missing": "Saatgutdaten fehlen",
+        "done": "Saatgutdaten vorhanden"
+      }
+    },
+    "emptyStates": {
+      "requirementsTitle": "Noch kein Saatgutbedarf berechenbar",
+      "requirementsDescription": "Für den Saatgutbedarf brauchst du Anbaupläne und Saatgutdaten zu deinen Kulturen.",
+      "noResultsTitle": "Kein Saatgutbedarf vorhanden",
+      "noResultsDescription": "Für die aktuellen Anbaupläne konnte kein Saatgutbedarf berechnet werden.",
+      "actions": {
+        "createPlan": "Anbauplan erstellen",
+        "editCultures": "Kulturen bearbeiten"
+      }
+    },
     "selectSupplier": "Lieferant auswählen",
     "createSupplierAction": "Neuen Lieferanten anlegen",
     "editCultureAction": "Kultur bearbeiten",

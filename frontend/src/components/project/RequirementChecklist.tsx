@@ -5,6 +5,8 @@ import { Chip, Stack } from '@mui/material';
 interface RequirementChecklistItem {
   label: string;
   satisfied: boolean;
+  satisfiedLabel?: string;
+  missingLabel?: string;
 }
 
 interface RequirementChecklistProps {
@@ -20,7 +22,9 @@ export default function RequirementChecklist({ items }: RequirementChecklistProp
             size="small"
             color={item.satisfied ? 'success' : 'default'}
             icon={item.satisfied ? <CheckCircleOutlineIcon /> : <ErrorOutlineIcon />}
-            label={item.satisfied ? `${item.label} vorhanden` : `${item.label} fehlt`}
+            label={item.satisfied
+              ? (item.satisfiedLabel ?? `${item.label} vorhanden`)
+              : (item.missingLabel ?? `${item.label} fehlt`)}
           />
         </Stack>
       ))}

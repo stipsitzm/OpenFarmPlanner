@@ -50,6 +50,10 @@ export default function SeedDemandPage(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [cultureCount, setCultureCount] = useState(0);
   const [planCount, setPlanCount] = useState(0);
+  const [hasCulturesWithSeedData, setHasCulturesWithSeedData] = useState(false);
+  const hasPlans = planCount > 0;
+  const hasSeedData = hasCulturesWithSeedData;
+  const canCalculateSeedDemand = hasPlans && hasSeedData;
 
   const loadRows = async () => {
     setIsLoading(true);
@@ -58,8 +62,14 @@ export default function SeedDemandPage(): React.ReactElement {
       const response = await seedDemandAPI.list();
       setRows(response.data.results ?? []);
       const [culturesResponse, plansResponse] = await Promise.all([cultureAPI.list(), plantingPlanAPI.list()]);
-      setCultureCount(culturesResponse.data.results.length);
+      const cultures = culturesResponse.data.results;
+      setCultureCount(cultures.length);
       setPlanCount(plansResponse.data.results.length);
+      setHasCulturesWithSeedData(cultures.some((culture) => (
+        culture.seed_rate_value !== null
+        || culture.seed_rate_direct_value !== null
+        || culture.seed_rate_pre_cultivation_value !== null
+      )));
     } catch {
       setError(t('seedDemand.loadError'));
     } finally {
@@ -84,6 +94,7 @@ export default function SeedDemandPage(): React.ReactElement {
       setRows([]);
       setIsLoading(false);
       setError(null);
+      setHasCulturesWithSeedData(false);
       return;
     }
     void loadRows();
@@ -118,19 +129,35 @@ export default function SeedDemandPage(): React.ReactElement {
         {isLoading && <CircularProgress />}
         {error && <Alert severity="error">{error}</Alert>}
 
-        {!isLoading && !error && (
+        {!isLoading && !error && !canCalculateSeedDemand && (
+          <EmptyStateCard
+            title={t('seedDemand.emptyStates.requirementsTitle')}
+            description={t('seedDemand.emptyStates.requirementsDescription')}
+            checklist={[
+              {
+                label: t('seedDemand.requirements.plantingPlans.label'),
+                done: hasPlans,
+                doneLabel: t('seedDemand.requirements.plantingPlans.done'),
+                missingLabel: t('seedDemand.requirements.plantingPlans.missing'),
+              },
+              {
+                label: t('seedDemand.requirements.seedData.label'),
+                done: hasSeedData,
+                doneLabel: t('seedDemand.requirements.seedData.done'),
+                missingLabel: t('seedDemand.requirements.seedData.missing'),
+              },
+            ]}
+            actions={[
+              ...(!hasPlans ? [{ label: t('seedDemand.emptyStates.actions.createPlan'), to: '/app/planting-plans' }] : []),
+              ...(!hasSeedData || cultureCount === 0
+                ? [{ label: t('seedDemand.emptyStates.actions.editCultures'), to: '/app/cultures' }]
+                : []),
+            ]}
+          />
+        )}
+
+        {!isLoading && !error && canCalculateSeedDemand && (
           <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
-            {rows.length === 0 ? (
-              <EmptyStateCard
-                title="Noch kein Saatgutbedarf berechenbar"
-                description="Der Saatgutbedarf entsteht aus deinen Anbauplänen und den Saatgutdaten der Kulturen."
-                actions={planCount === 0
-                  ? [{ label: 'Anbauplan erstellen', to: '/app/planting-plans' }]
-                  : cultureCount === 0
-                    ? [{ label: 'Kultur anlegen', to: '/app/cultures' }]
-                    : [{ label: 'Kulturen bearbeiten', to: '/app/cultures' }]}
-              />
-            ) : null}
             <Table
               sx={{
                 '& .MuiTableCell-root': { py: 1 },
@@ -230,6 +257,14 @@ export default function SeedDemandPage(): React.ReactElement {
               })}
             </TableBody>
             </Table>
+            {rows.length === 0 ? (
+              <Box sx={{ p: 2 }}>
+                <EmptyStateCard
+                  title={t('seedDemand.emptyStates.noResultsTitle')}
+                  description={t('seedDemand.emptyStates.noResultsDescription')}
+                />
+              </Box>
+            ) : null}
           </TableContainer>
         )}
       </Box>

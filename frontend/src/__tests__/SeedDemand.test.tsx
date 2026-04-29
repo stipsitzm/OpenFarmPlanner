@@ -48,8 +48,78 @@ describe('SeedDemandPage', () => {
     projectRequirementState.shouldShowProjectRequiredState = false;
     projectRequirementState.missingProjectReason = null;
     saveSelectionMock.mockResolvedValue({ data: { culture_id: 1, selected_supplier_id: 10 } });
+    cultureListMock.mockResolvedValue({
+      data: { results: [{ id: 1, name: 'Basis', seed_rate_value: 1, seed_rate_direct_value: null, seed_rate_pre_cultivation_value: null }] },
+    });
+    planListMock.mockResolvedValue({ data: { results: [{ id: 1 }] } });
+  });
+
+  it('shows requirements checklist and no table header when planting plans are missing', async () => {
+    listMock.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
     cultureListMock.mockResolvedValue({ data: { results: [] } });
     planListMock.mockResolvedValue({ data: { results: [] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('seedDemand.requirements.plantingPlans.missing')).toBeInTheDocument();
+    });
+    expect(screen.getByText('seedDemand.requirements.seedData.missing')).toBeInTheDocument();
+    expect(screen.queryByText('seedDemand.columns.culture')).not.toBeInTheDocument();
+    expect(screen.queryByText('Keine Einträge vorhanden')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'seedDemand.emptyStates.actions.createPlan' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'seedDemand.emptyStates.actions.editCultures' })).toBeInTheDocument();
+  });
+
+  it('shows seed-data missing state with matching actions when plans exist', async () => {
+    listMock.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
+    cultureListMock.mockResolvedValue({
+      data: { results: [{ id: 1, name: 'Karotte', seed_rate_value: null, seed_rate_direct_value: null, seed_rate_pre_cultivation_value: null }] },
+    });
+    planListMock.mockResolvedValue({ data: { results: [{ id: 1 }] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('seedDemand.requirements.plantingPlans.done')).toBeInTheDocument();
+    });
+    expect(screen.getByText('seedDemand.requirements.seedData.missing')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'seedDemand.emptyStates.actions.createPlan' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'seedDemand.emptyStates.actions.editCultures' })).toBeInTheDocument();
+  });
+
+  it('shows no-results empty state when requirements are fulfilled but no rows are calculated', async () => {
+    listMock.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
+    cultureListMock.mockResolvedValue({
+      data: { results: [{ id: 1, name: 'Karotte', seed_rate_value: 2, seed_rate_direct_value: null, seed_rate_pre_cultivation_value: null }] },
+    });
+    planListMock.mockResolvedValue({ data: { results: [{ id: 1 }] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('seedDemand.columns.culture')).toBeInTheDocument();
+    });
+    expect(screen.getByText('seedDemand.emptyStates.noResultsTitle')).toBeInTheDocument();
+    expect(screen.getByText('seedDemand.emptyStates.noResultsDescription')).toBeInTheDocument();
   });
 
   it('shows project-required info instead of a technical error when no project exists', async () => {

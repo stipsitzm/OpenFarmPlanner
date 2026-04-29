@@ -11,7 +11,7 @@ interface EmptyStateCardProps {
   title: string;
   description: string;
   actions?: EmptyStateAction[];
-  checklist?: Array<{ label: string; done: boolean }>;
+  checklist?: Array<{ label: string; done: boolean; doneLabel?: string; missingLabel?: string }>;
 }
 
 export default function EmptyStateCard({
@@ -26,7 +26,18 @@ export default function EmptyStateCard({
       <Typography variant="body2" sx={{ mb: actions.length > 0 || checklist.length > 0 ? 1.5 : 0 }}>
         {description}
       </Typography>
-      {checklist.length > 0 ? <Box sx={{ mb: 1.5 }}><RequirementChecklist items={checklist.map((item) => ({ label: item.label, satisfied: item.done }))} /></Box> : null}
+      {checklist.length > 0 ? (
+        <Box sx={{ mb: 1.5 }}>
+          <RequirementChecklist
+            items={checklist.map((item) => ({
+              label: item.label,
+              satisfied: item.done,
+              satisfiedLabel: item.doneLabel,
+              missingLabel: item.missingLabel,
+            }))}
+          />
+        </Box>
+      ) : null}
       {actions.length > 0 ? (
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           {actions.map((action) => (
