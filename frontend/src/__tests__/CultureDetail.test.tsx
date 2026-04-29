@@ -69,6 +69,36 @@ describe('CultureDetail Component', () => {
     expect(screen.queryByText(translations.cultures.emptySearch.title)).not.toBeInTheDocument();
   });
 
+  it('shows onboarding empty-state when no cultures exist', () => {
+    render(
+      <CultureDetail
+        cultures={[]}
+        onCultureSelect={vi.fn()}
+        onCreateCulture={vi.fn()}
+        onOpenPublicLibrary={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Noch keine Kulturen vorhanden')).toBeInTheDocument();
+    expect(screen.queryByText('Keine Kulturen gefunden')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Suche und Filter zurücksetzen' })).not.toBeInTheDocument();
+  });
+
+  it('shows filter empty-state when cultures exist but filters have no matches', () => {
+    render(
+      <CultureDetail
+        cultures={mockCultures}
+        onCultureSelect={vi.fn()}
+      />
+    );
+
+    const searchInput = screen.getByLabelText(translations.cultures.searchPlaceholder);
+    fireEvent.change(searchInput, { target: { value: 'ZZZ-kein-treffer' } });
+
+    expect(screen.getByText('Keine Kulturen gefunden')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Suche und Filter zurücksetzen' })).toBeInTheDocument();
+  });
+
   it('displays culture details when culture is selected', () => {
     const mockOnSelect = vi.fn();
     render(
