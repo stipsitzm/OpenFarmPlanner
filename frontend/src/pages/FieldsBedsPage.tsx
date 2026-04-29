@@ -10,10 +10,11 @@ import PageHelp from '../components/help/PageHelp';
 import PageContainer from '../components/layout/PageContainer';
 import PageHeader from '../components/layout/PageHeader';
 import ModeToggle from '../components/ModeToggle';
-import { locationAPI, type Location } from '../api/api';
+import { bedAPI, fieldAPI, locationAPI, type Location } from '../api/api';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
+import EmptyStateCard from '../components/project/EmptyStateCard';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 
@@ -29,6 +30,8 @@ export default function FieldsBedsPage(): React.ReactElement {
   });
   const [interactionMode, setInteractionMode] = useState<InteractionMode>('view');
   const [locations, setLocations] = useState<Location[]>([]);
+  const [fieldsCount, setFieldsCount] = useState(0);
+  const [bedsCount, setBedsCount] = useState(0);
   const [globalActionError, setGlobalActionError] = useState<string>('');
   const [hierarchyRenderKey, setHierarchyRenderKey] = useState(0);
   const [addFieldDialogOpen, setAddFieldDialogOpen] = useState(false);
@@ -61,8 +64,14 @@ export default function FieldsBedsPage(): React.ReactElement {
       return;
     }
     try {
-      const response = await locationAPI.list();
-      setLocations(response.data.results);
+      const [locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
+        locationAPI.list(),
+        fieldAPI.list(),
+        bedAPI.list(),
+      ]);
+      setLocations(locationsResponse.data.results);
+      setFieldsCount(fieldsResponse.data.results.length);
+      setBedsCount(bedsResponse.data.results.length);
     } catch (error) {
       console.error('Error loading locations for global action:', error);
     }
@@ -144,6 +153,11 @@ export default function FieldsBedsPage(): React.ReactElement {
     window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
   }, [viewMode]);
 
+  const hasLocations = locations.length > 0;
+  const hasFields = fieldsCount > 0;
+  const hasBeds = bedsCount > 0;
+  const shouldShowAreasEmptyState = !hasLocations || !hasFields || !hasBeds;
+
   useEffect(() => {
     if (viewMode === 'graphical') {
       setInteractionMode('view');
@@ -224,10 +238,26 @@ export default function FieldsBedsPage(): React.ReactElement {
         {shouldShowProjectRequiredState && missingProjectReason ? (
           <ProjectRequiredState reason={missingProjectReason} />
         ) : null}
+        {!shouldShowProjectRequiredState && shouldShowAreasEmptyState ? (
+          <EmptyStateCard
+            title={t('hierarchy:emptyAreas.title')}
+            description={t('hierarchy:emptyAreas.description')}
+            checklist={[
+              { label: t('hierarchy:columns.location'), done: hasLocations },
+              { label: t('hierarchy:columns.field'), done: hasFields },
+              { label: t('hierarchy:columns.bed'), done: hasBeds },
+            ]}
+            actions={[
+              ...(!hasLocations ? [{ label: t('hierarchy:emptyAreas.actions.createLocation'), to: '/app/locations' }] : []),
+              ...(hasLocations && !hasFields ? [{ label: t('hierarchy:emptyAreas.actions.createField'), to: '/app/fields' }] : []),
+              ...(hasFields && !hasBeds ? [{ label: t('hierarchy:emptyAreas.actions.createBed'), to: '/app/fields' }] : []),
+            ]}
+          />
+        ) : null}
       </PageContainer>
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
-        {!shouldShowProjectRequiredState && viewMode === 'graphical' ? (
+        {!shouldShowProjectRequiredState && !shouldShowAreasEmptyState && viewMode === 'graphical' ? (
           <GraphicalFields
             showTitle={false}
             interactionMode={interactionMode}
@@ -235,7 +265,7 @@ export default function FieldsBedsPage(): React.ReactElement {
             showModeToggle={false}
           />
         ) : null}
-        {!shouldShowProjectRequiredState && viewMode !== 'graphical' ? (
+        {!shouldShowProjectRequiredState && !shouldShowAreasEmptyState && viewMode !== 'graphical' ? (
           <FieldsBedsHierarchy key={hierarchyRenderKey} showTitle={false} />
         ) : null}
       </PageContainer>
