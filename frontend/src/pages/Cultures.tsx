@@ -984,6 +984,7 @@ function Cultures(): React.ReactElement {
       </Box>
 
       {/* Action buttons for selected culture */}
+      {cultures.length > 0 && (
       <Box
         sx={{
           display: 'flex',
@@ -1110,6 +1111,7 @@ function Cultures(): React.ReactElement {
           </Tooltip>
           <Box sx={{ flexGrow: 1 }} />
       </Box>
+      )}
 
       <PublicCultureLibraryDialog
         open={publicLibraryOpen}
