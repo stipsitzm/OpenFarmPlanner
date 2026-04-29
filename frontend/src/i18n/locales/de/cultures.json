@@ -203,6 +203,55 @@
     "title": "Saatgutbedarf",
     "loadError": "Saatgutbedarf konnte nicht geladen werden.",
     "saveError": "Lieferantenauswahl konnte nicht gespeichert werden.",
+    "requirements": {
+      "plantingPlans": {
+        "label": "Anbaupläne",
+        "missing": "Anbaupläne fehlen",
+        "done": "Anbaupläne vorhanden"
+      },
+      "seedData": {
+        "label": "Saatgutdaten",
+        "missing": "Saatgutdaten fehlen",
+        "done": "Saatgutdaten vorhanden"
+      }
+    },
+    "emptyStates": {
+      "requirementsTitle": "Noch kein Saatgutbedarf berechenbar",
+      "requirementsDescription": "Für den Saatgutbedarf brauchst du Anbaupläne und Saatgutdaten zu deinen Kulturen.",
+      "noResultsTitle": "Kein Saatgutbedarf vorhanden",
+      "noResultsDescription": "Für die aktuellen Anbaupläne konnte kein Saatgutbedarf berechnet werden.",
+      "actions": {
+        "createPlan": "Anbauplan erstellen",
+        "editCultures": "Kulturen bearbeiten"
+      }
+    },
+    "progressive": {
+      "locations": {
+        "title": "Noch kein Saatgutbedarf berechenbar",
+        "description": "Lege zuerst einen Standort an, damit du Flächen und Beete planen kannst.",
+        "action": "Standort anlegen"
+      },
+      "beds": {
+        "title": "Noch kein Saatgutbedarf berechenbar",
+        "description": "Lege als Nächstes Beete an, damit Kulturen einer Fläche zugeordnet werden können.",
+        "action": "Beete anlegen"
+      },
+      "cultures": {
+        "title": "Noch kein Saatgutbedarf berechenbar",
+        "description": "Lege jetzt deine ersten Kulturen an, damit daraus ein Saatgutbedarf berechnet werden kann.",
+        "action": "Kultur anlegen"
+      },
+      "plans": {
+        "title": "Noch kein Saatgutbedarf berechenbar",
+        "description": "Erstelle als Nächstes einen Anbauplan, damit ein konkreter Saatgutbedarf entsteht.",
+        "action": "Anbauplan erstellen"
+      },
+      "seedData": {
+        "title": "Noch kein Saatgutbedarf berechenbar",
+        "description": "Ergänze Saatgutdaten bei deinen Kulturen, damit der Bedarf berechnet werden kann.",
+        "action": "Saatgutdaten ergänzen"
+      }
+    },
     "selectSupplier": "Lieferant auswählen",
     "createSupplierAction": "Neuen Lieferanten anlegen",
     "editCultureAction": "Kultur bearbeiten",

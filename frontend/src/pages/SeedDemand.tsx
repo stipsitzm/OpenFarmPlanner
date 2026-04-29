@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
@@ -18,7 +18,7 @@ import {
   Typography,
 } from '@mui/material';
 import { seedDemandAPI, type SeedDemand } from '../api/api';
-import { cultureAPI, plantingPlanAPI } from '../api/api';
+import { bedAPI, cultureAPI, locationAPI, plantingPlanAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import { useCommandContextTag } from '../commands/useCommandContext';
 import PageHelp from '../components/help/PageHelp';
@@ -50,6 +50,50 @@ export default function SeedDemandPage(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [cultureCount, setCultureCount] = useState(0);
   const [planCount, setPlanCount] = useState(0);
+  const [hasCulturesWithSeedData, setHasCulturesWithSeedData] = useState(false);
+  const [locationCount, setLocationCount] = useState(0);
+  const [bedCount, setBedCount] = useState(0);
+  const hasPlans = planCount > 0;
+  const hasSeedData = hasCulturesWithSeedData;
+  const canCalculateSeedDemand = locationCount > 0 && bedCount > 0 && cultureCount > 0 && hasPlans && hasSeedData;
+  const missingRequirement = useMemo(() => {
+    if (locationCount === 0) {
+      return {
+        title: t('seedDemand.progressive.locations.title'),
+        description: t('seedDemand.progressive.locations.description'),
+        action: { label: t('seedDemand.progressive.locations.action'), to: '/app/locations' },
+      };
+    }
+    if (bedCount === 0) {
+      return {
+        title: t('seedDemand.progressive.beds.title'),
+        description: t('seedDemand.progressive.beds.description'),
+        action: { label: t('seedDemand.progressive.beds.action'), to: '/app/fields' },
+      };
+    }
+    if (cultureCount === 0) {
+      return {
+        title: t('seedDemand.progressive.cultures.title'),
+        description: t('seedDemand.progressive.cultures.description'),
+        action: { label: t('seedDemand.progressive.cultures.action'), to: '/app/cultures' },
+      };
+    }
+    if (!hasPlans) {
+      return {
+        title: t('seedDemand.progressive.plans.title'),
+        description: t('seedDemand.progressive.plans.description'),
+        action: { label: t('seedDemand.progressive.plans.action'), to: '/app/planting-plans' },
+      };
+    }
+    if (!hasSeedData) {
+      return {
+        title: t('seedDemand.progressive.seedData.title'),
+        description: t('seedDemand.progressive.seedData.description'),
+        action: { label: t('seedDemand.progressive.seedData.action'), to: '/app/cultures' },
+      };
+    }
+    return null;
+  }, [bedCount, cultureCount, hasPlans, hasSeedData, locationCount, t]);
 
   const loadRows = async () => {
     setIsLoading(true);
@@ -57,9 +101,22 @@ export default function SeedDemandPage(): React.ReactElement {
     try {
       const response = await seedDemandAPI.list();
       setRows(response.data.results ?? []);
-      const [culturesResponse, plansResponse] = await Promise.all([cultureAPI.list(), plantingPlanAPI.list()]);
-      setCultureCount(culturesResponse.data.results.length);
+      const [culturesResponse, plansResponse, locationsResponse, bedsResponse] = await Promise.all([
+        cultureAPI.list(),
+        plantingPlanAPI.list(),
+        locationAPI.list(),
+        bedAPI.list(),
+      ]);
+      const cultures = culturesResponse.data.results;
+      setCultureCount(cultures.length);
       setPlanCount(plansResponse.data.results.length);
+      setLocationCount(locationsResponse.data.results.length);
+      setBedCount(bedsResponse.data.results.length);
+      setHasCulturesWithSeedData(cultures.some((culture) => (
+        culture.seed_rate_value !== null
+        || culture.seed_rate_direct_value !== null
+        || culture.seed_rate_pre_cultivation_value !== null
+      )));
     } catch {
       setError(t('seedDemand.loadError'));
     } finally {
@@ -84,6 +141,7 @@ export default function SeedDemandPage(): React.ReactElement {
       setRows([]);
       setIsLoading(false);
       setError(null);
+      setHasCulturesWithSeedData(false);
       return;
     }
     void loadRows();
@@ -118,19 +176,16 @@ export default function SeedDemandPage(): React.ReactElement {
         {isLoading && <CircularProgress />}
         {error && <Alert severity="error">{error}</Alert>}
 
-        {!isLoading && !error && (
+        {!isLoading && !error && !canCalculateSeedDemand && (
+          <EmptyStateCard
+            title={missingRequirement?.title ?? t('seedDemand.emptyStates.requirementsTitle')}
+            description={missingRequirement?.description ?? t('seedDemand.emptyStates.requirementsDescription')}
+            actions={missingRequirement ? [missingRequirement.action] : []}
+          />
+        )}
+
+        {!isLoading && !error && canCalculateSeedDemand && (
           <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
-            {rows.length === 0 ? (
-              <EmptyStateCard
-                title="Noch kein Saatgutbedarf berechenbar"
-                description="Der Saatgutbedarf entsteht aus deinen Anbauplänen und den Saatgutdaten der Kulturen."
-                actions={planCount === 0
-                  ? [{ label: 'Anbauplan erstellen', to: '/app/planting-plans' }]
-                  : cultureCount === 0
-                    ? [{ label: 'Kultur anlegen', to: '/app/cultures' }]
-                    : [{ label: 'Kulturen bearbeiten', to: '/app/cultures' }]}
-              />
-            ) : null}
             <Table
               sx={{
                 '& .MuiTableCell-root': { py: 1 },
@@ -230,6 +285,14 @@ export default function SeedDemandPage(): React.ReactElement {
               })}
             </TableBody>
             </Table>
+            {rows.length === 0 ? (
+              <Box sx={{ p: 2 }}>
+                <EmptyStateCard
+                  title={t('seedDemand.emptyStates.noResultsTitle')}
+                  description={t('seedDemand.emptyStates.noResultsDescription')}
+                />
+              </Box>
+            ) : null}
           </TableContainer>
         )}
       </Box>

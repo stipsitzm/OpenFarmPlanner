@@ -63,13 +63,28 @@
   "emptyStates": {
     "createBlockedTooltip": "Erst Kultur und Beet anlegen",
     "missingRequirementsTitle": "Du kannst noch keinen Anbauplan erstellen",
-    "missingRequirementsDescription": "Für einen Anbauplan brauchst du mindestens eine Kultur und ein Beet.",
+    "missingRequirementsDescription": "Lege zuerst einen Standort an. Danach kannst du Parzellen, Beete, Kulturen und Anbaupläne erfassen.",
     "noPlansTitle": "Noch keine Anbaupläne vorhanden",
     "noPlansDescription": "Anbaupläne verbinden Kulturen mit Beeten und Zeiträumen. Danach erscheinen sie automatisch im Anbaukalender.",
     "actions": {
+      "createLocation": "Standort anlegen",
       "createCulture": "Kultur anlegen",
       "createAreas": "Anbauflächen anlegen",
       "createPlan": "Anbauplan erstellen"
+    }
+  },
+  "requirements": {
+    "location": {
+      "label": "Standort",
+      "missing": "Standort fehlt"
+    },
+    "bed": {
+      "label": "Beet",
+      "missing": "Beet fehlt"
+    },
+    "culture": {
+      "label": "Kultur",
+      "missing": "Kultur fehlt"
     }
   }
 }

@@ -215,56 +215,59 @@ export default function Suppliers(): React.ReactElement {
             </Box>
           )}
         />
-        <TableContainer sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
-          {suppliers.length === 0 ? (
+        {suppliers.length === 0 ? (
+          <Box sx={{ width: '100%', maxWidth: 880 }}>
             <EmptyStateCard
-              title="Noch keine Lieferanten vorhanden"
-              description="Lieferanten helfen dir bei der Saatgutplanung und beim Paketvergleich. Du kannst auch ohne Lieferanten starten."
-              actions={[{ label: 'Lieferant anlegen', to: '/app/suppliers?create=1' }]}
+              title={t('emptyState.title')}
+              description={t('emptyState.description')}
+              actions={[{ label: t('create'), to: '/app/suppliers?create=1' }]}
             />
-          ) : null}
-          <Table size="small" sx={{ width: 'auto' }}>
-            <TableHead>
-              <TableRow>
-                <TableCell>{t('name')}</TableCell>
-                <TableCell>{t('homepage')}</TableCell>
-                <TableCell align="right">{t('actions')}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {suppliers.map((supplier) => (
-                <TableRow key={supplier.id} hover>
-                  <TableCell>{supplier.name}</TableCell>
-                  <TableCell>
-                    {supplier.homepage_url ? (
-                      <Link href={supplier.homepage_url} target="_blank" rel="noopener noreferrer" underline="hover">
-                        {supplier.homepage_url}
-                      </Link>
-                    ) : null}
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      aria-label={t('editAction')}
-                      onClick={() => openEdit(supplier)}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      aria-label={t('deleteAction')}
-                      onClick={() => void deleteSupplier(supplier)}
-                    >
-                      <CloseIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
+          </Box>
+        ) : (
+          <TableContainer sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
+            <Table size="small" sx={{ width: 'auto' }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t('name')}</TableCell>
+                  <TableCell>{t('homepage')}</TableCell>
+                  <TableCell align="right">{t('actions')}</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {suppliers.map((supplier) => (
+                  <TableRow key={supplier.id} hover>
+                    <TableCell>{supplier.name}</TableCell>
+                    <TableCell>
+                      {supplier.homepage_url ? (
+                        <Link href={supplier.homepage_url} target="_blank" rel="noopener noreferrer" underline="hover">
+                          {supplier.homepage_url}
+                        </Link>
+                      ) : null}
+                    </TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        aria-label={t('editAction')}
+                        onClick={() => openEdit(supplier)}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        aria-label={t('deleteAction')}
+                        onClick={() => void deleteSupplier(supplier)}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
       </Box>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">

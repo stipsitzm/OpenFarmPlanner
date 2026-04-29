@@ -52,7 +52,6 @@ import AddIcon from '@mui/icons-material/Add';
 import { cultureAPI, projectAPI } from './api/api';
 import type { CultureHistoryEntry } from './api/types';
 import './App.css';
-import { HelpIcon } from './components/help/HelpIcon';
 import { useAuth } from './auth/useAuth';
 import ProtectedRoute from './auth/ProtectedRoute';
 import HomePage from './pages/public/HomePage';
@@ -68,6 +67,7 @@ import ProjectSelectionPage from './pages/ProjectSelectionPage';
 import AccountSettingsPage from './pages/AccountSettingsPage';
 import ProjectSettingsPage from './pages/ProjectSettingsPage';
 import InvitationAcceptPage from './pages/InvitationAcceptPage';
+import AppLogo from './components/layout/AppLogo';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
@@ -154,6 +154,7 @@ interface GlobalMenuProps {
   onOpenProjectHistory: () => Promise<void>;
   onOpenAccountSettings: () => void;
   onOpenShortcuts: () => void;
+  onOpenHelp: () => void;
   onLogout: () => Promise<void>;
   t: (key: string) => string;
 }
@@ -168,6 +169,7 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
     onOpenProjectHistory,
     onOpenAccountSettings,
     onOpenShortcuts,
+    onOpenHelp,
     onLogout,
     t,
   } = props;
@@ -187,6 +189,9 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
       </MenuItem>
       <MenuItem onClick={onOpenShortcuts}>
         Tastenkürzel
+      </MenuItem>
+      <MenuItem onClick={onOpenHelp}>
+        Hilfe
       </MenuItem>
       <MenuItem onClick={() => void onLogout()}>
         {t('commandPalette.commands.logout')} {userLabel}
@@ -210,11 +215,13 @@ function RootLayout(): React.ReactElement {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isCompactDesktop = useMediaQuery('(max-width:1365px)');
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
   const { openPalette } = useCommandContext();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
+  const [moreNavAnchor, setMoreNavAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isSwitchingProject, setIsSwitchingProject] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
@@ -231,6 +238,8 @@ function RootLayout(): React.ReactElement {
     { to: '/app/seed-demand', label: t('seedDemand'), keywords: ['saatgutbedarf', 'saatgut'] },
     { to: '/app/suppliers', label: t('suppliers'), keywords: ['lieferanten', 'einkauf'] },
   ];
+  const primaryNavItems = (isCompactDesktop && !isMobile) ? navItems.slice(0, 4) : navItems;
+  const overflowNavItems = (isCompactDesktop && !isMobile) ? navItems.slice(4) : [];
 
   const handleGlobalMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setGlobalMenuAnchor(event.currentTarget);
@@ -246,6 +255,12 @@ function RootLayout(): React.ReactElement {
 
   const handleProjectMenuClose = () => {
     setProjectMenuAnchor(null);
+  };
+  const handleMoreNavOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setMoreNavAnchor(event.currentTarget);
+  };
+  const handleMoreNavClose = () => {
+    setMoreNavAnchor(null);
   };
 
   const closeMobileNav = () => {
@@ -406,17 +421,22 @@ function RootLayout(): React.ReactElement {
     return normalizedPath === '/' ? '/app/locations' : `/app${normalizedPath}`;
   };
 
-  const goToNextPage = (): void => {
-    const currentIndex = routes.indexOf(normalizeRoutePath(location.pathname));
+  const getCurrentRouteFromLocation = useCallback((): string => {
+    const pathname = window.location.pathname || location.pathname;
+    return normalizeRoutePath(pathname);
+  }, [location.pathname]);
+
+  const goToNextPage = useCallback((): void => {
+    const currentIndex = routes.indexOf(getCurrentRouteFromLocation());
     const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % routes.length;
     navigate(routes[nextIndex]);
-  };
+  }, [getCurrentRouteFromLocation, navigate, routes]);
 
-  const goToPreviousPage = (): void => {
-    const currentIndex = routes.indexOf(normalizeRoutePath(location.pathname));
+  const goToPreviousPage = useCallback((): void => {
+    const currentIndex = routes.indexOf(getCurrentRouteFromLocation());
     const previousIndex = currentIndex === -1 ? routes.length - 1 : (currentIndex - 1 + routes.length) % routes.length;
     navigate(routes[previousIndex]);
-  };
+  }, [getCurrentRouteFromLocation, navigate, routes]);
 
   const globalCommands = useMemo(() => createRootCommands({
     currentPath: normalizeRoutePath(location.pathname),
@@ -447,7 +467,23 @@ function RootLayout(): React.ReactElement {
       openPalette: t('commandPalette.label'),
       openShortcuts: t('commandPalette.commands.openShortcuts'),
     },
-  }), [activeMembershipRole, activeProjectId, location.pathname, memberships, navigate, openCurrentPageHelp, openPalette, t]);
+  }), [
+    activeMembershipRole,
+    activeProjectId,
+    goToNextPage,
+    goToPreviousPage,
+    handleLogout,
+    handleOpenCreateProject,
+    handleOpenProjectHistory,
+    handleOpenProjectSettings,
+    handleSwitchProject,
+    location.pathname,
+    memberships,
+    navigate,
+    openCurrentPageHelp,
+    openPalette,
+    t,
+  ]);
 
   useRegisterCommands('global-app', globalCommands);
   
@@ -464,11 +500,12 @@ function RootLayout(): React.ReactElement {
             >
               <MenuIcon fontSize="small" />
             </IconButton>
-            <span className="mobile-nav-title">OpenFarmPlanner</span>
+            <AppLogo size={24} showText={false} />
           </div>
         ) : (
           <div className="nav-links">
-            {navItems.map((item) => (
+            <AppLogo size={28} showText={!isCompactDesktop} />
+            {primaryNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -477,6 +514,36 @@ function RootLayout(): React.ReactElement {
                 {item.label}
               </NavLink>
             ))}
+            {overflowNavItems.length > 0 ? (
+              <>
+                <Button
+                  size="small"
+                  onClick={handleMoreNavOpen}
+                  aria-controls={moreNavAnchor ? 'more-nav-menu' : undefined}
+                  aria-haspopup="true"
+                  sx={{ color: 'white', textTransform: 'none', px: 1 }}
+                >
+                  Mehr
+                </Button>
+                <Menu id="more-nav-menu" anchorEl={moreNavAnchor} open={Boolean(moreNavAnchor)} onClose={handleMoreNavClose}>
+                  {overflowNavItems.map((item) => {
+                    const isActive = location.pathname === item.to || location.pathname === item.activePath;
+                    return (
+                      <MenuItem
+                        key={item.to}
+                        selected={Boolean(isActive)}
+                        onClick={() => {
+                          navigate(item.to);
+                          handleMoreNavClose();
+                        }}
+                      >
+                        {item.label}
+                      </MenuItem>
+                    );
+                  })}
+                </Menu>
+              </>
+            ) : null}
           </div>
         )}
         <div className="nav-actions">
@@ -520,7 +587,6 @@ function RootLayout(): React.ReactElement {
           >
             <MoreVertIcon fontSize="small" />
           </IconButton>
-          <HelpIcon buttonSx={{ color: 'white' }} size="small" />
           <GlobalMenu
             anchorEl={globalMenuAnchor}
             open={Boolean(globalMenuAnchor)}
@@ -530,6 +596,7 @@ function RootLayout(): React.ReactElement {
             onOpenProjectHistory={handleOpenProjectHistory}
             onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
             onOpenShortcuts={handleOpenShortcuts}
+            onOpenHelp={openCurrentPageHelp}
             onLogout={handleLogout}
             t={t}
           />

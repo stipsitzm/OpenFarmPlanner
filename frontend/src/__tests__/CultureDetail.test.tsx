@@ -80,6 +80,8 @@ describe('CultureDetail Component', () => {
     );
 
     expect(screen.getByText('Noch keine Kulturen vorhanden')).toBeInTheDocument();
+    expect(screen.getByTestId('InfoOutlinedIcon')).toBeInTheDocument();
+    expect(screen.queryByLabelText(translations.cultures.searchPlaceholder)).not.toBeInTheDocument();
     expect(screen.queryByText('Keine Kulturen gefunden')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Suche und Filter zurücksetzen' })).not.toBeInTheDocument();
   });
