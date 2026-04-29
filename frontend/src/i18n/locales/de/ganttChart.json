@@ -89,5 +89,31 @@
   },
   "seedlings": {
     "emptyState": "Keine Jungpflanzen-Anzuchtzeiträume für dieses Jahr vorhanden."
+  },
+  "requirements": {
+    "culture": {
+      "label": "Kultur",
+      "missing": "Kultur fehlt",
+      "done": "Kultur vorhanden"
+    },
+    "bed": {
+      "label": "Beet",
+      "missing": "Beet fehlt",
+      "done": "Beet vorhanden"
+    },
+    "plan": {
+      "label": "Anbauplan",
+      "missing": "Anbauplan fehlt",
+      "done": "Anbauplan vorhanden"
+    }
+  },
+  "emptyStates": {
+    "requirementsTitle": "Noch keine Anbaupläne vorhanden",
+    "requirementsDescription": "Der Anbaukalender zeigt deine geplanten Kulturen über die Zeit. Lege zuerst einen Anbauplan an – danach erscheint er automatisch hier.",
+    "actions": {
+      "createCulture": "Kultur anlegen",
+      "createAreas": "Anbauflächen anlegen",
+      "createPlan": "Anbauplan erstellen"
+    }
   }
 }
