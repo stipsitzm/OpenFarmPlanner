@@ -21,7 +21,17 @@ export default function EmptyStateCard({
   checklist = [],
 }: EmptyStateCardProps): React.ReactElement {
   return (
-    <Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
+    <Paper
+      variant="outlined"
+      sx={{
+        mb: 2,
+        p: 2,
+        width: '100%',
+        maxWidth: 880,
+        borderColor: 'divider',
+        backgroundColor: 'background.paper',
+      }}
+    >
       <Typography variant="subtitle1" sx={{ mb: 0.75, fontWeight: 600 }}>{title}</Typography>
       <Typography variant="body2" sx={{ mb: actions.length > 0 || checklist.length > 0 ? 1.5 : 0 }}>
         {description}
@@ -39,13 +49,13 @@ export default function EmptyStateCard({
         </Box>
       ) : null}
       {actions.length > 0 ? (
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {actions.map((action) => (
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+          {actions.map((action, index) => (
             <Button
               key={`${action.label}-${action.to}`}
               component={RouterLink}
               to={action.to}
-              variant="outlined"
+              variant={index === 0 ? 'contained' : 'outlined'}
               size="small"
             >
               {action.label}
