@@ -45,6 +45,7 @@ import type { Culture } from '../api/api';
 import { SearchableSelect } from '../components/inputs/SearchableSelect';
 import type { SearchableSelectOption } from '../components/inputs/SearchableSelect';
 import { UI_LABEL_SEPARATOR } from '../utils/uiLabelSeparator';
+import EmptyStateCard from '../components/project/EmptyStateCard';
 
 interface CultureDetailProps {
   cultures: Culture[];
@@ -457,6 +458,7 @@ export function CultureDetail({
   return (
     <Box sx={{ width: '100%' }}>
       {/* Searchable Dropdown */}
+      {cultures.length > 0 ? (
       <Box sx={{ mb: 3 }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
           <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 280 } }}>
@@ -613,6 +615,7 @@ export function CultureDetail({
           {t('searchHelperText', { count: filteredCultures.length })}
         </Typography>
       </Box>
+      ) : null}
 
       {/* Detail View */}
       {selectedCulture && (
@@ -1051,24 +1054,14 @@ export function CultureDetail({
       )}
 
       {!isLoading && !selectedCulture && cultures.length === 0 && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6" align="center" sx={{ mb: 1 }}>
-              {t('emptyOnboarding.title')}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>
-              {t('emptyOnboarding.description')}
-            </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="center">
-              <Button variant="contained" onClick={onCreateCulture}>
-                {t('emptyOnboarding.createAction')}
-              </Button>
-              <Button variant="outlined" onClick={onOpenPublicLibrary}>
-                {t('emptyOnboarding.openLibraryAction')}
-              </Button>
-            </Stack>
-          </CardContent>
-        </Card>
+        <EmptyStateCard
+          title={t('emptyOnboarding.title')}
+          description={t('emptyOnboarding.description')}
+          actions={[
+            { label: t('emptyOnboarding.createAction'), onClick: onCreateCulture },
+            { label: t('emptyOnboarding.openLibraryAction'), onClick: onOpenPublicLibrary },
+          ]}
+        />
       )}
 
       {!isLoading && !selectedCulture && cultures.length > 0 && filteredCultures.length === 0 && (

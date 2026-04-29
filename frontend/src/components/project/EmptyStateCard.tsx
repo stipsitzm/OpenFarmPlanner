@@ -5,7 +5,8 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 export interface EmptyStateAction {
   label: string;
-  to: string;
+  to?: string;
+  onClick?: () => void;
 }
 
 interface EmptyStateCardProps {
@@ -62,8 +63,9 @@ export default function EmptyStateCard({
           {actions.map((action, index) => (
             <Button
               key={`${action.label}-${action.to}`}
-              component={RouterLink}
+              component={action.to ? RouterLink : 'button'}
               to={action.to}
+              onClick={action.onClick}
               variant={index === 0 ? 'contained' : 'outlined'}
               size="small"
             >
