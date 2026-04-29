@@ -17,6 +17,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import { useTranslation } from '../../i18n';
 import type { Bed, Field, Location } from '../../api/types';
+import EmptyStateCard from '../project/EmptyStateCard';
 
 const AREA_LABEL_SEPARATOR = ' | ';
 
@@ -239,6 +240,13 @@ export function AreaAssignmentDialog({
         <DialogTitle>{t('areaAssignment.title')}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
+            {bedsWithLocation.length === 0 ? (
+              <EmptyStateCard
+                title="Keine Anbauflächen vorhanden"
+                description="Lege zuerst Parzellen und Beete an, bevor du einem Anbauplan eine Fläche zuweist."
+                actions={[{ label: 'Anbauflächen anlegen', to: '/app/fields' }]}
+              />
+            ) : null}
             <Stack spacing={2.5}>
               {!hasSingleLocation && (
                 <FormControl fullWidth size="small">
@@ -328,7 +336,7 @@ export function AreaAssignmentDialog({
         </DialogContent>
         <DialogActions>
           <Button type="button" data-dialog-action="cancel" onClick={() => setIsOpen(false)}>{t('areaAssignment.cancel')}</Button>
-          <Button type="button" data-dialog-action="apply" variant="contained" onClick={handleApply} disabled={!draft.bedId}>{t('areaAssignment.apply')}</Button>
+          <Button type="button" data-dialog-action="apply" variant="contained" onClick={handleApply} disabled={!draft.bedId || bedsWithLocation.length === 0}>{t('areaAssignment.apply')}</Button>
         </DialogActions>
       </Dialog>
     </>

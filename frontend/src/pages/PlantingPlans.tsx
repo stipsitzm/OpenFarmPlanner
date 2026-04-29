@@ -79,6 +79,7 @@ import type { CommandSpec } from "../commands/types";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
+import EmptyStateCard from "../components/project/EmptyStateCard";
 
 const AREA_LABEL_SEPARATOR = " | ";
 
@@ -1464,14 +1465,19 @@ function PlantingPlans(): React.ReactElement {
         actions={(
           <>
             {!isMobile ? (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => gridCommandApiRef.current?.addRow()}
-                aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
-              >
-                {t("plantingPlans:addButton")}
-              </Button>
+              <Tooltip title={cultures.length === 0 || beds.length === 0 ? "Lege zuerst mindestens eine Kultur und ein Beet an." : ""}>
+                <span>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => gridCommandApiRef.current?.addRow()}
+                    aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
+                    disabled={cultures.length === 0 || beds.length === 0}
+                  >
+                    {t("plantingPlans:addButton")}
+                  </Button>
+                </span>
+              </Tooltip>
             ) : null}
             <PageHelp pageKey="plantingPlans" />
           </>
@@ -1485,6 +1491,20 @@ function PlantingPlans(): React.ReactElement {
       ) : null}
 
       <Box sx={{ width: "100%" }}>
+        {mobileRows.length === 0 ? (
+          <EmptyStateCard
+            title="Du kannst noch keinen Anbauplan erstellen"
+            description="Für einen Anbauplan brauchst du mindestens eine Kultur und ein Beet."
+            checklist={[
+              { label: "Kultur angelegt", done: cultures.length > 0 },
+              { label: "Beet angelegt", done: beds.length > 0 },
+            ]}
+            actions={[
+              ...(cultures.length === 0 ? [{ label: "Kultur anlegen", to: "/app/cultures" }] : []),
+              ...(beds.length === 0 ? [{ label: "Anbauflächen anlegen", to: "/app/fields" }] : []),
+            ]}
+          />
+        ) : null}
 
         {isMobile ? (
           <Box sx={{ pb: 10 }}>

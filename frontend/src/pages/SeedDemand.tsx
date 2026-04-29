@@ -18,12 +18,14 @@ import {
   Typography,
 } from '@mui/material';
 import { seedDemandAPI, type SeedDemand } from '../api/api';
+import { cultureAPI, plantingPlanAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import { useCommandContextTag } from '../commands/useCommandContext';
 import PageHelp from '../components/help/PageHelp';
 import PageContainer from '../components/layout/PageContainer';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
+import EmptyStateCard from '../components/project/EmptyStateCard';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
@@ -46,6 +48,8 @@ export default function SeedDemandPage(): React.ReactElement {
   const [rows, setRows] = useState<SeedDemand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cultureCount, setCultureCount] = useState(0);
+  const [planCount, setPlanCount] = useState(0);
 
   const loadRows = async () => {
     setIsLoading(true);
@@ -53,6 +57,9 @@ export default function SeedDemandPage(): React.ReactElement {
     try {
       const response = await seedDemandAPI.list();
       setRows(response.data.results ?? []);
+      const [culturesResponse, plansResponse] = await Promise.all([cultureAPI.list(), plantingPlanAPI.list()]);
+      setCultureCount(culturesResponse.data.results.length);
+      setPlanCount(plansResponse.data.results.length);
     } catch {
       setError(t('seedDemand.loadError'));
     } finally {
@@ -113,6 +120,17 @@ export default function SeedDemandPage(): React.ReactElement {
 
         {!isLoading && !error && (
           <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
+            {rows.length === 0 ? (
+              <EmptyStateCard
+                title="Noch kein Saatgutbedarf berechenbar"
+                description="Der Saatgutbedarf entsteht aus deinen Anbauplänen und den Saatgutdaten der Kulturen."
+                actions={planCount === 0
+                  ? [{ label: 'Anbauplan erstellen', to: '/app/planting-plans' }]
+                  : cultureCount === 0
+                    ? [{ label: 'Kultur anlegen', to: '/app/cultures' }]
+                    : [{ label: 'Kulturen bearbeiten', to: '/app/cultures' }]}
+              />
+            ) : null}
             <Table
               sx={{
                 '& .MuiTableCell-root': { py: 1 },
