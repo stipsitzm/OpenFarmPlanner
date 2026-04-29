@@ -1,4 +1,4 @@
-import { Alert, AlertTitle, Box, Button, Stack, Typography } from '@mui/material';
+import { Box, Button, Paper, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import RequirementChecklist from './RequirementChecklist';
 
@@ -21,8 +21,8 @@ export default function EmptyStateCard({
   checklist = [],
 }: EmptyStateCardProps): React.ReactElement {
   return (
-    <Alert severity="info" sx={{ mb: 2 }}>
-      <AlertTitle>{title}</AlertTitle>
+    <Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
+      <Typography variant="subtitle1" sx={{ mb: 0.75, fontWeight: 600 }}>{title}</Typography>
       <Typography variant="body2" sx={{ mb: actions.length > 0 || checklist.length > 0 ? 1.5 : 0 }}>
         {description}
       </Typography>
@@ -42,6 +42,6 @@ export default function EmptyStateCard({
           ))}
         </Box>
       ) : null}
-    </Alert>
+    </Paper>
   );
 }

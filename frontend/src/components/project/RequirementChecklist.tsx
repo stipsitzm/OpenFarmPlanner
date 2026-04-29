@@ -1,6 +1,6 @@
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import { Chip, Stack, Typography } from '@mui/material';
+import { Chip, Stack } from '@mui/material';
 
 interface RequirementChecklistItem {
   label: string;
@@ -22,7 +22,6 @@ export default function RequirementChecklist({ items }: RequirementChecklistProp
             icon={item.satisfied ? <CheckCircleOutlineIcon /> : <ErrorOutlineIcon />}
             label={item.satisfied ? `${item.label} vorhanden` : `${item.label} fehlt`}
           />
-          <Typography variant="body2" color="text.secondary">{item.satisfied ? 'Erfüllt' : 'Fehlt'}</Typography>
         </Stack>
       ))}
     </Stack>
