@@ -79,6 +79,7 @@ import type { CommandSpec } from "../commands/types";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
+import EmptyStateCard from "../components/project/EmptyStateCard";
 
 const AREA_LABEL_SEPARATOR = " | ";
 
@@ -1456,6 +1457,12 @@ function PlantingPlans(): React.ReactElement {
       );
     }
   };
+  const hasCultures = cultures.length > 0;
+  const hasBeds = beds.length > 0;
+  const canCreatePlan = hasCultures && hasBeds;
+  const hasPlans = mobileRows.length > 0;
+  const shouldShowPrerequisiteState = !canCreatePlan;
+  const shouldShowNoPlansState = canCreatePlan && !hasPlans;
 
   return (
     <PageContainer variant="xwide">
@@ -1464,14 +1471,19 @@ function PlantingPlans(): React.ReactElement {
         actions={(
           <>
             {!isMobile ? (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => gridCommandApiRef.current?.addRow()}
-                aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
-              >
-                {t("plantingPlans:addButton")}
-              </Button>
+              <Tooltip title={canCreatePlan ? "" : t("plantingPlans:emptyStates.createBlockedTooltip")}>
+                <span>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => gridCommandApiRef.current?.addRow()}
+                    aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
+                    disabled={!canCreatePlan}
+                  >
+                    {t("plantingPlans:addButton")}
+                  </Button>
+                </span>
+              </Tooltip>
             ) : null}
             <PageHelp pageKey="plantingPlans" />
           </>
@@ -1485,8 +1497,28 @@ function PlantingPlans(): React.ReactElement {
       ) : null}
 
       <Box sx={{ width: "100%" }}>
+        {shouldShowPrerequisiteState ? (
+          <EmptyStateCard
+            title={t("plantingPlans:emptyStates.missingRequirementsTitle")}
+            description={t("plantingPlans:emptyStates.missingRequirementsDescription")}
+            checklist={[
+              { label: t("plantingPlans:columns.culture"), done: hasCultures },
+              { label: t("plantingPlans:columns.bed"), done: hasBeds },
+            ]}
+            actions={[
+              ...(!hasCultures ? [{ label: t("plantingPlans:emptyStates.actions.createCulture"), to: "/app/cultures" }] : []),
+              ...(!hasBeds ? [{ label: t("plantingPlans:emptyStates.actions.createAreas"), to: "/app/fields" }] : []),
+            ]}
+          />
+        ) : shouldShowNoPlansState ? (
+          <EmptyStateCard
+            title={t("plantingPlans:emptyStates.noPlansTitle")}
+            description={t("plantingPlans:emptyStates.noPlansDescription")}
+            actions={[{ label: t("plantingPlans:emptyStates.actions.createPlan"), to: "/app/planting-plans" }]}
+          />
+        ) : null}
 
-        {isMobile ? (
+        {isMobile && hasPlans ? (
           <Box sx={{ pb: 10 }}>
             <MobileCardList
               items={getVisibleMobileRows(mobileRows)}
@@ -1551,7 +1583,7 @@ function PlantingPlans(): React.ReactElement {
 
         <Box
           sx={{
-            display: isMobile ? "none" : "block",
+            display: isMobile || shouldShowPrerequisiteState ? "none" : "block",
             width: "100%",
             maxWidth: "1575px",
           }}

@@ -7,6 +7,7 @@
     "name": "Name",
     "location": "Standort",
     "field": "Parzelle",
+    "bed": "Beet",
     "area": "Fläche (m²)",
     "notes": "Notizen",
     "length": "Länge (m)",
@@ -51,6 +52,22 @@
   "actions": {
     "addField": "Parzelle hinzufügen",
     "createLocation": "Standort anlegen"
+  },
+  "dialogs": {
+    "addField": {
+      "title": "Parzelle hinzufügen",
+      "nameLabel": "Name der Parzelle",
+      "submit": "Hinzufügen"
+    }
+  },
+  "emptyAreas": {
+    "title": "Noch keine Anbauflächen vorhanden",
+    "description": "Anbauflächen bestehen aus Standorten, Parzellen und Beeten. Lege zuerst einen Standort an und ergänze danach Parzellen und Beete.",
+    "actions": {
+      "createLocation": "Standort anlegen",
+      "createField": "Parzelle anlegen",
+      "createBed": "Beet anlegen"
+    }
   },
   "confirm": {
     "deleteFieldWithBeds": "Möchten Sie diese Parzelle wirklich löschen? Alle zugehörigen Beete werden ebenfalls gelöscht.",

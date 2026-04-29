@@ -976,6 +976,10 @@ function Cultures(): React.ReactElement {
           isLoading={isCulturesLoading}
           selectedCultureId={selectedCultureId}
           onCultureSelect={handleCultureSelect}
+          onCreateCulture={handleAddNew}
+          onOpenPublicLibrary={() => {
+            void handleOpenPublicLibrary();
+          }}
         />
       </Box>
 

@@ -35,6 +35,7 @@ import { NotesDrawer } from './NotesDrawer';
 import { getPlainExcerpt } from './markdown';
 import { useNotesEditor } from './useNotesEditor';
 import { extractApiErrorMessage } from '../../api/errors';
+import { germanDataGridLocaleText } from './localeText';
 
 export interface EditableRow {
   id: number;
@@ -762,6 +763,7 @@ export function EditableDataGrid<T extends EditableRow>({
               handleSaveRow(params.id);
             }
           }}
+          localeText={germanDataGridLocaleText}
           />
         </Box>
       </Box>

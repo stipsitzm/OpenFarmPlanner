@@ -4,9 +4,11 @@ import { MemoryRouter } from 'react-router-dom';
 import SeedDemandPage from '../pages/SeedDemand';
 import { CommandProvider } from '../commands/CommandProvider';
 
-const { listMock, saveSelectionMock } = vi.hoisted(() => ({
+const { listMock, saveSelectionMock, cultureListMock, planListMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   saveSelectionMock: vi.fn(),
+  cultureListMock: vi.fn(),
+  planListMock: vi.fn(),
 }));
 const projectRequirementState = vi.hoisted(() => ({
   shouldShowProjectRequiredState: false,
@@ -20,6 +22,12 @@ vi.mock('../api/api', async () => {
     seedDemandAPI: {
       list: listMock,
       saveSupplierSelection: saveSelectionMock,
+    },
+    cultureAPI: {
+      list: cultureListMock,
+    },
+    plantingPlanAPI: {
+      list: planListMock,
     },
   };
 });
@@ -40,6 +48,8 @@ describe('SeedDemandPage', () => {
     projectRequirementState.shouldShowProjectRequiredState = false;
     projectRequirementState.missingProjectReason = null;
     saveSelectionMock.mockResolvedValue({ data: { culture_id: 1, selected_supplier_id: 10 } });
+    cultureListMock.mockResolvedValue({ data: { results: [] } });
+    planListMock.mockResolvedValue({ data: { results: [] } });
   });
 
   it('shows project-required info instead of a technical error when no project exists', async () => {

@@ -51,6 +51,8 @@ interface CultureDetailProps {
   isLoading?: boolean;
   selectedCultureId?: number;
   onCultureSelect: (culture: Culture | null) => void;
+  onCreateCulture?: () => void;
+  onOpenPublicLibrary?: () => void;
 }
 
 const CULTURE_FILTERS_STORAGE_KEY = 'culturesDetailFiltersV1';
@@ -131,6 +133,8 @@ export function CultureDetail({
   isLoading = false,
   selectedCultureId,
   onCultureSelect,
+  onCreateCulture,
+  onOpenPublicLibrary,
 }: CultureDetailProps): React.ReactElement {
   const { t } = useTranslation('cultures');
   const [searchQuery, setSearchQuery] = useState('');
@@ -1046,7 +1050,28 @@ export function CultureDetail({
         </Card>
       )}
 
-      {!isLoading && !selectedCulture && filteredCultures.length === 0 && (
+      {!isLoading && !selectedCulture && cultures.length === 0 && (
+        <Card>
+          <CardContent>
+            <Typography variant="h6" align="center" sx={{ mb: 1 }}>
+              {t('emptyOnboarding.title')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>
+              {t('emptyOnboarding.description')}
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="center">
+              <Button variant="contained" onClick={onCreateCulture}>
+                {t('emptyOnboarding.createAction')}
+              </Button>
+              <Button variant="outlined" onClick={onOpenPublicLibrary}>
+                {t('emptyOnboarding.openLibraryAction')}
+              </Button>
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLoading && !selectedCulture && cultures.length > 0 && filteredCultures.length === 0 && (
         <Card>
           <CardContent>
             <Typography variant="h6" align="center" sx={{ mb: 1 }}>

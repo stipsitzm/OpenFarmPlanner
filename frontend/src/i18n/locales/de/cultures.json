@@ -30,8 +30,14 @@
   },
   "emptySearch": {
     "title": "Keine Kulturen gefunden",
-    "description": "Versuchen Sie einen kürzeren Suchbegriff oder setzen Sie einzelne Filter zurück.",
+    "description": "Versuche einen kürzeren Suchbegriff oder setze einzelne Filter zurück.",
     "resetAction": "Suche und Filter zurücksetzen"
+  },
+  "emptyOnboarding": {
+    "title": "Noch keine Kulturen vorhanden",
+    "description": "Kulturen sind die Grundlage für deine Anbauplanung. Lege deine erste Kultur an oder übernimm Kulturen aus der öffentlichen Kulturbibliothek.",
+    "createAction": "Neue Kultur hinzufügen",
+    "openLibraryAction": "Öffentliche Kulturbibliothek öffnen"
   },
   "perennial": "Mehrjährig",
   "annual": "Einjährig",

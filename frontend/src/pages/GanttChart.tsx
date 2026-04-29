@@ -44,6 +44,7 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import type { CommandSpec } from '../commands/types';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import { extractApiErrorMessage } from '../api/errors';
+import EmptyStateCard from '../components/project/EmptyStateCard';
 import {
   buildFieldOccupancyTaskGroups,
   buildOccupancyTooltipDetails,
@@ -459,11 +460,21 @@ function GanttChartPage(): React.ReactElement {
 
         <Paper className="gantt-container-wrapper">
           {activeTaskGroups.length === 0 ? (
-            <div className="gantt-no-data">
-              {calendarMode === 'occupancy'
-                ? t('ganttChart:noData')
-                : t('ganttChart:seedlings.emptyState')}
-            </div>
+            <Box sx={{ p: 2 }}>
+              <EmptyStateCard
+                title="Noch keine Anbaupläne vorhanden"
+                description="Der Anbaukalender zeigt deine geplanten Kulturen über die Zeit. Lege zuerst einen Anbauplan an – danach erscheint er automatisch hier."
+                checklist={[
+                  { label: 'Kultur angelegt', done: cultures.length > 0 },
+                  { label: 'Beet angelegt', done: beds.length > 0 },
+                ]}
+                actions={[
+                  ...(cultures.length === 0 ? [{ label: 'Kultur anlegen', to: '/app/cultures' }] : []),
+                  ...(beds.length === 0 ? [{ label: 'Anbauflächen anlegen', to: '/app/fields' }] : []),
+                  ...(cultures.length > 0 && beds.length > 0 ? [{ label: 'Anbauplan erstellen', to: '/app/planting-plans' }] : []),
+                ]}
+              />
+            </Box>
           ) : (
             <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
               <GanttChart

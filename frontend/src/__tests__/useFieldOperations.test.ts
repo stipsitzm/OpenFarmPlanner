@@ -16,7 +16,6 @@ vi.mock('../api/api', () => ({
 }));
 
 describe('useFieldOperations', () => {
-  const originalPrompt = window.prompt;
   const originalConfirm = window.confirm;
 
   beforeEach(() => {
@@ -24,7 +23,6 @@ describe('useFieldOperations', () => {
   });
 
   afterEach(() => {
-    window.prompt = originalPrompt;
     window.confirm = originalConfirm;
   });
 
@@ -34,7 +32,7 @@ describe('useFieldOperations', () => {
 
     const { result } = renderHook(() => useFieldOperations([], setError, fetchData, mockT as never));
 
-    await result.current.addField();
+    await result.current.addField(undefined, 'Parzelle 1');
 
     expect(setError).toHaveBeenCalledWith('Bitte erstellen Sie zuerst einen Standort.');
     expect(createFieldMock).not.toHaveBeenCalled();
@@ -42,8 +40,6 @@ describe('useFieldOperations', () => {
   });
 
   it('creates a field with trimmed name using the first location by default', async () => {
-    window.prompt = vi.fn().mockReturnValue('  North Plot  ');
-
     const setError = vi.fn();
     const fetchData = vi.fn().mockResolvedValue(undefined);
     createFieldMock.mockResolvedValue({});
@@ -52,7 +48,7 @@ describe('useFieldOperations', () => {
       useFieldOperations([{ id: 12, name: 'Farm', area_sqm: 1000, notes: '' }], setError, fetchData, mockT as never)
     );
 
-    await result.current.addField();
+    await result.current.addField(undefined, '  North Plot  ');
 
     expect(createFieldMock).toHaveBeenCalledWith({
       name: 'North Plot',
@@ -65,8 +61,6 @@ describe('useFieldOperations', () => {
   });
 
   it('uses explicitly provided location id instead of default location', async () => {
-    window.prompt = vi.fn().mockReturnValue('Custom field');
-
     const setError = vi.fn();
     const fetchData = vi.fn().mockResolvedValue(undefined);
     createFieldMock.mockResolvedValue({});
@@ -75,14 +69,14 @@ describe('useFieldOperations', () => {
       useFieldOperations([{ id: 1, name: 'Default', area_sqm: 1, notes: '' }], setError, fetchData, mockT as never)
     );
 
-    await result.current.addField(99);
+    await result.current.addField(99, 'Custom field');
 
     expect(createFieldMock).toHaveBeenCalledWith(
       expect.objectContaining({ location: 99 })
     );
   });
 
-  it('does not create a field when prompt is cancelled or blank', async () => {
+  it('does not create a field when name is blank', async () => {
     const setError = vi.fn();
     const fetchData = vi.fn();
 
@@ -90,19 +84,14 @@ describe('useFieldOperations', () => {
       useFieldOperations([{ id: 5, name: 'A', area_sqm: 20, notes: '' }], setError, fetchData, mockT as never)
     );
 
-    window.prompt = vi.fn().mockReturnValue('   ');
-    await result.current.addField();
-
-    window.prompt = vi.fn().mockReturnValue(null);
-    await result.current.addField();
+    await result.current.addField(undefined, '   ');
+    await result.current.addField(undefined, '');
 
     expect(createFieldMock).not.toHaveBeenCalled();
     expect(fetchData).not.toHaveBeenCalled();
   });
 
   it('reports API errors when creating a field fails', async () => {
-    window.prompt = vi.fn().mockReturnValue('Failing field');
-
     const setError = vi.fn();
     const fetchData = vi.fn();
     createFieldMock.mockRejectedValue(new Error('network error'));
@@ -111,7 +100,7 @@ describe('useFieldOperations', () => {
       useFieldOperations([{ id: 3, name: 'A', area_sqm: 20, notes: '' }], setError, fetchData, mockT as never)
     );
 
-    await result.current.addField();
+    await result.current.addField(undefined, 'Failing field');
 
     expect(setError).toHaveBeenCalledWith('Fehler beim Erstellen der Parzelle');
     expect(fetchData).not.toHaveBeenCalled();

@@ -59,5 +59,17 @@
     "editAria": "Anbauplan bearbeiten",
     "notesPhotos": "Fotos",
     "notesPhotosAria": "Notizen und Fotos öffnen"
+  },
+  "emptyStates": {
+    "createBlockedTooltip": "Erst Kultur und Beet anlegen",
+    "missingRequirementsTitle": "Du kannst noch keinen Anbauplan erstellen",
+    "missingRequirementsDescription": "Für einen Anbauplan brauchst du mindestens eine Kultur und ein Beet.",
+    "noPlansTitle": "Noch keine Anbaupläne vorhanden",
+    "noPlansDescription": "Anbaupläne verbinden Kulturen mit Beeten und Zeiträumen. Danach erscheinen sie automatisch im Anbaukalender.",
+    "actions": {
+      "createCulture": "Kultur anlegen",
+      "createAreas": "Anbauflächen anlegen",
+      "createPlan": "Anbauplan erstellen"
+    }
   }
 }

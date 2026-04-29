@@ -29,6 +29,7 @@ import type { Supplier } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
+import EmptyStateCard from '../components/project/EmptyStateCard';
 
 interface SupplierDraft {
   id?: number;
@@ -215,6 +216,13 @@ export default function Suppliers(): React.ReactElement {
           )}
         />
         <TableContainer sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
+          {suppliers.length === 0 ? (
+            <EmptyStateCard
+              title="Noch keine Lieferanten vorhanden"
+              description="Lieferanten helfen dir bei der Saatgutplanung und beim Paketvergleich. Du kannst auch ohne Lieferanten starten."
+              actions={[{ label: 'Lieferant anlegen', to: '/app/suppliers?create=1' }]}
+            />
+          ) : null}
           <Table size="small" sx={{ width: 'auto' }}>
             <TableHead>
               <TableRow>

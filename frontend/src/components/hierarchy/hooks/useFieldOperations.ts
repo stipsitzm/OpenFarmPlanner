@@ -11,7 +11,7 @@ export function useFieldOperations(
   fetchData: () => Promise<void>,
   t: TFunction
 ) {
-  const addField = async (locationId?: number): Promise<void> => {
+  const addField = async (locationId: number | undefined, fieldName: string): Promise<void> => {
     // Use first location if not specified
     const targetLocationId = locationId || (locations.length > 0 ? locations[0].id : undefined);
     if (!targetLocationId) {
@@ -19,7 +19,6 @@ export function useFieldOperations(
       return;
     }
 
-    const fieldName = window.prompt(t('prompts.newFieldName'));
     if (!fieldName || fieldName.trim() === '') {
       return; // User cancelled or entered empty name
     }

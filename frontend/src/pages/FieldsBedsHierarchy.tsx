@@ -18,6 +18,7 @@ import React, {
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../i18n";
 import { DataGrid, GridRowModes } from "@mui/x-data-grid";
+import { germanDataGridLocaleText } from "../components/data-grid/localeText";
 import type { GridRowsProp, GridRowModesModel, GridRowHeightParams } from "@mui/x-data-grid";
 import { Box, Alert } from "@mui/material";
 import { dataGridSx } from "../components/data-grid/styles";
@@ -907,6 +908,7 @@ function FieldsBedsHierarchy({
               setTreeActive(true);
               handleEditableCellClick(params, rowModesModel, setRowModesModel);
             }}
+            localeText={germanDataGridLocaleText}
           />
         </Box>
       </Box>
