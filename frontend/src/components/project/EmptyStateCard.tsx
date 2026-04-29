@@ -1,5 +1,6 @@
 import { Alert, AlertTitle, Box, Button, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
+import RequirementChecklist from './RequirementChecklist';
 
 export interface EmptyStateAction {
   label: string;
@@ -25,15 +26,7 @@ export default function EmptyStateCard({
       <Typography variant="body2" sx={{ mb: actions.length > 0 || checklist.length > 0 ? 1.5 : 0 }}>
         {description}
       </Typography>
-      {checklist.length > 0 ? (
-        <Stack spacing={0.5} sx={{ mb: 1.5 }}>
-          {checklist.map((item) => (
-            <Typography key={item.label} variant="body2" color={item.done ? 'success.main' : 'text.secondary'}>
-              {item.done ? '✓' : '○'} {item.label}
-            </Typography>
-          ))}
-        </Stack>
-      ) : null}
+      {checklist.length > 0 ? <Box sx={{ mb: 1.5 }}><RequirementChecklist items={checklist.map((item) => ({ label: item.label, satisfied: item.done }))} /></Box> : null}
       {actions.length > 0 ? (
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           {actions.map((action) => (

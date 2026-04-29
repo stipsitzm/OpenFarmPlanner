@@ -29,6 +29,7 @@ import { resolveLocaleFromLanguage } from '../utils/numberLocalization';
 import { deriveLocationTasks, type DerivedLocationTask } from './locationDerivedTasks';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
+import EmptyStateCard from '../components/project/EmptyStateCard';
 
 type SoilType = NonNullable<Location['soil_type']>;
 type Exposure = NonNullable<Location['exposure']>;
@@ -309,7 +310,11 @@ function Locations(): React.ReactElement {
         ) : null}
 
         {!loading && !shouldShowProjectRequiredState && locations.length === 0 ? (
-          <Alert severity="info">{t('locations:emptyState')}</Alert>
+          <EmptyStateCard
+            title="Noch keine Standorte vorhanden"
+            description="Standorte helfen dir, deine Anbauflächen zu strukturieren, zum Beispiel verschiedene Gärten oder Felder."
+            actions={[{ label: 'Standort anlegen', to: '/app/locations' }]}
+          />
         ) : (
           !shouldShowProjectRequiredState && (
           <Box
