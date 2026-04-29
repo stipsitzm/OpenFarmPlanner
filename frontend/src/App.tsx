@@ -406,17 +406,22 @@ function RootLayout(): React.ReactElement {
     return normalizedPath === '/' ? '/app/locations' : `/app${normalizedPath}`;
   };
 
-  const goToNextPage = (): void => {
-    const currentIndex = routes.indexOf(normalizeRoutePath(location.pathname));
+  const getCurrentRouteFromLocation = useCallback((): string => {
+    const pathname = window.location.pathname || location.pathname;
+    return normalizeRoutePath(pathname);
+  }, [location.pathname]);
+
+  const goToNextPage = useCallback((): void => {
+    const currentIndex = routes.indexOf(getCurrentRouteFromLocation());
     const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % routes.length;
     navigate(routes[nextIndex]);
-  };
+  }, [getCurrentRouteFromLocation, navigate, routes]);
 
-  const goToPreviousPage = (): void => {
-    const currentIndex = routes.indexOf(normalizeRoutePath(location.pathname));
+  const goToPreviousPage = useCallback((): void => {
+    const currentIndex = routes.indexOf(getCurrentRouteFromLocation());
     const previousIndex = currentIndex === -1 ? routes.length - 1 : (currentIndex - 1 + routes.length) % routes.length;
     navigate(routes[previousIndex]);
-  };
+  }, [getCurrentRouteFromLocation, navigate, routes]);
 
   const globalCommands = useMemo(() => createRootCommands({
     currentPath: normalizeRoutePath(location.pathname),
@@ -447,7 +452,23 @@ function RootLayout(): React.ReactElement {
       openPalette: t('commandPalette.label'),
       openShortcuts: t('commandPalette.commands.openShortcuts'),
     },
-  }), [activeMembershipRole, activeProjectId, location.pathname, memberships, navigate, openCurrentPageHelp, openPalette, t]);
+  }), [
+    activeMembershipRole,
+    activeProjectId,
+    goToNextPage,
+    goToPreviousPage,
+    handleLogout,
+    handleOpenCreateProject,
+    handleOpenProjectHistory,
+    handleOpenProjectSettings,
+    handleSwitchProject,
+    location.pathname,
+    memberships,
+    navigate,
+    openCurrentPageHelp,
+    openPalette,
+    t,
+  ]);
 
   useRegisterCommands('global-app', globalCommands);
   
