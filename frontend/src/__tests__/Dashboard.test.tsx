@@ -42,11 +42,22 @@ describe('Dashboard', () => {
     mocks.planList.mockResolvedValue({ data: { results: [] } });
   });
 
-  it('shows empty project state and location-first action', async () => {
+  it('shows welcome box and first action for a completely empty project', async () => {
     render(<MemoryRouter><Dashboard /></MemoryRouter>);
-    expect(await screen.findByText('Starte deine Anbauplanung')).toBeInTheDocument();
-    expect(screen.getByText('Lege zuerst einen Standort an.')).toBeInTheDocument();
+    expect(await screen.findByText('Willkommen bei OpenFarmPlanner')).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'Standort anlegen' }).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Projektstatus')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nächster sinnvoller Schritt')).not.toBeInTheDocument();
+    expect(screen.queryByText('Anstehende Aufgaben')).not.toBeInTheDocument();
+  });
+
+  it('does not show welcome box for partially configured projects', async () => {
+    mocks.locationList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hof' }] } });
+
+    render(<MemoryRouter><Dashboard /></MemoryRouter>);
+
+    expect(await screen.findByText('Projektstatus')).toBeInTheDocument();
+    expect(screen.queryByText('Willkommen bei OpenFarmPlanner')).not.toBeInTheDocument();
   });
 
   it('shows aggregated upcoming tasks and ready state when setup is complete', async () => {
@@ -62,6 +73,7 @@ describe('Dashboard', () => {
     expect(screen.queryByText('Projektstatus')).not.toBeInTheDocument();
     expect(screen.queryByText('Nächster sinnvoller Schritt')).not.toBeInTheDocument();
     expect(screen.queryByText('Dein Projekt ist eingerichtet.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Willkommen bei OpenFarmPlanner')).not.toBeInTheDocument();
     expect(screen.getByText('Anstehende Aufgaben')).toBeInTheDocument();
     expect(screen.queryByText('Keine anstehenden Aufgaben vorhanden')).not.toBeInTheDocument();
   });
