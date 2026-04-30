@@ -1044,142 +1044,150 @@ function Cultures(): React.ReactElement {
 
       {/* Action buttons for selected culture */}
       {cultures.length > 0 && (
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 1,
-          mb: 2,
-          flexWrap: 'wrap',
-          minHeight: 44,
-          alignItems: 'center',
-        }}
-      >
-          <Tooltip title="Vorherige Kultur (Alt+Shift+←)">
-            <span>
-              <Button aria-label="Vorherige Kultur (Alt+Shift+←)" variant="outlined" onClick={() => goToRelativeCulture('previous')} disabled={cultures.length < 2}>
-                ←
-              </Button>
-            </span>
-          </Tooltip>
-          <Tooltip title="Nächste Kultur (Alt+Shift+→)">
-            <span>
-              <Button aria-label="Nächste Kultur (Alt+Shift+→)" variant="outlined" onClick={() => goToRelativeCulture('next')} disabled={cultures.length < 2}>
-                →
-              </Button>
-            </span>
-          </Tooltip>
-          <Tooltip title={canCreatePlantingPlan ? "Anbauplan erstellen (Alt+P)" : t(`buttons.createPlantingPlanDisabled.${firstMissingPlanRequirement}`)}>
-            <span>
-              <Button
-                aria-label="Anbauplan erstellen (Alt+P)"
-                variant="contained"
-                startIcon={<AgricultureIcon />}
-                onClick={handleCreatePlantingPlan}
-                disabled={!canCreatePlantingPlan}
-              >
-                {t('buttons.createPlantingPlan')}
-              </Button>
-            </span>
-          </Tooltip>
-          {firstMissingPlanRequirement === 'beds' ? (
-            <>
-              <Button component={RouterLink} to="/app/fields-beds" variant="outlined" color="secondary">
-                {t('buttons.goToFieldsBeds')}
-              </Button>
-              <Typography variant="body2" color="text.secondary">
-                {t('buttons.createPlantingPlanDisabled.beds')}
-              </Typography>
-            </>
-          ) : null}
-          {aiEnrichmentEnabled && (
-            <>
-              <Tooltip title={!canRunEnrichmentForCulture(selectedCulture) ? enrichmentDisabledReason : ''}><span><ButtonGroup variant="contained" aria-label={t('ai.menuLabel')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
-            <Tooltip title={!selectedCultureNeedsCompletion && selectedCulture ? t('ai.completeDisabledReason') : ''}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            mb: 2,
+            gap: 1.5,
+          }}
+        >
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+            <Tooltip title="Vorherige Kultur (Alt+Shift+←)">
               <span>
-                <Button
-                  startIcon={<AutoAwesomeIcon />}
-                  onClick={() => void handleEnrichCurrent('complete')}
-                  aria-label="Kultur vervollständigen (KI) (Alt+U)"
-                  disabled={Boolean(selectedCulture) && !selectedCultureNeedsCompletion}
-                >
-                  {t('buttons.aiComplete')}
+                <Button aria-label="Vorherige Kultur (Alt+Shift+←)" variant="outlined" onClick={() => goToRelativeCulture('previous')} disabled={cultures.length < 2}>
+                  ←
                 </Button>
               </span>
             </Tooltip>
-            <Button
-              size="small"
-              aria-label={t('ai.menuLabel')}
-              aria-controls={aiMenuAnchor ? 'culture-ai-menu' : undefined}
-              aria-haspopup="true"
-              onClick={handleAiMenuOpen}
-              sx={{ minWidth: 32, px: 0.5 }}
+            <Tooltip title="Nächste Kultur (Alt+Shift+→)">
+              <span>
+                <Button aria-label="Nächste Kultur (Alt+Shift+→)" variant="outlined" onClick={() => goToRelativeCulture('next')} disabled={cultures.length < 2}>
+                  →
+                </Button>
+              </span>
+            </Tooltip>
+            <Tooltip title={canCreatePlantingPlan ? "Anbauplan erstellen (Alt+P)" : t(`buttons.createPlantingPlanDisabled.${firstMissingPlanRequirement}`)}>
+              <span>
+                <Button
+                  aria-label="Anbauplan erstellen (Alt+P)"
+                  variant="contained"
+                  color="success"
+                  startIcon={<AgricultureIcon />}
+                  onClick={handleCreatePlantingPlan}
+                  disabled={!canCreatePlantingPlan}
+                >
+                  {t('buttons.createPlantingPlan')}
+                </Button>
+              </span>
+            </Tooltip>
+            {firstMissingPlanRequirement === 'beds' ? (
+              <Button component={RouterLink} to="/app/fields-beds" variant="outlined" color="success">
+                {t('buttons.goToFieldsBeds')}
+              </Button>
+            ) : null}
+          </Box>
+
+          {firstMissingPlanRequirement === 'beds' ? (
+            <Alert severity="info">{t('buttons.createPlantingPlanDisabled.beds')}</Alert>
+          ) : null}
+
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+            <Tooltip title="Kultur bearbeiten (Alt+E)">
+              <span>
+                <Button
+                  aria-label="Kultur bearbeiten (Alt+E)"
+                  variant="outlined"
+                  startIcon={<EditIcon />}
+                  onClick={() => selectedCulture && handleEdit(selectedCulture)}
+                  disabled={!selectedCulture}
+                >
+                  {t('buttons.edit')}
+                </Button>
+              </span>
+            </Tooltip>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+            {aiEnrichmentEnabled && (
+              <>
+                <Tooltip title={!canRunEnrichmentForCulture(selectedCulture) ? enrichmentDisabledReason : ''}><span><ButtonGroup variant="contained" aria-label={t('ai.menuLabel')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
+              <Tooltip title={!selectedCultureNeedsCompletion && selectedCulture ? t('ai.completeDisabledReason') : ''}>
+                <span>
+                  <Button
+                    startIcon={<AutoAwesomeIcon />}
+                    onClick={() => void handleEnrichCurrent('complete')}
+                    aria-label="Kultur vervollständigen (KI) (Alt+U)"
+                    disabled={Boolean(selectedCulture) && !selectedCultureNeedsCompletion}
+                  >
+                    {t('buttons.aiComplete')}
+                  </Button>
+                </span>
+              </Tooltip>
+              <Button
+                size="small"
+                aria-label={t('ai.menuLabel')}
+                aria-controls={aiMenuAnchor ? 'culture-ai-menu' : undefined}
+                aria-haspopup="true"
+                onClick={handleAiMenuOpen}
+                sx={{ minWidth: 32, px: 0.5 }}
+              >
+                <ArrowDropDownIcon />
+              </Button>
+            </ButtonGroup></span></Tooltip>
+            <Menu
+              id="culture-ai-menu"
+              anchorEl={aiMenuAnchor}
+              open={Boolean(aiMenuAnchor)}
+              onClose={handleAiMenuClose}
             >
-              <ArrowDropDownIcon />
+              <MenuItem aria-label="Kultur komplett neu recherchieren (KI) (Alt+R)" onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
+                <ManageSearchIcon sx={{ mr: 1 }} fontSize="small" />
+                {t('buttons.aiReresearch')}
+              </MenuItem>
+              <MenuItem aria-label="Alle Kulturen vervollständigen (KI) (Alt+A)" onClick={() => setEnrichAllConfirmOpen(true)} disabled={cultures.length === 0 || enrichmentLoading || !cultures.some((culture) => canRunEnrichmentForCulture(culture))}>
+                <PlaylistAddCheckIcon sx={{ mr: 1 }} fontSize="small" />
+                {t('buttons.aiCompleteAll')}
+              </MenuItem>
+                </Menu>
+              </>
+            )}
+            <Tooltip title={t('library.publishTooltip')}>
+              <span>
+                <Button
+                  variant="outlined"
+                  startIcon={<PublicIcon />}
+                  onClick={() => void handlePublishCurrentCulture()}
+                  disabled={!selectedCulture || publishingCultureId === selectedCulture?.id}
+                >
+                  {publishingCultureId === selectedCulture?.id
+                    ? (isUpdatingOwnPublicCulture ? t('library.updating') : t('library.publishing'))
+                    : (isUpdatingOwnPublicCulture ? t('library.updateButton') : t('library.publishButton'))}
+                </Button>
+              </span>
+            </Tooltip>
+            <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
+              Versionen
             </Button>
-          </ButtonGroup></span></Tooltip>
-          <Menu
-            id="culture-ai-menu"
-            anchorEl={aiMenuAnchor}
-            open={Boolean(aiMenuAnchor)}
-            onClose={handleAiMenuClose}
-          >
-            <MenuItem aria-label="Kultur komplett neu recherchieren (KI) (Alt+R)" onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
-              <ManageSearchIcon sx={{ mr: 1 }} fontSize="small" />
-              {t('buttons.aiReresearch')}
-            </MenuItem>
-            <MenuItem aria-label="Alle Kulturen vervollständigen (KI) (Alt+A)" onClick={() => setEnrichAllConfirmOpen(true)} disabled={cultures.length === 0 || enrichmentLoading || !cultures.some((culture) => canRunEnrichmentForCulture(culture))}>
-              <PlaylistAddCheckIcon sx={{ mr: 1 }} fontSize="small" />
-              {t('buttons.aiCompleteAll')}
-            </MenuItem>
-              </Menu>
-            </>
-          )}
-          <Tooltip title="Kultur bearbeiten (Alt+E)">
-            <span>
-              <Button
-                aria-label="Kultur bearbeiten (Alt+E)"
-                variant="outlined"
-                startIcon={<EditIcon />}
-                onClick={() => selectedCulture && handleEdit(selectedCulture)}
-                disabled={!selectedCulture}
-              >
-                {t('buttons.edit')}
-              </Button>
-            </span>
-          </Tooltip>
-          <Tooltip title={t('library.publishTooltip')}>
-            <span>
-              <Button
-                variant="outlined"
-                startIcon={<PublicIcon />}
-                onClick={() => void handlePublishCurrentCulture()}
-                disabled={!selectedCulture || publishingCultureId === selectedCulture?.id}
-              >
-                {publishingCultureId === selectedCulture?.id
-                  ? (isUpdatingOwnPublicCulture ? t('library.updating') : t('library.publishing'))
-                  : (isUpdatingOwnPublicCulture ? t('library.updateButton') : t('library.publishButton'))}
-              </Button>
-            </span>
-          </Tooltip>
-          <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
-            Versionen
-          </Button>
-          <Tooltip title="Kultur löschen (Alt+Shift+D)">
-            <span>
-              <Button
-                aria-label="Kultur löschen (Alt+Shift+D)"
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteIcon />}
-                onClick={() => selectedCulture && handleDelete(selectedCulture)}
-                disabled={!selectedCulture}
-              >
-                {t('buttons.delete')}
-              </Button>
-            </span>
-          </Tooltip>
-          <Box sx={{ flexGrow: 1 }} />
-      </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+            <Tooltip title="Kultur löschen (Alt+Shift+D)">
+              <span>
+                <Button
+                  aria-label="Kultur löschen (Alt+Shift+D)"
+                  variant="outlined"
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                  onClick={() => selectedCulture && handleDelete(selectedCulture)}
+                  disabled={!selectedCulture}
+                >
+                  {t('buttons.delete')}
+                </Button>
+              </span>
+            </Tooltip>
+          </Box>
+        </Box>
       )}
 
       <PublicCultureLibraryDialog
