@@ -216,8 +216,20 @@ describe('ProjectSettingsPage', () => {
     ).not.toBe(0);
   });
 
-  it('shows current project name and allows renaming via PATCH', async () => {
+  it('shows project name in view mode and allows switching to edit mode', async () => {
     render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+    expect(await screen.findByText('Alpha')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Projekt umbenennen')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Speichern' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Projekt umbenennen' }));
+    expect(await screen.findByLabelText('Projekt umbenennen')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abbrechen' })).toBeInTheDocument();
+  });
+
+  it('allows renaming via PATCH from edit mode', async () => {
+    render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Projekt umbenennen' }));
     const projectNameInput = await screen.findByLabelText('Projekt umbenennen');
     expect(projectNameInput).toHaveValue('Alpha');
 
@@ -230,6 +242,7 @@ describe('ProjectSettingsPage', () => {
 
   it('prevents empty or unchanged project name saves', async () => {
     render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Projekt umbenennen' }));
     const projectNameInput = await screen.findByLabelText('Projekt umbenennen');
     const saveButton = screen.getByRole('button', { name: 'Speichern' });
 
@@ -241,10 +254,37 @@ describe('ProjectSettingsPage', () => {
 
   it('submits rename on Enter key', async () => {
     render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Projekt umbenennen' }));
     const projectNameInput = await screen.findByLabelText('Projekt umbenennen');
     fireEvent.change(projectNameInput, { target: { value: 'Gamma' } });
     fireEvent.keyDown(projectNameInput, { key: 'Enter', code: 'Enter' });
 
     await waitFor(() => expect(updateProjectMock).toHaveBeenCalledWith(1, { name: 'Gamma' }));
+  });
+
+  it('cancels edit mode on Escape without API call', async () => {
+    render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Projekt umbenennen' }));
+    const projectNameInput = await screen.findByLabelText('Projekt umbenennen');
+
+    fireEvent.change(projectNameInput, { target: { value: 'Delta' } });
+    fireEvent.keyDown(projectNameInput, { key: 'Escape', code: 'Escape' });
+
+    expect(updateProjectMock).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('Projekt umbenennen')).not.toBeInTheDocument();
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+  });
+
+  it('cancels edit mode via cancel button without API call', async () => {
+    render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Projekt umbenennen' }));
+    const projectNameInput = await screen.findByLabelText('Projekt umbenennen');
+
+    fireEvent.change(projectNameInput, { target: { value: 'Delta' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+
+    expect(updateProjectMock).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('Projekt umbenennen')).not.toBeInTheDocument();
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
   });
 });

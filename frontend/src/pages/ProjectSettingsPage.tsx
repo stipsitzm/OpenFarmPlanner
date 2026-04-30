@@ -1,4 +1,5 @@
-import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { projectAPI, type ProjectInvitationPayload, type ProjectMemberPayload } from '../api/api';
 import { useAuth } from '../auth/useAuth';
@@ -28,6 +29,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
   const [invitationLoadError, setInvitationLoadError] = useState<string | null>(null);
   const [projectNameDraft, setProjectNameDraft] = useState('');
   const [isSavingProjectName, setIsSavingProjectName] = useState(false);
+  const [isEditingProjectName, setIsEditingProjectName] = useState(false);
 
   const isProjectAdmin = activeMembership?.role === 'admin';
   const canManageMembers = isProjectAdmin;
@@ -92,8 +94,10 @@ export default function ProjectSettingsPage(): React.ReactElement {
   }, [loadInvitations]);
 
   useEffect(() => {
-    setProjectNameDraft(activeMembership?.project_name ?? '');
-  }, [activeMembership?.project_name]);
+    if (!isEditingProjectName) {
+      setProjectNameDraft(activeMembership?.project_name ?? '');
+    }
+  }, [activeMembership?.project_name, isEditingProjectName]);
 
   const sortedInvitations = useMemo(() => (
     [...invitations].sort((left, right) => {
@@ -153,12 +157,24 @@ export default function ProjectSettingsPage(): React.ReactElement {
     try {
       await projectAPI.update(activeMembership.project_id, { name: normalizedProjectName });
       await refreshUser();
+      setIsEditingProjectName(false);
       setFeedback({ severity: 'success', text: t('projectRename.success') });
     } catch {
       setFeedback({ severity: 'error', text: t('projectRename.error') });
     } finally {
       setIsSavingProjectName(false);
     }
+  };
+
+  const handleProjectNameEditStart = (): void => {
+    setProjectNameDraft(activeMembership?.project_name ?? '');
+    setIsEditingProjectName(true);
+  };
+
+  const handleProjectNameEditCancel = (): void => {
+    setProjectNameDraft(activeMembership?.project_name ?? '');
+    setIsEditingProjectName(false);
+    setFeedback(null);
   };
 
   const handleRevoke = async (invitationId: number): Promise<void> => {
@@ -225,31 +241,56 @@ export default function ProjectSettingsPage(): React.ReactElement {
   return (
     <Box sx={{ p: 3, maxWidth: 760, mx: 'auto' }}>
       <Typography variant="h4" sx={{ mb: 1 }}>{t('title')}</Typography>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 3 }} alignItems={{ sm: 'center' }}>
-        <TextField
-          label={t('projectRename.label')}
-          value={projectNameDraft}
-          onChange={(event) => setProjectNameDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && canSaveProjectName) {
-              event.preventDefault();
-              void handleProjectNameSave();
-            }
-          }}
-          disabled={!isProjectAdmin || isSavingProjectName}
-          error={projectNameDraft.trim().length > 0 && projectNameDraft.trim().length < 2}
-          helperText={projectNameDraft.trim().length > 0 && projectNameDraft.trim().length < 2 ? t('projectRename.minLength') : ' '}
-          fullWidth
-        />
-        <Button
-          variant="contained"
-          onClick={() => void handleProjectNameSave()}
-          disabled={!canSaveProjectName || isSavingProjectName}
-          sx={{ minWidth: 140 }}
-        >
-          {t('projectRename.save')}
-        </Button>
-      </Stack>
+      <Box sx={{ mb: 3 }}>
+        {!isEditingProjectName ? (
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Typography variant="h6">{activeMembership.project_name}</Typography>
+            {isProjectAdmin ? (
+              <IconButton aria-label={t('projectRename.label')} onClick={handleProjectNameEditStart}>
+                <EditIcon />
+              </IconButton>
+            ) : null}
+          </Stack>
+        ) : (
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'flex-start' }}>
+            <TextField
+              label={t('projectRename.label')}
+              value={projectNameDraft}
+              onChange={(event) => setProjectNameDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  handleProjectNameEditCancel();
+                  return;
+                }
+                if (event.key === 'Enter' && canSaveProjectName) {
+                  event.preventDefault();
+                  void handleProjectNameSave();
+                }
+              }}
+              disabled={!isProjectAdmin || isSavingProjectName}
+              error={projectNameDraft.trim().length > 0 && projectNameDraft.trim().length < 2}
+              helperText={projectNameDraft.trim().length > 0 && projectNameDraft.trim().length < 2 ? t('projectRename.minLength') : ' '}
+              fullWidth
+              autoFocus
+              inputProps={{ 'aria-label': t('projectRename.label') }}
+            />
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="contained"
+                onClick={() => void handleProjectNameSave()}
+                disabled={!canSaveProjectName || isSavingProjectName}
+                sx={{ minWidth: 140 }}
+              >
+                {t('projectRename.save')}
+              </Button>
+              <Button variant="outlined" onClick={handleProjectNameEditCancel} disabled={isSavingProjectName}>
+                {t('projectRename.cancel')}
+              </Button>
+            </Stack>
+          </Stack>
+        )}
+      </Box>
 
       <Typography variant="h6" sx={{ mb: 2 }}>{t('inviteSectionTitle')}</Typography>
       <Stack spacing={2}>
