@@ -1,9 +1,9 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AddIcon from '@mui/icons-material/Add';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
+import { AddBedIcon } from '../components/hierarchy/AddBedIcon';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
@@ -256,9 +256,10 @@ export default function FieldsBedsPage(): React.ReactElement {
               gap: 0.75,
             }}
           >
-            <AddIcon fontSize="small" sx={{ color: 'success.dark', flexShrink: 0 }} aria-hidden="true" />
-            <Typography variant="body2" color="inherit">
-              {t('hierarchy:messages.noBedsHint')}
+            <Typography variant="body2" color="inherit" sx={{ display: 'inline-flex', alignItems: 'baseline', gap: 0.5, flexWrap: 'wrap' }}>
+              {t('hierarchy:messages.noBedsHintBeforeIcon')}
+              <AddBedIcon interactive={false} ariaHidden sx={{ verticalAlign: 'baseline', mb: '-1px' }} />
+              {t('hierarchy:messages.noBedsHintAfterIcon')}
             </Typography>
           </Box>
         ) : null}
