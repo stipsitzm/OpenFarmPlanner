@@ -13,7 +13,7 @@ describe('Empty state components', () => {
           description="Lege zuerst Daten an."
           actions={[
             { label: 'Primäre Aktion', to: '/app/cultures' },
-            { label: 'Sekundäre Aktion', to: '/app/fields' },
+            { label: 'Sekundäre Aktion', to: '/app/fields-beds' },
           ]}
         />
       </MemoryRouter>,

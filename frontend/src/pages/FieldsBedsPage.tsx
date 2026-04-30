@@ -1,6 +1,7 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AddIcon from '@mui/icons-material/Add';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
@@ -156,7 +157,8 @@ export default function FieldsBedsPage(): React.ReactElement {
   const hasLocations = locations.length > 0;
   const hasFields = fieldsCount > 0;
   const hasBeds = bedsCount > 0;
-  const shouldShowAreasEmptyState = !hasLocations || !hasFields || !hasBeds;
+  const shouldShowAreasEmptyState = !hasLocations || !hasFields;
+  const shouldShowMissingBedsHint = hasFields && !hasBeds;
 
   useEffect(() => {
     if (viewMode === 'graphical') {
@@ -238,6 +240,28 @@ export default function FieldsBedsPage(): React.ReactElement {
         {shouldShowProjectRequiredState && missingProjectReason ? (
           <ProjectRequiredState reason={missingProjectReason} />
         ) : null}
+        {!shouldShowProjectRequiredState && shouldShowMissingBedsHint ? (
+          <Box
+            sx={{
+              mb: 2,
+              px: 1.25,
+              py: 0.9,
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'success.200',
+              bgcolor: 'success.50',
+              color: 'success.dark',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.75,
+            }}
+          >
+            <AddIcon fontSize="small" sx={{ color: 'success.dark', flexShrink: 0 }} aria-hidden="true" />
+            <Typography variant="body2" color="inherit">
+              {t('hierarchy:messages.noBedsHint')}
+            </Typography>
+          </Box>
+        ) : null}
         {!shouldShowProjectRequiredState && shouldShowAreasEmptyState ? (
           <EmptyStateCard
             title={t('hierarchy:emptyAreas.title')}
@@ -245,12 +269,10 @@ export default function FieldsBedsPage(): React.ReactElement {
             checklist={[
               { label: t('hierarchy:columns.location'), done: hasLocations },
               { label: t('hierarchy:columns.field'), done: hasFields },
-              { label: t('hierarchy:columns.bed'), done: hasBeds },
             ]}
             actions={[
               ...(!hasLocations ? [{ label: t('hierarchy:emptyAreas.actions.createLocation'), onClick: () => navigate('/app/locations?create=true') }] : []),
               ...(hasLocations && !hasFields ? [{ label: t('hierarchy:emptyAreas.actions.createField'), onClick: handleGlobalAddField }] : []),
-              ...(hasFields && !hasBeds ? [{ label: t('hierarchy:emptyAreas.actions.createBed'), to: '/app/fields' }] : []),
             ]}
           />
         ) : null}

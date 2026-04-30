@@ -486,7 +486,7 @@ function GanttChartPage(): React.ReactElement {
                 ]}
                 actions={[
                   ...(firstMissingRequirement === 'locations' ? [{ label: t('ganttChart:emptyStates.actions.createLocation'), to: '/app/locations?create=true' }] : []),
-                  ...(firstMissingRequirement === 'beds' ? [{ label: t('ganttChart:emptyStates.actions.createAreas'), to: '/app/fields' }] : []),
+                  ...(firstMissingRequirement === 'beds' ? [{ label: t('ganttChart:emptyStates.actions.createAreas'), to: '/app/fields-beds' }] : []),
                   ...(firstMissingRequirement === 'cultures' ? [{ label: t('ganttChart:emptyStates.actions.createCulture'), to: '/app/cultures?create=true' }] : []),
                   ...(firstMissingRequirement === 'plans' ? [{ label: t('ganttChart:emptyStates.actions.createPlan'), to: '/app/planting-plans?create=true' }] : []),
                 ]}

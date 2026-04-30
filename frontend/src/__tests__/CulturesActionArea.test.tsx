@@ -228,10 +228,13 @@ describe('Cultures action area', () => {
 
     const createPlanButton = await screen.findByRole('button', { name: 'Anbauplan erstellen (Alt+P)' });
     expect(createPlanButton).toBeDisabled();
-    expect(await screen.findByRole('link', { name: 'Beet anlegen' })).toBeInTheDocument();
+    const fieldsBedsLink = await screen.findByRole('link', { name: 'Zu Anbauflächen' });
+    expect(fieldsBedsLink).toBeInTheDocument();
+    expect(fieldsBedsLink).toHaveAttribute('href', '/app/fields-beds');
+    expect(screen.queryByRole('link', { name: 'Beet anlegen' })).not.toBeInTheDocument();
 
     fireEvent.mouseOver(createPlanButton.parentElement as HTMLElement);
-    expect(await screen.findByText('Du brauchst zuerst mindestens ein Beet, um einen Anbauplan zu erstellen.')).toBeInTheDocument();
+    expect(await screen.findByText('Du brauchst zuerst mindestens ein Beet. Beete werden innerhalb einer Parzelle auf der Seite Anbauflächen hinzugefügt.')).toBeInTheDocument();
   });
 
   it('enables create planting plan button when all prerequisites are present', async () => {

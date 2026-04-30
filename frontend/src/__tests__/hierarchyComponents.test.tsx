@@ -118,7 +118,7 @@ describe('hierarchy components and behaviors', () => {
         } as never)}
       </>
     );
-    await user.click(screen.getByLabelText('Beet hinzufügen'));
+    await user.click(screen.getByLabelText('Beet zu dieser Parzelle hinzufügen'));
     await user.click(screen.getByLabelText('Löschen'));
     expect(addBed).toHaveBeenCalledWith(10);
     expect(deleteField).toHaveBeenCalledWith(10);

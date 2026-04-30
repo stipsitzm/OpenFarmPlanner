@@ -2,6 +2,7 @@
   "title": "Anbauflächen",
   "addField": "Parzelle",
   "addBed": "Beet",
+  "addBedToField": "Beet zu dieser Parzelle hinzufügen",
   "createPlantingPlan": "Anbauplan erstellen",
   "columns": {
     "name": "Name",
@@ -43,7 +44,8 @@
   "messages": {
     "createLocationFirst": "Bitte erstellen Sie zuerst einen Standort.",
     "singleLocationHint": "Standort: {{name}}",
-    "invalidLocationSelection": "Bitte wählen Sie einen gültigen Standort aus."
+    "invalidLocationSelection": "Bitte wählen Sie einen gültigen Standort aus.",
+    "noBedsHint": "Es sind noch keine Beete vorhanden. Füge Beete über das Plus-Symbol bei der jeweiligen Parzelle hinzu."
   },
   "prompts": {
     "newFieldName": "Name der neuen Parzelle:",
@@ -66,7 +68,7 @@
     "actions": {
       "createLocation": "Standort hinzufügen",
       "createField": "Parzelle hinzufügen",
-      "createBed": "Beet hinzufügen"
+      "createBed": "Zu Anbauflächen"
     }
   },
   "confirm": {

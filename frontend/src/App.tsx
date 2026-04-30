@@ -73,6 +73,7 @@ import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
+import { MAIN_NAV_ITEMS, MAIN_NAV_ROUTES, normalizeMainRoutePath } from './navigation/mainNavigation';
 
 interface SnackbarState {
   open: boolean;
@@ -229,18 +230,16 @@ function RootLayout(): React.ReactElement {
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
-  const routes = ['/app/locations', '/app/fields-beds', '/app/cultures', '/app/anbauplaene', '/app/gantt-chart', '/app/seed-demand', '/app/suppliers'];
-  const navItems = [
-    { to: '/app/locations', label: t('locations'), keywords: ['standorte', 'orte', 'locations'] },
-    { to: '/app/fields-beds', label: t('fieldsAndBeds'), keywords: ['anbauflächen', 'felder', 'beete'] },
-    { to: '/app/cultures', label: t('cultures'), keywords: ['kulturen', 'kultur'] },
-    { to: '/app/anbauplaene', label: t('plantingPlans'), activePath: '/app/planting-plans', keywords: ['anbaupläne', 'pläne', 'planung'] },
-    { to: '/app/gantt-chart', label: t('ganttChart'), keywords: ['anbaukalender', 'kalender', 'gantt'] },
-    { to: '/app/seed-demand', label: t('seedDemand'), keywords: ['saatgutbedarf', 'saatgut'] },
-    { to: '/app/suppliers', label: t('suppliers'), keywords: ['lieferanten', 'einkauf'] },
-  ];
-  const primaryNavItems = (isCompactDesktop && !isMobile) ? navItems.slice(0, 4) : navItems;
-  const overflowNavItems = (isCompactDesktop && !isMobile) ? navItems.slice(4) : [];
+  const navItems = useMemo(() => (
+    MAIN_NAV_ITEMS.map((item) => ({
+      to: item.to,
+      label: t(item.labelKey),
+      activeAliases: item.activeAliases ?? [],
+      keywords: item.keywords,
+    }))
+  ), [t]);
+  const primaryNavItems = (isCompactDesktop && !isMobile) ? navItems.slice(0, 5) : navItems;
+  const overflowNavItems = (isCompactDesktop && !isMobile) ? navItems.slice(5) : [];
 
   const handleGlobalMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setGlobalMenuAnchor(event.currentTarget);
@@ -408,39 +407,34 @@ function RootLayout(): React.ReactElement {
 
   const activeMembershipRole = activeMembership?.role ?? null;
 
-  const normalizeRoutePath = (pathname: string): string => {
-    const normalizedPath = pathname.replace(/\/$/, '') || '/';
-
-    if (normalizedPath === '/planting-plans') {
-      return '/app/anbauplaene';
-    }
-
-    if (normalizedPath.startsWith('/app/')) {
-      return normalizedPath;
-    }
-
-    return normalizedPath === '/' ? '/app/dashboard' : `/app${normalizedPath}`;
-  };
-
   const getCurrentRouteFromLocation = useCallback((): string => {
     const pathname = window.location.pathname || location.pathname;
-    return normalizeRoutePath(pathname);
+    return normalizeMainRoutePath(pathname);
   }, [location.pathname]);
 
   const goToNextPage = useCallback((): void => {
-    const currentIndex = routes.indexOf(getCurrentRouteFromLocation());
-    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % routes.length;
-    navigate(routes[nextIndex]);
-  }, [getCurrentRouteFromLocation, navigate, routes]);
+    const currentIndex = MAIN_NAV_ROUTES.indexOf(getCurrentRouteFromLocation());
+    if (currentIndex === -1) {
+      navigate('/app/dashboard');
+      return;
+    }
+    if (currentIndex >= MAIN_NAV_ROUTES.length - 1) {
+      return;
+    }
+    navigate(MAIN_NAV_ROUTES[currentIndex + 1]);
+  }, [getCurrentRouteFromLocation, navigate]);
 
   const goToPreviousPage = useCallback((): void => {
-    const currentIndex = routes.indexOf(getCurrentRouteFromLocation());
-    const previousIndex = currentIndex === -1 ? routes.length - 1 : (currentIndex - 1 + routes.length) % routes.length;
-    navigate(routes[previousIndex]);
-  }, [getCurrentRouteFromLocation, navigate, routes]);
+    const currentIndex = MAIN_NAV_ROUTES.indexOf(getCurrentRouteFromLocation());
+    if (currentIndex <= 0) {
+      navigate('/app/dashboard');
+      return;
+    }
+    navigate(MAIN_NAV_ROUTES[currentIndex - 1]);
+  }, [getCurrentRouteFromLocation, navigate]);
 
   const globalCommands = useMemo(() => createRootCommands({
-    currentPath: normalizeRoutePath(location.pathname),
+    currentPath: normalizeMainRoutePath(location.pathname),
     activeProjectId,
     isProjectAdmin: activeMembershipRole === 'admin',
     memberships,
@@ -501,16 +495,26 @@ function RootLayout(): React.ReactElement {
             >
               <MenuIcon fontSize="small" />
             </IconButton>
-            <AppLogo size={24} showText={false} to={activeProjectId ? '/app/dashboard' : '/app/project-selection'} />
+            <AppLogo
+              size={24}
+              showText={false}
+              to={activeProjectId ? '/app/dashboard' : '/app/project-selection'}
+              subtleActive={activeProjectId !== null && normalizeMainRoutePath(location.pathname) === '/app/dashboard'}
+            />
           </div>
         ) : (
           <div className="nav-links">
-            <AppLogo size={28} showText={!isCompactDesktop} to={activeProjectId ? '/app/dashboard' : '/app/project-selection'} />
+            <AppLogo
+              size={28}
+              showText={!isCompactDesktop}
+              to={activeProjectId ? '/app/dashboard' : '/app/project-selection'}
+              subtleActive={activeProjectId !== null && normalizeMainRoutePath(location.pathname) === '/app/dashboard'}
+            />
             {primaryNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
-                className={({ isActive }) => (isActive || location.pathname === item.activePath) ? 'nav-link active' : 'nav-link'}
+                className={({ isActive }) => (isActive || item.activeAliases.includes(location.pathname)) ? 'nav-link active' : 'nav-link'}
               >
                 {item.label}
               </NavLink>
@@ -528,7 +532,7 @@ function RootLayout(): React.ReactElement {
                 </Button>
                 <Menu id="more-nav-menu" anchorEl={moreNavAnchor} open={Boolean(moreNavAnchor)} onClose={handleMoreNavClose}>
                   {overflowNavItems.map((item) => {
-                    const isActive = location.pathname === item.to || location.pathname === item.activePath;
+                    const isActive = location.pathname === item.to || item.activeAliases.includes(location.pathname);
                     return (
                       <MenuItem
                         key={item.to}
@@ -607,7 +611,7 @@ function RootLayout(): React.ReactElement {
       <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav}>
         <List sx={{ width: 280 }}>
           {navItems.map((item) => {
-            const isActive = location.pathname === item.to || location.pathname === item.activePath;
+            const isActive = location.pathname === item.to || item.activeAliases.includes(location.pathname);
             return (
               <ListItem key={item.to} disablePadding>
                 <Button

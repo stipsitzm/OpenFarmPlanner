@@ -118,7 +118,7 @@
     "actions": {
       "createLocation": "Standort hinzufügen",
       "createCulture": "Kultur hinzufügen",
-      "createAreas": "Parzelle hinzufügen",
+      "createAreas": "Zu Anbauflächen",
       "createPlan": "Anbauplan erstellen"
     }
   }

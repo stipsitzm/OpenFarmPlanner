@@ -1,0 +1,31 @@
+export interface MainNavigationItem {
+  to: string;
+  labelKey: string;
+  keywords: string[];
+  activeAliases?: string[];
+}
+
+export const MAIN_NAV_ITEMS: MainNavigationItem[] = [
+  { to: '/app/dashboard', labelKey: 'dashboard', keywords: ['übersicht', 'dashboard', 'start'] },
+  { to: '/app/locations', labelKey: 'locations', keywords: ['standorte', 'orte', 'locations'] },
+  { to: '/app/fields-beds', labelKey: 'fieldsAndBeds', keywords: ['anbauflächen', 'felder', 'beete'] },
+  { to: '/app/cultures', labelKey: 'cultures', keywords: ['kulturen', 'kultur'] },
+  { to: '/app/anbauplaene', labelKey: 'plantingPlans', activeAliases: ['/app/planting-plans'], keywords: ['anbaupläne', 'pläne', 'planung'] },
+  { to: '/app/gantt-chart', labelKey: 'ganttChart', keywords: ['anbaukalender', 'kalender', 'gantt'] },
+  { to: '/app/seed-demand', labelKey: 'seedDemand', keywords: ['saatgutbedarf', 'saatgut'] },
+  { to: '/app/suppliers', labelKey: 'suppliers', keywords: ['lieferanten', 'einkauf'] },
+];
+
+export const MAIN_NAV_ROUTES = MAIN_NAV_ITEMS.map((item) => item.to);
+
+export const normalizeMainRoutePath = (pathname: string): string => {
+  const normalizedPath = pathname.replace(/\/$/, '') || '/';
+  if (normalizedPath === '/planting-plans') {
+    return '/app/anbauplaene';
+  }
+  if (normalizedPath.startsWith('/app/')) {
+    return normalizedPath;
+  }
+  return normalizedPath === '/' ? '/app/dashboard' : `/app${normalizedPath}`;
+};
+
