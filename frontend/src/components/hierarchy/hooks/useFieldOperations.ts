@@ -12,10 +12,14 @@ export function useFieldOperations(
   t: TFunction
 ) {
   const addField = async (locationId: number | undefined, fieldName: string): Promise<void> => {
-    // Use first location if not specified
-    const targetLocationId = locationId || (locations.length > 0 ? locations[0].id : undefined);
+    const targetLocationId =
+      locationId ?? (locations.length === 1 ? locations[0].id : undefined);
     if (!targetLocationId) {
-      setError(t('messages.createLocationFirst'));
+      setError(
+        locations.length > 1
+          ? t('messages.invalidLocationSelection')
+          : t('messages.createLocationFirst'),
+      );
       return;
     }
 

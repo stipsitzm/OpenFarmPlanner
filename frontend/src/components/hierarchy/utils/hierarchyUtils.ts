@@ -145,6 +145,9 @@ export function buildHierarchyRowsFromIndex(
   expandedRows: Set<string | number>,
 ): HierarchyRow[] {
   const hierarchyRows: HierarchyRow[] = [];
+  const singleLocationId = !hierarchyIndex.hasMultipleLocations
+    ? hierarchyIndex.sortedLocations[0]?.id
+    : undefined;
 
   if (hierarchyIndex.hasMultipleLocations) {
     hierarchyIndex.sortedLocations.forEach((location) => {
@@ -222,6 +225,7 @@ export function buildHierarchyRowsFromIndex(
       level: 0,
       name: field.name,
       fieldId: field.id,
+      ...(singleLocationId !== undefined ? { locationId: singleLocationId } : {}),
       expanded: isFieldExpanded,
       hasChildren: fieldBeds.length > 0,
       area_sqm: field.area_sqm,
@@ -246,6 +250,7 @@ export function buildHierarchyRowsFromIndex(
         width_m: bed.width_m,
         notes: bed.notes,
         fieldId: field.id,
+        ...(singleLocationId !== undefined ? { locationId: singleLocationId } : {}),
         bedId: bed.id,
         hasChildren: false,
         isNew: bed.id! < 0,
@@ -360,6 +365,9 @@ export function createHierarchyRowsProjector(hierarchyIndex: HierarchyIndex) {
 
   return (expandedRows: Set<string | number>): HierarchyRow[] => {
     const hierarchyRows: HierarchyRow[] = [];
+    const singleLocationId = !hierarchyIndex.hasMultipleLocations
+      ? hierarchyIndex.sortedLocations[0]?.id
+      : undefined;
 
     if (hierarchyIndex.hasMultipleLocations) {
       hierarchyIndex.sortedLocations.forEach((location) => {
@@ -424,7 +432,7 @@ export function createHierarchyRowsProjector(hierarchyIndex: HierarchyIndex) {
           field,
           0,
           undefined,
-          undefined,
+          singleLocationId,
           fieldBeds.length > 0,
           isFieldExpanded,
         ),
@@ -436,7 +444,7 @@ export function createHierarchyRowsProjector(hierarchyIndex: HierarchyIndex) {
 
       fieldBeds.forEach((bed) => {
         hierarchyRows.push(
-          getBedRow(bed, 1, fieldKey, field.id!, field.name, undefined),
+          getBedRow(bed, 1, fieldKey, field.id!, field.name, singleLocationId),
         );
       });
     });
