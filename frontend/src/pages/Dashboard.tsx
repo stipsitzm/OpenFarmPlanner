@@ -11,10 +11,10 @@ import { getFirstMissingRequirement } from './requirementFlow';
 import { deriveLocationTasks } from './locationDerivedTasks';
 
 const NEXT_STEP_CONFIG = {
-  locations: { textKey: 'dashboard:nextStep.locations.text', actionKey: 'dashboard:nextStep.locations.action', to: '/app/locations' },
+  locations: { textKey: 'dashboard:nextStep.locations.text', actionKey: 'dashboard:nextStep.locations.action', to: '/app/locations?create=true' },
   beds: { textKey: 'dashboard:nextStep.beds.text', actionKey: 'dashboard:nextStep.beds.action', to: '/app/fields' },
-  cultures: { textKey: 'dashboard:nextStep.cultures.text', actionKey: 'dashboard:nextStep.cultures.action', to: '/app/cultures' },
-  plans: { textKey: 'dashboard:nextStep.plans.text', actionKey: 'dashboard:nextStep.plans.action', to: '/app/planting-plans' },
+  cultures: { textKey: 'dashboard:nextStep.cultures.text', actionKey: 'dashboard:nextStep.cultures.action', to: '/app/cultures?create=true' },
+  plans: { textKey: 'dashboard:nextStep.plans.text', actionKey: 'dashboard:nextStep.plans.action', to: '/app/planting-plans?create=true' },
 } as const;
 
 export default function Dashboard(): React.ReactElement {
@@ -89,7 +89,7 @@ export default function Dashboard(): React.ReactElement {
           <CardContent>
             <Typography variant="h6" gutterBottom>{t('dashboard:emptyState.title')}</Typography>
             <Typography variant="body2" sx={{ mb: 2 }}>{t('dashboard:emptyState.shortDescription')}</Typography>
-            <Button component={RouterLink} to="/app/locations" variant="contained">{t('dashboard:emptyState.action')}</Button>
+            <Button component={RouterLink} to="/app/locations?create=true" variant="contained">{t('dashboard:emptyState.action')}</Button>
           </CardContent>
         </Card>
       ) : null}

@@ -51,7 +51,7 @@
   },
   "actions": {
     "addField": "Parzelle hinzufügen",
-    "createLocation": "Standort anlegen"
+    "createLocation": "Standort hinzufügen"
   },
   "dialogs": {
     "addField": {
@@ -64,9 +64,9 @@
     "title": "Noch keine Anbauflächen vorhanden",
     "description": "Anbauflächen bestehen aus Standorten, Parzellen und Beeten. Lege zuerst einen Standort an und ergänze danach Parzellen und Beete.",
     "actions": {
-      "createLocation": "Standort anlegen",
-      "createField": "Parzelle anlegen",
-      "createBed": "Beet anlegen"
+      "createLocation": "Standort hinzufügen",
+      "createField": "Parzelle hinzufügen",
+      "createBed": "Beet hinzufügen"
     }
   },
   "confirm": {

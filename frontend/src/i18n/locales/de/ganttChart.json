@@ -116,9 +116,9 @@
     "requirementsTitle": "Noch keine Anbauplanung möglich",
     "requirementsDescription": "Lege zuerst einen Standort an. Danach kannst du Parzellen, Beete, Kulturen und Anbaupläne erfassen.",
     "actions": {
-      "createLocation": "Standort anlegen",
-      "createCulture": "Kultur anlegen",
-      "createAreas": "Anbauflächen anlegen",
+      "createLocation": "Standort hinzufügen",
+      "createCulture": "Kultur hinzufügen",
+      "createAreas": "Parzelle hinzufügen",
       "createPlan": "Anbauplan erstellen"
     }
   }

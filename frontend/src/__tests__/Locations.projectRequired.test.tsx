@@ -111,9 +111,9 @@ describe("Locations project requirement state", () => {
       </MemoryRouter>,
     );
 
-    const emptyStateButton = await screen.findByRole("button", { name: "Standort anlegen" });
+    const emptyStateButton = await screen.findByRole("button", { name: "Standort hinzufügen" });
     fireEvent.click(emptyStateButton);
-    expect(await screen.findByRole("heading", { name: "Neuen Standort hinzufügen" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Standort hinzufügen" })).toBeInTheDocument();
     unmount();
 
     render(
@@ -121,11 +121,22 @@ describe("Locations project requirement state", () => {
         <Locations />
       </MemoryRouter>,
     );
-    const headerButton = await screen.findByRole("button", { name: "Neuen Standort hinzufügen" });
+    const headerButton = await screen.findByRole("button", { name: "Standort hinzufügen" });
     fireEvent.click(headerButton);
-    expect(await screen.findByRole("heading", { name: "Neuen Standort hinzufügen" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Standort hinzufügen" })).toBeInTheDocument();
 
     expect(consoleErrorSpy).not.toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+
+  it("opens the existing create dialog from query intent and clears create parameter", async () => {
+    render(
+      <MemoryRouter initialEntries={["/app/locations?create=true"]}>
+        <Locations />
+      </MemoryRouter>,
+    );
+
+    const createDialogHeadings = await screen.findAllByRole("heading", { name: "Standort hinzufügen" });
+    expect(createDialogHeadings).toHaveLength(1);
   });
 });

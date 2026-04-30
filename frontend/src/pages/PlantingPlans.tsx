@@ -451,6 +451,7 @@ function PlantingPlans(): React.ReactElement {
   const [mobileNotesDraft, setMobileNotesDraft] = useState("");
   const [isMobileNotesSaving, setIsMobileNotesSaving] = useState(false);
   const mobilePrefillHandledRef = useRef(false);
+  const createIntentHandledRef = useRef(false);
 
   useEffect(() => {
     if (isMobile) {
@@ -1472,6 +1473,25 @@ function PlantingPlans(): React.ReactElement {
   const shouldShowPrerequisiteState = !canCreatePlan;
   const shouldShowNoPlansState = canCreatePlan && !hasPlans;
 
+  useEffect(() => {
+    if (createIntentHandledRef.current || !canCreatePlan) {
+      return;
+    }
+    if (searchParams.get("create") !== "true") {
+      return;
+    }
+
+    if (isMobile) {
+      openMobileCreateDialog();
+    } else {
+      gridCommandApiRef.current?.addRow();
+    }
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("create");
+    setSearchParams(nextParams, { replace: true });
+    createIntentHandledRef.current = true;
+  }, [canCreatePlan, isMobile, searchParams, setSearchParams]);
+
   return (
     <PageContainer variant="xwide">
       <PageHeader
@@ -1515,16 +1535,16 @@ function PlantingPlans(): React.ReactElement {
               ...(firstMissingRequirement === "cultures" ? [{ label: t("plantingPlans:requirements.culture.label"), done: false, missingLabel: t("plantingPlans:requirements.culture.missing") }] : []),
             ]}
             actions={[
-              ...(firstMissingRequirement === "locations" ? [{ label: t("plantingPlans:emptyStates.actions.createLocation"), to: "/app/locations" }] : []),
+              ...(firstMissingRequirement === "locations" ? [{ label: t("plantingPlans:emptyStates.actions.createLocation"), to: "/app/locations?create=true" }] : []),
               ...(firstMissingRequirement === "beds" ? [{ label: t("plantingPlans:emptyStates.actions.createAreas"), to: "/app/fields" }] : []),
-              ...(firstMissingRequirement === "cultures" ? [{ label: t("plantingPlans:emptyStates.actions.createCulture"), to: "/app/cultures" }] : []),
+              ...(firstMissingRequirement === "cultures" ? [{ label: t("plantingPlans:emptyStates.actions.createCulture"), to: "/app/cultures?create=true" }] : []),
             ]}
           />
         ) : shouldShowNoPlansState ? (
           <EmptyStateCard
             title={t("plantingPlans:emptyStates.noPlansTitle")}
             description={t("plantingPlans:emptyStates.noPlansDescription")}
-            actions={[{ label: t("plantingPlans:emptyStates.actions.createPlan"), to: "/app/planting-plans" }]}
+            actions={[{ label: t("plantingPlans:emptyStates.actions.createPlan"), to: "/app/planting-plans?create=true" }]}
           />
         ) : null}
 

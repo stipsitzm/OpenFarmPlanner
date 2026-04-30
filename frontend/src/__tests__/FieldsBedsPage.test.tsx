@@ -205,6 +205,9 @@ describe('FieldsBedsPage', () => {
 
     renderPage();
     expect(await screen.findByText('Parzelle fehlt')).toBeInTheDocument();
+    const matchingButtons = await screen.findAllByRole('button', { name: 'Parzelle hinzufügen' });
+    fireEvent.click(matchingButtons[matchingButtons.length - 1]);
+    expect(await screen.findByRole('heading', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
   });
 
   it('shows missing bed requirement when fields exist but no beds exist', async () => {

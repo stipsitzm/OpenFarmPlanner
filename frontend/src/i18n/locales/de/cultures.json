@@ -313,6 +313,14 @@
     "delete": "Löschen",
     "deleteConfirm": "Möchten Sie diese Kultur wirklich löschen?",
     "createPlantingPlan": "Anbauplan erstellen",
+    "createBed": "Beet hinzufügen",
+    "createPlantingPlanDisabled": {
+      "locations": "Du brauchst zuerst mindestens einen Standort, um einen Anbauplan zu erstellen.",
+      "fields": "Du brauchst zuerst mindestens eine Parzelle, um einen Anbauplan zu erstellen.",
+      "beds": "Du brauchst zuerst mindestens ein Beet, um einen Anbauplan zu erstellen.",
+      "cultures": "Du brauchst zuerst mindestens eine Kultur, um einen Anbauplan zu erstellen.",
+      "null": "Anbauplan erstellen"
+    },
     "aiComplete": "Kultur vervollständigen (KI)",
     "aiReresearch": "Kultur komplett neu recherchieren (KI)",
     "aiCompleteAll": "Alle Kulturen vervollständigen (KI)",

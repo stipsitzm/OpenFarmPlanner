@@ -2,6 +2,14 @@
   "title": "Project settings",
   "noActiveProject": "No active project selected.",
   "projectLabel": "Project: {{name}}",
+  "projectRename": {
+    "label": "Rename project",
+    "save": "Save",
+    "cancel": "Cancel",
+    "success": "Project name updated.",
+    "error": "Project name could not be updated.",
+    "minLength": "At least 2 characters."
+  },
   "inviteSectionTitle": "Invite users",
   "emailLabel": "Email",
   "roleLabel": "Role",
