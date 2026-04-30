@@ -11,7 +11,7 @@ interface InviteFeedback {
 
 export default function ProjectSettingsPage(): React.ReactElement {
   const { t } = useTranslation('projectInvitations');
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const activeProjectId = Number(window.localStorage.getItem('activeProjectId'));
   const activeMembership = useMemo(
     () => (user?.memberships ?? []).find((membership) => membership.project_id === activeProjectId),
@@ -26,9 +26,15 @@ export default function ProjectSettingsPage(): React.ReactElement {
   const [pendingRemovalMember, setPendingRemovalMember] = useState<ProjectMemberPayload | null>(null);
   const [memberLoadError, setMemberLoadError] = useState<string | null>(null);
   const [invitationLoadError, setInvitationLoadError] = useState<string | null>(null);
+  const [projectNameDraft, setProjectNameDraft] = useState('');
+  const [isSavingProjectName, setIsSavingProjectName] = useState(false);
 
   const isProjectAdmin = activeMembership?.role === 'admin';
   const canManageMembers = isProjectAdmin;
+  const normalizedProjectName = projectNameDraft.trim();
+  const canSaveProjectName = isProjectAdmin
+    && normalizedProjectName.length >= 2
+    && normalizedProjectName !== (activeMembership?.project_name ?? '');
 
   const extractErrorPayload = (error: unknown): { code: string | null; detail: string | null; message: string | null } => {
     const payload = (error as { response?: { data?: { code?: string; detail?: string; message?: string } } })?.response?.data;
@@ -85,6 +91,20 @@ export default function ProjectSettingsPage(): React.ReactElement {
     }, 0);
   }, [loadInvitations]);
 
+  useEffect(() => {
+    setProjectNameDraft(activeMembership?.project_name ?? '');
+  }, [activeMembership?.project_name]);
+
+  const sortedInvitations = useMemo(() => (
+    [...invitations].sort((left, right) => {
+      const expiryDelta = new Date(right.expires_at).getTime() - new Date(left.expires_at).getTime();
+      if (expiryDelta !== 0) {
+        return expiryDelta;
+      }
+      return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+    })
+  ), [invitations]);
+
   if (!activeMembership) {
     return (
       <Box sx={{ p: 3 }}>
@@ -121,6 +141,23 @@ export default function ProjectSettingsPage(): React.ReactElement {
         ? t(`error.${payload.code}`, { defaultValue: payload.message ?? payload.detail ?? t('inviteFailed') })
         : (payload.message ?? payload.detail ?? t('inviteFailed'));
       setFeedback({ severity: 'error', text: message });
+    }
+  };
+
+  const handleProjectNameSave = async (): Promise<void> => {
+    if (!activeMembership || !canSaveProjectName) {
+      return;
+    }
+    setIsSavingProjectName(true);
+    setFeedback(null);
+    try {
+      await projectAPI.update(activeMembership.project_id, { name: normalizedProjectName });
+      await refreshUser();
+      setFeedback({ severity: 'success', text: t('projectRename.success') });
+    } catch {
+      setFeedback({ severity: 'error', text: t('projectRename.error') });
+    } finally {
+      setIsSavingProjectName(false);
     }
   };
 
@@ -185,20 +222,34 @@ export default function ProjectSettingsPage(): React.ReactElement {
     return null;
   })();
 
-  const sortedInvitations = useMemo(() => (
-    [...invitations].sort((left, right) => {
-      const expiryDelta = new Date(right.expires_at).getTime() - new Date(left.expires_at).getTime();
-      if (expiryDelta !== 0) {
-        return expiryDelta;
-      }
-      return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
-    })
-  ), [invitations]);
-
   return (
     <Box sx={{ p: 3, maxWidth: 760, mx: 'auto' }}>
       <Typography variant="h4" sx={{ mb: 1 }}>{t('title')}</Typography>
-      <Typography sx={{ mb: 3 }}>{t('projectLabel', { name: activeMembership.project_name })}</Typography>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 3 }} alignItems={{ sm: 'center' }}>
+        <TextField
+          label={t('projectRename.label')}
+          value={projectNameDraft}
+          onChange={(event) => setProjectNameDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && canSaveProjectName) {
+              event.preventDefault();
+              void handleProjectNameSave();
+            }
+          }}
+          disabled={!isProjectAdmin || isSavingProjectName}
+          error={projectNameDraft.trim().length > 0 && projectNameDraft.trim().length < 2}
+          helperText={projectNameDraft.trim().length > 0 && projectNameDraft.trim().length < 2 ? t('projectRename.minLength') : ' '}
+          fullWidth
+        />
+        <Button
+          variant="contained"
+          onClick={() => void handleProjectNameSave()}
+          disabled={!canSaveProjectName || isSavingProjectName}
+          sx={{ minWidth: 140 }}
+        >
+          {t('projectRename.save')}
+        </Button>
+      </Stack>
 
       <Typography variant="h6" sx={{ mb: 2 }}>{t('inviteSectionTitle')}</Typography>
       <Stack spacing={2}>

@@ -258,6 +258,8 @@ export interface VersionResponse {
 export const projectAPI = {
   create: (data: { name: string; description?: string }) =>
     http.post<ProjectPayload>('/projects/', data),
+  update: (projectId: number, data: { name: string }) =>
+    http.patch<ProjectPayload>(`/projects/${projectId}/`, data),
   invite: (projectId: number, data: { email: string; role: 'admin' | 'member' }) =>
     http.post(`/projects/${projectId}/invitations/`, data),
   listMembers: (projectId: number) =>

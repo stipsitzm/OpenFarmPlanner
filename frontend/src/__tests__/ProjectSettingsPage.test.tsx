@@ -21,12 +21,15 @@ const listMembersMock = vi.fn(async () => ({
 const updateMemberMock = vi.fn(async () => ({ data: { id: 11, role: 'admin' } }));
 const removeMemberMock = vi.fn(async () => ({}));
 const revokeInvitationMock = vi.fn();
+const updateProjectMock = vi.fn(async () => ({ data: { id: 1, name: 'Beta' } }));
+const refreshUserMock = vi.fn(async () => null);
 
 const authState = {
   user: {
     id: 1,
     memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' as const }],
   },
+  refreshUser: refreshUserMock,
 };
 
 vi.mock('../auth/useAuth', () => ({
@@ -45,6 +48,7 @@ vi.mock('../api/api', async () => {
       updateMember: (...args: unknown[]) => updateMemberMock(...args),
       removeMember: (...args: unknown[]) => removeMemberMock(...args),
       revokeInvitation: (...args: unknown[]) => revokeInvitationMock(...args),
+      update: (...args: unknown[]) => updateProjectMock(...args),
     },
   };
 });
@@ -62,6 +66,8 @@ describe('ProjectSettingsPage', () => {
     updateMemberMock.mockClear();
     removeMemberMock.mockClear();
     revokeInvitationMock.mockClear();
+    updateProjectMock.mockClear();
+    refreshUserMock.mockClear();
     listMock.mockResolvedValue({ data: [] });
     listMembersMock.mockResolvedValue({
       data: [
@@ -208,5 +214,37 @@ describe('ProjectSettingsPage', () => {
     expect(
       newerInvitation.compareDocumentPosition(olderInvitation) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0);
+  });
+
+  it('shows current project name and allows renaming via PATCH', async () => {
+    render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+    const projectNameInput = await screen.findByLabelText('Projekt umbenennen');
+    expect(projectNameInput).toHaveValue('Alpha');
+
+    fireEvent.change(projectNameInput, { target: { value: 'Beta' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => expect(updateProjectMock).toHaveBeenCalledWith(1, { name: 'Beta' }));
+    await waitFor(() => expect(refreshUserMock).toHaveBeenCalled());
+  });
+
+  it('prevents empty or unchanged project name saves', async () => {
+    render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+    const projectNameInput = await screen.findByLabelText('Projekt umbenennen');
+    const saveButton = screen.getByRole('button', { name: 'Speichern' });
+
+    expect(saveButton).toBeDisabled();
+    fireEvent.change(projectNameInput, { target: { value: '   ' } });
+    expect(saveButton).toBeDisabled();
+    expect(updateProjectMock).not.toHaveBeenCalled();
+  });
+
+  it('submits rename on Enter key', async () => {
+    render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+    const projectNameInput = await screen.findByLabelText('Projekt umbenennen');
+    fireEvent.change(projectNameInput, { target: { value: 'Gamma' } });
+    fireEvent.keyDown(projectNameInput, { key: 'Enter', code: 'Enter' });
+
+    await waitFor(() => expect(updateProjectMock).toHaveBeenCalledWith(1, { name: 'Gamma' }));
   });
 });
