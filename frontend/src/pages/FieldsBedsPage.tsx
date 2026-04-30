@@ -103,7 +103,7 @@ export default function FieldsBedsPage(): React.ReactElement {
 
   const handleGlobalAddField = useCallback((): void => {
     if (locations.length === 0) {
-      navigate('/app/locations');
+      navigate('/app/locations?create=true');
       return;
     }
 
@@ -248,8 +248,8 @@ export default function FieldsBedsPage(): React.ReactElement {
               { label: t('hierarchy:columns.bed'), done: hasBeds },
             ]}
             actions={[
-              ...(!hasLocations ? [{ label: t('hierarchy:emptyAreas.actions.createLocation'), to: '/app/locations' }] : []),
-              ...(hasLocations && !hasFields ? [{ label: t('hierarchy:emptyAreas.actions.createField'), to: '/app/fields' }] : []),
+              ...(!hasLocations ? [{ label: t('hierarchy:emptyAreas.actions.createLocation'), onClick: () => navigate('/app/locations?create=true') }] : []),
+              ...(hasLocations && !hasFields ? [{ label: t('hierarchy:emptyAreas.actions.createField'), onClick: handleGlobalAddField }] : []),
               ...(hasFields && !hasBeds ? [{ label: t('hierarchy:emptyAreas.actions.createBed'), to: '/app/fields' }] : []),
             ]}
           />

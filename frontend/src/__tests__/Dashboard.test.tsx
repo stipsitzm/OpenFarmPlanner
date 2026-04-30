@@ -46,7 +46,7 @@ describe('Dashboard', () => {
     render(<MemoryRouter><Dashboard /></MemoryRouter>);
     expect(await screen.findByText('Starte deine Anbauplanung')).toBeInTheDocument();
     expect(screen.getByText('Lege zuerst einen Standort an.')).toBeInTheDocument();
-    const createLocationLinks = screen.getAllByRole('link', { name: 'Standort anlegen' });
+    const createLocationLinks = screen.getAllByRole('link', { name: 'Standort hinzufügen' });
     expect(createLocationLinks).toHaveLength(1);
     expect(createLocationLinks[0]).toHaveAttribute('href', '/app/locations?create=true');
     expect(screen.queryByText('Projektstatus')).not.toBeInTheDocument();

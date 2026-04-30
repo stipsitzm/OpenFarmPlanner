@@ -12,7 +12,7 @@
     "coordinateFormat": "Bitte Koordinaten im Format „Breitengrad, Längengrad“ eingeben."
   },
   "confirmDelete": "Möchten Sie diesen Standort wirklich löschen?",
-  "addButton": "Neuen Standort hinzufügen",
+  "addButton": "Standort hinzufügen",
   "editTitle": "Standort bearbeiten",
   "emptyState": "Noch keine Standorte vorhanden.",
   "openInGoogleMaps": "In Google Maps öffnen",

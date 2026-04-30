@@ -7,7 +7,7 @@
     "title": "Starte deine Anbauplanung",
     "description": "Lege zuerst einen Standort an. Danach kannst du Anbauflächen, Kulturen und Anbaupläne erfassen.",
     "shortDescription": "Lege zuerst einen Standort an.",
-    "action": "Standort anlegen"
+    "action": "Standort hinzufügen"
   },
   "setup": {
     "title": "Projektstatus",
@@ -22,9 +22,9 @@
   },
   "nextStep": {
     "title": "Nächster sinnvoller Schritt",
-    "locations": { "text": "Lege zuerst einen Standort an.", "action": "Standort anlegen" },
-    "beds": { "text": "Lege als Nächstes deine Anbauflächen an.", "action": "Anbauflächen anlegen" },
-    "cultures": { "text": "Lege deine ersten Kulturen an.", "action": "Kultur anlegen" },
+    "locations": { "text": "Lege zuerst einen Standort an.", "action": "Standort hinzufügen" },
+    "beds": { "text": "Lege als Nächstes deine Anbauflächen an.", "action": "Parzelle hinzufügen" },
+    "cultures": { "text": "Lege deine ersten Kulturen an.", "action": "Kultur hinzufügen" },
     "plans": { "text": "Erstelle deinen ersten Anbauplan.", "action": "Anbauplan erstellen" }
   },
   "tasks": {
