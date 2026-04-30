@@ -1,0 +1,47 @@
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it } from 'vitest';
+import EmptyStateCard from '../components/project/EmptyStateCard';
+import RequirementChecklist from '../components/project/RequirementChecklist';
+
+describe('Empty state components', () => {
+  it('renders a neutral outlined empty-state container with consistent action variants', () => {
+    render(
+      <MemoryRouter>
+        <EmptyStateCard
+          title="Noch keine Daten"
+          description="Lege zuerst Daten an."
+          actions={[
+            { label: 'Primäre Aktion', to: '/app/cultures' },
+            { label: 'Sekundäre Aktion', to: '/app/fields' },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    const primary = screen.getByRole('link', { name: 'Primäre Aktion' });
+    const secondary = screen.getByRole('link', { name: 'Sekundäre Aktion' });
+
+    expect(screen.getByTestId('InfoOutlinedIcon')).toBeInTheDocument();
+    expect(screen.getByText('Noch keine Daten')).toBeInTheDocument();
+    expect(screen.getByText('Lege zuerst Daten an.')).toBeInTheDocument();
+    expect(primary.className).toContain('MuiButton-contained');
+    expect(secondary.className).toContain('MuiButton-outlined');
+  });
+
+  it('shows requirement states without duplicated status text', () => {
+    render(
+      <RequirementChecklist
+        items={[
+          { label: 'Kultur', satisfied: true },
+          { label: 'Beet', satisfied: false },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Kultur vorhanden')).toBeInTheDocument();
+    expect(screen.getByText('Beet fehlt')).toBeInTheDocument();
+    expect(screen.queryByText('Kultur vorhanden vorhanden')).not.toBeInTheDocument();
+    expect(screen.queryByText('Beet fehlt fehlt')).not.toBeInTheDocument();
+  });
+});

@@ -55,6 +55,7 @@ import {
   type GanttTask,
   type GanttTaskGroup,
 } from './ganttChartUtils';
+import { getFirstMissingRequirement } from './requirementFlow';
 
 interface WeeklyYieldCultureMeta {
   id: number;
@@ -313,6 +314,16 @@ function GanttChartPage(): React.ReactElement {
   }), [calendarMode, t]);
 
   const activeTaskGroups = calendarMode === 'occupancy' ? occupancyTaskGroups : seedlingTaskGroups;
+  const hasCultures = cultures.length > 0;
+  const hasBeds = beds.length > 0;
+  const hasPlantingPlans = plantingPlans.length > 0;
+  const firstMissingRequirement = getFirstMissingRequirement({
+    hasLocations: locations.length > 0,
+    hasBeds,
+    hasCultures,
+    hasPlans: hasPlantingPlans,
+  });
+  const hasCalendarRequirements = firstMissingRequirement === null;
 
   const renderOccupancyTooltip = useCallback(({ task }: { task: GanttTask }) => (
     <Box sx={{ p: 0.5 }}>
@@ -396,6 +407,7 @@ function GanttChartPage(): React.ReactElement {
       maxTotalYield: maxYield,
     };
   }, [weeklyYield]);
+  const hasYieldData = chartData.length > 0;
 
   const yAxisTicks = useMemo(() => {
     const tickCount = 5;
@@ -431,18 +443,20 @@ function GanttChartPage(): React.ReactElement {
       <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-        <Box sx={{ mb: 2 }}>
-          <Tabs
-            value={calendarMode}
-            onChange={(_, value: CalendarMode) => setCalendarMode(value)}
-            aria-label={t('ganttChart:viewSelectorAriaLabel')}
-          >
-            <Tab label={t('ganttChart:modes.occupancy')} value="occupancy" />
-            <Tab label={t('ganttChart:modes.seedlings')} value="seedlings" />
-          </Tabs>
-        </Box>
+        {hasCalendarRequirements ? (
+          <Box sx={{ mb: 2 }}>
+            <Tabs
+              value={calendarMode}
+              onChange={(_, value: CalendarMode) => setCalendarMode(value)}
+              aria-label={t('ganttChart:viewSelectorAriaLabel')}
+            >
+              <Tab label={t('ganttChart:modes.occupancy')} value="occupancy" />
+              <Tab label={t('ganttChart:modes.seedlings')} value="seedlings" />
+            </Tabs>
+          </Box>
+        ) : null}
 
-        {calendarMode === 'occupancy' ? (
+        {hasCalendarRequirements && calendarMode === 'occupancy' ? (
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <ModeToggle
               label={t('ganttChart:modeLabel')}
@@ -458,24 +472,29 @@ function GanttChartPage(): React.ReactElement {
           </Box>
         ) : null}
 
-        <Paper className="gantt-container-wrapper">
-          {activeTaskGroups.length === 0 ? (
+        {!hasCalendarRequirements ? (
+          <Paper className="gantt-container-wrapper">
             <Box sx={{ p: 2 }}>
               <EmptyStateCard
-                title="Noch keine Anbaupläne vorhanden"
-                description="Der Anbaukalender zeigt deine geplanten Kulturen über die Zeit. Lege zuerst einen Anbauplan an – danach erscheint er automatisch hier."
+                title={t('ganttChart:emptyStates.requirementsTitle')}
+                description={t('ganttChart:emptyStates.requirementsDescription')}
                 checklist={[
-                  { label: 'Kultur angelegt', done: cultures.length > 0 },
-                  { label: 'Beet angelegt', done: beds.length > 0 },
+                  ...(firstMissingRequirement === 'locations' ? [{ label: t('ganttChart:requirements.location.label'), done: false, missingLabel: t('ganttChart:requirements.location.missing') }] : []),
+                  ...(firstMissingRequirement === 'beds' ? [{ label: t('ganttChart:requirements.bed.label'), done: false, missingLabel: t('ganttChart:requirements.bed.missing') }] : []),
+                  ...(firstMissingRequirement === 'cultures' ? [{ label: t('ganttChart:requirements.culture.label'), done: false, missingLabel: t('ganttChart:requirements.culture.missing') }] : []),
+                  ...(firstMissingRequirement === 'plans' ? [{ label: t('ganttChart:requirements.plan.label'), done: false, missingLabel: t('ganttChart:requirements.plan.missing') }] : []),
                 ]}
                 actions={[
-                  ...(cultures.length === 0 ? [{ label: 'Kultur anlegen', to: '/app/cultures' }] : []),
-                  ...(beds.length === 0 ? [{ label: 'Anbauflächen anlegen', to: '/app/fields' }] : []),
-                  ...(cultures.length > 0 && beds.length > 0 ? [{ label: 'Anbauplan erstellen', to: '/app/planting-plans' }] : []),
+                  ...(firstMissingRequirement === 'locations' ? [{ label: t('ganttChart:emptyStates.actions.createLocation'), to: '/app/locations' }] : []),
+                  ...(firstMissingRequirement === 'beds' ? [{ label: t('ganttChart:emptyStates.actions.createAreas'), to: '/app/fields' }] : []),
+                  ...(firstMissingRequirement === 'cultures' ? [{ label: t('ganttChart:emptyStates.actions.createCulture'), to: '/app/cultures' }] : []),
+                  ...(firstMissingRequirement === 'plans' ? [{ label: t('ganttChart:emptyStates.actions.createPlan'), to: '/app/planting-plans' }] : []),
                 ]}
               />
             </Box>
-          ) : (
+          </Paper>
+        ) : (
+          <Paper className="gantt-container-wrapper">
             <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
               <GanttChart
                 key={ganttRenderKey}
@@ -525,17 +544,14 @@ function GanttChartPage(): React.ReactElement {
                   : undefined}
               />
             </GanttRenderBoundary>
-          )}
-        </Paper>
+          </Paper>
+        )}
 
-        {calendarMode === 'occupancy' ? (
+        {hasCalendarRequirements && calendarMode === 'occupancy' && hasYieldData ? (
           <Paper className="gantt-container-wrapper" sx={{ mt: 3, p: 2 }}>
             <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
               {t('ganttChart:yieldDistributionTitle')}
             </Typography>
-            {chartData.length === 0 ? (
-              <div className="gantt-no-data">{t('ganttChart:noYieldData')}</div>
-            ) : (
               <Box sx={{ width: '100%' }}>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                   {chartCultures.map((culture) => (
@@ -593,7 +609,6 @@ function GanttChartPage(): React.ReactElement {
                   </Box>
                 </Box>
               </Box>
-            )}
           </Paper>
         ) : null}
     </PageContainer>

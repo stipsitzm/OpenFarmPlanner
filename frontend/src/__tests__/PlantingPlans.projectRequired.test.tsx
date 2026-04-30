@@ -5,7 +5,10 @@ import PlantingPlans from "../pages/PlantingPlans";
 
 const apiMocks = vi.hoisted(() => ({
   cultureList: vi.fn(),
+  locationList: vi.fn(),
+  fieldList: vi.fn(),
   bedList: vi.fn(),
+  planList: vi.fn(),
 }));
 
 const projectRequirementState = vi.hoisted(() => ({
@@ -21,6 +24,14 @@ vi.mock("../commands/useCommandContext", () => ({
   useCommandContextTag: vi.fn(),
   useRegisterCommands: vi.fn(),
 }));
+vi.mock("../hooks/useNavigationBlocker", () => ({
+  useNavigationBlocker: () => ({
+    isBlocked: false,
+    proceed: vi.fn(),
+    reset: vi.fn(),
+    destination: null,
+  }),
+}));
 
 vi.mock("../api/api", async () => {
   const actual = await vi.importActual<typeof import("../api/api")>("../api/api");
@@ -30,9 +41,21 @@ vi.mock("../api/api", async () => {
       ...actual.cultureAPI,
       list: apiMocks.cultureList,
     },
+    locationAPI: {
+      ...actual.locationAPI,
+      list: apiMocks.locationList,
+    },
+    fieldAPI: {
+      ...actual.fieldAPI,
+      list: apiMocks.fieldList,
+    },
     bedAPI: {
       ...actual.bedAPI,
       list: apiMocks.bedList,
+    },
+    plantingPlanAPI: {
+      ...actual.plantingPlanAPI,
+      list: apiMocks.planList,
     },
   };
 });
@@ -43,7 +66,10 @@ describe("PlantingPlans project requirement state", () => {
     projectRequirementState.shouldShowProjectRequiredState = false;
     projectRequirementState.missingProjectReason = null;
     apiMocks.cultureList.mockResolvedValue({ data: { results: [] } });
+    apiMocks.locationList.mockResolvedValue({ data: { results: [] } });
+    apiMocks.fieldList.mockResolvedValue({ data: { results: [] } });
     apiMocks.bedList.mockResolvedValue({ data: { results: [] } });
+    apiMocks.planList.mockResolvedValue({ data: { results: [] } });
   });
 
   it("shows friendly no-project state and skips project-bound loading", async () => {
@@ -60,5 +86,21 @@ describe("PlantingPlans project requirement state", () => {
     expect(screen.getByRole("button", { name: "Erstes Projekt anlegen" })).toBeInTheDocument();
     expect(apiMocks.cultureList).not.toHaveBeenCalled();
     expect(apiMocks.bedList).not.toHaveBeenCalled();
+  });
+
+  it("shows only location as first missing requirement when no locations exist", async () => {
+    render(
+      <MemoryRouter>
+        <PlantingPlans />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Du kannst noch keinen Anbauplan erstellen")).toBeInTheDocument();
+    expect(screen.getByText("Standort fehlt")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Standort anlegen" })).toBeInTheDocument();
+    expect(screen.queryByText("Kultur fehlt")).not.toBeInTheDocument();
+    expect(screen.queryByText("Beet fehlt")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Kultur anlegen" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Anbauflächen anlegen" })).not.toBeInTheDocument();
   });
 });

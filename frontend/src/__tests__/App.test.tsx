@@ -92,9 +92,35 @@ describe('App', () => {
     render(<CommandProvider><App /></CommandProvider>);
 
     expect(await screen.findByText(translations.navigation.locations)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Übersicht' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'OpenFarmPlanner' }).length).toBeGreaterThan(0);
     expect(screen.getByText(translations.navigation.cultures)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: translations.navigation.plantingPlans })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Aktives Projekt wechseln' })).toBeInTheDocument();
+  });
+
+  it('links logo to dashboard when an active project is selected', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: 1,
+      last_project_id: 1,
+      resolved_project_id: 1,
+      needs_project_selection: false,
+      memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+    };
+    authState.activeProjectId = 1;
+    window.history.pushState({}, '', '/app/locations');
+
+    render(<CommandProvider><App /></CommandProvider>);
+
+    const logoLinks = await screen.findAllByRole('link', { name: 'OpenFarmPlanner' });
+    expect(logoLinks[0]).toHaveAttribute('href', '/app/dashboard');
   });
 
   it('shows account settings in three-dot menu without project settings', async () => {

@@ -103,6 +103,50 @@ beforeEach(() => {
 });
 
 describe('GanttChartPage', () => {
+  it('shows only location as first missing requirement when no locations exist', async () => {
+    mocks.planList.mockResolvedValue({ data: { results: [] } });
+    mocks.cultureList.mockResolvedValue({ data: { results: [] } });
+    mocks.bedList.mockResolvedValue({ data: { results: [] } });
+    mocks.locationList.mockResolvedValue({ data: { results: [] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText('Noch keine Anbauplanung möglich')).toBeInTheDocument());
+    expect(screen.getByText('Standort fehlt')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Standort anlegen' })).toBeInTheDocument();
+    expect(screen.queryByText('Kultur fehlt')).not.toBeInTheDocument();
+    expect(screen.queryByText('Beet fehlt')).not.toBeInTheDocument();
+    expect(screen.queryByText('Anbauplan fehlt')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Kultur anlegen' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Anbauflächen anlegen' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Feldbelegung' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ansicht' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Ertragsverteilung')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mock-gantt')).not.toBeInTheDocument();
+  });
+
+  it('shows "Anbauplan fehlt" when cultures and beds exist but no plan exists', async () => {
+    mocks.planList.mockResolvedValue({ data: { results: [] } });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText('Anbauplan fehlt')).toBeInTheDocument());
+    expect(screen.getByRole('link', { name: 'Anbauplan erstellen' })).toBeInTheDocument();
+  });
+
   it('shows project-required info instead of a red load error when no project is active', async () => {
     projectRequirementState.shouldShowProjectRequiredState = true;
     projectRequirementState.missingProjectReason = 'no_active_project';
@@ -256,8 +300,8 @@ describe('GanttChartPage', () => {
   });
 
   it('fills empty yield weeks between available week entries', async () => {
-    mocks.planList.mockResolvedValue({ data: { results: [] } });
-    mocks.cultureList.mockResolvedValue({ data: { results: [] } });
+    mocks.planList.mockResolvedValue({ data: { results: [{ id: 10, culture: 1, culture_name: 'Kohl', bed: 3, planting_date: '2026-03-01' }] } });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Kohl' }] } });
     mocks.yieldList.mockResolvedValue({
       data: [
         {
@@ -285,6 +329,23 @@ describe('GanttChartPage', () => {
     expect(screen.getByText('W13')).toBeInTheDocument();
     expect(screen.getByText('W14')).toBeInTheDocument();
     expect(screen.getByText('W15')).toBeInTheDocument();
+  });
+
+  it('hides yield distribution area when no yield data is available', async () => {
+    mocks.planList.mockResolvedValue({ data: { results: [{ id: 10, culture: 1, culture_name: 'Kohl', bed: 3, planting_date: '2026-03-01' }] } });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Kohl' }] } });
+    mocks.yieldList.mockResolvedValue({ data: [] });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('mock-gantt')).toBeInTheDocument());
+    expect(screen.queryByText('Ertragsverteilung')).not.toBeInTheDocument();
   });
 
   it('still shows a red load error for real API failures', async () => {

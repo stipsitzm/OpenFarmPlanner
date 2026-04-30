@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Alert,
   Box,
@@ -6,7 +6,6 @@ import {
   Card,
   CardActions,
   CardContent,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -20,13 +19,12 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, type Bed, type Culture, type Field, type Location, type PlantingPlan } from '../api/api';
+import { locationAPI, type Location } from '../api/api';
 import PageHelp from '../components/help/PageHelp';
 import PageHeader from '../components/layout/PageHeader';
 import PageContainer from '../components/layout/PageContainer';
 import { useTranslation } from '../i18n';
 import { resolveLocaleFromLanguage } from '../utils/numberLocalization';
-import { deriveLocationTasks, type DerivedLocationTask } from './locationDerivedTasks';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
@@ -102,12 +100,6 @@ const validateCoordinateRange = (value: number | null, min: number, max: number)
 const formatCoordinate = (value: number, locale: string): string =>
   new Intl.NumberFormat(locale, { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(value);
 
-const formatTaskDate = (value: string, locale: string): string => {
-  const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString(locale);
-};
-
 const toFormState = (location: Location | null): LocationFormState => ({
   name: location?.name ?? '',
   coordinates:
@@ -126,10 +118,6 @@ function Locations(): React.ReactElement {
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [fields, setFields] = useState<Field[]>([]);
-  const [beds, setBeds] = useState<Bed[]>([]);
-  const [plantingPlans, setPlantingPlans] = useState<PlantingPlan[]>([]);
-  const [cultures, setCultures] = useState<Culture[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
@@ -142,18 +130,8 @@ function Locations(): React.ReactElement {
     setLoading(true);
     setError('');
     try {
-      const [locationsResponse, fieldsResponse, bedsResponse, plansResponse, culturesResponse] = await Promise.all([
-        locationAPI.list(),
-        fieldAPI.list(),
-        bedAPI.list(),
-        plantingPlanAPI.list(),
-        cultureAPI.list(),
-      ]);
+      const [locationsResponse] = await Promise.all([locationAPI.list()]);
       setLocations(locationsResponse.data.results);
-      setFields(fieldsResponse.data.results);
-      setBeds(bedsResponse.data.results);
-      setPlantingPlans(plansResponse.data.results);
-      setCultures(culturesResponse.data.results);
     } catch {
       setError(t('locations:errors.load'));
     } finally {
@@ -169,18 +147,6 @@ function Locations(): React.ReactElement {
     }
     void loadData();
   }, [loadData, shouldShowProjectRequiredState]);
-
-  const tasksByLocation = useMemo(
-    () =>
-      deriveLocationTasks({
-        locations,
-        fields,
-        beds,
-        plantingPlans,
-        cultures,
-      }),
-    [beds, cultures, fields, locations, plantingPlans],
-  );
 
   const openCreateDialog = (): void => {
     setEditingLocation(null);
@@ -280,12 +246,6 @@ function Locations(): React.ReactElement {
     }
   };
 
-  const renderTaskLine = (task: DerivedLocationTask): string => {
-    const taskTitle = t(`locations:taskTitles.${task.type}`);
-    const culture = task.cultureName ? ` – ${task.cultureName}` : '';
-    return `${formatTaskDate(task.date, numberLocale)} – ${taskTitle}${culture}`;
-  };
-
   return (
     <PageContainer>
       <Box sx={{ width: '100%', mx: 'auto' }}>
@@ -313,7 +273,7 @@ function Locations(): React.ReactElement {
           <EmptyStateCard
             title="Noch keine Standorte vorhanden"
             description="Standorte helfen dir, deine Anbauflächen zu strukturieren, zum Beispiel verschiedene Gärten oder Felder."
-            actions={[{ label: 'Standort anlegen', to: '/app/locations' }]}
+            actions={[{ label: 'Standort anlegen', onClick: openCreateDialog }]}
           />
         ) : (
           !shouldShowProjectRequiredState && (
@@ -333,7 +293,6 @@ function Locations(): React.ReactElement {
               const mapLink = hasCoordinates
                 ? `https://www.google.com/maps?q=${location.latitude},${location.longitude}`
                 : null;
-              const taskPreview = (location.id ? tasksByLocation[location.id] : []) ?? [];
 
               return (
                 <Box
@@ -375,22 +334,6 @@ function Locations(): React.ReactElement {
                         </Typography>
                       </Stack>
 
-                      <Box mt={2}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          {t('locations:upcomingTasks')}
-                        </Typography>
-                        {taskPreview.length === 0 ? (
-                          <Typography variant="body2" color="text.secondary">
-                            {t('locations:noUpcomingTasks')}
-                          </Typography>
-                        ) : (
-                          <Stack spacing={0.5}>
-                            {taskPreview.slice(0, 3).map((task) => (
-                              <Chip key={`${task.type}-${task.date}-${task.planId ?? 'na'}`} label={renderTaskLine(task)} size="small" />
-                            ))}
-                          </Stack>
-                        )}
-                      </Box>
                     </CardContent>
                     <CardActions sx={{ justifyContent: 'flex-end', mt: 'auto' }}>
                       <Button size="small" startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(location)}>

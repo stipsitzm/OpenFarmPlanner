@@ -89,5 +89,37 @@
   },
   "seedlings": {
     "emptyState": "Keine Jungpflanzen-Anzuchtzeiträume für dieses Jahr vorhanden."
+  },
+  "requirements": {
+    "location": {
+      "label": "Standort",
+      "missing": "Standort fehlt",
+      "done": "Standort vorhanden"
+    },
+    "culture": {
+      "label": "Kultur",
+      "missing": "Kultur fehlt",
+      "done": "Kultur vorhanden"
+    },
+    "bed": {
+      "label": "Beet",
+      "missing": "Beet fehlt",
+      "done": "Beet vorhanden"
+    },
+    "plan": {
+      "label": "Anbauplan",
+      "missing": "Anbauplan fehlt",
+      "done": "Anbauplan vorhanden"
+    }
+  },
+  "emptyStates": {
+    "requirementsTitle": "Noch keine Anbauplanung möglich",
+    "requirementsDescription": "Lege zuerst einen Standort an. Danach kannst du Parzellen, Beete, Kulturen und Anbaupläne erfassen.",
+    "actions": {
+      "createLocation": "Standort anlegen",
+      "createCulture": "Kultur anlegen",
+      "createAreas": "Anbauflächen anlegen",
+      "createPlan": "Anbauplan erstellen"
+    }
   }
 }

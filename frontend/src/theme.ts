@@ -6,7 +6,9 @@ const theme = createTheme({
   palette: {
     // Primary color used by contained buttons and primary components
     primary: {
-      main: '#1976d2',
+      main: '#2e7d32',
+      dark: '#1b5e20',
+      light: '#60ad5e',
     },
     secondary: {
       main: '#9c27b0',

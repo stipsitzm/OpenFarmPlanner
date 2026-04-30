@@ -77,6 +77,7 @@ import {
 } from "../commands/useCommandContext";
 import type { CommandSpec } from "../commands/types";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
+import { getFirstMissingRequirement } from "./requirementFlow";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
 import EmptyStateCard from "../components/project/EmptyStateCard";
@@ -1457,9 +1458,16 @@ function PlantingPlans(): React.ReactElement {
       );
     }
   };
+  const hasLocations = locations.length > 0;
   const hasCultures = cultures.length > 0;
   const hasBeds = beds.length > 0;
-  const canCreatePlan = hasCultures && hasBeds;
+  const firstMissingRequirement = getFirstMissingRequirement({
+    hasLocations,
+    hasBeds,
+    hasCultures,
+    hasPlans: false,
+  });
+  const canCreatePlan = firstMissingRequirement === "plans";
   const hasPlans = mobileRows.length > 0;
   const shouldShowPrerequisiteState = !canCreatePlan;
   const shouldShowNoPlansState = canCreatePlan && !hasPlans;
@@ -1502,12 +1510,14 @@ function PlantingPlans(): React.ReactElement {
             title={t("plantingPlans:emptyStates.missingRequirementsTitle")}
             description={t("plantingPlans:emptyStates.missingRequirementsDescription")}
             checklist={[
-              { label: t("plantingPlans:columns.culture"), done: hasCultures },
-              { label: t("plantingPlans:columns.bed"), done: hasBeds },
+              ...(firstMissingRequirement === "locations" ? [{ label: t("plantingPlans:requirements.location.label"), done: false, missingLabel: t("plantingPlans:requirements.location.missing") }] : []),
+              ...(firstMissingRequirement === "beds" ? [{ label: t("plantingPlans:requirements.bed.label"), done: false, missingLabel: t("plantingPlans:requirements.bed.missing") }] : []),
+              ...(firstMissingRequirement === "cultures" ? [{ label: t("plantingPlans:requirements.culture.label"), done: false, missingLabel: t("plantingPlans:requirements.culture.missing") }] : []),
             ]}
             actions={[
-              ...(!hasCultures ? [{ label: t("plantingPlans:emptyStates.actions.createCulture"), to: "/app/cultures" }] : []),
-              ...(!hasBeds ? [{ label: t("plantingPlans:emptyStates.actions.createAreas"), to: "/app/fields" }] : []),
+              ...(firstMissingRequirement === "locations" ? [{ label: t("plantingPlans:emptyStates.actions.createLocation"), to: "/app/locations" }] : []),
+              ...(firstMissingRequirement === "beds" ? [{ label: t("plantingPlans:emptyStates.actions.createAreas"), to: "/app/fields" }] : []),
+              ...(firstMissingRequirement === "cultures" ? [{ label: t("plantingPlans:emptyStates.actions.createCulture"), to: "/app/cultures" }] : []),
             ]}
           />
         ) : shouldShowNoPlansState ? (
