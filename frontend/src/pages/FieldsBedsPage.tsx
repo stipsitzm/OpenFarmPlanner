@@ -1,6 +1,7 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AddIcon from '@mui/icons-material/Add';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
@@ -240,9 +241,26 @@ export default function FieldsBedsPage(): React.ReactElement {
           <ProjectRequiredState reason={missingProjectReason} />
         ) : null}
         {!shouldShowProjectRequiredState && shouldShowMissingBedsHint ? (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            {t('hierarchy:messages.noBedsHint')}
-          </Alert>
+          <Box
+            sx={{
+              mb: 2,
+              px: 1.25,
+              py: 0.9,
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'success.200',
+              bgcolor: 'success.50',
+              color: 'success.dark',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.75,
+            }}
+          >
+            <AddIcon fontSize="small" sx={{ color: 'success.dark', flexShrink: 0 }} aria-hidden="true" />
+            <Typography variant="body2" color="inherit">
+              {t('hierarchy:messages.noBedsHint')}
+            </Typography>
+          </Box>
         ) : null}
         {!shouldShowProjectRequiredState && shouldShowAreasEmptyState ? (
           <EmptyStateCard

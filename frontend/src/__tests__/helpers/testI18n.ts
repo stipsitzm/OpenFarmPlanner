@@ -7,6 +7,7 @@ export const i18nMap: Record<string, string> = {
   'hierarchy:columns.name': 'Name',
   'hierarchy:columns.area': 'Fläche (m²)',
   'hierarchy:addBed': 'Beet hinzufügen',
+  'hierarchy:addBedToField': 'Beet zu dieser Parzelle hinzufügen',
   'hierarchy:addField': 'Parzelle hinzufügen',
   addField: 'Parzelle hinzufügen',
   'hierarchy:createPlantingPlan': 'Pflanzplan erstellen',

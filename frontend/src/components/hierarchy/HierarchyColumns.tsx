@@ -47,11 +47,13 @@ function renderActionIconButton({
   color,
   onClick,
   icon,
+  sx,
 }: {
   label: string;
   color?: 'default' | 'primary' | 'error';
   onClick: (event: MouseEvent) => void;
   icon: ReactElement;
+  sx?: Record<string, unknown>;
 }): ReactElement {
   return (
     <Tooltip title={label}>
@@ -63,6 +65,7 @@ function renderActionIconButton({
           event.stopPropagation();
           onClick(event);
         }}
+        sx={sx}
       >
         {icon}
       </IconButton>
@@ -88,10 +91,27 @@ function renderInlineActions(
     return (
       <>
         {renderActionIconButton({
-          label: t('hierarchy:addBed'),
-          color: 'primary',
+          label: t('hierarchy:addBedToField'),
           onClick: () => callbacks.onAddBed(row.fieldId!),
           icon: <AddIcon fontSize="small" />,
+          sx: {
+            width: 30,
+            height: 30,
+            bgcolor: 'success.50',
+            color: 'success.dark',
+            borderRadius: '999px',
+            border: '1px solid',
+            borderColor: 'success.200',
+            '&:hover': {
+              bgcolor: 'success.100',
+              borderColor: 'success.300',
+            },
+            '&:focus-visible': {
+              outline: '2px solid',
+              outlineColor: 'success.main',
+              outlineOffset: '2px',
+            },
+          },
         })}
         {renderActionIconButton({
           label: t('common:actions.delete'),
