@@ -92,7 +92,7 @@ describe('App', () => {
     render(<CommandProvider><App /></CommandProvider>);
 
     expect(await screen.findByText(translations.navigation.locations)).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Übersicht' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Übersicht' })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'OpenFarmPlanner' }).length).toBeGreaterThan(0);
     expect(screen.getByText(translations.navigation.cultures)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: translations.navigation.plantingPlans })).toBeInTheDocument();

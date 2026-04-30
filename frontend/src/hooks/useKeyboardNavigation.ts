@@ -10,24 +10,11 @@
  */
 
 import { useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-
-const APP_BASE = '/app';
-
-// Define the ordered list of routes to cycle through.
-const ROUTES = [
-  '/app/locations',
-  '/app/fields-beds',
-  '/app/cultures',
-  '/app/anbauplaene',
-  '/app/gantt-chart',
-  '/app/seed-demand',
-  '/app/suppliers',
-];
+import { useNavigate } from 'react-router-dom';
+import { MAIN_NAV_ROUTES, normalizeMainRoutePath } from '../navigation/mainNavigation';
 
 export function useKeyboardNavigation(): void {
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
@@ -52,34 +39,26 @@ export function useKeyboardNavigation(): void {
 
       event.preventDefault();
 
-      // Normalize pathname by removing trailing slash and mapping aliases.
-      const rawPath = location.pathname.replace(/\/$/, '') || '/';
-      const normalizedPath =
-        rawPath === '/planting-plans' ? '/app/anbauplaene'
-          : rawPath.startsWith('/app/') ? rawPath
-            : `${APP_BASE}${rawPath === '/' ? '/anbauplaene' : rawPath}`;
-
-      const currentIndex = ROUTES.indexOf(normalizedPath);
+      const normalizedPath = normalizeMainRoutePath(window.location.pathname || '/');
+      const currentIndex = MAIN_NAV_ROUTES.indexOf(normalizedPath);
 
       if (currentIndex === -1) {
-        navigate('/app/anbauplaene');
+        navigate('/app/dashboard');
         return;
       }
 
-      let nextIndex: number;
       if (event.key === 'ArrowLeft') {
-        nextIndex = currentIndex - 1;
-        if (nextIndex < 0) {
-          nextIndex = ROUTES.length - 1;
+        if (currentIndex === 0) {
+          return;
         }
-      } else {
-        nextIndex = currentIndex + 1;
-        if (nextIndex >= ROUTES.length) {
-          nextIndex = 0;
-        }
+        navigate(MAIN_NAV_ROUTES[currentIndex - 1]);
+        return;
       }
 
-      navigate(ROUTES[nextIndex]);
+      if (currentIndex >= MAIN_NAV_ROUTES.length - 1) {
+        return;
+      }
+      navigate(MAIN_NAV_ROUTES[currentIndex + 1]);
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -87,5 +66,5 @@ export function useKeyboardNavigation(): void {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [navigate, location.pathname]);
+  }, [navigate]);
 }

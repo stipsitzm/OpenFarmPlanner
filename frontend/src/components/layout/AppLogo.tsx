@@ -6,9 +6,10 @@ interface AppLogoProps {
   to?: string;
   size?: number;
   showText?: boolean;
+  subtleActive?: boolean;
 }
 
-export default function AppLogo({ to = '/app/locations', size = 28, showText = true }: AppLogoProps): React.ReactElement {
+export default function AppLogo({ to = '/app/dashboard', size = 28, showText = true, subtleActive = false }: AppLogoProps): React.ReactElement {
   const { t } = useTranslation('common');
 
   return (
@@ -22,6 +23,16 @@ export default function AppLogo({ to = '/app/locations', size = 28, showText = t
         textDecoration: 'none',
         color: 'inherit',
         minWidth: 0,
+        px: 0.75,
+        py: 0.35,
+        borderRadius: 1,
+        backgroundColor: subtleActive ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+        border: subtleActive ? '1px solid rgba(255, 255, 255, 0.16)' : '1px solid transparent',
+        transition: 'background-color 120ms ease, border-color 120ms ease',
+        '&:hover': {
+          backgroundColor: subtleActive ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.06)',
+          borderColor: subtleActive ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+        },
       }}
       aria-label={t('appName')}
     >
