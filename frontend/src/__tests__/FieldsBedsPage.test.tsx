@@ -216,6 +216,7 @@ describe('FieldsBedsPage', () => {
     bedListMock.mockResolvedValue({ data: { results: [] } });
 
     renderPage();
-    expect(await screen.findByText('Beet fehlt')).toBeInTheDocument();
+    expect(await screen.findByText('Es sind noch keine Beete vorhanden. Füge Beete über das Plus bei der jeweiligen Parzelle hinzu.')).toBeInTheDocument();
+    expect(screen.queryByText('Noch keine Anbauflächen vorhanden')).not.toBeInTheDocument();
   });
 });

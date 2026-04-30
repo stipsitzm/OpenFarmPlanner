@@ -156,7 +156,8 @@ export default function FieldsBedsPage(): React.ReactElement {
   const hasLocations = locations.length > 0;
   const hasFields = fieldsCount > 0;
   const hasBeds = bedsCount > 0;
-  const shouldShowAreasEmptyState = !hasLocations || !hasFields || !hasBeds;
+  const shouldShowAreasEmptyState = !hasLocations || !hasFields;
+  const shouldShowMissingBedsHint = hasFields && !hasBeds;
 
   useEffect(() => {
     if (viewMode === 'graphical') {
@@ -238,6 +239,11 @@ export default function FieldsBedsPage(): React.ReactElement {
         {shouldShowProjectRequiredState && missingProjectReason ? (
           <ProjectRequiredState reason={missingProjectReason} />
         ) : null}
+        {!shouldShowProjectRequiredState && shouldShowMissingBedsHint ? (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            {t('hierarchy:messages.noBedsHint')}
+          </Alert>
+        ) : null}
         {!shouldShowProjectRequiredState && shouldShowAreasEmptyState ? (
           <EmptyStateCard
             title={t('hierarchy:emptyAreas.title')}
@@ -245,12 +251,10 @@ export default function FieldsBedsPage(): React.ReactElement {
             checklist={[
               { label: t('hierarchy:columns.location'), done: hasLocations },
               { label: t('hierarchy:columns.field'), done: hasFields },
-              { label: t('hierarchy:columns.bed'), done: hasBeds },
             ]}
             actions={[
               ...(!hasLocations ? [{ label: t('hierarchy:emptyAreas.actions.createLocation'), onClick: () => navigate('/app/locations?create=true') }] : []),
               ...(hasLocations && !hasFields ? [{ label: t('hierarchy:emptyAreas.actions.createField'), onClick: handleGlobalAddField }] : []),
-              ...(hasFields && !hasBeds ? [{ label: t('hierarchy:emptyAreas.actions.createBed'), to: '/app/fields-beds' }] : []),
             ]}
           />
         ) : null}
