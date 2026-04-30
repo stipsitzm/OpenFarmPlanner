@@ -58,9 +58,24 @@ describe('Dashboard', () => {
 
     render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
-    expect(await screen.findByText('Dein Projekt ist eingerichtet.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Anbaukalender öffnen' })).toBeInTheDocument();
+    expect(await screen.findByText('Anstehende Aufgaben')).toBeInTheDocument();
+    expect(screen.queryByText('Projektstatus')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nächster sinnvoller Schritt')).not.toBeInTheDocument();
+    expect(screen.queryByText('Dein Projekt ist eingerichtet.')).not.toBeInTheDocument();
     expect(screen.getByText('Anstehende Aufgaben')).toBeInTheDocument();
     expect(screen.queryByText('Keine anstehenden Aufgaben vorhanden')).not.toBeInTheDocument();
+  });
+
+  it('shows compact tasks empty state when setup is complete but there are no upcoming tasks', async () => {
+    mocks.locationList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hof' }] } });
+    mocks.fieldList.mockResolvedValue({ data: { results: [{ id: 2, name: 'Nord', location: 1 }] } });
+    mocks.bedList.mockResolvedValue({ data: { results: [{ id: 3, name: 'Beet A', field: 2 }] } });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 4, name: 'Salat' }] } });
+    mocks.planList.mockResolvedValue({ data: { results: [{ id: 5, culture: 4, bed: 3, planting_date: '2020-01-01', culture_name: 'Salat' }] } });
+
+    render(<MemoryRouter><Dashboard /></MemoryRouter>);
+
+    expect(await screen.findByText('Keine anstehenden Aufgaben')).toBeInTheDocument();
+    expect(screen.getByText('Aktuell gibt es keine anstehenden Aufgaben für dieses Projekt.')).toBeInTheDocument();
   });
 });

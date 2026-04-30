@@ -24,11 +24,12 @@
     "locations": { "text": "Lege zuerst einen Standort an.", "action": "Standort anlegen" },
     "beds": { "text": "Lege als Nächstes deine Anbauflächen an.", "action": "Anbauflächen anlegen" },
     "cultures": { "text": "Lege deine ersten Kulturen an.", "action": "Kultur anlegen" },
-    "plans": { "text": "Erstelle deinen ersten Anbauplan.", "action": "Anbauplan erstellen" },
-    "ready": { "text": "Dein Projekt ist eingerichtet.", "action": "Anbaukalender öffnen" }
+    "plans": { "text": "Erstelle deinen ersten Anbauplan.", "action": "Anbauplan erstellen" }
   },
   "tasks": {
     "title": "Anstehende Aufgaben",
-    "empty": "Keine anstehenden Aufgaben vorhanden"
+    "empty": "Keine anstehenden Aufgaben vorhanden",
+    "emptyTitle": "Keine anstehenden Aufgaben",
+    "emptyDescription": "Aktuell gibt es keine anstehenden Aufgaben für dieses Projekt."
   }
 }

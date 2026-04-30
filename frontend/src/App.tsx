@@ -229,9 +229,8 @@ function RootLayout(): React.ReactElement {
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
-  const routes = ['/app/dashboard', '/app/locations', '/app/fields-beds', '/app/cultures', '/app/anbauplaene', '/app/gantt-chart', '/app/seed-demand', '/app/suppliers'];
+  const routes = ['/app/locations', '/app/fields-beds', '/app/cultures', '/app/anbauplaene', '/app/gantt-chart', '/app/seed-demand', '/app/suppliers'];
   const navItems = [
-    { to: '/app/dashboard', label: t('dashboard'), keywords: ['übersicht', 'dashboard', 'start'] },
     { to: '/app/locations', label: t('locations'), keywords: ['standorte', 'orte', 'locations'] },
     { to: '/app/fields-beds', label: t('fieldsAndBeds'), keywords: ['anbauflächen', 'felder', 'beete'] },
     { to: '/app/cultures', label: t('cultures'), keywords: ['kulturen', 'kultur'] },

@@ -77,6 +77,7 @@ export default function Dashboard(): React.ReactElement {
   if (shouldShowProjectRequiredState && missingProjectReason) return <PageContainer><ProjectRequiredState reason={missingProjectReason} /></PageContainer>;
 
   const isEmptyProject = locations.length === 0 && beds.length === 0 && cultures.length === 0 && plans.length === 0;
+  const isSetupComplete = firstMissingRequirement === null;
 
   return (
     <PageContainer>
@@ -93,36 +94,41 @@ export default function Dashboard(): React.ReactElement {
         </Card>
       ) : null}
 
-      <Card variant="outlined" sx={{ mb: 2 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>{t('dashboard:setup.title')}</Typography>
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            {setupItems.map((item) => <Chip key={item.label} label={`${item.label}: ${item.done ? t('dashboard:status.done') : t('dashboard:status.missing')}`} color={item.done ? 'success' : 'default'} />)}
-          </Stack>
-        </CardContent>
-      </Card>
+      {!isSetupComplete ? (
+        <>
+          <Card variant="outlined" sx={{ mb: 2 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>{t('dashboard:setup.title')}</Typography>
+              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                {setupItems.map((item) => <Chip key={item.label} label={`${item.label}: ${item.done ? t('dashboard:status.done') : t('dashboard:status.missing')}`} color={item.done ? 'success' : 'default'} />)}
+              </Stack>
+            </CardContent>
+          </Card>
 
-      <Card variant="outlined" sx={{ mb: 2 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>{t('dashboard:nextStep.title')}</Typography>
-          {firstMissingRequirement ? (
-            <>
-              <Typography variant="body2" sx={{ mb: 1.5 }}>{t(NEXT_STEP_CONFIG[firstMissingRequirement].textKey)}</Typography>
-              <Button component={RouterLink} to={NEXT_STEP_CONFIG[firstMissingRequirement].to} variant="contained">{t(NEXT_STEP_CONFIG[firstMissingRequirement].actionKey)}</Button>
-            </>
-          ) : (
-            <>
-              <Typography variant="body2" sx={{ mb: 1.5 }}>{t('dashboard:nextStep.ready.text')}</Typography>
-              <Button component={RouterLink} to="/app/gantt-chart" variant="contained">{t('dashboard:nextStep.ready.action')}</Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
+          <Card variant="outlined" sx={{ mb: 2 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>{t('dashboard:nextStep.title')}</Typography>
+              {firstMissingRequirement ? (
+                <>
+                  <Typography variant="body2" sx={{ mb: 1.5 }}>{t(NEXT_STEP_CONFIG[firstMissingRequirement].textKey)}</Typography>
+                  <Button component={RouterLink} to={NEXT_STEP_CONFIG[firstMissingRequirement].to} variant="contained">{t(NEXT_STEP_CONFIG[firstMissingRequirement].actionKey)}</Button>
+                </>
+              ) : null}
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
 
+      {isSetupComplete || (!isSetupComplete && upcomingTasks.length > 0) ? (
       <Card variant="outlined">
         <CardContent>
           <Typography variant="h6" gutterBottom>{t('dashboard:tasks.title')}</Typography>
-          {upcomingTasks.length === 0 ? <Typography variant="body2">{t('dashboard:tasks.empty')}</Typography> : (
+          {upcomingTasks.length === 0 ? (
+            <>
+              <Typography variant="subtitle2">{t('dashboard:tasks.emptyTitle')}</Typography>
+              <Typography variant="body2">{t('dashboard:tasks.emptyDescription')}</Typography>
+            </>
+          ) : (
             <Stack spacing={0.75}>
               {upcomingTasks.map((task) => (
                 <Box key={`${task.locationId}-${task.type}-${task.date}-${task.planId ?? 'na'}`} sx={{ borderBottom: '1px solid', borderColor: 'divider', pb: 0.5 }}>
@@ -134,6 +140,7 @@ export default function Dashboard(): React.ReactElement {
           )}
         </CardContent>
       </Card>
+      ) : null}
     </PageContainer>
   );
 }
