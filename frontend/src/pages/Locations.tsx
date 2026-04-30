@@ -273,7 +273,7 @@ function Locations(): React.ReactElement {
           <EmptyStateCard
             title="Noch keine Standorte vorhanden"
             description="Standorte helfen dir, deine Anbauflächen zu strukturieren, zum Beispiel verschiedene Gärten oder Felder."
-            actions={[{ label: 'Standort anlegen', to: '/app/locations' }]}
+            actions={[{ label: 'Standort anlegen', onClick: openCreateDialog }]}
           />
         ) : (
           !shouldShowProjectRequiredState && (

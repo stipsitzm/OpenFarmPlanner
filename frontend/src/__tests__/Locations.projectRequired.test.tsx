@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Locations from "../pages/Locations";
@@ -100,5 +100,32 @@ describe("Locations project requirement state", () => {
 
     expect(await screen.findByText("Hof")).toBeInTheDocument();
     expect(screen.queryByText("Anstehende Aufgaben")).not.toBeInTheDocument();
+  });
+
+  it("uses the same create dialog flow for header and empty-state add actions", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { unmount } = render(
+      <MemoryRouter>
+        <Locations />
+      </MemoryRouter>,
+    );
+
+    const emptyStateButton = await screen.findByRole("button", { name: "Standort anlegen" });
+    fireEvent.click(emptyStateButton);
+    expect(await screen.findByRole("heading", { name: "Neuen Standort hinzufügen" })).toBeInTheDocument();
+    unmount();
+
+    render(
+      <MemoryRouter>
+        <Locations />
+      </MemoryRouter>,
+    );
+    const headerButton = await screen.findByRole("button", { name: "Neuen Standort hinzufügen" });
+    fireEvent.click(headerButton);
+    expect(await screen.findByRole("heading", { name: "Neuen Standort hinzufügen" })).toBeInTheDocument();
+
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
   });
 });
