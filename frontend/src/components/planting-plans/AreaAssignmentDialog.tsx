@@ -244,7 +244,7 @@ export function AreaAssignmentDialog({
               <EmptyStateCard
                 title="Keine Anbauflächen vorhanden"
                 description="Lege zuerst Parzellen und Beete an, bevor du einem Anbauplan eine Fläche zuweist."
-                actions={[{ label: 'Anbauflächen anlegen', to: '/app/fields' }]}
+                actions={[{ label: 'Zu Anbauflächen', to: '/app/fields-beds' }]}
               />
             ) : null}
             <Stack spacing={2.5}>

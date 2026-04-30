@@ -61,7 +61,7 @@
     "notesPhotosAria": "Notizen und Fotos öffnen"
   },
   "emptyStates": {
-    "createBlockedTooltip": "Erst Kultur und Beet hinzufügen",
+    "createBlockedTooltip": "Beete werden innerhalb von Parzellen auf der Seite Anbauflächen hinzugefügt.",
     "missingRequirementsTitle": "Du kannst noch keinen Anbauplan erstellen",
     "missingRequirementsDescription": "Lege zuerst einen Standort an. Danach kannst du Parzellen, Beete, Kulturen und Anbaupläne erfassen.",
     "noPlansTitle": "Noch keine Anbaupläne vorhanden",
@@ -69,7 +69,7 @@
     "actions": {
       "createLocation": "Standort hinzufügen",
       "createCulture": "Kultur hinzufügen",
-      "createAreas": "Parzelle hinzufügen",
+      "createAreas": "Zu Anbauflächen",
       "createPlan": "Anbauplan erstellen"
     }
   },

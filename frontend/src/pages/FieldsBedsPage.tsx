@@ -250,7 +250,7 @@ export default function FieldsBedsPage(): React.ReactElement {
             actions={[
               ...(!hasLocations ? [{ label: t('hierarchy:emptyAreas.actions.createLocation'), onClick: () => navigate('/app/locations?create=true') }] : []),
               ...(hasLocations && !hasFields ? [{ label: t('hierarchy:emptyAreas.actions.createField'), onClick: handleGlobalAddField }] : []),
-              ...(hasFields && !hasBeds ? [{ label: t('hierarchy:emptyAreas.actions.createBed'), to: '/app/fields' }] : []),
+              ...(hasFields && !hasBeds ? [{ label: t('hierarchy:emptyAreas.actions.createBed'), to: '/app/fields-beds' }] : []),
             ]}
           />
         ) : null}

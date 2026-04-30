@@ -1536,7 +1536,7 @@ function PlantingPlans(): React.ReactElement {
             ]}
             actions={[
               ...(firstMissingRequirement === "locations" ? [{ label: t("plantingPlans:emptyStates.actions.createLocation"), to: "/app/locations?create=true" }] : []),
-              ...(firstMissingRequirement === "beds" ? [{ label: t("plantingPlans:emptyStates.actions.createAreas"), to: "/app/fields" }] : []),
+              ...(firstMissingRequirement === "beds" ? [{ label: t("plantingPlans:emptyStates.actions.createAreas"), to: "/app/fields-beds" }] : []),
               ...(firstMissingRequirement === "cultures" ? [{ label: t("plantingPlans:emptyStates.actions.createCulture"), to: "/app/cultures?create=true" }] : []),
             ]}
           />

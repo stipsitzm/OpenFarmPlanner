@@ -68,7 +68,7 @@ export default function SeedDemandPage(): React.ReactElement {
       return {
         title: t('seedDemand.progressive.beds.title'),
         description: t('seedDemand.progressive.beds.description'),
-        action: { label: t('seedDemand.progressive.beds.action'), to: '/app/fields' },
+        action: { label: t('seedDemand.progressive.beds.action'), to: '/app/fields-beds' },
       };
     }
     if (cultureCount === 0) {

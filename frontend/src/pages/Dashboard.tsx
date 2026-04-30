@@ -12,7 +12,7 @@ import { deriveLocationTasks } from './locationDerivedTasks';
 
 const NEXT_STEP_CONFIG = {
   locations: { textKey: 'dashboard:nextStep.locations.text', actionKey: 'dashboard:nextStep.locations.action', to: '/app/locations?create=true' },
-  beds: { textKey: 'dashboard:nextStep.beds.text', actionKey: 'dashboard:nextStep.beds.action', to: '/app/fields' },
+  beds: { textKey: 'dashboard:nextStep.beds.text', actionKey: 'dashboard:nextStep.beds.action', to: '/app/fields-beds' },
   cultures: { textKey: 'dashboard:nextStep.cultures.text', actionKey: 'dashboard:nextStep.cultures.action', to: '/app/cultures?create=true' },
   plans: { textKey: 'dashboard:nextStep.plans.text', actionKey: 'dashboard:nextStep.plans.action', to: '/app/planting-plans?create=true' },
 } as const;
