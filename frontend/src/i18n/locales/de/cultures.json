@@ -313,11 +313,11 @@
     "delete": "Löschen",
     "deleteConfirm": "Möchten Sie diese Kultur wirklich löschen?",
     "createPlantingPlan": "Anbauplan erstellen",
-    "createBed": "Beet hinzufügen",
+    "goToFieldsBeds": "Zu Anbauflächen",
     "createPlantingPlanDisabled": {
       "locations": "Du brauchst zuerst mindestens einen Standort, um einen Anbauplan zu erstellen.",
       "fields": "Du brauchst zuerst mindestens eine Parzelle, um einen Anbauplan zu erstellen.",
-      "beds": "Du brauchst zuerst mindestens ein Beet, um einen Anbauplan zu erstellen.",
+      "beds": "Du brauchst zuerst mindestens ein Beet. Beete werden innerhalb einer Parzelle auf der Seite Anbauflächen hinzugefügt.",
       "cultures": "Du brauchst zuerst mindestens eine Kultur, um einen Anbauplan zu erstellen.",
       "null": "Anbauplan erstellen"
     },

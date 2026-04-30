@@ -1082,9 +1082,14 @@ function Cultures(): React.ReactElement {
             </span>
           </Tooltip>
           {firstMissingPlanRequirement === 'beds' ? (
-            <Button component={RouterLink} to="/app/fields" variant="text">
-              {t('buttons.createBed')}
-            </Button>
+            <>
+              <Button component={RouterLink} to="/app/fields-beds" variant="outlined" color="secondary">
+                {t('buttons.goToFieldsBeds')}
+              </Button>
+              <Typography variant="body2" color="text.secondary">
+                {t('buttons.createPlantingPlanDisabled.beds')}
+              </Typography>
+            </>
           ) : null}
           {aiEnrichmentEnabled && (
             <>
