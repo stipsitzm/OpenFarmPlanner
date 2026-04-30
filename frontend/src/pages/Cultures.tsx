@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
@@ -105,6 +105,7 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
+  const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
@@ -213,6 +214,27 @@ function Cultures(): React.ReactElement {
     setEditingCulture(undefined);
     setShowForm(true);
   };
+
+  useEffect(() => {
+    if (shouldShowProjectRequiredState || showForm) {
+      return;
+    }
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('create') !== 'true') {
+      return;
+    }
+
+    handleAddNew();
+    searchParams.delete('create');
+    const nextSearch = searchParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+      },
+      { replace: true },
+    );
+  }, [location.pathname, location.search, navigate, shouldShowProjectRequiredState, showForm]);
 
   const handleEdit = (culture: Culture) => {
     setEditingCulture(culture);

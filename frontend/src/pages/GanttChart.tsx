@@ -485,10 +485,10 @@ function GanttChartPage(): React.ReactElement {
                   ...(firstMissingRequirement === 'plans' ? [{ label: t('ganttChart:requirements.plan.label'), done: false, missingLabel: t('ganttChart:requirements.plan.missing') }] : []),
                 ]}
                 actions={[
-                  ...(firstMissingRequirement === 'locations' ? [{ label: t('ganttChart:emptyStates.actions.createLocation'), to: '/app/locations' }] : []),
+                  ...(firstMissingRequirement === 'locations' ? [{ label: t('ganttChart:emptyStates.actions.createLocation'), to: '/app/locations?create=true' }] : []),
                   ...(firstMissingRequirement === 'beds' ? [{ label: t('ganttChart:emptyStates.actions.createAreas'), to: '/app/fields' }] : []),
-                  ...(firstMissingRequirement === 'cultures' ? [{ label: t('ganttChart:emptyStates.actions.createCulture'), to: '/app/cultures' }] : []),
-                  ...(firstMissingRequirement === 'plans' ? [{ label: t('ganttChart:emptyStates.actions.createPlan'), to: '/app/planting-plans' }] : []),
+                  ...(firstMissingRequirement === 'cultures' ? [{ label: t('ganttChart:emptyStates.actions.createCulture'), to: '/app/cultures?create=true' }] : []),
+                  ...(firstMissingRequirement === 'plans' ? [{ label: t('ganttChart:emptyStates.actions.createPlan'), to: '/app/planting-plans?create=true' }] : []),
                 ]}
               />
             </Box>

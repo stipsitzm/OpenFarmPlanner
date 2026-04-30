@@ -28,6 +28,7 @@ import { resolveLocaleFromLanguage } from '../utils/numberLocalization';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 type SoilType = NonNullable<Location['soil_type']>;
 type Exposure = NonNullable<Location['exposure']>;
@@ -115,6 +116,8 @@ const toFormState = (location: Location | null): LocationFormState => ({
 
 function Locations(): React.ReactElement {
   const { t, i18n } = useTranslation(['locations', 'common']);
+  const location = useLocation();
+  const navigate = useNavigate();
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -155,6 +158,27 @@ function Locations(): React.ReactElement {
     setFormErrorField(null);
     setDialogOpen(true);
   };
+
+  useEffect(() => {
+    if (shouldShowProjectRequiredState || dialogOpen) {
+      return;
+    }
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('create') !== 'true') {
+      return;
+    }
+
+    openCreateDialog();
+    searchParams.delete('create');
+    const nextSearch = searchParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+      },
+      { replace: true },
+    );
+  }, [dialogOpen, location.pathname, location.search, navigate, shouldShowProjectRequiredState]);
 
   const openEditDialog = (location: Location): void => {
     setEditingLocation(location);

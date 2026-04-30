@@ -96,7 +96,8 @@ export default function Suppliers(): React.ReactElement {
       return;
     }
     const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get('create') !== '1') {
+    const createIntent = searchParams.get('create');
+    if (createIntent !== '1' && createIntent !== 'true') {
       return;
     }
 
@@ -220,7 +221,7 @@ export default function Suppliers(): React.ReactElement {
             <EmptyStateCard
               title={t('emptyState.title')}
               description={t('emptyState.description')}
-              actions={[{ label: t('create'), to: '/app/suppliers?create=1' }]}
+              actions={[{ label: t('create'), to: '/app/suppliers?create=true' }]}
             />
           </Box>
         ) : (

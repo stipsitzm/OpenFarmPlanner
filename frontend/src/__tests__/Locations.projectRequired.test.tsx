@@ -128,4 +128,15 @@ describe("Locations project requirement state", () => {
     expect(consoleErrorSpy).not.toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });
+
+  it("opens the existing create dialog from query intent and clears create parameter", async () => {
+    render(
+      <MemoryRouter initialEntries={["/app/locations?create=true"]}>
+        <Locations />
+      </MemoryRouter>,
+    );
+
+    const createDialogHeadings = await screen.findAllByRole("heading", { name: "Neuen Standort hinzufügen" });
+    expect(createDialogHeadings).toHaveLength(1);
+  });
 });
