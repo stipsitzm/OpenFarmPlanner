@@ -6,11 +6,7 @@
   "emptyState": {
     "title": "Starte deine Anbauplanung",
     "description": "Lege zuerst einen Standort an. Danach kannst du Anbauflächen, Kulturen und Anbaupläne erfassen.",
-    "action": "Standort anlegen"
-  },
-  "welcome": {
-    "title": "Willkommen bei OpenFarmPlanner",
-    "description": "Starte deine Anbauplanung, indem du zuerst einen Standort anlegst.",
+    "shortDescription": "Lege zuerst einen Standort an.",
     "action": "Standort anlegen"
   },
   "setup": {

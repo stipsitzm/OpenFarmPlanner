@@ -87,9 +87,9 @@ export default function Dashboard(): React.ReactElement {
       {isEmptyProject ? (
         <Card variant="outlined" sx={{ mb: 2 }}>
           <CardContent>
-            <Typography variant="h6" gutterBottom>{t('dashboard:welcome.title')}</Typography>
-            <Typography variant="body2" sx={{ mb: 2 }}>{t('dashboard:welcome.description')}</Typography>
-            <Button component={RouterLink} to="/app/locations" variant="contained">{t('dashboard:welcome.action')}</Button>
+            <Typography variant="h6" gutterBottom>{t('dashboard:emptyState.title')}</Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>{t('dashboard:emptyState.shortDescription')}</Typography>
+            <Button component={RouterLink} to="/app/locations" variant="contained">{t('dashboard:emptyState.action')}</Button>
           </CardContent>
         </Card>
       ) : null}

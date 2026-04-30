@@ -42,10 +42,11 @@ describe('Dashboard', () => {
     mocks.planList.mockResolvedValue({ data: { results: [] } });
   });
 
-  it('shows welcome box and first action for a completely empty project', async () => {
+  it('shows only the start box for a completely empty project', async () => {
     render(<MemoryRouter><Dashboard /></MemoryRouter>);
-    expect(await screen.findByText('Willkommen bei OpenFarmPlanner')).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: 'Standort anlegen' }).length).toBeGreaterThan(0);
+    expect(await screen.findByText('Starte deine Anbauplanung')).toBeInTheDocument();
+    expect(screen.getByText('Lege zuerst einen Standort an.')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Standort anlegen' })).toHaveLength(1);
     expect(screen.queryByText('Projektstatus')).not.toBeInTheDocument();
     expect(screen.queryByText('Nächster sinnvoller Schritt')).not.toBeInTheDocument();
     expect(screen.queryByText('Anstehende Aufgaben')).not.toBeInTheDocument();
@@ -57,7 +58,7 @@ describe('Dashboard', () => {
     render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
     expect(await screen.findByText('Projektstatus')).toBeInTheDocument();
-    expect(screen.queryByText('Willkommen bei OpenFarmPlanner')).not.toBeInTheDocument();
+    expect(screen.queryByText('Starte deine Anbauplanung')).not.toBeInTheDocument();
   });
 
   it('shows aggregated upcoming tasks and ready state when setup is complete', async () => {
@@ -73,7 +74,7 @@ describe('Dashboard', () => {
     expect(screen.queryByText('Projektstatus')).not.toBeInTheDocument();
     expect(screen.queryByText('Nächster sinnvoller Schritt')).not.toBeInTheDocument();
     expect(screen.queryByText('Dein Projekt ist eingerichtet.')).not.toBeInTheDocument();
-    expect(screen.queryByText('Willkommen bei OpenFarmPlanner')).not.toBeInTheDocument();
+    expect(screen.queryByText('Starte deine Anbauplanung')).not.toBeInTheDocument();
     expect(screen.getByText('Anstehende Aufgaben')).toBeInTheDocument();
     expect(screen.queryByText('Keine anstehenden Aufgaben vorhanden')).not.toBeInTheDocument();
   });
