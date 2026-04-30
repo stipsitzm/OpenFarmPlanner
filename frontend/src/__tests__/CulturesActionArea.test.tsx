@@ -8,10 +8,16 @@ import { CommandProvider } from '../commands/CommandProvider';
 
 const {
   listMock,
+  locationListMock,
+  fieldListMock,
+  bedListMock,
   publicCultureListMock,
   publishPublicMock,
 } = vi.hoisted(() => ({
   listMock: vi.fn(),
+  locationListMock: vi.fn(),
+  fieldListMock: vi.fn(),
+  bedListMock: vi.fn(),
   publicCultureListMock: vi.fn(),
   publishPublicMock: vi.fn(),
 }));
@@ -24,6 +30,18 @@ vi.mock('../api/api', async () => {
       ...actual.cultureAPI,
       list: listMock,
       publishPublic: publishPublicMock,
+    },
+    locationAPI: {
+      ...actual.locationAPI,
+      list: locationListMock,
+    },
+    fieldAPI: {
+      ...actual.fieldAPI,
+      list: fieldListMock,
+    },
+    bedAPI: {
+      ...actual.bedAPI,
+      list: bedListMock,
     },
     publicCultureAPI: {
       ...actual.publicCultureAPI,
@@ -87,6 +105,9 @@ describe('Cultures action area', () => {
         results: [],
       },
     });
+    locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hof' }] } });
+    fieldListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Parzelle A', location: 1 }] } });
+    bedListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Beet A', field: 1 }] } });
     publishPublicMock.mockResolvedValue({
       data: {
         operation: 'created',
@@ -199,5 +220,23 @@ describe('Cultures action area', () => {
       expect(screen.getByRole('button', { name: 'Öffentliche Version aktualisieren' })).toBeInTheDocument();
     });
     expect(screen.queryByRole('button', { name: 'Veröffentlichen' })).not.toBeInTheDocument();
+  });
+
+  it('disables create planting plan button with bed-specific guidance when no beds exist', async () => {
+    bedListMock.mockResolvedValue({ data: { results: [] } });
+    renderCultures('/cultures?cultureId=1');
+
+    const createPlanButton = await screen.findByRole('button', { name: 'Anbauplan erstellen (Alt+P)' });
+    expect(createPlanButton).toBeDisabled();
+    expect(await screen.findByRole('link', { name: 'Beet anlegen' })).toBeInTheDocument();
+
+    fireEvent.mouseOver(createPlanButton.parentElement as HTMLElement);
+    expect(await screen.findByText('Du brauchst zuerst mindestens ein Beet, um einen Anbauplan zu erstellen.')).toBeInTheDocument();
+  });
+
+  it('enables create planting plan button when all prerequisites are present', async () => {
+    renderCultures('/cultures?cultureId=1');
+    const createPlanButton = await screen.findByRole('button', { name: 'Anbauplan erstellen (Alt+P)' });
+    await waitFor(() => expect(createPlanButton).toBeEnabled());
   });
 });

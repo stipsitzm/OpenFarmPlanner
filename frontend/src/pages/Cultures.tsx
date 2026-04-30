@@ -13,7 +13,7 @@ import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
-import { cultureAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
+import { bedAPI, cultureAPI, fieldAPI, locationAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
 import type {
   CultivationType,
   CultureHistoryEntry,
@@ -102,6 +102,7 @@ import { CulturesImportDialog } from './CulturesImportDialog';
 import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
+import { getFirstMissingCultivationPlanRequirement } from './requirementFlow';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -152,6 +153,9 @@ function Cultures(): React.ReactElement {
   const [publicCultures, setPublicCultures] = useState<PublicCulture[]>([]);
   const [publicLibraryImportingId, setPublicLibraryImportingId] = useState<number | null>(null);
   const [publishingCultureId, setPublishingCultureId] = useState<number | null>(null);
+  const [hasLocations, setHasLocations] = useState(false);
+  const [hasFields, setHasFields] = useState(false);
+  const [hasBeds, setHasBeds] = useState(false);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error' | 'info') => {
     setSnackbar({ open: true, message, severity });
@@ -189,11 +193,37 @@ function Cultures(): React.ReactElement {
     if (shouldShowProjectRequiredState) {
       setCultures([]);
       setIsCulturesLoading(false);
+      setHasLocations(false);
+      setHasFields(false);
+      setHasBeds(false);
       return;
     }
     // eslint-disable-next-line -- Data fetching on mount is intentional
     fetchCultures();
   }, [fetchCultures, shouldShowProjectRequiredState]);
+
+  useEffect(() => {
+    if (shouldShowProjectRequiredState) {
+      return;
+    }
+    const fetchPlanRequirements = async (): Promise<void> => {
+      try {
+        const [locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
+          locationAPI.list(),
+          fieldAPI.list(),
+          bedAPI.list(),
+        ]);
+        setHasLocations(locationsResponse.data.results.length > 0);
+        setHasFields(fieldsResponse.data.results.length > 0);
+        setHasBeds(bedsResponse.data.results.length > 0);
+      } catch {
+        setHasLocations(false);
+        setHasFields(false);
+        setHasBeds(false);
+      }
+    };
+    void fetchPlanRequirements();
+  }, [shouldShowProjectRequiredState]);
 
 
   useEffect(() => {
@@ -561,6 +591,13 @@ function Cultures(): React.ReactElement {
   };
 
   const selectedCulture = cultures.find(c => c.id === selectedCultureId);
+  const firstMissingPlanRequirement = getFirstMissingCultivationPlanRequirement({
+    hasLocations,
+    hasFields,
+    hasBeds,
+    hasCultures: cultures.length > 0,
+  });
+  const canCreatePlantingPlan = Boolean(selectedCulture) && firstMissingPlanRequirement === null;
   const isUpdatingOwnPublicCulture = Boolean(selectedCulture?.owned_public_culture_id);
   const dialogCostInfo = getDialogCostInfo(enrichmentResult);
 
@@ -1031,19 +1068,24 @@ function Cultures(): React.ReactElement {
               </Button>
             </span>
           </Tooltip>
-          <Tooltip title="Anbauplan erstellen (Alt+P)">
+          <Tooltip title={canCreatePlantingPlan ? "Anbauplan erstellen (Alt+P)" : t(`buttons.createPlantingPlanDisabled.${firstMissingPlanRequirement}`)}>
             <span>
               <Button
                 aria-label="Anbauplan erstellen (Alt+P)"
                 variant="contained"
                 startIcon={<AgricultureIcon />}
                 onClick={handleCreatePlantingPlan}
-                disabled={!selectedCulture}
+                disabled={!canCreatePlantingPlan}
               >
                 {t('buttons.createPlantingPlan')}
               </Button>
             </span>
           </Tooltip>
+          {firstMissingPlanRequirement === 'beds' ? (
+            <Button component={RouterLink} to="/app/fields" variant="text">
+              {t('buttons.createBed')}
+            </Button>
+          ) : null}
           {aiEnrichmentEnabled && (
             <>
               <Tooltip title={!canRunEnrichmentForCulture(selectedCulture) ? enrichmentDisabledReason : ''}><span><ButtonGroup variant="contained" aria-label={t('ai.menuLabel')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
