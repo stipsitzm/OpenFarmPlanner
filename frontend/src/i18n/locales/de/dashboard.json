@@ -1,0 +1,34 @@
+{
+  "title": "Übersicht",
+  "errors": {
+    "load": "Fehler beim Laden der Dashboard-Daten"
+  },
+  "emptyState": {
+    "title": "Starte deine Anbauplanung",
+    "description": "Lege zuerst einen Standort an. Danach kannst du Anbauflächen, Kulturen und Anbaupläne erfassen.",
+    "action": "Standort anlegen"
+  },
+  "setup": {
+    "title": "Projektstatus",
+    "location": "Standort angelegt",
+    "bed": "Beet angelegt",
+    "culture": "Kultur angelegt",
+    "plan": "Anbauplan erstellt"
+  },
+  "status": {
+    "done": "vorhanden",
+    "missing": "fehlt"
+  },
+  "nextStep": {
+    "title": "Nächster sinnvoller Schritt",
+    "locations": { "text": "Lege zuerst einen Standort an.", "action": "Standort anlegen" },
+    "beds": { "text": "Lege als Nächstes deine Anbauflächen an.", "action": "Anbauflächen anlegen" },
+    "cultures": { "text": "Lege deine ersten Kulturen an.", "action": "Kultur anlegen" },
+    "plans": { "text": "Erstelle deinen ersten Anbauplan.", "action": "Anbauplan erstellen" },
+    "ready": { "text": "Dein Projekt ist eingerichtet.", "action": "Anbaukalender öffnen" }
+  },
+  "tasks": {
+    "title": "Anstehende Aufgaben",
+    "empty": "Keine anstehenden Aufgaben vorhanden"
+  }
+}

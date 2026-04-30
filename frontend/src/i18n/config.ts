@@ -15,6 +15,7 @@ import navigationDE from './locales/de/navigation.json';
 import navigationEN from './locales/en/navigation.json';
 import homeDE from './locales/de/home.json';
 import homeEN from './locales/en/home.json';
+import dashboardDE from './locales/de/dashboard.json';
 import locationsDE from './locales/de/locations.json';
 import culturesDE from './locales/de/cultures.json';
 import plantingPlansDE from './locales/de/plantingPlans.json';
@@ -43,7 +44,7 @@ i18n
     debug: import.meta.env.DEV && import.meta.env.MODE !== 'test',
     
     // Namespaces for organizing translations
-    ns: ['common', 'navigation', 'home', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart', 'suppliers', 'help', 'auth', 'account', 'projectInvitations'],
+    ns: ['common', 'navigation', 'home', 'dashboard', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart', 'suppliers', 'help', 'auth', 'account', 'projectInvitations'],
     defaultNS: 'common',
     
     // Translation resources
@@ -52,6 +53,7 @@ i18n
         common: commonDE,
         navigation: navigationDE,
         home: homeDE,
+        dashboard: dashboardDE,
         locations: locationsDE,
         cultures: culturesDE,
         plantingPlans: plantingPlansDE,

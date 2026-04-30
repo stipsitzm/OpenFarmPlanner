@@ -88,4 +88,17 @@ describe("Locations project requirement state", () => {
       expect(screen.getByText("Fehler beim Laden der Standorte")).toBeInTheDocument();
     });
   });
+
+  it("does not render upcoming tasks section in location cards", async () => {
+    apiMocks.locationList.mockResolvedValue({ data: { results: [{ id: 1, name: "Hof" }] } });
+
+    render(
+      <MemoryRouter>
+        <Locations />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Hof")).toBeInTheDocument();
+    expect(screen.queryByText("Anstehende Aufgaben")).not.toBeInTheDocument();
+  });
 });

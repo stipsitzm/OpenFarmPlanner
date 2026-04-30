@@ -43,6 +43,7 @@ import PlantingPlans from './pages/PlantingPlans';
 import GanttChart from './pages/GanttChart';
 import SeedDemandPage from './pages/SeedDemand';
 import Suppliers from './pages/Suppliers';
+import Dashboard from './pages/Dashboard';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import MenuIcon from '@mui/icons-material/Menu';
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
@@ -228,8 +229,9 @@ function RootLayout(): React.ReactElement {
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
-  const routes = ['/app/locations', '/app/fields-beds', '/app/cultures', '/app/anbauplaene', '/app/gantt-chart', '/app/seed-demand', '/app/suppliers'];
+  const routes = ['/app/dashboard', '/app/locations', '/app/fields-beds', '/app/cultures', '/app/anbauplaene', '/app/gantt-chart', '/app/seed-demand', '/app/suppliers'];
   const navItems = [
+    { to: '/app/dashboard', label: t('dashboard'), keywords: ['übersicht', 'dashboard', 'start'] },
     { to: '/app/locations', label: t('locations'), keywords: ['standorte', 'orte', 'locations'] },
     { to: '/app/fields-beds', label: t('fieldsAndBeds'), keywords: ['anbauflächen', 'felder', 'beete'] },
     { to: '/app/cultures', label: t('cultures'), keywords: ['kulturen', 'kultur'] },
@@ -379,7 +381,7 @@ function RootLayout(): React.ReactElement {
         description: newProjectDescription.trim(),
       });
       closeCreateProjectDialog();
-      navigate('/app/locations');
+      navigate('/app/dashboard');
       await applyProjectContextChange(response.data.id);
     } catch (error) {
       console.error('Error creating project:', error);
@@ -418,7 +420,7 @@ function RootLayout(): React.ReactElement {
       return normalizedPath;
     }
 
-    return normalizedPath === '/' ? '/app/locations' : `/app${normalizedPath}`;
+    return normalizedPath === '/' ? '/app/dashboard' : `/app${normalizedPath}`;
   };
 
   const getCurrentRouteFromLocation = useCallback((): string => {
@@ -500,11 +502,11 @@ function RootLayout(): React.ReactElement {
             >
               <MenuIcon fontSize="small" />
             </IconButton>
-            <AppLogo size={24} showText={false} />
+            <AppLogo size={24} showText={false} to={activeProjectId ? '/app/dashboard' : '/app/project-selection'} />
           </div>
         ) : (
           <div className="nav-links">
-            <AppLogo size={28} showText={!isCompactDesktop} />
+            <AppLogo size={28} showText={!isCompactDesktop} to={activeProjectId ? '/app/dashboard' : '/app/project-selection'} />
             {primaryNavItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -827,8 +829,9 @@ function createAppRouter(basename: string) {
           children: [
             {
               index: true,
-              loader: () => redirect('/app/locations'),
+              loader: () => redirect('/app/dashboard'),
             },
+            { path: 'dashboard', element: <Dashboard /> },
             { path: 'locations', element: <Locations /> },
             { path: 'fields-beds', element: <FieldsBedsPage /> },
             { path: 'cultures', element: <Cultures /> },
