@@ -40,7 +40,7 @@ describe('Suppliers page empty and table states', () => {
     expect(screen.queryByText('Name')).not.toBeInTheDocument();
     expect(screen.queryByText('Webseite')).not.toBeInTheDocument();
     expect(screen.queryByText('Aktionen')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Lieferant anlegen' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Lieferant hinzufügen' })).toBeInTheDocument();
   });
 
   it('shows table headers when suppliers exist', async () => {
