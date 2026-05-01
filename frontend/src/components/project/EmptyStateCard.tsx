@@ -32,15 +32,15 @@ export default function EmptyStateCard({
         p: 2,
         width: '100%',
         maxWidth: 880,
-        borderColor: 'divider',
-        backgroundColor: 'grey.50',
+        borderColor: 'success.200',
+        backgroundColor: 'success.50',
         borderLeft: 4,
-        borderLeftColor: 'primary.main',
+        borderLeftColor: 'success.main',
         boxShadow: 'none',
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
-        {showInfoIcon ? <InfoOutlinedIcon fontSize="small" color="primary" /> : null}
+        {showInfoIcon ? <InfoOutlinedIcon fontSize="small" color="success" /> : null}
         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{title}</Typography>
       </Box>
       <Typography variant="body2" sx={{ mb: actions.length > 0 || checklist.length > 0 ? 1.5 : 0 }}>

@@ -102,6 +102,7 @@ import { CulturesImportDialog } from './CulturesImportDialog';
 import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
+import EmptyStateCard from '../components/project/EmptyStateCard';
 import { getFirstMissingCultivationPlanRequirement } from './requirementFlow';
 
 function Cultures(): React.ReactElement {
@@ -1081,15 +1082,14 @@ function Cultures(): React.ReactElement {
                 </Button>
               </span>
             </Tooltip>
-            {firstMissingPlanRequirement === 'beds' ? (
-              <Button component={RouterLink} to="/app/fields-beds" variant="outlined" color="success">
-                {t('buttons.goToFieldsBeds')}
-              </Button>
-            ) : null}
           </Box>
 
           {firstMissingPlanRequirement === 'beds' ? (
-            <Alert severity="success" variant="outlined">{t('buttons.createPlantingPlanDisabled.beds')}</Alert>
+            <EmptyStateCard
+              title={t('buttons.createPlantingPlanMissingBedsTitle')}
+              description={t('buttons.createPlantingPlanDisabled.beds')}
+              actions={[{ label: t('buttons.goToFieldsBeds'), to: '/app/fields-beds' }]}
+            />
           ) : null}
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>

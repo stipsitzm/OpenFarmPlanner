@@ -325,7 +325,8 @@
     "aiReresearch": "Kultur komplett neu recherchieren (KI)",
     "aiCompleteAll": "Alle Kulturen vervollständigen (KI)",
     "aiApplySelected": "Auswahl anwenden",
-    "aiClose": "Schließen"
+    "aiClose": "Schließen",
+    "createPlantingPlanMissingBedsTitle": "Du brauchst zuerst mindestens ein Beet."
   },
   "ai": {
     "menuLabel": "KI-Aktionen",
