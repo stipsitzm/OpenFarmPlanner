@@ -1,4 +1,4 @@
-import { Box, Button, Paper, Typography } from '@mui/material';
+import { Box, Button, Paper, Typography, type SxProps, type Theme } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import RequirementChecklist from './RequirementChecklist';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -16,6 +16,8 @@ interface EmptyStateCardProps {
   actions?: EmptyStateAction[];
   checklist?: Array<{ label: string; done: boolean; doneLabel?: string; missingLabel?: string }>;
   showInfoIcon?: boolean;
+  containerSx?: SxProps<Theme>;
+  titleSx?: SxProps<Theme>;
 }
 
 export default function EmptyStateCard({
@@ -24,6 +26,8 @@ export default function EmptyStateCard({
   actions = [],
   checklist = [],
   showInfoIcon = true,
+  containerSx,
+  titleSx,
 }: EmptyStateCardProps): React.ReactElement {
   return (
     <Paper
@@ -38,11 +42,12 @@ export default function EmptyStateCard({
         borderLeft: 4,
         borderLeftColor: 'success.main',
         boxShadow: 'none',
+        ...containerSx,
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
         {showInfoIcon ? <InfoOutlinedIcon fontSize="small" color="success" /> : null}
-        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{title}</Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, ...titleSx }}>{title}</Typography>
       </Box>
       <Typography variant="body2" sx={{ mb: actions.length > 0 || checklist.length > 0 ? 1.5 : 0 }}>
         {description}

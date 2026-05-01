@@ -1142,6 +1142,14 @@ function Cultures(): React.ReactElement {
               title={t('buttons.createPlantingPlanMissingBedsTitle')}
               description={t('buttons.createPlantingPlanDisabled.beds')}
               actions={[{ label: t('buttons.goToFieldsBeds'), to: '/app/fields-beds' }]}
+              containerSx={{
+                backgroundColor: 'rgba(76, 175, 80, 0.06)',
+                borderLeft: '3px solid',
+                borderLeftColor: 'success.main',
+                py: 1.25,
+                px: 1.5,
+              }}
+              titleSx={{ fontWeight: 500 }}
             />
           ) : null}
 
