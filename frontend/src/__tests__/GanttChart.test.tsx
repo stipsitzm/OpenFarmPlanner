@@ -103,7 +103,7 @@ beforeEach(() => {
 });
 
 describe('GanttChartPage', () => {
-  it('shows only location as first missing requirement when no locations exist', async () => {
+  it('shows location-specific guidance when no locations exist', async () => {
     mocks.planList.mockResolvedValue({ data: { results: [] } });
     mocks.cultureList.mockResolvedValue({ data: { results: [] } });
     mocks.bedList.mockResolvedValue({ data: { results: [] } });
@@ -117,9 +117,10 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(screen.getByText('Noch keine Anbauplanung möglich')).toBeInTheDocument());
-    expect(screen.getByText('Standort fehlt')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Standort anlegen' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Du kannst noch keinen Anbauplan erstellen.')).toBeInTheDocument());
+    expect(screen.getByText('Lege zuerst einen Standort an.')).toBeInTheDocument();
+    expect(screen.queryByText('Standort fehlt')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Standort anlegen' })).not.toBeInTheDocument();
     expect(screen.queryByText('Kultur fehlt')).not.toBeInTheDocument();
     expect(screen.queryByText('Beet fehlt')).not.toBeInTheDocument();
     expect(screen.queryByText('Anbauplan fehlt')).not.toBeInTheDocument();
