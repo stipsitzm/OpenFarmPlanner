@@ -1089,24 +1089,8 @@ function Cultures(): React.ReactElement {
           </Box>
 
           {firstMissingPlanRequirement === 'beds' ? (
-            <Alert severity="info">{t('buttons.createPlantingPlanDisabled.beds')}</Alert>
+            <Alert severity="success" variant="outlined">{t('buttons.createPlantingPlanDisabled.beds')}</Alert>
           ) : null}
-
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-            <Tooltip title="Kultur bearbeiten (Alt+E)">
-              <span>
-                <Button
-                  aria-label="Kultur bearbeiten (Alt+E)"
-                  variant="outlined"
-                  startIcon={<EditIcon />}
-                  onClick={() => selectedCulture && handleEdit(selectedCulture)}
-                  disabled={!selectedCulture}
-                >
-                  {t('buttons.edit')}
-                </Button>
-              </span>
-            </Tooltip>
-          </Box>
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
             {aiEnrichmentEnabled && (
@@ -1152,6 +1136,22 @@ function Cultures(): React.ReactElement {
                 </Menu>
               </>
             )}
+          </Box>
+
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+            <Tooltip title="Kultur bearbeiten (Alt+E)">
+              <span>
+                <Button
+                  aria-label="Kultur bearbeiten (Alt+E)"
+                  variant="outlined"
+                  startIcon={<EditIcon />}
+                  onClick={() => selectedCulture && handleEdit(selectedCulture)}
+                  disabled={!selectedCulture}
+                >
+                  {t('buttons.edit')}
+                </Button>
+              </span>
+            </Tooltip>
             <Tooltip title={t('library.publishTooltip')}>
               <span>
                 <Button
