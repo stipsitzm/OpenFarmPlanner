@@ -2,6 +2,7 @@ import { Box, Button, Paper, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import RequirementChecklist from './RequirementChecklist';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import type { ReactNode } from 'react';
 
 export interface EmptyStateAction {
   label: string;
@@ -11,7 +12,7 @@ export interface EmptyStateAction {
 
 interface EmptyStateCardProps {
   title: string;
-  description: string;
+  description: ReactNode;
   actions?: EmptyStateAction[];
   checklist?: Array<{ label: string; done: boolean; doneLabel?: string; missingLabel?: string }>;
   showInfoIcon?: boolean;

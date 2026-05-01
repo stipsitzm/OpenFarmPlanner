@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
+import { AddBedIcon } from '../components/hierarchy/AddBedIcon';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
@@ -242,7 +243,13 @@ export default function FieldsBedsPage(): React.ReactElement {
         {!shouldShowProjectRequiredState && shouldShowMissingBedsHint ? (
           <EmptyStateCard
             title={t('hierarchy:messages.noBedsHintTitle')}
-            description={t('hierarchy:messages.noBedsHintDescription')}
+            description={(
+              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                {t('hierarchy:messages.noBedsHintBeforeIcon')}
+                <AddBedIcon interactive={false} ariaHidden sx={{ verticalAlign: 'baseline', mb: '-1px' }} />
+                {t('hierarchy:messages.noBedsHintAfterIcon')}
+              </Box>
+            )}
           />
         ) : null}
         {!shouldShowProjectRequiredState && shouldShowAreasEmptyState ? (

@@ -22,9 +22,9 @@ export function AddBedIcon({
     height: 24,
     borderRadius: '50%',
     border: '1px solid',
-    borderColor: 'success.200',
+    borderColor: 'success.400',
     bgcolor: interactive ? 'transparent' : 'success.50',
-    color: 'success.700',
+    color: 'success.main',
     transition: 'background-color 150ms ease, color 150ms ease, border-color 150ms ease',
     '& .MuiSvgIcon-root': {
       fontSize: 14,
@@ -34,8 +34,8 @@ export function AddBedIcon({
           cursor: 'pointer',
           '&:hover': {
             bgcolor: 'success.100',
-            color: 'success.900',
-            borderColor: 'success.300',
+            color: 'success.dark',
+            borderColor: 'success.main',
           },
           '&:focus-visible': {
             outline: '2px solid',

@@ -2,7 +2,7 @@
   "title": "Anbauflächen",
   "addField": "Parzelle",
   "addBed": "Beet",
-  "addBedToField": "Beet zu dieser Parzelle hinzufügen",
+  "addBedToField": "Beet für diese Parzelle hinzufügen",
   "createPlantingPlan": "Anbauplan erstellen",
   "columns": {
     "name": "Name",
