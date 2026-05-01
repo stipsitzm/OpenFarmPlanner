@@ -102,7 +102,6 @@ import { CulturesImportDialog } from './CulturesImportDialog';
 import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
-import EmptyStateCard from '../components/project/EmptyStateCard';
 import { getFirstMissingCultivationPlanRequirement } from './requirementFlow';
 
 function Cultures(): React.ReactElement {
@@ -1068,7 +1067,13 @@ function Cultures(): React.ReactElement {
                 </Button>
               </span>
             </Tooltip>
-            <Tooltip title={canCreatePlantingPlan ? "Anbauplan erstellen (Alt+P)" : t(`buttons.createPlantingPlanDisabled.${firstMissingPlanRequirement}`)}>
+            <Tooltip
+              title={
+                canCreatePlantingPlan
+                  ? "Anbauplan erstellen (Alt+P)"
+                  : t('buttons.createPlantingPlanMissingBedsTooltip')
+              }
+            >
               <span>
                 <Button
                   aria-label="Anbauplan erstellen (Alt+P)"
@@ -1082,14 +1087,20 @@ function Cultures(): React.ReactElement {
                 </Button>
               </span>
             </Tooltip>
+            {firstMissingPlanRequirement === 'beds' ? (
+              <Button component={RouterLink} to="/app/fields-beds" variant="outlined" color="success">
+                {t('buttons.goToFieldsBeds')}
+              </Button>
+            ) : null}
           </Box>
 
           {firstMissingPlanRequirement === 'beds' ? (
-            <EmptyStateCard
-              title={t('buttons.createPlantingPlanMissingBedsTitle')}
-              description={t('buttons.createPlantingPlanDisabled.beds')}
-              actions={[{ label: t('buttons.goToFieldsBeds'), to: '/app/fields-beds' }]}
-            />
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, color: 'success.dark', ml: 0.5 }}>
+              <InfoOutlinedIcon fontSize="small" color="success" />
+              <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>
+                {t('buttons.createPlantingPlanMissingBedsHint')}
+              </Typography>
+            </Box>
           ) : null}
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
