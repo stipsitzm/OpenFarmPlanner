@@ -216,7 +216,8 @@ describe('FieldsBedsPage', () => {
     bedListMock.mockResolvedValue({ data: { results: [] } });
 
     renderPage();
-    expect(await screen.findByText('Es sind noch keine Beete vorhanden. Füge Beete über das Plus-Symbol bei der jeweiligen Parzelle hinzu.')).toBeInTheDocument();
+    expect((await screen.findAllByText('Symbol bei der jeweiligen Parzelle hinzu.')).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
     expect(screen.queryByText('Noch keine Anbauflächen vorhanden')).not.toBeInTheDocument();
   });
 });
