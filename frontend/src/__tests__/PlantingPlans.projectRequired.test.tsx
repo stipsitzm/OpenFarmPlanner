@@ -88,19 +88,18 @@ describe("PlantingPlans project requirement state", () => {
     expect(apiMocks.bedList).not.toHaveBeenCalled();
   });
 
-  it("shows only location as first missing requirement when no locations exist", async () => {
+  it("shows only location-specific next step when no locations exist", async () => {
     render(
       <MemoryRouter>
         <PlantingPlans />
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("Du kannst noch keinen Anbauplan erstellen")).toBeInTheDocument();
-    expect(screen.getByText("Standort fehlt")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Standort anlegen" })).toBeInTheDocument();
+    expect(await screen.findByText("Du kannst noch keinen Anbauplan erstellen.")).toBeInTheDocument();
+    expect(screen.getByText("Lege zuerst einen Standort an.")).toBeInTheDocument();
+    expect(screen.queryByText("Standort fehlt")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Standort anlegen" })).not.toBeInTheDocument();
     expect(screen.queryByText("Kultur fehlt")).not.toBeInTheDocument();
     expect(screen.queryByText("Beet fehlt")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Kultur anlegen" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Anbauflächen anlegen" })).not.toBeInTheDocument();
   });
 });

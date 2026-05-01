@@ -1,9 +1,9 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AddIcon from '@mui/icons-material/Add';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
+import { AddBedIcon } from '../components/hierarchy/AddBedIcon';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
@@ -241,26 +241,16 @@ export default function FieldsBedsPage(): React.ReactElement {
           <ProjectRequiredState reason={missingProjectReason} />
         ) : null}
         {!shouldShowProjectRequiredState && shouldShowMissingBedsHint ? (
-          <Box
-            sx={{
-              mb: 2,
-              px: 1.25,
-              py: 0.9,
-              borderRadius: 1,
-              border: '1px solid',
-              borderColor: 'success.200',
-              bgcolor: 'success.50',
-              color: 'success.dark',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.75,
-            }}
-          >
-            <AddIcon fontSize="small" sx={{ color: 'success.dark', flexShrink: 0 }} aria-hidden="true" />
-            <Typography variant="body2" color="inherit">
-              {t('hierarchy:messages.noBedsHint')}
-            </Typography>
-          </Box>
+          <EmptyStateCard
+            title={t('hierarchy:messages.noBedsHintTitle')}
+            description={(
+              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                {t('hierarchy:messages.noBedsHintBeforeIcon')}
+                <AddBedIcon interactive={false} ariaHidden />
+                {t('hierarchy:messages.noBedsHintAfterIcon')}
+              </Box>
+            )}
+          />
         ) : null}
         {!shouldShowProjectRequiredState && shouldShowAreasEmptyState ? (
           <EmptyStateCard

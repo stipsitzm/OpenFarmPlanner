@@ -62,29 +62,27 @@
   },
   "emptyStates": {
     "createBlockedTooltip": "Beete werden innerhalb von Parzellen auf der Seite Anbauflächen hinzugefügt.",
-    "missingRequirementsTitle": "Du kannst noch keinen Anbauplan erstellen",
-    "missingRequirementsDescription": "Lege zuerst einen Standort an. Danach kannst du Parzellen, Beete, Kulturen und Anbaupläne erfassen.",
-    "noPlansTitle": "Noch keine Anbaupläne vorhanden",
-    "noPlansDescription": "Anbaupläne verbinden Kulturen mit Beeten und Zeiträumen. Danach erscheinen sie automatisch im Anbaukalender.",
+    "states": {
+      "locations": {
+        "title": "Du kannst noch keinen Anbauplan erstellen.",
+        "description": "Lege zuerst einen Standort an."
+      },
+      "beds": {
+        "title": "Du hast noch keine Beete angelegt.",
+        "description": "Beete sind die Grundlage für Anbaupläne. Lege jetzt dein erstes Beet an."
+      },
+      "cultures": {
+        "title": "Du hast noch keine Kulturen angelegt.",
+        "description": "Kulturen werden benötigt, um Anbaupläne zu erstellen."
+      },
+      "plans": {
+        "title": "Du hast noch keinen Anbauplan erstellt.",
+        "description": "Erstelle jetzt deinen ersten Anbauplan."
+      }
+    },
     "actions": {
-      "createLocation": "Standort hinzufügen",
-      "createCulture": "Kultur hinzufügen",
       "createAreas": "Zu Anbauflächen",
       "createPlan": "Anbauplan erstellen"
-    }
-  },
-  "requirements": {
-    "location": {
-      "label": "Standort",
-      "missing": "Standort fehlt"
-    },
-    "bed": {
-      "label": "Beet",
-      "missing": "Beet fehlt"
-    },
-    "culture": {
-      "label": "Kultur",
-      "missing": "Kultur fehlt"
     }
   }
 }

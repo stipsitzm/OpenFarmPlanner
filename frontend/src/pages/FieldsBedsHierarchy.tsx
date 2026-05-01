@@ -552,7 +552,14 @@ function FieldsBedsHierarchy({
         };
       } catch (err) {
         const extractedError = extractApiErrorMessage(err, t, t("errors.save"));
+        const requiresLocationSelection =
+          locations.length > 1 &&
+          extractedError.toLowerCase().includes("standort") &&
+          extractedError.toLowerCase().includes(t("validation.required").toLowerCase());
         const errorMessage =
+          requiresLocationSelection
+            ? t("messages.invalidLocationSelection")
+            :
           extractedError.includes("max_digits") ||
           extractedError.toLowerCase().includes("digits")
             ? t("validation.areaTooLarge")

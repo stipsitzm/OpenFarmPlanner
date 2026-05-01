@@ -1462,14 +1462,14 @@ function PlantingPlans(): React.ReactElement {
   const hasLocations = locations.length > 0;
   const hasCultures = cultures.length > 0;
   const hasBeds = beds.length > 0;
+  const hasPlans = mobileRows.length > 0;
   const firstMissingRequirement = getFirstMissingRequirement({
     hasLocations,
     hasBeds,
     hasCultures,
-    hasPlans: false,
+    hasPlans,
   });
-  const canCreatePlan = firstMissingRequirement === "plans";
-  const hasPlans = mobileRows.length > 0;
+  const canCreatePlan = firstMissingRequirement === "plans" || firstMissingRequirement === null;
   const shouldShowPrerequisiteState = !canCreatePlan;
   const shouldShowNoPlansState = canCreatePlan && !hasPlans;
 
@@ -1527,23 +1527,16 @@ function PlantingPlans(): React.ReactElement {
       <Box sx={{ width: "100%" }}>
         {shouldShowPrerequisiteState ? (
           <EmptyStateCard
-            title={t("plantingPlans:emptyStates.missingRequirementsTitle")}
-            description={t("plantingPlans:emptyStates.missingRequirementsDescription")}
-            checklist={[
-              ...(firstMissingRequirement === "locations" ? [{ label: t("plantingPlans:requirements.location.label"), done: false, missingLabel: t("plantingPlans:requirements.location.missing") }] : []),
-              ...(firstMissingRequirement === "beds" ? [{ label: t("plantingPlans:requirements.bed.label"), done: false, missingLabel: t("plantingPlans:requirements.bed.missing") }] : []),
-              ...(firstMissingRequirement === "cultures" ? [{ label: t("plantingPlans:requirements.culture.label"), done: false, missingLabel: t("plantingPlans:requirements.culture.missing") }] : []),
-            ]}
+            title={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.title`)}
+            description={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.description`)}
             actions={[
-              ...(firstMissingRequirement === "locations" ? [{ label: t("plantingPlans:emptyStates.actions.createLocation"), to: "/app/locations?create=true" }] : []),
               ...(firstMissingRequirement === "beds" ? [{ label: t("plantingPlans:emptyStates.actions.createAreas"), to: "/app/fields-beds" }] : []),
-              ...(firstMissingRequirement === "cultures" ? [{ label: t("plantingPlans:emptyStates.actions.createCulture"), to: "/app/cultures?create=true" }] : []),
             ]}
           />
         ) : shouldShowNoPlansState ? (
           <EmptyStateCard
-            title={t("plantingPlans:emptyStates.noPlansTitle")}
-            description={t("plantingPlans:emptyStates.noPlansDescription")}
+            title={t("plantingPlans:emptyStates.states.plans.title")}
+            description={t("plantingPlans:emptyStates.states.plans.description")}
             actions={[{ label: t("plantingPlans:emptyStates.actions.createPlan"), to: "/app/planting-plans?create=true" }]}
           />
         ) : null}

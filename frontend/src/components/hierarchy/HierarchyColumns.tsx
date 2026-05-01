@@ -15,6 +15,7 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
+import { AddBedIcon } from './AddBedIcon';
 import { getPlainExcerpt } from '../data-grid/markdown';
 
 export interface HierarchyColumnWidths {
@@ -90,35 +91,25 @@ function renderInlineActions(
   if (row.type === 'field') {
     return (
       <>
-        {renderActionIconButton({
-          label: t('hierarchy:addBedToField'),
-          onClick: () => callbacks.onAddBed(row.fieldId!),
-          icon: <AddIcon fontSize="small" />,
-          sx: {
-            width: 30,
-            height: 30,
-            bgcolor: 'success.50',
-            color: 'success.dark',
-            borderRadius: '999px',
-            border: '1px solid',
-            borderColor: 'success.200',
-            '&:hover': {
-              bgcolor: 'success.100',
-              borderColor: 'success.300',
-            },
-            '&:focus-visible': {
-              outline: '2px solid',
-              outlineColor: 'success.main',
-              outlineOffset: '2px',
-            },
-          },
-        })}
-        {renderActionIconButton({
-          label: t('common:actions.delete'),
-          color: 'error',
-          onClick: () => callbacks.onDeleteField(row.fieldId!),
-          icon: <DeleteIcon fontSize="small" />,
-        })}
+        <Tooltip title={t('hierarchy:addBedToField')}>
+          <span>
+            <AddBedIcon
+              ariaLabel={t('hierarchy:addBedToField')}
+              onClick={(event) => {
+                event.stopPropagation();
+                callbacks.onAddBed(row.fieldId!);
+              }}
+            />
+          </span>
+        </Tooltip>
+        <Box sx={{ ml: 0.25 }}>
+          {renderActionIconButton({
+            label: t('common:actions.delete'),
+            color: 'error',
+            onClick: () => callbacks.onDeleteField(row.fieldId!),
+            icon: <DeleteIcon fontSize="small" />,
+          })}
+        </Box>
       </>
     );
   }
@@ -213,7 +204,7 @@ function renderNameCell(
           {params.value}
         </Box>
 
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, ml: 0.75 }}>
           {showInlineActions ? renderInlineActions(row, callbacks, t) : null}
         </Box>
       </Box>
