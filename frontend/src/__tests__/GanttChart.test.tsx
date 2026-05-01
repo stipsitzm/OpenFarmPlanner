@@ -117,10 +117,10 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(screen.getByText('Du kannst noch keinen Anbauplan erstellen.')).toBeInTheDocument());
-    expect(screen.getByText('Lege zuerst einen Standort an.')).toBeInTheDocument();
-    expect(screen.queryByText('Standort fehlt')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Standort anlegen' })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Noch keine Anbauplanung möglich')).toBeInTheDocument());
+    expect(screen.getByText('Lege zuerst einen Standort an. Danach kannst du Parzellen, Beete, Kulturen und Anbaupläne erfassen.')).toBeInTheDocument();
+    expect(screen.getByText('Standort fehlt')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Standort hinzufügen' })).toBeInTheDocument();
     expect(screen.queryByText('Kultur fehlt')).not.toBeInTheDocument();
     expect(screen.queryByText('Beet fehlt')).not.toBeInTheDocument();
     expect(screen.queryByText('Anbauplan fehlt')).not.toBeInTheDocument();
