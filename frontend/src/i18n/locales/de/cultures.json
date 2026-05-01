@@ -234,7 +234,7 @@
       "beds": {
         "title": "Noch kein Saatgutbedarf berechenbar",
         "description": "Lege als Nächstes Beete an, damit Kulturen einer Fläche zugeordnet werden können.",
-        "action": "Beete anlegen"
+        "action": "Beet hinzufügen"
       },
       "cultures": {
         "title": "Noch kein Saatgutbedarf berechenbar",
