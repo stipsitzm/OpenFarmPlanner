@@ -326,7 +326,7 @@
     "aiCompleteAll": "Alle Kulturen vervollständigen (KI)",
     "aiApplySelected": "Auswahl anwenden",
     "aiClose": "Schließen",
-    "createPlantingPlanMissingBedsTitle": "Du brauchst zuerst mindestens ein Beet.",
+    "createPlantingPlanMissingBedsTitle": "Um einen Anbauplan zu erstellen, brauchst du mindestens ein Beet.",
     "createPlantingPlanMissingBedsHint": "Für einen Anbauplan brauchst du zuerst mindestens ein Beet.",
     "createPlantingPlanMissingBedsTooltip": "Du brauchst zuerst mindestens ein Beet. Beete legst du auf der Seite Anbauflächen an."
   },

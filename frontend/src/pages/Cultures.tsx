@@ -1120,6 +1120,23 @@ function Cultures(): React.ReactElement {
             </Button>
           </Box>
 
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+            <Tooltip title="Kultur löschen (Alt+Shift+D)">
+              <span>
+                <Button
+                  aria-label="Kultur löschen (Alt+Shift+D)"
+                  variant="outlined"
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                  onClick={() => selectedCulture && handleDelete(selectedCulture)}
+                  disabled={!selectedCulture}
+                >
+                  {t('buttons.delete')}
+                </Button>
+              </span>
+            </Tooltip>
+          </Box>
+
           {firstMissingPlanRequirement === 'beds' ? (
             <EmptyStateCard
               title={t('buttons.createPlantingPlanMissingBedsTitle')}
@@ -1172,22 +1189,6 @@ function Cultures(): React.ReactElement {
             </Box>
           )}
 
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-            <Tooltip title="Kultur löschen (Alt+Shift+D)">
-              <span>
-                <Button
-                  aria-label="Kultur löschen (Alt+Shift+D)"
-                  variant="outlined"
-                  color="error"
-                  startIcon={<DeleteIcon />}
-                  onClick={() => selectedCulture && handleDelete(selectedCulture)}
-                  disabled={!selectedCulture}
-                >
-                  {t('buttons.delete')}
-                </Button>
-              </span>
-            </Tooltip>
-          </Box>
         </Box>
       )}
 
