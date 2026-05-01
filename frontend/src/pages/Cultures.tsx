@@ -62,6 +62,7 @@ import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PublicIcon from '@mui/icons-material/Public';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {
   buildAllCulturesExport,
   buildAllCulturesFilename,
