@@ -18,8 +18,11 @@ export function AddBedIcon({
   sx,
 }: AddBedIconProps): ReactElement {
   const commonSx: SxProps<Theme> = {
-    width: 24,
-    height: 24,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 20,
+    height: 20,
     borderRadius: '50%',
     border: '1px solid',
     borderColor: 'success.400',
@@ -27,7 +30,7 @@ export function AddBedIcon({
     color: 'success.main',
     transition: 'background-color 150ms ease, color 150ms ease, border-color 150ms ease',
     '& .MuiSvgIcon-root': {
-      fontSize: 14,
+      fontSize: 12,
     },
     ...(interactive
       ? {
@@ -56,7 +59,7 @@ export function AddBedIcon({
         aria-hidden={ariaHidden ?? true}
         sx={{
           display: 'inline-flex',
-          verticalAlign: 'text-bottom',
+          verticalAlign: 'middle',
           ...commonSx,
           ...sx,
         }}

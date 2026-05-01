@@ -246,7 +246,7 @@ export default function FieldsBedsPage(): React.ReactElement {
             description={(
               <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
                 {t('hierarchy:messages.noBedsHintBeforeIcon')}
-                <AddBedIcon interactive={false} ariaHidden sx={{ verticalAlign: 'baseline', mb: '-1px' }} />
+                <AddBedIcon interactive={false} ariaHidden />
                 {t('hierarchy:messages.noBedsHintAfterIcon')}
               </Box>
             )}
