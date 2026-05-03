@@ -145,7 +145,7 @@ describe('GanttChartPage', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Anbauplan fehlt')).toBeInTheDocument());
-    expect(screen.getByRole('link', { name: 'Anbauplan erstellen' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Anbauplan hinzufügen' })).toBeInTheDocument();
   });
 
   it('shows project-required info instead of a red load error when no project is active', async () => {
