@@ -256,9 +256,9 @@
     "createSupplierAction": "Lieferant hinzufügen",
     "editCultureAction": "Kultur bearbeiten",
     "noSupplierData": "Keine Lieferantendaten vorhanden",
-    "noSupplierAvailable": "Kein Lieferant verfügbar",
+    "noSupplierAvailable": "Keine Lieferantendaten hinterlegt",
     "noPackagesAvailable": "Keine Packungsgrößen verfügbar",
-    "noPackageCalculationPossible": "Keine Berechnung möglich",
+    "noPackageCalculationPossible": "Nicht berechenbar (Daten fehlen)",
     "unitSeeds": "Korn",
     "unitGrams": "g",
     "columns": {
