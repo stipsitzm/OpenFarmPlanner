@@ -226,7 +226,32 @@ export function AreaAssignmentDialog({
 
   return (
     <>
-      <Stack direction="row" spacing={0.5} alignItems="center" sx={{ width: '100%', overflow: 'hidden' }}>
+      <Box
+        role="button"
+        tabIndex={0}
+        aria-label={t('areaAssignment.editButton')}
+        onClick={() => setIsOpen(true)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setIsOpen(true);
+          }
+        }}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.5,
+          width: '100%',
+          overflow: 'hidden',
+          cursor: 'pointer',
+          borderRadius: 0.5,
+          '&:focus-visible': {
+            outline: '2px solid',
+            outlineColor: 'primary.main',
+            outlineOffset: '1px',
+          },
+        }}
+      >
         <Typography variant="body2" noWrap sx={{ flexGrow: 1 }}>{compactLabel}</Typography>
         <IconButton
           aria-label={t('areaAssignment.editButton')}
@@ -235,7 +260,7 @@ export function AreaAssignmentDialog({
         >
           <EditIcon fontSize="small" />
         </IconButton>
-      </Stack>
+      </Box>
       <Dialog open={isOpen} onClose={() => setIsOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t('areaAssignment.title')}</DialogTitle>
         <DialogContent>
