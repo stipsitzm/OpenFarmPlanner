@@ -1118,9 +1118,7 @@ function Cultures(): React.ReactElement {
             <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
               Versionen
             </Button>
-          </Box>
-
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+            <Box sx={{ flexGrow: 1, minWidth: { xs: 0, md: 16 } }} />
             <Tooltip title="Kultur löschen (Alt+Shift+D)">
               <span>
                 <Button
@@ -1130,6 +1128,7 @@ function Cultures(): React.ReactElement {
                   startIcon={<DeleteIcon />}
                   onClick={() => selectedCulture && handleDelete(selectedCulture)}
                   disabled={!selectedCulture}
+                  sx={{ ml: { xs: 0, md: 'auto' } }}
                 >
                   {t('buttons.delete')}
                 </Button>
