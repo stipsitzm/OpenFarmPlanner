@@ -49,8 +49,8 @@ describe('Dashboard', () => {
     const createLocationLinks = screen.getAllByRole('link', { name: 'Standort hinzufügen' });
     expect(createLocationLinks).toHaveLength(1);
     expect(createLocationLinks[0]).toHaveAttribute('href', '/app/locations?create=true');
-    expect(screen.queryByText('Projektstatus')).not.toBeInTheDocument();
-    expect(screen.queryByText('Nächster sinnvoller Schritt')).not.toBeInTheDocument();
+    expect(screen.queryByText('Checkliste')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
     expect(screen.queryByText('Anstehende Aufgaben')).not.toBeInTheDocument();
   });
 
@@ -59,7 +59,7 @@ describe('Dashboard', () => {
 
     render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
-    expect(await screen.findByText('Projektstatus')).toBeInTheDocument();
+    expect(await screen.findByText('Checkliste')).toBeInTheDocument();
     expect(screen.queryByText('Starte deine Anbauplanung')).not.toBeInTheDocument();
   });
 
@@ -73,8 +73,8 @@ describe('Dashboard', () => {
     render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
     expect(await screen.findByText('Anstehende Aufgaben')).toBeInTheDocument();
-    expect(screen.queryByText('Projektstatus')).not.toBeInTheDocument();
-    expect(screen.queryByText('Nächster sinnvoller Schritt')).not.toBeInTheDocument();
+    expect(screen.queryByText('Checkliste')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
     expect(screen.queryByText('Dein Projekt ist eingerichtet.')).not.toBeInTheDocument();
     expect(screen.queryByText('Starte deine Anbauplanung')).not.toBeInTheDocument();
     expect(screen.getByText('Anstehende Aufgaben')).toBeInTheDocument();
