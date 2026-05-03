@@ -17,8 +17,8 @@
     "locationRequired": "Standort ist ein Pflichtfeld"
   },
   "confirmDelete": "Möchten Sie diese Parzelle wirklich löschen?",
-  "addButton": "Neue Parzelle hinzufügen",
-  "createNew": "Neue Parzelle erstellen",
+  "addButton": "Parzelle hinzufügen",
+  "createNew": "Parzelle hinzufügen",
   "cancel": "Abbrechen",
   "submit": "Erstellen",
   "selectLocation": "Standort auswählen",

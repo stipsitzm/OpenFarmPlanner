@@ -35,7 +35,7 @@
     "requiredFields": "Folgende Pflichtfelder müssen ausgefüllt werden: {{fields}}"
   },
   "confirmDelete": "Möchten Sie diesen Anbauplan wirklich löschen?",
-  "addButton": "Neuen Anbauplan hinzufügen",
+  "addButton": "Anbauplan hinzufügen",
   "cultivationTypes": {
     "directSowing": "Direktsaat",
     "preCultivation": "Pflanzung"
@@ -49,12 +49,12 @@
   "mobile": {
     "showDetails": "Details anzeigen",
     "hideDetails": "Details ausblenden",
-    "fabLabel": "Neuer Plan",
-    "fabAria": "Neuen Anbauplan erstellen",
+    "fabLabel": "Anbauplan hinzufügen",
+    "fabAria": "Anbauplan hinzufügen",
     "emptyTitle": "Noch keine Anbaupläne vorhanden",
     "emptyDescription": "Lege deinen ersten Anbauplan an, um Kultur, Anbauart und Zeiträume mobil übersichtlich zu verwalten.",
-    "emptyCta": "Anbauplan erstellen",
-    "createTitle": "Neuen Anbauplan erstellen",
+    "emptyCta": "Anbauplan hinzufügen",
+    "createTitle": "Anbauplan hinzufügen",
     "editTitle": "Anbauplan bearbeiten",
     "editAria": "Anbauplan bearbeiten",
     "notesPhotos": "Fotos",
@@ -64,7 +64,7 @@
     "createBlockedTooltip": "Beete werden innerhalb von Parzellen auf der Seite Anbauflächen hinzugefügt.",
     "states": {
       "locations": {
-        "title": "Du kannst noch keinen Anbauplan erstellen.",
+        "title": "Du kannst noch keinen Anbauplan hinzufügen.",
         "description": "Lege zuerst einen Standort an."
       },
       "beds": {
@@ -82,7 +82,7 @@
     },
     "actions": {
       "createAreas": "Zu Anbauflächen",
-      "createPlan": "Anbauplan erstellen"
+      "createPlan": "Anbauplan hinzufügen"
     }
   }
 }

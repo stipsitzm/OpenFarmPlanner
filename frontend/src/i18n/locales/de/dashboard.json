@@ -25,7 +25,7 @@
     "locations": { "text": "Lege zuerst einen Standort an.", "action": "Standort hinzufügen" },
     "beds": { "text": "Beete werden innerhalb von Parzellen auf der Seite Anbauflächen hinzugefügt.", "action": "Zu Anbauflächen" },
     "cultures": { "text": "Lege deine ersten Kulturen an.", "action": "Kultur hinzufügen" },
-    "plans": { "text": "Erstelle deinen ersten Anbauplan.", "action": "Anbauplan erstellen" }
+    "plans": { "text": "Erstelle deinen ersten Anbauplan.", "action": "Anbauplan hinzufügen" }
   },
   "tasks": {
     "title": "Anstehende Aufgaben",
