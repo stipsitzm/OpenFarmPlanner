@@ -73,7 +73,7 @@ describe('useKeyboardNavigation', () => {
   });
 
 
-  it('stays on suppliers when pressing Ctrl+Shift+ArrowRight from the last page', () => {
+  it('wraps to Übersicht when pressing Ctrl+Shift+ArrowRight from the last page', () => {
     window.history.pushState({}, '', '/suppliers');
     render(<TestComponent />);
 
@@ -86,7 +86,7 @@ describe('useKeyboardNavigation', () => {
       })
     );
 
-    expect(navigateMock).not.toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith('/app/dashboard');
   });
 
   it('falls back to Übersicht when current route is unknown', () => {
@@ -215,7 +215,7 @@ describe('useKeyboardNavigation', () => {
     expect(navigateMock).toHaveBeenCalledWith('/app/locations');
   });
 
-  it('stays on Übersicht on Ctrl+Shift+ArrowLeft', () => {
+  it('wraps to Lieferanten on Ctrl+Shift+ArrowLeft from Übersicht', () => {
     window.history.pushState({}, '', '/app/dashboard');
     render(<TestComponent />);
 
@@ -228,6 +228,6 @@ describe('useKeyboardNavigation', () => {
       })
     );
 
-    expect(navigateMock).not.toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith('/app/suppliers');
   });
 });

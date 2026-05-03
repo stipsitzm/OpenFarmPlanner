@@ -41,9 +41,14 @@ export function useKeyboardNavigation(): void {
 
       const normalizedPath = normalizeMainRoutePath(window.location.pathname || '/');
       const currentIndex = KEYBOARD_NAV_ROUTES.indexOf(normalizedPath);
-      const safeCurrentIndex = currentIndex === -1 ? 0 : currentIndex;
+      if (currentIndex === -1) {
+        console.warn(`[keyboard-nav] Unknown route "${normalizedPath}" (pathname: "${window.location.pathname}"). Falling back to dashboard.`);
+        navigate('/app/dashboard');
+        return;
+      }
+
       const direction = event.key === 'ArrowRight' ? 1 : -1;
-      const nextIndex = (safeCurrentIndex + direction + KEYBOARD_NAV_ROUTES.length) % KEYBOARD_NAV_ROUTES.length;
+      const nextIndex = (currentIndex + direction + KEYBOARD_NAV_ROUTES.length) % KEYBOARD_NAV_ROUTES.length;
 
       navigate(KEYBOARD_NAV_ROUTES[nextIndex]);
     };
