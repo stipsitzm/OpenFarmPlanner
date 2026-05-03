@@ -6,7 +6,6 @@ export interface MainNavigationItem {
 }
 
 export const MAIN_NAV_ITEMS: MainNavigationItem[] = [
-  { to: '/app/dashboard', labelKey: 'dashboard', keywords: ['übersicht', 'dashboard', 'start'] },
   { to: '/app/locations', labelKey: 'locations', keywords: ['standorte', 'orte', 'locations'] },
   { to: '/app/fields-beds', labelKey: 'fieldsAndBeds', keywords: ['anbauflächen', 'felder', 'beete'] },
   { to: '/app/cultures', labelKey: 'cultures', keywords: ['kulturen', 'kultur'] },

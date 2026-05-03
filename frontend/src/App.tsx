@@ -498,8 +498,7 @@ function RootLayout(): React.ReactElement {
             <AppLogo
               size={24}
               showText={false}
-              to={activeProjectId ? '/app/dashboard' : '/app/project-selection'}
-              subtleActive={activeProjectId !== null && normalizeMainRoutePath(location.pathname) === '/app/dashboard'}
+              to="/app/dashboard"
             />
           </div>
         ) : (
@@ -507,8 +506,7 @@ function RootLayout(): React.ReactElement {
             <AppLogo
               size={28}
               showText={!isCompactDesktop}
-              to={activeProjectId ? '/app/dashboard' : '/app/project-selection'}
-              subtleActive={activeProjectId !== null && normalizeMainRoutePath(location.pathname) === '/app/dashboard'}
+              to="/app/dashboard"
             />
             {primaryNavItems.map((item) => (
               <NavLink
