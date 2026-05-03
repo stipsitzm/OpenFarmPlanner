@@ -102,14 +102,13 @@ function renderInlineActions(
             />
           </span>
         </Tooltip>
-        <Box sx={{ ml: 0.25 }}>
-          {renderActionIconButton({
-            label: t('common:actions.delete'),
-            color: 'error',
-            onClick: () => callbacks.onDeleteField(row.fieldId!),
-            icon: <DeleteIcon fontSize="small" />,
-          })}
-        </Box>
+        {renderActionIconButton({
+          label: t('common:actions.delete'),
+          color: 'error',
+          onClick: () => callbacks.onDeleteField(row.fieldId!),
+          icon: <DeleteIcon fontSize="small" />,
+          sx: { ml: 0.5 },
+        })}
       </>
     );
   }
@@ -128,6 +127,7 @@ function renderInlineActions(
           color: 'error',
           onClick: () => callbacks.onDeleteBed(row.bedId!),
           icon: <DeleteIcon fontSize="small" />,
+          sx: { ml: 0.5 },
         })}
       </>
     );
@@ -204,7 +204,7 @@ function renderNameCell(
           {params.value}
         </Box>
 
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, ml: 0.75 }}>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, ml: 0.5 }}>
           {showInlineActions ? renderInlineActions(row, callbacks, t) : null}
         </Box>
       </Box>
