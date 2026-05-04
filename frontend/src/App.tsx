@@ -540,6 +540,10 @@ function RootLayout(): React.ReactElement {
   }, []);
   
   const sidebarWidth = sidebarCollapsed ? 64 : 240;
+  const currentPageTitle = useMemo(() => {
+    const activeItem = navItems.find((item) => location.pathname === item.to || item.activeAliases.includes(location.pathname));
+    return activeItem?.label ?? '';
+  }, [location.pathname, navItems]);
 
   return (
     <Box className="app" sx={{ display: 'flex', minHeight: '100vh' }}>
@@ -571,6 +575,9 @@ function RootLayout(): React.ReactElement {
         <Toolbar variant="dense" sx={{ minHeight: 52, gap: 1 }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
           {!isDesktopUp ? <AppLogo size={24} showText to="/app/dashboard" /> : null}
+          <Typography component="h1" variant="h6" noWrap sx={{ minWidth: 0, fontSize: '1rem', fontWeight: 600 }}>
+            {currentPageTitle}
+          </Typography>
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}

@@ -151,10 +151,7 @@ export default function SeedDemandPage(): React.ReactElement {
     return (
       <PageContainer>
         <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, width: '100%' }}>
-            <Typography variant="h4">
-              {t('seedDemand.title')}
-            </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1, width: '100%' }}>
             <PageHelp pageKey="seedDemand" />
           </Box>
           <ProjectRequiredState reason={missingProjectReason} />
@@ -166,10 +163,7 @@ export default function SeedDemandPage(): React.ReactElement {
   return (
     <PageContainer>
       <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, width: '100%' }}>
-          <Typography variant="h4">
-            {t('seedDemand.title')}
-          </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1, width: '100%' }}>
           <PageHelp pageKey="seedDemand" />
         </Box>
 

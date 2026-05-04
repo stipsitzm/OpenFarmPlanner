@@ -21,7 +21,6 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { locationAPI, type Location } from '../api/api';
 import PageHelp from '../components/help/PageHelp';
-import PageHeader from '../components/layout/PageHeader';
 import PageContainer from '../components/layout/PageContainer';
 import { useTranslation } from '../i18n';
 import { resolveLocaleFromLanguage } from '../utils/numberLocalization';
@@ -273,19 +272,14 @@ function Locations(): React.ReactElement {
   return (
     <PageContainer>
       <Box sx={{ width: '100%', mx: 'auto' }}>
-        <PageHeader
-          title={t('locations:title')}
-          actions={(
-            <>
-              {!shouldShowProjectRequiredState ? (
-                <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
-                  {t('locations:addButton')}
-                </Button>
-              ) : null}
-              <PageHelp pageKey="locations" />
-            </>
-          )}
-        />
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 1 }}>
+          {!shouldShowProjectRequiredState ? (
+            <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
+              {t('locations:addButton')}
+            </Button>
+          ) : null}
+          <PageHelp pageKey="locations" />
+        </Box>
 
         {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
         {loading ? <Typography>{t('common:messages.loading')}</Typography> : null}

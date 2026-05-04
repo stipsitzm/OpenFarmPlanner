@@ -960,7 +960,6 @@ function Cultures(): React.ReactElement {
             mb: 2,
           }}
         >
-          <h1>{t('title')}</h1>
           <PageHelp pageKey="cultures" />
         </Box>
         <ProjectRequiredState reason={missingProjectReason} />
@@ -980,7 +979,6 @@ function Cultures(): React.ReactElement {
           mb: 2,
         }}
       >
-        <h1>{t('title')}</h1>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 'auto' }}>
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNew}>
             {t('buttons.addNew')}
