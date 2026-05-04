@@ -66,7 +66,11 @@ function renderActionIconButton({
           event.stopPropagation();
           onClick(event);
         }}
-        sx={sx}
+        sx={{
+          p: 0.5,
+          '& .MuiSvgIcon-root': { fontSize: 18 },
+          ...sx,
+        }}
       >
         {icon}
       </IconButton>
@@ -80,17 +84,21 @@ function renderInlineActions(
   t: TFunction
 ): ReactElement | null {
   if (row.type === 'location') {
-    return renderActionIconButton({
-      label: t('hierarchy:addField'),
-      color: 'primary',
-      onClick: () => callbacks.onAddField(row.locationId),
-      icon: <AddIcon fontSize="small" />,
-    });
+    return (
+      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+        {renderActionIconButton({
+          label: t('hierarchy:addField'),
+          color: 'primary',
+          onClick: () => callbacks.onAddField(row.locationId),
+          icon: <AddIcon />,
+        })}
+      </Box>
+    );
   }
 
   if (row.type === 'field') {
     return (
-      <>
+      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
         <Tooltip title={t('hierarchy:addBedToField')}>
           <span>
             <AddBedIcon
@@ -99,6 +107,7 @@ function renderInlineActions(
                 event.stopPropagation();
                 callbacks.onAddBed(row.fieldId!);
               }}
+              sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
             />
           </span>
         </Tooltip>
@@ -106,30 +115,36 @@ function renderInlineActions(
           label: t('common:actions.delete'),
           color: 'error',
           onClick: () => callbacks.onDeleteField(row.fieldId!),
-          icon: <DeleteIcon fontSize="small" />,
-          sx: { ml: 0.5 },
+          icon: <DeleteIcon />,
+          sx: {
+            opacity: 0.7,
+            '&:hover': { opacity: 1 },
+          },
         })}
-      </>
+      </Box>
     );
   }
 
   if (row.type === 'bed') {
     return (
-      <>
+      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
         {renderActionIconButton({
           label: t('hierarchy:createPlantingPlan'),
           color: 'primary',
           onClick: () => callbacks.onCreatePlantingPlan(row.bedId!),
-          icon: <AgricultureIcon fontSize="small" />,
+          icon: <AgricultureIcon />,
         })}
         {renderActionIconButton({
           label: t('common:actions.delete'),
           color: 'error',
           onClick: () => callbacks.onDeleteBed(row.bedId!),
-          icon: <DeleteIcon fontSize="small" />,
-          sx: { ml: 0.5 },
+          icon: <DeleteIcon />,
+          sx: {
+            opacity: 0.7,
+            '&:hover': { opacity: 1 },
+          },
         })}
-      </>
+      </Box>
     );
   }
 
@@ -204,7 +219,7 @@ function renderNameCell(
           {params.value}
         </Box>
 
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, ml: 0.5 }}>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center' }}>
           {showInlineActions ? renderInlineActions(row, callbacks, t) : null}
         </Box>
       </Box>
