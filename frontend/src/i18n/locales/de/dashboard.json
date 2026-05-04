@@ -9,28 +9,18 @@
     "shortDescription": "Lege zuerst einen Standort an.",
     "action": "Standort hinzufügen"
   },
-  "setup": {
-    "title": "Projektstatus",
-    "location": "Standort angelegt",
-    "bed": "Beet angelegt",
-    "culture": "Kultur angelegt",
-    "plan": "Anbauplan erstellt"
-  },
-  "status": {
-    "done": "vorhanden",
-    "missing": "fehlt"
-  },
-  "nextStep": {
-    "title": "Nächster sinnvoller Schritt",
-    "locations": { "text": "Lege zuerst einen Standort an.", "action": "Standort hinzufügen" },
-    "beds": { "text": "Beete werden innerhalb von Parzellen auf der Seite Anbauflächen hinzugefügt.", "action": "Zu Anbauflächen" },
-    "cultures": { "text": "Lege deine ersten Kulturen an.", "action": "Kultur hinzufügen" },
-    "plans": { "text": "Erstelle deinen ersten Anbauplan.", "action": "Anbauplan erstellen" }
-  },
   "tasks": {
     "title": "Anstehende Aufgaben",
     "empty": "Keine anstehenden Aufgaben vorhanden",
     "emptyTitle": "Keine anstehenden Aufgaben",
     "emptyDescription": "Aktuell gibt es keine anstehenden Aufgaben für dieses Projekt."
+  },
+  "checklist": {
+    "title": "Checkliste",
+    "location": "Standort hinzufügen",
+    "field": "Parzelle hinzufügen",
+    "bed": "Beet hinzufügen",
+    "culture": "Kultur hinzufügen",
+    "plan": "Anbauplan hinzufügen"
   }
 }

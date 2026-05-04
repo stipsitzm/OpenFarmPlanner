@@ -36,7 +36,7 @@
   "emptyOnboarding": {
     "title": "Noch keine Kulturen vorhanden",
     "description": "Kulturen sind die Grundlage für deine Anbauplanung. Lege deine erste Kultur an oder übernimm Kulturen aus der öffentlichen Kulturbibliothek.",
-    "createAction": "Neue Kultur hinzufügen",
+    "createAction": "Kultur hinzufügen",
     "openLibraryAction": "Öffentliche Kulturbibliothek öffnen"
   },
   "perennial": "Mehrjährig",
@@ -67,7 +67,7 @@
     "harvestWindowValue": "{{first}}–{{last}} Tage nach der Aussaat"
   },
   "form": {
-    "createTitle": "Neue Kultur erstellen",
+    "createTitle": "Kultur hinzufügen",
     "editTitle": "Kultur bearbeiten",
     "cancel": "Abbrechen",
     "save": "Speichern",
@@ -88,9 +88,9 @@
     "supplierRequired": "Saatgutlieferant ist erforderlich",
     "supplierHelp": "Lieferant aus der Liste auswählen",
     "noSuppliers": "Keine Lieferanten vorhanden",
-    "createSuppliers": "Lieferanten anlegen",
+    "createSuppliers": "Lieferanten hinzufügen",
     "newSupplierOption": "+ Neuer Lieferant",
-    "createNewSupplierInline": "Neuen Lieferanten anlegen",
+    "createNewSupplierInline": "Lieferant hinzufügen",
     "noSuppliersHint": "Bitte legen Sie zuerst einen Lieferanten an.",
     "supplierHomepage": "Lieferanten-Homepage",
     "generalInfoSectionTitle": "Allgemeine Informationen",
@@ -221,7 +221,7 @@
       "noResultsTitle": "Kein Saatgutbedarf vorhanden",
       "noResultsDescription": "Für die aktuellen Anbaupläne konnte kein Saatgutbedarf berechnet werden.",
       "actions": {
-        "createPlan": "Anbauplan erstellen",
+        "createPlan": "Anbauplan hinzufügen",
         "editCultures": "Kulturen bearbeiten"
       }
     },
@@ -229,22 +229,22 @@
       "locations": {
         "title": "Noch kein Saatgutbedarf berechenbar",
         "description": "Lege zuerst einen Standort an, damit du Flächen und Beete planen kannst.",
-        "action": "Standort anlegen"
+        "action": "Standort hinzufügen"
       },
       "beds": {
         "title": "Noch kein Saatgutbedarf berechenbar",
         "description": "Lege als Nächstes Beete an, damit Kulturen einer Fläche zugeordnet werden können.",
-        "action": "Beete anlegen"
+        "action": "Beet hinzufügen"
       },
       "cultures": {
         "title": "Noch kein Saatgutbedarf berechenbar",
         "description": "Lege jetzt deine ersten Kulturen an, damit daraus ein Saatgutbedarf berechnet werden kann.",
-        "action": "Kultur anlegen"
+        "action": "Kultur hinzufügen"
       },
       "plans": {
         "title": "Noch kein Saatgutbedarf berechenbar",
         "description": "Erstelle als Nächstes einen Anbauplan, damit ein konkreter Saatgutbedarf entsteht.",
-        "action": "Anbauplan erstellen"
+        "action": "Anbauplan hinzufügen"
       },
       "seedData": {
         "title": "Noch kein Saatgutbedarf berechenbar",
@@ -253,12 +253,12 @@
       }
     },
     "selectSupplier": "Lieferant auswählen",
-    "createSupplierAction": "Neuen Lieferanten anlegen",
+    "createSupplierAction": "Lieferant hinzufügen",
     "editCultureAction": "Kultur bearbeiten",
     "noSupplierData": "Keine Lieferantendaten vorhanden",
-    "noSupplierAvailable": "Kein Lieferant verfügbar",
+    "noSupplierAvailable": "Keine Lieferantendaten hinterlegt",
     "noPackagesAvailable": "Keine Packungsgrößen verfügbar",
-    "noPackageCalculationPossible": "Keine Berechnung möglich",
+    "noPackageCalculationPossible": "Nicht berechenbar (Daten fehlen)",
     "unitSeeds": "Korn",
     "unitGrams": "g",
     "columns": {
@@ -308,18 +308,18 @@
     "all": "Alle Kulturen als JSON herunterladen"
   },
   "buttons": {
-    "addNew": "Neue Kultur hinzufügen",
+    "addNew": "Kultur hinzufügen",
     "edit": "Bearbeiten",
     "delete": "Löschen",
     "deleteConfirm": "Möchten Sie diese Kultur wirklich löschen?",
-    "createPlantingPlan": "Anbauplan erstellen",
+    "createPlantingPlan": "Anbauplan hinzufügen",
     "goToFieldsBeds": "Zu Anbauflächen",
     "createPlantingPlanDisabled": {
       "locations": "Du brauchst zuerst mindestens einen Standort, um einen Anbauplan zu erstellen.",
       "fields": "Du brauchst zuerst mindestens eine Parzelle, um einen Anbauplan zu erstellen.",
       "beds": "Du brauchst zuerst mindestens ein Beet. Beete werden innerhalb einer Parzelle auf der Seite Anbauflächen hinzugefügt.",
       "cultures": "Du brauchst zuerst mindestens eine Kultur, um einen Anbauplan zu erstellen.",
-      "null": "Anbauplan erstellen"
+      "null": "Anbauplan hinzufügen"
     },
     "aiComplete": "Kultur vervollständigen (KI)",
     "aiReresearch": "Kultur komplett neu recherchieren (KI)",

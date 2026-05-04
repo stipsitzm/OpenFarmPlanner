@@ -73,7 +73,7 @@ import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
-import { MAIN_NAV_ITEMS, MAIN_NAV_ROUTES, normalizeMainRoutePath } from './navigation/mainNavigation';
+import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './navigation/mainNavigation';
 
 interface SnackbarState {
   open: boolean;
@@ -412,26 +412,27 @@ function RootLayout(): React.ReactElement {
     return normalizeMainRoutePath(pathname);
   }, [location.pathname]);
 
-  const goToNextPage = useCallback((): void => {
-    const currentIndex = MAIN_NAV_ROUTES.indexOf(getCurrentRouteFromLocation());
+  const navigateRelativePage = useCallback((direction: 1 | -1): void => {
+    const currentRoute = getCurrentRouteFromLocation();
+    const currentIndex = KEYBOARD_NAV_ROUTES.indexOf(currentRoute);
+
     if (currentIndex === -1) {
+      console.warn(`[keyboard-nav] Unknown route "${currentRoute}" (pathname: "${window.location.pathname}"). Falling back to dashboard.`);
       navigate('/app/dashboard');
       return;
     }
-    if (currentIndex >= MAIN_NAV_ROUTES.length - 1) {
-      return;
-    }
-    navigate(MAIN_NAV_ROUTES[currentIndex + 1]);
+
+    const nextIndex = (currentIndex + direction + KEYBOARD_NAV_ROUTES.length) % KEYBOARD_NAV_ROUTES.length;
+    navigate(KEYBOARD_NAV_ROUTES[nextIndex]);
   }, [getCurrentRouteFromLocation, navigate]);
 
+  const goToNextPage = useCallback((): void => {
+    navigateRelativePage(1);
+  }, [navigateRelativePage]);
+
   const goToPreviousPage = useCallback((): void => {
-    const currentIndex = MAIN_NAV_ROUTES.indexOf(getCurrentRouteFromLocation());
-    if (currentIndex <= 0) {
-      navigate('/app/dashboard');
-      return;
-    }
-    navigate(MAIN_NAV_ROUTES[currentIndex - 1]);
-  }, [getCurrentRouteFromLocation, navigate]);
+    navigateRelativePage(-1);
+  }, [navigateRelativePage]);
 
   const globalCommands = useMemo(() => createRootCommands({
     currentPath: normalizeMainRoutePath(location.pathname),
@@ -498,8 +499,7 @@ function RootLayout(): React.ReactElement {
             <AppLogo
               size={24}
               showText={false}
-              to={activeProjectId ? '/app/dashboard' : '/app/project-selection'}
-              subtleActive={activeProjectId !== null && normalizeMainRoutePath(location.pathname) === '/app/dashboard'}
+              to="/app/dashboard"
             />
           </div>
         ) : (
@@ -507,8 +507,7 @@ function RootLayout(): React.ReactElement {
             <AppLogo
               size={28}
               showText={!isCompactDesktop}
-              to={activeProjectId ? '/app/dashboard' : '/app/project-selection'}
-              subtleActive={activeProjectId !== null && normalizeMainRoutePath(location.pathname) === '/app/dashboard'}
+              to="/app/dashboard"
             />
             {primaryNavItems.map((item) => (
               <NavLink

@@ -11,7 +11,7 @@
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MAIN_NAV_ROUTES, normalizeMainRoutePath } from '../navigation/mainNavigation';
+import { KEYBOARD_NAV_ROUTES, normalizeMainRoutePath } from '../navigation/mainNavigation';
 
 export function useKeyboardNavigation(): void {
   const navigate = useNavigate();
@@ -40,25 +40,17 @@ export function useKeyboardNavigation(): void {
       event.preventDefault();
 
       const normalizedPath = normalizeMainRoutePath(window.location.pathname || '/');
-      const currentIndex = MAIN_NAV_ROUTES.indexOf(normalizedPath);
-
+      const currentIndex = KEYBOARD_NAV_ROUTES.indexOf(normalizedPath);
       if (currentIndex === -1) {
+        console.warn(`[keyboard-nav] Unknown route "${normalizedPath}" (pathname: "${window.location.pathname}"). Falling back to dashboard.`);
         navigate('/app/dashboard');
         return;
       }
 
-      if (event.key === 'ArrowLeft') {
-        if (currentIndex === 0) {
-          return;
-        }
-        navigate(MAIN_NAV_ROUTES[currentIndex - 1]);
-        return;
-      }
+      const direction = event.key === 'ArrowRight' ? 1 : -1;
+      const nextIndex = (currentIndex + direction + KEYBOARD_NAV_ROUTES.length) % KEYBOARD_NAV_ROUTES.length;
 
-      if (currentIndex >= MAIN_NAV_ROUTES.length - 1) {
-        return;
-      }
-      navigate(MAIN_NAV_ROUTES[currentIndex + 1]);
+      navigate(KEYBOARD_NAV_ROUTES[nextIndex]);
     };
 
     window.addEventListener('keydown', handleKeyDown);

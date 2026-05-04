@@ -118,7 +118,10 @@ describe('hierarchy components and behaviors', () => {
         } as never)}
       </>
     );
-    await user.click(screen.getByLabelText('Beet zu dieser Parzelle hinzufügen'));
+    const addBedButton = screen.getAllByRole('button', { name: 'Beet zu dieser Parzelle hinzufügen' })
+      .find((button) => !button.hasAttribute('data-mui-internal-clone-element'));
+    expect(addBedButton).toBeDefined();
+    await user.click(addBedButton!);
     await user.click(screen.getByLabelText('Löschen'));
     expect(addBed).toHaveBeenCalledWith(10);
     expect(deleteField).toHaveBeenCalledWith(10);

@@ -121,7 +121,7 @@ describe('Cultures action area', () => {
     renderCultures('/cultures?cultureId=1');
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Neue Kultur hinzufügen' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Kultur hinzufügen' })).toBeInTheDocument();
     });
 
     expect(screen.getByRole('button', { name: 'Öffentliche Kulturbibliothek' })).toBeInTheDocument();

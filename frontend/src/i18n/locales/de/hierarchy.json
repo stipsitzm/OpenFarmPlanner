@@ -3,7 +3,7 @@
   "addField": "Parzelle",
   "addBed": "Beet",
   "addBedToField": "Beet für diese Parzelle hinzufügen",
-  "createPlantingPlan": "Anbauplan erstellen",
+  "createPlantingPlan": "Anbauplan hinzufügen",
   "columns": {
     "name": "Name",
     "location": "Standort",

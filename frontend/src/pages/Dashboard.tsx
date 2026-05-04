@@ -1,7 +1,9 @@
-import { Alert, Box, Button, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../i18n';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, type Bed, type Culture, type Field, type Location, type PlantingPlan } from '../api/api';
 import PageContainer from '../components/layout/PageContainer';
 import PageHeader from '../components/layout/PageHeader';
@@ -11,10 +13,11 @@ import { getFirstMissingRequirement } from './requirementFlow';
 import { deriveLocationTasks } from './locationDerivedTasks';
 
 const NEXT_STEP_CONFIG = {
-  locations: { textKey: 'dashboard:nextStep.locations.text', actionKey: 'dashboard:nextStep.locations.action', to: '/app/locations?create=true' },
-  beds: { textKey: 'dashboard:nextStep.beds.text', actionKey: 'dashboard:nextStep.beds.action', to: '/app/fields-beds' },
-  cultures: { textKey: 'dashboard:nextStep.cultures.text', actionKey: 'dashboard:nextStep.cultures.action', to: '/app/cultures?create=true' },
-  plans: { textKey: 'dashboard:nextStep.plans.text', actionKey: 'dashboard:nextStep.plans.action', to: '/app/planting-plans?create=true' },
+  locations: { actionKey: 'dashboard:checklist.location', to: '/app/locations?create=true' },
+  fields: { actionKey: 'dashboard:checklist.field', to: '/app/fields-beds' },
+  beds: { actionKey: 'dashboard:checklist.bed', to: '/app/fields-beds' },
+  cultures: { actionKey: 'dashboard:checklist.culture', to: '/app/cultures?create=true' },
+  plans: { actionKey: 'dashboard:checklist.plan', to: '/app/planting-plans?create=true' },
 } as const;
 
 export default function Dashboard(): React.ReactElement {
@@ -57,14 +60,26 @@ export default function Dashboard(): React.ReactElement {
   }, [shouldShowProjectRequiredState, t]);
 
   const firstMissingRequirement = getFirstMissingRequirement({ hasLocations: locations.length > 0, hasBeds: beds.length > 0, hasCultures: cultures.length > 0, hasPlans: plans.length > 0 });
+  const firstMissingChecklistStep = (locations.length === 0
+    ? 'locations'
+    : fields.length === 0
+      ? 'fields'
+      : beds.length === 0
+        ? 'beds'
+        : cultures.length === 0
+          ? 'cultures'
+          : plans.length === 0
+            ? 'plans'
+            : null);
   const locale = i18n.resolvedLanguage === 'de' ? 'de-DE' : 'en-US';
 
-  const setupItems = [
-    { label: t('dashboard:setup.location'), done: locations.length > 0 },
-    { label: t('dashboard:setup.bed'), done: beds.length > 0 },
-    { label: t('dashboard:setup.culture'), done: cultures.length > 0 },
-    { label: t('dashboard:setup.plan'), done: plans.length > 0 },
-  ];
+  const checklistItems = [
+    { key: 'locations', label: t('dashboard:checklist.location'), done: locations.length > 0 },
+    { key: 'fields', label: t('dashboard:checklist.field'), done: fields.length > 0 },
+    { key: 'beds', label: t('dashboard:checklist.bed'), done: beds.length > 0 },
+    { key: 'cultures', label: t('dashboard:checklist.culture'), done: cultures.length > 0 },
+    { key: 'plans', label: t('dashboard:checklist.plan'), done: plans.length > 0 },
+  ] as const;
 
   const upcomingTasks = useMemo(() => {
     const byLocation = deriveLocationTasks({ locations, fields, beds, cultures, plantingPlans: plans });
@@ -95,28 +110,33 @@ export default function Dashboard(): React.ReactElement {
       ) : null}
 
       {!isEmptyProject && !isSetupComplete ? (
-        <>
-          <Card variant="outlined" sx={{ mb: 2 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>{t('dashboard:setup.title')}</Typography>
-              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                {setupItems.map((item) => <Chip key={item.label} label={`${item.label}: ${item.done ? t('dashboard:status.done') : t('dashboard:status.missing')}`} color={item.done ? 'success' : 'default'} />)}
-              </Stack>
-            </CardContent>
-          </Card>
-
-          <Card variant="outlined" sx={{ mb: 2 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>{t('dashboard:nextStep.title')}</Typography>
-              {firstMissingRequirement ? (
-                <>
-                  <Typography variant="body2" sx={{ mb: 1.5 }}>{t(NEXT_STEP_CONFIG[firstMissingRequirement].textKey)}</Typography>
-                  <Button component={RouterLink} to={NEXT_STEP_CONFIG[firstMissingRequirement].to} variant="contained">{t(NEXT_STEP_CONFIG[firstMissingRequirement].actionKey)}</Button>
-                </>
-              ) : null}
-            </CardContent>
-          </Card>
-        </>
+        <Card variant="outlined" sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>{t('dashboard:checklist.title')}</Typography>
+            <Stack spacing={1.1} sx={{ mb: 2 }}>
+              {checklistItems.map((item) => {
+                const isNextStep = firstMissingChecklistStep === item.key;
+                return (
+                  <Box key={item.key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {item.done ? (
+                      <CheckBoxIcon fontSize="small" color="success" />
+                    ) : (
+                      <CheckBoxOutlineBlankIcon fontSize="small" color={isNextStep ? 'primary' : 'disabled'} />
+                    )}
+                    <Typography variant="body2" sx={{ fontWeight: isNextStep ? 600 : 400, color: isNextStep ? 'primary.main' : 'text.primary' }}>
+                      {item.label}
+                    </Typography>
+                  </Box>
+                );
+              })}
+            </Stack>
+            {firstMissingChecklistStep ? (
+              <Button component={RouterLink} to={NEXT_STEP_CONFIG[firstMissingChecklistStep].to} variant="contained">
+                {t(NEXT_STEP_CONFIG[firstMissingChecklistStep].actionKey)}
+              </Button>
+            ) : null}
+          </CardContent>
+        </Card>
       ) : null}
 
       {!isEmptyProject && (isSetupComplete || (!isSetupComplete && upcomingTasks.length > 0)) ? (

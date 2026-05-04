@@ -72,7 +72,7 @@
       ],
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
-        "add": "Neuen Standort hinzufügen",
+        "add": "Standort hinzufügen",
         "edit": "Standort bearbeiten",
         "delete": "Standort löschen"
       }
@@ -132,9 +132,9 @@
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
         "expandToggle": "Bereich ein- oder ausklappen",
-        "add": "Neues Element anlegen",
+        "add": "Element hinzufügen",
         "delete": "Element löschen",
-        "createPlan": "Anbauplan für dieses Beet anlegen",
+        "createPlan": "Anbauplan für dieses Beet hinzufügen",
         "dimensions": "Ausrichtung von Länge und Breite für die grafische Ansicht"
       }
     },
@@ -160,9 +160,9 @@
       ],
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
-        "add": "Neue Kultur anlegen",
+        "add": "Kultur hinzufügen",
         "library": "Öffentliche Kulturbibliothek öffnen",
-        "createPlan": "Anbauplan für diese Kultur anlegen",
+        "createPlan": "Anbauplan für diese Kultur hinzufügen",
         "more": "Weitere Aktionen öffnen",
         "edit": "Kulturdaten bearbeiten",
         "delete": "Kultur entfernen"
@@ -192,7 +192,7 @@
       ],
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
-        "add": "Neuen Anbauplan anlegen",
+        "add": "Anbauplan hinzufügen",
         "mobileAdd": "Auf Mobilgeräten schnell einen neuen Eintrag anlegen",
         "notes": "Notizen und Anhänge pro Eintrag öffnen",
         "edit": "Werte direkt in der Tabelle ändern"
@@ -261,7 +261,7 @@
       ],
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
-        "add": "Lieferanten anlegen",
+        "add": "Lieferanten hinzufügen",
         "edit": "Lieferantendaten ändern",
         "delete": "Lieferanten entfernen"
       }

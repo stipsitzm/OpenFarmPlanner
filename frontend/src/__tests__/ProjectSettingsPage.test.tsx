@@ -219,7 +219,7 @@ describe('ProjectSettingsPage', () => {
   it('shows project name in view mode and allows switching to edit mode', async () => {
     render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
     expect(await screen.findByText('Alpha')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Projekt umbenennen')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Projekt umbenennen')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Speichern' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Projekt umbenennen' }));
@@ -271,7 +271,7 @@ describe('ProjectSettingsPage', () => {
     fireEvent.keyDown(projectNameInput, { key: 'Escape', code: 'Escape' });
 
     expect(updateProjectMock).not.toHaveBeenCalled();
-    expect(screen.queryByLabelText('Projekt umbenennen')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Projekt umbenennen')).toBeInTheDocument();
     expect(screen.getByText('Alpha')).toBeInTheDocument();
   });
 
@@ -284,7 +284,7 @@ describe('ProjectSettingsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
 
     expect(updateProjectMock).not.toHaveBeenCalled();
-    expect(screen.queryByLabelText('Projekt umbenennen')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Projekt umbenennen')).toBeInTheDocument();
     expect(screen.getByText('Alpha')).toBeInTheDocument();
   });
 });

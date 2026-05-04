@@ -1,16 +1,13 @@
 import { Box } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
-import { useTranslation } from '../../i18n';
 
 interface AppLogoProps {
   to?: string;
   size?: number;
   showText?: boolean;
-  subtleActive?: boolean;
 }
 
-export default function AppLogo({ to = '/app/dashboard', size = 28, showText = true, subtleActive = false }: AppLogoProps): React.ReactElement {
-  const { t } = useTranslation('common');
+export default function AppLogo({ to = '/app/dashboard', size = 28, showText = true }: AppLogoProps): React.ReactElement {
 
   return (
     <Box
@@ -26,25 +23,31 @@ export default function AppLogo({ to = '/app/dashboard', size = 28, showText = t
         px: 0.75,
         py: 0.35,
         borderRadius: 1,
-        backgroundColor: subtleActive ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-        border: subtleActive ? '1px solid rgba(255, 255, 255, 0.16)' : '1px solid transparent',
-        transition: 'background-color 120ms ease, border-color 120ms ease',
+        border: '1px solid transparent',
+        transition: 'background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease',
         '&:hover': {
-          backgroundColor: subtleActive ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.06)',
-          borderColor: subtleActive ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+          borderColor: 'rgba(255, 255, 255, 0.2)',
+        },
+        '&:focus-visible': {
+          outline: 'none',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          borderColor: 'rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.35)',
         },
       }}
-      aria-label={t('appName')}
+      aria-label="Zur Übersicht"
+      title="Zur Übersicht"
     >
       <Box
         component="img"
         src="/favicon.png"
-        alt={t('appName')}
+        alt="OpenFarmPlanner"
         sx={{ height: size, width: size, borderRadius: 0.5, flexShrink: 0 }}
       />
       {showText ? (
         <Box component="span" sx={{ fontWeight: 700, fontSize: 16, whiteSpace: 'nowrap' }}>
-          {t('appName')}
+          OpenFarmPlanner
         </Box>
       ) : null}
     </Box>

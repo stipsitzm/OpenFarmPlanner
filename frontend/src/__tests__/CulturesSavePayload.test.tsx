@@ -271,7 +271,7 @@ describe('Cultures save payload', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Neue Kultur hinzufügen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Kultur hinzufügen' }));
     fireEvent.click(await screen.findByRole('button', { name: 'submit-edit' }));
 
     await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
