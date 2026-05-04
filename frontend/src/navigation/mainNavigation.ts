@@ -16,7 +16,7 @@ export const MAIN_NAV_ITEMS: MainNavigationItem[] = [
 ];
 
 export const MAIN_NAV_ROUTES = MAIN_NAV_ITEMS.map((item) => item.to);
-export const KEYBOARD_NAV_ROUTES = ['/app/dashboard', ...MAIN_NAV_ROUTES];
+export const ORDERED_APP_ROUTES = ['/app/dashboard', ...MAIN_NAV_ROUTES];
 
 export const normalizeMainRoutePath = (pathname: string): string => {
   const normalizedPath = pathname.replace(/\/$/, '') || '/';
