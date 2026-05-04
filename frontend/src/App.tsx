@@ -776,7 +776,7 @@ function RootLayout(): React.ReactElement {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </div>
+    </Box>
   );
 }
 
