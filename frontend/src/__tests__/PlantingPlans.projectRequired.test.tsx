@@ -95,7 +95,7 @@ describe("PlantingPlans project requirement state", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("Du kannst noch keinen Anbauplan erstellen.")).toBeInTheDocument();
+    expect(await screen.findByText("Du kannst noch keinen Anbauplan hinzufügen.")).toBeInTheDocument();
     expect(screen.getByText("Lege zuerst einen Standort an.")).toBeInTheDocument();
     expect(screen.queryByText("Standort fehlt")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Standort anlegen" })).not.toBeInTheDocument();
