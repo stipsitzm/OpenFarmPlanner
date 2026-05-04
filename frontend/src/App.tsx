@@ -211,7 +211,7 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
         Tastenkürzel
       </MenuItem>
       <MenuItem onClick={onOpenHelp}>
-        Hilfe
+        App-Hilfe
       </MenuItem>
       <MenuItem onClick={() => void onLogout()}>
         {t('commandPalette.commands.logout')} {userLabel}

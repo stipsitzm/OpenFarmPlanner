@@ -1,6 +1,7 @@
 {
   "showTooltip": "Show help",
   "title": "Help",
+  "globalTitle": "Overview: How OpenFarmPlanner works",
   "heading": "How OpenFarmPlanner works",
   "intro": "OpenFarmPlanner consists of several pages that work together:",
   "sections": [
