@@ -69,6 +69,7 @@ import {
 import { MobileCardList } from "../components/mobile/MobileCardList";
 import { NotesDrawer } from "../components/data-grid/NotesDrawer";
 import PageHelp from "../components/help/PageHelp";
+import PageHeader from "../components/layout/PageHeader";
 import ProjectRequiredState from "../components/project/ProjectRequiredState";
 import {
   useCommandContextTag,
@@ -793,9 +794,11 @@ function PlantingPlans(): React.ReactElement {
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
       <PageContainer>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-          <PageHelp pageKey="plantingPlans" />
-        </Box>
+        <PageHeader
+          title={t("plantingPlans:title")}
+          help={<PageHelp pageKey="plantingPlans" ariaLabel="Hilfe zu Anbauplänen öffnen" tooltip="Hilfe zu Anbauplänen öffnen" />}
+          marginBottom={1}
+        />
         <ProjectRequiredState reason={missingProjectReason} />
       </PageContainer>
     );
@@ -1495,8 +1498,10 @@ function PlantingPlans(): React.ReactElement {
 
   return (
     <PageContainer variant="xwide">
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1, mb: 1 }}>
-        {!isMobile ? (
+      <PageHeader
+        title={t("plantingPlans:title")}
+        help={<PageHelp pageKey="plantingPlans" ariaLabel="Hilfe zu Anbauplänen öffnen" tooltip="Hilfe zu Anbauplänen öffnen" />}
+        actions={!isMobile ? (
           <Tooltip title={canCreatePlan ? "" : t("plantingPlans:emptyStates.createBlockedTooltip")}>
             <span>
               <Button
@@ -1510,9 +1515,9 @@ function PlantingPlans(): React.ReactElement {
               </Button>
             </span>
           </Tooltip>
-        ) : null}
-        <PageHelp pageKey="plantingPlans" />
-      </Box>
+        ) : undefined}
+        marginBottom={1}
+      />
 
       {areaWarning ? (
         <Alert severity="warning" sx={{ mb: 2 }}>

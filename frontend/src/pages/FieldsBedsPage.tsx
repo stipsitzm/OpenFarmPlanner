@@ -9,6 +9,7 @@ import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
 import PageHelp from '../components/help/PageHelp';
 import PageContainer from '../components/layout/PageContainer';
+import PageHeader from '../components/layout/PageHeader';
 import ModeToggle from '../components/ModeToggle';
 import { bedAPI, fieldAPI, locationAPI, type Location } from '../api/api';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
@@ -168,9 +169,11 @@ export default function FieldsBedsPage(): React.ReactElement {
   return (
     <>
       <PageContainer variant="standard">
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-          <PageHelp pageKey={viewMode === 'graphical' ? 'graphical' : 'areas'} />
-        </Box>
+        <PageHeader
+          title={t('hierarchy:title')}
+          help={<PageHelp pageKey={viewMode === 'graphical' ? 'graphical' : 'areas'} ariaLabel="Hilfe zu Anbauflächen öffnen" tooltip="Hilfe zu Anbauflächen öffnen" />}
+          marginBottom={1}
+        />
         <Box
           sx={{
             display: 'flex',

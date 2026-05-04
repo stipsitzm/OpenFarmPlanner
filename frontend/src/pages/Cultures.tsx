@@ -92,6 +92,7 @@ import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from '.
 import { buildCultureSavePayload } from './culturesSaveUtils';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './culturesHistoryUtils';
 import PageHelp from '../components/help/PageHelp';
+import PageHeader from '../components/layout/PageHeader';
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
 import { useAuth } from '../auth/useAuth';
@@ -950,18 +951,11 @@ function Cultures(): React.ReactElement {
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
       <PageContainer>
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: { xs: 'flex-start', sm: 'center' },
-            flexWrap: 'wrap',
-            gap: 1.5,
-            mb: 2,
-          }}
-        >
-          <PageHelp pageKey="cultures" />
-        </Box>
+        <PageHeader
+          title={t('title')}
+          help={<PageHelp pageKey="cultures" ariaLabel="Hilfe zu Kulturen öffnen" tooltip="Hilfe zu Kulturen öffnen" />}
+          marginBottom={1}
+        />
         <ProjectRequiredState reason={missingProjectReason} />
       </PageContainer>
     );
@@ -969,17 +963,10 @@ function Cultures(): React.ReactElement {
 
   return (
     <PageContainer>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          flexWrap: 'wrap',
-          gap: 1.5,
-          mb: 2,
-        }}
-      >
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 'auto' }}>
+      <PageHeader
+        title={t('title')}
+        help={<PageHelp pageKey="cultures" ariaLabel="Hilfe zu Kulturen öffnen" tooltip="Hilfe zu Kulturen öffnen" />}
+        actions={<Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNew}>
             {t('buttons.addNew')}
           </Button>
@@ -995,8 +982,9 @@ function Cultures(): React.ReactElement {
           >
             <MoreVertIcon />
           </IconButton>
-          <PageHelp pageKey="cultures" />
-        </Box>
+        </Box>}
+        marginBottom={1}
+      />
         <Menu
           id="culture-import-menu"
           anchorEl={importMenuAnchor}
@@ -1020,7 +1008,6 @@ function Cultures(): React.ReactElement {
           onChange={handleImportFileChange}
           hidden
         />
-      </Box>
       
       {enrichmentCostBanner && (
         <Alert severity="info" sx={{ mb: 2 }}>

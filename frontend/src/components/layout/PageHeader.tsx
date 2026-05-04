@@ -3,6 +3,8 @@ import type { ReactElement, ReactNode } from 'react';
 
 interface PageHeaderProps {
   title: ReactNode;
+  help?: ReactNode;
+  description?: ReactNode;
   actions?: ReactNode;
   marginBottom?: number;
 }
@@ -18,6 +20,8 @@ interface PageHeaderProps {
  */
 export default function PageHeader({
   title,
+  help,
+  description,
   actions,
   marginBottom = 2,
 }: PageHeaderProps): ReactElement {
@@ -32,9 +36,19 @@ export default function PageHeader({
         mb: marginBottom,
       }}
     >
-      <Typography variant="h4" component="h1">
-        {title}
-      </Typography>
+      <Box sx={{ minWidth: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Typography variant="h5" component="h1" sx={{ lineHeight: 1.2 }}>
+            {title}
+          </Typography>
+          {help}
+        </Box>
+        {description ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {description}
+          </Typography>
+        ) : null}
+      </Box>
       {actions ? (
         <Box
           sx={{

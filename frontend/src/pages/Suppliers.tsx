@@ -23,6 +23,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import PageHelp from '../components/help/PageHelp';
+import PageHeader from '../components/layout/PageHeader';
 import PageContainer from '../components/layout/PageContainer';
 import type { Supplier } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -191,9 +192,11 @@ export default function Suppliers(): React.ReactElement {
     return (
       <PageContainer>
         <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-            <PageHelp pageKey="suppliers" />
-          </Box>
+          <PageHeader
+            title={t('title')}
+            help={<PageHelp pageKey="suppliers" ariaLabel="Hilfe zu Lieferanten öffnen" tooltip="Hilfe zu Lieferanten öffnen" />}
+            marginBottom={1}
+          />
           <ProjectRequiredState reason={missingProjectReason} />
         </Box>
       </PageContainer>
@@ -203,12 +206,16 @@ export default function Suppliers(): React.ReactElement {
   return (
     <PageContainer>
       <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1, mb: 1 }}>
-          <Button variant="contained" onClick={openCreate}>
-            + {t('create')}
-          </Button>
-          <PageHelp pageKey="suppliers" />
-        </Box>
+        <PageHeader
+          title={t('title')}
+          help={<PageHelp pageKey="suppliers" ariaLabel="Hilfe zu Lieferanten öffnen" tooltip="Hilfe zu Lieferanten öffnen" />}
+          actions={(
+            <Button variant="contained" onClick={openCreate}>
+              + {t('create')}
+            </Button>
+          )}
+          marginBottom={1}
+        />
         {suppliers.length === 0 ? (
           <Box sx={{ width: '100%', maxWidth: 880 }}>
             <EmptyStateCard

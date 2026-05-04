@@ -23,6 +23,7 @@ import { useTranslation } from '../i18n';
 import { useCommandContextTag } from '../commands/useCommandContext';
 import PageHelp from '../components/help/PageHelp';
 import PageContainer from '../components/layout/PageContainer';
+import PageHeader from '../components/layout/PageHeader';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
@@ -151,9 +152,11 @@ export default function SeedDemandPage(): React.ReactElement {
     return (
       <PageContainer>
         <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1, width: '100%' }}>
-            <PageHelp pageKey="seedDemand" />
-          </Box>
+          <PageHeader
+            title={t('seedDemand.title')}
+            help={<PageHelp pageKey="seedDemand" ariaLabel="Hilfe zu Saatgutbedarf öffnen" tooltip="Hilfe zu Saatgutbedarf öffnen" />}
+            marginBottom={1}
+          />
           <ProjectRequiredState reason={missingProjectReason} />
         </Box>
       </PageContainer>
@@ -163,9 +166,11 @@ export default function SeedDemandPage(): React.ReactElement {
   return (
     <PageContainer>
       <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1, width: '100%' }}>
-          <PageHelp pageKey="seedDemand" />
-        </Box>
+        <PageHeader
+          title={t('seedDemand.title')}
+          help={<PageHelp pageKey="seedDemand" ariaLabel="Hilfe zu Saatgutbedarf öffnen" tooltip="Hilfe zu Saatgutbedarf öffnen" />}
+          marginBottom={1}
+        />
 
         {isLoading && <CircularProgress />}
         {error && <Alert severity="error">{error}</Alert>}

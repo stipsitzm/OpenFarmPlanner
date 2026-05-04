@@ -37,6 +37,7 @@ import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import PageHelp from '../components/help/PageHelp';
+import PageHeader from '../components/layout/PageHeader';
 import ModeToggle from '../components/ModeToggle';
 import PageContainer from '../components/layout/PageContainer';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
@@ -422,9 +423,7 @@ function GanttChartPage(): React.ReactElement {
   if (loading) {
     return (
       <PageContainer variant="full">
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-          <PageHelp pageKey="calendar" />
-        </Box>
+        <PageHeader title={t('ganttChart:title')} help={<PageHelp pageKey="calendar" ariaLabel="Hilfe zu Anbaukalender öffnen" tooltip="Hilfe zu Anbaukalender öffnen" />} marginBottom={1} />
         <p>{t('ganttChart:loading')}</p>
       </PageContainer>
     );
@@ -433,9 +432,7 @@ function GanttChartPage(): React.ReactElement {
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
       <PageContainer variant="full">
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-          <PageHelp pageKey="calendar" />
-        </Box>
+        <PageHeader title={t('ganttChart:title')} help={<PageHelp pageKey="calendar" ariaLabel="Hilfe zu Anbaukalender öffnen" tooltip="Hilfe zu Anbaukalender öffnen" />} marginBottom={1} />
         <ProjectRequiredState reason={missingProjectReason} />
       </PageContainer>
     );
@@ -443,9 +440,7 @@ function GanttChartPage(): React.ReactElement {
 
   return (
     <PageContainer variant="full">
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-        <PageHelp pageKey="calendar" />
-      </Box>
+      <PageHeader title={t('ganttChart:title')} help={<PageHelp pageKey="calendar" ariaLabel="Hilfe zu Anbaukalender öffnen" tooltip="Hilfe zu Anbaukalender öffnen" />} marginBottom={1} />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {hasCalendarRequirements ? (
