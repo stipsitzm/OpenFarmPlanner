@@ -6,8 +6,6 @@ import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, type Bed, type Culture, type Field, type Location, type PlantingPlan } from '../api/api';
 import PageContainer from '../components/layout/PageContainer';
-import PageHelp from '../components/help/PageHelp';
-import PageHeader from '../components/layout/PageHeader';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import { getFirstMissingRequirement } from './requirementFlow';
@@ -97,10 +95,6 @@ export default function Dashboard(): React.ReactElement {
 
   return (
     <PageContainer>
-      <PageHeader
-        title={t('dashboard:title')}
-        help={<PageHelp pageKey="dashboard" ariaLabel="Hilfe zu Übersicht öffnen" tooltip="Hilfe zu Übersicht öffnen" />}
-      />
       {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
 
       {isEmptyProject ? (

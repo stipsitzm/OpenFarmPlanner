@@ -91,8 +91,6 @@ import { createCulturesCommandSpecs } from './culturesCommandSpecs';
 import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './culturesHistoryUtils';
-import PageHelp from '../components/help/PageHelp';
-import PageHeader from '../components/layout/PageHeader';
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
 import { useAuth } from '../auth/useAuth';
@@ -951,11 +949,6 @@ function Cultures(): React.ReactElement {
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
       <PageContainer>
-        <PageHeader
-          title={t('title')}
-          help={<PageHelp pageKey="cultures" ariaLabel="Hilfe zu Kulturen öffnen" tooltip="Hilfe zu Kulturen öffnen" />}
-          marginBottom={1}
-        />
         <ProjectRequiredState reason={missingProjectReason} />
       </PageContainer>
     );
@@ -963,28 +956,6 @@ function Cultures(): React.ReactElement {
 
   return (
     <PageContainer>
-      <PageHeader
-        title={t('title')}
-        help={<PageHelp pageKey="cultures" ariaLabel="Hilfe zu Kulturen öffnen" tooltip="Hilfe zu Kulturen öffnen" />}
-        actions={<Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNew}>
-            {t('buttons.addNew')}
-          </Button>
-          <Button variant="outlined" startIcon={<PublicIcon />} onClick={() => void handleOpenPublicLibrary()}>
-            {t('library.openButton')}
-          </Button>
-          <IconButton
-            size="small"
-            aria-label={t('import.menuLabel')}
-            aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
-            aria-haspopup="true"
-            onClick={handleImportMenuOpen}
-          >
-            <MoreVertIcon />
-          </IconButton>
-        </Box>}
-        marginBottom={1}
-      />
         <Menu
           id="culture-import-menu"
           anchorEl={importMenuAnchor}

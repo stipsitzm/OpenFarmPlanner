@@ -68,8 +68,6 @@ import {
 } from "../components/data-grid";
 import { MobileCardList } from "../components/mobile/MobileCardList";
 import { NotesDrawer } from "../components/data-grid/NotesDrawer";
-import PageHelp from "../components/help/PageHelp";
-import PageHeader from "../components/layout/PageHeader";
 import ProjectRequiredState from "../components/project/ProjectRequiredState";
 import {
   useCommandContextTag,
@@ -794,11 +792,6 @@ function PlantingPlans(): React.ReactElement {
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
       <PageContainer>
-        <PageHeader
-          title={t("plantingPlans:title")}
-          help={<PageHelp pageKey="plantingPlans" ariaLabel="Hilfe zu Anbauplänen öffnen" tooltip="Hilfe zu Anbauplänen öffnen" />}
-          marginBottom={1}
-        />
         <ProjectRequiredState reason={missingProjectReason} />
       </PageContainer>
     );
@@ -1498,26 +1491,6 @@ function PlantingPlans(): React.ReactElement {
 
   return (
     <PageContainer variant="xwide">
-      <PageHeader
-        title={t("plantingPlans:title")}
-        help={<PageHelp pageKey="plantingPlans" ariaLabel="Hilfe zu Anbauplänen öffnen" tooltip="Hilfe zu Anbauplänen öffnen" />}
-        actions={!isMobile ? (
-          <Tooltip title={canCreatePlan ? "" : t("plantingPlans:emptyStates.createBlockedTooltip")}>
-            <span>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => gridCommandApiRef.current?.addRow()}
-                aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
-                disabled={!canCreatePlan}
-              >
-                {t("plantingPlans:addButton")}
-              </Button>
-            </span>
-          </Tooltip>
-        ) : undefined}
-        marginBottom={1}
-      />
 
       {areaWarning ? (
         <Alert severity="warning" sx={{ mb: 2 }}>

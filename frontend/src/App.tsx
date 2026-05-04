@@ -87,6 +87,7 @@ import ProjectSettingsPage from './pages/ProjectSettingsPage';
 import InvitationAcceptPage from './pages/InvitationAcceptPage';
 import AppLogo from './components/layout/AppLogo';
 import { HelpDialog } from './components/help/HelpDialog';
+import PageHelp from './components/help/PageHelp';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
@@ -544,6 +545,25 @@ function RootLayout(): React.ReactElement {
     const activeItem = navItems.find((item) => location.pathname === item.to || item.activeAliases.includes(location.pathname));
     return activeItem?.label ?? '';
   }, [location.pathname, navItems]);
+  const topbarHelpConfig = useMemo(() => {
+    if (location.pathname.startsWith('/app/dashboard')) return { pageKey: 'dashboard' as const, label: 'Hilfe zu Übersicht' };
+    if (location.pathname.startsWith('/app/locations')) return { pageKey: 'locations' as const, label: 'Hilfe zu Standorte' };
+    if (location.pathname.startsWith('/app/fields-beds')) return { pageKey: 'areas' as const, label: 'Hilfe zu Anbauflächen' };
+    if (location.pathname.startsWith('/app/cultures')) return { pageKey: 'cultures' as const, label: 'Hilfe zu Kulturen' };
+    if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { pageKey: 'plantingPlans' as const, label: 'Hilfe zu Anbauplänen' };
+    if (location.pathname.startsWith('/app/gantt-chart')) return { pageKey: 'calendar' as const, label: 'Hilfe zu Anbaukalender' };
+    if (location.pathname.startsWith('/app/seed-demand')) return { pageKey: 'seedDemand' as const, label: 'Hilfe zu Saatgutbedarf' };
+    if (location.pathname.startsWith('/app/suppliers')) return { pageKey: 'suppliers' as const, label: 'Hilfe zu Lieferanten' };
+    return null;
+  }, [location.pathname]);
+  const topbarPrimaryAction = useMemo(() => {
+    if (location.pathname.startsWith('/app/locations')) return { label: 'Standort hinzufügen', to: '/app/locations?create=true' };
+    if (location.pathname.startsWith('/app/cultures')) return { label: 'Kultur hinzufügen', to: '/app/cultures?create=true' };
+    if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { label: 'Anbauplan hinzufügen', to: '/app/planting-plans?create=true' };
+    if (location.pathname.startsWith('/app/suppliers')) return { label: 'Lieferant hinzufügen', to: '/app/suppliers?create=true' };
+    if (location.pathname.startsWith('/app/fields-beds')) return { label: 'Parzelle hinzufügen', to: '/app/fields-beds' };
+    return null;
+  }, [location.pathname]);
 
   return (
     <Box className="app" sx={{ display: 'flex', minHeight: '100vh' }}>
@@ -575,10 +595,16 @@ function RootLayout(): React.ReactElement {
         <Toolbar variant="dense" sx={{ minHeight: 52, gap: 1 }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
           {!isDesktopUp ? <AppLogo size={24} showText to="/app/dashboard" /> : null}
-          <Typography component="h1" variant="h6" noWrap sx={{ minWidth: 0, fontSize: '1rem', fontWeight: 600 }}>
+          <Typography component="h1" variant="h5" noWrap sx={{ minWidth: 0, fontSize: { xs: '1.1rem', md: '1.25rem' }, fontWeight: 600 }}>
             {currentPageTitle}
           </Typography>
+          {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {topbarPrimaryAction && !isMobile ? (
+            <Button size="small" variant="contained" onClick={() => navigate(topbarPrimaryAction.to)} sx={{ textTransform: 'none' }}>
+              + {topbarPrimaryAction.label}
+            </Button>
+          ) : null}
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
             aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}

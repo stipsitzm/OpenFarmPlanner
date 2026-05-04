@@ -21,9 +21,7 @@ import { seedDemandAPI, type SeedDemand } from '../api/api';
 import { bedAPI, cultureAPI, locationAPI, plantingPlanAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import { useCommandContextTag } from '../commands/useCommandContext';
-import PageHelp from '../components/help/PageHelp';
 import PageContainer from '../components/layout/PageContainer';
-import PageHeader from '../components/layout/PageHeader';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
@@ -152,11 +150,6 @@ export default function SeedDemandPage(): React.ReactElement {
     return (
       <PageContainer>
         <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-          <PageHeader
-            title={t('seedDemand.title')}
-            help={<PageHelp pageKey="seedDemand" ariaLabel="Hilfe zu Saatgutbedarf öffnen" tooltip="Hilfe zu Saatgutbedarf öffnen" />}
-            marginBottom={1}
-          />
           <ProjectRequiredState reason={missingProjectReason} />
         </Box>
       </PageContainer>
@@ -166,11 +159,6 @@ export default function SeedDemandPage(): React.ReactElement {
   return (
     <PageContainer>
       <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-        <PageHeader
-          title={t('seedDemand.title')}
-          help={<PageHelp pageKey="seedDemand" ariaLabel="Hilfe zu Saatgutbedarf öffnen" tooltip="Hilfe zu Saatgutbedarf öffnen" />}
-          marginBottom={1}
-        />
 
         {isLoading && <CircularProgress />}
         {error && <Alert severity="error">{error}</Alert>}
