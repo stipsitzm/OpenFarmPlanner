@@ -949,6 +949,10 @@ function Cultures(): React.ReactElement {
 
   return (
     <PageContainer>
+      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
+        <Button variant="contained" onClick={handleAddNew}>Kultur hinzufügen</Button>
+        <Button variant="outlined" onClick={() => { void handleOpenPublicLibrary(); }}>Öffentliche Kulturbibliothek</Button>
+      </Box>
         <Menu
           id="culture-import-menu"
           anchorEl={importMenuAnchor}
