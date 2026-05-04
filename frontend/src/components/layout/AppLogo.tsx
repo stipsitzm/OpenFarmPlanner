@@ -1,5 +1,6 @@
 import { Box } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
+import { normalizeMainRoutePath } from '../../navigation/mainNavigation';
 
 interface AppLogoProps {
   to?: string;
@@ -8,10 +9,12 @@ interface AppLogoProps {
 }
 
 export default function AppLogo({ to = '/app/dashboard', size = 28, showText = true }: AppLogoProps): React.ReactElement {
+  const location = useLocation();
+  const isActive = normalizeMainRoutePath(location.pathname) === '/app/dashboard';
 
   return (
     <Box
-      component={RouterLink}
+      component={NavLink}
       to={to}
       sx={{
         display: 'inline-flex',
@@ -24,9 +27,11 @@ export default function AppLogo({ to = '/app/dashboard', size = 28, showText = t
         py: 0.35,
         borderRadius: 1,
         border: '1px solid transparent',
+        backgroundColor: isActive ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+        boxShadow: isActive ? 'inset 0 0 0 1px rgba(255, 255, 255, 0.12)' : 'none',
         transition: 'background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease',
         '&:hover': {
-          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+          backgroundColor: isActive ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.08)',
           borderColor: 'rgba(255, 255, 255, 0.2)',
         },
         '&:focus-visible': {
