@@ -254,8 +254,9 @@ export function AreaAssignmentDialog({
       >
         <Typography variant="body2" noWrap sx={{ flexGrow: 1 }}>{compactLabel}</Typography>
         <IconButton
-          aria-label={t('areaAssignment.editButton')}
           size="small"
+          tabIndex={-1}
+          aria-hidden
           onClick={() => setIsOpen(true)}
         >
           <EditIcon fontSize="small" />

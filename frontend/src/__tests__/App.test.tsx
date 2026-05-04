@@ -92,8 +92,8 @@ describe('App', () => {
     render(<CommandProvider><App /></CommandProvider>);
 
     expect(await screen.findByText(translations.navigation.locations)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Übersicht' })).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: 'OpenFarmPlanner' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: 'Zur Übersicht' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Zur Übersicht' }).length).toBeGreaterThan(0);
     expect(screen.getByText(translations.navigation.cultures)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: translations.navigation.plantingPlans })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Aktives Projekt wechseln' })).toBeInTheDocument();
@@ -119,7 +119,7 @@ describe('App', () => {
 
     render(<CommandProvider><App /></CommandProvider>);
 
-    const logoLinks = await screen.findAllByRole('link', { name: 'OpenFarmPlanner' });
+    const logoLinks = await screen.findAllByRole('link', { name: 'Zur Übersicht' });
     expect(logoLinks[0]).toHaveAttribute('href', '/app/dashboard');
   });
 
