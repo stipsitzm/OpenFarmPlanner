@@ -539,6 +539,23 @@ function RootLayout(): React.ReactElement {
     window.addEventListener('keydown', handleHelpShortcut);
     return () => window.removeEventListener('keydown', handleHelpShortcut);
   }, []);
+  useEffect(() => {
+    const handleSidebarShortcut = (event: KeyboardEvent): void => {
+      const target = event.target as HTMLElement | null;
+      const isTypingTarget = target instanceof HTMLInputElement
+        || target instanceof HTMLTextAreaElement
+        || target?.isContentEditable;
+      if (isTypingTarget || !isDesktopUp) {
+        return;
+      }
+      if (event.altKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'b') {
+        event.preventDefault();
+        toggleSidebarCollapsed();
+      }
+    };
+    window.addEventListener('keydown', handleSidebarShortcut);
+    return () => window.removeEventListener('keydown', handleSidebarShortcut);
+  }, [isDesktopUp]);
   
   const sidebarWidth = sidebarCollapsed ? 64 : 240;
   const currentPageTitle = useMemo(() => {
@@ -759,6 +776,9 @@ function RootLayout(): React.ReactElement {
             </ListItem>
             <ListItem>
               <ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="–" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Sidebar ein-/ausklappen" secondary="Alt+B" />
             </ListItem>
             <ListItem>
               <ListItemText primary={t('commandPalette.commands.closeDialog')} secondary="Esc" />
