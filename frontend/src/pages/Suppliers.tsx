@@ -84,11 +84,6 @@ export default function Suppliers(): React.ReactElement {
     return () => window.clearTimeout(timeoutId);
   }, [shouldShowProjectRequiredState]);
 
-  const openCreate = (): void => {
-    setDraft({ name: '', homepage_url: '' });
-    setDialogOpen(true);
-  };
-
   useEffect(() => {
     if (shouldShowProjectRequiredState) {
       return;

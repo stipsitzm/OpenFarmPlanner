@@ -40,7 +40,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   List,
   ListItem,
   ListItemText,
@@ -52,7 +51,6 @@ import {
   Link,
   Stack,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -60,7 +58,6 @@ import AgricultureIcon from '@mui/icons-material/Agriculture';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PublicIcon from '@mui/icons-material/Public';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import {
   buildAllCulturesExport,
@@ -365,10 +362,6 @@ function Cultures(): React.ReactElement {
     if (selectedCultureId) {
       navigate(`/app/planting-plans?cultureId=${selectedCultureId}`);
     }
-  };
-
-  const handleImportMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setImportMenuAnchor(event.currentTarget);
   };
 
   const handleImportMenuClose = () => {

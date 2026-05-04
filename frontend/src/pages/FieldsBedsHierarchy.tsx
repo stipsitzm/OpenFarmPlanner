@@ -605,7 +605,10 @@ function FieldsBedsHierarchy({
     }
 
     if (selectedRow.type === "location" && selectedRow.locationId) {
-      void addField(selectedRow.locationId);
+      const fieldName = window.prompt(t("dialogs.addField.nameLabel"));
+      if (fieldName !== null) {
+        void addField(selectedRow.locationId, fieldName);
+      }
       return;
     }
 
@@ -817,7 +820,12 @@ function FieldsBedsHierarchy({
       toggleExpand,
       handleAddBed,
       (bedId) => deleteBed(bedId),
-      (locationId) => addField(locationId),
+      (locationId) => {
+        const fieldName = window.prompt(t("dialogs.addField.nameLabel"));
+        if (fieldName !== null) {
+          void addField(locationId, fieldName);
+        }
+      },
       (fieldId) => deleteField(fieldId),
       handleCreatePlantingPlan,
       notesEditor.handleOpen,
