@@ -772,10 +772,10 @@ function RootLayout(): React.ReactElement {
         <DialogContent>
           <List dense>
             <ListItem>
-              <ListItemText primary={t('commandPalette.commands.openShortcuts')} secondary="?" />
+              <ListItemText primary={t('commandPalette.commands.openShortcuts')} secondary="Alt+H" />
             </ListItem>
             <ListItem>
-              <ListItemText primary={t('commandPalette.label')} secondary="Ctrl+K" />
+              <ListItemText primary={t('commandPalette.label')} secondary="Alt+K" />
             </ListItem>
             <ListItem>
               <ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="–" />

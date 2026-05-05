@@ -143,7 +143,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
       {children}
       <CommandPalette open={paletteOpen} commands={activeCommands} onClose={closePalette} />
       <Dialog open={helpOpen} onClose={() => setHelpOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle>Tastenkürzel (?)</DialogTitle>
+        <DialogTitle>Tastenkürzel (Alt+H)</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
             Shortcuts sind browser-sicher und überschreiben keine üblichen Browser-Shortcuts.
@@ -177,7 +177,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert severity="info" onClose={() => setHintOpen(false)}>
-          💡 Tipp: Drücke Ctrl+K für die Command Palette.
+          💡 Tipp: Drücke Alt+K für die Command Palette.
         </Alert>
       </Snackbar>
     </CommandContext.Provider>
