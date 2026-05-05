@@ -43,10 +43,9 @@ export default function FieldsBedsPage(): React.ReactElement {
   const commands = useMemo<CommandSpec[]>(() => [
     {
       id: 'areas.toggleGraphicalView',
-      label: 'Ansicht umschalten (Alt+G)',
+      label: 'Ansicht umschalten',
       group: 'navigation',
       keywords: ['ansicht', 'grafisch', 'tabelle', 'anbauflächen'],
-      shortcutHint: 'Alt+G',
       contextTags: ['areas'],
       isEnabled: () => true,
       action: () => {
@@ -127,26 +126,6 @@ export default function FieldsBedsPage(): React.ReactElement {
     setNewFieldName('');
   }, [addField, newFieldName, targetLocationId]);
 
-
-  useEffect(() => {
-    const handleToggleViewShortcut = (event: KeyboardEvent): void => {
-      if (event.repeat) {
-        return;
-      }
-      if (!event.altKey || event.shiftKey || event.ctrlKey || event.metaKey) {
-        return;
-      }
-      if (event.key.toLowerCase() !== 'g') {
-        return;
-      }
-
-      event.preventDefault();
-      setViewMode((previous) => (previous === 'graphical' ? 'table' : 'graphical'));
-    };
-
-    window.addEventListener('keydown', handleToggleViewShortcut);
-    return () => window.removeEventListener('keydown', handleToggleViewShortcut);
-  }, []);
 
   useEffect(() => {
     window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);

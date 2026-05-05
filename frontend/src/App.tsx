@@ -548,7 +548,7 @@ function RootLayout(): React.ReactElement {
       if (isTypingTarget || !isDesktopUp) {
         return;
       }
-      if (event.altKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'b') {
+      if (event.ctrlKey && !event.altKey && !event.metaKey && event.key.toLowerCase() === 'b') {
         event.preventDefault();
         toggleSidebarCollapsed();
       }
@@ -772,16 +772,16 @@ function RootLayout(): React.ReactElement {
         <DialogContent>
           <List dense>
             <ListItem>
-              <ListItemText primary={t('commandPalette.commands.openShortcuts')} secondary="Alt+H" />
+              <ListItemText primary={t('commandPalette.commands.openShortcuts')} secondary="?" />
             </ListItem>
             <ListItem>
-              <ListItemText primary={t('commandPalette.label')} secondary="Alt+K" />
+              <ListItemText primary={t('commandPalette.label')} secondary="Ctrl+K" />
             </ListItem>
             <ListItem>
               <ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="–" />
             </ListItem>
             <ListItem>
-              <ListItemText primary="Sidebar ein-/ausklappen" secondary="Alt+B" />
+              <ListItemText primary="Sidebar ein-/ausklappen" secondary="Ctrl+B" />
             </ListItem>
             <ListItem>
               <ListItemText primary={t('commandPalette.commands.closeDialog')} secondary="Esc" />
