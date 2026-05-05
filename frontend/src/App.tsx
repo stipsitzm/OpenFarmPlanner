@@ -609,7 +609,7 @@ function RootLayout(): React.ReactElement {
       ) : null}
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
-        {navItems.map((item) => <span key={`sr-${item.to}`}>{item.label}</span>)}
+        {navItems.map((item) => <RouterLink key={`sr-${item.to}`} to={item.to}>{item.label}</RouterLink>)}
       </Box>
       <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
         <Toolbar variant="dense" sx={{ minHeight: 52, gap: 1 }}>
