@@ -131,12 +131,7 @@ describe('CommandProvider', () => {
     expect(screen.getByText('Projekteinstellungen')).toBeInTheDocument();
     expect(screen.getByText('Projekt wechseln: Garten')).toBeInTheDocument();
     expect(screen.getByText('Nächste Seite')).toBeInTheDocument();
-    expect(screen.getByText('Alt+Shift+P')).toBeInTheDocument();
-    expect(screen.getByText('Alt+1')).toBeInTheDocument();
-    expect(screen.getByText('Alt+Shift+A')).toBeInTheDocument();
-    expect(screen.getByText('Alt+Shift+V')).toBeInTheDocument();
-    expect(screen.getByText('Alt+Shift+L')).toBeInTheDocument();
-    expect(screen.queryByText('Standorte')).not.toBeInTheDocument();
+        expect(screen.queryByText('Standorte')).not.toBeInTheDocument();
   });
 
   it('opens the command palette with Alt+K when not typing', () => {
@@ -174,12 +169,12 @@ describe('CommandProvider', () => {
       </CommandProvider>,
     );
 
-    fireEvent.keyDown(window, { key: 'ArrowRight', ctrlKey: true, shiftKey: true });
+    fireEvent.keyDown(window, { key: 'ArrowDown', ctrlKey: true, shiftKey: true });
 
     expect(onNextPage).toHaveBeenCalledTimes(1);
   });
 
-  it('runs root project settings shortcut from shared command metadata', () => {
+  it('shows project settings as root command without requiring a keyboard shortcut', () => {
     const onOpenProjectSettings = vi.fn();
     render(
       <CommandProvider>
@@ -187,9 +182,10 @@ describe('CommandProvider', () => {
       </CommandProvider>,
     );
 
-    fireEvent.keyDown(window, { key: 'P', altKey: true, shiftKey: true });
+    fireEvent.keyDown(window, { key: 'k', altKey: true });
 
-    expect(onOpenProjectSettings).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Projekteinstellungen')).toBeInTheDocument();
+    expect(onOpenProjectSettings).toHaveBeenCalledTimes(0);
   });
 
   it('runs page help shortcut with Alt+H', () => {

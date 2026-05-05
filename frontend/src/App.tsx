@@ -11,6 +11,7 @@
 import { createBrowserRouter, RouterProvider, Outlet, NavLink, Link as RouterLink, redirect, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import {
   Alert,
+  AppBar,
   Button,
   Chip,
   Divider,
@@ -29,6 +30,12 @@ import {
   Stack,
   TextField,
   Drawer,
+  ListItemButton,
+  ListItemIcon,
+  Toolbar,
+  Tooltip,
+  Typography,
+  Box,
   useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
@@ -46,6 +53,16 @@ import Suppliers from './pages/Suppliers';
 import Dashboard from './pages/Dashboard';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import MenuIcon from '@mui/icons-material/Menu';
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
+import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import LocalFloristOutlinedIcon from '@mui/icons-material/LocalFloristOutlined';
+import EventNoteOutlinedIcon from '@mui/icons-material/EventNoteOutlined';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
+import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined';
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import CheckIcon from '@mui/icons-material/Check';
@@ -69,6 +86,8 @@ import AccountSettingsPage from './pages/AccountSettingsPage';
 import ProjectSettingsPage from './pages/ProjectSettingsPage';
 import InvitationAcceptPage from './pages/InvitationAcceptPage';
 import AppLogo from './components/layout/AppLogo';
+import { HelpDialog } from './components/help/HelpDialog';
+import PageHelp from './components/help/PageHelp';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
@@ -193,7 +212,7 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
         Tastenkürzel
       </MenuItem>
       <MenuItem onClick={onOpenHelp}>
-        Hilfe
+        App-Hilfe
       </MenuItem>
       <MenuItem onClick={() => void onLogout()}>
         {t('commandPalette.commands.logout')} {userLabel}
@@ -217,29 +236,35 @@ function RootLayout(): React.ReactElement {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const isCompactDesktop = useMediaQuery('(max-width:1365px)');
+  const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
   const { openPalette } = useCommandContext();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
-  const [moreNavAnchor, setMoreNavAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isSwitchingProject, setIsSwitchingProject] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
-  const navItems = useMemo(() => (
-    MAIN_NAV_ITEMS.map((item) => ({
+  const navItems = useMemo(() => ([
+    { to: '/app/dashboard', label: t('dashboard'), activeAliases: [], keywords: ['übersicht', 'dashboard'], icon: <DashboardOutlinedIcon fontSize="small" /> },
+    ...MAIN_NAV_ITEMS.map((item) => ({
       to: item.to,
       label: t(item.labelKey),
       activeAliases: item.activeAliases ?? [],
       keywords: item.keywords,
-    }))
-  ), [t]);
-  const primaryNavItems = (isCompactDesktop && !isMobile) ? navItems.slice(0, 5) : navItems;
-  const overflowNavItems = (isCompactDesktop && !isMobile) ? navItems.slice(5) : [];
+      icon: item.to.includes('locations') ? <PlaceOutlinedIcon fontSize="small" />
+        : item.to.includes('fields-beds') ? <GridViewOutlinedIcon fontSize="small" />
+          : item.to.includes('cultures') ? <LocalFloristOutlinedIcon fontSize="small" />
+            : item.to.includes('anbauplaene') ? <EventNoteOutlinedIcon fontSize="small" />
+              : item.to.includes('gantt-chart') ? <CalendarMonthOutlinedIcon fontSize="small" />
+                : item.to.includes('seed-demand') ? <ScienceOutlinedIcon fontSize="small" />
+                  : <LocalShippingOutlinedIcon fontSize="small" />,
+    })),
+  ]), [t]);
 
   const handleGlobalMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setGlobalMenuAnchor(event.currentTarget);
@@ -256,19 +281,27 @@ function RootLayout(): React.ReactElement {
   const handleProjectMenuClose = () => {
     setProjectMenuAnchor(null);
   };
-  const handleMoreNavOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setMoreNavAnchor(event.currentTarget);
-  };
-  const handleMoreNavClose = () => {
-    setMoreNavAnchor(null);
-  };
-
   const closeMobileNav = () => {
     setMobileNavOpen(false);
+  };
+  useEffect(() => {
+    const storedValue = window.localStorage.getItem('openfarmplanner.sidebarCollapsed');
+    if (storedValue !== null) {
+      setSidebarCollapsed(storedValue === 'true');
+    }
+  }, []);
+
+  const toggleSidebarCollapsed = (): void => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      window.localStorage.setItem('openfarmplanner.sidebarCollapsed', String(next));
+      return next;
+    });
   };
 
   const [projectHistoryOpen, setProjectHistoryOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [globalHelpOpen, setGlobalHelpOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
@@ -314,6 +347,12 @@ function RootLayout(): React.ReactElement {
 
   const openCurrentPageHelp = (): void => {
     window.dispatchEvent(new CustomEvent('ofp:open-page-help'));
+  };
+  const openGlobalHelp = (): void => {
+    setGlobalHelpOpen(true);
+  };
+  const closeGlobalHelp = (): void => {
+    setGlobalHelpOpen(false);
   };
 
   const handleLogout = async (): Promise<void> => {
@@ -482,75 +521,110 @@ function RootLayout(): React.ReactElement {
   ]);
 
   useRegisterCommands('global-app', globalCommands);
+
+  useEffect(() => {
+    const handleHelpShortcut = (event: KeyboardEvent): void => {
+      const target = event.target as HTMLElement | null;
+      const isTypingTarget = target instanceof HTMLInputElement
+        || target instanceof HTMLTextAreaElement
+        || target?.isContentEditable;
+      if (isTypingTarget) {
+        return;
+      }
+      if (event.key === '?') {
+        event.preventDefault();
+        setGlobalHelpOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleHelpShortcut);
+    return () => window.removeEventListener('keydown', handleHelpShortcut);
+  }, []);
+  useEffect(() => {
+    const handleSidebarShortcut = (event: KeyboardEvent): void => {
+      const target = event.target as HTMLElement | null;
+      const isTypingTarget = target instanceof HTMLInputElement
+        || target instanceof HTMLTextAreaElement
+        || target?.isContentEditable;
+      if (isTypingTarget || !isDesktopUp) {
+        return;
+      }
+      if (event.ctrlKey && !event.altKey && !event.metaKey && event.key.toLowerCase() === 'b') {
+        event.preventDefault();
+        toggleSidebarCollapsed();
+      }
+    };
+    window.addEventListener('keydown', handleSidebarShortcut);
+    return () => window.removeEventListener('keydown', handleSidebarShortcut);
+  }, [isDesktopUp]);
   
+  const sidebarWidth = sidebarCollapsed ? 64 : 240;
+  const currentPageTitle = useMemo(() => {
+    const activeItem = navItems.find((item) => location.pathname === item.to || item.activeAliases.includes(location.pathname));
+    return activeItem?.label ?? '';
+  }, [location.pathname, navItems]);
+  const topbarHelpConfig = useMemo(() => {
+    if (location.pathname.startsWith('/app/dashboard')) return { pageKey: 'dashboard' as const, label: 'Hilfe zu Übersicht' };
+    if (location.pathname.startsWith('/app/locations')) return { pageKey: 'locations' as const, label: 'Hilfe zu Standorte' };
+    if (location.pathname.startsWith('/app/fields-beds')) return { pageKey: 'areas' as const, label: 'Hilfe zu Anbauflächen' };
+    if (location.pathname.startsWith('/app/cultures')) return { pageKey: 'cultures' as const, label: 'Hilfe zu Kulturen' };
+    if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { pageKey: 'plantingPlans' as const, label: 'Hilfe zu Anbauplänen' };
+    if (location.pathname.startsWith('/app/gantt-chart')) return { pageKey: 'calendar' as const, label: 'Hilfe zu Anbaukalender' };
+    if (location.pathname.startsWith('/app/seed-demand')) return { pageKey: 'seedDemand' as const, label: 'Hilfe zu Saatgutbedarf' };
+    if (location.pathname.startsWith('/app/suppliers')) return { pageKey: 'suppliers' as const, label: 'Hilfe zu Lieferanten' };
+    return null;
+  }, [location.pathname]);
+  const topbarPrimaryAction = useMemo(() => {
+    if (location.pathname.startsWith('/app/locations')) return { label: 'Standort hinzufügen', to: '/app/locations?create=true' };
+    if (location.pathname.startsWith('/app/cultures')) return { label: 'Kultur hinzufügen', to: '/app/cultures?create=true' };
+    if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { label: 'Anbauplan hinzufügen', to: '/app/planting-plans?create=true' };
+    if (location.pathname.startsWith('/app/suppliers')) return { label: 'Lieferant hinzufügen', to: '/app/suppliers?create=true' };
+    if (location.pathname.startsWith('/app/fields-beds')) return { label: 'Parzelle hinzufügen', to: '/app/fields-beds' };
+    return null;
+  }, [location.pathname]);
+
   return (
-    <div className="app">
-      <nav className="nav">
-        {isMobile ? (
-          <div className="mobile-nav-row">
-            <IconButton
-              aria-label="Menü öffnen"
-              onClick={() => setMobileNavOpen(true)}
-              size="small"
-              sx={{ color: 'white' }}
-            >
-              <MenuIcon fontSize="small" />
-            </IconButton>
-            <AppLogo
-              size={24}
-              showText={false}
-              to="/app/dashboard"
-            />
-          </div>
-        ) : (
-          <div className="nav-links">
-            <AppLogo
-              size={28}
-              showText={!isCompactDesktop}
-              to="/app/dashboard"
-            />
-            {primaryNavItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) => (isActive || item.activeAliases.includes(location.pathname)) ? 'nav-link active' : 'nav-link'}
-              >
-                {item.label}
-              </NavLink>
-            ))}
-            {overflowNavItems.length > 0 ? (
-              <>
-                <Button
-                  size="small"
-                  onClick={handleMoreNavOpen}
-                  aria-controls={moreNavAnchor ? 'more-nav-menu' : undefined}
-                  aria-haspopup="true"
-                  sx={{ color: 'white', textTransform: 'none', px: 1 }}
-                >
-                  Mehr
-                </Button>
-                <Menu id="more-nav-menu" anchorEl={moreNavAnchor} open={Boolean(moreNavAnchor)} onClose={handleMoreNavClose}>
-                  {overflowNavItems.map((item) => {
-                    const isActive = location.pathname === item.to || item.activeAliases.includes(location.pathname);
-                    return (
-                      <MenuItem
-                        key={item.to}
-                        selected={Boolean(isActive)}
-                        onClick={() => {
-                          navigate(item.to);
-                          handleMoreNavClose();
-                        }}
-                      >
-                        {item.label}
-                      </MenuItem>
-                    );
-                  })}
-                </Menu>
-              </>
-            ) : null}
-          </div>
-        )}
-        <div className="nav-actions">
+    <Box className="app" sx={{ display: 'flex', minHeight: '100vh' }}>
+      {isDesktopUp ? (
+        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', transition: 'width 0.2s ease' }}>
+          <Stack sx={{ height: '100%' }}>
+            <Stack direction="row" alignItems="center" justifyContent={sidebarCollapsed ? 'center' : 'space-between'} sx={{ px: sidebarCollapsed ? 1 : 2, py: 1 }}>
+              <AppLogo size={26} showText={!sidebarCollapsed} to="/app/dashboard" />
+              {!sidebarCollapsed ? <IconButton aria-label="Sidebar einklappen" size="small" onClick={toggleSidebarCollapsed}><ChevronLeftIcon fontSize="small" /></IconButton> : null}
+            </Stack>
+            {sidebarCollapsed ? <IconButton aria-label="Sidebar ausklappen" size="small" onClick={toggleSidebarCollapsed} sx={{ mx: 'auto', mb: 1 }}><ChevronRightIcon fontSize="small" /></IconButton> : null}
+            <List sx={{ px: 1 }}>
+              {navItems.map((item) => {
+                const isActive = location.pathname === item.to || item.activeAliases.includes(location.pathname);
+                const entry = (
+                  <ListItemButton key={item.to} component={NavLink} to={item.to} selected={isActive} sx={{ minHeight: 44, borderRadius: 1, mb: 0.5, justifyContent: sidebarCollapsed ? 'center' : 'initial' }}>
+                    <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 36, color: isActive ? 'primary.main' : 'inherit' }}>{item.icon}</ListItemIcon>
+                    {!sidebarCollapsed ? <ListItemText primary={item.label} /> : null}
+                  </ListItemButton>
+                );
+                return sidebarCollapsed ? <Tooltip key={item.to} title={item.label} placement="right">{entry}</Tooltip> : entry;
+              })}
+            </List>
+          </Stack>
+        </Box>
+      ) : null}
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+        {navItems.map((item) => <RouterLink key={`sr-${item.to}`} to={item.to}>{item.label}</RouterLink>)}
+      </Box>
+      <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Toolbar variant="dense" sx={{ minHeight: 52, gap: 1 }}>
+          {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
+          {!isDesktopUp ? <AppLogo size={24} showText to="/app/dashboard" /> : null}
+          <Typography component="h1" variant="h5" noWrap sx={{ minWidth: 0, fontSize: { xs: '1.1rem', md: '1.25rem' }, fontWeight: 600 }}>
+            {currentPageTitle}
+          </Typography>
+          {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
+          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {topbarPrimaryAction && !isMobile ? (
+            <Button size="small" variant="contained" onClick={() => navigate(topbarPrimaryAction.to)} sx={{ textTransform: 'none' }}>
+              + {topbarPrimaryAction.label}
+            </Button>
+          ) : null}
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
             aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}
@@ -559,7 +633,7 @@ function RootLayout(): React.ReactElement {
             size="small"
             disabled={isSwitchingProject}
             sx={{
-              color: 'white',
+              color: 'text.primary',
               textTransform: 'none',
               maxWidth: { xs: 180, sm: 260, md: 320 },
               minWidth: 0,
@@ -587,7 +661,7 @@ function RootLayout(): React.ReactElement {
             aria-haspopup="true"
             onClick={handleGlobalMenuOpen}
             size="small"
-            sx={{ color: 'white' }}
+            sx={{ color: 'text.primary' }}
           >
             <MoreVertIcon fontSize="small" />
           </IconButton>
@@ -600,21 +674,24 @@ function RootLayout(): React.ReactElement {
             onOpenProjectHistory={handleOpenProjectHistory}
             onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
             onOpenShortcuts={handleOpenShortcuts}
-            onOpenHelp={openCurrentPageHelp}
+            onOpenHelp={openGlobalHelp}
             onLogout={handleLogout}
             t={t}
           />
-        </div>
-      </nav>
+        </Box>
+        </Toolbar>
+      </AppBar>
 
       <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav}>
         <List sx={{ width: 280 }}>
+          <ListItem sx={{ py: 1.5, px: 2 }}>
+            <AppLogo size={26} showText to="/app/dashboard" />
+          </ListItem>
           {navItems.map((item) => {
             const isActive = location.pathname === item.to || item.activeAliases.includes(location.pathname);
             return (
               <ListItem key={item.to} disablePadding>
-                <Button
-                  fullWidth
+                <ListItemButton
                   onClick={() => {
                     navigate(item.to);
                     closeMobileNav();
@@ -628,8 +705,9 @@ function RootLayout(): React.ReactElement {
                     fontWeight: isActive ? 700 : 500,
                   }}
                 >
-                  {item.label}
-                </Button>
+                  <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.label} />
+                </ListItemButton>
               </ListItem>
             );
           })}
@@ -637,6 +715,7 @@ function RootLayout(): React.ReactElement {
       </Drawer>
 
       <Outlet />
+      </Box>
 
       <Dialog open={projectHistoryOpen} onClose={() => setProjectHistoryOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t('commandPalette.commands.openVersionHistory')}</DialogTitle>
@@ -702,6 +781,9 @@ function RootLayout(): React.ReactElement {
               <ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="–" />
             </ListItem>
             <ListItem>
+              <ListItemText primary="Sidebar ein-/ausklappen" secondary="Ctrl+B" />
+            </ListItem>
+            <ListItem>
               <ListItemText primary={t('commandPalette.commands.closeDialog')} secondary="Esc" />
             </ListItem>
           </List>
@@ -710,6 +792,7 @@ function RootLayout(): React.ReactElement {
           <Button onClick={() => setShortcutsOpen(false)}>{t('common:actions.close')}</Button>
         </DialogActions>
       </Dialog>
+      <HelpDialog open={globalHelpOpen} onClose={closeGlobalHelp} />
 
 
       <Dialog open={isCreateProjectOpen} onClose={closeCreateProjectDialog} fullWidth maxWidth="sm">
@@ -749,7 +832,7 @@ function RootLayout(): React.ReactElement {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </div>
+    </Box>
   );
 }
 

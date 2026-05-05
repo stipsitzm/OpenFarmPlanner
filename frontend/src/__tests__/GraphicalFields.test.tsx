@@ -287,7 +287,9 @@ describe("GraphicalFields", () => {
       writable: true,
       value: height,
     });
-    window.dispatchEvent(new Event("resize"));
+    act(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
   };
 
   beforeEach(() => {

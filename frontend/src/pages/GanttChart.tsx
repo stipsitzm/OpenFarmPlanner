@@ -36,10 +36,8 @@ import GanttChart, { ViewMode } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
-import PageHelp from '../components/help/PageHelp';
 import ModeToggle from '../components/ModeToggle';
 import PageContainer from '../components/layout/PageContainer';
-import PageHeader from '../components/layout/PageHeader';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import type { CommandSpec } from '../commands/types';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
@@ -423,7 +421,6 @@ function GanttChartPage(): React.ReactElement {
   if (loading) {
     return (
       <PageContainer variant="full">
-        <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
         <p>{t('ganttChart:loading')}</p>
       </PageContainer>
     );
@@ -432,7 +429,6 @@ function GanttChartPage(): React.ReactElement {
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
       <PageContainer variant="full">
-        <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
         <ProjectRequiredState reason={missingProjectReason} />
       </PageContainer>
     );
@@ -440,7 +436,6 @@ function GanttChartPage(): React.ReactElement {
 
   return (
     <PageContainer variant="full">
-      <PageHeader title={t('ganttChart:title')} actions={<PageHelp pageKey="calendar" />} marginBottom={1} />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {hasCalendarRequirements ? (

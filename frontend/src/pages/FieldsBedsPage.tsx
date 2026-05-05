@@ -7,9 +7,7 @@ import { AddBedIcon } from '../components/hierarchy/AddBedIcon';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
-import PageHelp from '../components/help/PageHelp';
 import PageContainer from '../components/layout/PageContainer';
-import PageHeader from '../components/layout/PageHeader';
 import ModeToggle from '../components/ModeToggle';
 import { bedAPI, fieldAPI, locationAPI, type Location } from '../api/api';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
@@ -45,10 +43,9 @@ export default function FieldsBedsPage(): React.ReactElement {
   const commands = useMemo<CommandSpec[]>(() => [
     {
       id: 'areas.toggleGraphicalView',
-      label: 'Ansicht umschalten (Alt+G)',
+      label: 'Ansicht umschalten',
       group: 'navigation',
       keywords: ['ansicht', 'grafisch', 'tabelle', 'anbauflächen'],
-      shortcutHint: 'Alt+G',
       contextTags: ['areas'],
       isEnabled: () => true,
       action: () => {
@@ -131,26 +128,6 @@ export default function FieldsBedsPage(): React.ReactElement {
 
 
   useEffect(() => {
-    const handleToggleViewShortcut = (event: KeyboardEvent): void => {
-      if (event.repeat) {
-        return;
-      }
-      if (!event.altKey || event.shiftKey || event.ctrlKey || event.metaKey) {
-        return;
-      }
-      if (event.key.toLowerCase() !== 'g') {
-        return;
-      }
-
-      event.preventDefault();
-      setViewMode((previous) => (previous === 'graphical' ? 'table' : 'graphical'));
-    };
-
-    window.addEventListener('keydown', handleToggleViewShortcut);
-    return () => window.removeEventListener('keydown', handleToggleViewShortcut);
-  }, []);
-
-  useEffect(() => {
     window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
   }, [viewMode]);
 
@@ -169,11 +146,6 @@ export default function FieldsBedsPage(): React.ReactElement {
   return (
     <>
       <PageContainer variant="standard">
-        <PageHeader
-          title={t('hierarchy:title')}
-          actions={<PageHelp pageKey={viewMode === 'graphical' ? 'graphical' : 'areas'} />}
-          marginBottom={1}
-        />
         <Box
           sx={{
             display: 'flex',

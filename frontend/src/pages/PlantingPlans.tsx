@@ -68,8 +68,6 @@ import {
 } from "../components/data-grid";
 import { MobileCardList } from "../components/mobile/MobileCardList";
 import { NotesDrawer } from "../components/data-grid/NotesDrawer";
-import PageHelp from "../components/help/PageHelp";
-import PageHeader from "../components/layout/PageHeader";
 import ProjectRequiredState from "../components/project/ProjectRequiredState";
 import {
   useCommandContextTag,
@@ -757,9 +755,7 @@ function PlantingPlans(): React.ReactElement {
         label: "Neuer Anbauplan (Alt+Shift+N)",
         group: 'navigation',
         keywords: ["anbauplan", "neu", "create"],
-        shortcutHint: "Alt+Shift+N",
-        keys: { alt: true, shift: true, key: "n" },
-        contextTags: ["plans"],
+                        contextTags: ["plans"],
         isEnabled: () => Boolean(gridCommandApiRef.current),
         action: () => gridCommandApiRef.current?.addRow(),
       },
@@ -768,8 +764,7 @@ function PlantingPlans(): React.ReactElement {
         label: "Anbauplan bearbeiten (Alt+E)",
         group: 'navigation',
         keywords: ["anbauplan", "bearbeiten", "edit"],
-        shortcutHint: "Alt+E",
-        keys: { alt: true, key: "e" },
+                keys: { key: "Enter" },
         contextTags: ["plans"],
         isEnabled: () => selectedPlan !== null,
         action: () => gridCommandApiRef.current?.editSelectedRow(),
@@ -779,8 +774,7 @@ function PlantingPlans(): React.ReactElement {
         label: "Anbauplan löschen (Alt+Shift+D)",
         group: 'navigation',
         keywords: ["anbauplan", "löschen", "delete"],
-        shortcutHint: "Alt+Shift+D",
-        keys: { alt: true, shift: true, key: "d" },
+                keys: { key: "Delete" },
         contextTags: ["plans"],
         isEnabled: () => selectedPlan !== null,
         action: () => gridCommandApiRef.current?.deleteSelectedRow(),
@@ -794,7 +788,6 @@ function PlantingPlans(): React.ReactElement {
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
       <PageContainer>
-        <PageHeader title={t("plantingPlans:title")} actions={<PageHelp pageKey="plantingPlans" />} />
         <ProjectRequiredState reason={missingProjectReason} />
       </PageContainer>
     );
@@ -1494,29 +1487,6 @@ function PlantingPlans(): React.ReactElement {
 
   return (
     <PageContainer variant="xwide">
-      <PageHeader
-        title={t("plantingPlans:title")}
-        actions={(
-          <>
-            {!isMobile ? (
-              <Tooltip title={canCreatePlan ? "" : t("plantingPlans:emptyStates.createBlockedTooltip")}>
-                <span>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => gridCommandApiRef.current?.addRow()}
-                    aria-label={`${t("plantingPlans:addButton")} (Alt+N)`}
-                    disabled={!canCreatePlan}
-                  >
-                    {t("plantingPlans:addButton")}
-                  </Button>
-                </span>
-              </Tooltip>
-            ) : null}
-            <PageHelp pageKey="plantingPlans" />
-          </>
-        )}
-      />
 
       {areaWarning ? (
         <Alert severity="warning" sx={{ mb: 2 }}>

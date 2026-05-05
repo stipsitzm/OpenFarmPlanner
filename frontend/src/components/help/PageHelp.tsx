@@ -62,6 +62,8 @@ export type HelpPageKey =
 
 interface PageHelpProps {
   pageKey: HelpPageKey;
+  ariaLabel?: string;
+  tooltip?: string;
 }
 
 interface HelpSection {
@@ -161,7 +163,7 @@ const PAGE_SYMBOL_DEFINITIONS: Partial<Record<HelpPageKey, SymbolDefinition[]>> 
  * @param props.pageKey - The help page key to render.
  * @returns JSX element with the page help entry point and content.
  */
-export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | null {
+export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps): ReactElement | null {
   const { t, i18n } = useTranslation('help');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -365,8 +367,8 @@ export default function PageHelp({ pageKey }: PageHelpProps): ReactElement | nul
 
   return (
     <>
-      <Tooltip title={t('showTooltip')}>
-        <IconButton ref={triggerButtonRef} aria-label={t('showTooltip')} onClick={handleOpen} size="small" sx={{ color: 'text.secondary' }}>
+      <Tooltip title={tooltip ?? t('showTooltip')}>
+        <IconButton ref={triggerButtonRef} aria-label={ariaLabel ?? t('showTooltip')} onClick={handleOpen} size="small" sx={{ color: 'text.secondary' }}>
           <HelpOutlineIcon fontSize="small" />
         </IconButton>
       </Tooltip>

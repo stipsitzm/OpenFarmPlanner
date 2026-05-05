@@ -117,35 +117,25 @@ describe('Cultures action area', () => {
     });
   });
 
-  it('shows the public library as a direct visible button and not as a menu item', async () => {
+  it('does not render a public library shortcut in the cultures action area', async () => {
     renderCultures('/cultures?cultureId=1');
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Kultur hinzufügen' })).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('button', { name: 'Öffentliche Kulturbibliothek' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Weitere Aktionen' }));
-
-    expect(screen.getByRole('menuitem', { name: 'JSON exportieren (Alt+J)' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Alle Kulturen exportieren (Alt+Shift+J)' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'JSON importieren (Alt+I)' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Öffentliche Kulturbibliothek' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Öffentliche Kulturbibliothek' })).not.toBeInTheDocument();
   });
 
-  it('opens the public library dialog via the direct button', async () => {
+  it('keeps public culture API idle when no public-library button is rendered', async () => {
     renderCultures();
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Öffentliche Kulturbibliothek' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Kultur hinzufügen' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Öffentliche Kulturbibliothek' }));
-
-    await waitFor(() => {
-      expect(publicCultureListMock).toHaveBeenCalledTimes(1);
-    });
+    expect(screen.queryByRole('button', { name: 'Öffentliche Kulturbibliothek' })).not.toBeInTheDocument();
+    expect(publicCultureListMock).not.toHaveBeenCalled();
   });
 
   it('shows duplicate publish warning when backend returns conflict', async () => {
@@ -176,7 +166,7 @@ describe('Cultures action area', () => {
     });
   });
 
-  it('deduplicates duplicate-looking public library entries in the dialog list', async () => {
+  it('does not attempt to render public-library entries without a trigger', async () => {
     publicCultureListMock.mockResolvedValue({
       data: {
         count: 2,
@@ -192,14 +182,11 @@ describe('Cultures action area', () => {
     renderCultures();
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Öffentliche Kulturbibliothek' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Kultur hinzufügen' })).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Öffentliche Kulturbibliothek' }));
 
-    await waitFor(() => {
-      expect(screen.getByText('Salat (Bijella)')).toBeInTheDocument();
-    });
-    expect(screen.getAllByText('Salat (Bijella)')).toHaveLength(1);
+    expect(screen.queryByText('Salat (Bijella)')).not.toBeInTheDocument();
+    expect(publicCultureListMock).not.toHaveBeenCalled();
   });
 
   it('shows update label for cultures linked to an owned public culture', async () => {
@@ -226,7 +213,7 @@ describe('Cultures action area', () => {
     bedListMock.mockResolvedValue({ data: { results: [] } });
     renderCultures('/cultures?cultureId=1');
 
-    const createPlanButton = await screen.findByRole('button', { name: 'Anbauplan erstellen (Alt+P)' });
+    const createPlanButton = await screen.findByRole('button', { name: 'Anbauplan erstellen' });
     expect(createPlanButton).toBeDisabled();
     const fieldsBedsLink = await screen.findByRole('link', { name: 'Zu Anbauflächen' });
     expect(fieldsBedsLink).toBeInTheDocument();
@@ -239,7 +226,7 @@ describe('Cultures action area', () => {
 
   it('enables create planting plan button when all prerequisites are present', async () => {
     renderCultures('/cultures?cultureId=1');
-    const createPlanButton = await screen.findByRole('button', { name: 'Anbauplan erstellen (Alt+P)' });
+    const createPlanButton = await screen.findByRole('button', { name: 'Anbauplan erstellen' });
     await waitFor(() => expect(createPlanButton).toBeEnabled());
   });
 });

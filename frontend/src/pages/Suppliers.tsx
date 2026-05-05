@@ -22,8 +22,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
-import PageHelp from '../components/help/PageHelp';
-import PageHeader from '../components/layout/PageHeader';
 import PageContainer from '../components/layout/PageContainer';
 import type { Supplier } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -85,11 +83,6 @@ export default function Suppliers(): React.ReactElement {
 
     return () => window.clearTimeout(timeoutId);
   }, [shouldShowProjectRequiredState]);
-
-  const openCreate = (): void => {
-    setDraft({ name: '', homepage_url: '' });
-    setDialogOpen(true);
-  };
 
   useEffect(() => {
     if (shouldShowProjectRequiredState) {
@@ -192,10 +185,6 @@ export default function Suppliers(): React.ReactElement {
     return (
       <PageContainer>
         <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-          <PageHeader
-            title={t('title')}
-            actions={<PageHelp pageKey="suppliers" />}
-          />
           <ProjectRequiredState reason={missingProjectReason} />
         </Box>
       </PageContainer>
@@ -205,17 +194,6 @@ export default function Suppliers(): React.ReactElement {
   return (
     <PageContainer>
       <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-        <PageHeader
-          title={t('title')}
-          actions={(
-            <Box sx={{ ml: { sm: 3 }, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Button variant="contained" onClick={openCreate}>
-                + {t('create')}
-              </Button>
-              <PageHelp pageKey="suppliers" />
-            </Box>
-          )}
-        />
         {suppliers.length === 0 ? (
           <Box sx={{ width: '100%', maxWidth: 880 }}>
             <EmptyStateCard

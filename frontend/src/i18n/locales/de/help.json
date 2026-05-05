@@ -1,6 +1,7 @@
 {
   "showTooltip": "Hilfe anzeigen",
   "title": "Hilfe",
+  "globalTitle": "Überblick: So funktioniert OpenFarmPlanner",
   "heading": "So funktioniert OpenFarmPlanner",
   "intro": "OpenFarmPlanner besteht aus mehreren Seiten, die zusammenarbeiten:",
   "sections": [

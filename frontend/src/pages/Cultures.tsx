@@ -40,7 +40,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   List,
   ListItem,
   ListItemText,
@@ -52,7 +51,6 @@ import {
   Link,
   Stack,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -60,7 +58,6 @@ import AgricultureIcon from '@mui/icons-material/Agriculture';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PublicIcon from '@mui/icons-material/Public';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import {
   buildAllCulturesExport,
@@ -91,7 +88,6 @@ import { createCulturesCommandSpecs } from './culturesCommandSpecs';
 import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './culturesHistoryUtils';
-import PageHelp from '../components/help/PageHelp';
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
 import { useAuth } from '../auth/useAuth';
@@ -366,10 +362,6 @@ function Cultures(): React.ReactElement {
     if (selectedCultureId) {
       navigate(`/app/planting-plans?cultureId=${selectedCultureId}`);
     }
-  };
-
-  const handleImportMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setImportMenuAnchor(event.currentTarget);
   };
 
   const handleImportMenuClose = () => {
@@ -912,57 +904,13 @@ function Cultures(): React.ReactElement {
     return () => window.removeEventListener('keydown', onEscapeCancel, { capture: true });
   }, [handleCancelEnrichment]);
 
-  useEffect(() => {
-    if (!aiEnrichmentEnabled) {
-      return;
-    }
-
-    const onAiShortcut = (event: KeyboardEvent) => {
-      if (!event.altKey || event.ctrlKey || event.metaKey) {
-        return;
-      }
-      if (isTypingInEditableElement(document.activeElement)) {
-        return;
-      }
-
-      const key = event.key.toLowerCase();
-      if (key === 'u') {
-        if (!selectedCultureNeedsCompletion) {
-          return;
-        }
-        event.preventDefault();
-        void handleEnrichCurrent('complete');
-      } else if (key === 'r') {
-        event.preventDefault();
-        void handleEnrichCurrent('reresearch');
-      } else if (key === 'a') {
-        event.preventDefault();
-        setEnrichAllConfirmOpen(true);
-      }
-    };
-
-    window.addEventListener('keydown', onAiShortcut);
-    return () => window.removeEventListener('keydown', onAiShortcut);
-  }, [aiEnrichmentEnabled, handleEnrichAll, handleEnrichCurrent, selectedCultureNeedsCompletion]);
+ 
 
 
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
       <PageContainer>
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: { xs: 'flex-start', sm: 'center' },
-            flexWrap: 'wrap',
-            gap: 1.5,
-            mb: 2,
-          }}
-        >
-          <h1>{t('title')}</h1>
-          <PageHelp pageKey="cultures" />
-        </Box>
         <ProjectRequiredState reason={missingProjectReason} />
       </PageContainer>
     );
@@ -970,49 +918,23 @@ function Cultures(): React.ReactElement {
 
   return (
     <PageContainer>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          flexWrap: 'wrap',
-          gap: 1.5,
-          mb: 2,
-        }}
-      >
-        <h1>{t('title')}</h1>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', ml: 'auto' }}>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNew}>
-            {t('buttons.addNew')}
-          </Button>
-          <Button variant="outlined" startIcon={<PublicIcon />} onClick={() => void handleOpenPublicLibrary()}>
-            {t('library.openButton')}
-          </Button>
-          <IconButton
-            size="small"
-            aria-label={t('import.menuLabel')}
-            aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
-            aria-haspopup="true"
-            onClick={handleImportMenuOpen}
-          >
-            <MoreVertIcon />
-          </IconButton>
-          <PageHelp pageKey="cultures" />
-        </Box>
+      <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+        <Button variant="contained" onClick={handleAddNew}>Kultur hinzufügen</Button>
+      </Box>
         <Menu
           id="culture-import-menu"
           anchorEl={importMenuAnchor}
           open={Boolean(importMenuAnchor)}
           onClose={handleImportMenuClose}
         >
-          <MenuItem aria-label="JSON exportieren (Alt+J)" onClick={handleExportCurrentCulture} disabled={!selectedCulture}>
-            JSON exportieren (Alt+J)
+          <MenuItem aria-label="JSON exportieren" onClick={handleExportCurrentCulture} disabled={!selectedCulture}>
+            JSON exportieren
           </MenuItem>
-          <MenuItem aria-label="Alle Kulturen exportieren (Alt+Shift+J)" onClick={handleExportAllCultures}>
-            Alle Kulturen exportieren (Alt+Shift+J)
+          <MenuItem aria-label="Alle Kulturen exportieren" onClick={handleExportAllCultures}>
+            Alle Kulturen exportieren
           </MenuItem>
-          <MenuItem aria-label="JSON importieren (Alt+I)" onClick={handleImportFileTrigger}>
-            JSON importieren (Alt+I)
+          <MenuItem aria-label="JSON importieren" onClick={handleImportFileTrigger}>
+            JSON importieren
           </MenuItem>
         </Menu>
         <input
@@ -1022,7 +944,6 @@ function Cultures(): React.ReactElement {
           onChange={handleImportFileChange}
           hidden
         />
-      </Box>
       
       {enrichmentCostBanner && (
         <Alert severity="info" sx={{ mb: 2 }}>
@@ -1054,16 +975,16 @@ function Cultures(): React.ReactElement {
           }}
         >
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-            <Tooltip title="Vorherige Kultur (Alt+Shift+←)">
+            <Tooltip title="Vorherige Kultur">
               <span>
-                <Button aria-label="Vorherige Kultur (Alt+Shift+←)" variant="outlined" onClick={() => goToRelativeCulture('previous')} disabled={cultures.length < 2}>
+                <Button aria-label="Vorherige Kultur" variant="outlined" onClick={() => goToRelativeCulture('previous')} disabled={cultures.length < 2}>
                   ←
                 </Button>
               </span>
             </Tooltip>
-            <Tooltip title="Nächste Kultur (Alt+Shift+→)">
+            <Tooltip title="Nächste Kultur">
               <span>
-                <Button aria-label="Nächste Kultur (Alt+Shift+→)" variant="outlined" onClick={() => goToRelativeCulture('next')} disabled={cultures.length < 2}>
+                <Button aria-label="Nächste Kultur" variant="outlined" onClick={() => goToRelativeCulture('next')} disabled={cultures.length < 2}>
                   →
                 </Button>
               </span>
@@ -1071,13 +992,13 @@ function Cultures(): React.ReactElement {
             <Tooltip
               title={
                 canCreatePlantingPlan
-                  ? "Anbauplan erstellen (Alt+P)"
+                  ? "Anbauplan erstellen"
                   : t('buttons.createPlantingPlanMissingBedsTooltip')
               }
             >
               <span>
                 <Button
-                  aria-label="Anbauplan erstellen (Alt+P)"
+                  aria-label="Anbauplan erstellen"
                   variant="contained"
                   color="success"
                   startIcon={<AgricultureIcon />}
@@ -1088,10 +1009,10 @@ function Cultures(): React.ReactElement {
                 </Button>
               </span>
             </Tooltip>
-            <Tooltip title="Kultur bearbeiten (Alt+E)">
+            <Tooltip title="Kultur bearbeiten">
               <span>
                 <Button
-                  aria-label="Kultur bearbeiten (Alt+E)"
+                  aria-label="Kultur bearbeiten"
                   variant="outlined"
                   startIcon={<EditIcon />}
                   onClick={() => selectedCulture && handleEdit(selectedCulture)}
@@ -1118,10 +1039,10 @@ function Cultures(): React.ReactElement {
             <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
               Versionen
             </Button>
-            <Tooltip title="Kultur löschen (Alt+Shift+D)">
+            <Tooltip title="Kultur löschen">
               <span>
                 <Button
-                  aria-label="Kultur löschen (Alt+Shift+D)"
+                  aria-label="Kultur löschen"
                   variant="outlined"
                   color="error"
                   startIcon={<DeleteIcon />}
@@ -1159,7 +1080,7 @@ function Cultures(): React.ReactElement {
                   <Button
                     startIcon={<AutoAwesomeIcon />}
                     onClick={() => void handleEnrichCurrent('complete')}
-                    aria-label="Kultur vervollständigen (KI) (Alt+U)"
+                    aria-label="Kultur vervollständigen (KI)"
                     disabled={Boolean(selectedCulture) && !selectedCultureNeedsCompletion}
                   >
                     {t('buttons.aiComplete')}
@@ -1183,11 +1104,11 @@ function Cultures(): React.ReactElement {
               open={Boolean(aiMenuAnchor)}
               onClose={handleAiMenuClose}
             >
-              <MenuItem aria-label="Kultur komplett neu recherchieren (KI) (Alt+R)" onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
+              <MenuItem aria-label="Kultur komplett neu recherchieren (KI)" onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
                 <ManageSearchIcon sx={{ mr: 1 }} fontSize="small" />
                 {t('buttons.aiReresearch')}
               </MenuItem>
-              <MenuItem aria-label="Alle Kulturen vervollständigen (KI) (Alt+A)" onClick={() => setEnrichAllConfirmOpen(true)} disabled={cultures.length === 0 || enrichmentLoading || !cultures.some((culture) => canRunEnrichmentForCulture(culture))}>
+              <MenuItem aria-label="Alle Kulturen vervollständigen (KI)" onClick={() => setEnrichAllConfirmOpen(true)} disabled={cultures.length === 0 || enrichmentLoading || !cultures.some((culture) => canRunEnrichmentForCulture(culture))}>
                 <PlaylistAddCheckIcon sx={{ mr: 1 }} fontSize="small" />
                 {t('buttons.aiCompleteAll')}
               </MenuItem>
@@ -1399,7 +1320,7 @@ function Cultures(): React.ReactElement {
               <ListItemText primary="Tastenkürzel öffnen" secondary="?" />
             </ListItem>
             <ListItem>
-              <ListItemText primary="Command Palette" secondary="Alt+K" />
+              <ListItemText primary="Command Palette" secondary="Ctrl+K" />
             </ListItem>
             <ListItem>
               <ListItemText primary="Dialog schließen" secondary="Esc" />
@@ -1407,13 +1328,13 @@ function Cultures(): React.ReactElement {
             {aiEnrichmentEnabled && (
               <>
                 <ListItem>
-                  <ListItemText primary="KI: Kultur vervollständigen" secondary="Alt+U" />
+                  <ListItemText primary="KI: Kultur vervollständigen" secondary="–" />
                 </ListItem>
                 <ListItem>
-                  <ListItemText primary="KI: Kultur neu recherchieren" secondary="Alt+R" />
+                  <ListItemText primary="KI: Kultur neu recherchieren" secondary="–" />
                 </ListItem>
                 <ListItem>
-                  <ListItemText primary="KI: Alle Kulturen vervollständigen" secondary="Alt+A" />
+                  <ListItemText primary="KI: Alle Kulturen vervollständigen" secondary="–" />
                 </ListItem>
               </>
             )}

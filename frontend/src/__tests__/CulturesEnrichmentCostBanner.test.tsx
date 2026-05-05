@@ -123,7 +123,7 @@ describe('Cultures enrichment cost banner', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: 'select-culture' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Kultur vervollständigen (KI) (Alt+U)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Kultur vervollständigen (KI)' }));
 
     await waitFor(() => {
       expect(screen.getAllByText(/KI-Kosten \(Schätzung, inkl\. 20% MwSt\.\): \$0\.019/).length).toBeGreaterThan(0);
@@ -174,7 +174,7 @@ describe('Cultures enrichment cost banner', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: 'select-culture' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Kultur vervollständigen (KI) (Alt+U)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Kultur vervollständigen (KI)' }));
 
     expect(await screen.findByText('Anfrage an KI senden')).toBeInTheDocument();
     expect(screen.getByText('Webquellen recherchieren und sammeln')).toBeInTheDocument();
@@ -219,7 +219,7 @@ describe('Cultures enrichment cost banner', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: 'select-culture' }));
-    const aiButton = screen.getByRole('button', { name: 'Kultur vervollständigen (KI) (Alt+U)' });
+    const aiButton = screen.getByRole('button', { name: 'Kultur vervollständigen (KI)' });
     expect(aiButton.className).toContain('Mui-disabled');
   });
 

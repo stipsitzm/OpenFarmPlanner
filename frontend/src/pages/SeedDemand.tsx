@@ -21,7 +21,6 @@ import { seedDemandAPI, type SeedDemand } from '../api/api';
 import { bedAPI, cultureAPI, locationAPI, plantingPlanAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import { useCommandContextTag } from '../commands/useCommandContext';
-import PageHelp from '../components/help/PageHelp';
 import PageContainer from '../components/layout/PageContainer';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
@@ -151,12 +150,6 @@ export default function SeedDemandPage(): React.ReactElement {
     return (
       <PageContainer>
         <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, width: '100%' }}>
-            <Typography variant="h4">
-              {t('seedDemand.title')}
-            </Typography>
-            <PageHelp pageKey="seedDemand" />
-          </Box>
           <ProjectRequiredState reason={missingProjectReason} />
         </Box>
       </PageContainer>
@@ -166,12 +159,6 @@ export default function SeedDemandPage(): React.ReactElement {
   return (
     <PageContainer>
       <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, width: '100%' }}>
-          <Typography variant="h4">
-            {t('seedDemand.title')}
-          </Typography>
-          <PageHelp pageKey="seedDemand" />
-        </Box>
 
         {isLoading && <CircularProgress />}
         {error && <Alert severity="error">{error}</Alert>}

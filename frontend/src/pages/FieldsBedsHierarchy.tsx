@@ -605,7 +605,10 @@ function FieldsBedsHierarchy({
     }
 
     if (selectedRow.type === "location" && selectedRow.locationId) {
-      void addField(selectedRow.locationId);
+      const fieldName = window.prompt(t("dialogs.addField.nameLabel"));
+      if (fieldName !== null) {
+        void addField(selectedRow.locationId, fieldName);
+      }
       return;
     }
 
@@ -641,9 +644,7 @@ function FieldsBedsHierarchy({
         label: "Neu erstellen (Alt+Shift+N)",
         group: 'navigation',
       keywords: ["neu", "anbauflächen", "create"],
-        shortcutHint: "Alt+Shift+N",
-        keys: { alt: true, shift: true, key: "n" },
-        contextTags: ["areas"],
+                        contextTags: ["areas"],
         isEnabled: () => selectedRow !== null,
         action: handleCreateBySelection,
       },
@@ -652,8 +653,7 @@ function FieldsBedsHierarchy({
         label: "Bearbeiten (Alt+E)",
         group: 'navigation',
       keywords: ["bearbeiten", "edit"],
-        shortcutHint: "Alt+E",
-        keys: { alt: true, key: "e" },
+                keys: { key: "Enter" },
         contextTags: ["areas"],
         isEnabled: () =>
           selectedRow !== null && selectedRow.type !== "location",
@@ -664,8 +664,7 @@ function FieldsBedsHierarchy({
         label: "Löschen (Alt+Shift+D)",
         group: 'navigation',
       keywords: ["löschen", "delete"],
-        shortcutHint: "Alt+Shift+D",
-        keys: { alt: true, shift: true, key: "d" },
+                keys: { key: "Delete" },
         contextTags: ["areas"],
         isEnabled: () =>
           selectedRow !== null && selectedRow.type !== "location",
@@ -817,7 +816,12 @@ function FieldsBedsHierarchy({
       toggleExpand,
       handleAddBed,
       (bedId) => deleteBed(bedId),
-      (locationId) => addField(locationId),
+      (locationId) => {
+        const fieldName = window.prompt(t("dialogs.addField.nameLabel"));
+        if (fieldName !== null) {
+          void addField(locationId, fieldName);
+        }
+      },
       (fieldId) => deleteField(fieldId),
       handleCreatePlantingPlan,
       notesEditor.handleOpen,
