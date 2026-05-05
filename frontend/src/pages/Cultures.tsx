@@ -40,7 +40,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   List,
   ListItem,
   ListItemText,
@@ -59,7 +58,6 @@ import AgricultureIcon from '@mui/icons-material/Agriculture';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PublicIcon from '@mui/icons-material/Public';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import {
   buildAllCulturesExport,
@@ -920,19 +918,6 @@ function Cultures(): React.ReactElement {
 
   return (
     <PageContainer>
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
-        <Button variant="contained" onClick={handleAddNew}>Kultur hinzufügen</Button>
-        <Button variant="outlined" onClick={() => { void handleOpenPublicLibrary(); }}>Öffentliche Kulturbibliothek</Button>
-        <IconButton
-          size="small"
-          aria-label="Weitere Aktionen"
-          aria-controls={importMenuAnchor ? 'culture-import-menu' : undefined}
-          aria-haspopup="true"
-          onClick={(event) => setImportMenuAnchor(event.currentTarget)}
-        >
-          <MoreVertIcon />
-        </IconButton>
-      </Box>
         <Menu
           id="culture-import-menu"
           anchorEl={importMenuAnchor}
