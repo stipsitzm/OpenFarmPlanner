@@ -201,3 +201,13 @@ See `CONTRIBUTING.md` for commit format requirements.
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).
+
+## Developer Quality Checks
+
+Run the shared quality script before opening a PR:
+
+```bash
+./scripts/quality.sh
+```
+
+This script executes the backend and frontend lint/test gates used in CI.
