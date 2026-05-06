@@ -146,6 +146,7 @@ export function CultureDetail({
   const [yieldMax, setYieldMax] = useState('');
   const [selectedSowingMonths, setSelectedSowingMonths] = useState<number[]>([]);
   const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
+  const isFilterPopoverOpen = Boolean(filterAnchorEl);
 
   const activeFilterCount = useMemo(
     () => [
@@ -1098,4 +1099,3 @@ export function CultureDetail({
     </Box>
   );
 }
-  const isFilterPopoverOpen = Boolean(filterAnchorEl);
