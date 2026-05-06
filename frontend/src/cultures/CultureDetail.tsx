@@ -15,14 +15,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import {
   Badge,
   Box,
   Card,
   CardContent,
-  Collapse,
   CircularProgress,
   Typography,
   Chip,
@@ -39,6 +36,7 @@ import {
   MenuItem,
   Stack,
   Button,
+  Popover,
   TextField,
 } from '@mui/material';
 import type { Culture } from '../api/api';
@@ -147,7 +145,7 @@ export function CultureDetail({
   const [yieldMin, setYieldMin] = useState('');
   const [yieldMax, setYieldMax] = useState('');
   const [selectedSowingMonths, setSelectedSowingMonths] = useState<number[]>([]);
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
 
   const activeFilterCount = useMemo(
     () => [
@@ -477,28 +475,37 @@ export function CultureDetail({
           <Button
             variant="outlined"
             size="small"
-            onClick={() => setFiltersExpanded((prev) => !prev)}
+            onClick={(event) => setFilterAnchorEl(event.currentTarget)}
             startIcon={
               <Badge color="primary" badgeContent={activeFilterCount > 0 ? activeFilterCount : null}>
                 <FilterListIcon fontSize="small" />
               </Badge>
             }
-            endIcon={filtersExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             sx={{ alignSelf: { xs: 'flex-end', sm: 'center' }, whiteSpace: 'nowrap' }}
-            aria-expanded={filtersExpanded}
+            aria-expanded={isFilterPopoverOpen}
+            aria-haspopup="dialog"
+            aria-controls={isFilterPopoverOpen ? 'culture-filters-popover' : undefined}
             aria-label={t('filters.toggle')}
           >
             {t('filters.toggle')}
           </Button>
         </Stack>
 
-        <Collapse in={filtersExpanded}>
+        <Popover
+          id="culture-filters-popover"
+          open={isFilterPopoverOpen}
+          anchorEl={filterAnchorEl}
+          onClose={() => setFilterAnchorEl(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          PaperProps={{ sx: { width: { xs: 'min(92vw, 360px)', sm: 360 }, p: 1.5 } }}
+        >
           <Stack
-            direction={{ xs: 'column', md: 'row' }}
+            direction="column"
             spacing={1}
             sx={{ pt: 0.5, pb: 0.5 }}
           >
-            <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
+            <FormControl size="small" sx={{ minWidth: '100%' }}>
               <InputLabel id="culture-family-filter-label">{t('filters.cropFamily')}</InputLabel>
               <Select
                 labelId="culture-family-filter-label"
@@ -512,7 +519,7 @@ export function CultureDetail({
                 ))}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
+            <FormControl size="small" sx={{ minWidth: '100%' }}>
               <InputLabel id="culture-method-filter-label">{t('filters.cultivationType')}</InputLabel>
               <Select
                 labelId="culture-method-filter-label"
@@ -526,7 +533,7 @@ export function CultureDetail({
                 <MenuItem value="both">{t('filters.both')}</MenuItem>
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
+            <FormControl size="small" sx={{ minWidth: '100%' }}>
               <InputLabel id="culture-nutrient-filter-label">{t('filters.nutrientDemand')}</InputLabel>
               <Select
                 labelId="culture-nutrient-filter-label"
@@ -546,7 +553,7 @@ export function CultureDetail({
               label={t('filters.growthDaysMin')}
               value={growthDaysMin}
               onChange={(event) => setGrowthDaysMin(event.target.value)}
-              sx={{ minWidth: { xs: '100%', md: 140 } }}
+              sx={{ minWidth: '100%' }}
             />
             <TextField
               size="small"
@@ -554,9 +561,9 @@ export function CultureDetail({
               label={t('filters.growthDaysMax')}
               value={growthDaysMax}
               onChange={(event) => setGrowthDaysMax(event.target.value)}
-              sx={{ minWidth: { xs: '100%', md: 140 } }}
+              sx={{ minWidth: '100%' }}
             />
-            <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 220 } }}>
+            <FormControl size="small" sx={{ minWidth: '100%' }}>
               <InputLabel id="culture-sowing-month-filter-label">{t('filters.sowingMonths')}</InputLabel>
               <Select
                 multiple
@@ -581,7 +588,7 @@ export function CultureDetail({
               label={t('filters.yieldMin')}
               value={yieldMin}
               onChange={(event) => setYieldMin(event.target.value)}
-              sx={{ minWidth: { xs: '100%', md: 140 } }}
+              sx={{ minWidth: '100%' }}
             />
             <TextField
               size="small"
@@ -589,7 +596,7 @@ export function CultureDetail({
               label={t('filters.yieldMax')}
               value={yieldMax}
               onChange={(event) => setYieldMax(event.target.value)}
-              sx={{ minWidth: { xs: '100%', md: 140 } }}
+              sx={{ minWidth: '100%' }}
             />
             <Button
               variant="text"
@@ -605,12 +612,12 @@ export function CultureDetail({
                 setYieldMax('');
                 setSelectedSowingMonths([]);
               }}
-              sx={{ alignSelf: { xs: 'flex-end', md: 'center' }, whiteSpace: 'nowrap' }}
+              sx={{ alignSelf: 'flex-end', whiteSpace: 'nowrap' }}
             >
               {t('filters.reset')}
             </Button>
           </Stack>
-        </Collapse>
+        </Popover>
         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: 'block' }}>
           {t('searchHelperText', { count: filteredCultures.length })}
         </Typography>
@@ -1091,3 +1098,4 @@ export function CultureDetail({
     </Box>
   );
 }
+  const isFilterPopoverOpen = Boolean(filterAnchorEl);
