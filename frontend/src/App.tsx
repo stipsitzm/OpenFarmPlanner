@@ -422,6 +422,13 @@ function RootLayout(): React.ReactElement {
     handleGlobalMenuClose();
     navigate(path);
   };
+  const handleCultureLibraryMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setCultureLibraryMenuAnchor(event.currentTarget);
+  };
+
+  const handleCultureLibraryMenuClose = () => {
+    setCultureLibraryMenuAnchor(null);
+  };
   const isCulturesPage = location.pathname.startsWith('/app/cultures');
   const cultureLibraryAction = useMemo(
     () => topbarContextActions.find((action) => action.id === 'cultures-open-library'),
@@ -651,8 +658,10 @@ function RootLayout(): React.ReactElement {
                 size="small"
                 variant="outlined"
                 onClick={handleCultureLibraryMenuOpen}
+                aria-label="Bibliothek öffnen"
                 aria-controls={cultureLibraryMenuAnchor ? 'culture-library-menu' : undefined}
                 aria-haspopup="true"
+                aria-expanded={Boolean(cultureLibraryMenuAnchor)}
                 startIcon={<PublicIcon fontSize="small" />}
                 endIcon={<KeyboardArrowDownIcon fontSize="small" />}
                 sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
@@ -1023,10 +1032,3 @@ function App(): React.ReactElement {
 }
 
 export default App;
-  const handleCultureLibraryMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setCultureLibraryMenuAnchor(event.currentTarget);
-  };
-
-  const handleCultureLibraryMenuClose = () => {
-    setCultureLibraryMenuAnchor(null);
-  };
