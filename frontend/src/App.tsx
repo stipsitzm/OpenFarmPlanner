@@ -693,7 +693,7 @@ function RootLayout(): React.ReactElement {
             t={t}
           />
           <IconButton
-            aria-label="Weitere Aktionen öffnen"
+            aria-label="Mehr"
             aria-controls={globalMenuAnchor ? 'global-actions-menu' : undefined}
             aria-haspopup="true"
             onClick={handleGlobalMenuOpen}

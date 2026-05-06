@@ -107,7 +107,8 @@ function Cultures(): React.ReactElement {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { setTopbarContextActions } = useOutletContext<RootLayoutOutletContext>();
+  const outletContext = useOutletContext<RootLayoutOutletContext | null>();
+  const setTopbarContextActions = outletContext?.setTopbarContextActions ?? (() => undefined);
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const { selectedCultureId, updateSelectedCultureId } = useSelectedCultureSync();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
@@ -154,6 +155,7 @@ function Cultures(): React.ReactElement {
   const [hasLocations, setHasLocations] = useState(false);
   const [hasFields, setHasFields] = useState(false);
   const [hasBeds, setHasBeds] = useState(false);
+  const selectedCulture = cultures.find((culture) => culture.id === selectedCultureId);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error' | 'info') => {
     setSnackbar({ open: true, message, severity });
@@ -574,7 +576,6 @@ function Cultures(): React.ReactElement {
     setImportDialogOpen(false);
   };
 
-  const selectedCulture = cultures.find(c => c.id === selectedCultureId);
   const firstMissingPlanRequirement = getFirstMissingCultivationPlanRequirement({
     hasLocations,
     hasFields,
