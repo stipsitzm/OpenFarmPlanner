@@ -264,7 +264,7 @@ function RootLayout(): React.ReactElement {
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
-  const [cultureLibraryMenuAnchor, setCultureLibraryMenuAnchor] = useState<null | HTMLElement>(null);
+  const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
   const navItems = useMemo(() => ([
     { to: '/app/dashboard', label: t('dashboard'), activeAliases: [], keywords: ['übersicht', 'dashboard'], icon: <DashboardOutlinedIcon fontSize="small" /> },
     ...MAIN_NAV_ITEMS.map((item) => ({
@@ -422,12 +422,12 @@ function RootLayout(): React.ReactElement {
     handleGlobalMenuClose();
     navigate(path);
   };
-  const handleCultureLibraryMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setCultureLibraryMenuAnchor(event.currentTarget);
+  const handleCultureActionsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setCultureActionsMenuAnchor(event.currentTarget);
   };
 
-  const handleCultureLibraryMenuClose = () => {
-    setCultureLibraryMenuAnchor(null);
+  const handleCultureActionsMenuClose = () => {
+    setCultureActionsMenuAnchor(null);
   };
   const isCulturesPage = location.pathname.startsWith('/app/cultures');
   const cultureLibraryAction = useMemo(
@@ -657,43 +657,38 @@ function RootLayout(): React.ReactElement {
               <Button
                 size="small"
                 variant="outlined"
-                onClick={handleCultureLibraryMenuOpen}
-                aria-label="Bibliothek öffnen"
-                aria-controls={cultureLibraryMenuAnchor ? 'culture-library-menu' : undefined}
-                aria-haspopup="true"
-                aria-expanded={Boolean(cultureLibraryMenuAnchor)}
+                onClick={() => cultureLibraryAction?.onClick()}
+                aria-label="Öffentliche Kulturbibliothek öffnen"
                 startIcon={<PublicIcon fontSize="small" />}
-                endIcon={<KeyboardArrowDownIcon fontSize="small" />}
                 sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+                disabled={!cultureLibraryAction || cultureLibraryAction.disabled}
               >
                 Bibliothek
               </Button>
-              <Menu
-                id="culture-library-menu"
-                anchorEl={cultureLibraryMenuAnchor}
-                open={Boolean(cultureLibraryMenuAnchor)}
-                onClose={handleCultureLibraryMenuClose}
+              <IconButton
+                aria-label="Kulturaktionen öffnen"
+                aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                onClick={handleCultureActionsMenuOpen}
+                size="small"
+                sx={{ color: 'text.primary' }}
               >
-                {cultureLibraryAction ? (
-                  <MenuItem
-                    aria-label={cultureLibraryAction.ariaLabel ?? cultureLibraryAction.label}
-                    onClick={() => {
-                      cultureLibraryAction.onClick();
-                      handleCultureLibraryMenuClose();
-                    }}
-                    disabled={cultureLibraryAction.disabled}
-                  >
-                    {cultureLibraryAction.label}
-                  </MenuItem>
-                ) : null}
-                {cultureLibraryAction ? <Divider /> : null}
+                <MoreVertIcon fontSize="small" />
+              </IconButton>
+              <Menu
+                id="culture-actions-menu"
+                anchorEl={cultureActionsMenuAnchor}
+                open={Boolean(cultureActionsMenuAnchor)}
+                onClose={handleCultureActionsMenuClose}
+              >
                 {cultureImportExportActions.map((action) => (
                   <MenuItem
                     key={action.id}
                     aria-label={action.ariaLabel ?? action.label}
                     onClick={() => {
                       action.onClick();
-                      handleCultureLibraryMenuClose();
+                      handleCultureActionsMenuClose();
                     }}
                     disabled={action.disabled}
                   >
