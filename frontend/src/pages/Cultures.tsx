@@ -399,10 +399,10 @@ function Cultures(): React.ReactElement {
     }
   }, [t]);
 
-  const handleOpenPublicLibrary = async () => {
+  const handleOpenPublicLibrary = useCallback(async () => {
     setPublicLibraryOpen(true);
     await fetchPublicCultures();
-  };
+  }, [fetchPublicCultures]);
 
   const handleImportPublicCulture = async (publicCulture: PublicCulture) => {
     try {
@@ -710,6 +710,14 @@ function Cultures(): React.ReactElement {
 
   const contextActions = useMemo<TopbarContextAction[]>(() => ([
     {
+      id: 'cultures-open-library',
+      label: 'Öffentliche Kulturbibliothek öffnen',
+      ariaLabel: 'Öffentliche Kulturbibliothek öffnen',
+      onClick: () => {
+        void handleOpenPublicLibrary();
+      },
+    },
+    {
       id: 'cultures-import-json',
       label: 'Kulturen importieren (JSON)',
       ariaLabel: 'Kulturen importieren (JSON)',
@@ -731,7 +739,7 @@ function Cultures(): React.ReactElement {
       onClick: handleExportAllCultures,
       shortcutHint: 'Alt+Shift+J',
     },
-  ]), [handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, selectedCulture]);
+  ]), [handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, handleOpenPublicLibrary, selectedCulture]);
 
   useEffect(() => {
     setTopbarContextActions(contextActions);
@@ -940,9 +948,6 @@ function Cultures(): React.ReactElement {
 
   return (
     <PageContainer>
-      <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-        <Button variant="contained" onClick={handleAddNew}>Kultur hinzufügen</Button>
-      </Box>
         <input
           ref={fileInputRef}
           type="file"
