@@ -177,6 +177,7 @@ interface GlobalMenuProps {
   onOpenShortcuts: () => void;
   onOpenHelp: () => void;
   onLogout: () => Promise<void>;
+  contextualActions: React.ReactNode;
   t: (key: string) => string;
 }
 
@@ -192,6 +193,7 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
     onOpenShortcuts,
     onOpenHelp,
     onLogout,
+    contextualActions,
     t,
   } = props;
 
@@ -202,6 +204,7 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
       open={open}
       onClose={onClose}
     >
+      {contextualActions}
       <MenuItem onClick={() => void onOpenProjectHistory()} disabled={historyLoading}>
         {t('commandPalette.commands.openVersionHistory')}
       </MenuItem>
@@ -219,6 +222,19 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
       </MenuItem>
     </Menu>
   );
+}
+
+export interface TopbarContextAction {
+  id: string;
+  label: string;
+  ariaLabel?: string;
+  onClick: () => void;
+  disabled?: boolean;
+  shortcutHint?: string;
+}
+
+export interface RootLayoutOutletContext {
+  setTopbarContextActions: (actions: TopbarContextAction[]) => void;
 }
 
 
@@ -249,6 +265,7 @@ function RootLayout(): React.ReactElement {
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
   const navItems = useMemo(() => ([
     { to: '/app/dashboard', label: t('dashboard'), activeAliases: [], keywords: ['übersicht', 'dashboard'], icon: <DashboardOutlinedIcon fontSize="small" /> },
     ...MAIN_NAV_ITEMS.map((item) => ({
@@ -406,6 +423,26 @@ function RootLayout(): React.ReactElement {
     handleGlobalMenuClose();
     navigate(path);
   };
+  const contextualActionsMenuContent = useMemo(() => {
+    if (!location.pathname.startsWith('/app/cultures') || topbarContextActions.length === 0) {
+      return null;
+    }
+    return (
+      <>
+        {topbarContextActions.map((action) => (
+          <MenuItem
+            key={action.id}
+            aria-label={action.ariaLabel ?? action.label}
+            onClick={action.onClick}
+            disabled={action.disabled}
+          >
+            <ListItemText primary={action.label} secondary={action.shortcutHint} />
+          </MenuItem>
+        ))}
+        <Divider />
+      </>
+    );
+  }, [location.pathname, topbarContextActions]);
 
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
@@ -656,7 +693,7 @@ function RootLayout(): React.ReactElement {
             t={t}
           />
           <IconButton
-            aria-label="Mehr"
+            aria-label="Weitere Aktionen öffnen"
             aria-controls={globalMenuAnchor ? 'global-actions-menu' : undefined}
             aria-haspopup="true"
             onClick={handleGlobalMenuOpen}
@@ -676,6 +713,7 @@ function RootLayout(): React.ReactElement {
             onOpenShortcuts={handleOpenShortcuts}
             onOpenHelp={openGlobalHelp}
             onLogout={handleLogout}
+            contextualActions={contextualActionsMenuContent}
             t={t}
           />
         </Box>
@@ -714,7 +752,7 @@ function RootLayout(): React.ReactElement {
         </List>
       </Drawer>
 
-      <Outlet />
+      <Outlet context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
       </Box>
 
       <Dialog open={projectHistoryOpen} onClose={() => setProjectHistoryOpen(false)} fullWidth maxWidth="sm">
