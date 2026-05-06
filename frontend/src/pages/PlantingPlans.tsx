@@ -1098,9 +1098,11 @@ function PlantingPlans(): React.ReactElement {
       {
         field: "notes",
         headerName: t("common:fields.notes"),
-        width: 220,
-        minWidth: dynamicWidths.notes,
-        maxWidth: 260,
+        width: 72,
+        minWidth: 56,
+        maxWidth: 90,
+        align: "center",
+        headerAlign: "center",
         // Notes field will be overridden by NotesCell in EditableDataGrid
       },
     ],
@@ -1782,6 +1784,7 @@ function PlantingPlans(): React.ReactElement {
                   labelKey: "common:fields.notes",
                   attachmentNoteIdField: "id",
                   attachmentCountField: "note_attachment_count",
+                  compactIndicator: true,
                 },
               ],
             }}
