@@ -451,12 +451,12 @@ function Cultures(): React.ReactElement {
     }
   };
 
-  const handleImportFileTrigger = () => {
+  const handleImportFileTrigger = useCallback(() => {
     resetImportState();
     fileInputRef.current?.click();
-  };
+  }, [resetImportState]);
 
-  const handleExportCurrentCulture = () => {
+  const handleExportCurrentCulture = useCallback(() => {
     if (!selectedCulture) {
       return;
     }
@@ -465,9 +465,9 @@ function Cultures(): React.ReactElement {
     const filename = buildSingleCultureFilename(selectedCulture);
     downloadJsonFile(exportPayload, filename);
     showSnackbar(t('messages.exportSuccess'), 'success');
-  };
+  }, [selectedCulture, showSnackbar, t]);
 
-  const handleExportAllCultures = async () => {
+  const handleExportAllCultures = useCallback(async () => {
     try {
       const allCultures: Culture[] = [];
       let nextUrl: string | null = '/cultures/';
@@ -485,10 +485,8 @@ function Cultures(): React.ReactElement {
     } catch (error) {
       console.error('Error exporting cultures:', error);
       showSnackbar(t('messages.fetchError'), 'error');
-    } finally {
-      // no-op: kept to preserve flow symmetry
     }
-  };
+  }, [showSnackbar, t]);
 
   const handleImportFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
