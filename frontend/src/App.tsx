@@ -665,17 +665,19 @@ function RootLayout(): React.ReactElement {
               >
                 Bibliothek
               </Button>
-              <IconButton
-                aria-label="Kulturaktionen öffnen"
+              <Button
+                size="small"
+                variant="outlined"
+                aria-label="Import/Export öffnen"
                 aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
                 aria-haspopup="true"
                 aria-expanded={Boolean(cultureActionsMenuAnchor)}
                 onClick={handleCultureActionsMenuOpen}
-                size="small"
-                sx={{ color: 'text.primary' }}
+                endIcon={<KeyboardArrowDownIcon fontSize="small" />}
+                sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
               >
-                <MoreVertIcon fontSize="small" />
-              </IconButton>
+                Import/Export
+              </Button>
               <Menu
                 id="culture-actions-menu"
                 anchorEl={cultureActionsMenuAnchor}
