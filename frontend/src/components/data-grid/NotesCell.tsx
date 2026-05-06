@@ -17,6 +17,7 @@ export interface NotesCellProps {
   rawValue: string;
   onOpen: () => void;
   attachmentCount?: number;
+  compactIndicator?: boolean;
   onOpenAttachments?: (event: MouseEvent<HTMLButtonElement>) => void;
 }
 
@@ -26,6 +27,7 @@ export function NotesCell({
   rawValue,
   onOpen,
   attachmentCount = 0,
+  compactIndicator = false,
   onOpenAttachments,
 }: NotesCellProps): React.ReactElement {
   const { t } = useTranslation('common');
@@ -68,6 +70,59 @@ export function NotesCell({
 
   const notesAria = hasValue ? t('notes.editWithContent') : t('notes.editEmpty');
   const attachmentTooltip = t('notes.attachmentsCount', { count: attachmentCount });
+  const hasAttachments = attachmentCount > 0;
+  const compactAriaLabel = hasValue && hasAttachments
+    ? 'Notiz und Bilder vorhanden'
+    : hasValue
+      ? 'Notiz vorhanden'
+      : hasAttachments
+        ? 'Bilder vorhanden'
+        : 'Keine Notiz oder Bilder vorhanden';
+  const compactTooltip = hasValue && hasAttachments
+    ? `Notiz vorhanden. ${attachmentTooltip}`
+    : hasValue
+      ? 'Notiz vorhanden'
+      : hasAttachments
+        ? attachmentTooltip
+        : 'Keine Notiz oder Bilder vorhanden';
+
+  if (compactIndicator) {
+    return (
+      <Tooltip title={hasValue || hasAttachments ? compactTooltip : '—'} arrow>
+        <Box
+          role="button"
+          tabIndex={0}
+          aria-label={compactAriaLabel}
+          onClick={onOpen}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              onOpen();
+            }
+          }}
+          sx={{
+            width: '100%',
+            height: '100%',
+            minHeight: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 0.25,
+            whiteSpace: 'nowrap',
+            cursor: 'pointer',
+          }}
+        >
+          {hasValue ? <NotesIcon fontSize="small" color="action" /> : null}
+          {hasAttachments ? <PhotoLibraryIcon fontSize="small" color="action" /> : null}
+          {!hasValue && !hasAttachments ? (
+            <Typography variant="body2" color="text.disabled" aria-hidden>
+              —
+            </Typography>
+          ) : null}
+        </Box>
+      </Tooltip>
+    );
+  }
 
   return (
     <Tooltip
@@ -142,7 +197,7 @@ export function NotesCell({
           {hasValue && hasMore ? ' ...' : ''}
         </Typography>
 
-        {attachmentCount > 0 && onOpenAttachments && (
+        {hasAttachments && onOpenAttachments && (
           <Tooltip title={attachmentTooltip} arrow>
             <IconButton
               size="small"

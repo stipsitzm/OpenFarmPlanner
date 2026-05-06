@@ -65,6 +65,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import PublicIcon from '@mui/icons-material/Public';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
 import { cultureAPI, projectAPI } from './api/api';
@@ -221,6 +222,19 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
   );
 }
 
+export interface TopbarContextAction {
+  id: string;
+  label: string;
+  ariaLabel?: string;
+  onClick: () => void;
+  disabled?: boolean;
+  shortcutHint?: string;
+}
+
+export interface RootLayoutOutletContext {
+  setTopbarContextActions: (actions: TopbarContextAction[]) => void;
+}
+
 
 /**
  * Root layout component with navigation.
@@ -249,6 +263,8 @@ function RootLayout(): React.ReactElement {
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
+  const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
   const navItems = useMemo(() => ([
     { to: '/app/dashboard', label: t('dashboard'), activeAliases: [], keywords: ['übersicht', 'dashboard'], icon: <DashboardOutlinedIcon fontSize="small" /> },
     ...MAIN_NAV_ITEMS.map((item) => ({
@@ -406,6 +422,22 @@ function RootLayout(): React.ReactElement {
     handleGlobalMenuClose();
     navigate(path);
   };
+  const handleCultureActionsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setCultureActionsMenuAnchor(event.currentTarget);
+  };
+
+  const handleCultureActionsMenuClose = () => {
+    setCultureActionsMenuAnchor(null);
+  };
+  const isCulturesPage = location.pathname.startsWith('/app/cultures');
+  const cultureLibraryAction = useMemo(
+    () => topbarContextActions.find((action) => action.id === 'cultures-open-library'),
+    [topbarContextActions],
+  );
+  const cultureImportExportActions = useMemo(
+    () => topbarContextActions.filter((action) => action.id !== 'cultures-open-library'),
+    [topbarContextActions],
+  );
 
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
@@ -620,6 +652,54 @@ function RootLayout(): React.ReactElement {
           </Typography>
           {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {isCulturesPage && !isMobile ? (
+            <>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => cultureLibraryAction?.onClick()}
+                aria-label="Öffentliche Kulturbibliothek öffnen"
+                startIcon={<PublicIcon fontSize="small" />}
+                sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+                disabled={!cultureLibraryAction || cultureLibraryAction.disabled}
+              >
+                Bibliothek
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                aria-label="Import/Export öffnen"
+                aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                onClick={handleCultureActionsMenuOpen}
+                endIcon={<KeyboardArrowDownIcon fontSize="small" />}
+                sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+              >
+                Import/Export
+              </Button>
+              <Menu
+                id="culture-actions-menu"
+                anchorEl={cultureActionsMenuAnchor}
+                open={Boolean(cultureActionsMenuAnchor)}
+                onClose={handleCultureActionsMenuClose}
+              >
+                {cultureImportExportActions.map((action) => (
+                  <MenuItem
+                    key={action.id}
+                    aria-label={action.ariaLabel ?? action.label}
+                    onClick={() => {
+                      action.onClick();
+                      handleCultureActionsMenuClose();
+                    }}
+                    disabled={action.disabled}
+                  >
+                    <ListItemText primary={action.label} secondary={action.shortcutHint} />
+                  </MenuItem>
+                ))}
+              </Menu>
+            </>
+          ) : null}
           {topbarPrimaryAction && !isMobile ? (
             <Button size="small" variant="contained" onClick={() => navigate(topbarPrimaryAction.to)} sx={{ textTransform: 'none' }}>
               + {topbarPrimaryAction.label}
@@ -714,7 +794,7 @@ function RootLayout(): React.ReactElement {
         </List>
       </Drawer>
 
-      <Outlet />
+      <Outlet context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
       </Box>
 
       <Dialog open={projectHistoryOpen} onClose={() => setProjectHistoryOpen(false)} fullWidth maxWidth="sm">

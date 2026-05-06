@@ -6,9 +6,10 @@ const theme = createTheme({
   palette: {
     // Primary color used by contained buttons and primary components
     primary: {
-      main: '#2e7d32',
+      main: '#256f2a',
       dark: '#1b5e20',
-      light: '#60ad5e',
+      light: '#4f9853',
+      contrastText: '#ffffff',
     },
     secondary: {
       main: '#9c27b0',
@@ -28,6 +29,23 @@ const theme = createTheme({
         root: {
           padding: '8px 24px',
           textTransform: 'none',
+          fontSize: '0.95rem',
+          fontWeight: 600,
+          lineHeight: 1.3,
+        },
+        containedPrimary: {
+          color: '#ffffff',
+          '&:hover': {
+            backgroundColor: '#1f6224',
+          },
+        },
+        startIcon: {
+          display: 'inline-flex',
+          alignItems: 'center',
+        },
+        endIcon: {
+          display: 'inline-flex',
+          alignItems: 'center',
         },
       },
     },
