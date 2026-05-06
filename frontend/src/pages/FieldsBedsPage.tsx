@@ -95,6 +95,9 @@ export default function FieldsBedsPage(): React.ReactElement {
     reloadHierarchyAndLocations,
     t as never,
   );
+  const shouldShowGlobalAddButton = viewMode === 'table'
+    && !shouldShowProjectRequiredState
+    && locations.length <= 1;
   const handleGlobalAddField = useCallback((): void => {
     if (locations.length === 0) {
       navigate('/app/locations?create=true');
@@ -188,6 +191,17 @@ export default function FieldsBedsPage(): React.ReactElement {
               />
             ) : null}
           </Box>
+          {shouldShowGlobalAddButton ? (
+            <Button
+              variant="outlined"
+              onClick={handleGlobalAddField}
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
+            >
+              {locations.length === 0
+                ? t('hierarchy:actions.createLocation')
+                : t('hierarchy:actions.addField')}
+            </Button>
+          ) : null}
         </Box>
         {globalActionError ? (
           <Alert severity="error" sx={{ mb: 2 }}>
