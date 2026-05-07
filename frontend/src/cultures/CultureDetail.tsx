@@ -461,7 +461,7 @@ export function CultureDetail({
       {cultures.length > 0 ? (
       <Box sx={{ mb: 3 }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
-          <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 280 }, position: 'relative' }}>
+          <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 280 } }}>
             <SearchableSelect
               options={cultureOptions}
               value={selectedOption}
@@ -471,32 +471,25 @@ export function CultureDetail({
               noOptionsText={t('noOptionsEnhanced')}
               textFieldSx={{
                 width: '100%',
-                '& .MuiInputBase-root': {
-                  pr: 5.5,
-                },
               }}
               inputValue={searchQuery}
               onInputChange={setSearchQuery}
+              endAdornment={(
+                <IconButton
+                  size="small"
+                  onClick={(event) => setFilterAnchorEl(event.currentTarget)}
+                  aria-expanded={isFilterPopoverOpen}
+                  aria-haspopup="dialog"
+                  aria-controls={isFilterPopoverOpen ? 'culture-filters-popover' : undefined}
+                  aria-label="Erweiterte Filter öffnen"
+                  sx={{ bgcolor: activeFilterCount > 0 ? 'action.selected' : 'transparent' }}
+                >
+                  <Badge color="primary" badgeContent={activeFilterCount > 0 ? activeFilterCount : null}>
+                    <TuneIcon fontSize="small" />
+                  </Badge>
+                </IconButton>
+              )}
             />
-            <IconButton
-              size="small"
-              onClick={(event) => setFilterAnchorEl(event.currentTarget)}
-              aria-expanded={isFilterPopoverOpen}
-              aria-haspopup="dialog"
-              aria-controls={isFilterPopoverOpen ? 'culture-filters-popover' : undefined}
-              aria-label="Erweiterte Filter öffnen"
-              sx={{
-                position: 'absolute',
-                top: '50%',
-                right: 8,
-                transform: 'translateY(-50%)',
-                bgcolor: activeFilterCount > 0 ? 'action.selected' : 'transparent',
-              }}
-            >
-              <Badge color="primary" badgeContent={activeFilterCount > 0 ? activeFilterCount : null}>
-                <TuneIcon fontSize="small" />
-              </Badge>
-            </IconButton>
           </Box>
         </Stack>
 
