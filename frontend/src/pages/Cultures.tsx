@@ -990,89 +990,91 @@ function Cultures(): React.ReactElement {
             display: 'flex',
             flexDirection: 'column',
             mb: 2,
-            gap: 1.5,
+            gap: 1.25,
           }}
         >
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-            <Tooltip title="Vorherige Kultur">
-              <span>
-                <Button aria-label="Vorherige Kultur" variant="outlined" onClick={() => goToRelativeCulture('previous')} disabled={cultures.length < 2}>
-                  ←
-                </Button>
-              </span>
-            </Tooltip>
-            <Tooltip title="Nächste Kultur">
-              <span>
-                <Button aria-label="Nächste Kultur" variant="outlined" onClick={() => goToRelativeCulture('next')} disabled={cultures.length < 2}>
-                  →
-                </Button>
-              </span>
-            </Tooltip>
-            <Tooltip
-              title={
-                canCreatePlantingPlan
-                  ? "Anbauplan erstellen"
-                  : t('buttons.createPlantingPlanMissingBedsTooltip')
-              }
-            >
-              <span>
-                <Button
-                  aria-label="Anbauplan erstellen"
-                  variant="contained"
-                  color="success"
-                  startIcon={<AgricultureIcon />}
-                  onClick={handleCreatePlantingPlan}
-                  disabled={!canCreatePlantingPlan}
-                >
-                  {t('buttons.createPlantingPlan')}
-                </Button>
-              </span>
-            </Tooltip>
-            <Tooltip title="Kultur bearbeiten">
-              <span>
-                <Button
-                  aria-label="Kultur bearbeiten"
-                  variant="outlined"
-                  startIcon={<EditIcon />}
-                  onClick={() => selectedCulture && handleEdit(selectedCulture)}
-                  disabled={!selectedCulture}
-                >
-                  {t('buttons.edit')}
-                </Button>
-              </span>
-            </Tooltip>
-            <Tooltip title={t('library.publishTooltip')}>
-              <span>
-                <Button
-                  variant="outlined"
-                  startIcon={<PublicIcon />}
-                  onClick={() => void handlePublishCurrentCulture()}
-                  disabled={!selectedCulture || publishingCultureId === selectedCulture?.id}
-                >
-                  {publishingCultureId === selectedCulture?.id
-                    ? (isUpdatingOwnPublicCulture ? t('library.updating') : t('library.publishing'))
-                    : (isUpdatingOwnPublicCulture ? t('library.updateButton') : t('library.publishButton'))}
-                </Button>
-              </span>
-            </Tooltip>
-            <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
-              Versionen
-            </Button>
-            <Tooltip title="Kultur löschen">
-              <span>
-                <Button
-                  aria-label="Kultur löschen"
-                  variant="outlined"
-                  color="error"
-                  startIcon={<DeleteIcon />}
-                  onClick={() => selectedCulture && handleDelete(selectedCulture)}
-                  disabled={!selectedCulture}
-                  sx={{ ml: 2 }}
-                >
-                  {t('buttons.delete')}
-                </Button>
-              </span>
-            </Tooltip>
+          <Box
+            sx={{
+              borderTop: '1px solid #e5e7eb',
+              bgcolor: '#f8faf8',
+              px: { xs: 1.25, md: 1.5 },
+              py: 1.25,
+              borderRadius: 2,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 1,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Tooltip title="Kultur löschen">
+                <span>
+                  <Button
+                    aria-label="Kultur löschen"
+                    variant="text"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => selectedCulture && handleDelete(selectedCulture)}
+                    disabled={!selectedCulture}
+                  >
+                    {t('buttons.delete')}
+                  </Button>
+                </span>
+              </Tooltip>
+            </Box>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+              <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
+                Versionen
+              </Button>
+              <Tooltip title="Kultur bearbeiten">
+                <span>
+                  <Button
+                    aria-label="Kultur bearbeiten"
+                    variant="outlined"
+                    startIcon={<EditIcon />}
+                    onClick={() => selectedCulture && handleEdit(selectedCulture)}
+                    disabled={!selectedCulture}
+                  >
+                    {t('buttons.edit')}
+                  </Button>
+                </span>
+              </Tooltip>
+              <Tooltip title={t('library.publishTooltip')}>
+                <span>
+                  <Button
+                    variant="outlined"
+                    startIcon={<PublicIcon />}
+                    onClick={() => void handlePublishCurrentCulture()}
+                    disabled={!selectedCulture || publishingCultureId === selectedCulture?.id}
+                  >
+                    {publishingCultureId === selectedCulture?.id
+                      ? (isUpdatingOwnPublicCulture ? t('library.updating') : t('library.publishing'))
+                      : (isUpdatingOwnPublicCulture ? t('library.updateButton') : t('library.publishButton'))}
+                  </Button>
+                </span>
+              </Tooltip>
+              <Tooltip
+                title={
+                  canCreatePlantingPlan
+                    ? "Anbauplan erstellen"
+                    : t('buttons.createPlantingPlanMissingBedsTooltip')
+                }
+              >
+                <span>
+                  <Button
+                    aria-label="Anbauplan erstellen"
+                    variant="contained"
+                    color="success"
+                    startIcon={<AgricultureIcon />}
+                    onClick={handleCreatePlantingPlan}
+                    disabled={!canCreatePlantingPlan}
+                  >
+                    {t('buttons.createPlantingPlan')}
+                  </Button>
+                </span>
+              </Tooltip>
+            </Box>
           </Box>
 
           {firstMissingPlanRequirement === 'beds' ? (
