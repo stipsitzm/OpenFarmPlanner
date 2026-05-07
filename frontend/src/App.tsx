@@ -92,7 +92,8 @@ import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './navigation/mainNavigation';
-import { PanelLeft } from 'lucide-react';
+import FirstPageIcon from '@mui/icons-material/FirstPage';
+import LastPageIcon from '@mui/icons-material/LastPage';
 
 interface SnackbarState {
   open: boolean;
@@ -643,7 +644,7 @@ function RootLayout(): React.ReactElement {
                       '&:hover': { bgcolor: '#F3F4F6' },
                     }}
                   >
-                    <PanelLeft size={19} strokeWidth={1.8} />
+                    <FirstPageIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
               </Stack>
@@ -667,7 +668,7 @@ function RootLayout(): React.ReactElement {
                       '&:hover': { bgcolor: '#F3F4F6' },
                     }}
                   >
-                    <PanelLeft size={19} strokeWidth={1.8} />
+                    <LastPageIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
               </Stack>
