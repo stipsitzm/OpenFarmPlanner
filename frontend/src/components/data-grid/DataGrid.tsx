@@ -94,6 +94,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showFooterEditControls?: boolean;
   showRowEditActions?: boolean;
   onRowsStateChange?: (rows: T[]) => void;
+  onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean; error: string }) => void;
 }
 
 export function EditableDataGrid<T extends EditableRow>({
@@ -121,6 +122,7 @@ export function EditableDataGrid<T extends EditableRow>({
   showFooterEditControls = true,
   showRowEditActions = false,
   onRowsStateChange,
+  onLoadStateChange,
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -684,6 +686,13 @@ export function EditableDataGrid<T extends EditableRow>({
     }
     onRowsStateChange(rows as T[]);
   }, [onRowsStateChange, rows]);
+
+  useEffect(() => {
+    if (!onLoadStateChange) {
+      return;
+    }
+    onLoadStateChange({ loading, dataFetched, error });
+  }, [dataFetched, error, loading, onLoadStateChange]);
 
   useEffect(() => {
     if (!onSelectedRowChange) {
