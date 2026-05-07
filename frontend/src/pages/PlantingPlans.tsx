@@ -18,6 +18,7 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -432,6 +433,8 @@ function PlantingPlans(): React.ReactElement {
     null,
   );
   const [mobileRows, setMobileRows] = useState<PlantingPlanRow[]>([]);
+  const [isHierarchyLoading, setIsHierarchyLoading] = useState(true);
+  const [isPlansLoading, setIsPlansLoading] = useState(true);
   const [expandedCardIds, setExpandedCardIds] = useState<Set<number | string>>(
     new Set(),
   );
@@ -718,9 +721,11 @@ function PlantingPlans(): React.ReactElement {
       setLocations([]);
       setFields([]);
       setBeds([]);
+      setIsHierarchyLoading(false);
       return;
     }
     const fetchData = async (): Promise<void> => {
+      setIsHierarchyLoading(true);
       try {
         const [culturesResponse, locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
           cultureAPI.list(),
@@ -739,6 +744,8 @@ function PlantingPlans(): React.ReactElement {
         );
       } catch (err) {
         console.error("Error fetching hierarchy data:", err);
+      } finally {
+        setIsHierarchyLoading(false);
       }
     };
     fetchData();
@@ -1098,9 +1105,11 @@ function PlantingPlans(): React.ReactElement {
       {
         field: "notes",
         headerName: t("common:fields.notes"),
-        width: 220,
-        minWidth: dynamicWidths.notes,
-        maxWidth: 260,
+        width: 72,
+        minWidth: 56,
+        maxWidth: 90,
+        align: "center",
+        headerAlign: "center",
         // Notes field will be overridden by NotesCell in EditableDataGrid
       },
     ],
@@ -1465,6 +1474,7 @@ function PlantingPlans(): React.ReactElement {
   const canCreatePlan = firstMissingRequirement === "plans" || firstMissingRequirement === null;
   const shouldShowPrerequisiteState = !canCreatePlan;
   const shouldShowNoPlansState = canCreatePlan && !hasPlans;
+  const isInitialLoading = !shouldShowProjectRequiredState && (isHierarchyLoading || isPlansLoading);
 
   useEffect(() => {
     if (createIntentHandledRef.current || !canCreatePlan) {
@@ -1495,7 +1505,26 @@ function PlantingPlans(): React.ReactElement {
       ) : null}
 
       <Box sx={{ width: "100%" }}>
-        {shouldShowPrerequisiteState ? (
+        {isInitialLoading ? (
+          <Box
+            sx={{
+              minHeight: 280,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1px dashed #d1d5db",
+              borderRadius: 2,
+              bgcolor: "#fafbfa",
+            }}
+          >
+            <Stack spacing={1.25} alignItems="center">
+              <CircularProgress size={24} />
+              <Typography variant="body2" color="text.secondary">
+                Anbaupläne werden geladen…
+              </Typography>
+            </Stack>
+          </Box>
+        ) : shouldShowPrerequisiteState ? (
           <EmptyStateCard
             title={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.title`)}
             description={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.description`)}
@@ -1592,6 +1621,9 @@ function PlantingPlans(): React.ReactElement {
                   ? previousRows
                   : rows,
               );
+            }}
+            onLoadStateChange={({ loading, dataFetched }) => {
+              setIsPlansLoading(loading || !dataFetched);
             }}
             createNewRow={() => ({
             id: -Date.now(),
@@ -1782,6 +1814,7 @@ function PlantingPlans(): React.ReactElement {
                   labelKey: "common:fields.notes",
                   attachmentNoteIdField: "id",
                   attachmentCountField: "note_attachment_count",
+                  compactIndicator: true,
                 },
               ],
             }}

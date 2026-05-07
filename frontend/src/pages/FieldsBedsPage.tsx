@@ -1,6 +1,6 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
 import { AddBedIcon } from '../components/hierarchy/AddBedIcon';
@@ -23,6 +23,7 @@ type InteractionMode = 'view' | 'edit';
 export default function FieldsBedsPage(): React.ReactElement {
   const { t } = useTranslation(['fields', 'hierarchy']);
   const navigate = useNavigate();
+  const location = useLocation();
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
     return stored === 'graphical' ? 'graphical' : 'table';
@@ -98,7 +99,6 @@ export default function FieldsBedsPage(): React.ReactElement {
   const shouldShowGlobalAddButton = viewMode === 'table'
     && !shouldShowProjectRequiredState
     && locations.length <= 1;
-
   const handleGlobalAddField = useCallback((): void => {
     if (locations.length === 0) {
       navigate('/app/locations?create=true');
@@ -125,6 +125,26 @@ export default function FieldsBedsPage(): React.ReactElement {
     setAddFieldDialogOpen(false);
     setNewFieldName('');
   }, [addField, newFieldName, targetLocationId]);
+
+  useEffect(() => {
+    if (!location.pathname.startsWith('/app/fields-beds')) {
+      return;
+    }
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('create') !== 'true') {
+      return;
+    }
+    handleGlobalAddField();
+    searchParams.delete('create');
+    const nextSearch = searchParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+      },
+      { replace: true },
+    );
+  }, [handleGlobalAddField, location.pathname, location.search, navigate]);
 
 
   useEffect(() => {
@@ -194,7 +214,7 @@ export default function FieldsBedsPage(): React.ReactElement {
           </Box>
           {shouldShowGlobalAddButton ? (
             <Button
-              variant="contained"
+              variant="outlined"
               onClick={handleGlobalAddField}
               sx={{ width: { xs: '100%', sm: 'auto' } }}
             >

@@ -21,6 +21,7 @@
 import { useState } from 'react';
 import { Autocomplete, TextField } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
+import type { ReactNode } from 'react';
 
 export interface SearchableSelectOption<T = unknown> {
   value: number;
@@ -41,6 +42,7 @@ export interface SearchableSelectProps<T = unknown> {
   textFieldSx?: SxProps<Theme>;
   inputValue?: string;
   onInputChange?: (value: string) => void;
+  endAdornment?: ReactNode;
 }
 
 export function SearchableSelect<T = unknown>({
@@ -56,6 +58,7 @@ export function SearchableSelect<T = unknown>({
   textFieldSx,
   inputValue,
   onInputChange,
+  endAdornment,
 }: SearchableSelectProps<T>): React.ReactElement {
   const [internalInputValue, setInternalInputValue] = useState('');
   const resolvedInputValue = inputValue ?? internalInputValue;
@@ -95,6 +98,15 @@ export function SearchableSelect<T = unknown>({
           placeholder={placeholder}
           autoFocus={autoFocus}
           sx={textFieldSx}
+          InputProps={{
+            ...params.InputProps,
+            endAdornment: (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                {params.InputProps.endAdornment}
+                {endAdornment}
+              </span>
+            ),
+          }}
         />
       )}
     />
