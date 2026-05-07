@@ -231,10 +231,18 @@ function Cultures(): React.ReactElement {
       return;
     }
 
+    if (selectedCultureId === undefined && !showForm) {
+      const [firstCulture] = cultures;
+      if (firstCulture?.id !== undefined) {
+        updateSelectedCultureId(firstCulture.id, 'internal');
+      }
+      return;
+    }
+
     if (selectedCultureId !== undefined && !cultures.some((culture) => culture.id === selectedCultureId)) {
       updateSelectedCultureId(undefined, 'internal');
     }
-  }, [cultures, selectedCultureId, updateSelectedCultureId]);
+  }, [cultures, selectedCultureId, showForm, updateSelectedCultureId]);
 
   const handleCultureSelect = (culture: Culture | null) => {
     updateSelectedCultureId(culture?.id, 'internal');

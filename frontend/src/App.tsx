@@ -723,19 +723,6 @@ function RootLayout(): React.ReactElement {
             {currentPageTitle}
           </Typography>
           {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
-          {isCulturesPage ? (
-            <Box
-              id="cultures-selector-topbar-slot"
-              sx={{
-                ml: 1,
-                flex: 1,
-                minWidth: 0,
-                maxWidth: { md: 420, lg: 520 },
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            />
-          ) : null}
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5 }}>
           {isCulturesPage && !isMobile ? (
             <>

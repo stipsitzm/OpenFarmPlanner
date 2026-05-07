@@ -11,7 +11,6 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
@@ -152,7 +151,6 @@ export function CultureDetail({
   const [selectedSowingMonths, setSelectedSowingMonths] = useState<number[]>([]);
   const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
   const isFilterPopoverOpen = Boolean(filterAnchorEl);
-  const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null);
 
   const activeFilterCount = useMemo(
     () => [
@@ -244,10 +242,6 @@ export function CultureDetail({
     yieldMax,
     yieldMin,
   ]);
-
-  useEffect(() => {
-    setTopbarSlot(document.getElementById('cultures-selector-topbar-slot'));
-  }, []);
 
   const filteredCultures = useMemo(() => {
     const parsedGrowthDaysMin = growthDaysMin ? Number(growthDaysMin) : null;
@@ -465,9 +459,9 @@ export function CultureDetail({
   }, [activeCultivationTypes, selectedCulture]);
 
   const selectorControl = cultures.length > 0 ? (
-      <Box sx={{ width: '100%' }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
-          <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 280 } }}>
+      <Box sx={{ width: '100%', p: 1.25, borderBottom: '1px solid #e5e7eb', bgcolor: '#fcfdfc' }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
             <SearchableSelect
               options={cultureOptions}
               value={selectedOption}
@@ -632,13 +626,23 @@ export function CultureDetail({
 
   return (
     <Box sx={{ width: '100%' }}>
-      {topbarSlot && selectorControl ? createPortal(selectorControl, topbarSlot) : selectorControl}
 
       {/* Detail View */}
       {!isLoading && cultures.length > 0 ? (
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-          <Card sx={{ width: { xs: '100%', md: 340 }, flexShrink: 0, maxHeight: { md: 'calc(100vh - 220px)' }, overflowY: 'auto' }}>
-            <List dense sx={{ py: 0.5 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '350px minmax(0, 1fr)' }, gap: 1.5, alignItems: 'start' }}>
+          <Card
+            sx={{
+              width: '100%',
+              flexShrink: 0,
+              maxHeight: { md: 'calc(100vh - 210px)' },
+              overflow: 'hidden',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 2px rgba(16, 24, 40, 0.04)',
+              borderRadius: 2,
+            }}
+          >
+            {selectorControl}
+            <List dense sx={{ py: 0.75, px: 0.75, overflowY: 'auto', maxHeight: { md: 'calc(100vh - 290px)' } }}>
               {filteredCultures.map((culture) => {
                 const cultivationValues = culture.cultivation_types && culture.cultivation_types.length > 0
                   ? culture.cultivation_types
@@ -658,11 +662,26 @@ export function CultureDetail({
                     key={culture.id}
                     selected={selectedCulture?.id === culture.id}
                     onClick={() => onCultureSelect(culture)}
-                    sx={{ borderRadius: 1, mx: 0.5, mb: 0.5, alignItems: 'flex-start' }}
+                    sx={{
+                      borderRadius: 1.5,
+                      px: 1,
+                      py: 0.75,
+                      mb: 0.5,
+                      alignItems: 'flex-start',
+                      border: '1px solid transparent',
+                      '&:hover': { bgcolor: '#f4f8f4', borderColor: '#d6e6d8' },
+                      '&.Mui-selected': {
+                        bgcolor: 'rgba(37, 111, 42, 0.12)',
+                        borderColor: 'rgba(37, 111, 42, 0.32)',
+                      },
+                      '&.Mui-selected:hover': { bgcolor: 'rgba(37, 111, 42, 0.16)' },
+                    }}
                   >
                     <ListItemText
                       primary={culture.name}
+                      primaryTypographyProps={{ fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.25 }}
                       secondary={secondary || culture.crop_family || undefined}
+                      secondaryTypographyProps={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.25 }}
                     />
                   </ListItemButton>
                 );
