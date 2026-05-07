@@ -122,7 +122,7 @@ export function createCulturesCommandSpecs({
     },
     {
       id: 'culture.exportCurrent',
-      label: 'JSON exportieren (Alt+J)',
+      label: (selectedCulture ? 'Aktuelle Kultur exportieren (JSON)' : 'Kulturen exportieren (JSON)') + ' (Alt+J)',
       group: 'navigation',
       keywords: ['json', 'export', 'kultur'],
       shortcutHint: 'Alt+J',
@@ -133,7 +133,7 @@ export function createCulturesCommandSpecs({
     },
     {
       id: 'culture.exportAll',
-      label: 'Alle Kulturen exportieren (Alt+Shift+J)',
+      label: 'Alle Kulturen exportieren (JSON) (Alt+Shift+J)',
       group: 'navigation',
       keywords: ['json', 'export', 'alle', 'kulturen'],
       shortcutHint: 'Alt+Shift+J',
@@ -144,7 +144,7 @@ export function createCulturesCommandSpecs({
     },
     {
       id: 'culture.import',
-      label: 'JSON importieren (Alt+I)',
+      label: 'Kulturen importieren (JSON) (Alt+I)',
       group: 'navigation',
       keywords: ['json', 'import'],
       shortcutHint: 'Alt+I',

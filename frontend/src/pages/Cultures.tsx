@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import axios from 'axios';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
@@ -100,12 +100,15 @@ import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { getFirstMissingCultivationPlanRequirement } from './requirementFlow';
+import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const outletContext = useOutletContext<RootLayoutOutletContext | null>();
+  const setTopbarContextActions = outletContext?.setTopbarContextActions ?? (() => undefined);
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const { selectedCultureId, updateSelectedCultureId } = useSelectedCultureSync();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
@@ -114,7 +117,6 @@ function Cultures(): React.ReactElement {
   const [isCulturesLoading, setIsCulturesLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingCulture, setEditingCulture] = useState<Culture | undefined>(undefined);
-  const [importMenuAnchor, setImportMenuAnchor] = useState<null | HTMLElement>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const {
     state: importState,
@@ -153,6 +155,7 @@ function Cultures(): React.ReactElement {
   const [hasLocations, setHasLocations] = useState(false);
   const [hasFields, setHasFields] = useState(false);
   const [hasBeds, setHasBeds] = useState(false);
+  const selectedCulture = cultures.find((culture) => culture.id === selectedCultureId);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error' | 'info') => {
     setSnackbar({ open: true, message, severity });
@@ -273,7 +276,6 @@ function Cultures(): React.ReactElement {
   };
 
   const handleOpenHistory = async () => {
-    handleImportMenuClose();
     if (!selectedCulture?.id) {
       return;
     }
@@ -364,10 +366,6 @@ function Cultures(): React.ReactElement {
     }
   };
 
-  const handleImportMenuClose = () => {
-    setImportMenuAnchor(null);
-  };
-
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== '?') {
@@ -401,11 +399,10 @@ function Cultures(): React.ReactElement {
     }
   }, [t]);
 
-  const handleOpenPublicLibrary = async () => {
-    handleImportMenuClose();
+  const handleOpenPublicLibrary = useCallback(async () => {
     setPublicLibraryOpen(true);
     await fetchPublicCultures();
-  };
+  }, [fetchPublicCultures]);
 
   const handleImportPublicCulture = async (publicCulture: PublicCulture) => {
     try {
@@ -456,13 +453,12 @@ function Cultures(): React.ReactElement {
     }
   };
 
-  const handleImportFileTrigger = () => {
-    handleImportMenuClose();
+  const handleImportFileTrigger = useCallback(() => {
     resetImportState();
     fileInputRef.current?.click();
-  };
+  }, [resetImportState]);
 
-  const handleExportCurrentCulture = () => {
+  const handleExportCurrentCulture = useCallback(() => {
     if (!selectedCulture) {
       return;
     }
@@ -471,10 +467,9 @@ function Cultures(): React.ReactElement {
     const filename = buildSingleCultureFilename(selectedCulture);
     downloadJsonFile(exportPayload, filename);
     showSnackbar(t('messages.exportSuccess'), 'success');
-    handleImportMenuClose();
-  };
+  }, [selectedCulture, showSnackbar, t]);
 
-  const handleExportAllCultures = async () => {
+  const handleExportAllCultures = useCallback(async () => {
     try {
       const allCultures: Culture[] = [];
       let nextUrl: string | null = '/cultures/';
@@ -492,10 +487,8 @@ function Cultures(): React.ReactElement {
     } catch (error) {
       console.error('Error exporting cultures:', error);
       showSnackbar(t('messages.fetchError'), 'error');
-    } finally {
-      handleImportMenuClose();
     }
-  };
+  }, [showSnackbar, t]);
 
   const handleImportFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -583,7 +576,6 @@ function Cultures(): React.ReactElement {
     setImportDialogOpen(false);
   };
 
-  const selectedCulture = cultures.find(c => c.id === selectedCultureId);
   const firstMissingPlanRequirement = getFirstMissingCultivationPlanRequirement({
     hasLocations,
     hasFields,
@@ -715,6 +707,44 @@ function Cultures(): React.ReactElement {
       setEnrichmentLoading(false);
     }
   };
+
+  const contextActions = useMemo<TopbarContextAction[]>(() => ([
+    {
+      id: 'cultures-open-library',
+      label: 'Öffentliche Kulturbibliothek öffnen',
+      ariaLabel: 'Öffentliche Kulturbibliothek öffnen',
+      onClick: () => {
+        void handleOpenPublicLibrary();
+      },
+    },
+    {
+      id: 'cultures-import-json',
+      label: 'Kulturen importieren (JSON)',
+      ariaLabel: 'Kulturen importieren (JSON)',
+      onClick: handleImportFileTrigger,
+      shortcutHint: 'Alt+I',
+    },
+    {
+      id: 'cultures-export-current-json',
+      label: selectedCulture ? 'Aktuelle Kultur exportieren (JSON)' : 'Kulturen exportieren (JSON)',
+      ariaLabel: selectedCulture ? 'Aktuelle Kultur exportieren (JSON)' : 'Kulturen exportieren (JSON)',
+      onClick: handleExportCurrentCulture,
+      disabled: !selectedCulture,
+      shortcutHint: 'Alt+J',
+    },
+    {
+      id: 'cultures-export-all-json',
+      label: 'Alle Kulturen exportieren (JSON)',
+      ariaLabel: 'Alle Kulturen exportieren (JSON)',
+      onClick: handleExportAllCultures,
+      shortcutHint: 'Alt+Shift+J',
+    },
+  ]), [handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, handleOpenPublicLibrary, selectedCulture]);
+
+  useEffect(() => {
+    setTopbarContextActions(contextActions);
+    return () => setTopbarContextActions([]);
+  }, [contextActions, setTopbarContextActions]);
 
   const commandSpecs = useMemo(() => createCulturesCommandSpecs({
     canRunEnrichmentForCulture,
@@ -918,25 +948,6 @@ function Cultures(): React.ReactElement {
 
   return (
     <PageContainer>
-      <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-        <Button variant="contained" onClick={handleAddNew}>Kultur hinzufügen</Button>
-      </Box>
-        <Menu
-          id="culture-import-menu"
-          anchorEl={importMenuAnchor}
-          open={Boolean(importMenuAnchor)}
-          onClose={handleImportMenuClose}
-        >
-          <MenuItem aria-label="JSON exportieren" onClick={handleExportCurrentCulture} disabled={!selectedCulture}>
-            JSON exportieren
-          </MenuItem>
-          <MenuItem aria-label="Alle Kulturen exportieren" onClick={handleExportAllCultures}>
-            Alle Kulturen exportieren
-          </MenuItem>
-          <MenuItem aria-label="JSON importieren" onClick={handleImportFileTrigger}>
-            JSON importieren
-          </MenuItem>
-        </Menu>
         <input
           ref={fileInputRef}
           type="file"

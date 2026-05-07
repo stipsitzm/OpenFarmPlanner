@@ -11,18 +11,16 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import TuneIcon from '@mui/icons-material/Tune';
 import {
   Badge,
   Box,
   Card,
   CardContent,
-  Collapse,
   CircularProgress,
   Typography,
   Chip,
@@ -33,12 +31,17 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  List,
+  ListItemButton,
+  ListItemText,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   Stack,
   Button,
+  IconButton,
+  Popover,
   TextField,
 } from '@mui/material';
 import type { Culture } from '../api/api';
@@ -147,7 +150,9 @@ export function CultureDetail({
   const [yieldMin, setYieldMin] = useState('');
   const [yieldMax, setYieldMax] = useState('');
   const [selectedSowingMonths, setSelectedSowingMonths] = useState<number[]>([]);
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
+  const isFilterPopoverOpen = Boolean(filterAnchorEl);
+  const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null);
 
   const activeFilterCount = useMemo(
     () => [
@@ -239,6 +244,10 @@ export function CultureDetail({
     yieldMax,
     yieldMin,
   ]);
+
+  useEffect(() => {
+    setTopbarSlot(document.getElementById('cultures-selector-topbar-slot'));
+  }, []);
 
   const filteredCultures = useMemo(() => {
     const parsedGrowthDaysMin = growthDaysMin ? Number(growthDaysMin) : null;
@@ -455,11 +464,8 @@ export function CultureDetail({
     return [];
   }, [activeCultivationTypes, selectedCulture]);
 
-  return (
-    <Box sx={{ width: '100%' }}>
-      {/* Searchable Dropdown */}
-      {cultures.length > 0 ? (
-      <Box sx={{ mb: 3 }}>
+  const selectorControl = cultures.length > 0 ? (
+      <Box sx={{ width: '100%' }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
           <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 280 } }}>
             <SearchableSelect
@@ -469,36 +475,45 @@ export function CultureDetail({
               label={t('searchPlaceholder')}
               placeholder={t('searchInputPlaceholderEnhanced')}
               noOptionsText={t('noOptionsEnhanced')}
-              textFieldSx={{ width: '100%' }}
+              textFieldSx={{
+                width: '100%',
+              }}
               inputValue={searchQuery}
               onInputChange={setSearchQuery}
+              endAdornment={(
+                <IconButton
+                  size="small"
+                  onClick={(event) => setFilterAnchorEl(event.currentTarget)}
+                  aria-expanded={isFilterPopoverOpen}
+                  aria-haspopup="dialog"
+                  aria-controls={isFilterPopoverOpen ? 'culture-filters-popover' : undefined}
+                  aria-label="Erweiterte Filter öffnen"
+                  sx={{ bgcolor: activeFilterCount > 0 ? 'action.selected' : 'transparent' }}
+                >
+                  <Badge color="primary" badgeContent={activeFilterCount > 0 ? activeFilterCount : null}>
+                    <TuneIcon fontSize="small" />
+                  </Badge>
+                </IconButton>
+              )}
             />
           </Box>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => setFiltersExpanded((prev) => !prev)}
-            startIcon={
-              <Badge color="primary" badgeContent={activeFilterCount > 0 ? activeFilterCount : null}>
-                <FilterListIcon fontSize="small" />
-              </Badge>
-            }
-            endIcon={filtersExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            sx={{ alignSelf: { xs: 'flex-end', sm: 'center' }, whiteSpace: 'nowrap' }}
-            aria-expanded={filtersExpanded}
-            aria-label={t('filters.toggle')}
-          >
-            {t('filters.toggle')}
-          </Button>
         </Stack>
 
-        <Collapse in={filtersExpanded}>
+        <Popover
+          id="culture-filters-popover"
+          open={isFilterPopoverOpen}
+          anchorEl={filterAnchorEl}
+          onClose={() => setFilterAnchorEl(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          PaperProps={{ sx: { width: { xs: 'min(92vw, 360px)', sm: 360 }, p: 1.5 } }}
+        >
           <Stack
-            direction={{ xs: 'column', md: 'row' }}
+            direction="column"
             spacing={1}
             sx={{ pt: 0.5, pb: 0.5 }}
           >
-            <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
+            <FormControl size="small" sx={{ minWidth: '100%' }}>
               <InputLabel id="culture-family-filter-label">{t('filters.cropFamily')}</InputLabel>
               <Select
                 labelId="culture-family-filter-label"
@@ -512,7 +527,7 @@ export function CultureDetail({
                 ))}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
+            <FormControl size="small" sx={{ minWidth: '100%' }}>
               <InputLabel id="culture-method-filter-label">{t('filters.cultivationType')}</InputLabel>
               <Select
                 labelId="culture-method-filter-label"
@@ -526,7 +541,7 @@ export function CultureDetail({
                 <MenuItem value="both">{t('filters.both')}</MenuItem>
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 180 } }}>
+            <FormControl size="small" sx={{ minWidth: '100%' }}>
               <InputLabel id="culture-nutrient-filter-label">{t('filters.nutrientDemand')}</InputLabel>
               <Select
                 labelId="culture-nutrient-filter-label"
@@ -546,7 +561,7 @@ export function CultureDetail({
               label={t('filters.growthDaysMin')}
               value={growthDaysMin}
               onChange={(event) => setGrowthDaysMin(event.target.value)}
-              sx={{ minWidth: { xs: '100%', md: 140 } }}
+              sx={{ minWidth: '100%' }}
             />
             <TextField
               size="small"
@@ -554,9 +569,9 @@ export function CultureDetail({
               label={t('filters.growthDaysMax')}
               value={growthDaysMax}
               onChange={(event) => setGrowthDaysMax(event.target.value)}
-              sx={{ minWidth: { xs: '100%', md: 140 } }}
+              sx={{ minWidth: '100%' }}
             />
-            <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 220 } }}>
+            <FormControl size="small" sx={{ minWidth: '100%' }}>
               <InputLabel id="culture-sowing-month-filter-label">{t('filters.sowingMonths')}</InputLabel>
               <Select
                 multiple
@@ -581,7 +596,7 @@ export function CultureDetail({
               label={t('filters.yieldMin')}
               value={yieldMin}
               onChange={(event) => setYieldMin(event.target.value)}
-              sx={{ minWidth: { xs: '100%', md: 140 } }}
+              sx={{ minWidth: '100%' }}
             />
             <TextField
               size="small"
@@ -589,7 +604,7 @@ export function CultureDetail({
               label={t('filters.yieldMax')}
               value={yieldMax}
               onChange={(event) => setYieldMax(event.target.value)}
-              sx={{ minWidth: { xs: '100%', md: 140 } }}
+              sx={{ minWidth: '100%' }}
             />
             <Button
               variant="text"
@@ -604,25 +619,62 @@ export function CultureDetail({
                 setYieldMin('');
                 setYieldMax('');
                 setSelectedSowingMonths([]);
+                setFilterAnchorEl(null);
               }}
-              sx={{ alignSelf: { xs: 'flex-end', md: 'center' }, whiteSpace: 'nowrap' }}
+              sx={{ alignSelf: 'flex-end', whiteSpace: 'nowrap' }}
             >
               {t('filters.reset')}
             </Button>
           </Stack>
-        </Collapse>
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: 'block' }}>
-          {t('searchHelperText', { count: filteredCultures.length })}
-        </Typography>
+        </Popover>
       </Box>
-      ) : null}
+  ) : null;
+
+  return (
+    <Box sx={{ width: '100%' }}>
+      {topbarSlot && selectorControl ? createPortal(selectorControl, topbarSlot) : selectorControl}
 
       {/* Detail View */}
-      {selectedCulture && (
-        <Card>
-          <CardContent>
+      {!isLoading && cultures.length > 0 ? (
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+          <Card sx={{ width: { xs: '100%', md: 340 }, flexShrink: 0, maxHeight: { md: 'calc(100vh - 220px)' }, overflowY: 'auto' }}>
+            <List dense sx={{ py: 0.5 }}>
+              {filteredCultures.map((culture) => {
+                const cultivationValues = culture.cultivation_types && culture.cultivation_types.length > 0
+                  ? culture.cultivation_types
+                  : (culture.cultivation_type ? [culture.cultivation_type] : []);
+                const cultivationLabel = cultivationValues.includes('direct_sowing') && cultivationValues.includes('pre_cultivation')
+                  ? t('filters.both')
+                  : cultivationValues.includes('direct_sowing')
+                    ? t('filters.directSowing')
+                    : cultivationValues.includes('pre_cultivation')
+                      ? t('filters.preCultivation')
+                      : '';
+                const secondaryParts = [culture.variety, cultivationLabel, culture.seed_supplier].filter(Boolean);
+                const secondary = secondaryParts.join(' • ');
+
+                return (
+                  <ListItemButton
+                    key={culture.id}
+                    selected={selectedCulture?.id === culture.id}
+                    onClick={() => onCultureSelect(culture)}
+                    sx={{ borderRadius: 1, mx: 0.5, mb: 0.5, alignItems: 'flex-start' }}
+                  >
+                    <ListItemText
+                      primary={culture.name}
+                      secondary={secondary || culture.crop_family || undefined}
+                    />
+                  </ListItemButton>
+                );
+              })}
+            </List>
+          </Card>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            {selectedCulture ? (
+              <Card>
+                <CardContent>
             {/* Header with crop name and badge */}
-            <Box sx={{ mb: 3 }}>
+                  <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="h4" component="h2">
@@ -1024,10 +1076,21 @@ export function CultureDetail({
                   </Box>
                 )}
               </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      )}
+                  </Box>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent>
+                  <Typography variant="body2" color="text.secondary">
+                    {t('selectPrompt')}
+                  </Typography>
+                </CardContent>
+              </Card>
+            )}
+          </Box>
+        </Box>
+      ) : null}
 
       {/* Empty State */}
       {isLoading && (
@@ -1039,16 +1102,6 @@ export function CultureDetail({
                 {t('messages.loadingCultures')}
               </Typography>
             </Box>
-          </CardContent>
-        </Card>
-      )}
-
-      {!isLoading && !selectedCulture && filteredCultures.length > 0 && (
-        <Card>
-          <CardContent>
-            <Typography variant="body1" color="text.secondary" align="center">
-              {t('selectPrompt')}
-            </Typography>
           </CardContent>
         </Card>
       )}

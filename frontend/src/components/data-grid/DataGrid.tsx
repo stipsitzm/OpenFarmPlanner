@@ -64,6 +64,7 @@ export interface NotesFieldConfig {
   titleKey?: string;
   attachmentNoteIdField?: string;
   attachmentCountField?: string;
+  compactIndicator?: boolean;
 }
 
 export interface EditableDataGridProps<T extends EditableRow> {
@@ -563,6 +564,7 @@ export function EditableDataGrid<T extends EditableRow>({
               excerpt={excerpt}
               rawValue={value}
               attachmentCount={attachmentCount}
+              compactIndicator={Boolean(fieldConfig?.compactIndicator)}
               onOpen={() => notesEditor.handleOpen(params.id, col.field)}
               onOpenAttachments={(event) => {
                 event.preventDefault();
