@@ -948,9 +948,6 @@ function Cultures(): React.ReactElement {
 
   return (
     <PageContainer>
-      <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-        <Button variant="contained" onClick={handleAddNew}>Kultur hinzufügen</Button>
-      </Box>
         <input
           ref={fileInputRef}
           type="file"

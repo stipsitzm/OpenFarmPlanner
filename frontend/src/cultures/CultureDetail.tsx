@@ -14,7 +14,7 @@ import { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
-import FilterListIcon from '@mui/icons-material/FilterList';
+import TuneIcon from '@mui/icons-material/Tune';
 import {
   Badge,
   Box,
@@ -36,6 +36,7 @@ import {
   MenuItem,
   Stack,
   Button,
+  IconButton,
   Popover,
   TextField,
 } from '@mui/material';
@@ -460,7 +461,7 @@ export function CultureDetail({
       {cultures.length > 0 ? (
       <Box sx={{ mb: 3 }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
-          <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 280 } }}>
+          <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 280 }, position: 'relative' }}>
             <SearchableSelect
               options={cultureOptions}
               value={selectedOption}
@@ -468,28 +469,35 @@ export function CultureDetail({
               label={t('searchPlaceholder')}
               placeholder={t('searchInputPlaceholderEnhanced')}
               noOptionsText={t('noOptionsEnhanced')}
-              textFieldSx={{ width: '100%' }}
+              textFieldSx={{
+                width: '100%',
+                '& .MuiInputBase-root': {
+                  pr: 5.5,
+                },
+              }}
               inputValue={searchQuery}
               onInputChange={setSearchQuery}
             />
-          </Box>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={(event) => setFilterAnchorEl(event.currentTarget)}
-            startIcon={
+            <IconButton
+              size="small"
+              onClick={(event) => setFilterAnchorEl(event.currentTarget)}
+              aria-expanded={isFilterPopoverOpen}
+              aria-haspopup="dialog"
+              aria-controls={isFilterPopoverOpen ? 'culture-filters-popover' : undefined}
+              aria-label="Erweiterte Filter öffnen"
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                right: 8,
+                transform: 'translateY(-50%)',
+                bgcolor: activeFilterCount > 0 ? 'action.selected' : 'transparent',
+              }}
+            >
               <Badge color="primary" badgeContent={activeFilterCount > 0 ? activeFilterCount : null}>
-                <FilterListIcon fontSize="small" />
+                <TuneIcon fontSize="small" />
               </Badge>
-            }
-            sx={{ alignSelf: 'center', whiteSpace: 'nowrap' }}
-            aria-expanded={isFilterPopoverOpen}
-            aria-haspopup="dialog"
-            aria-controls={isFilterPopoverOpen ? 'culture-filters-popover' : undefined}
-            aria-label={t('filters.toggle')}
-          >
-            {t('filters.toggle')}
-          </Button>
+            </IconButton>
+          </Box>
         </Stack>
 
         <Popover
