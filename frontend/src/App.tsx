@@ -62,7 +62,6 @@ import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined
 import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import PublicIcon from '@mui/icons-material/Public';
@@ -640,29 +639,34 @@ function RootLayout(): React.ReactElement {
               })}
             </List>
           </Stack>
-          <IconButton
-            aria-label={sidebarCollapsed ? 'Sidebar ausklappen' : 'Sidebar einklappen'}
-            onClick={toggleSidebarCollapsed}
-            size="small"
-            sx={{
-              position: 'absolute',
-              top: '50%',
-              right: -16,
-              transform: 'translateY(-50%)',
-              width: 34,
-              height: 34,
-              borderRadius: '50%',
-              border: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.paper',
-              boxShadow: 2,
-              transition: 'transform 0.25s ease, background-color 0.2s ease',
-              '&:hover': { bgcolor: 'action.hover' },
-              zIndex: 5,
-            }}
-          >
-            {sidebarCollapsed ? <ChevronRightIcon fontSize="medium" /> : <ChevronLeftIcon fontSize="medium" />}
-          </IconButton>
+          <Tooltip title={sidebarCollapsed ? 'Sidebar ausklappen' : 'Sidebar einklappen'} placement="right">
+            <IconButton
+              aria-label={sidebarCollapsed ? 'Sidebar ausklappen' : 'Sidebar einklappen'}
+              onClick={toggleSidebarCollapsed}
+              size="small"
+              sx={{
+                position: 'absolute',
+                top: 34,
+                right: -16,
+                transform: 'translateY(-50%)',
+                width: 34,
+                height: 34,
+                borderRadius: '50%',
+                border: '1px solid',
+                borderColor: 'rgba(0,0,0,0.2)',
+                bgcolor: 'background.paper',
+                boxShadow: 3,
+                transition: 'background-color 0.2s ease',
+                '&:hover': { bgcolor: 'action.selected' },
+                zIndex: 5,
+              }}
+            >
+              <ChevronLeftIcon
+                fontSize="medium"
+                sx={{ transform: sidebarCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.25s ease' }}
+              />
+            </IconButton>
+          </Tooltip>
         </Box>
       ) : null}
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
