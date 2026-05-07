@@ -620,7 +620,7 @@ function RootLayout(): React.ReactElement {
   return (
     <Box className="app" sx={{ display: 'flex', minHeight: '100vh' }}>
       {isDesktopUp ? (
-        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', transition: 'width 0.25s ease', position: 'relative' }}>
+        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
             <Stack direction="row" alignItems="center" justifyContent={sidebarCollapsed ? 'center' : 'space-between'} sx={{ px: sidebarCollapsed ? 1 : 2, py: 1 }}>
               <AppLogo size={26} showText={!sidebarCollapsed} to="/app/dashboard" />
@@ -647,23 +647,22 @@ function RootLayout(): React.ReactElement {
               sx={{
                 position: 'absolute',
                 top: 34,
-                right: -16,
+                right: -15,
                 transform: 'translateY(-50%)',
-                width: 34,
-                height: 34,
+                width: 30,
+                height: 30,
                 borderRadius: '50%',
                 border: '1px solid',
-                borderColor: 'rgba(0,0,0,0.2)',
+                borderColor: 'rgba(15, 23, 42, 0.2)',
                 bgcolor: 'background.paper',
-                boxShadow: 3,
-                transition: 'background-color 0.2s ease',
-                '&:hover': { bgcolor: 'action.selected' },
+                boxShadow: '0 2px 6px rgba(15, 23, 42, 0.16)',
+                transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
+                '&:hover': { bgcolor: 'action.selected', boxShadow: '0 3px 10px rgba(15, 23, 42, 0.2)' },
                 zIndex: 5,
               }}
             >
               <ChevronLeftIcon
-                fontSize="medium"
-                sx={{ transform: sidebarCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.25s ease' }}
+                sx={{ fontSize: 20, transform: sidebarCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.25s ease' }}
               />
             </IconButton>
           </Tooltip>
