@@ -61,10 +61,9 @@ import EventNoteOutlinedIcon from '@mui/icons-material/EventNoteOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import PublicIcon from '@mui/icons-material/Public';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
 import { cultureAPI, projectAPI } from './api/api';
@@ -93,6 +92,7 @@ import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './navigation/mainNavigation';
+import { PanelLeft } from 'lucide-react';
 
 interface SnackbarState {
   open: boolean;
@@ -221,6 +221,19 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
   );
 }
 
+export interface TopbarContextAction {
+  id: string;
+  label: string;
+  ariaLabel?: string;
+  onClick: () => void;
+  disabled?: boolean;
+  shortcutHint?: string;
+}
+
+export interface RootLayoutOutletContext {
+  setTopbarContextActions: (actions: TopbarContextAction[]) => void;
+}
+
 
 /**
  * Root layout component with navigation.
@@ -237,18 +250,21 @@ function RootLayout(): React.ReactElement {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
+  const isLargeDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
   const { openPalette } = useCommandContext();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(!isLargeDesktop);
   const [isSwitchingProject, setIsSwitchingProject] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
+  const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
   const navItems = useMemo(() => ([
     { to: '/app/dashboard', label: t('dashboard'), activeAliases: [], keywords: ['übersicht', 'dashboard'], icon: <DashboardOutlinedIcon fontSize="small" /> },
     ...MAIN_NAV_ITEMS.map((item) => ({
@@ -406,6 +422,22 @@ function RootLayout(): React.ReactElement {
     handleGlobalMenuClose();
     navigate(path);
   };
+  const handleCultureActionsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setCultureActionsMenuAnchor(event.currentTarget);
+  };
+
+  const handleCultureActionsMenuClose = () => {
+    setCultureActionsMenuAnchor(null);
+  };
+  const isCulturesPage = location.pathname.startsWith('/app/cultures');
+  const cultureLibraryAction = useMemo(
+    () => topbarContextActions.find((action) => action.id === 'cultures-open-library'),
+    [topbarContextActions],
+  );
+  const cultureImportExportActions = useMemo(
+    () => topbarContextActions.filter((action) => action.id !== 'cultures-open-library'),
+    [topbarContextActions],
+  );
 
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
@@ -556,6 +588,9 @@ function RootLayout(): React.ReactElement {
     window.addEventListener('keydown', handleSidebarShortcut);
     return () => window.removeEventListener('keydown', handleSidebarShortcut);
   }, [isDesktopUp]);
+  useEffect(() => {
+    setSidebarCollapsed(!isLargeDesktop);
+  }, [isLargeDesktop]);
   
   const sidebarWidth = sidebarCollapsed ? 64 : 240;
   const currentPageTitle = useMemo(() => {
@@ -583,22 +618,113 @@ function RootLayout(): React.ReactElement {
   }, [location.pathname]);
 
   return (
-    <Box className="app" sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box className="app" sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f7f5' }}>
       {isDesktopUp ? (
-        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', transition: 'width 0.2s ease' }}>
+        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#1f2622', bgcolor: '#111315', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
-            <Stack direction="row" alignItems="center" justifyContent={sidebarCollapsed ? 'center' : 'space-between'} sx={{ px: sidebarCollapsed ? 1 : 2, py: 1 }}>
-              <AppLogo size={26} showText={!sidebarCollapsed} to="/app/dashboard" />
-              {!sidebarCollapsed ? <IconButton aria-label="Sidebar einklappen" size="small" onClick={toggleSidebarCollapsed}><ChevronLeftIcon fontSize="small" /></IconButton> : null}
-            </Stack>
-            {sidebarCollapsed ? <IconButton aria-label="Sidebar ausklappen" size="small" onClick={toggleSidebarCollapsed} sx={{ mx: 'auto', mb: 1 }}><ChevronRightIcon fontSize="small" /></IconButton> : null}
-            <List sx={{ px: 1 }}>
+            {!sidebarCollapsed ? (
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1.5 }}>
+                <Tooltip title="OpenFarmPlanner" placement="right" enterDelay={500}>
+                  <Box
+                    component={RouterLink}
+                    to="/app/dashboard"
+                    aria-label="Zur Übersicht"
+                    title="Zur Übersicht"
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 34,
+                      height: 34,
+                      borderRadius: 1,
+                      textDecoration: 'none',
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' },
+                      '&:focus-visible': {
+                        outline: 'none',
+                        boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.35)',
+                      },
+                    }}
+                  >
+                    <Box
+                      component="img"
+                      src="/favicon.png"
+                      alt="OpenFarmPlanner"
+                      sx={{ width: 24, height: 24, borderRadius: 0.5 }}
+                    />
+                  </Box>
+                </Tooltip>
+                <Tooltip
+                  title="Seitenleiste schließen"
+                  placement="right"
+                  enterDelay={350}
+                  slotProps={{ tooltip: { sx: { bgcolor: '#111827', fontSize: '0.72rem', px: 1, py: 0.5 } } }}
+                >
+                  <IconButton
+                    aria-label="Sidebar einklappen"
+                    onClick={toggleSidebarCollapsed}
+                    size="small"
+                    sx={{
+                      width: 30,
+                      height: 30,
+                      color: '#6B7280',
+                      cursor: 'w-resize',
+                      '&:hover': { bgcolor: '#F3F4F6' },
+                    }}
+                  >
+                    <PanelLeft size={18} strokeWidth={1.8} />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            ) : (
+              <Stack direction="row" alignItems="center" justifyContent="center" sx={{ py: 1, mb: 0.75 }}>
+                <Tooltip
+                  title="Seitenleiste öffnen"
+                  placement="right"
+                  enterDelay={350}
+                  slotProps={{ tooltip: { sx: { bgcolor: '#111827', fontSize: '0.72rem', px: 1, py: 0.5 } } }}
+                >
+                  <IconButton
+                    aria-label="Sidebar ausklappen"
+                    onClick={toggleSidebarCollapsed}
+                    size="small"
+                    sx={{
+                      width: 30,
+                      height: 30,
+                      color: '#6B7280',
+                      cursor: 'e-resize',
+                      '&:hover': { bgcolor: '#F3F4F6' },
+                    }}
+                  >
+                    <PanelLeft size={18} strokeWidth={1.8} />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            )}
+            <List sx={{ px: 1, pt: 0.5 }}>
               {navItems.map((item) => {
                 const isActive = location.pathname === item.to || item.activeAliases.includes(location.pathname);
                 const entry = (
-                  <ListItemButton key={item.to} component={NavLink} to={item.to} selected={isActive} sx={{ minHeight: 44, borderRadius: 1, mb: 0.5, justifyContent: sidebarCollapsed ? 'center' : 'initial' }}>
-                    <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 36, color: isActive ? 'primary.main' : 'inherit' }}>{item.icon}</ListItemIcon>
-                    {!sidebarCollapsed ? <ListItemText primary={item.label} /> : null}
+                  <ListItemButton
+                    key={item.to}
+                    component={NavLink}
+                    to={item.to}
+                    selected={isActive}
+                    sx={{
+                      minHeight: 44,
+                      borderRadius: 1.5,
+                      mb: 0.75,
+                      px: 1.25,
+                      justifyContent: sidebarCollapsed ? 'center' : 'initial',
+                      color: isActive ? '#e7f6e8' : '#d1d5db',
+                      bgcolor: isActive ? 'rgba(37, 111, 42, 0.26)' : 'transparent',
+                      border: isActive ? '1px solid rgba(110, 194, 115, 0.35)' : '1px solid transparent',
+                      '&:hover': {
+                        bgcolor: isActive ? 'rgba(37, 111, 42, 0.3)' : 'rgba(255,255,255,0.06)',
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 36, color: 'inherit' }}>{item.icon}</ListItemIcon>
+                    {!sidebarCollapsed ? <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 500, fontSize: '0.95rem' }} /> : null}
                   </ListItemButton>
                 );
                 return sidebarCollapsed ? <Tooltip key={item.to} title={item.label} placement="right">{entry}</Tooltip> : entry;
@@ -607,12 +733,17 @@ function RootLayout(): React.ReactElement {
           </Stack>
         </Box>
       ) : null}
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', bgcolor: '#f5f7f5' }}>
       <Box sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
         {navItems.map((item) => <RouterLink key={`sr-${item.to}`} to={item.to}>{item.label}</RouterLink>)}
       </Box>
-      <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
-        <Toolbar variant="dense" sx={{ minHeight: 52, gap: 1 }}>
+      <AppBar
+        position="sticky"
+        color="inherit"
+        elevation={0}
+        sx={{ borderBottom: '1px solid', borderColor: '#e5e7eb', bgcolor: '#f8faf8', backdropFilter: 'saturate(120%) blur(2px)' }}
+      >
+        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5 }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
           {!isDesktopUp ? <AppLogo size={24} showText to="/app/dashboard" /> : null}
           <Typography component="h1" variant="h5" noWrap sx={{ minWidth: 0, fontSize: { xs: '1.1rem', md: '1.25rem' }, fontWeight: 600 }}>
@@ -620,6 +751,54 @@ function RootLayout(): React.ReactElement {
           </Typography>
           {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {isCulturesPage && !isMobile ? (
+            <>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => cultureLibraryAction?.onClick()}
+                aria-label="Öffentliche Kulturbibliothek öffnen"
+                startIcon={<PublicIcon fontSize="small" />}
+                sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+                disabled={!cultureLibraryAction || cultureLibraryAction.disabled}
+              >
+                Bibliothek
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                aria-label="Import/Export öffnen"
+                aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                onClick={handleCultureActionsMenuOpen}
+                endIcon={<KeyboardArrowDownIcon fontSize="small" />}
+                sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+              >
+                Import/Export
+              </Button>
+              <Menu
+                id="culture-actions-menu"
+                anchorEl={cultureActionsMenuAnchor}
+                open={Boolean(cultureActionsMenuAnchor)}
+                onClose={handleCultureActionsMenuClose}
+              >
+                {cultureImportExportActions.map((action) => (
+                  <MenuItem
+                    key={action.id}
+                    aria-label={action.ariaLabel ?? action.label}
+                    onClick={() => {
+                      action.onClick();
+                      handleCultureActionsMenuClose();
+                    }}
+                    disabled={action.disabled}
+                  >
+                    <ListItemText primary={action.label} secondary={action.shortcutHint} />
+                  </MenuItem>
+                ))}
+              </Menu>
+            </>
+          ) : null}
           {topbarPrimaryAction && !isMobile ? (
             <Button size="small" variant="contained" onClick={() => navigate(topbarPrimaryAction.to)} sx={{ textTransform: 'none' }}>
               + {topbarPrimaryAction.label}
@@ -714,7 +893,32 @@ function RootLayout(): React.ReactElement {
         </List>
       </Drawer>
 
-      <Outlet />
+      <Box
+        component="main"
+        sx={{
+          width: '100%',
+          maxWidth: '1400px',
+          mx: 'auto',
+          px: { xs: 1.5, sm: 2.5, md: 3.5 },
+          py: { xs: 1.5, md: 2.5 },
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+        }}
+      >
+        <Box
+          sx={{
+            bgcolor: '#ffffff',
+            border: '1px solid #e5e7eb',
+            borderRadius: 3,
+            boxShadow: '0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 1px rgba(16, 24, 40, 0.02)',
+            p: { xs: 1.25, sm: 1.75, md: 2.25 },
+            minHeight: 'calc(100vh - 124px)',
+          }}
+        >
+          <Outlet context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
+        </Box>
+      </Box>
       </Box>
 
       <Dialog open={projectHistoryOpen} onClose={() => setProjectHistoryOpen(false)} fullWidth maxWidth="sm">
