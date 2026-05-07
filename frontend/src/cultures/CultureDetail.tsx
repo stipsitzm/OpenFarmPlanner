@@ -482,7 +482,7 @@ export function CultureDetail({
                 <FilterListIcon fontSize="small" />
               </Badge>
             }
-            sx={{ alignSelf: { xs: 'flex-end', sm: 'center' }, whiteSpace: 'nowrap' }}
+            sx={{ alignSelf: 'center', whiteSpace: 'nowrap' }}
             aria-expanded={isFilterPopoverOpen}
             aria-haspopup="dialog"
             aria-controls={isFilterPopoverOpen ? 'culture-filters-popover' : undefined}
@@ -612,6 +612,7 @@ export function CultureDetail({
                 setYieldMin('');
                 setYieldMax('');
                 setSelectedSowingMonths([]);
+                setFilterAnchorEl(null);
               }}
               sx={{ alignSelf: 'flex-end', whiteSpace: 'nowrap' }}
             >
