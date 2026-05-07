@@ -625,8 +625,32 @@ function RootLayout(): React.ReactElement {
             {!sidebarCollapsed ? (
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1.5 }}>
                 <Tooltip title="OpenFarmPlanner" placement="right" enterDelay={500}>
-                  <Box>
-                    <AppLogo size={26} to="/app/dashboard" />
+                  <Box
+                    component={RouterLink}
+                    to="/app/dashboard"
+                    aria-label="Zur Übersicht"
+                    title="Zur Übersicht"
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 34,
+                      height: 34,
+                      borderRadius: 1,
+                      textDecoration: 'none',
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' },
+                      '&:focus-visible': {
+                        outline: 'none',
+                        boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.35)',
+                      },
+                    }}
+                  >
+                    <Box
+                      component="img"
+                      src="/favicon.png"
+                      alt="OpenFarmPlanner"
+                      sx={{ width: 24, height: 24, borderRadius: 0.5 }}
+                    />
                   </Box>
                 </Tooltip>
                 <Tooltip
