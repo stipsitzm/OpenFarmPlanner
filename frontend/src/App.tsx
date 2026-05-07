@@ -620,7 +620,7 @@ function RootLayout(): React.ReactElement {
   return (
     <Box className="app" sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f7f5' }}>
       {isDesktopUp ? (
-        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#1f2622', bgcolor: '#111315', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
+        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#E5E7E5', bgcolor: '#F5F6F5', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
             {!sidebarCollapsed ? (
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1.5 }}>
@@ -638,10 +638,10 @@ function RootLayout(): React.ReactElement {
                       height: 34,
                       borderRadius: 1,
                       textDecoration: 'none',
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' },
+                      '&:hover': { bgcolor: 'rgba(80, 120, 90, 0.08)' },
                       '&:focus-visible': {
                         outline: 'none',
-                        boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.35)',
+                        boxShadow: '0 0 0 2px rgba(80, 130, 90, 0.22)',
                       },
                     }}
                   >
@@ -657,7 +657,7 @@ function RootLayout(): React.ReactElement {
                   title="Seitenleiste schließen"
                   placement="right"
                   enterDelay={350}
-                  slotProps={{ tooltip: { sx: { bgcolor: '#111827', fontSize: '0.72rem', px: 1, py: 0.5 } } }}
+                  slotProps={{ tooltip: { sx: { bgcolor: '#1F2A24', fontSize: '0.72rem', px: 1, py: 0.5 } } }}
                 >
                   <IconButton
                     aria-label="Sidebar einklappen"
@@ -666,9 +666,9 @@ function RootLayout(): React.ReactElement {
                     sx={{
                       width: 30,
                       height: 30,
-                      color: '#6B7280',
+                      color: '#4E5A53',
                       cursor: 'w-resize',
-                      '&:hover': { bgcolor: '#F3F4F6' },
+                      '&:hover': { bgcolor: 'rgba(80, 120, 90, 0.08)' },
                     }}
                   >
                     <PanelLeft size={18} strokeWidth={1.8} />
@@ -681,7 +681,7 @@ function RootLayout(): React.ReactElement {
                   title="Seitenleiste öffnen"
                   placement="right"
                   enterDelay={350}
-                  slotProps={{ tooltip: { sx: { bgcolor: '#111827', fontSize: '0.72rem', px: 1, py: 0.5 } } }}
+                  slotProps={{ tooltip: { sx: { bgcolor: '#1F2A24', fontSize: '0.72rem', px: 1, py: 0.5 } } }}
                 >
                   <IconButton
                     aria-label="Sidebar ausklappen"
@@ -690,9 +690,9 @@ function RootLayout(): React.ReactElement {
                     sx={{
                       width: 30,
                       height: 30,
-                      color: '#6B7280',
+                      color: '#4E5A53',
                       cursor: 'e-resize',
-                      '&:hover': { bgcolor: '#F3F4F6' },
+                      '&:hover': { bgcolor: 'rgba(80, 120, 90, 0.08)' },
                     }}
                   >
                     <PanelLeft size={18} strokeWidth={1.8} />
@@ -715,11 +715,22 @@ function RootLayout(): React.ReactElement {
                       mb: 0.75,
                       px: 1.25,
                       justifyContent: sidebarCollapsed ? 'center' : 'initial',
-                      color: isActive ? '#e7f6e8' : '#d1d5db',
-                      bgcolor: isActive ? 'rgba(37, 111, 42, 0.26)' : 'transparent',
-                      border: isActive ? '1px solid rgba(110, 194, 115, 0.35)' : '1px solid transparent',
+                      color: isActive ? '#2F3A33' : '#3F4B45',
+                      bgcolor: isActive ? 'rgba(80, 130, 90, 0.14)' : 'transparent',
+                      border: '1px solid transparent',
+                      position: 'relative',
                       '&:hover': {
-                        bgcolor: isActive ? 'rgba(37, 111, 42, 0.3)' : 'rgba(255,255,255,0.06)',
+                        bgcolor: isActive ? 'rgba(80, 130, 90, 0.18)' : 'rgba(80, 120, 90, 0.08)',
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        left: 0,
+                        top: 8,
+                        bottom: 8,
+                        width: 3,
+                        borderRadius: 999,
+                        bgcolor: isActive ? 'rgba(68, 112, 79, 0.58)' : 'transparent',
                       },
                     }}
                   >
@@ -861,7 +872,7 @@ function RootLayout(): React.ReactElement {
         </Toolbar>
       </AppBar>
 
-      <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav}>
+      <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav} PaperProps={{ sx: { bgcolor: '#F5F6F5', borderRight: '1px solid #E5E7E5' } }}>
         <List sx={{ width: 280 }}>
           <ListItem sx={{ py: 1.5, px: 2 }}>
             <AppLogo size={26} showText to="/app/dashboard" />
@@ -880,8 +891,12 @@ function RootLayout(): React.ReactElement {
                     borderRadius: 0,
                     px: 2,
                     py: 1.5,
-                    color: isActive ? 'primary.main' : 'text.primary',
+                    color: isActive ? '#2F3A33' : '#3F4B45',
                     fontWeight: isActive ? 700 : 500,
+                    bgcolor: isActive ? 'rgba(80, 130, 90, 0.14)' : 'transparent',
+                    '&:hover': {
+                      bgcolor: isActive ? 'rgba(80, 130, 90, 0.18)' : 'rgba(80, 120, 90, 0.08)',
+                    },
                   }}
                 >
                   <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
