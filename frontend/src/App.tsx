@@ -61,7 +61,6 @@ import EventNoteOutlinedIcon from '@mui/icons-material/EventNoteOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import PublicIcon from '@mui/icons-material/Public';
@@ -93,6 +92,33 @@ import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './navigation/mainNavigation';
+
+function SidebarToggleGlyph(): React.ReactElement {
+  return (
+    <Box
+      aria-hidden
+      sx={{
+        width: 16,
+        height: 16,
+        border: '1.5px solid',
+        borderColor: '#9ca3af',
+        borderRadius: '5px',
+        position: 'relative',
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          top: 1,
+          bottom: 1,
+          left: '50%',
+          width: '1.5px',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#9ca3af',
+          borderRadius: 999,
+        },
+      }}
+    />
+  );
+}
 
 interface SnackbarState {
   open: boolean;
@@ -649,21 +675,21 @@ function RootLayout(): React.ReactElement {
                 top: 34,
                 right: -15,
                 transform: 'translateY(-50%)',
-                width: 30,
-                height: 30,
+                width: 28,
+                height: 28,
                 borderRadius: '50%',
                 border: '1px solid',
-                borderColor: 'rgba(15, 23, 42, 0.2)',
-                bgcolor: 'background.paper',
-                boxShadow: '0 2px 6px rgba(15, 23, 42, 0.16)',
-                transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
-                '&:hover': { bgcolor: 'action.selected', boxShadow: '0 3px 10px rgba(15, 23, 42, 0.2)' },
+                borderColor: '#E5E7EB',
+                bgcolor: '#FFFFFF',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                transition: 'background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+                '&:hover': { bgcolor: '#F3F4F6', borderColor: '#D1D5DB' },
+                '&:active': { bgcolor: '#E5E7EB' },
+                '&:focus-visible': { outline: '2px solid #D1D5DB', outlineOffset: 2 },
                 zIndex: 5,
               }}
             >
-              <ChevronLeftIcon
-                sx={{ fontSize: 20, transform: sidebarCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.25s ease' }}
-              />
+              <SidebarToggleGlyph />
             </IconButton>
           </Tooltip>
         </Box>
