@@ -95,28 +95,17 @@ import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './n
 
 function SidebarToggleGlyph(): React.ReactElement {
   return (
-    <Box
+    <svg
       aria-hidden
-      sx={{
-        width: 16,
-        height: 16,
-        border: '1.5px solid',
-        borderColor: '#9ca3af',
-        borderRadius: '5px',
-        position: 'relative',
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          top: 1,
-          bottom: 1,
-          left: '50%',
-          width: '1.5px',
-          transform: 'translateX(-50%)',
-          backgroundColor: '#9ca3af',
-          borderRadius: 999,
-        },
-      }}
-    />
+      width="18"
+      height="18"
+      viewBox="0 0 18 18"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect x="2.25" y="2.25" width="13.5" height="13.5" rx="4.25" stroke="#9CA3AF" strokeWidth="1.5" />
+      <line x1="8.95" y1="3.25" x2="8.95" y2="14.75" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -648,9 +637,21 @@ function RootLayout(): React.ReactElement {
       {isDesktopUp ? (
         <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
-            <Stack direction="row" alignItems="center" justifyContent={sidebarCollapsed ? 'center' : 'space-between'} sx={{ px: sidebarCollapsed ? 1 : 2, py: 1 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: sidebarCollapsed ? 1 : 2, py: 1, gap: 1 }}>
               <AppLogo size={26} showText={!sidebarCollapsed} to="/app/dashboard" />
-              {!sidebarCollapsed ? <Box sx={{ width: 24, height: 24 }} /> : null}
+              <IconButton
+                aria-label={sidebarCollapsed ? 'Sidebar ausklappen' : 'Sidebar einklappen'}
+                onClick={toggleSidebarCollapsed}
+                size="small"
+                sx={{
+                  width: 30,
+                  height: 30,
+                  color: '#6B7280',
+                  '&:hover': { bgcolor: '#F3F4F6' },
+                }}
+              >
+                <SidebarToggleGlyph />
+              </IconButton>
             </Stack>
             <List sx={{ px: 1 }}>
               {navItems.map((item) => {
@@ -665,33 +666,6 @@ function RootLayout(): React.ReactElement {
               })}
             </List>
           </Stack>
-          <Tooltip title={sidebarCollapsed ? 'Sidebar ausklappen' : 'Sidebar einklappen'} placement="right">
-            <IconButton
-              aria-label={sidebarCollapsed ? 'Sidebar ausklappen' : 'Sidebar einklappen'}
-              onClick={toggleSidebarCollapsed}
-              size="small"
-              sx={{
-                position: 'absolute',
-                top: 34,
-                right: -15,
-                transform: 'translateY(-50%)',
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                border: '1px solid',
-                borderColor: '#E5E7EB',
-                bgcolor: '#FFFFFF',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-                transition: 'background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
-                '&:hover': { bgcolor: '#F3F4F6', borderColor: '#D1D5DB' },
-                '&:active': { bgcolor: '#E5E7EB' },
-                '&:focus-visible': { outline: '2px solid #D1D5DB', outlineOffset: 2 },
-                zIndex: 5,
-              }}
-            >
-              <SidebarToggleGlyph />
-            </IconButton>
-          </Tooltip>
         </Box>
       ) : null}
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
