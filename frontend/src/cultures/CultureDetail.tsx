@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
@@ -148,6 +149,7 @@ export function CultureDetail({
   const [selectedSowingMonths, setSelectedSowingMonths] = useState<number[]>([]);
   const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
   const isFilterPopoverOpen = Boolean(filterAnchorEl);
+  const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null);
 
   const activeFilterCount = useMemo(
     () => [
@@ -239,6 +241,10 @@ export function CultureDetail({
     yieldMax,
     yieldMin,
   ]);
+
+  useEffect(() => {
+    setTopbarSlot(document.getElementById('cultures-selector-topbar-slot'));
+  }, []);
 
   const filteredCultures = useMemo(() => {
     const parsedGrowthDaysMin = growthDaysMin ? Number(growthDaysMin) : null;
@@ -455,11 +461,8 @@ export function CultureDetail({
     return [];
   }, [activeCultivationTypes, selectedCulture]);
 
-  return (
-    <Box sx={{ width: '100%' }}>
-      {/* Searchable Dropdown */}
-      {cultures.length > 0 ? (
-      <Box sx={{ mb: 3 }}>
+  const selectorControl = cultures.length > 0 ? (
+      <Box sx={{ width: '100%' }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
           <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 280 } }}>
             <SearchableSelect
@@ -625,7 +628,11 @@ export function CultureDetail({
           {t('searchHelperText', { count: filteredCultures.length })}
         </Typography>
       </Box>
-      ) : null}
+  ) : null;
+
+  return (
+    <Box sx={{ width: '100%' }}>
+      {topbarSlot && selectorControl ? createPortal(selectorControl, topbarSlot) : selectorControl}
 
       {/* Detail View */}
       {selectedCulture && (
