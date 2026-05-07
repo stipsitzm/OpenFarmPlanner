@@ -637,22 +637,40 @@ function RootLayout(): React.ReactElement {
       {isDesktopUp ? (
         <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: sidebarCollapsed ? 1 : 2, py: 1, gap: 1 }}>
-              <AppLogo size={26} showText={!sidebarCollapsed} to="/app/dashboard" />
-              <IconButton
-                aria-label={sidebarCollapsed ? 'Sidebar ausklappen' : 'Sidebar einklappen'}
-                onClick={toggleSidebarCollapsed}
-                size="small"
-                sx={{
-                  width: 30,
-                  height: 30,
-                  color: '#6B7280',
-                  '&:hover': { bgcolor: '#F3F4F6' },
-                }}
-              >
-                <SidebarToggleGlyph />
-              </IconButton>
-            </Stack>
+            {!sidebarCollapsed ? (
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1, gap: 1 }}>
+                <AppLogo size={26} showText to="/app/dashboard" />
+                <IconButton
+                  aria-label="Sidebar einklappen"
+                  onClick={toggleSidebarCollapsed}
+                  size="small"
+                  sx={{
+                    width: 30,
+                    height: 30,
+                    color: '#6B7280',
+                    '&:hover': { bgcolor: '#F3F4F6' },
+                  }}
+                >
+                  <SidebarToggleGlyph />
+                </IconButton>
+              </Stack>
+            ) : (
+              <Stack direction="row" alignItems="center" justifyContent="center" sx={{ py: 1, mb: 0.5 }}>
+                <IconButton
+                  aria-label="Sidebar ausklappen"
+                  onClick={toggleSidebarCollapsed}
+                  size="small"
+                  sx={{
+                    width: 30,
+                    height: 30,
+                    color: '#6B7280',
+                    '&:hover': { bgcolor: '#F3F4F6' },
+                  }}
+                >
+                  <SidebarToggleGlyph />
+                </IconButton>
+              </Stack>
+            )}
             <List sx={{ px: 1 }}>
               {navItems.map((item) => {
                 const isActive = location.pathname === item.to || item.activeAliases.includes(location.pathname);
