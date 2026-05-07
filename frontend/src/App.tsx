@@ -92,8 +92,7 @@ import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './navigation/mainNavigation';
-import FirstPageIcon from '@mui/icons-material/FirstPage';
-import LastPageIcon from '@mui/icons-material/LastPage';
+import { PanelLeft } from 'lucide-react';
 
 interface SnackbarState {
   open: boolean;
@@ -624,8 +623,12 @@ function RootLayout(): React.ReactElement {
         <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#1f2622', bgcolor: '#111315', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
             {!sidebarCollapsed ? (
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1, gap: 1 }}>
-                <AppLogo size={26} showText to="/app/dashboard" />
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1.5 }}>
+                <Tooltip title="OpenFarmPlanner" placement="right" enterDelay={500}>
+                  <Box>
+                    <AppLogo size={26} to="/app/dashboard" />
+                  </Box>
+                </Tooltip>
                 <Tooltip
                   title="Seitenleiste schließen"
                   placement="right"
@@ -644,12 +647,12 @@ function RootLayout(): React.ReactElement {
                       '&:hover': { bgcolor: '#F3F4F6' },
                     }}
                   >
-                    <FirstPageIcon fontSize="small" />
+                    <PanelLeft size={18} strokeWidth={1.8} />
                   </IconButton>
                 </Tooltip>
               </Stack>
             ) : (
-              <Stack direction="row" alignItems="center" justifyContent="center" sx={{ py: 1, mb: 0.5 }}>
+              <Stack direction="row" alignItems="center" justifyContent="center" sx={{ py: 1, mb: 0.75 }}>
                 <Tooltip
                   title="Seitenleiste öffnen"
                   placement="right"
@@ -668,7 +671,7 @@ function RootLayout(): React.ReactElement {
                       '&:hover': { bgcolor: '#F3F4F6' },
                     }}
                   >
-                    <LastPageIcon fontSize="small" />
+                    <PanelLeft size={18} strokeWidth={1.8} />
                   </IconButton>
                 </Tooltip>
               </Stack>
