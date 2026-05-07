@@ -619,9 +619,9 @@ function RootLayout(): React.ReactElement {
   }, [location.pathname]);
 
   return (
-    <Box className="app" sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box className="app" sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f7f5' }}>
       {isDesktopUp ? (
-        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
+        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#1f2622', bgcolor: '#111315', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
             {!sidebarCollapsed ? (
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1, gap: 1 }}>
@@ -673,13 +673,31 @@ function RootLayout(): React.ReactElement {
                 </Tooltip>
               </Stack>
             )}
-            <List sx={{ px: 1 }}>
+            <List sx={{ px: 1, pt: 0.5 }}>
               {navItems.map((item) => {
                 const isActive = location.pathname === item.to || item.activeAliases.includes(location.pathname);
                 const entry = (
-                  <ListItemButton key={item.to} component={NavLink} to={item.to} selected={isActive} sx={{ minHeight: 44, borderRadius: 1, mb: 0.5, justifyContent: sidebarCollapsed ? 'center' : 'initial' }}>
-                    <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 36, color: isActive ? 'primary.main' : 'inherit' }}>{item.icon}</ListItemIcon>
-                    {!sidebarCollapsed ? <ListItemText primary={item.label} /> : null}
+                  <ListItemButton
+                    key={item.to}
+                    component={NavLink}
+                    to={item.to}
+                    selected={isActive}
+                    sx={{
+                      minHeight: 44,
+                      borderRadius: 1.5,
+                      mb: 0.75,
+                      px: 1.25,
+                      justifyContent: sidebarCollapsed ? 'center' : 'initial',
+                      color: isActive ? '#e7f6e8' : '#d1d5db',
+                      bgcolor: isActive ? 'rgba(37, 111, 42, 0.26)' : 'transparent',
+                      border: isActive ? '1px solid rgba(110, 194, 115, 0.35)' : '1px solid transparent',
+                      '&:hover': {
+                        bgcolor: isActive ? 'rgba(37, 111, 42, 0.3)' : 'rgba(255,255,255,0.06)',
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 36, color: 'inherit' }}>{item.icon}</ListItemIcon>
+                    {!sidebarCollapsed ? <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 500, fontSize: '0.95rem' }} /> : null}
                   </ListItemButton>
                 );
                 return sidebarCollapsed ? <Tooltip key={item.to} title={item.label} placement="right">{entry}</Tooltip> : entry;
@@ -688,12 +706,17 @@ function RootLayout(): React.ReactElement {
           </Stack>
         </Box>
       ) : null}
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', bgcolor: '#f5f7f5' }}>
       <Box sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
         {navItems.map((item) => <RouterLink key={`sr-${item.to}`} to={item.to}>{item.label}</RouterLink>)}
       </Box>
-      <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
-        <Toolbar variant="dense" sx={{ minHeight: 52, gap: 1 }}>
+      <AppBar
+        position="sticky"
+        color="inherit"
+        elevation={0}
+        sx={{ borderBottom: '1px solid', borderColor: '#e5e7eb', bgcolor: '#f8faf8', backdropFilter: 'saturate(120%) blur(2px)' }}
+      >
+        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5 }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
           {!isDesktopUp ? <AppLogo size={24} showText to="/app/dashboard" /> : null}
           <Typography component="h1" variant="h5" noWrap sx={{ minWidth: 0, fontSize: { xs: '1.1rem', md: '1.25rem' }, fontWeight: 600 }}>
@@ -856,7 +879,32 @@ function RootLayout(): React.ReactElement {
         </List>
       </Drawer>
 
-      <Outlet context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
+      <Box
+        component="main"
+        sx={{
+          width: '100%',
+          maxWidth: '1400px',
+          mx: 'auto',
+          px: { xs: 1.5, sm: 2.5, md: 3.5 },
+          py: { xs: 1.5, md: 2.5 },
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+        }}
+      >
+        <Box
+          sx={{
+            bgcolor: '#ffffff',
+            border: '1px solid #e5e7eb',
+            borderRadius: 3,
+            boxShadow: '0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 1px rgba(16, 24, 40, 0.02)',
+            p: { xs: 1.25, sm: 1.75, md: 2.25 },
+            minHeight: 'calc(100vh - 124px)',
+          }}
+        >
+          <Outlet context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
+        </Box>
+      </Box>
       </Box>
 
       <Dialog open={projectHistoryOpen} onClose={() => setProjectHistoryOpen(false)} fullWidth maxWidth="sm">

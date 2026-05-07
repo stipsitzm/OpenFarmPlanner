@@ -11,9 +11,29 @@ import type { Theme } from '@mui/material/styles';
  * Common styles for MUI DataGrid components
  */
 export const dataGridSx = {
+  border: '1px solid #e5e7eb',
+  borderRadius: 3,
+  backgroundColor: '#ffffff',
+  boxShadow: '0 1px 2px rgba(16, 24, 40, 0.04)',
+  '& .MuiDataGrid-columnHeaders': {
+    backgroundColor: '#f8faf8',
+    borderBottom: '1px solid #e5e7eb',
+  },
+  '& .MuiDataGrid-columnHeaderTitle': {
+    fontWeight: 600,
+  },
+  '& .MuiDataGrid-row': {
+    minHeight: 44,
+  },
+  '& .MuiDataGrid-row:nth-of-type(even)': {
+    backgroundColor: '#fbfcfb',
+  },
+  '& .MuiDataGrid-row:hover': {
+    backgroundColor: '#f1f7f2',
+  },
   '& .MuiDataGrid-cell': {
-    bgcolor: '#f5f5f5',
-    transition: 'background-color 0.15s',
+    borderColor: '#edf1ee',
+    transition: 'background-color 0.15s ease',
   },
   '& .MuiDataGrid-cell--editable': {
     bgcolor: (theme: Theme) =>
