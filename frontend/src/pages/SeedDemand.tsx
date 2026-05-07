@@ -148,7 +148,7 @@ export default function SeedDemandPage(): React.ReactElement {
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
-      <PageContainer>
+      <PageContainer variant="wide">
         <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
           <ProjectRequiredState reason={missingProjectReason} />
         </Box>
@@ -157,7 +157,7 @@ export default function SeedDemandPage(): React.ReactElement {
   }
 
   return (
-    <PageContainer>
+    <PageContainer variant="wide">
       <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
 
         {isLoading && <CircularProgress />}

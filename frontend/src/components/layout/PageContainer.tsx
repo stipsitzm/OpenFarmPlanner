@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from 'react';
 
-type PageContainerVariant = 'standard' | 'wide' | 'workspace' | 'xwide' | 'full';
+type PageContainerVariant = 'narrow' | 'default' | 'wide' | 'full' | 'standard' | 'workspace' | 'xwide';
 
 interface PageContainerProps {
   children: ReactNode;
@@ -9,16 +9,18 @@ interface PageContainerProps {
 }
 
 const VARIANT_CLASSNAME: Record<PageContainerVariant, string> = {
+  narrow: 'content content--narrow',
+  default: 'content content--default',
   standard: 'content',
   wide: 'content content--wide',
-  workspace: 'content content--workspace',
+  workspace: 'content content--wide',
   xwide: 'content content--xwide',
   full: 'content--full',
 };
 
 function PageContainer({
   children,
-  variant = 'standard',
+  variant = 'default',
   className,
 }: PageContainerProps): ReactElement {
   const containerClassName = className

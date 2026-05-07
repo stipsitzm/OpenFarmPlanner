@@ -1496,7 +1496,7 @@ function PlantingPlans(): React.ReactElement {
   }, [canCreatePlan, isMobile, searchParams, setSearchParams]);
 
   return (
-    <PageContainer variant="xwide">
+    <PageContainer variant="full">
 
       {areaWarning ? (
         <Alert severity="warning" sx={{ mb: 2 }}>

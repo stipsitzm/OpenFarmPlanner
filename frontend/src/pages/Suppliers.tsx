@@ -183,7 +183,7 @@ export default function Suppliers(): React.ReactElement {
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
-      <PageContainer>
+      <PageContainer variant="default">
         <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
           <ProjectRequiredState reason={missingProjectReason} />
         </Box>
@@ -192,7 +192,7 @@ export default function Suppliers(): React.ReactElement {
   }
 
   return (
-    <PageContainer>
+    <PageContainer variant="default">
       <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
         {suppliers.length === 0 ? (
           <Box sx={{ width: '100%', maxWidth: 880 }}>
