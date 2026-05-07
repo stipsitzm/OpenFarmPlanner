@@ -31,6 +31,9 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  List,
+  ListItemButton,
+  ListItemText,
   FormControl,
   InputLabel,
   Select,
@@ -624,9 +627,6 @@ export function CultureDetail({
             </Button>
           </Stack>
         </Popover>
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: 'block' }}>
-          {t('searchHelperText', { count: filteredCultures.length })}
-        </Typography>
       </Box>
   ) : null;
 
@@ -1063,9 +1063,20 @@ export function CultureDetail({
       {!isLoading && !selectedCulture && filteredCultures.length > 0 && (
         <Card>
           <CardContent>
-            <Typography variant="body1" color="text.secondary" align="center">
-              {t('selectPrompt')}
-            </Typography>
+            <List dense sx={{ py: 0 }}>
+              {filteredCultures.map((culture) => (
+                <ListItemButton
+                  key={culture.id}
+                  onClick={() => onCultureSelect(culture)}
+                  sx={{ borderRadius: 1, mb: 0.5 }}
+                >
+                  <ListItemText
+                    primary={culture.name}
+                    secondary={culture.variety || culture.crop_family || undefined}
+                  />
+                </ListItemButton>
+              ))}
+            </List>
           </CardContent>
         </Card>
       )}
