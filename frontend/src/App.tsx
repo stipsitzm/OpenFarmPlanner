@@ -251,13 +251,14 @@ function RootLayout(): React.ReactElement {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
+  const isLargeDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
   const { openPalette } = useCommandContext();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(!isLargeDesktop);
   const [isSwitchingProject, setIsSwitchingProject] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
@@ -588,6 +589,9 @@ function RootLayout(): React.ReactElement {
     window.addEventListener('keydown', handleSidebarShortcut);
     return () => window.removeEventListener('keydown', handleSidebarShortcut);
   }, [isDesktopUp]);
+  useEffect(() => {
+    setSidebarCollapsed(!isLargeDesktop);
+  }, [isLargeDesktop]);
   
   const sidebarWidth = sidebarCollapsed ? 64 : 240;
   const currentPageTitle = useMemo(() => {
@@ -617,13 +621,12 @@ function RootLayout(): React.ReactElement {
   return (
     <Box className="app" sx={{ display: 'flex', minHeight: '100vh' }}>
       {isDesktopUp ? (
-        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', transition: 'width 0.2s ease' }}>
+        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', transition: 'width 0.25s ease', position: 'relative' }}>
           <Stack sx={{ height: '100%' }}>
             <Stack direction="row" alignItems="center" justifyContent={sidebarCollapsed ? 'center' : 'space-between'} sx={{ px: sidebarCollapsed ? 1 : 2, py: 1 }}>
               <AppLogo size={26} showText={!sidebarCollapsed} to="/app/dashboard" />
-              {!sidebarCollapsed ? <IconButton aria-label="Sidebar einklappen" size="small" onClick={toggleSidebarCollapsed}><ChevronLeftIcon fontSize="small" /></IconButton> : null}
+              {!sidebarCollapsed ? <Box sx={{ width: 24, height: 24 }} /> : null}
             </Stack>
-            {sidebarCollapsed ? <IconButton aria-label="Sidebar ausklappen" size="small" onClick={toggleSidebarCollapsed} sx={{ mx: 'auto', mb: 1 }}><ChevronRightIcon fontSize="small" /></IconButton> : null}
             <List sx={{ px: 1 }}>
               {navItems.map((item) => {
                 const isActive = location.pathname === item.to || item.activeAliases.includes(location.pathname);
@@ -637,6 +640,29 @@ function RootLayout(): React.ReactElement {
               })}
             </List>
           </Stack>
+          <IconButton
+            aria-label={sidebarCollapsed ? 'Sidebar ausklappen' : 'Sidebar einklappen'}
+            onClick={toggleSidebarCollapsed}
+            size="small"
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              right: -16,
+              transform: 'translateY(-50%)',
+              width: 34,
+              height: 34,
+              borderRadius: '50%',
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              boxShadow: 2,
+              transition: 'transform 0.25s ease, background-color 0.2s ease',
+              '&:hover': { bgcolor: 'action.hover' },
+              zIndex: 5,
+            }}
+          >
+            {sidebarCollapsed ? <ChevronRightIcon fontSize="medium" /> : <ChevronLeftIcon fontSize="medium" />}
+          </IconButton>
         </Box>
       ) : null}
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
