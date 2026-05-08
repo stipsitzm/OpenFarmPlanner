@@ -917,20 +917,10 @@ function RootLayout(): React.ReactElement {
           display: 'flex',
           flexDirection: 'column',
           gap: 2,
+          minWidth: 0,
         }}
       >
-        <Box
-          sx={{
-            bgcolor: '#ffffff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 3,
-            boxShadow: '0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 1px rgba(16, 24, 40, 0.02)',
-            p: { xs: 1.25, sm: 1.75, md: 2.25 },
-            minHeight: 'calc(100vh - 124px)',
-          }}
-        >
-          <Outlet context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
-        </Box>
+        <Outlet context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
       </Box>
       </Box>
 
