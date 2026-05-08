@@ -612,8 +612,8 @@ function PlantingPlans(): React.ReactElement {
         t("plantingPlans:columns.bed"),
         ...bedOptions.map((option) => option.label),
       ],
-      145,
-      210,
+      hasMultipleLocationsWithBeds ? 220 : 150,
+      hasMultipleLocationsWithBeds ? 320 : 230,
     );
 
     return {
@@ -659,7 +659,7 @@ function PlantingPlans(): React.ReactElement {
       ),
       notes: 220,
     };
-  }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, numberLocale, t]);
+  }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, hasMultipleLocationsWithBeds, numberLocale, t]);
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
@@ -1606,8 +1606,8 @@ function PlantingPlans(): React.ReactElement {
         <Box
           sx={{
             display: isMobile || shouldShowPrerequisiteState ? "none" : "block",
-            width: "100%",
-            maxWidth: "1575px",
+            width: "fit-content",
+            maxWidth: "100%",
           }}
         >
           <EditableDataGrid<PlantingPlanRow>
@@ -1625,6 +1625,7 @@ function PlantingPlans(): React.ReactElement {
             onLoadStateChange={({ loading, dataFetched }) => {
               setIsPlansLoading(loading || !dataFetched);
             }}
+            fitContentWidth
             createNewRow={() => ({
             id: -Date.now(),
             culture: 0,
