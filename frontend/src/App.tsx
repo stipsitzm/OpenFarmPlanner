@@ -779,7 +779,8 @@ function RootLayout(): React.ReactElement {
             {currentPageTitle}
           </Typography>
           {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
-          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
           {isCulturesPage && !isMobile ? (
             <>
               <Button
@@ -893,6 +894,8 @@ function RootLayout(): React.ReactElement {
               + {topbarPrimaryAction.label}
             </Button>
           ) : null}
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: { xs: 2, md: 3 } }}>
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
             aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}
@@ -946,7 +949,8 @@ function RootLayout(): React.ReactElement {
             onLogout={handleLogout}
             t={t}
           />
-        </Box>
+            </Box>
+          </Box>
         </Toolbar>
       </AppBar>
 
