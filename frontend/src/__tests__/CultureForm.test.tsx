@@ -276,7 +276,7 @@ describe('CultureForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect(screen.getByText('messages.updateError')).toBeInTheDocument();
+    expect(await screen.findByText('messages.updateError')).toBeInTheDocument();
   });
 
   it('scrolls dialog content with arrow and page keys, even when an input is focused', () => {

@@ -50,7 +50,8 @@
     "noBedsHintTitle": "Es sind noch keine Beete vorhanden.",
     "noBedsHintDescription": "Füge Beete über das Plus-Symbol bei der jeweiligen Parzelle hinzu.",
     "missingDimensionsHint": "Länge und Breite sind wichtig für Flächenberechnungen, Saatgutbedarf und Anbauplanung.",
-    "missingDimensionsHintOptional": "Du kannst die Werte später ergänzen."
+    "missingDimensionsHintOptional": "Du kannst die Werte später ergänzen.",
+    "missingDimensionsCellTooltip": "Für Flächenberechnungen und Saatgutbedarf erforderlich."
   },
   "prompts": {
     "newFieldName": "Name der neuen Parzelle:",

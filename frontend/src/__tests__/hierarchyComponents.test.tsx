@@ -302,6 +302,34 @@ describe('hierarchy components and behaviors', () => {
     expect(areaColumn?.valueGetter?.(undefined, fieldRow as never, {} as never, {} as never)).toBe(24);
   });
 
+  it('applies missing-dimension marker classes only to incomplete cells', () => {
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+    );
+
+    const lengthColumn = columns.find((column) => column.field === 'length_m');
+    const widthColumn = columns.find((column) => column.field === 'width_m');
+    const areaColumn = columns.find((column) => column.field === 'area_sqm');
+
+    const incompleteRow = { id: 1, type: 'field', level: 1, length_m: null, width_m: 3, area_sqm: null };
+    const completeRow = { id: 2, type: 'bed', level: 2, length_m: 5, width_m: 2, area_sqm: null };
+
+    expect(lengthColumn?.cellClassName?.({ row: incompleteRow } as never)).toContain('ofp-hierarchy-cell-missing-dimension');
+    expect(widthColumn?.cellClassName?.({ row: incompleteRow } as never)).toBe('');
+    expect(areaColumn?.cellClassName?.({ row: incompleteRow } as never)).toContain('ofp-hierarchy-cell-missing-dimension');
+
+    expect(lengthColumn?.cellClassName?.({ row: completeRow } as never)).toBe('');
+    expect(widthColumn?.cellClassName?.({ row: completeRow } as never)).toBe('');
+    expect(areaColumn?.cellClassName?.({ row: completeRow } as never)).toBe('');
+  });
+
   it('updates footer messaging and add action based on location count', async () => {
     const user = userEvent.setup();
     const onAddField = vi.fn();

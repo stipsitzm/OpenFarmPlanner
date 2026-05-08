@@ -31,6 +31,7 @@ export const i18nMap: Record<string, string> = {
   'tooltips.expand': 'Eintrag aufklappen',
   'tooltips.collapse': 'Eintrag zuklappen',
   'tooltips.addField': 'Parzelle hinzufügen',
+  'hierarchy:messages.missingDimensionsCellTooltip': 'Für Flächenberechnungen und Saatgutbedarf erforderlich.',
   'footer.singleLocation': 'Ein Standort',
   'footer.multipleLocations': 'Mehrere Standorte',
 };

@@ -146,7 +146,7 @@ describe('GanttChartPage', () => {
     expect(screen.queryByText('Anbauplan fehlt')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Kultur anlegen' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Anbauflächen anlegen' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Feldbelegung' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Feldbelegung' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Ansicht' })).not.toBeInTheDocument();
     expect(screen.queryByText('Ertragsverteilung')).not.toBeInTheDocument();
     expect(screen.queryByTestId('mock-gantt')).not.toBeInTheDocument();

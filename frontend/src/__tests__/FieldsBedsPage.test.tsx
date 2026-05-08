@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import FieldsBedsPage from '../pages/FieldsBedsPage';
 import { MemoryRouter } from 'react-router-dom';
@@ -135,7 +135,7 @@ describe('FieldsBedsPage', () => {
       </MemoryRouter>
     );
 
-    const nameInput = screen.getByLabelText('Name der Parzelle');
+    const nameInput = await screen.findByLabelText('Name der Parzelle');
     fireEvent.change(nameInput, { target: { value: '   ' } });
     expect(screen.getByRole('button', { name: 'Hinzufügen' })).toBeDisabled();
   });

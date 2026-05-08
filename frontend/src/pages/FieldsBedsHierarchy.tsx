@@ -98,6 +98,9 @@ const HIERARCHY_DATA_GRID_SX = {
       minHeight: "32px",
       height: "32px",
     },
+  "& .ofp-hierarchy-cell-missing-dimension": {
+    backgroundColor: (theme) => `${theme.palette.warning.main}14`,
+  },
 };
 
 function FieldsBedsHierarchy({
@@ -867,20 +870,28 @@ function FieldsBedsHierarchy({
   }, []);
 
 
-  const hasMissingDimensionData = useMemo(
-    () => rows.some((row) => {
-      if (row.type !== "field" && row.type !== "bed") {
-        return false;
-      }
+  const shouldShowMissingDimensionsHint = useMemo(() => {
+    const dimensionalRows = rows.filter(
+      (row): row is HierarchyRow => row.type === "field" || row.type === "bed",
+    );
+    if (dimensionalRows.length === 0) {
+      return false;
+    }
+
+    const incompleteRows = dimensionalRows.filter((row) => {
       const length = parseDimensionValue(row.length_m);
       const width = parseDimensionValue(row.width_m);
       const area = parseAreaValue(row.area_sqm);
-      const missingLengthOrWidth = !Number.isFinite(length ?? NaN) || !Number.isFinite(width ?? NaN);
-      const missingArea = !Number.isFinite(area ?? NaN);
-      return missingLengthOrWidth || missingArea;
-    }),
-    [rows],
-  );
+      const hasLength = Number.isFinite(length ?? NaN);
+      const hasWidth = Number.isFinite(width ?? NaN);
+      const hasArea = Number.isFinite(area ?? NaN);
+      return !hasLength || !hasWidth || !(hasArea || (hasLength && hasWidth));
+    });
+
+    const completeRowsCount = dimensionalRows.length - incompleteRows.length;
+    const incompleteShare = incompleteRows.length / dimensionalRows.length;
+    return completeRowsCount === 0 || (dimensionalRows.length >= 4 && incompleteShare >= 0.75);
+  }, [parseAreaValue, parseDimensionValue, rows]);
 
   const rowSelectionModel = useMemo(
     () => ({
@@ -901,7 +912,7 @@ function FieldsBedsHierarchy({
           </Alert>
         )}
 
-        {hasMissingDimensionData && (
+        {shouldShowMissingDimensionsHint && (
           <Box sx={{ mb: 2 }}>
             <EmptyStateCard
               title={t('messages.missingDimensionsHint')}
