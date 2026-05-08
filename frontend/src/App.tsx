@@ -786,12 +786,12 @@ function RootLayout(): React.ReactElement {
                 size="small"
                 variant="outlined"
                 onClick={() => cultureLibraryAction?.onClick()}
-                aria-label="Öffentliche Kulturbibliothek öffnen"
+                aria-label="Kulturbibliothek öffnen"
                 startIcon={<PublicIcon fontSize="small" />}
                 sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
                 disabled={!cultureLibraryAction || cultureLibraryAction.disabled}
               >
-                Bibliothek
+                Kulturbibliothek
               </Button>
               <Button
                 size="small"
