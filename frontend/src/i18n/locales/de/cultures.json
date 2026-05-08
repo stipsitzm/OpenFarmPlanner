@@ -248,8 +248,9 @@
       },
       "seedData": {
         "title": "Noch kein Saatgutbedarf berechenbar",
-        "description": "Ergänze Saatgutdaten bei deinen Kulturen, damit der Bedarf berechnet werden kann.",
-        "action": "Saatgutdaten ergänzen"
+        "description": "Ergänze bei deinen Kulturen Saatgutdaten, damit der Bedarf berechnet werden kann.",
+        "action": "Saatgutdaten ergänzen",
+        "hint": "Öffne dazu eine Kultur und klicke auf „Bearbeiten“"
       }
     },
     "selectSupplier": "Lieferant auswählen",
