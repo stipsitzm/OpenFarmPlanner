@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
@@ -37,6 +37,8 @@ export default function FieldsBedsPage(): React.ReactElement {
   const [addFieldDialogOpen, setAddFieldDialogOpen] = useState(false);
   const [newFieldName, setNewFieldName] = useState('');
   const [targetLocationId, setTargetLocationId] = useState<number | ''>('');
+  const [isAreaDataLoading, setIsAreaDataLoading] = useState(false);
+  const [hasAreaDataLoaded, setHasAreaDataLoaded] = useState(false);
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
 
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
@@ -46,25 +48,45 @@ export default function FieldsBedsPage(): React.ReactElement {
 
   const commands = useMemo<CommandSpec[]>(() => [
     {
-      id: 'areas.toggleGraphicalView',
-      label: 'Ansicht umschalten',
+      id: 'areas.showListView',
+      label: 'Listenansicht',
       group: 'navigation',
-      keywords: ['ansicht', 'grafisch', 'tabelle', 'anbauflächen'],
+      keywords: ['liste', 'tabelle', 'anbauflächen'],
+      shortcutHint: 'Alt+L',
+      keys: { alt: true, key: 'l' },
       contextTags: ['areas'],
-      isEnabled: () => true,
+      isEnabled: () => viewMode !== 'table',
       action: () => {
-        setViewMode((previous) => (previous === 'graphical' ? 'table' : 'graphical'));
+        setViewMode('table');
       },
     },
-  ], []);
+    {
+      id: 'areas.showGraphicalView',
+      label: 'Grafikansicht',
+      group: 'navigation',
+      keywords: ['grafik', 'grafisch', 'anbauflächen'],
+      shortcutHint: 'Alt+G',
+      keys: { alt: true, key: 'g' },
+      contextTags: ['areas'],
+      isEnabled: () => viewMode !== 'graphical',
+      action: () => {
+        setViewMode('graphical');
+      },
+    },
+  ], [viewMode]);
 
   useRegisterCommands('areas-view-switch', commands);
 
   const loadLocations = useCallback(async (): Promise<void> => {
     if (shouldShowProjectRequiredState) {
       setLocations([]);
+      setFieldsCount(0);
+      setBedsCount(0);
+      setHasAreaDataLoaded(false);
+      setIsAreaDataLoading(false);
       return;
     }
+    setIsAreaDataLoading(true);
     try {
       const [locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
         locationAPI.list(),
@@ -74,8 +96,12 @@ export default function FieldsBedsPage(): React.ReactElement {
       setLocations(locationsResponse.data.results);
       setFieldsCount(fieldsResponse.data.results.length);
       setBedsCount(bedsResponse.data.results.length);
+      setHasAreaDataLoaded(true);
     } catch (error) {
       console.error('Error loading locations for global action:', error);
+      setHasAreaDataLoaded(true);
+    } finally {
+      setIsAreaDataLoading(false);
     }
   }, [shouldShowProjectRequiredState]);
 
@@ -83,10 +109,8 @@ export default function FieldsBedsPage(): React.ReactElement {
     if (shouldShowProjectRequiredState) {
       return;
     }
-    if (viewMode === 'table') {
-      void loadLocations();
-    }
-  }, [loadLocations, shouldShowProjectRequiredState, viewMode]);
+    void loadLocations();
+  }, [loadLocations, shouldShowProjectRequiredState]);
 
   const reloadHierarchyAndLocations = useCallback(async (): Promise<void> => {
     setHierarchyRenderKey((previous) => previous + 1);
@@ -157,7 +181,7 @@ export default function FieldsBedsPage(): React.ReactElement {
   const hasLocations = locations.length > 0;
   const hasFields = fieldsCount > 0;
   const hasBeds = bedsCount > 0;
-  const shouldShowAreasEmptyState = !hasLocations || !hasFields;
+  const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && (!hasLocations || !hasFields);
   const shouldShowMissingBedsHint = hasFields && !hasBeds;
 
   useEffect(() => {
@@ -203,7 +227,12 @@ export default function FieldsBedsPage(): React.ReactElement {
         {shouldShowProjectRequiredState && missingProjectReason ? (
           <ProjectRequiredState reason={missingProjectReason} />
         ) : null}
-        {!shouldShowProjectRequiredState && shouldShowMissingBedsHint ? (
+        {!shouldShowProjectRequiredState && isAreaDataLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : null}
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldShowMissingBedsHint ? (
           <EmptyStateCard
             title={t('hierarchy:messages.noBedsHintTitle')}
             description={(
@@ -215,7 +244,7 @@ export default function FieldsBedsPage(): React.ReactElement {
             )}
           />
         ) : null}
-        {!shouldShowProjectRequiredState && shouldShowAreasEmptyState ? (
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldShowAreasEmptyState ? (
           <EmptyStateCard
             title={t('hierarchy:emptyAreas.title')}
             description={t('hierarchy:emptyAreas.description')}
@@ -232,7 +261,7 @@ export default function FieldsBedsPage(): React.ReactElement {
       </PageContainer>
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
-        {!shouldShowProjectRequiredState && !shouldShowAreasEmptyState && viewMode === 'graphical' ? (
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState && viewMode === 'graphical' ? (
           <GraphicalFields
             showTitle={false}
             interactionMode={interactionMode}
@@ -240,7 +269,7 @@ export default function FieldsBedsPage(): React.ReactElement {
             showModeToggle={false}
           />
         ) : null}
-        {!shouldShowProjectRequiredState && !shouldShowAreasEmptyState && viewMode !== 'graphical' ? (
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState && viewMode !== 'graphical' ? (
           <FieldsBedsHierarchy key={hierarchyRenderKey} showTitle={false} />
         ) : null}
       </PageContainer>
