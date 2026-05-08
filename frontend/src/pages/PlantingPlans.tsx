@@ -607,13 +607,15 @@ function PlantingPlans(): React.ReactElement {
       170,
       240,
     );
+    const hierarchyColumnValues = [
+      t("plantingPlans:columns.bed"),
+      ...bedOptions.map((option) => option.label),
+      ...Array.from(bedLabelById.values()),
+    ];
     const bedWidth = estimateColumnWidth(
-      [
-        t("plantingPlans:columns.bed"),
-        ...bedOptions.map((option) => option.label),
-      ],
-      hasMultipleLocationsWithBeds ? 220 : 150,
-      hasMultipleLocationsWithBeds ? 320 : 230,
+      hierarchyColumnValues,
+      hasMultipleLocationsWithBeds ? 230 : 170,
+      hasMultipleLocationsWithBeds ? 460 : 340,
     );
 
     return {
@@ -659,7 +661,7 @@ function PlantingPlans(): React.ReactElement {
       ),
       notes: 220,
     };
-  }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, hasMultipleLocationsWithBeds, numberLocale, t]);
+  }, [bedLabelById, bedOptions, beds, cultivationTypeOptions, cultureOptions, hasMultipleLocationsWithBeds, numberLocale, t]);
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
