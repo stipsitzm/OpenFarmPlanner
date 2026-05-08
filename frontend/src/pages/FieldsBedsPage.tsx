@@ -165,7 +165,7 @@ export default function FieldsBedsPage(): React.ReactElement {
 
   return (
     <>
-      <PageContainer variant="full">
+      <PageContainer variant="standard">
         <Box
           sx={{
             display: 'flex',
@@ -260,7 +260,7 @@ export default function FieldsBedsPage(): React.ReactElement {
         ) : null}
       </PageContainer>
 
-      <PageContainer variant={viewMode === 'graphical' ? 'full' : 'wide'}>
+      <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
         {!shouldShowProjectRequiredState && !shouldShowAreasEmptyState && viewMode === 'graphical' ? (
           <GraphicalFields
             showTitle={false}

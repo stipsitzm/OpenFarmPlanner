@@ -1496,7 +1496,7 @@ function PlantingPlans(): React.ReactElement {
   }, [canCreatePlan, isMobile, searchParams, setSearchParams]);
 
   return (
-    <PageContainer variant="full">
+    <PageContainer variant="xwide">
 
       {areaWarning ? (
         <Alert severity="warning" sx={{ mb: 2 }}>
@@ -1607,6 +1607,7 @@ function PlantingPlans(): React.ReactElement {
           sx={{
             display: isMobile || shouldShowPrerequisiteState ? "none" : "block",
             width: "100%",
+            maxWidth: "1575px",
           }}
         >
           <EditableDataGrid<PlantingPlanRow>

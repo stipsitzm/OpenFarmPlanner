@@ -95,25 +95,17 @@
 .content,
 .page-container {
   width: 100%;
-  max-width: 1400px;
+  max-width: 1200px;
   box-sizing: border-box;
-  padding: 0 clamp(16px, 2vw, 32px);
+  padding: 0 24px;
   margin: 0 auto;
-}
-
-.content--narrow {
-  max-width: 1120px;
-}
-
-.content--default {
-  max-width: 1400px;
 }
 
 .content--wide {
   width: 100%;
   max-width: 1800px;
   box-sizing: border-box;
-  padding: 0 clamp(16px, 2vw, 32px);
+  padding: 0 24px;
   margin: 0 auto;
 }
 
@@ -130,14 +122,14 @@
   width: 100%;
   max-width: 1900px;
   box-sizing: border-box;
-  padding: 0 clamp(16px, 2vw, 32px);
+  padding: 0 24px;
   margin: 0 auto;
 }
 
 .content--full {
   width: 100%;
   box-sizing: border-box;
-  padding: 0 clamp(16px, 2vw, 32px);
+  padding: 0 24px;
 }
 
 /* Error Message */

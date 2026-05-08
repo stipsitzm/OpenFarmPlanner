@@ -268,7 +268,7 @@ function Locations(): React.ReactElement {
   };
 
   return (
-    <PageContainer variant="wide">
+    <PageContainer>
       <Box sx={{ width: '100%', mx: 'auto' }}>
 
         {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
@@ -288,11 +288,11 @@ function Locations(): React.ReactElement {
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 360px))',
               gap: 2,
               alignItems: 'stretch',
               width: '100%',
-              justifyContent: 'stretch',
+              justifyContent: 'center',
             }}
           >
             {locations.map((location) => {

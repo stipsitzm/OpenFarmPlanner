@@ -87,14 +87,14 @@ export default function Dashboard(): React.ReactElement {
 
   const locationNameById = useMemo(() => new Map(locations.filter((l) => l.id !== undefined).map((l) => [l.id as number, l.name])), [locations]);
 
-  if (loading) return <PageContainer variant="narrow"><Typography>{t('common:messages.loading')}</Typography></PageContainer>;
-  if (shouldShowProjectRequiredState && missingProjectReason) return <PageContainer variant="narrow"><ProjectRequiredState reason={missingProjectReason} /></PageContainer>;
+  if (loading) return <PageContainer><Typography>{t('common:messages.loading')}</Typography></PageContainer>;
+  if (shouldShowProjectRequiredState && missingProjectReason) return <PageContainer><ProjectRequiredState reason={missingProjectReason} /></PageContainer>;
 
   const isEmptyProject = locations.length === 0 && beds.length === 0 && cultures.length === 0 && plans.length === 0;
   const isSetupComplete = firstMissingRequirement === null;
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
 
       {isEmptyProject ? (
