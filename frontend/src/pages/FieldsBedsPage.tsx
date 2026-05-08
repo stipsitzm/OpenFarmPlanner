@@ -1,6 +1,6 @@
-import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
 import { AddBedIcon } from '../components/hierarchy/AddBedIcon';
@@ -8,12 +8,12 @@ import { useCommandContextTag, useRegisterCommands } from '../commands/useComman
 import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
-import ModeToggle from '../components/ModeToggle';
 import { bedAPI, fieldAPI, locationAPI, type Location } from '../api/api';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
+import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 
@@ -37,31 +37,56 @@ export default function FieldsBedsPage(): React.ReactElement {
   const [addFieldDialogOpen, setAddFieldDialogOpen] = useState(false);
   const [newFieldName, setNewFieldName] = useState('');
   const [targetLocationId, setTargetLocationId] = useState<number | ''>('');
+  const [isAreaDataLoading, setIsAreaDataLoading] = useState(false);
+  const [hasAreaDataLoaded, setHasAreaDataLoaded] = useState(false);
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
+
+  const outletContext = useOutletContext<RootLayoutOutletContext | null>();
+  const setTopbarContextActions = outletContext?.setTopbarContextActions ?? (() => undefined);
 
   useCommandContextTag('areas');
 
   const commands = useMemo<CommandSpec[]>(() => [
     {
-      id: 'areas.toggleGraphicalView',
-      label: 'Ansicht umschalten',
+      id: 'areas.showListView',
+      label: 'Listenansicht',
       group: 'navigation',
-      keywords: ['ansicht', 'grafisch', 'tabelle', 'anbauflächen'],
+      keywords: ['liste', 'tabelle', 'anbauflächen'],
+      shortcutHint: 'Alt+L',
+      keys: { alt: true, key: 'l' },
       contextTags: ['areas'],
-      isEnabled: () => true,
+      isEnabled: () => viewMode !== 'table',
       action: () => {
-        setViewMode((previous) => (previous === 'graphical' ? 'table' : 'graphical'));
+        setViewMode('table');
       },
     },
-  ], []);
+    {
+      id: 'areas.showGraphicalView',
+      label: 'Grafikansicht',
+      group: 'navigation',
+      keywords: ['grafik', 'grafisch', 'anbauflächen'],
+      shortcutHint: 'Alt+G',
+      keys: { alt: true, key: 'g' },
+      contextTags: ['areas'],
+      isEnabled: () => viewMode !== 'graphical',
+      action: () => {
+        setViewMode('graphical');
+      },
+    },
+  ], [viewMode]);
 
   useRegisterCommands('areas-view-switch', commands);
 
   const loadLocations = useCallback(async (): Promise<void> => {
     if (shouldShowProjectRequiredState) {
       setLocations([]);
+      setFieldsCount(0);
+      setBedsCount(0);
+      setHasAreaDataLoaded(false);
+      setIsAreaDataLoading(false);
       return;
     }
+    setIsAreaDataLoading(true);
     try {
       const [locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
         locationAPI.list(),
@@ -71,8 +96,12 @@ export default function FieldsBedsPage(): React.ReactElement {
       setLocations(locationsResponse.data.results);
       setFieldsCount(fieldsResponse.data.results.length);
       setBedsCount(bedsResponse.data.results.length);
+      setHasAreaDataLoaded(true);
     } catch (error) {
       console.error('Error loading locations for global action:', error);
+      setHasAreaDataLoaded(true);
+    } finally {
+      setIsAreaDataLoading(false);
     }
   }, [shouldShowProjectRequiredState]);
 
@@ -80,10 +109,8 @@ export default function FieldsBedsPage(): React.ReactElement {
     if (shouldShowProjectRequiredState) {
       return;
     }
-    if (viewMode === 'table') {
-      void loadLocations();
-    }
-  }, [loadLocations, shouldShowProjectRequiredState, viewMode]);
+    void loadLocations();
+  }, [loadLocations, shouldShowProjectRequiredState]);
 
   const reloadHierarchyAndLocations = useCallback(async (): Promise<void> => {
     setHierarchyRenderKey((previous) => previous + 1);
@@ -107,13 +134,13 @@ export default function FieldsBedsPage(): React.ReactElement {
 
     if (locations.length === 1 && locations[0]?.id !== undefined) {
       setTargetLocationId(locations[0].id);
-      setNewFieldName(`Parzelle ${2}`);
+      setNewFieldName('');
       setAddFieldDialogOpen(true);
       return;
     }
     const firstLocation = locations.find((location) => location.id !== undefined);
     setTargetLocationId(firstLocation?.id ?? '');
-    setNewFieldName(`Parzelle ${2}`);
+    setNewFieldName('');
     setAddFieldDialogOpen(true);
   }, [addField, locations, navigate, t]);
 
@@ -154,7 +181,7 @@ export default function FieldsBedsPage(): React.ReactElement {
   const hasLocations = locations.length > 0;
   const hasFields = fieldsCount > 0;
   const hasBeds = bedsCount > 0;
-  const shouldShowAreasEmptyState = !hasLocations || !hasFields;
+  const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && (!hasLocations || !hasFields);
   const shouldShowMissingBedsHint = hasFields && !hasBeds;
 
   useEffect(() => {
@@ -163,67 +190,61 @@ export default function FieldsBedsPage(): React.ReactElement {
     }
   }, [viewMode]);
 
+
+  useEffect(() => {
+    const contextActions: TopbarContextAction[] = [
+      {
+        id: 'fields-interaction-mode-view',
+        label: t('fields:graphical.viewModeOption'),
+        onClick: () => {
+          setInteractionMode('view');
+        },
+        active: interactionMode === 'view',
+        hidden: viewMode !== 'graphical',
+        reserveSpace: true,
+        ariaLabel: t('fields:graphical.modeAriaLabel'),
+        groupId: 'fields-interaction-mode',
+      },
+      {
+        id: 'fields-interaction-mode-edit',
+        label: t('fields:graphical.editModeOption'),
+        onClick: () => {
+          setInteractionMode('edit');
+        },
+        active: interactionMode === 'edit',
+        hidden: viewMode !== 'graphical',
+        reserveSpace: true,
+        ariaLabel: t('fields:graphical.modeAriaLabel'),
+        groupId: 'fields-interaction-mode',
+      },
+      {
+        id: 'fields-view-mode-list',
+        label: t('fields:representation.table'),
+        onClick: () => {
+          setViewMode('table');
+        },
+        active: viewMode === 'table',
+        ariaLabel: t('fields:representation.ariaLabel'),
+        groupId: 'fields-view-mode',
+      },
+      {
+        id: 'fields-view-mode-graphical',
+        label: t('fields:representation.graphical'),
+        onClick: () => {
+          setViewMode('graphical');
+        },
+        active: viewMode === 'graphical',
+        ariaLabel: t('fields:representation.ariaLabel'),
+        groupId: 'fields-view-mode',
+      },
+    ];
+    setTopbarContextActions(contextActions);
+    return () => setTopbarContextActions([]);
+  }, [interactionMode, setTopbarContextActions, t, viewMode]);
+
   return (
     <>
       <PageContainer variant="standard">
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: { xs: 'stretch', sm: 'center' },
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: 2,
-            mb: 2,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
-            <Stack spacing={0.75} sx={{ width: { xs: '100%', sm: 'fit-content' } }}>
-              <Typography variant="subtitle2">{t('fields:representation.label')}</Typography>
-              <ToggleButtonGroup
-                value={viewMode}
-                exclusive
-                onChange={(_, selectedViewMode: ViewMode | null) => {
-                  if (selectedViewMode !== null) {
-                    setViewMode(selectedViewMode);
-                  }
-                }}
-                size="small"
-                color="primary"
-                aria-label={t('fields:representation.ariaLabel')}
-                fullWidth
-              >
-                <ToggleButton value="table" aria-label={t('fields:representation.table')}>
-                  {t('fields:representation.table')}
-                </ToggleButton>
-                <ToggleButton value="graphical" aria-label={t('fields:representation.graphical')}>
-                  {t('fields:representation.graphical')}
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </Stack>
-            {viewMode === 'graphical' ? (
-              <ModeToggle
-                label={t('fields:graphical.viewMode')}
-                ariaLabel={t('fields:graphical.modeAriaLabel')}
-                viewLabel={t('fields:graphical.viewModeOption')}
-                editLabel={t('fields:graphical.editModeOption')}
-                value={interactionMode}
-                onChange={setInteractionMode}
-                fullWidth={false}
-              />
-            ) : null}
-          </Box>
-          {shouldShowGlobalAddButton ? (
-            <Button
-              variant="outlined"
-              onClick={handleGlobalAddField}
-              sx={{ width: { xs: '100%', sm: 'auto' } }}
-            >
-              {locations.length === 0
-                ? t('hierarchy:actions.createLocation')
-                : t('hierarchy:actions.addField')}
-            </Button>
-          ) : null}
-        </Box>
         {globalActionError ? (
           <Alert severity="error" sx={{ mb: 2 }}>
             {globalActionError}
@@ -232,7 +253,12 @@ export default function FieldsBedsPage(): React.ReactElement {
         {shouldShowProjectRequiredState && missingProjectReason ? (
           <ProjectRequiredState reason={missingProjectReason} />
         ) : null}
-        {!shouldShowProjectRequiredState && shouldShowMissingBedsHint ? (
+        {!shouldShowProjectRequiredState && isAreaDataLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : null}
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldShowMissingBedsHint ? (
           <EmptyStateCard
             title={t('hierarchy:messages.noBedsHintTitle')}
             description={(
@@ -244,7 +270,7 @@ export default function FieldsBedsPage(): React.ReactElement {
             )}
           />
         ) : null}
-        {!shouldShowProjectRequiredState && shouldShowAreasEmptyState ? (
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldShowAreasEmptyState ? (
           <EmptyStateCard
             title={t('hierarchy:emptyAreas.title')}
             description={t('hierarchy:emptyAreas.description')}
@@ -261,7 +287,7 @@ export default function FieldsBedsPage(): React.ReactElement {
       </PageContainer>
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
-        {!shouldShowProjectRequiredState && !shouldShowAreasEmptyState && viewMode === 'graphical' ? (
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState && viewMode === 'graphical' ? (
           <GraphicalFields
             showTitle={false}
             interactionMode={interactionMode}
@@ -269,7 +295,7 @@ export default function FieldsBedsPage(): React.ReactElement {
             showModeToggle={false}
           />
         ) : null}
-        {!shouldShowProjectRequiredState && !shouldShowAreasEmptyState && viewMode !== 'graphical' ? (
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState && viewMode !== 'graphical' ? (
           <FieldsBedsHierarchy key={hierarchyRenderKey} showTitle={false} />
         ) : null}
       </PageContainer>

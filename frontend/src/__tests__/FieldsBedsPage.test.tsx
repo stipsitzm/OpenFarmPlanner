@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import FieldsBedsPage from '../pages/FieldsBedsPage';
 import { MemoryRouter } from 'react-router-dom';
@@ -92,33 +92,13 @@ describe('FieldsBedsPage', () => {
     window.localStorage.clear();
   });
 
-  it('switches between hierarchy and graphical view via representation buttons', async () => {
+  it('restores graphical view from persisted state', async () => {
+    window.localStorage.setItem('fieldsBedsViewMode', 'graphical');
+
     renderPage();
 
-    await waitFor(() => {
-      expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
-    });
-    expect(screen.queryByText(/Editiermodus-/)).not.toBeInTheDocument();
-    expect(screen.getByText('Darstellung')).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
-    });
-    expect(screen.queryByText('Modus')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Ansicht' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Grafik' }));
-
-    expect(screen.getByText('Editiermodus-view')).toBeInTheDocument();
-    expect(screen.getByText('Modus')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Ansicht' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Bearbeiten' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Liste' }));
-
-    expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
-    expect(screen.queryByText(/Editiermodus-/)).not.toBeInTheDocument();
-    expect(screen.queryByText('Modus')).not.toBeInTheDocument();
+    expect(await screen.findByText('Editiermodus-view')).toBeInTheDocument();
+    expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
   });
 
   it('shows a neutral project-required state when no project is available', async () => {
@@ -133,58 +113,33 @@ describe('FieldsBedsPage', () => {
     expect(locationListMock).not.toHaveBeenCalled();
   });
 
-  it('shows the global add button when exactly one location exists', async () => {
-    locationListMock.mockResolvedValue({
-      data: {
-        results: [{ id: 1, name: 'Hofstelle' }],
-      },
-    });
 
-    renderPage();
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
-    });
-  });
-
-  it('opens a translated add-field dialog instead of native prompt', async () => {
+  it('opens a translated add-field dialog via query parameter instead of native prompt', async () => {
     const promptSpy = vi.spyOn(window, 'prompt');
-    renderPage();
+    render(
+      <MemoryRouter initialEntries={['/app/fields-beds?create=true']}>
+        <FieldsBedsPage />
+      </MemoryRouter>
+    );
 
-    const addButton = await screen.findByRole('button', { name: 'Parzelle hinzufügen' });
-    fireEvent.click(addButton);
-
-    expect(screen.getByRole('heading', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
     expect(screen.getByLabelText('Name der Parzelle')).toBeInTheDocument();
     expect(promptSpy).not.toHaveBeenCalled();
     promptSpy.mockRestore();
   });
 
   it('prevents saving an empty field name in add-field dialog', async () => {
-    renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Parzelle hinzufügen' }));
+    render(
+      <MemoryRouter initialEntries={['/app/fields-beds?create=true']}>
+        <FieldsBedsPage />
+      </MemoryRouter>
+    );
 
-    const nameInput = screen.getByLabelText('Name der Parzelle');
+    const nameInput = await screen.findByLabelText('Name der Parzelle');
     fireEvent.change(nameInput, { target: { value: '   ' } });
     expect(screen.getByRole('button', { name: 'Hinzufügen' })).toBeDisabled();
   });
 
-  it('hides the global add button when more than one location exists', async () => {
-    locationListMock.mockResolvedValue({
-      data: {
-        results: [
-          { id: 1, name: 'Hofstelle' },
-          { id: 2, name: 'Obstgarten' },
-        ],
-      },
-    });
-
-    renderPage();
-
-    await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
-    });
-  });
 
   it('shows onboarding empty-state when no area hierarchy exists', async () => {
     locationListMock.mockResolvedValue({ data: { results: [] } });

@@ -15,6 +15,10 @@ const mocks = vi.hoisted(() => ({
   planUpdate: vi.fn(),
   ganttProps: vi.fn(),
 }));
+const topbarContext = vi.hoisted(() => ({
+  setTopbarContextActions: vi.fn(),
+  latestActions: [] as Array<Record<string, unknown>>,
+}));
 const projectRequirementState = vi.hoisted(() => ({
   shouldShowProjectRequiredState: false,
   missingProjectReason: null as null | 'no_projects' | 'no_active_project',
@@ -36,6 +40,20 @@ vi.mock('../api/api', async () => {
 vi.mock('../hooks/useProjectRequirement', () => ({
   useProjectRequirement: () => projectRequirementState,
 }));
+
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useOutletContext: () => ({
+      setTopbarContextActions: (actions: Array<Record<string, unknown>>) => {
+        topbarContext.latestActions = actions;
+        topbarContext.setTopbarContextActions(actions);
+      },
+    }),
+  };
+});
 
 vi.mock('react-modern-gantt', () => ({
   __esModule: true,
@@ -100,6 +118,8 @@ beforeEach(() => {
   mocks.bedList.mockResolvedValue({ data: { results: [{ id: 3, name: 'Beet 1', field: 2 }] } });
   mocks.planUpdate.mockResolvedValue({ data: {} });
   mocks.yieldList.mockResolvedValue({ data: [] });
+  topbarContext.setTopbarContextActions.mockReset();
+  topbarContext.latestActions = [];
 });
 
 describe('GanttChartPage', () => {
@@ -126,7 +146,7 @@ describe('GanttChartPage', () => {
     expect(screen.queryByText('Anbauplan fehlt')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Kultur anlegen' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Anbauflächen anlegen' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: 'Feldbelegung' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Feldbelegung' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Ansicht' })).not.toBeInTheDocument();
     expect(screen.queryByText('Ertragsverteilung')).not.toBeInTheDocument();
     expect(screen.queryByTestId('mock-gantt')).not.toBeInTheDocument();
@@ -193,8 +213,11 @@ describe('GanttChartPage', () => {
 
     await waitFor(() => expect(screen.getByText('Feldbelegung')).toBeInTheDocument());
     expect(screen.queryByText(/Belegung von Parzellen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Ansicht' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Bearbeiten' })).toBeInTheDocument();
+    await waitFor(() => expect(topbarContext.latestActions.length).toBeGreaterThan(0));
+    const viewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { hidden?: boolean } | undefined;
+    const editAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { hidden?: boolean } | undefined;
+    expect(viewAction?.hidden).toBe(false);
+    expect(editAction?.hidden).toBe(false);
     expect(screen.getByText('Feld / Beet 1')).toBeInTheDocument();
     expect(screen.queryByText('Hof / Feld / Beet 1')).not.toBeInTheDocument();
     expect(mocks.ganttProps).toHaveBeenCalled();
@@ -246,7 +269,7 @@ describe('GanttChartPage', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Jungpflanzen')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('tab', { name: 'Jungpflanzen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Jungpflanzen' }));
 
     await waitFor(() => expect(screen.getAllByText('Tomate').length).toBeGreaterThan(0));
     expect(screen.getByText('Standort: Hof / Feld')).toBeInTheDocument();
@@ -257,8 +280,10 @@ describe('GanttChartPage', () => {
     expect(screen.getByText('Fläche: 8.00 m²')).toBeInTheDocument();
     expect(screen.getByText('Pflanzenanzahl: 24')).toBeInTheDocument();
     expect(screen.queryByText(/Anbauplan/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Ansicht' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
+    const seedlingViewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { hidden?: boolean } | undefined;
+    const seedlingEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { hidden?: boolean } | undefined;
+    expect(seedlingViewAction?.hidden).toBe(true);
+    expect(seedlingEditAction?.hidden).toBe(true);
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
     expect(latestProps?.localeText).toMatchObject({
       title: 'Anzuchtplanung',
@@ -292,12 +317,16 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    const editButton = await screen.findByRole('button', { name: 'Bearbeiten' });
-    expect(editButton).toHaveAttribute('aria-pressed', 'false');
+    await waitFor(() => expect(topbarContext.latestActions.length).toBeGreaterThan(0));
+    const beforeEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { active?: boolean } | undefined;
+    expect(beforeEditAction?.active).toBe(false);
 
     fireEvent.keyDown(window, { key: 'e', altKey: true });
 
-    await waitFor(() => expect(editButton).toHaveAttribute('aria-pressed', 'true'));
+    await waitFor(() => {
+      const afterEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { active?: boolean } | undefined;
+      expect(afterEditAction?.active).toBe(true);
+    });
   });
 
   it('fills empty yield weeks between available week entries', async () => {
@@ -388,13 +417,12 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    const viewButton = await screen.findByRole('button', { name: 'Ansicht' });
-    fireEvent.mouseOver(viewButton);
-    expect(await screen.findByText('Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.')).toBeInTheDocument();
+    await waitFor(() => expect(topbarContext.latestActions.length).toBeGreaterThan(0));
+    const viewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { tooltip?: string } | undefined;
+    const editAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { tooltip?: string } | undefined;
 
-    const editButton = screen.getByRole('button', { name: 'Bearbeiten' });
-    fireEvent.mouseOver(editButton);
-    expect(await screen.findByText('Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.')).toBeInTheDocument();
+    expect(viewAction?.tooltip).toBe('Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.');
+    expect(editAction?.tooltip).toBe('Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.');
   });
 
   it('shows backend validation errors and reloads plans after failed task update', async () => {

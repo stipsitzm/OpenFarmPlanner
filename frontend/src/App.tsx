@@ -13,6 +13,7 @@ import {
   Alert,
   AppBar,
   Button,
+  ButtonGroup,
   Chip,
   Divider,
   Dialog,
@@ -42,7 +43,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from './i18n';
 import { useCommandContext, useRegisterCommands } from './commands/useCommandContext';
 import { createRootCommands } from './commands/commands';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Locations from './pages/Locations';
 import FieldsBedsPage from './pages/FieldsBedsPage';
 import Cultures from './pages/Cultures';
@@ -87,6 +88,10 @@ import InvitationAcceptPage from './pages/InvitationAcceptPage';
 import AppLogo from './components/layout/AppLogo';
 import { HelpDialog } from './components/help/HelpDialog';
 import PageHelp from './components/help/PageHelp';
+import {
+  getSegmentedActionButtonSx,
+  segmentedButtonGroupSx,
+} from './components/buttons/segmentedControlStyles';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
@@ -228,6 +233,11 @@ export interface TopbarContextAction {
   onClick: () => void;
   disabled?: boolean;
   shortcutHint?: string;
+  active?: boolean;
+  hidden?: boolean;
+  reserveSpace?: boolean;
+  groupId?: string;
+  tooltip?: string;
 }
 
 export interface RootLayoutOutletContext {
@@ -438,6 +448,10 @@ function RootLayout(): React.ReactElement {
     () => topbarContextActions.filter((action) => action.id !== 'cultures-open-library'),
     [topbarContextActions],
   );
+  const genericTopbarContextActions = useMemo(
+    () => (isCulturesPage ? [] : topbarContextActions),
+    [isCulturesPage, topbarContextActions],
+  );
 
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
@@ -623,36 +637,44 @@ function RootLayout(): React.ReactElement {
         <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#E5E7E5', bgcolor: '#F5F6F5', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
             {!sidebarCollapsed ? (
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1.5 }}>
-                <Tooltip title="OpenFarmPlanner" placement="right" enterDelay={500}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1 }}>
+                <Box
+                  component={RouterLink}
+                  to="/app/dashboard"
+                  aria-label="Zur Übersicht"
+                  title="Zur Übersicht"
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    minWidth: 0,
+                    flex: 1,
+                    borderRadius: 1,
+                    px: 0.5,
+                    py: 0.25,
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    '&:hover': { bgcolor: 'rgba(80, 120, 90, 0.08)' },
+                    '&:focus-visible': {
+                      outline: 'none',
+                      boxShadow: '0 0 0 2px rgba(80, 130, 90, 0.22)',
+                    },
+                  }}
+                >
                   <Box
-                    component={RouterLink}
-                    to="/app/dashboard"
-                    aria-label="Zur Übersicht"
-                    title="Zur Übersicht"
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 34,
-                      height: 34,
-                      borderRadius: 1,
-                      textDecoration: 'none',
-                      '&:hover': { bgcolor: 'rgba(80, 120, 90, 0.08)' },
-                      '&:focus-visible': {
-                        outline: 'none',
-                        boxShadow: '0 0 0 2px rgba(80, 130, 90, 0.22)',
-                      },
-                    }}
+                    component="img"
+                    src="/favicon.png"
+                    alt="OpenFarmPlanner"
+                    sx={{ width: 24, height: 24, borderRadius: 0.5, flexShrink: 0 }}
+                  />
+                  <Typography
+                    variant="subtitle2"
+                    noWrap
+                    sx={{ fontWeight: 700, color: '#2F3A33', letterSpacing: 0.1 }}
                   >
-                    <Box
-                      component="img"
-                      src="/favicon.png"
-                      alt="OpenFarmPlanner"
-                      sx={{ width: 24, height: 24, borderRadius: 0.5 }}
-                    />
-                  </Box>
-                </Tooltip>
+                    OpenFarmPlanner
+                  </Typography>
+                </Box>
                 <Tooltip
                   title="Seitenleiste schließen"
                   placement="right"
@@ -761,19 +783,20 @@ function RootLayout(): React.ReactElement {
             {currentPageTitle}
           </Typography>
           {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
-          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
           {isCulturesPage && !isMobile ? (
             <>
               <Button
                 size="small"
                 variant="outlined"
                 onClick={() => cultureLibraryAction?.onClick()}
-                aria-label="Öffentliche Kulturbibliothek öffnen"
+                aria-label="Kulturbibliothek öffnen"
                 startIcon={<PublicIcon fontSize="small" />}
                 sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
                 disabled={!cultureLibraryAction || cultureLibraryAction.disabled}
               >
-                Bibliothek
+                Kulturbibliothek
               </Button>
               <Button
                 size="small"
@@ -810,11 +833,64 @@ function RootLayout(): React.ReactElement {
               </Menu>
             </>
           ) : null}
+          {!isMobile ? (() => {
+            const groups: TopbarContextAction[][] = [];
+            genericTopbarContextActions.forEach((action) => {
+              const lastGroup = groups[groups.length - 1];
+              if (!lastGroup || !action.groupId || lastGroup[0]?.groupId !== action.groupId) {
+                groups.push([action]);
+                return;
+              }
+              lastGroup.push(action);
+            });
+            return groups.map((group, index) => {
+              const isSegmentedGroup = group.length > 1 && group[0]?.groupId;
+              const content = group.map((action) => {
+                const button = (
+                <Button
+                  key={action.id}
+                  size="small"
+                  variant={action.active ? 'contained' : 'outlined'}
+                  color={action.active ? 'success' : 'inherit'}
+                  onClick={action.onClick}
+                  aria-label={action.ariaLabel ?? action.label}
+                  aria-pressed={action.active}
+                  disabled={action.disabled}
+                  sx={getSegmentedActionButtonSx({
+                    active: Boolean(action.active),
+                    hidden: Boolean(action.hidden),
+                  })}
+                >
+                  {action.label}
+                </Button>
+                );
+                return action.tooltip ? (
+                  <Tooltip key={action.id} title={action.tooltip}>
+                    <Box component="span" sx={{ display: 'inline-flex' }}>{button}</Box>
+                  </Tooltip>
+                ) : React.cloneElement(button, { key: action.id });
+              });
+              return isSegmentedGroup ? (
+                <ButtonGroup
+                  key={`group-${group[0]?.groupId}-${index}`}
+                  size="small"
+                  variant="outlined"
+                  sx={segmentedButtonGroupSx}
+                >
+                  {content}
+                </ButtonGroup>
+              ) : (
+                <Box key={`group-${index}`} sx={{ display: 'inline-flex' }}>{content}</Box>
+              );
+            });
+          })() : null}
           {topbarPrimaryAction && !isMobile ? (
-            <Button size="small" variant="contained" onClick={() => navigate(topbarPrimaryAction.to)} sx={{ textTransform: 'none' }}>
+            <Button size="small" variant="contained" onClick={() => navigate(topbarPrimaryAction.to)} sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}>
               + {topbarPrimaryAction.label}
             </Button>
           ) : null}
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: { xs: 2, md: 3 } }}>
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
             aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}
@@ -868,7 +944,8 @@ function RootLayout(): React.ReactElement {
             onLogout={handleLogout}
             t={t}
           />
-        </Box>
+            </Box>
+          </Box>
         </Toolbar>
       </AppBar>
 

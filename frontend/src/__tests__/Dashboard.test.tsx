@@ -42,24 +42,23 @@ describe('Dashboard', () => {
     mocks.planList.mockResolvedValue({ data: { results: [] } });
   });
 
-  it('shows only the start box for a completely empty project', async () => {
+  it('shows unified onboarding checklist for a completely empty project', async () => {
     render(<MemoryRouter><Dashboard /></MemoryRouter>);
-    expect(await screen.findByText('Starte deine Anbauplanung')).toBeInTheDocument();
-    expect(screen.getByText('Lege zuerst einen Standort an.')).toBeInTheDocument();
+    expect(await screen.findByText('Projektstart')).toBeInTheDocument();
+    expect(screen.getByText('OpenFarmPlanner unterstützt dich bei der strukturierten Planung von Flächen, Kulturen und Anbauzyklen. Beginne mit dem ersten Schritt deiner Anbauplanung.')).toBeInTheDocument();
     const createLocationLinks = screen.getAllByRole('link', { name: 'Standort hinzufügen' });
     expect(createLocationLinks).toHaveLength(1);
     expect(createLocationLinks[0]).toHaveAttribute('href', '/app/locations?create=true');
-    expect(screen.queryByText('Checkliste')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
     expect(screen.queryByText('Anstehende Aufgaben')).not.toBeInTheDocument();
   });
 
-  it('does not show welcome box for partially configured projects', async () => {
+  it('keeps the same onboarding card for partially configured projects', async () => {
     mocks.locationList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hof' }] } });
 
     render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
-    expect(await screen.findByText('Checkliste')).toBeInTheDocument();
+    expect(await screen.findByText('Projektstart')).toBeInTheDocument();
     expect(screen.queryByText('Starte deine Anbauplanung')).not.toBeInTheDocument();
   });
 
@@ -73,7 +72,7 @@ describe('Dashboard', () => {
     render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
     expect(await screen.findByText('Anstehende Aufgaben')).toBeInTheDocument();
-    expect(screen.queryByText('Checkliste')).not.toBeInTheDocument();
+    expect(screen.queryByText('Standort hinzufügen')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
     expect(screen.queryByText('Dein Projekt ist eingerichtet.')).not.toBeInTheDocument();
     expect(screen.queryByText('Starte deine Anbauplanung')).not.toBeInTheDocument();

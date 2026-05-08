@@ -35,9 +35,9 @@
   },
   "emptyOnboarding": {
     "title": "Noch keine Kulturen vorhanden",
-    "description": "Kulturen sind die Grundlage für deine Anbauplanung. Lege deine erste Kultur an oder übernimm Kulturen aus der öffentlichen Kulturbibliothek.",
+    "description": "Kulturen sind die Grundlage für deine Anbauplanung. Lege deine erste Kultur an oder übernimm Kulturen aus der Kulturbibliothek.",
     "createAction": "Kultur hinzufügen",
-    "openLibraryAction": "Öffentliche Kulturbibliothek öffnen"
+    "openLibraryAction": "Kulturbibliothek öffnen"
   },
   "perennial": "Mehrjährig",
   "annual": "Einjährig",
@@ -401,8 +401,8 @@
     }
   },
   "library": {
-    "openButton": "Öffentliche Kulturbibliothek",
-    "dialogTitle": "Öffentliche Kulturbibliothek",
+    "openButton": "Kulturbibliothek",
+    "dialogTitle": "Kulturbibliothek",
     "searchLabel": "Öffentliche Kulturen durchsuchen",
     "selectPrompt": "Wählen Sie eine öffentliche Kultur aus, um Details und Import anzuzeigen.",
     "empty": "Keine öffentlichen Kulturen gefunden.",
@@ -411,16 +411,16 @@
     "importSuccess": "„{{name}}“ wurde in dieses Projekt importiert.",
     "importError": "Die öffentliche Kultur konnte nicht importiert werden.",
     "publishButton": "Veröffentlichen",
-    "publishTooltip": "Veröffentlicht die ausgewählte Kultur in der öffentlichen Kulturbibliothek.",
+    "publishTooltip": "Veröffentlicht die ausgewählte Kultur in der Kulturbibliothek.",
     "updateButton": "Öffentliche Version aktualisieren",
     "publishing": "Veröffentliche…",
     "updating": "Aktualisiere…",
-    "publishSuccess": "„{{name}}“ wurde in die öffentliche Bibliothek veröffentlicht.",
+    "publishSuccess": "„{{name}}“ wurde in die Kulturbibliothek veröffentlicht.",
     "updateSuccess": "Die öffentliche Version von „{{name}}“ wurde aktualisiert.",
-    "publishDuplicateError": "Diese Kultur ist bereits in der öffentlichen Bibliothek vorhanden.",
+    "publishDuplicateError": "Diese Kultur ist bereits in der Kulturbibliothek vorhanden.",
     "publishDuplicateErrorWithCandidates": "Diese Kultur ist bereits öffentlich vorhanden: {{duplicates}}",
     "publishError": "Die Kultur konnte nicht veröffentlicht werden.",
-    "loadError": "Die öffentliche Kulturbibliothek konnte nicht geladen werden.",
+    "loadError": "Die Kulturbibliothek konnte nicht geladen werden.",
     "versionLabel": "Version",
     "createdByLabel": "Von",
     "filters": {

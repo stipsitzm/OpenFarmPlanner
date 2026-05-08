@@ -148,7 +148,7 @@
           "points": [
             "Wähle eine Kultur aus, um Details zu sehen oder zu bearbeiten.",
             "Erstelle, exportiere, lösche oder verwende Kulturen direkt für einen Anbauplan.",
-            "Nutze die öffentliche Kulturbibliothek, um Kulturen zu teilen oder zu übernehmen."
+            "Nutze die Kulturbibliothek, um Kulturen zu teilen oder zu übernehmen."
           ]
         },
         {
@@ -162,7 +162,7 @@
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
         "add": "Kultur hinzufügen",
-        "library": "Öffentliche Kulturbibliothek öffnen",
+        "library": "Kulturbibliothek öffnen",
         "createPlan": "Anbauplan für diese Kultur hinzufügen",
         "more": "Weitere Aktionen öffnen",
         "edit": "Kulturdaten bearbeiten",

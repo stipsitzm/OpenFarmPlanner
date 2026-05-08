@@ -716,11 +716,12 @@ function Cultures(): React.ReactElement {
     }
   };
 
+
   const contextActions = useMemo<TopbarContextAction[]>(() => ([
     {
       id: 'cultures-open-library',
-      label: 'Öffentliche Kulturbibliothek öffnen',
-      ariaLabel: 'Öffentliche Kulturbibliothek öffnen',
+      label: 'Kulturbibliothek öffnen',
+      ariaLabel: 'Kulturbibliothek öffnen',
       onClick: () => {
         void handleOpenPublicLibrary();
       },

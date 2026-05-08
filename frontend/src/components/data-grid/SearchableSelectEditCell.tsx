@@ -18,6 +18,7 @@ import type { SearchableSelectOption } from '../inputs/SearchableSelect';
 export interface SearchableSelectEditCellProps extends GridRenderEditCellParams {
   options: SearchableSelectOption[];
   onValueChange?: (nextValue: number | null) => Promise<void> | void;
+  placeholder?: string;
 }
 
 export function SearchableSelectEditCell({
@@ -26,6 +27,7 @@ export function SearchableSelectEditCell({
   field,
   options,
   onValueChange,
+  placeholder,
 }: SearchableSelectEditCellProps): React.ReactElement {
   const apiRef = useGridApiContext();
   const [inputValue, setInputValue] = useState('');
@@ -66,6 +68,7 @@ export function SearchableSelectEditCell({
       onChange={(newValue) => {
         void handleChange(undefined, newValue);
       }}
+      placeholder={placeholder}
       size="small"
       textFieldSx={{ '& .MuiInputBase-root': { height: '100%' } }}
     />

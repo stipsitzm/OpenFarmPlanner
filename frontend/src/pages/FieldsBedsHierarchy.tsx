@@ -21,6 +21,7 @@ import { DataGrid, GridRowModes } from "@mui/x-data-grid";
 import { germanDataGridLocaleText } from "../components/data-grid/localeText";
 import type { GridRowsProp, GridRowModesModel, GridRowHeightParams } from "@mui/x-data-grid";
 import { Box, Alert } from "@mui/material";
+import EmptyStateCard from '../components/project/EmptyStateCard';
 import { dataGridSx } from "../components/data-grid/styles";
 import {
   handleRowEditStop,
@@ -97,6 +98,9 @@ const HIERARCHY_DATA_GRID_SX = {
       minHeight: "32px",
       height: "32px",
     },
+  "& .ofp-hierarchy-cell-missing-dimension": {
+    backgroundColor: (theme) => `${theme.palette.warning.main}14`,
+  },
 };
 
 function FieldsBedsHierarchy({
@@ -865,6 +869,31 @@ function FieldsBedsHierarchy({
     return false;
   }, []);
 
+
+  const shouldShowMissingDimensionsHint = useMemo(() => {
+    const dimensionalRows = rows.filter(
+      (row): row is HierarchyRow => row.type === "field" || row.type === "bed",
+    );
+    if (dimensionalRows.length === 0) {
+      return false;
+    }
+
+    const incompleteRows = dimensionalRows.filter((row) => {
+      const length = parseDimensionValue(row.length_m);
+      const width = parseDimensionValue(row.width_m);
+      const area = parseAreaValue(row.area_sqm);
+      const hasLength = Number.isFinite(length ?? NaN);
+      const hasWidth = Number.isFinite(width ?? NaN);
+      const hasArea = Number.isFinite(area ?? NaN);
+      const hasComputableArea = hasArea || (hasLength && hasWidth);
+      return !hasLength || !hasWidth || !hasComputableArea;
+    });
+
+    const completeRowsCount = dimensionalRows.length - incompleteRows.length;
+    const incompleteShare = incompleteRows.length / dimensionalRows.length;
+    return completeRowsCount === 0 || (dimensionalRows.length >= 4 && incompleteShare >= 0.75);
+  }, [parseAreaValue, parseDimensionValue, rows]);
+
   const rowSelectionModel = useMemo(
     () => ({
       type: "include" as const,
@@ -882,6 +911,15 @@ function FieldsBedsHierarchy({
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
+        )}
+
+        {shouldShowMissingDimensionsHint && (
+          <Box sx={{ mb: 2 }}>
+            <EmptyStateCard
+              title={t('messages.missingDimensionsHint')}
+              description={t('messages.missingDimensionsHintOptional')}
+            />
+          </Box>
         )}
 
         <Box

@@ -39,7 +39,11 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTranslation } from "../i18n";
-import { getAllowedCultivationTypesForCulture } from "./plantingPlansUtils";
+import {
+  getAllowedCultivationTypesForCulture,
+  normalizeCultivationType,
+  resolveCultivationTypeForAllowedOptions,
+} from "./plantingPlansUtils";
 import PageContainer from "../components/layout/PageContainer";
 import {
   plantingPlanAPI,
@@ -607,13 +611,14 @@ function PlantingPlans(): React.ReactElement {
       170,
       240,
     );
+    const hierarchyColumnValues = [
+      t("plantingPlans:columns.bed"),
+      ...Array.from(new Set(bedOptions.map((option) => option.label))),
+    ];
     const bedWidth = estimateColumnWidth(
-      [
-        t("plantingPlans:columns.bed"),
-        ...bedOptions.map((option) => option.label),
-      ],
-      hasMultipleLocationsWithBeds ? 220 : 150,
-      hasMultipleLocationsWithBeds ? 320 : 230,
+      hierarchyColumnValues,
+      hasMultipleLocationsWithBeds ? 210 : 160,
+      hasMultipleLocationsWithBeds ? 380 : 300,
     );
 
     return {
@@ -821,18 +826,10 @@ function PlantingPlans(): React.ReactElement {
           );
           const availableTypes =
             getAllowedCultivationTypesForCulture(selectedCulture);
-
-          const currentType =
-            nextRow.cultivation_type === "pre_cultivation" ||
-            nextRow.cultivation_type === "direct_sowing"
-              ? nextRow.cultivation_type
-              : undefined;
-
-          const nextCultivationType: CultivationType = availableTypes.includes(
-            currentType ?? "pre_cultivation",
-          )
-            ? (currentType ?? "pre_cultivation")
-            : (availableTypes[0] ?? "pre_cultivation");
+          const nextCultivationType = resolveCultivationTypeForAllowedOptions(
+            availableTypes,
+            nextRow.cultivation_type,
+          );
 
           return {
             ...nextRow,
@@ -862,6 +859,72 @@ function PlantingPlans(): React.ReactElement {
           );
           return option?.label ?? "";
         },
+        renderCell: (params) => {
+          const row = params.row as PlantingPlanRow;
+          const options = getCultivationTypeOptionsForRow(row);
+          const formattedValue =
+            typeof params.formattedValue === "string" ? params.formattedValue : "";
+          if (formattedValue.length > 0) {
+            return formattedValue;
+          }
+          if (options.length > 1) {
+            return (
+              <Box component="span" sx={{ color: "text.secondary", fontStyle: "italic" }}>
+                {t("plantingPlans:placeholders.selectCultivationType")}
+              </Box>
+            );
+          }
+          return "";
+        },
+        renderEditCell: (params) => {
+          const row = params.row as PlantingPlanRow;
+          const options = getCultivationTypeOptionsForRow(row);
+          const selectedValue = normalizeCultivationType(params.value) ?? "";
+          const showPlaceholder = options.length > 1;
+
+          return (
+            <TextField
+              select
+              fullWidth
+              size="small"
+              value={selectedValue}
+              onChange={async (event) => {
+                await params.api.setEditCellValue({
+                  id: params.id,
+                  field: params.field,
+                  value: event.target.value,
+                });
+              }}
+              slotProps={{
+                select: {
+                  displayEmpty: true,
+                  renderValue: (selected) => {
+                    if (selected === "") {
+                      return (
+                        <Box component="span" sx={{ color: "text.secondary", fontStyle: "italic" }}>
+                          {t("plantingPlans:placeholders.selectCultivationType")}
+                        </Box>
+                      );
+                    }
+                    const selectedOption = options.find((option) => option.value === selected);
+                    return selectedOption?.label ?? "";
+                  },
+                },
+              }}
+            >
+              {showPlaceholder ? (
+                <MenuItem value="" disabled>
+                  {t("plantingPlans:placeholders.selectCultivationType")}
+                </MenuItem>
+              ) : null}
+              {options.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          );
+        },
         valueSetter: (value, row) => {
           const nextRow = row as PlantingPlanRow;
           const selectedCulture = cultures.find(
@@ -869,16 +932,16 @@ function PlantingPlans(): React.ReactElement {
           );
           const allowedTypes =
             getAllowedCultivationTypesForCulture(selectedCulture);
-          const nextType: CultivationType =
-            value === "pre_cultivation" || value === "direct_sowing"
-              ? value
-              : "pre_cultivation";
+          const nextType = normalizeCultivationType(value);
 
           return {
             ...row,
-            cultivation_type: allowedTypes.includes(nextType)
+            cultivation_type: nextType && allowedTypes.includes(nextType)
               ? nextType
-              : (allowedTypes[0] ?? "pre_cultivation"),
+              : resolveCultivationTypeForAllowedOptions(
+                allowedTypes,
+                nextRow.cultivation_type,
+              ),
           };
         },
         preProcessEditCellProps: (params) => ({
@@ -1629,7 +1692,7 @@ function PlantingPlans(): React.ReactElement {
             createNewRow={() => ({
             id: -Date.now(),
             culture: 0,
-            cultivation_type: "pre_cultivation",
+            cultivation_type: "",
             location_id: undefined,
             field_id: undefined,
             bed: 0,
@@ -1647,7 +1710,11 @@ function PlantingPlans(): React.ReactElement {
                   ...(initialSelection.cultureId
                     ? { culture: initialSelection.cultureId }
                     : {}),
-                  cultivation_type: "pre_cultivation",
+                  cultivation_type: resolveCultivationTypeForAllowedOptions(
+                    getAllowedCultivationTypesForCulture(
+                      cultures.find((culture) => culture.id === initialSelection.cultureId),
+                    ),
+                  ),
                   ...(initialSelection.bedId
                     ? { bed: initialSelection.bedId }
                     : {}),
@@ -1662,7 +1729,7 @@ function PlantingPlans(): React.ReactElement {
               ...plan,
               id: plan.id!,
               culture: plan.culture,
-              cultivation_type: plan.cultivation_type || "pre_cultivation",
+              cultivation_type: plan.cultivation_type ?? "",
               culture_name: plan.culture_name || "",
               bed: plan.bed,
               bed_name: plan.bed_name || "",
@@ -1714,7 +1781,7 @@ function PlantingPlans(): React.ReactElement {
               planting_date: plantingDate,
               quantity: row.quantity,
               notes: row.notes || "",
-              cultivation_type: row.cultivation_type || "pre_cultivation",
+              cultivation_type: row.cultivation_type ?? "",
             };
 
             // Determine which field to send based on last edit

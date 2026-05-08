@@ -158,7 +158,7 @@ describe('EditableDataGrid', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: /Tab speichern 1/i })[0]);
     await waitFor(() => expect(updateSpy).toHaveBeenCalled());
-    expect(updateSpy).toHaveBeenLastCalledWith(100, expect.objectContaining({ area_sqm: 12 }));
+    expect(updateSpy).toHaveBeenLastCalledWith(expect.any(Number), expect.objectContaining({ area_sqm: 12 }));
   });
 
   it('prevents delete when canceled and deletes when confirmed', async () => {

@@ -13,6 +13,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
 import { AddBedIcon } from './AddBedIcon';
@@ -241,6 +242,106 @@ const calculateAreaValue = (row: HierarchyRow): number | string | undefined => {
   return row.area_sqm;
 };
 
+type DimensionCellType = 'length' | 'width' | 'area';
+
+interface DimensionRowState {
+  hasLength: boolean;
+  hasWidth: boolean;
+  hasAreaValue: boolean;
+}
+
+const parseNumericValue = (value: unknown): number | undefined => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : undefined;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+    const parsed = Number.parseFloat(trimmed.replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+};
+
+const getDimensionRowState = (row: HierarchyRow): DimensionRowState | null => {
+  if (row.type !== 'field' && row.type !== 'bed') {
+    return null;
+  }
+  const lengthValue = parseNumericValue(row.length_m);
+  const widthValue = parseNumericValue(row.width_m);
+  const areaValue = parseNumericValue(row.area_sqm);
+  return {
+    hasLength: Number.isFinite(lengthValue ?? NaN),
+    hasWidth: Number.isFinite(widthValue ?? NaN),
+    hasAreaValue: Number.isFinite(areaValue ?? NaN),
+  };
+};
+
+const isDimensionCellIncomplete = (type: DimensionCellType, rowState: DimensionRowState): boolean => {
+  if (type === 'length') {
+    return !rowState.hasLength;
+  }
+  if (type === 'width') {
+    return !rowState.hasWidth;
+  }
+  return !(rowState.hasAreaValue || (rowState.hasLength && rowState.hasWidth));
+};
+
+const getDimensionCellClassName = (row: HierarchyRow, type: DimensionCellType): string => {
+  const rowState = getDimensionRowState(row);
+  if (!rowState || !isDimensionCellIncomplete(type, rowState)) {
+    return '';
+  }
+  return 'ofp-hierarchy-cell-missing-dimension';
+};
+
+const renderDimensionCell = (
+  params: GridRenderCellParams<HierarchyRow>,
+  type: DimensionCellType,
+  t: TFunction,
+): ReactElement => {
+  const rowState = getDimensionRowState(params.row);
+  const displayValue = params.formattedValue ?? params.value;
+  const hasDisplayValue = displayValue !== null && displayValue !== undefined && String(displayValue).trim() !== '';
+
+  if (!rowState || !isDimensionCellIncomplete(type, rowState)) {
+    return <Box component="span">{hasDisplayValue ? String(displayValue) : ''}</Box>;
+  }
+
+  return (
+    <Tooltip title={t('hierarchy:messages.missingDimensionsCellTooltip')} enterDelay={250}>
+      <Box
+        component="span"
+        sx={{
+          width: '100%',
+          minWidth: 0,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.5,
+        }}
+      >
+        <InfoOutlinedIcon sx={{ fontSize: 14, color: 'warning.main', flexShrink: 0 }} />
+        <Box
+          component="span"
+          sx={{
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            color: hasDisplayValue ? 'text.primary' : 'warning.main',
+            borderBottom: hasDisplayValue ? 'none' : '1px dashed',
+            lineHeight: 1.2,
+          }}
+        >
+          {hasDisplayValue ? String(displayValue) : '—'}
+        </Box>
+      </Box>
+    </Tooltip>
+  );
+};
+
 export function createHierarchyColumns(
   onToggleExpand: (rowId: string | number) => void,
   onAddBed: (fieldId: number) => void,
@@ -291,6 +392,8 @@ export function createHierarchyColumns(
       type: 'string',
       editable: true,
       valueGetter: (_value, row: HierarchyRow) => row.type === 'location' ? undefined : row.length_m,
+      cellClassName: (params) => getDimensionCellClassName(params.row, 'length'),
+      renderCell: (params) => renderDimensionCell(params, 'length', t),
     },
     {
       field: 'width_m',
@@ -305,6 +408,8 @@ export function createHierarchyColumns(
       type: 'string',
       editable: true,
       valueGetter: (_value, row: HierarchyRow) => row.type === 'location' ? undefined : row.width_m,
+      cellClassName: (params) => getDimensionCellClassName(params.row, 'width'),
+      renderCell: (params) => renderDimensionCell(params, 'width', t),
     },
     {
       field: 'area_sqm',
@@ -313,6 +418,8 @@ export function createHierarchyColumns(
       type: 'string',
       editable: true,
       valueGetter: (_value, row: HierarchyRow) => calculateAreaValue(row),
+      cellClassName: (params) => getDimensionCellClassName(params.row, 'area'),
+      renderCell: (params) => renderDimensionCell(params, 'area', t),
     },
     {
       field: 'notes',
