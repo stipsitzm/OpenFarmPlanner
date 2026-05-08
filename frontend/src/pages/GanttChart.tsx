@@ -54,6 +54,10 @@ import {
   type GanttTaskGroup,
 } from './ganttChartUtils';
 import { getFirstMissingRequirement } from './requirementFlow';
+import {
+  getSegmentedActionButtonSx,
+  segmentedButtonGroupSx,
+} from '../components/buttons/segmentedControlStyles';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 
 interface WeeklyYieldCultureMeta {
@@ -473,19 +477,18 @@ function GanttChartPage(): React.ReactElement {
 
         {hasCalendarRequirements ? (
           <Box sx={{ mb: 1, display: 'flex', justifyContent: 'flex-start' }}>
-            <ButtonGroup size="small" variant="outlined" sx={{ gap: 0 }} aria-label={t('ganttChart:viewSelectorAriaLabel')}>
+            <ButtonGroup
+              size="small"
+              variant="outlined"
+              sx={segmentedButtonGroupSx}
+              aria-label={t('ganttChart:viewSelectorAriaLabel')}
+            >
               <Button
                 onClick={() => setCalendarMode('occupancy')}
                 aria-pressed={calendarMode === 'occupancy'}
                 variant={calendarMode === 'occupancy' ? 'contained' : 'outlined'}
                 color={calendarMode === 'occupancy' ? 'success' : 'inherit'}
-                sx={{
-                  textTransform: 'none',
-                  whiteSpace: 'nowrap',
-                  ...(calendarMode === 'occupancy'
-                    ? { bgcolor: 'success.main', color: 'success.contrastText', '&:hover': { bgcolor: 'success.dark' } }
-                    : { borderColor: 'divider', color: 'text.primary' }),
-                }}
+                sx={getSegmentedActionButtonSx({ active: calendarMode === 'occupancy' })}
               >
                 {t('ganttChart:modes.occupancy')}
               </Button>
@@ -494,13 +497,7 @@ function GanttChartPage(): React.ReactElement {
                 aria-pressed={calendarMode === 'seedlings'}
                 variant={calendarMode === 'seedlings' ? 'contained' : 'outlined'}
                 color={calendarMode === 'seedlings' ? 'success' : 'inherit'}
-                sx={{
-                  textTransform: 'none',
-                  whiteSpace: 'nowrap',
-                  ...(calendarMode === 'seedlings'
-                    ? { bgcolor: 'success.main', color: 'success.contrastText', '&:hover': { bgcolor: 'success.dark' } }
-                    : { borderColor: 'divider', color: 'text.primary' }),
-                }}
+                sx={getSegmentedActionButtonSx({ active: calendarMode === 'seedlings' })}
               >
                 {t('ganttChart:modes.seedlings')}
               </Button>

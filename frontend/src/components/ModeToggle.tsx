@@ -1,5 +1,9 @@
 import type { ReactElement } from 'react';
 import { Stack, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
+import {
+  segmentedToggleButtonGroupSx,
+  segmentedToggleButtonSx,
+} from './buttons/segmentedControlStyles';
 
 export type ModeToggleValue = 'view' | 'edit';
 
@@ -53,6 +57,7 @@ function ModeToggle({
         color="primary"
         fullWidth={fullWidth}
         aria-label={ariaLabel}
+        sx={segmentedToggleButtonGroupSx}
         onChange={(_, selectedMode: ModeToggleValue | null) => {
           if (selectedMode !== null) {
             onChange(selectedMode);
@@ -60,13 +65,13 @@ function ModeToggle({
         }}
       >
         {renderToggleButtonWithOptionalTooltip(
-          <ToggleButton value="view" aria-label={viewLabel}>
+          <ToggleButton value="view" aria-label={viewLabel} sx={segmentedToggleButtonSx}>
             {viewLabel}
           </ToggleButton>,
           viewTooltip,
         )}
         {renderToggleButtonWithOptionalTooltip(
-          <ToggleButton value="edit" aria-label={editLabel}>
+          <ToggleButton value="edit" aria-label={editLabel} sx={segmentedToggleButtonSx}>
             {editLabel}
           </ToggleButton>,
           editTooltip,

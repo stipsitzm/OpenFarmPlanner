@@ -88,6 +88,10 @@ import InvitationAcceptPage from './pages/InvitationAcceptPage';
 import AppLogo from './components/layout/AppLogo';
 import { HelpDialog } from './components/help/HelpDialog';
 import PageHelp from './components/help/PageHelp';
+import {
+  getSegmentedActionButtonSx,
+  segmentedButtonGroupSx,
+} from './components/buttons/segmentedControlStyles';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
@@ -852,24 +856,10 @@ function RootLayout(): React.ReactElement {
                   aria-label={action.ariaLabel ?? action.label}
                   aria-pressed={action.active}
                   disabled={action.disabled}
-                  sx={{
-                    textTransform: 'none',
-                    whiteSpace: 'nowrap',
-                    minWidth: 0,
-                    px: 1.25,
-                    visibility: action.hidden ? 'hidden' : 'visible',
-                    pointerEvents: action.hidden ? 'none' : 'auto',
-                    ...(!action.hidden && action.active
-                      ? {
-                        bgcolor: 'success.main',
-                        color: 'success.contrastText',
-                        '&:hover': { bgcolor: 'success.dark' },
-                      }
-                      : {
-                        borderColor: 'divider',
-                        color: 'text.primary',
-                      }),
-                  }}
+                  sx={getSegmentedActionButtonSx({
+                    active: Boolean(action.active),
+                    hidden: Boolean(action.hidden),
+                  })}
                 >
                   {action.label}
                 </Button>
@@ -881,7 +871,12 @@ function RootLayout(): React.ReactElement {
                 ) : React.cloneElement(button, { key: action.id });
               });
               return isSegmentedGroup ? (
-                <ButtonGroup key={`group-${group[0]?.groupId}-${index}`} size="small" variant="outlined" sx={{ gap: 0 }}>
+                <ButtonGroup
+                  key={`group-${group[0]?.groupId}-${index}`}
+                  size="small"
+                  variant="outlined"
+                  sx={segmentedButtonGroupSx}
+                >
                   {content}
                 </ButtonGroup>
               ) : (
