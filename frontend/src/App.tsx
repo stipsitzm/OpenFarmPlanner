@@ -633,36 +633,44 @@ function RootLayout(): React.ReactElement {
         <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#E5E7E5', bgcolor: '#F5F6F5', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
             {!sidebarCollapsed ? (
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1.5 }}>
-                <Tooltip title="OpenFarmPlanner" placement="right" enterDelay={500}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1 }}>
+                <Box
+                  component={RouterLink}
+                  to="/app/dashboard"
+                  aria-label="Zur Übersicht"
+                  title="Zur Übersicht"
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    minWidth: 0,
+                    flex: 1,
+                    borderRadius: 1,
+                    px: 0.5,
+                    py: 0.25,
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    '&:hover': { bgcolor: 'rgba(80, 120, 90, 0.08)' },
+                    '&:focus-visible': {
+                      outline: 'none',
+                      boxShadow: '0 0 0 2px rgba(80, 130, 90, 0.22)',
+                    },
+                  }}
+                >
                   <Box
-                    component={RouterLink}
-                    to="/app/dashboard"
-                    aria-label="Zur Übersicht"
-                    title="Zur Übersicht"
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 34,
-                      height: 34,
-                      borderRadius: 1,
-                      textDecoration: 'none',
-                      '&:hover': { bgcolor: 'rgba(80, 120, 90, 0.08)' },
-                      '&:focus-visible': {
-                        outline: 'none',
-                        boxShadow: '0 0 0 2px rgba(80, 130, 90, 0.22)',
-                      },
-                    }}
+                    component="img"
+                    src="/favicon.png"
+                    alt="OpenFarmPlanner"
+                    sx={{ width: 24, height: 24, borderRadius: 0.5, flexShrink: 0 }}
+                  />
+                  <Typography
+                    variant="subtitle2"
+                    noWrap
+                    sx={{ fontWeight: 700, color: '#2F3A33', letterSpacing: 0.1 }}
                   >
-                    <Box
-                      component="img"
-                      src="/favicon.png"
-                      alt="OpenFarmPlanner"
-                      sx={{ width: 24, height: 24, borderRadius: 0.5 }}
-                    />
-                  </Box>
-                </Tooltip>
+                    OpenFarmPlanner
+                  </Typography>
+                </Box>
                 <Tooltip
                   title="Seitenleiste schließen"
                   placement="right"
