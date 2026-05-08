@@ -134,13 +134,13 @@ export default function FieldsBedsPage(): React.ReactElement {
 
     if (locations.length === 1 && locations[0]?.id !== undefined) {
       setTargetLocationId(locations[0].id);
-      setNewFieldName(`Parzelle ${2}`);
+      setNewFieldName('');
       setAddFieldDialogOpen(true);
       return;
     }
     const firstLocation = locations.find((location) => location.id !== undefined);
     setTargetLocationId(firstLocation?.id ?? '');
-    setNewFieldName(`Parzelle ${2}`);
+    setNewFieldName('');
     setAddFieldDialogOpen(true);
   }, [addField, locations, navigate, t]);
 
