@@ -13,7 +13,6 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
 import { AddBedIcon } from './AddBedIcon';
@@ -319,10 +318,9 @@ const renderDimensionCell = (
           minWidth: 0,
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 0.5,
+          lineHeight: 1.2,
         }}
       >
-        <InfoOutlinedIcon sx={{ fontSize: 14, color: 'warning.main', flexShrink: 0 }} />
         <Box
           component="span"
           sx={{
@@ -330,9 +328,9 @@ const renderDimensionCell = (
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            color: hasDisplayValue ? 'text.primary' : 'warning.main',
+            color: hasDisplayValue ? 'text.primary' : 'text.secondary',
             borderBottom: hasDisplayValue ? 'none' : '1px dashed',
-            lineHeight: 1.2,
+            borderBottomColor: hasDisplayValue ? 'transparent' : 'divider',
           }}
         >
           {hasDisplayValue ? String(displayValue) : '—'}

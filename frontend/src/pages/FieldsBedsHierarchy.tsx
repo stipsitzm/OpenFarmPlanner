@@ -99,7 +99,7 @@ const HIERARCHY_DATA_GRID_SX = {
       height: "32px",
     },
   "& .ofp-hierarchy-cell-missing-dimension": {
-    backgroundColor: (theme) => `${theme.palette.warning.main}14`,
+    backgroundColor: (theme) => theme.palette.action.hover,
   },
 };
 
