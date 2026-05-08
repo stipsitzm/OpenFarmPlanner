@@ -43,7 +43,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from './i18n';
 import { useCommandContext, useRegisterCommands } from './commands/useCommandContext';
 import { createRootCommands } from './commands/commands';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Locations from './pages/Locations';
 import FieldsBedsPage from './pages/FieldsBedsPage';
 import Cultures from './pages/Cultures';
