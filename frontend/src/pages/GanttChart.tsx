@@ -332,7 +332,7 @@ function GanttChartPage(): React.ReactElement {
 
   const renderOccupancyTooltip = useCallback(({ task }: { task: GanttTask }) => (
     <Box sx={{ p: 0.5 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.75 }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.75 }}>
         {formatSeedlingTooltipTitle(task)}
       </Typography>
       {buildOccupancyTooltipDetails(task).map((detail) => (
@@ -345,7 +345,7 @@ function GanttChartPage(): React.ReactElement {
 
   const renderSeedlingTooltip = useCallback(({ task }: { task: GanttTask }) => (
     <Box sx={{ p: 0.5 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.75 }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.75 }}>
         {formatSeedlingTooltipTitle(task)}
       </Typography>
       {buildSeedlingTooltipDetails(task).map((detail) => (

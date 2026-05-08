@@ -259,7 +259,7 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
 
   const renderSection = (section: HelpSection, key: string): ReactElement => (
     <Box key={key} sx={{ mb: 1.25 }}>
-      <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
         {section.title}
       </Typography>
       <List dense disablePadding>
@@ -313,7 +313,7 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
       ))}
 
       <Box>
-        <Typography variant="body1" sx={{ fontWeight: 700, mb: 1 }}>
+        <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
           {t('pages.graphical.symbolsTitle')}
         </Typography>
         <Stack spacing={1}>
@@ -324,11 +324,11 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
       </Box>
 
       <Box>
-        <Typography variant="body1" sx={{ fontWeight: 700, mb: 1 }}>
+        <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
           {t('pages.graphical.modeTitle')}
         </Typography>
         <Box sx={{ display: 'inline-flex', flexDirection: 'column', gap: 1, p: 1.25, borderRadius: 1.5, border: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="caption" sx={{ fontWeight: 700 }}>
+          <Typography variant="caption" sx={{ fontWeight: 600 }}>
             {t('pages.graphical.modeLabel')}
           </Typography>
           <ToggleButtonGroup value="view" exclusive size="small" aria-label={t('pages.graphical.modeLabel')}>
@@ -354,7 +354,7 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
 
   const renderSymbolsContent = (): ReactElement => (
     <Box>
-      <Typography variant="body1" sx={{ fontWeight: 700, mb: 0.75 }}>
+      <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.75 }}>
         {symbolsTitle}
       </Typography>
       <Stack spacing={1}>
@@ -381,7 +381,7 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <Box sx={{ maxWidth: 720, width: { xs: 1, sm: 680 }, p: 2.5 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{title}</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{title}</Typography>
           {pageKey === 'graphical' ? renderGraphicalHelpContent() : sections && sections.length > 0 ? (
             <>
               {renderIntro()}

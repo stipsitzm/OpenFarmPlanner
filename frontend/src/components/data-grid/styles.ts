@@ -19,9 +19,6 @@ export const dataGridSx = {
     backgroundColor: '#f8faf8',
     borderBottom: '1px solid #e5e7eb',
   },
-  '& .MuiDataGrid-columnHeaderTitle': {
-    fontWeight: 600,
-  },
   '& .MuiDataGrid-row': {
     minHeight: 44,
   },

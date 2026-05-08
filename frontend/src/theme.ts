@@ -3,6 +3,29 @@
 import { createTheme } from '@mui/material/styles';
 
 const theme = createTheme({
+  typography: {
+    h5: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
+    subtitle1: {
+      fontWeight: 600,
+    },
+    subtitle2: {
+      fontWeight: 600,
+    },
+    body1: {
+      fontWeight: 400,
+    },
+    body2: {
+      fontWeight: 400,
+    },
+    caption: {
+      fontWeight: 400,
+    },
+  },
   palette: {
     // Primary color used by contained buttons and primary components
     primary: {
@@ -56,6 +79,24 @@ const theme = createTheme({
         endIcon: {
           display: 'inline-flex',
           alignItems: 'center',
+        },
+      },
+    },
+    MuiListItemText: {
+      styleOverrides: {
+        primary: {
+          fontWeight: 400,
+        },
+        secondary: {
+          fontWeight: 400,
+          color: 'rgba(47, 58, 51, 0.66)',
+        },
+      },
+    },
+    MuiDataGrid: {
+      styleOverrides: {
+        columnHeaderTitle: {
+          fontWeight: 600,
         },
       },
     },
