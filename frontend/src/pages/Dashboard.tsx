@@ -90,38 +90,36 @@ export default function Dashboard(): React.ReactElement {
   if (loading) return <PageContainer><Typography>{t('common:messages.loading')}</Typography></PageContainer>;
   if (shouldShowProjectRequiredState && missingProjectReason) return <PageContainer><ProjectRequiredState reason={missingProjectReason} /></PageContainer>;
 
-  const isEmptyProject = locations.length === 0 && beds.length === 0 && cultures.length === 0 && plans.length === 0;
   const isSetupComplete = firstMissingRequirement === null;
 
   return (
     <PageContainer>
       {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
 
-      {isEmptyProject ? (
-        <Card variant="outlined" sx={{ mb: 2 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>{t('dashboard:emptyState.title')}</Typography>
-            <Typography variant="body2" sx={{ mb: 2 }}>{t('dashboard:emptyState.shortDescription')}</Typography>
-            <Button component={RouterLink} to="/app/locations?create=true" variant="contained">{t('dashboard:emptyState.action')}</Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {!isEmptyProject && !isSetupComplete ? (
+      {!isSetupComplete ? (
         <Card variant="outlined" sx={{ mb: 2 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>{t('dashboard:checklist.title')}</Typography>
-            <Stack spacing={1.1} sx={{ mb: 2 }}>
+            <Stack spacing={1.6} sx={{ mb: 2.5, mt: 1 }}>
               {checklistItems.map((item) => {
                 const isNextStep = firstMissingChecklistStep === item.key;
                 return (
-                  <Box key={item.key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {item.done ? (
-                      <CheckBoxIcon fontSize="small" color="success" />
-                    ) : (
-                      <CheckBoxOutlineBlankIcon fontSize="small" color={isNextStep ? 'primary' : 'disabled'} />
-                    )}
-                    <Typography variant="body2" sx={{ fontWeight: isNextStep ? 600 : 400, color: isNextStep ? 'primary.main' : 'text.primary' }}>
+                  <Box key={item.key} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25 }}>
+                    <Box sx={{ mt: 0.1 }}>
+                      {item.done ? (
+                        <CheckBoxIcon fontSize="small" color="success" />
+                      ) : (
+                        <CheckBoxOutlineBlankIcon fontSize="small" color={isNextStep ? 'primary' : 'disabled'} />
+                      )}
+                    </Box>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: isNextStep ? 700 : 500,
+                        color: isNextStep ? 'text.primary' : 'text.secondary',
+                        lineHeight: 1.45,
+                      }}
+                    >
                       {item.label}
                     </Typography>
                   </Box>
@@ -137,7 +135,7 @@ export default function Dashboard(): React.ReactElement {
         </Card>
       ) : null}
 
-      {!isEmptyProject && (isSetupComplete || (!isSetupComplete && upcomingTasks.length > 0)) ? (
+      {(isSetupComplete || (!isSetupComplete && upcomingTasks.length > 0)) ? (
       <Card variant="outlined">
         <CardContent>
           <Typography variant="h6" gutterBottom>{t('dashboard:tasks.title')}</Typography>
