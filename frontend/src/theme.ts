@@ -23,6 +23,16 @@ const theme = createTheme({
     borderRadius: 4,
   },
   components: {
+
+    MuiDialogContent: {
+      styleOverrides: {
+        root: {
+          '.MuiDialogTitle-root + &': {
+            paddingTop: 12,
+          },
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         // Apply consistent padding and disable uppercase labels
