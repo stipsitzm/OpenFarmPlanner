@@ -93,7 +93,7 @@ export function HelpDialog({ open, onClose }: HelpDialogProps): ReactElement {
       <DialogContent sx={{ pb: 3 }}>
         <Stack spacing={2}>
           <Box>
-            <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
               {t('heading')}
             </Typography>
             <Typography variant="body1">
@@ -104,7 +104,7 @@ export function HelpDialog({ open, onClose }: HelpDialogProps): ReactElement {
           <Stack spacing={1.5}>
             {helpSections.map((section) => (
               <Box key={section.title}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
                   {section.title}
                 </Typography>
                 <List dense disablePadding>
@@ -119,7 +119,7 @@ export function HelpDialog({ open, onClose }: HelpDialogProps): ReactElement {
           </Stack>
 
           <Box sx={{ pt: 1 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
               {t('workflowTitle')}
             </Typography>
             <Box

@@ -51,7 +51,7 @@ export default function AppLogo({ to = '/app/dashboard', size = 28, showText = t
         sx={{ height: size, width: size, borderRadius: 0.5, flexShrink: 0 }}
       />
       {showText ? (
-        <Box component="span" sx={{ fontWeight: 700, fontSize: 16, whiteSpace: 'nowrap' }}>
+        <Box component="span" sx={{ fontWeight: 600, fontSize: 16, whiteSpace: 'nowrap' }}>
           OpenFarmPlanner
         </Box>
       ) : null}

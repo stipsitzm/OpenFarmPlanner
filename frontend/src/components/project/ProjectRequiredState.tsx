@@ -28,7 +28,7 @@ export default function ProjectRequiredState({
   return (
     <Alert severity="info">
       <Stack spacing={1.5}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
           {t(titleKey)}
         </Typography>
         <Typography variant="body2">{t(descriptionKey)}</Typography>

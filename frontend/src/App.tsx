@@ -670,7 +670,7 @@ function RootLayout(): React.ReactElement {
                   <Typography
                     variant="subtitle2"
                     noWrap
-                    sx={{ fontWeight: 700, color: '#2F3A33', letterSpacing: 0.1 }}
+                    sx={{ color: '#2F3A33', letterSpacing: 0.1 }}
                   >
                     OpenFarmPlanner
                   </Typography>
@@ -969,7 +969,6 @@ function RootLayout(): React.ReactElement {
                     px: 2,
                     py: 1.5,
                     color: isActive ? '#2F3A33' : '#3F4B45',
-                    fontWeight: isActive ? 700 : 500,
                     bgcolor: isActive ? 'rgba(80, 130, 90, 0.14)' : 'transparent',
                     '&:hover': {
                       bgcolor: isActive ? 'rgba(80, 130, 90, 0.18)' : 'rgba(80, 120, 90, 0.08)',
@@ -977,7 +976,7 @@ function RootLayout(): React.ReactElement {
                   }}
                 >
                   <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.label} />
+                  <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 500 }} />
                 </ListItemButton>
               </ListItem>
             );

@@ -23,7 +23,7 @@ export default function ProjectSelectionPage(): React.ReactElement {
         {memberships.length === 0 ? (
           <Alert severity="info">
             <Stack spacing={1.5}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                 {t('common:projectRequired.noProjectsTitle')}
               </Typography>
               <Typography variant="body2">
