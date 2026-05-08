@@ -860,27 +860,14 @@ function PlantingPlans(): React.ReactElement {
           return option?.label ?? "";
         },
         renderCell: (params) => {
-          const row = params.row as PlantingPlanRow;
-          const options = getCultivationTypeOptionsForRow(row);
           const formattedValue =
             typeof params.formattedValue === "string" ? params.formattedValue : "";
-          if (formattedValue.length > 0) {
-            return formattedValue;
-          }
-          if (options.length > 1) {
-            return (
-              <Box component="span" sx={{ color: "text.secondary", fontStyle: "italic" }}>
-                {t("plantingPlans:placeholders.selectCultivationType")}
-              </Box>
-            );
-          }
-          return "";
+          return formattedValue;
         },
         renderEditCell: (params) => {
           const row = params.row as PlantingPlanRow;
           const options = getCultivationTypeOptionsForRow(row);
           const selectedValue = normalizeCultivationType(params.value) ?? "";
-          const showPlaceholder = options.length > 1;
 
           return (
             <TextField
@@ -895,28 +882,7 @@ function PlantingPlans(): React.ReactElement {
                   value: event.target.value,
                 });
               }}
-              slotProps={{
-                select: {
-                  displayEmpty: true,
-                  renderValue: (selected) => {
-                    if (selected === "") {
-                      return (
-                        <Box component="span" sx={{ color: "text.secondary", fontStyle: "italic" }}>
-                          {t("plantingPlans:placeholders.selectCultivationType")}
-                        </Box>
-                      );
-                    }
-                    const selectedOption = options.find((option) => option.value === selected);
-                    return selectedOption?.label ?? "";
-                  },
-                },
-              }}
             >
-              {showPlaceholder ? (
-                <MenuItem value="" disabled>
-                  {t("plantingPlans:placeholders.selectCultivationType")}
-                </MenuItem>
-              ) : null}
               {options.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
