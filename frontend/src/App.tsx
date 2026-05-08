@@ -912,8 +912,6 @@ function RootLayout(): React.ReactElement {
         component="main"
         sx={{
           width: '100%',
-          maxWidth: '1400px',
-          mx: 'auto',
           px: { xs: 1.5, sm: 2.5, md: 3.5 },
           py: { xs: 1.5, md: 2.5 },
           display: 'flex',

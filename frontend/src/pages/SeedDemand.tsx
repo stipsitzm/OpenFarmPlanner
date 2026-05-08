@@ -149,7 +149,7 @@ export default function SeedDemandPage(): React.ReactElement {
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
       <PageContainer variant="wide">
-        <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+        <Box sx={{ width: '100%' }}>
           <ProjectRequiredState reason={missingProjectReason} />
         </Box>
       </PageContainer>
@@ -158,7 +158,7 @@ export default function SeedDemandPage(): React.ReactElement {
 
   return (
     <PageContainer variant="wide">
-      <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+      <Box sx={{ width: '100%' }}>
 
         {isLoading && <CircularProgress />}
         {error && <Alert severity="error">{error}</Alert>}
@@ -172,7 +172,7 @@ export default function SeedDemandPage(): React.ReactElement {
         )}
 
         {!isLoading && !error && canCalculateSeedDemand && (
-          <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
+          <TableContainer component={Paper} sx={{ width: '100%', maxWidth: '100%', overflowX: 'auto' }}>
             <Table
               sx={{
                 '& .MuiTableCell-root': { py: 1 },
