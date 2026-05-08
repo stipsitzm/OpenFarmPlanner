@@ -16,7 +16,8 @@
     "emptyDescription": "Aktuell gibt es keine anstehenden Aufgaben für dieses Projekt."
   },
   "checklist": {
-    "title": "Checkliste",
+    "title": "Projektstart",
+    "intro": "OpenFarmPlanner unterstützt dich bei der strukturierten Planung von Flächen, Kulturen und Anbauzyklen. Beginne mit dem ersten Schritt deiner Anbauplanung.",
     "location": "Standort hinzufügen",
     "field": "Parzelle hinzufügen",
     "bed": "Beet hinzufügen",

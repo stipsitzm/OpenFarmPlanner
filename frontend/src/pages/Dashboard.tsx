@@ -1,9 +1,10 @@
-import { Alert, Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, CardContent, Divider, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../i18n';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import SproutOutlinedIcon from '@mui/icons-material/SpaOutlined';
 import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, type Bed, type Culture, type Field, type Location, type PlantingPlan } from '../api/api';
 import PageContainer from '../components/layout/PageContainer';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
@@ -97,10 +98,17 @@ export default function Dashboard(): React.ReactElement {
       {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
 
       {!isSetupComplete ? (
-        <Card variant="outlined" sx={{ mb: 2 }}>
+        <Card variant="outlined" sx={{ mb: 2, maxWidth: 860 }}>
           <CardContent>
-            <Typography variant="h6" gutterBottom>{t('dashboard:checklist.title')}</Typography>
-            <Stack spacing={1.6} sx={{ mb: 2.5, mt: 1 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.75 }}>
+              <SproutOutlinedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+              <Typography variant="h6">{t('dashboard:checklist.title')}</Typography>
+            </Stack>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.75, maxWidth: 720, lineHeight: 1.5 }}>
+              {t('dashboard:checklist.intro')}
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <Stack spacing={1.6} sx={{ mb: 2.75 }}>
               {checklistItems.map((item) => {
                 const isNextStep = firstMissingChecklistStep === item.key;
                 return (
