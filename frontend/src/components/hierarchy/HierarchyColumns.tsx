@@ -330,8 +330,8 @@ const renderDimensionCell = (
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            color: hasDisplayValue ? 'text.primary' : 'text.secondary',
-            borderBottom: hasDisplayValue ? 'none' : (theme) => `1px dashed ${theme.palette.warning.main}`,
+            color: hasDisplayValue ? 'text.primary' : 'warning.main',
+            borderBottom: hasDisplayValue ? 'none' : '1px dashed',
             lineHeight: 1.2,
           }}
         >

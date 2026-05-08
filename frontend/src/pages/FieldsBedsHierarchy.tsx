@@ -885,7 +885,8 @@ function FieldsBedsHierarchy({
       const hasLength = Number.isFinite(length ?? NaN);
       const hasWidth = Number.isFinite(width ?? NaN);
       const hasArea = Number.isFinite(area ?? NaN);
-      return !hasLength || !hasWidth || !(hasArea || (hasLength && hasWidth));
+      const hasComputableArea = hasArea || (hasLength && hasWidth);
+      return !hasLength || !hasWidth || !hasComputableArea;
     });
 
     const completeRowsCount = dimensionalRows.length - incompleteRows.length;

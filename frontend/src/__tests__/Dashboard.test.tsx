@@ -49,7 +49,6 @@ describe('Dashboard', () => {
     const createLocationLinks = screen.getAllByRole('link', { name: 'Standort hinzufügen' });
     expect(createLocationLinks).toHaveLength(1);
     expect(createLocationLinks[0]).toHaveAttribute('href', '/app/locations?create=true');
-    expect(screen.getAllByText('Standort hinzufügen').length).toBeGreaterThan(0);
     expect(screen.queryByRole('link', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
     expect(screen.queryByText('Anstehende Aufgaben')).not.toBeInTheDocument();
   });
