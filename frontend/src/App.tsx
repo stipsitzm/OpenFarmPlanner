@@ -13,6 +13,7 @@ import {
   Alert,
   AppBar,
   Button,
+  ButtonGroup,
   Chip,
   Divider,
   Dialog,
@@ -231,6 +232,7 @@ export interface TopbarContextAction {
   active?: boolean;
   hidden?: boolean;
   reserveSpace?: boolean;
+  groupId?: string;
 }
 
 export interface RootLayoutOutletContext {
@@ -615,7 +617,6 @@ function RootLayout(): React.ReactElement {
     if (location.pathname.startsWith('/app/suppliers')) return { pageKey: 'suppliers' as const, label: 'Hilfe zu Lieferanten' };
     return null;
   }, [location.pathname]);
-const isFieldsBedsPage = location.pathname.startsWith('/app/fields-beds');
   const topbarPrimaryAction = useMemo(() => {
     if (location.pathname.startsWith('/app/locations')) return { label: 'Standort hinzufügen', to: '/app/locations?create=true' };
     if (location.pathname.startsWith('/app/cultures')) return { label: 'Kultur hinzufügen', to: '/app/cultures?create=true' };
@@ -818,45 +819,60 @@ const isFieldsBedsPage = location.pathname.startsWith('/app/fields-beds');
               </Menu>
             </>
           ) : null}
-          {topbarPrimaryAction && !isMobile && isFieldsBedsPage ? (
-            <Button size="small" variant="contained" onClick={() => navigate(topbarPrimaryAction.to)} sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}>
-              + {topbarPrimaryAction.label}
-            </Button>
-          ) : null}
-          {!isMobile ? genericTopbarContextActions.map((action) => (
-            <Button
-              key={action.id}
-              size="small"
-              variant={action.active ? 'contained' : 'outlined'}
-              color={action.active ? 'success' : 'inherit'}
-              onClick={action.onClick}
-              aria-label={action.ariaLabel ?? action.label}
-              aria-pressed={action.active}
-              disabled={action.disabled}
-              sx={{
-                textTransform: 'none',
-                whiteSpace: 'nowrap',
-                minWidth: 0,
-                px: 1.25,
-                visibility: action.hidden ? 'hidden' : 'visible',
-                pointerEvents: action.hidden ? 'none' : 'auto',
-                ...(action.hidden && action.reserveSpace ? { display: 'inline-flex' } : {}),
-                ...(!action.hidden && action.active
-                  ? {
-                    bgcolor: 'success.main',
-                    color: 'success.contrastText',
-                    '&:hover': { bgcolor: 'success.dark' },
-                  }
-                  : {
-                    borderColor: 'divider',
-                    color: 'text.primary',
-                  }),
-              }}
-            >
-              {action.label}
-            </Button>
-          )) : null}
-          {topbarPrimaryAction && !isMobile && !isFieldsBedsPage ? (
+          {!isMobile ? (() => {
+            const groups: TopbarContextAction[][] = [];
+            genericTopbarContextActions.forEach((action) => {
+              const lastGroup = groups[groups.length - 1];
+              if (!lastGroup || !action.groupId || lastGroup[0]?.groupId !== action.groupId) {
+                groups.push([action]);
+                return;
+              }
+              lastGroup.push(action);
+            });
+            return groups.map((group, index) => {
+              const isSegmentedGroup = group.length > 1 && group[0]?.groupId;
+              const content = group.map((action) => (
+                <Button
+                  key={action.id}
+                  size="small"
+                  variant={action.active ? 'contained' : 'outlined'}
+                  color={action.active ? 'success' : 'inherit'}
+                  onClick={action.onClick}
+                  aria-label={action.ariaLabel ?? action.label}
+                  aria-pressed={action.active}
+                  disabled={action.disabled}
+                  sx={{
+                    textTransform: 'none',
+                    whiteSpace: 'nowrap',
+                    minWidth: 0,
+                    px: 1.25,
+                    visibility: action.hidden ? 'hidden' : 'visible',
+                    pointerEvents: action.hidden ? 'none' : 'auto',
+                    ...(!action.hidden && action.active
+                      ? {
+                        bgcolor: 'success.main',
+                        color: 'success.contrastText',
+                        '&:hover': { bgcolor: 'success.dark' },
+                      }
+                      : {
+                        borderColor: 'divider',
+                        color: 'text.primary',
+                      }),
+                  }}
+                >
+                  {action.label}
+                </Button>
+              ));
+              return isSegmentedGroup ? (
+                <ButtonGroup key={`group-${group[0]?.groupId}-${index}`} size="small" variant="outlined" sx={{ gap: 0 }}>
+                  {content}
+                </ButtonGroup>
+              ) : (
+                <Box key={`group-${index}`} sx={{ display: 'inline-flex' }}>{content}</Box>
+              );
+            });
+          })() : null}
+          {topbarPrimaryAction && !isMobile ? (
             <Button size="small" variant="contained" onClick={() => navigate(topbarPrimaryAction.to)} sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}>
               + {topbarPrimaryAction.label}
             </Button>

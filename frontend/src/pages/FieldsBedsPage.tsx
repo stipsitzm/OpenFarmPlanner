@@ -203,6 +203,7 @@ export default function FieldsBedsPage(): React.ReactElement {
         hidden: viewMode !== 'graphical',
         reserveSpace: true,
         ariaLabel: t('fields:graphical.modeAriaLabel'),
+        groupId: 'fields-interaction-mode',
       },
       {
         id: 'fields-interaction-mode-edit',
@@ -214,6 +215,7 @@ export default function FieldsBedsPage(): React.ReactElement {
         hidden: viewMode !== 'graphical',
         reserveSpace: true,
         ariaLabel: t('fields:graphical.modeAriaLabel'),
+        groupId: 'fields-interaction-mode',
       },
       {
         id: 'fields-view-mode-list',
@@ -223,6 +225,7 @@ export default function FieldsBedsPage(): React.ReactElement {
         },
         active: viewMode === 'table',
         ariaLabel: t('fields:representation.ariaLabel'),
+        groupId: 'fields-view-mode',
       },
       {
         id: 'fields-view-mode-graphical',
@@ -232,6 +235,7 @@ export default function FieldsBedsPage(): React.ReactElement {
         },
         active: viewMode === 'graphical',
         ariaLabel: t('fields:representation.ariaLabel'),
+        groupId: 'fields-view-mode',
       },
     ];
     setTopbarContextActions(contextActions);
