@@ -12,9 +12,9 @@ import { useTranslation } from '../i18n';
 import {
   Alert,
   Box,
+  Button,
+  ButtonGroup,
   Paper,
-  Tab,
-  Tabs,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -36,7 +36,7 @@ import GanttChart, { ViewMode } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
-import ModeToggle from '../components/ModeToggle';
+import { useOutletContext } from 'react-router-dom';
 import PageContainer from '../components/layout/PageContainer';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import type { CommandSpec } from '../commands/types';
@@ -54,6 +54,7 @@ import {
   type GanttTaskGroup,
 } from './ganttChartUtils';
 import { getFirstMissingRequirement } from './requirementFlow';
+import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 
 interface WeeklyYieldCultureMeta {
   id: number;
@@ -115,6 +116,8 @@ function formatIsoWeek(date: Date): string {
 function GanttChartPage(): React.ReactElement {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
+  const outletContext = useOutletContext<RootLayoutOutletContext | null>();
+  const setTopbarContextActions = outletContext?.setTopbarContextActions ?? (() => undefined);
   useCommandContextTag('calendar');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -418,6 +421,34 @@ function GanttChartPage(): React.ReactElement {
     });
   }, [maxTotalYield]);
 
+
+  useEffect(() => {
+    const topbarActions: TopbarContextAction[] = [
+      {
+        id: 'calendar-mode-view',
+        label: t('ganttChart:modeViewOption'),
+        onClick: () => setEditMode(false),
+        active: !editMode,
+        hidden: calendarMode !== 'occupancy',
+        reserveSpace: true,
+        groupId: 'calendar-interaction-mode',
+        ariaLabel: t('ganttChart:modeAriaLabel'),
+      },
+      {
+        id: 'calendar-mode-edit',
+        label: t('ganttChart:modeEditOption'),
+        onClick: () => setEditMode(true),
+        active: editMode,
+        hidden: calendarMode !== 'occupancy',
+        reserveSpace: true,
+        groupId: 'calendar-interaction-mode',
+        ariaLabel: t('ganttChart:modeAriaLabel'),
+      },
+    ];
+    setTopbarContextActions(topbarActions);
+    return () => setTopbarContextActions([]);
+  }, [calendarMode, editMode, setTopbarContextActions, t]);
+
   if (loading) {
     return (
       <PageContainer variant="full">
@@ -439,31 +470,39 @@ function GanttChartPage(): React.ReactElement {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {hasCalendarRequirements ? (
-          <Box sx={{ mb: 1 }}>
-            <Tabs
-              value={calendarMode}
-              onChange={(_, value: CalendarMode) => setCalendarMode(value)}
-              aria-label={t('ganttChart:viewSelectorAriaLabel')}
-            >
-              <Tab label={t('ganttChart:modes.occupancy')} value="occupancy" />
-              <Tab label={t('ganttChart:modes.seedlings')} value="seedlings" />
-            </Tabs>
-          </Box>
-        ) : null}
-
-        {hasCalendarRequirements && calendarMode === 'occupancy' ? (
-          <Box sx={{ mb: 1, mt: -0.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <ModeToggle
-              label={t('ganttChart:modeLabel')}
-              ariaLabel={t('ganttChart:modeAriaLabel')}
-              viewLabel={t('ganttChart:modeViewOption')}
-              editLabel={t('ganttChart:modeEditOption')}
-              viewTooltip={t('ganttChart:modeViewTooltip')}
-              editTooltip={t('ganttChart:modeEditTooltip')}
-              value={editMode ? 'edit' : 'view'}
-              onChange={(selectedMode) => setEditMode(selectedMode === 'edit')}
-              fullWidth={false}
-            />
+          <Box sx={{ mb: 1, display: 'flex', justifyContent: 'flex-start' }}>
+            <ButtonGroup size="small" variant="outlined" sx={{ gap: 0 }} aria-label={t('ganttChart:viewSelectorAriaLabel')}>
+              <Button
+                onClick={() => setCalendarMode('occupancy')}
+                aria-pressed={calendarMode === 'occupancy'}
+                variant={calendarMode === 'occupancy' ? 'contained' : 'outlined'}
+                color={calendarMode === 'occupancy' ? 'success' : 'inherit'}
+                sx={{
+                  textTransform: 'none',
+                  whiteSpace: 'nowrap',
+                  ...(calendarMode === 'occupancy'
+                    ? { bgcolor: 'success.main', color: 'success.contrastText', '&:hover': { bgcolor: 'success.dark' } }
+                    : { borderColor: 'divider', color: 'text.primary' }),
+                }}
+              >
+                {t('ganttChart:modes.occupancy')}
+              </Button>
+              <Button
+                onClick={() => setCalendarMode('seedlings')}
+                aria-pressed={calendarMode === 'seedlings'}
+                variant={calendarMode === 'seedlings' ? 'contained' : 'outlined'}
+                color={calendarMode === 'seedlings' ? 'success' : 'inherit'}
+                sx={{
+                  textTransform: 'none',
+                  whiteSpace: 'nowrap',
+                  ...(calendarMode === 'seedlings'
+                    ? { bgcolor: 'success.main', color: 'success.contrastText', '&:hover': { bgcolor: 'success.dark' } }
+                    : { borderColor: 'divider', color: 'text.primary' }),
+                }}
+              >
+                {t('ganttChart:modes.seedlings')}
+              </Button>
+            </ButtonGroup>
           </Box>
         ) : null}
 
