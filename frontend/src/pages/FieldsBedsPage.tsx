@@ -194,6 +194,28 @@ export default function FieldsBedsPage(): React.ReactElement {
   useEffect(() => {
     const contextActions: TopbarContextAction[] = [
       {
+        id: 'fields-interaction-mode-view',
+        label: t('fields:graphical.viewModeOption'),
+        onClick: () => {
+          setInteractionMode('view');
+        },
+        active: interactionMode === 'view',
+        hidden: viewMode !== 'graphical',
+        reserveSpace: true,
+        ariaLabel: t('fields:graphical.modeAriaLabel'),
+      },
+      {
+        id: 'fields-interaction-mode-edit',
+        label: t('fields:graphical.editModeOption'),
+        onClick: () => {
+          setInteractionMode('edit');
+        },
+        active: interactionMode === 'edit',
+        hidden: viewMode !== 'graphical',
+        reserveSpace: true,
+        ariaLabel: t('fields:graphical.modeAriaLabel'),
+      },
+      {
         id: 'fields-view-mode-list',
         label: t('fields:representation.table'),
         onClick: () => {
@@ -211,25 +233,6 @@ export default function FieldsBedsPage(): React.ReactElement {
         active: viewMode === 'graphical',
         ariaLabel: t('fields:representation.ariaLabel'),
       },
-      ...(viewMode === 'graphical'
-        ? [{
-          id: 'fields-interaction-mode-view',
-          label: t('fields:graphical.viewModeOption'),
-          onClick: () => {
-            setInteractionMode('view');
-          },
-          active: interactionMode === 'view',
-          ariaLabel: t('fields:graphical.modeAriaLabel'),
-        }, {
-          id: 'fields-interaction-mode-edit',
-          label: t('fields:graphical.editModeOption'),
-          onClick: () => {
-            setInteractionMode('edit');
-          },
-          active: interactionMode === 'edit',
-          ariaLabel: t('fields:graphical.modeAriaLabel'),
-        }] satisfies TopbarContextAction[]
-        : []),
     ];
     setTopbarContextActions(contextActions);
     return () => setTopbarContextActions([]);

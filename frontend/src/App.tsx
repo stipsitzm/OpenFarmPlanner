@@ -229,6 +229,8 @@ export interface TopbarContextAction {
   disabled?: boolean;
   shortcutHint?: string;
   active?: boolean;
+  hidden?: boolean;
+  reserveSpace?: boolean;
 }
 
 export interface RootLayoutOutletContext {
@@ -609,6 +611,7 @@ function RootLayout(): React.ReactElement {
     if (location.pathname.startsWith('/app/suppliers')) return { pageKey: 'suppliers' as const, label: 'Hilfe zu Lieferanten' };
     return null;
   }, [location.pathname]);
+const isFieldsBedsPage = location.pathname.startsWith('/app/fields-beds');
   const topbarPrimaryAction = useMemo(() => {
     if (location.pathname.startsWith('/app/locations')) return { label: 'Standort hinzufügen', to: '/app/locations?create=true' };
     if (location.pathname.startsWith('/app/cultures')) return { label: 'Kultur hinzufügen', to: '/app/cultures?create=true' };
@@ -811,6 +814,11 @@ function RootLayout(): React.ReactElement {
               </Menu>
             </>
           ) : null}
+          {topbarPrimaryAction && !isMobile && isFieldsBedsPage ? (
+            <Button size="small" variant="contained" onClick={() => navigate(topbarPrimaryAction.to)} sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}>
+              + {topbarPrimaryAction.label}
+            </Button>
+          ) : null}
           {!isMobile ? topbarContextActions.map((action) => (
             <Button
               key={action.id}
@@ -826,7 +834,10 @@ function RootLayout(): React.ReactElement {
                 whiteSpace: 'nowrap',
                 minWidth: 0,
                 px: 1.25,
-                ...(action.active
+                visibility: action.hidden ? 'hidden' : 'visible',
+                pointerEvents: action.hidden ? 'none' : 'auto',
+                ...(action.hidden && action.reserveSpace ? { display: 'inline-flex' } : {}),
+                ...(!action.hidden && action.active
                   ? {
                     bgcolor: 'success.main',
                     color: 'success.contrastText',
@@ -841,7 +852,7 @@ function RootLayout(): React.ReactElement {
               {action.label}
             </Button>
           )) : null}
-          {topbarPrimaryAction && !isMobile ? (
+          {topbarPrimaryAction && !isMobile && !isFieldsBedsPage ? (
             <Button size="small" variant="contained" onClick={() => navigate(topbarPrimaryAction.to)} sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}>
               + {topbarPrimaryAction.label}
             </Button>
