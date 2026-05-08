@@ -865,6 +865,22 @@ function FieldsBedsHierarchy({
     return false;
   }, []);
 
+
+  const hasMissingDimensionData = useMemo(
+    () => rows.some((row) => {
+      if (row.type !== "field" && row.type !== "bed") {
+        return false;
+      }
+      const length = parseDimensionValue(row.length_m);
+      const width = parseDimensionValue(row.width_m);
+      const area = parseAreaValue(row.area_sqm);
+      const missingLengthOrWidth = !Number.isFinite(length ?? NaN) || !Number.isFinite(width ?? NaN);
+      const missingArea = !Number.isFinite(area ?? NaN);
+      return missingLengthOrWidth || missingArea;
+    }),
+    [rows],
+  );
+
   const rowSelectionModel = useMemo(
     () => ({
       type: "include" as const,
@@ -881,6 +897,16 @@ function FieldsBedsHierarchy({
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
+          </Alert>
+        )}
+
+        {hasMissingDimensionData && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            {t('messages.missingDimensionsHint')}
+            {' '}
+            <Box component="span" sx={{ color: 'text.secondary' }}>
+              {t('messages.missingDimensionsHintOptional')}
+            </Box>
           </Alert>
         )}
 

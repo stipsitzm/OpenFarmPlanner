@@ -48,7 +48,9 @@
     "noBedsHintBeforeIcon": "Es sind noch keine Beete vorhanden. Füge Beete über das",
     "noBedsHintAfterIcon": "Symbol bei der jeweiligen Parzelle hinzu.",
     "noBedsHintTitle": "Es sind noch keine Beete vorhanden.",
-    "noBedsHintDescription": "Füge Beete über das Plus-Symbol bei der jeweiligen Parzelle hinzu."
+    "noBedsHintDescription": "Füge Beete über das Plus-Symbol bei der jeweiligen Parzelle hinzu.",
+    "missingDimensionsHint": "Länge und Breite sind wichtig für Flächenberechnungen, Saatgutbedarf und Anbauplanung.",
+    "missingDimensionsHintOptional": "Du kannst die Werte später ergänzen."
   },
   "prompts": {
     "newFieldName": "Name der neuen Parzelle:",
