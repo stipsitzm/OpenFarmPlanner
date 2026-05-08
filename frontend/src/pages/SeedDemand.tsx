@@ -87,7 +87,14 @@ export default function SeedDemandPage(): React.ReactElement {
     if (!hasSeedData) {
       return {
         title: t('seedDemand.progressive.seedData.title'),
-        description: t('seedDemand.progressive.seedData.description'),
+        description: (
+          <>
+            <Typography variant="body2">{t('seedDemand.progressive.seedData.description')}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+              {t('seedDemand.progressive.seedData.hint')}
+            </Typography>
+          </>
+        ),
         action: { label: t('seedDemand.progressive.seedData.action'), to: '/app/cultures' },
       };
     }
