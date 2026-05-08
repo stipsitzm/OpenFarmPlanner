@@ -146,7 +146,7 @@ describe('GanttChartPage', () => {
     expect(screen.queryByText('Anbauplan fehlt')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Kultur anlegen' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Anbauflächen anlegen' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: 'Feldbelegung' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Feldbelegung' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Ansicht' })).not.toBeInTheDocument();
     expect(screen.queryByText('Ertragsverteilung')).not.toBeInTheDocument();
     expect(screen.queryByTestId('mock-gantt')).not.toBeInTheDocument();
@@ -213,8 +213,11 @@ describe('GanttChartPage', () => {
 
     await waitFor(() => expect(screen.getByText('Feldbelegung')).toBeInTheDocument());
     expect(screen.queryByText(/Belegung von Parzellen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Ansicht' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Bearbeiten' })).toBeInTheDocument();
+    await waitFor(() => expect(topbarContext.latestActions.length).toBeGreaterThan(0));
+    const viewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { hidden?: boolean } | undefined;
+    const editAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { hidden?: boolean } | undefined;
+    expect(viewAction?.hidden).toBe(false);
+    expect(editAction?.hidden).toBe(false);
     expect(screen.getByText('Feld / Beet 1')).toBeInTheDocument();
     expect(screen.queryByText('Hof / Feld / Beet 1')).not.toBeInTheDocument();
     expect(mocks.ganttProps).toHaveBeenCalled();
@@ -277,8 +280,10 @@ describe('GanttChartPage', () => {
     expect(screen.getByText('Fläche: 8.00 m²')).toBeInTheDocument();
     expect(screen.getByText('Pflanzenanzahl: 24')).toBeInTheDocument();
     expect(screen.queryByText(/Anbauplan/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Ansicht' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
+    const seedlingViewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { hidden?: boolean } | undefined;
+    const seedlingEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { hidden?: boolean } | undefined;
+    expect(seedlingViewAction?.hidden).toBe(true);
+    expect(seedlingEditAction?.hidden).toBe(true);
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
     expect(latestProps?.localeText).toMatchObject({
       title: 'Anzuchtplanung',
