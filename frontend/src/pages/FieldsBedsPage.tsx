@@ -194,27 +194,46 @@ export default function FieldsBedsPage(): React.ReactElement {
   useEffect(() => {
     const contextActions: TopbarContextAction[] = [
       {
-        id: 'fields-view-mode',
-        label: `${t('fields:representation.table')} | ${t('fields:representation.graphical')}`,
+        id: 'fields-view-mode-list',
+        label: t('fields:representation.table'),
         onClick: () => {
-          setViewMode((previous) => (previous === 'graphical' ? 'table' : 'graphical'));
+          setViewMode('table');
         },
+        active: viewMode === 'table',
+        ariaLabel: t('fields:representation.ariaLabel'),
+      },
+      {
+        id: 'fields-view-mode-graphical',
+        label: t('fields:representation.graphical'),
+        onClick: () => {
+          setViewMode('graphical');
+        },
+        active: viewMode === 'graphical',
         ariaLabel: t('fields:representation.ariaLabel'),
       },
       ...(viewMode === 'graphical'
         ? [{
-          id: 'fields-interaction-mode',
-          label: `${t('fields:graphical.viewModeOption')} | ${t('fields:graphical.editModeOption')}`,
+          id: 'fields-interaction-mode-view',
+          label: t('fields:graphical.viewModeOption'),
           onClick: () => {
-            setInteractionMode((previous) => (previous === 'view' ? 'edit' : 'view'));
+            setInteractionMode('view');
           },
+          active: interactionMode === 'view',
           ariaLabel: t('fields:graphical.modeAriaLabel'),
-        } satisfies TopbarContextAction]
+        }, {
+          id: 'fields-interaction-mode-edit',
+          label: t('fields:graphical.editModeOption'),
+          onClick: () => {
+            setInteractionMode('edit');
+          },
+          active: interactionMode === 'edit',
+          ariaLabel: t('fields:graphical.modeAriaLabel'),
+        }] satisfies TopbarContextAction[]
         : []),
     ];
     setTopbarContextActions(contextActions);
     return () => setTopbarContextActions([]);
-  }, [setTopbarContextActions, t, viewMode]);
+  }, [interactionMode, setTopbarContextActions, t, viewMode]);
 
   return (
     <>

@@ -228,6 +228,7 @@ export interface TopbarContextAction {
   onClick: () => void;
   disabled?: boolean;
   shortcutHint?: string;
+  active?: boolean;
 }
 
 export interface RootLayoutOutletContext {
@@ -814,11 +815,28 @@ function RootLayout(): React.ReactElement {
             <Button
               key={action.id}
               size="small"
-              variant="outlined"
+              variant={action.active ? 'contained' : 'outlined'}
+              color={action.active ? 'success' : 'inherit'}
               onClick={action.onClick}
               aria-label={action.ariaLabel ?? action.label}
+              aria-pressed={action.active}
               disabled={action.disabled}
-              sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+              sx={{
+                textTransform: 'none',
+                whiteSpace: 'nowrap',
+                minWidth: 0,
+                px: 1.25,
+                ...(action.active
+                  ? {
+                    bgcolor: 'success.main',
+                    color: 'success.contrastText',
+                    '&:hover': { bgcolor: 'success.dark' },
+                  }
+                  : {
+                    borderColor: 'divider',
+                    color: 'text.primary',
+                  }),
+              }}
             >
               {action.label}
             </Button>
