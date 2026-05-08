@@ -10,6 +10,7 @@ import {
   DialogTitle,
   IconButton,
   Link,
+  Paper,
   Table,
   TableBody,
   TableCell,
@@ -203,7 +204,7 @@ export default function Suppliers(): React.ReactElement {
             />
           </Box>
         ) : (
-          <TableContainer sx={{ width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
+          <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
             <Table size="small" sx={{ width: 'auto' }}>
               <TableHead>
                 <TableRow>
