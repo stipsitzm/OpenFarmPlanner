@@ -441,6 +441,10 @@ function RootLayout(): React.ReactElement {
     () => topbarContextActions.filter((action) => action.id !== 'cultures-open-library'),
     [topbarContextActions],
   );
+  const genericTopbarContextActions = useMemo(
+    () => (isCulturesPage ? [] : topbarContextActions),
+    [isCulturesPage, topbarContextActions],
+  );
 
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
@@ -819,7 +823,7 @@ const isFieldsBedsPage = location.pathname.startsWith('/app/fields-beds');
               + {topbarPrimaryAction.label}
             </Button>
           ) : null}
-          {!isMobile ? topbarContextActions.map((action) => (
+          {!isMobile ? genericTopbarContextActions.map((action) => (
             <Button
               key={action.id}
               size="small"

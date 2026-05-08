@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import axios from 'axios';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
@@ -100,12 +100,15 @@ import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { getFirstMissingCultivationPlanRequirement } from './requirementFlow';
+import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const outletContext = useOutletContext<RootLayoutOutletContext | null>();
+  const setTopbarContextActions = outletContext?.setTopbarContextActions ?? (() => undefined);
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const { selectedCultureId, updateSelectedCultureId } = useSelectedCultureSync();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
@@ -712,6 +715,45 @@ function Cultures(): React.ReactElement {
       setEnrichmentLoading(false);
     }
   };
+
+
+  const contextActions = useMemo<TopbarContextAction[]>(() => ([
+    {
+      id: 'cultures-open-library',
+      label: 'Öffentliche Kulturbibliothek öffnen',
+      ariaLabel: 'Öffentliche Kulturbibliothek öffnen',
+      onClick: () => {
+        void handleOpenPublicLibrary();
+      },
+    },
+    {
+      id: 'cultures-import-json',
+      label: 'Kulturen importieren (JSON)',
+      ariaLabel: 'Kulturen importieren (JSON)',
+      onClick: handleImportFileTrigger,
+      shortcutHint: 'Alt+I',
+    },
+    {
+      id: 'cultures-export-current-json',
+      label: selectedCulture ? 'Aktuelle Kultur exportieren (JSON)' : 'Kulturen exportieren (JSON)',
+      ariaLabel: selectedCulture ? 'Aktuelle Kultur exportieren (JSON)' : 'Kulturen exportieren (JSON)',
+      onClick: handleExportCurrentCulture,
+      disabled: !selectedCulture,
+      shortcutHint: 'Alt+J',
+    },
+    {
+      id: 'cultures-export-all-json',
+      label: 'Alle Kulturen exportieren (JSON)',
+      ariaLabel: 'Alle Kulturen exportieren (JSON)',
+      onClick: handleExportAllCultures,
+      shortcutHint: 'Alt+Shift+J',
+    },
+  ]), [handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, handleOpenPublicLibrary, selectedCulture]);
+
+  useEffect(() => {
+    setTopbarContextActions(contextActions);
+    return () => setTopbarContextActions([]);
+  }, [contextActions, setTopbarContextActions]);
 
   const commandSpecs = useMemo(() => createCulturesCommandSpecs({
     canRunEnrichmentForCulture,
