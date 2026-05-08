@@ -113,7 +113,7 @@ interface PlantingPlanRow extends PlantingPlan, EditableRow {
 interface MobileCreateFormState {
   culture: string;
   bed: string;
-  cultivation_type: CultivationType;
+  cultivation_type: CultivationType | "";
   planting_date: string;
   area_m2: string;
   plants_count: string;
@@ -354,7 +354,7 @@ const buildBedDisplayLabel = (
 const createEmptyMobileCreateForm = (): MobileCreateFormState => ({
   culture: "",
   bed: "",
-  cultivation_type: "pre_cultivation",
+  cultivation_type: "",
   planting_date: "",
   area_m2: "",
   plants_count: "",
@@ -1462,7 +1462,7 @@ function PlantingPlans(): React.ReactElement {
     setMobileCreateForm({
       culture: String(row.culture ?? ""),
       bed: String(row.bed ?? ""),
-      cultivation_type: (row.cultivation_type as CultivationType) || "pre_cultivation",
+      cultivation_type: (row.cultivation_type as CultivationType) || "",
       planting_date: row.planting_date || "",
       area_m2:
         derivedArea !== null
