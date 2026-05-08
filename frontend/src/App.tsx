@@ -810,8 +810,21 @@ function RootLayout(): React.ReactElement {
               </Menu>
             </>
           ) : null}
+          {!isMobile ? topbarContextActions.map((action) => (
+            <Button
+              key={action.id}
+              size="small"
+              variant="outlined"
+              onClick={action.onClick}
+              aria-label={action.ariaLabel ?? action.label}
+              disabled={action.disabled}
+              sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+            >
+              {action.label}
+            </Button>
+          )) : null}
           {topbarPrimaryAction && !isMobile ? (
-            <Button size="small" variant="contained" onClick={() => navigate(topbarPrimaryAction.to)} sx={{ textTransform: 'none' }}>
+            <Button size="small" variant="contained" onClick={() => navigate(topbarPrimaryAction.to)} sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}>
               + {topbarPrimaryAction.label}
             </Button>
           ) : null}

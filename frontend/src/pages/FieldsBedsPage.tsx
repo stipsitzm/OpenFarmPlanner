@@ -1,6 +1,6 @@
-import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
 import { AddBedIcon } from '../components/hierarchy/AddBedIcon';
@@ -8,12 +8,12 @@ import { useCommandContextTag, useRegisterCommands } from '../commands/useComman
 import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
-import ModeToggle from '../components/ModeToggle';
 import { bedAPI, fieldAPI, locationAPI, type Location } from '../api/api';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
+import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 
@@ -38,6 +38,9 @@ export default function FieldsBedsPage(): React.ReactElement {
   const [newFieldName, setNewFieldName] = useState('');
   const [targetLocationId, setTargetLocationId] = useState<number | ''>('');
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
+
+  const outletContext = useOutletContext<RootLayoutOutletContext | null>();
+  const setTopbarContextActions = outletContext?.setTopbarContextActions ?? (() => undefined);
 
   useCommandContextTag('areas');
 
@@ -163,67 +166,35 @@ export default function FieldsBedsPage(): React.ReactElement {
     }
   }, [viewMode]);
 
+
+  useEffect(() => {
+    const contextActions: TopbarContextAction[] = [
+      {
+        id: 'fields-view-mode',
+        label: `${t('fields:representation.table')} | ${t('fields:representation.graphical')}`,
+        onClick: () => {
+          setViewMode((previous) => (previous === 'graphical' ? 'table' : 'graphical'));
+        },
+        ariaLabel: t('fields:representation.ariaLabel'),
+      },
+      ...(viewMode === 'graphical'
+        ? [{
+          id: 'fields-interaction-mode',
+          label: `${t('fields:graphical.viewModeOption')} | ${t('fields:graphical.editModeOption')}`,
+          onClick: () => {
+            setInteractionMode((previous) => (previous === 'view' ? 'edit' : 'view'));
+          },
+          ariaLabel: t('fields:graphical.modeAriaLabel'),
+        } satisfies TopbarContextAction]
+        : []),
+    ];
+    setTopbarContextActions(contextActions);
+    return () => setTopbarContextActions([]);
+  }, [setTopbarContextActions, t, viewMode]);
+
   return (
     <>
       <PageContainer variant="standard">
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: { xs: 'stretch', sm: 'center' },
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: 2,
-            mb: 2,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
-            <Stack spacing={0.75} sx={{ width: { xs: '100%', sm: 'fit-content' } }}>
-              <Typography variant="subtitle2">{t('fields:representation.label')}</Typography>
-              <ToggleButtonGroup
-                value={viewMode}
-                exclusive
-                onChange={(_, selectedViewMode: ViewMode | null) => {
-                  if (selectedViewMode !== null) {
-                    setViewMode(selectedViewMode);
-                  }
-                }}
-                size="small"
-                color="primary"
-                aria-label={t('fields:representation.ariaLabel')}
-                fullWidth
-              >
-                <ToggleButton value="table" aria-label={t('fields:representation.table')}>
-                  {t('fields:representation.table')}
-                </ToggleButton>
-                <ToggleButton value="graphical" aria-label={t('fields:representation.graphical')}>
-                  {t('fields:representation.graphical')}
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </Stack>
-            {viewMode === 'graphical' ? (
-              <ModeToggle
-                label={t('fields:graphical.viewMode')}
-                ariaLabel={t('fields:graphical.modeAriaLabel')}
-                viewLabel={t('fields:graphical.viewModeOption')}
-                editLabel={t('fields:graphical.editModeOption')}
-                value={interactionMode}
-                onChange={setInteractionMode}
-                fullWidth={false}
-              />
-            ) : null}
-          </Box>
-          {shouldShowGlobalAddButton ? (
-            <Button
-              variant="outlined"
-              onClick={handleGlobalAddField}
-              sx={{ width: { xs: '100%', sm: 'auto' } }}
-            >
-              {locations.length === 0
-                ? t('hierarchy:actions.createLocation')
-                : t('hierarchy:actions.addField')}
-            </Button>
-          ) : null}
-        </Box>
         {globalActionError ? (
           <Alert severity="error" sx={{ mb: 2 }}>
             {globalActionError}

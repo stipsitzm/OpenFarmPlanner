@@ -439,7 +439,7 @@ function GanttChartPage(): React.ReactElement {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {hasCalendarRequirements ? (
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 1 }}>
             <Tabs
               value={calendarMode}
               onChange={(_, value: CalendarMode) => setCalendarMode(value)}
@@ -452,7 +452,7 @@ function GanttChartPage(): React.ReactElement {
         ) : null}
 
         {hasCalendarRequirements && calendarMode === 'occupancy' ? (
-          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ mb: 1, mt: -0.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <ModeToggle
               label={t('ganttChart:modeLabel')}
               ariaLabel={t('ganttChart:modeAriaLabel')}
@@ -468,7 +468,7 @@ function GanttChartPage(): React.ReactElement {
         ) : null}
 
         {!hasCalendarRequirements ? (
-          <Paper className="gantt-container-wrapper">
+          <Paper className="gantt-container-wrapper" sx={{ mt: 0.5 }}>
             <Box sx={{ p: 2 }}>
               <EmptyStateCard
                 title={t('ganttChart:emptyStates.requirementsTitle')}
@@ -489,7 +489,7 @@ function GanttChartPage(): React.ReactElement {
             </Box>
           </Paper>
         ) : (
-          <Paper className="gantt-container-wrapper">
+          <Paper className="gantt-container-wrapper" sx={{ mt: 0.5 }}>
             <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
               <GanttChart
                 key={ganttRenderKey}
