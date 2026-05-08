@@ -629,7 +629,7 @@ export function CultureDetail({
 
       {/* Detail View */}
       {!isLoading && cultures.length > 0 ? (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '350px minmax(0, 1fr)' }, gap: 1.5, alignItems: 'start' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '320px minmax(0, 1fr)', xl: '340px minmax(0, 1fr)' }, gap: 1.5, alignItems: 'start' }}>
           <Card
             sx={{
               width: '100%',
@@ -688,7 +688,7 @@ export function CultureDetail({
               })}
             </List>
           </Card>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
             {selectedCulture ? (
               <Card>
                 <CardContent>
@@ -732,14 +732,14 @@ export function CultureDetail({
             <Divider sx={{ mb: 3 }} />
 
             {/* General Information Section */}
-            <Box sx={{ mb: 4 }}>
+            <Box sx={{ mb: 4, p: 2.5, border: '1px solid #e5e7eb', borderRadius: 2 }}>
               <Typography variant="h6" gutterBottom>
                 Allgemeine Informationen
               </Typography>
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
                   gap: 2,
                 }}
               >
@@ -796,7 +796,7 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
                   gap: 2,
                 }}
               >
@@ -839,7 +839,7 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
                   gap: 2,
                 }}
               >
@@ -886,7 +886,7 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
                   gap: 2,
                 }}
               >
@@ -1019,7 +1019,7 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
                   gap: 2,
                 }}
               >
@@ -1062,7 +1062,7 @@ export function CultureDetail({
             <Divider sx={{ mb: 3 }} />
 
             {/* Notes Section */}
-            <Box>
+            <Box sx={{ p: 2.5, border: '1px solid #e5e7eb', borderRadius: 2 }}>
               <Typography variant="h6" gutterBottom>
                 Notizen
               </Typography>
