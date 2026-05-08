@@ -233,6 +233,7 @@ export interface TopbarContextAction {
   hidden?: boolean;
   reserveSpace?: boolean;
   groupId?: string;
+  tooltip?: string;
 }
 
 export interface RootLayoutOutletContext {
@@ -831,7 +832,8 @@ function RootLayout(): React.ReactElement {
             });
             return groups.map((group, index) => {
               const isSegmentedGroup = group.length > 1 && group[0]?.groupId;
-              const content = group.map((action) => (
+              const content = group.map((action) => {
+                const button = (
                 <Button
                   key={action.id}
                   size="small"
@@ -862,7 +864,13 @@ function RootLayout(): React.ReactElement {
                 >
                   {action.label}
                 </Button>
-              ));
+                );
+                return action.tooltip ? (
+                  <Tooltip key={action.id} title={action.tooltip}>
+                    <Box component="span" sx={{ display: 'inline-flex' }}>{button}</Box>
+                  </Tooltip>
+                ) : React.cloneElement(button, { key: action.id });
+              });
               return isSegmentedGroup ? (
                 <ButtonGroup key={`group-${group[0]?.groupId}-${index}`} size="small" variant="outlined" sx={{ gap: 0 }}>
                   {content}

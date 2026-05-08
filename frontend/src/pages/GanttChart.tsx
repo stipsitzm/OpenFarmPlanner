@@ -433,6 +433,7 @@ function GanttChartPage(): React.ReactElement {
         reserveSpace: true,
         groupId: 'calendar-interaction-mode',
         ariaLabel: t('ganttChart:modeAriaLabel'),
+        tooltip: t('ganttChart:modeViewTooltip'),
       },
       {
         id: 'calendar-mode-edit',
@@ -443,6 +444,7 @@ function GanttChartPage(): React.ReactElement {
         reserveSpace: true,
         groupId: 'calendar-interaction-mode',
         ariaLabel: t('ganttChart:modeAriaLabel'),
+        tooltip: t('ganttChart:modeEditTooltip'),
       },
     ];
     setTopbarContextActions(topbarActions);
