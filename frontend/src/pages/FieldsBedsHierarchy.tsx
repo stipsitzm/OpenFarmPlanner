@@ -21,6 +21,7 @@ import { DataGrid, GridRowModes } from "@mui/x-data-grid";
 import { germanDataGridLocaleText } from "../components/data-grid/localeText";
 import type { GridRowsProp, GridRowModesModel, GridRowHeightParams } from "@mui/x-data-grid";
 import { Box, Alert } from "@mui/material";
+import EmptyStateCard from '../components/project/EmptyStateCard';
 import { dataGridSx } from "../components/data-grid/styles";
 import {
   handleRowEditStop,
@@ -901,13 +902,12 @@ function FieldsBedsHierarchy({
         )}
 
         {hasMissingDimensionData && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            {t('messages.missingDimensionsHint')}
-            {' '}
-            <Box component="span" sx={{ color: 'text.secondary' }}>
-              {t('messages.missingDimensionsHintOptional')}
-            </Box>
-          </Alert>
+          <Box sx={{ mb: 2 }}>
+            <EmptyStateCard
+              title={t('messages.missingDimensionsHint')}
+              description={t('messages.missingDimensionsHintOptional')}
+            />
+          </Box>
         )}
 
         <Box
