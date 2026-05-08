@@ -1024,6 +1024,9 @@ function Cultures(): React.ReactElement {
               </Tooltip>
             </Box>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+              <Button variant="contained" onClick={handleAddNew}>
+                Kultur hinzufügen
+              </Button>
               <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
                 Versionen
               </Button>
