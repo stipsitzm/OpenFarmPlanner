@@ -15,6 +15,10 @@ const mocks = vi.hoisted(() => ({
   planUpdate: vi.fn(),
   ganttProps: vi.fn(),
 }));
+const topbarContext = vi.hoisted(() => ({
+  setTopbarContextActions: vi.fn(),
+  latestActions: [] as Array<Record<string, unknown>>,
+}));
 const projectRequirementState = vi.hoisted(() => ({
   shouldShowProjectRequiredState: false,
   missingProjectReason: null as null | 'no_projects' | 'no_active_project',
@@ -36,6 +40,20 @@ vi.mock('../api/api', async () => {
 vi.mock('../hooks/useProjectRequirement', () => ({
   useProjectRequirement: () => projectRequirementState,
 }));
+
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useOutletContext: () => ({
+      setTopbarContextActions: (actions: Array<Record<string, unknown>>) => {
+        topbarContext.latestActions = actions;
+        topbarContext.setTopbarContextActions(actions);
+      },
+    }),
+  };
+});
 
 vi.mock('react-modern-gantt', () => ({
   __esModule: true,
@@ -100,6 +118,8 @@ beforeEach(() => {
   mocks.bedList.mockResolvedValue({ data: { results: [{ id: 3, name: 'Beet 1', field: 2 }] } });
   mocks.planUpdate.mockResolvedValue({ data: {} });
   mocks.yieldList.mockResolvedValue({ data: [] });
+  topbarContext.setTopbarContextActions.mockReset();
+  topbarContext.latestActions = [];
 });
 
 describe('GanttChartPage', () => {
@@ -246,7 +266,7 @@ describe('GanttChartPage', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Jungpflanzen')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('tab', { name: 'Jungpflanzen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Jungpflanzen' }));
 
     await waitFor(() => expect(screen.getAllByText('Tomate').length).toBeGreaterThan(0));
     expect(screen.getByText('Standort: Hof / Feld')).toBeInTheDocument();
@@ -292,12 +312,16 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    const editButton = await screen.findByRole('button', { name: 'Bearbeiten' });
-    expect(editButton).toHaveAttribute('aria-pressed', 'false');
+    await waitFor(() => expect(topbarContext.latestActions.length).toBeGreaterThan(0));
+    const beforeEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { active?: boolean } | undefined;
+    expect(beforeEditAction?.active).toBe(false);
 
     fireEvent.keyDown(window, { key: 'e', altKey: true });
 
-    await waitFor(() => expect(editButton).toHaveAttribute('aria-pressed', 'true'));
+    await waitFor(() => {
+      const afterEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { active?: boolean } | undefined;
+      expect(afterEditAction?.active).toBe(true);
+    });
   });
 
   it('fills empty yield weeks between available week entries', async () => {
@@ -388,13 +412,12 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    const viewButton = await screen.findByRole('button', { name: 'Ansicht' });
-    fireEvent.mouseOver(viewButton);
-    expect(await screen.findByText('Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.')).toBeInTheDocument();
+    await waitFor(() => expect(topbarContext.latestActions.length).toBeGreaterThan(0));
+    const viewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { tooltip?: string } | undefined;
+    const editAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { tooltip?: string } | undefined;
 
-    const editButton = screen.getByRole('button', { name: 'Bearbeiten' });
-    fireEvent.mouseOver(editButton);
-    expect(await screen.findByText('Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.')).toBeInTheDocument();
+    expect(viewAction?.tooltip).toBe('Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.');
+    expect(editAction?.tooltip).toBe('Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.');
   });
 
   it('shows backend validation errors and reloads plans after failed task update', async () => {
