@@ -93,10 +93,23 @@ const theme = createTheme({
         },
       },
     },
+    MuiTableCell: {
+      styleOverrides: {
+        head: {
+          fontWeight: 600,
+        },
+        body: {
+          fontWeight: 400,
+        },
+      },
+    },
     MuiDataGrid: {
       styleOverrides: {
         columnHeaderTitle: {
           fontWeight: 600,
+        },
+        cell: {
+          fontWeight: 400,
         },
       },
     },
