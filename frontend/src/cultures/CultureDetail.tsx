@@ -19,6 +19,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 import EditIcon from '@mui/icons-material/Edit';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PublicIcon from '@mui/icons-material/Public';
 import HistoryIcon from '@mui/icons-material/History';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -766,11 +767,6 @@ export function CultureDetail({
             {selectedCulture ? (
               <Card sx={{ width: '100%', maxWidth: { sm: 960, lg: 1220, xl: 1400 } }}>
                 <CardContent sx={{ p: { xs: 1.5, sm: 2, lg: 3 } }}>
-                  {isMobileLayout ? (
-                    <Button size="small" variant="text" onClick={() => setMobileSelectorOpen(true)} sx={{ textTransform: 'none', mb: 0.5, px: 0.5, minHeight: 28, color: 'text.secondary', alignSelf: 'flex-start' }}>
-                      {selectedCulture.name} ▼
-                    </Button>
-                  ) : null}
             {/* Header with crop name and badge */}
                   <Box sx={{ mb: { xs: 2, sm: 3 } }}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, sm: 2 }, mb: 0.75 }}>
@@ -792,9 +788,39 @@ export function CultureDetail({
                       />
                     ) : null}
                     <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.25 }}>
-                      <Typography component="h2" sx={{ fontSize: { xs: '1.25rem', sm: '2rem' }, lineHeight: 1.2, fontWeight: 600 }}>
-                        {selectedCulture.name}
-                      </Typography>
+                      {isMobileLayout ? (
+                        <Box
+                          component="button"
+                          type="button"
+                          onClick={() => setMobileSelectorOpen(true)}
+                          sx={{
+                            appearance: 'none',
+                            border: 'none',
+                            background: 'transparent',
+                            p: 0,
+                            m: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            cursor: 'pointer',
+                            color: 'inherit',
+                            textAlign: 'left',
+                            borderRadius: 0.75,
+                            '&:hover': { bgcolor: 'rgba(15, 23, 42, 0.04)' },
+                            '&:focus-visible': { outline: '2px solid rgba(37, 111, 42, 0.28)', outlineOffset: 2 },
+                          }}
+                          aria-label="Kultur auswählen"
+                        >
+                          <Typography component="span" sx={{ fontSize: '1.25rem', lineHeight: 1.2, fontWeight: 600 }}>
+                            {selectedCulture.name}
+                          </Typography>
+                          <ExpandMoreIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                        </Box>
+                      ) : (
+                        <Typography component="h2" sx={{ fontSize: { xs: '1.25rem', sm: '2rem' }, lineHeight: 1.2, fontWeight: 600 }}>
+                          {selectedCulture.name}
+                        </Typography>
+                      )}
                       {selectedCulture.variety && (
                         <Typography variant="body2" color="text.secondary">
                           {selectedCulture.variety}
@@ -1295,13 +1321,19 @@ export function CultureDetail({
               <Card>
                 <CardContent>
                   {isMobileLayout ? (
-                    <Button size="small" variant="text" onClick={() => setMobileSelectorOpen(true)} sx={{ textTransform: 'none', mb: 0.5, px: 0.5, minHeight: 28, color: 'text.secondary', alignSelf: 'flex-start' }}>
+                    <Typography
+                      component="button"
+                      type="button"
+                      onClick={() => setMobileSelectorOpen(true)}
+                      sx={{ border: 'none', background: 'transparent', p: 0, m: 0, color: 'text.secondary', textAlign: 'left', cursor: 'pointer' }}
+                    >
                       Kultur auswählen ▼
-                    </Button>
-                  ) : null}
-                  <Typography variant="body2" color="text.secondary">
-                    {t('selectPrompt')}
-                  </Typography>
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('selectPrompt')}
+                    </Typography>
+                  )}
                 </CardContent>
               </Card>
             )}
