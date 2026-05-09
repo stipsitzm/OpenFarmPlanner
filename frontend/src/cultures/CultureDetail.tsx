@@ -796,8 +796,9 @@ export function CultureDetail({
                         disabled={!onEditCulture}
                         sx={{
                           ...headerActionButtonSx,
-                          color: 'text.secondary',
+                          color: 'rgba(37, 111, 42, 0.72)',
                           borderRight: '1px solid rgba(15, 23, 42, 0.08)',
+                          '&:hover': { backgroundColor: 'rgba(37, 111, 42, 0.08)' },
                         }}
                       >
                         <EditIcon sx={{ fontSize: 18 }} />
@@ -846,8 +847,9 @@ export function CultureDetail({
                 <MenuItem
                   onClick={() => { setHeaderMenuAnchorEl(null); onPublishCulture?.(); }}
                   disabled={isPublishingCulture}
+                  sx={{ color: 'rgba(37, 111, 42, 0.86)' }}
                 >
-                  <PublicIcon sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+                  <PublicIcon sx={{ fontSize: 18, mr: 1, color: 'rgba(37, 111, 42, 0.78)' }} />
                   {publishActionLabel ?? t('library.publishButton')}
                 </MenuItem>
                 <MenuItem onClick={() => { setHeaderMenuAnchorEl(null); onDeleteCulture?.(selectedCulture); }} sx={{ color: 'error.main' }}>
