@@ -261,6 +261,8 @@ function RootLayout(): React.ReactElement {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
   const isLargeDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+  const isPhone = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTabletOrNarrowDesktop = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
   const { openPalette } = useCommandContext();
@@ -452,6 +454,9 @@ function RootLayout(): React.ReactElement {
     () => (isCulturesPage ? [] : topbarContextActions),
     [isCulturesPage, topbarContextActions],
   );
+  const showCompactCultureLibrary = isCulturesPage && (isTabletOrNarrowDesktop || isPhone);
+  const showIconOnlyCultureLibrary = isCulturesPage && (isPhone || isTabletOrNarrowDesktop);
+  const showCultureImportExportButton = isCulturesPage;
 
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
@@ -776,41 +781,51 @@ function RootLayout(): React.ReactElement {
         elevation={0}
         sx={{ borderBottom: '1px solid', borderColor: '#e5e7eb', bgcolor: '#f8faf8', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
-        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5 }}>
+        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, flexWrap: 'nowrap' }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
-          {!isDesktopUp ? <AppLogo size={24} showText to="/app/dashboard" /> : null}
-          <Typography component="h1" variant="h5" noWrap sx={{ minWidth: 0, fontSize: { xs: '1.1rem', md: '1.25rem' }, fontWeight: 600 }}>
-            {currentPageTitle}
-          </Typography>
-          {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
+          {!isDesktopUp ? <AppLogo size={24} showText={false} to="/app/dashboard" /> : null}
+          {!isPhone ? (
+            <Typography component="h1" variant="h5" noWrap sx={{ minWidth: 0, maxWidth: { sm: 180, md: 260 }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: { xs: '1rem', md: '1.25rem' }, fontWeight: 600 }}>
+              {currentPageTitle}
+            </Typography>
+          ) : null}
+          {!isPhone && topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
-          {isCulturesPage && !isMobile ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 0 }}>
+          {isCulturesPage ? (
             <>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => cultureLibraryAction?.onClick()}
-                aria-label="Kulturbibliothek öffnen"
-                startIcon={<PublicIcon fontSize="small" />}
-                sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
-                disabled={!cultureLibraryAction || cultureLibraryAction.disabled}
-              >
-                Kulturbibliothek
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                aria-label="Import/Export öffnen"
-                aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
-                aria-haspopup="true"
-                aria-expanded={Boolean(cultureActionsMenuAnchor)}
-                onClick={handleCultureActionsMenuOpen}
-                endIcon={<KeyboardArrowDownIcon fontSize="small" />}
-                sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
-              >
-                Import/Export
-              </Button>
+              {cultureLibraryAction ? (
+                <Tooltip title="Kulturbibliothek öffnen">
+                  <span>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => cultureLibraryAction.onClick()}
+                      aria-label="Kulturbibliothek öffnen"
+                      startIcon={<PublicIcon fontSize="small" />}
+                      sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: showIconOnlyCultureLibrary ? 36 : 'auto', px: showIconOnlyCultureLibrary ? 0.75 : 1.25 }}
+                      disabled={cultureLibraryAction.disabled}
+                    >
+                      {!showIconOnlyCultureLibrary ? (showCompactCultureLibrary ? 'Bibliothek' : 'Kulturbibliothek') : null}
+                    </Button>
+                  </span>
+                </Tooltip>
+              ) : null}
+              {showCultureImportExportButton || isMobile ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  aria-label="Import/Export öffnen"
+                  aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                  onClick={handleCultureActionsMenuOpen}
+                  endIcon={!isPhone ? <KeyboardArrowDownIcon fontSize="small" /> : undefined}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25 }}
+                >
+                  {isPhone ? '⋯' : 'Import/Export'}
+                </Button>
+              ) : null}
               <Menu
                 id="culture-actions-menu"
                 anchorEl={cultureActionsMenuAnchor}
@@ -884,13 +899,19 @@ function RootLayout(): React.ReactElement {
               );
             });
           })() : null}
-          {topbarPrimaryAction && !isMobile ? (
-            <Button size="small" variant="contained" onClick={() => navigate(topbarPrimaryAction.to)} sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}>
-              + {topbarPrimaryAction.label}
+          {topbarPrimaryAction && (!isMobile || isCulturesPage) ? (
+            <Button
+              size="small"
+              variant="contained"
+              onClick={() => navigate(topbarPrimaryAction.to)}
+              sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 34 : 'auto', px: isPhone ? 0.75 : 1.5 }}
+            >
+              {isPhone ? '+' : `+ ${topbarPrimaryAction.label}`}
             </Button>
           ) : null}
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: { xs: 2, md: 3 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: { xs: 1, md: 3 } }}>
+          {!isPhone ? (
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
             aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}
@@ -901,7 +922,7 @@ function RootLayout(): React.ReactElement {
             sx={{
               color: 'text.primary',
               textTransform: 'none',
-              maxWidth: { xs: 180, sm: 260, md: 320 },
+              maxWidth: { sm: 190, md: 240, lg: 320 },
               minWidth: 0,
             }}
             startIcon={<FolderOpenOutlinedIcon fontSize="small" />}
@@ -909,6 +930,7 @@ function RootLayout(): React.ReactElement {
           >
             <span className="project-switcher-label">{activeProjectLabel}</span>
           </Button>
+          ) : null}
           <ProjectMenu
             anchorEl={projectMenuAnchor}
             open={Boolean(projectMenuAnchor)}

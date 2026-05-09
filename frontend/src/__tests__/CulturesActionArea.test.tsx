@@ -58,6 +58,8 @@ vi.mock('../cultures/CultureDetail', () => ({
     onCreatePlan,
     onPublishCulture,
     onEditCulture,
+    canCreatePlan,
+    publishActionLabel,
   }: {
     cultures: Array<{ id?: number; name: string }>;
     onCultureSelect: (culture: { id?: number; name: string } | null) => void;
@@ -65,11 +67,13 @@ vi.mock('../cultures/CultureDetail', () => ({
     onCreatePlan?: () => void;
     onPublishCulture?: () => void;
     onEditCulture?: (culture: { id?: number; name: string }) => void;
+    canCreatePlan?: boolean;
+    publishActionLabel?: string;
   }): ReactElement => (
     <div data-testid="culture-detail-mock">
       <button type="button" onClick={() => onCreateCulture?.()}>Kultur hinzufügen</button>
-      <button type="button" onClick={() => onPublishCulture?.()}>Veröffentlichen</button>
-      <button type="button" onClick={() => onCreatePlan?.()}>Anbauplan erstellen</button>
+      <button type="button" onClick={() => onPublishCulture?.()}>{publishActionLabel ?? 'Veröffentlichen'}</button>
+      <button type="button" onClick={() => onCreatePlan?.()} disabled={!canCreatePlan}>Anbauplan erstellen</button>
       <button type="button" onClick={() => onEditCulture?.(cultures[0])}>Kultur bearbeiten</button>
       <button type="button" onClick={() => onCultureSelect(cultures[0] ?? null)}>select-culture</button>
     </div>
@@ -226,7 +230,7 @@ describe('Cultures action area', () => {
     renderCultures('/cultures?cultureId=1');
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Öffentliche Version aktualisieren' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Öffentliche Kulturbibliothek aktualisieren' })).toBeInTheDocument();
     });
     expect(screen.queryByRole('button', { name: 'Veröffentlichen' })).not.toBeInTheDocument();
   });
@@ -243,7 +247,7 @@ describe('Cultures action area', () => {
     expect(screen.queryByRole('link', { name: 'Beet anlegen' })).not.toBeInTheDocument();
 
     fireEvent.mouseOver(createPlanButton.parentElement as HTMLElement);
-    expect(await screen.findByText('Du brauchst zuerst mindestens ein Beet. Beete legst du auf der Seite Anbauflächen an.')).toBeInTheDocument();
+    expect(await screen.findByText('Du brauchst zuerst mindestens ein Beet. Beete werden innerhalb einer Parzelle auf der Seite Anbauflächen hinzugefügt.')).toBeInTheDocument();
   });
 
   it('enables create planting plan button when all prerequisites are present', async () => {

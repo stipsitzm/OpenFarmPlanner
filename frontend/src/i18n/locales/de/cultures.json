@@ -329,7 +329,7 @@
     "aiClose": "Schließen",
     "createPlantingPlanMissingBedsTitle": "Um einen Anbauplan zu erstellen, brauchst du mindestens ein Beet.",
     "createPlantingPlanMissingBedsHint": "Für einen Anbauplan brauchst du zuerst mindestens ein Beet.",
-    "createPlantingPlanMissingBedsTooltip": "Du brauchst zuerst mindestens ein Beet. Beete legst du auf der Seite Anbauflächen an."
+    "createPlantingPlanMissingBedsTooltip": "Du brauchst zuerst mindestens ein Beet. Beete werden innerhalb einer Parzelle auf der Seite Anbauflächen hinzugefügt."
   },
   "ai": {
     "menuLabel": "KI-Aktionen",
@@ -413,7 +413,7 @@
     "importError": "Die öffentliche Kultur konnte nicht importiert werden.",
     "publishButton": "Veröffentlichen",
     "publishTooltip": "Veröffentlicht die ausgewählte Kultur in der Kulturbibliothek.",
-    "updateButton": "Öffentliche Version aktualisieren",
+    "updateButton": "Öffentliche Kulturbibliothek aktualisieren",
     "publishing": "Veröffentliche…",
     "updating": "Aktualisiere…",
     "publishSuccess": "„{{name}}“ wurde in die Kulturbibliothek veröffentlicht.",

@@ -32,11 +32,13 @@ vi.mock('../cultures/CultureDetail', () => ({
     selectedCultureId,
     onCultureSelect,
     onEditCulture,
+    onCreateCulture,
   }: {
     cultures: Culture[];
     selectedCultureId?: number;
     onCultureSelect: (culture: Culture | null) => void;
     onEditCulture?: (culture: Culture) => void;
+    onCreateCulture?: () => void;
   }): ReactElement => (
     <div>
       <button
@@ -54,6 +56,7 @@ vi.mock('../cultures/CultureDetail', () => ({
       </button>
       <div data-testid="culture-list">{cultures.map((culture) => culture.name).join(', ')}</div>
       <div data-testid="selected-culture-id">{selectedCultureId ?? 'none'}</div>
+      <button type="button" onClick={() => onCreateCulture?.()}>Kultur hinzufügen</button>
       <button type="button" onClick={() => cultures[0] && onEditCulture?.(cultures[0])}>Kultur bearbeiten</button>
     </div>
   ),

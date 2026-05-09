@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { useMediaQuery, useTheme } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
@@ -18,6 +19,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 import EditIcon from '@mui/icons-material/Edit';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PublicIcon from '@mui/icons-material/Public';
 import HistoryIcon from '@mui/icons-material/History';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -50,6 +52,9 @@ import {
   TextField,
   Menu,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from '@mui/material';
 import type { Culture } from '../api/api';
 import { SearchableSelect } from '../components/inputs/SearchableSelect';
@@ -164,6 +169,9 @@ export function CultureDetail({
   publishActionLabel,
 }: CultureDetailProps): React.ReactElement {
   const { t } = useTranslation('cultures');
+  const theme = useTheme();
+  const isTabletLayout = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
+  const isMobileLayout = useMediaQuery(theme.breakpoints.down('sm'));
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFamilyFilter, setSelectedFamilyFilter] = useState('');
   const [selectedCultivationFilter, setSelectedCultivationFilter] = useState('');
@@ -175,19 +183,20 @@ export function CultureDetail({
   const [selectedSowingMonths, setSelectedSowingMonths] = useState<number[]>([]);
   const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
   const [headerMenuAnchorEl, setHeaderMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const [mobileSelectorOpen, setMobileSelectorOpen] = useState(false);
   const isFilterPopoverOpen = Boolean(filterAnchorEl);
   const isHeaderMenuOpen = Boolean(headerMenuAnchorEl);
   const headerActionButtonSx = {
-    width: 34,
-    height: 34,
-    borderRadius: 0,
+    width: isMobileLayout ? 30 : 34,
+    height: isMobileLayout ? 30 : 34,
+    borderRadius: isMobileLayout ? 0.75 : 0,
     border: 'none',
     backgroundColor: 'transparent',
     transition: 'background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease',
     '&:hover': {
       backgroundColor: 'rgba(15, 23, 42, 0.08)',
-      boxShadow: '0 2px 6px rgba(15, 23, 42, 0.10)',
-      transform: 'translateY(-1px)',
+      boxShadow: isMobileLayout ? 'none' : '0 2px 6px rgba(15, 23, 42, 0.10)',
+      transform: isMobileLayout ? 'none' : 'translateY(-1px)',
     },
     '&:focus-visible': {
       outline: '2px solid rgba(37, 111, 42, 0.28)',
@@ -672,8 +681,21 @@ export function CultureDetail({
 
       {/* Detail View */}
       {!isLoading && cultures.length > 0 ? (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '300px minmax(0, 1fr)', xl: '330px minmax(0, 1fr)' }, gap: 1.5, alignItems: 'start' }}>
-          <Card
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: '220px minmax(0, 1fr)',
+              md: '230px minmax(0, 1fr)',
+              lg: '300px minmax(0, 1fr)',
+              xl: '330px minmax(0, 1fr)',
+            },
+            gap: { xs: 1.25, lg: 1.5 },
+            alignItems: 'start',
+          }}
+        >
+          {!isMobileLayout ? (<Card
             sx={{
               width: '100%',
               flexShrink: 0,
@@ -685,7 +707,15 @@ export function CultureDetail({
             }}
           >
             {selectorControl}
-            <List dense sx={{ py: 0.75, px: 0.75, overflowY: 'auto', maxHeight: { md: 'calc(100vh - 290px)' } }}>
+            <List
+              dense
+              sx={{
+                py: { xs: 0.5, lg: 0.75 },
+                px: { xs: 0.5, lg: 0.75 },
+                overflowY: 'auto',
+                maxHeight: { sm: 'calc(100vh - 290px)' },
+              }}
+            >
               {filteredCultures.map((culture) => {
                 const cultivationValues = culture.cultivation_types && culture.cultivation_types.length > 0
                   ? culture.cultivation_types
@@ -697,8 +727,10 @@ export function CultureDetail({
                     : cultivationValues.includes('pre_cultivation')
                       ? t('filters.preCultivation')
                       : '';
-                const secondaryParts = [culture.variety, cultivationLabel, culture.seed_supplier].filter(Boolean);
-                const secondary = secondaryParts.join(' • ');
+                const secondaryParts = isTabletLayout
+                  ? [culture.variety]
+                  : [culture.variety, cultivationLabel, culture.seed_supplier].filter(Boolean);
+                const secondary = secondaryParts.filter(Boolean).join(' • ');
 
                 return (
                   <ListItemButton
@@ -707,9 +739,9 @@ export function CultureDetail({
                     onClick={() => onCultureSelect(culture)}
                     sx={{
                       borderRadius: 1.5,
-                      px: 1,
-                      py: 0.75,
-                      mb: 0.5,
+                      px: { xs: 0.875, lg: 1 },
+                      py: { xs: 0.5, lg: 0.75 },
+                      mb: { xs: 0.375, lg: 0.5 },
                       alignItems: 'flex-start',
                       border: '1px solid transparent',
                       '&:hover': { bgcolor: '#f4f8f4', borderColor: '#d6e6d8' },
@@ -722,22 +754,22 @@ export function CultureDetail({
                   >
                     <ListItemText
                       primary={culture.name}
-                      primaryTypographyProps={{ fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.25 }}
+                      primaryTypographyProps={{ fontSize: { xs: '0.9rem', lg: '0.95rem' }, fontWeight: 600, lineHeight: 1.25 }}
                       secondary={secondary || culture.crop_family || undefined}
-                      secondaryTypographyProps={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.25 }}
+                      secondaryTypographyProps={{ fontSize: { xs: '0.76rem', lg: '0.8rem' }, color: 'text.secondary', lineHeight: 1.25 }}
                     />
                   </ListItemButton>
                 );
               })}
             </List>
-          </Card>
-          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { md: 'flex-start' } }}>
+          </Card>) : null}
+          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { sm: 'flex-start' } }}>
             {selectedCulture ? (
-              <Card sx={{ width: '100%', maxWidth: { md: 1220, xl: 1400 } }}>
-                <CardContent>
+              <Card sx={{ width: '100%', maxWidth: { sm: 960, lg: 1220, xl: 1400 } }}>
+                <CardContent sx={{ p: { xs: 1.5, sm: 2, lg: 3 } }}>
             {/* Header with crop name and badge */}
-                  <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                  <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, sm: 2 }, mb: 0.75 }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1.75 }}>
                     {selectedCulture.display_color ? (
@@ -756,9 +788,39 @@ export function CultureDetail({
                       />
                     ) : null}
                     <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.25 }}>
-                      <Typography variant="h4" component="h2">
-                        {selectedCulture.name}
-                      </Typography>
+                      {isMobileLayout ? (
+                        <Box
+                          component="button"
+                          type="button"
+                          onClick={() => setMobileSelectorOpen(true)}
+                          sx={{
+                            appearance: 'none',
+                            border: 'none',
+                            background: 'transparent',
+                            p: 0,
+                            m: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            cursor: 'pointer',
+                            color: 'inherit',
+                            textAlign: 'left',
+                            borderRadius: 0.75,
+                            '&:hover': { bgcolor: 'rgba(15, 23, 42, 0.04)' },
+                            '&:focus-visible': { outline: '2px solid rgba(37, 111, 42, 0.28)', outlineOffset: 2 },
+                          }}
+                          aria-label="Kultur auswählen"
+                        >
+                          <Typography component="span" sx={{ fontSize: '1.25rem', lineHeight: 1.2, fontWeight: 600 }}>
+                            {selectedCulture.name}
+                          </Typography>
+                          <ExpandMoreIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                        </Box>
+                      ) : (
+                        <Typography component="h2" sx={{ fontSize: { xs: '1.25rem', sm: '2rem' }, lineHeight: 1.2, fontWeight: 600 }}>
+                          {selectedCulture.name}
+                        </Typography>
+                      )}
                       {selectedCulture.variety && (
                         <Typography variant="body2" color="text.secondary">
                           {selectedCulture.variety}
@@ -782,9 +844,9 @@ export function CultureDetail({
                     display: 'inline-flex',
                     alignItems: 'center',
                     border: '1px solid rgba(15, 23, 42, 0.10)',
-                    borderRadius: 1.5,
-                    backgroundColor: 'rgba(15, 23, 42, 0.03)',
-                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08)',
+                    borderRadius: isMobileLayout ? 1 : 1.5,
+                    backgroundColor: isMobileLayout ? 'rgba(15, 23, 42, 0.02)' : 'rgba(15, 23, 42, 0.03)',
+                    boxShadow: isMobileLayout ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.08)',
                     overflow: 'hidden',
                   }}
                 >
@@ -801,7 +863,7 @@ export function CultureDetail({
                           '&:hover': { backgroundColor: 'rgba(37, 111, 42, 0.12)' },
                         }}
                       >
-                        <EditIcon sx={{ fontSize: 18 }} />
+                        <EditIcon sx={{ fontSize: isMobileLayout ? 16 : 18 }} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -818,7 +880,7 @@ export function CultureDetail({
                           '&:hover': { backgroundColor: 'rgba(37, 111, 42, 0.10)' },
                         }}
                       >
-                        <AgricultureIcon sx={{ fontSize: 18 }} />
+                        <AgricultureIcon sx={{ fontSize: isMobileLayout ? 16 : 18 }} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -831,7 +893,7 @@ export function CultureDetail({
                       color: 'text.secondary',
                     }}
                   >
-                    <MoreVertIcon sx={{ fontSize: 18 }} />
+                    <MoreVertIcon sx={{ fontSize: isMobileLayout ? 16 : 18 }} />
                   </IconButton>
                 </Box>
               </Box>
@@ -1258,14 +1320,58 @@ export function CultureDetail({
             ) : (
               <Card>
                 <CardContent>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('selectPrompt')}
-                  </Typography>
+                  {isMobileLayout ? (
+                    <Typography
+                      component="button"
+                      type="button"
+                      onClick={() => setMobileSelectorOpen(true)}
+                      sx={{ border: 'none', background: 'transparent', p: 0, m: 0, color: 'text.secondary', textAlign: 'left', cursor: 'pointer' }}
+                    >
+                      Kultur auswählen ▼
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('selectPrompt')}
+                    </Typography>
+                  )}
                 </CardContent>
               </Card>
             )}
           </Box>
         </Box>
+      ) : null}
+
+
+      {isMobileLayout ? (
+        <Dialog fullScreen open={mobileSelectorOpen} onClose={() => setMobileSelectorOpen(false)}>
+          <DialogTitle>Kultur auswählen</DialogTitle>
+          <DialogContent sx={{ px: 1.5, pb: 2 }}>
+            {selectorControl}
+            <List dense sx={{ py: 0.5, px: 0.25, overflowY: 'auto' }}>
+              {filteredCultures.map((culture) => {
+                const secondary = [culture.variety].filter(Boolean).join(' • ');
+                return (
+                  <ListItemButton
+                    key={`mobile-${culture.id}`}
+                    selected={selectedCulture?.id === culture.id}
+                    onClick={() => {
+                      onCultureSelect(culture);
+                      setMobileSelectorOpen(false);
+                    }}
+                    sx={{ borderRadius: 1.25, mb: 0.375 }}
+                  >
+                    <ListItemText
+                      primary={culture.name}
+                      secondary={secondary || culture.crop_family || undefined}
+                      primaryTypographyProps={{ fontSize: '0.95rem', fontWeight: 600 }}
+                      secondaryTypographyProps={{ fontSize: '0.8rem', color: 'text.secondary' }}
+                    />
+                  </ListItemButton>
+                );
+              })}
+            </List>
+          </DialogContent>
+        </Dialog>
       ) : null}
 
       {/* Empty State */}
