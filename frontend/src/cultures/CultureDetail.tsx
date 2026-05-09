@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { useMediaQuery, useTheme } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
@@ -164,6 +165,8 @@ export function CultureDetail({
   publishActionLabel,
 }: CultureDetailProps): React.ReactElement {
   const { t } = useTranslation('cultures');
+  const theme = useTheme();
+  const isTabletLayout = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFamilyFilter, setSelectedFamilyFilter] = useState('');
   const [selectedCultivationFilter, setSelectedCultivationFilter] = useState('');
@@ -672,7 +675,20 @@ export function CultureDetail({
 
       {/* Detail View */}
       {!isLoading && cultures.length > 0 ? (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '300px minmax(0, 1fr)', xl: '330px minmax(0, 1fr)' }, gap: 1.5, alignItems: 'start' }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: '220px minmax(0, 1fr)',
+              md: '230px minmax(0, 1fr)',
+              lg: '300px minmax(0, 1fr)',
+              xl: '330px minmax(0, 1fr)',
+            },
+            gap: { xs: 1.25, lg: 1.5 },
+            alignItems: 'start',
+          }}
+        >
           <Card
             sx={{
               width: '100%',
@@ -685,7 +701,15 @@ export function CultureDetail({
             }}
           >
             {selectorControl}
-            <List dense sx={{ py: 0.75, px: 0.75, overflowY: 'auto', maxHeight: { md: 'calc(100vh - 290px)' } }}>
+            <List
+              dense
+              sx={{
+                py: { xs: 0.5, lg: 0.75 },
+                px: { xs: 0.5, lg: 0.75 },
+                overflowY: 'auto',
+                maxHeight: { sm: 'calc(100vh - 290px)' },
+              }}
+            >
               {filteredCultures.map((culture) => {
                 const cultivationValues = culture.cultivation_types && culture.cultivation_types.length > 0
                   ? culture.cultivation_types
@@ -697,8 +721,10 @@ export function CultureDetail({
                     : cultivationValues.includes('pre_cultivation')
                       ? t('filters.preCultivation')
                       : '';
-                const secondaryParts = [culture.variety, cultivationLabel, culture.seed_supplier].filter(Boolean);
-                const secondary = secondaryParts.join(' • ');
+                const secondaryParts = isTabletLayout
+                  ? [culture.variety]
+                  : [culture.variety, cultivationLabel, culture.seed_supplier].filter(Boolean);
+                const secondary = secondaryParts.filter(Boolean).join(' • ');
 
                 return (
                   <ListItemButton
@@ -707,9 +733,9 @@ export function CultureDetail({
                     onClick={() => onCultureSelect(culture)}
                     sx={{
                       borderRadius: 1.5,
-                      px: 1,
-                      py: 0.75,
-                      mb: 0.5,
+                      px: { xs: 0.875, lg: 1 },
+                      py: { xs: 0.5, lg: 0.75 },
+                      mb: { xs: 0.375, lg: 0.5 },
                       alignItems: 'flex-start',
                       border: '1px solid transparent',
                       '&:hover': { bgcolor: '#f4f8f4', borderColor: '#d6e6d8' },
@@ -722,19 +748,19 @@ export function CultureDetail({
                   >
                     <ListItemText
                       primary={culture.name}
-                      primaryTypographyProps={{ fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.25 }}
+                      primaryTypographyProps={{ fontSize: { xs: '0.9rem', lg: '0.95rem' }, fontWeight: 600, lineHeight: 1.25 }}
                       secondary={secondary || culture.crop_family || undefined}
-                      secondaryTypographyProps={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.25 }}
+                      secondaryTypographyProps={{ fontSize: { xs: '0.76rem', lg: '0.8rem' }, color: 'text.secondary', lineHeight: 1.25 }}
                     />
                   </ListItemButton>
                 );
               })}
             </List>
           </Card>
-          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { md: 'flex-start' } }}>
+          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { sm: 'flex-start' } }}>
             {selectedCulture ? (
-              <Card sx={{ width: '100%', maxWidth: { md: 1220, xl: 1400 } }}>
-                <CardContent>
+              <Card sx={{ width: '100%', maxWidth: { sm: 960, lg: 1220, xl: 1400 } }}>
+                <CardContent sx={{ p: { xs: 1.5, sm: 2, lg: 3 } }}>
             {/* Header with crop name and badge */}
                   <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
