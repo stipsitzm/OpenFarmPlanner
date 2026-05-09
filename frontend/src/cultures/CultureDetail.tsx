@@ -719,15 +719,15 @@ export function CultureDetail({
                   <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                 <Box sx={{ flexGrow: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1.25 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1.75 }}>
                     {selectedCulture.display_color ? (
                       <Box
                         sx={{
                           width: 4,
                           borderRadius: 1,
                           backgroundColor: selectedCulture.display_color,
-                          opacity: 0.8,
-                          minHeight: 44,
+                          opacity: 0.75,
+                          my: 0.5,
                           alignSelf: 'stretch',
                           flexShrink: 0,
                         }}
@@ -735,24 +735,26 @@ export function CultureDetail({
                         title={selectedCulture.display_color}
                       />
                     ) : null}
-                    <Typography variant="h4" component="h2">
-                      {selectedCulture.name}
-                    </Typography>
-                  </Box>
-                  {selectedCulture.variety && (
-                    <Typography variant="body2" color="text.secondary">
-                      {selectedCulture.variety}
-                    </Typography>
-                  )}
-                  <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-                    <Chip
-                      size="small"
-                      color={selectedCulture.origin_type === 'imported' ? 'secondary' : 'default'}
-                      label={selectedCulture.origin_type === 'imported' ? t('library.badges.imported') : t('library.badges.local')}
-                    />
-                    {selectedCulture.is_modified_from_source ? (
-                      <Chip size="small" color="warning" label={t('library.badges.modified')} />
-                    ) : null}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.25 }}>
+                      <Typography variant="h4" component="h2">
+                        {selectedCulture.name}
+                      </Typography>
+                      {selectedCulture.variety && (
+                        <Typography variant="body2" color="text.secondary">
+                          {selectedCulture.variety}
+                        </Typography>
+                      )}
+                      <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                        <Chip
+                          size="small"
+                          color={selectedCulture.origin_type === 'imported' ? 'secondary' : 'default'}
+                          label={selectedCulture.origin_type === 'imported' ? t('library.badges.imported') : t('library.badges.local')}
+                        />
+                        {selectedCulture.is_modified_from_source ? (
+                          <Chip size="small" color="warning" label={t('library.badges.modified')} />
+                        ) : null}
+                      </Box>
+                    </Box>
                   </Box>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
