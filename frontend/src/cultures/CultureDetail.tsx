@@ -174,6 +174,18 @@ export function CultureDetail({
   const [headerMenuAnchorEl, setHeaderMenuAnchorEl] = useState<HTMLElement | null>(null);
   const isFilterPopoverOpen = Boolean(filterAnchorEl);
   const isHeaderMenuOpen = Boolean(headerMenuAnchorEl);
+  const headerActionButtonSx = {
+    width: 34,
+    height: 34,
+    borderRadius: 1.25,
+    border: '1px solid rgba(15, 23, 42, 0.08)',
+    backgroundColor: 'transparent',
+    '&:hover': { backgroundColor: 'rgba(15, 23, 42, 0.06)' },
+    '&:focus-visible': {
+      outline: '2px solid rgba(37, 111, 42, 0.28)',
+      outlineOffset: 1,
+    },
+  } as const;
 
   const activeFilterCount = useMemo(
     () => [
@@ -757,15 +769,19 @@ export function CultureDetail({
                     </Box>
                   </Box>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <Tooltip title={t('buttons.edit')}>
                     <span>
                       <IconButton
                         size="small"
                         onClick={() => onEditCulture?.(selectedCulture)}
                         disabled={!onEditCulture}
+                        sx={{
+                          ...headerActionButtonSx,
+                          color: 'text.secondary',
+                        }}
                       >
-                        <EditIcon fontSize="small" />
+                        <EditIcon sx={{ fontSize: 18 }} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -773,16 +789,28 @@ export function CultureDetail({
                     <span>
                       <IconButton
                         size="small"
-                        color="success"
                         onClick={() => onCreatePlan?.()}
                         disabled={!canCreatePlan || !onCreatePlan}
+                        sx={{
+                          ...headerActionButtonSx,
+                          color: 'success.main',
+                          '&:hover': { backgroundColor: 'rgba(37, 111, 42, 0.10)' },
+                        }}
                       >
-                        <AgricultureIcon fontSize="small" />
+                        <AgricultureIcon sx={{ fontSize: 18 }} />
                       </IconButton>
                     </span>
                   </Tooltip>
-                  <IconButton size="small" onClick={(event) => setHeaderMenuAnchorEl(event.currentTarget)} aria-label="Weitere Aktionen">
-                    <MoreVertIcon fontSize="small" />
+                  <IconButton
+                    size="small"
+                    onClick={(event) => setHeaderMenuAnchorEl(event.currentTarget)}
+                    aria-label="Weitere Aktionen"
+                    sx={{
+                      ...headerActionButtonSx,
+                      color: 'text.secondary',
+                    }}
+                  >
+                    <MoreVertIcon sx={{ fontSize: 18 }} />
                   </IconButton>
                 </Box>
               </Box>
