@@ -21,6 +21,7 @@ import { DataGrid, GridRowModes } from "@mui/x-data-grid";
 import { germanDataGridLocaleText } from "../components/data-grid/localeText";
 import type { GridRowsProp, GridRowModesModel, GridRowHeightParams } from "@mui/x-data-grid";
 import { Box, Alert } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { dataGridSx } from "../components/data-grid/styles";
 import {
@@ -99,7 +100,7 @@ const HIERARCHY_DATA_GRID_SX = {
       height: "32px",
     },
   "& .ofp-hierarchy-cell-missing-dimension": {
-    backgroundColor: (theme) => theme.palette.action.hover,
+    backgroundColor: (theme: Theme) => theme.palette.action.hover,
   },
 };
 

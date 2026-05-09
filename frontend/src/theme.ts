@@ -1,6 +1,7 @@
 // Central MUI theme configuration
 // Controls colors, shapes, and component style overrides.
 import { createTheme } from '@mui/material/styles';
+import type {} from '@mui/x-data-grid/themeAugmentation';
 
 const theme = createTheme({
   typography: {
