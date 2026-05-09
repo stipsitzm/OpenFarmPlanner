@@ -167,6 +167,7 @@ export function CultureDetail({
   const { t } = useTranslation('cultures');
   const theme = useTheme();
   const isTabletLayout = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
+  const isMobileLayout = useMediaQuery(theme.breakpoints.down('sm'));
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFamilyFilter, setSelectedFamilyFilter] = useState('');
   const [selectedCultivationFilter, setSelectedCultivationFilter] = useState('');
@@ -689,7 +690,7 @@ export function CultureDetail({
             alignItems: 'start',
           }}
         >
-          <Card
+          {(!isMobileLayout || !selectedCulture) ? (<Card
             sx={{
               width: '100%',
               flexShrink: 0,
@@ -756,8 +757,8 @@ export function CultureDetail({
                 );
               })}
             </List>
-          </Card>
-          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { sm: 'flex-start' } }}>
+          </Card>) : null}
+          {(!isMobileLayout || selectedCulture) ? (<Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { sm: 'flex-start' } }}>
             {selectedCulture ? (
               <Card sx={{ width: '100%', maxWidth: { sm: 960, lg: 1220, xl: 1400 } }}>
                 <CardContent sx={{ p: { xs: 1.5, sm: 2, lg: 3 } }}>
@@ -1290,7 +1291,7 @@ export function CultureDetail({
                 </CardContent>
               </Card>
             )}
-          </Box>
+          </Box>) : null}
         </Box>
       ) : null}
 

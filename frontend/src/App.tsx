@@ -455,8 +455,8 @@ function RootLayout(): React.ReactElement {
     [isCulturesPage, topbarContextActions],
   );
   const showCompactCultureLibrary = isCulturesPage && (isTabletOrNarrowDesktop || isPhone);
-  const showIconOnlyCultureLibrary = isCulturesPage && isPhone;
-  const showCultureImportExportButton = isCulturesPage && !isMobile && isLargeDesktop;
+  const showIconOnlyCultureLibrary = isCulturesPage && (isPhone || isTabletOrNarrowDesktop);
+  const showCultureImportExportButton = isCulturesPage;
 
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
@@ -781,7 +781,7 @@ function RootLayout(): React.ReactElement {
         elevation={0}
         sx={{ borderBottom: '1px solid', borderColor: '#e5e7eb', bgcolor: '#f8faf8', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
-        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5 }}>
+        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, flexWrap: 'nowrap' }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
           {!isDesktopUp ? <AppLogo size={24} showText to="/app/dashboard" /> : null}
           <Typography component="h1" variant="h5" noWrap sx={{ minWidth: 0, fontSize: { xs: '1.1rem', md: '1.25rem' }, fontWeight: 600 }}>
@@ -789,7 +789,7 @@ function RootLayout(): React.ReactElement {
           </Typography>
           {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flexShrink: 0 }}>
           {isCulturesPage ? (
             <>
               {cultureLibraryAction ? (
