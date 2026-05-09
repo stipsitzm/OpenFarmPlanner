@@ -783,13 +783,15 @@ function RootLayout(): React.ReactElement {
       >
         <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, flexWrap: 'nowrap' }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
-          {!isDesktopUp ? <AppLogo size={24} showText to="/app/dashboard" /> : null}
-          <Typography component="h1" variant="h5" noWrap sx={{ minWidth: 0, fontSize: { xs: '1.1rem', md: '1.25rem' }, fontWeight: 600 }}>
-            {currentPageTitle}
-          </Typography>
-          {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
+          {!isDesktopUp ? <AppLogo size={24} showText={false} to="/app/dashboard" /> : null}
+          {!isPhone ? (
+            <Typography component="h1" variant="h5" noWrap sx={{ minWidth: 0, maxWidth: { sm: 180, md: 260 }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: { xs: '1rem', md: '1.25rem' }, fontWeight: 600 }}>
+              {currentPageTitle}
+            </Typography>
+          ) : null}
+          {!isPhone && topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flexShrink: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 0 }}>
           {isCulturesPage ? (
             <>
               {cultureLibraryAction ? (
@@ -902,7 +904,7 @@ function RootLayout(): React.ReactElement {
               size="small"
               variant="contained"
               onClick={() => navigate(topbarPrimaryAction.to)}
-              sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 1 : 1.5 }}
+              sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 34 : 'auto', px: isPhone ? 0.75 : 1.5 }}
             >
               {isPhone ? '+' : `+ ${topbarPrimaryAction.label}`}
             </Button>
