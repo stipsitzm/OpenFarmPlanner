@@ -719,9 +719,25 @@ export function CultureDetail({
                   <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                 <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="h4" component="h2">
-                    {selectedCulture.name}
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="h4" component="h2">
+                      {selectedCulture.name}
+                    </Typography>
+                    {selectedCulture.display_color ? (
+                      <Box
+                        sx={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          backgroundColor: selectedCulture.display_color,
+                          border: '1px solid rgba(15, 23, 42, 0.2)',
+                          flexShrink: 0,
+                        }}
+                        aria-label="Kulturfarbe"
+                        title={selectedCulture.display_color}
+                      />
+                    ) : null}
+                  </Box>
                   {selectedCulture.variety && (
                     <Typography variant="body2" color="text.secondary">
                       {selectedCulture.variety}
@@ -766,17 +782,6 @@ export function CultureDetail({
                     <MoreVertIcon fontSize="small" />
                   </IconButton>
                 </Box>
-                {selectedCulture.display_color && (
-                  <Box
-                    sx={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '8px',
-                      backgroundColor: selectedCulture.display_color,
-                      border: '1px solid #ccc',
-                    }}
-                  />
-                )}
               </Box>
               <Menu
                 anchorEl={headerMenuAnchorEl}
