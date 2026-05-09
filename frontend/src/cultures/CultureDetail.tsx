@@ -733,7 +733,7 @@ export function CultureDetail({
           </Card>
           <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { md: 'flex-start' } }}>
             {selectedCulture ? (
-              <Card sx={{ width: '100%', maxWidth: { md: 1220, xl: 1400 } }}>
+              <Card sx={{ width: '100%', maxWidth: { md: 1100 } }}>
                 <CardContent>
             {/* Header with crop name and badge */}
                   <Box sx={{ mb: 3 }}>
