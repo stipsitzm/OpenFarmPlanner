@@ -51,6 +51,9 @@ import {
   TextField,
   Menu,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from '@mui/material';
 import type { Culture } from '../api/api';
 import { SearchableSelect } from '../components/inputs/SearchableSelect';
@@ -179,6 +182,7 @@ export function CultureDetail({
   const [selectedSowingMonths, setSelectedSowingMonths] = useState<number[]>([]);
   const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
   const [headerMenuAnchorEl, setHeaderMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const [mobileSelectorOpen, setMobileSelectorOpen] = useState(false);
   const isFilterPopoverOpen = Boolean(filterAnchorEl);
   const isHeaderMenuOpen = Boolean(headerMenuAnchorEl);
   const headerActionButtonSx = {
@@ -690,7 +694,7 @@ export function CultureDetail({
             alignItems: 'start',
           }}
         >
-          {(!isMobileLayout || !selectedCulture) ? (<Card
+          {!isMobileLayout ? (<Card
             sx={{
               width: '100%',
               flexShrink: 0,
@@ -758,10 +762,15 @@ export function CultureDetail({
               })}
             </List>
           </Card>) : null}
-          {(!isMobileLayout || selectedCulture) ? (<Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { sm: 'flex-start' } }}>
+          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { sm: 'flex-start' } }}>
             {selectedCulture ? (
               <Card sx={{ width: '100%', maxWidth: { sm: 960, lg: 1220, xl: 1400 } }}>
                 <CardContent sx={{ p: { xs: 1.5, sm: 2, lg: 3 } }}>
+                  {isMobileLayout ? (
+                    <Button size="small" variant="outlined" onClick={() => setMobileSelectorOpen(true)} sx={{ textTransform: 'none', mb: 1 }}>
+                      {selectedCulture.name} ▼
+                    </Button>
+                  ) : null}
             {/* Header with crop name and badge */}
                   <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -1285,14 +1294,52 @@ export function CultureDetail({
             ) : (
               <Card>
                 <CardContent>
+                  {isMobileLayout ? (
+                    <Button size="small" variant="outlined" onClick={() => setMobileSelectorOpen(true)} sx={{ textTransform: 'none', mb: 1 }}>
+                      Kultur auswählen ▼
+                    </Button>
+                  ) : null}
                   <Typography variant="body2" color="text.secondary">
                     {t('selectPrompt')}
                   </Typography>
                 </CardContent>
               </Card>
             )}
-          </Box>) : null}
+          </Box>
         </Box>
+      ) : null}
+
+
+      {isMobileLayout ? (
+        <Dialog fullScreen open={mobileSelectorOpen} onClose={() => setMobileSelectorOpen(false)}>
+          <DialogTitle>Kultur auswählen</DialogTitle>
+          <DialogContent sx={{ px: 1.5, pb: 2 }}>
+            {selectorControl}
+            <List dense sx={{ py: 0.5, px: 0.25, overflowY: 'auto' }}>
+              {filteredCultures.map((culture) => {
+                const secondary = [culture.variety].filter(Boolean).join(' • ');
+                return (
+                  <ListItemButton
+                    key={`mobile-${culture.id}`}
+                    selected={selectedCulture?.id === culture.id}
+                    onClick={() => {
+                      onCultureSelect(culture);
+                      setMobileSelectorOpen(false);
+                    }}
+                    sx={{ borderRadius: 1.25, mb: 0.375 }}
+                  >
+                    <ListItemText
+                      primary={culture.name}
+                      secondary={secondary || culture.crop_family || undefined}
+                      primaryTypographyProps={{ fontSize: '0.95rem', fontWeight: 600 }}
+                      secondaryTypographyProps={{ fontSize: '0.8rem', color: 'text.secondary' }}
+                    />
+                  </ListItemButton>
+                );
+              })}
+            </List>
+          </DialogContent>
+        </Dialog>
       ) : null}
 
       {/* Empty State */}
