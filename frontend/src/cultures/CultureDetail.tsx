@@ -18,6 +18,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 import EditIcon from '@mui/icons-material/Edit';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import PublicIcon from '@mui/icons-material/Public';
 import {
   Badge,
   Box,
@@ -826,6 +827,7 @@ export function CultureDetail({
                   onClick={() => { setHeaderMenuAnchorEl(null); onPublishCulture?.(); }}
                   disabled={isPublishingCulture}
                 >
+                  <PublicIcon sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
                   {publishActionLabel ?? t('library.publishButton')}
                 </MenuItem>
                 <MenuItem onClick={() => { setHeaderMenuAnchorEl(null); onDeleteCulture?.(selectedCulture); }} sx={{ color: 'error.main' }}>

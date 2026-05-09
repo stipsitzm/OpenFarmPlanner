@@ -988,7 +988,9 @@ function Cultures(): React.ReactElement {
           isPublishingCulture={Boolean(selectedCulture && publishingCultureId === selectedCulture.id)}
           publishActionLabel={publishingCultureId === selectedCulture?.id
             ? (isUpdatingOwnPublicCulture ? t('library.updating') : t('library.publishing'))
-            : (isUpdatingOwnPublicCulture ? t('library.updateButton') : t('library.publishButton'))}
+            : (isUpdatingOwnPublicCulture
+              ? 'Öffentliche Kulturbibliothek aktualisieren'
+              : 'In Kulturbibliothek veröffentlichen')}
         />
       </Box>
 
