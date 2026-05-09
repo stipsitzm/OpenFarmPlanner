@@ -719,24 +719,25 @@ export function CultureDetail({
                   <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                 <Box sx={{ flexGrow: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h4" component="h2">
-                      {selectedCulture.name}
-                    </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1.25 }}>
                     {selectedCulture.display_color ? (
                       <Box
                         sx={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: '50%',
+                          width: 4,
+                          borderRadius: 1,
                           backgroundColor: selectedCulture.display_color,
-                          border: '1px solid rgba(15, 23, 42, 0.2)',
+                          opacity: 0.8,
+                          minHeight: 44,
+                          alignSelf: 'stretch',
                           flexShrink: 0,
                         }}
                         aria-label="Kulturfarbe"
                         title={selectedCulture.display_color}
                       />
                     ) : null}
+                    <Typography variant="h4" component="h2">
+                      {selectedCulture.name}
+                    </Typography>
                   </Box>
                   {selectedCulture.variety && (
                     <Typography variant="body2" color="text.secondary">
