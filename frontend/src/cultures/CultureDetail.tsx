@@ -652,7 +652,7 @@ export function CultureDetail({
 
       {/* Detail View */}
       {!isLoading && cultures.length > 0 ? (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '320px minmax(0, 1fr)', xl: '340px minmax(0, 1fr)' }, gap: 1.5, alignItems: 'start' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '300px minmax(0, 1fr)', xl: '330px minmax(0, 1fr)' }, gap: 1.5, alignItems: 'start' }}>
           <Card
             sx={{
               width: '100%',
@@ -711,9 +711,9 @@ export function CultureDetail({
               })}
             </List>
           </Card>
-          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { md: 'center' } }}>
+          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { md: 'flex-start' } }}>
             {selectedCulture ? (
-              <Card sx={{ width: '100%', maxWidth: { md: 1120, xl: 1240 } }}>
+              <Card sx={{ width: '100%', maxWidth: { md: 1220, xl: 1400 } }}>
                 <CardContent>
             {/* Header with crop name and badge */}
                   <Box sx={{ mb: 3 }}>
@@ -1147,13 +1147,13 @@ export function CultureDetail({
               <Typography variant="h6" gutterBottom>
                 Notizen
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: { xs: '100%', xl: 1180 } }}>
                 {selectedCulture.notes && (
                   <Box>
                     <Box
                       sx={{
                         '& h3': { mt: 2, mb: 1, fontSize: '1.05rem' },
-                        '& p': { mb: 1 },
+                        '& p': { mb: 1, maxWidth: '95ch' },
                         '& ul': { pl: 3, mb: 1 },
                         '& li': { mb: 0.5 },
                         '& a': { color: 'primary.main' },
