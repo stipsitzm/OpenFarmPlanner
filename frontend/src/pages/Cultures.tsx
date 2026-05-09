@@ -945,14 +945,14 @@ function Cultures(): React.ReactElement {
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
-      <PageContainer>
+      <PageContainer variant="xwide">
         <ProjectRequiredState reason={missingProjectReason} />
       </PageContainer>
     );
   }
 
   return (
-    <PageContainer>
+    <PageContainer variant="xwide">
         <input
           ref={fileInputRef}
           type="file"
