@@ -186,16 +186,16 @@ export function CultureDetail({
   const isFilterPopoverOpen = Boolean(filterAnchorEl);
   const isHeaderMenuOpen = Boolean(headerMenuAnchorEl);
   const headerActionButtonSx = {
-    width: 34,
-    height: 34,
-    borderRadius: 0,
+    width: isMobileLayout ? 30 : 34,
+    height: isMobileLayout ? 30 : 34,
+    borderRadius: isMobileLayout ? 0.75 : 0,
     border: 'none',
     backgroundColor: 'transparent',
     transition: 'background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease',
     '&:hover': {
       backgroundColor: 'rgba(15, 23, 42, 0.08)',
-      boxShadow: '0 2px 6px rgba(15, 23, 42, 0.10)',
-      transform: 'translateY(-1px)',
+      boxShadow: isMobileLayout ? 'none' : '0 2px 6px rgba(15, 23, 42, 0.10)',
+      transform: isMobileLayout ? 'none' : 'translateY(-1px)',
     },
     '&:focus-visible': {
       outline: '2px solid rgba(37, 111, 42, 0.28)',
@@ -767,13 +767,13 @@ export function CultureDetail({
               <Card sx={{ width: '100%', maxWidth: { sm: 960, lg: 1220, xl: 1400 } }}>
                 <CardContent sx={{ p: { xs: 1.5, sm: 2, lg: 3 } }}>
                   {isMobileLayout ? (
-                    <Button size="small" variant="outlined" onClick={() => setMobileSelectorOpen(true)} sx={{ textTransform: 'none', mb: 1 }}>
+                    <Button size="small" variant="text" onClick={() => setMobileSelectorOpen(true)} sx={{ textTransform: 'none', mb: 0.5, px: 0.5, minHeight: 28, color: 'text.secondary', alignSelf: 'flex-start' }}>
                       {selectedCulture.name} ▼
                     </Button>
                   ) : null}
             {/* Header with crop name and badge */}
-                  <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                  <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, sm: 2 }, mb: 0.75 }}>
                 <Box sx={{ flexGrow: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1.75 }}>
                     {selectedCulture.display_color ? (
@@ -792,7 +792,7 @@ export function CultureDetail({
                       />
                     ) : null}
                     <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.25 }}>
-                      <Typography variant="h4" component="h2">
+                      <Typography component="h2" sx={{ fontSize: { xs: '1.25rem', sm: '2rem' }, lineHeight: 1.2, fontWeight: 600 }}>
                         {selectedCulture.name}
                       </Typography>
                       {selectedCulture.variety && (
@@ -818,9 +818,9 @@ export function CultureDetail({
                     display: 'inline-flex',
                     alignItems: 'center',
                     border: '1px solid rgba(15, 23, 42, 0.10)',
-                    borderRadius: 1.5,
-                    backgroundColor: 'rgba(15, 23, 42, 0.03)',
-                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08)',
+                    borderRadius: isMobileLayout ? 1 : 1.5,
+                    backgroundColor: isMobileLayout ? 'rgba(15, 23, 42, 0.02)' : 'rgba(15, 23, 42, 0.03)',
+                    boxShadow: isMobileLayout ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.08)',
                     overflow: 'hidden',
                   }}
                 >
@@ -837,7 +837,7 @@ export function CultureDetail({
                           '&:hover': { backgroundColor: 'rgba(37, 111, 42, 0.12)' },
                         }}
                       >
-                        <EditIcon sx={{ fontSize: 18 }} />
+                        <EditIcon sx={{ fontSize: isMobileLayout ? 16 : 18 }} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -854,7 +854,7 @@ export function CultureDetail({
                           '&:hover': { backgroundColor: 'rgba(37, 111, 42, 0.10)' },
                         }}
                       >
-                        <AgricultureIcon sx={{ fontSize: 18 }} />
+                        <AgricultureIcon sx={{ fontSize: isMobileLayout ? 16 : 18 }} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -867,7 +867,7 @@ export function CultureDetail({
                       color: 'text.secondary',
                     }}
                   >
-                    <MoreVertIcon sx={{ fontSize: 18 }} />
+                    <MoreVertIcon sx={{ fontSize: isMobileLayout ? 16 : 18 }} />
                   </IconButton>
                 </Box>
               </Box>
@@ -1295,7 +1295,7 @@ export function CultureDetail({
               <Card>
                 <CardContent>
                   {isMobileLayout ? (
-                    <Button size="small" variant="outlined" onClick={() => setMobileSelectorOpen(true)} sx={{ textTransform: 'none', mb: 1 }}>
+                    <Button size="small" variant="text" onClick={() => setMobileSelectorOpen(true)} sx={{ textTransform: 'none', mb: 0.5, px: 0.5, minHeight: 28, color: 'text.secondary', alignSelf: 'flex-start' }}>
                       Kultur auswählen ▼
                     </Button>
                   ) : null}
