@@ -52,12 +52,8 @@ import {
   Stack,
 } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AgricultureIcon from '@mui/icons-material/Agriculture';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
-import PublicIcon from '@mui/icons-material/Public';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import {
   buildAllCulturesExport,
@@ -971,97 +967,6 @@ function Cultures(): React.ReactElement {
         </Alert>
       )}
 
-      {cultures.length > 0 && (
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1,
-            mb: 1.5,
-            p: 1.25,
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 2,
-            backgroundColor: 'background.paper',
-          }}
-        >
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Tooltip title="Kultur bearbeiten">
-              <span>
-                <Button
-                  aria-label="Kultur bearbeiten"
-                  variant="contained"
-                  startIcon={<EditIcon />}
-                  onClick={() => selectedCulture && handleEdit(selectedCulture)}
-                  disabled={!selectedCulture}
-                >
-                  {t('buttons.edit')}
-                </Button>
-              </span>
-            </Tooltip>
-            <Tooltip
-              title={
-                canCreatePlantingPlan
-                  ? "Anbauplan erstellen"
-                  : t('buttons.createPlantingPlanMissingBedsTooltip')
-              }
-            >
-              <span>
-                <Button
-                  aria-label="Anbauplan erstellen"
-                  variant="contained"
-                  color="success"
-                  startIcon={<AgricultureIcon />}
-                  onClick={handleCreatePlantingPlan}
-                  disabled={!canCreatePlantingPlan}
-                >
-                  {t('buttons.createPlantingPlan')}
-                </Button>
-              </span>
-            </Tooltip>
-            <Button variant="outlined" onClick={handleAddNew}>
-              Kultur hinzufügen
-            </Button>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Button variant="text" size="small" onClick={handleOpenHistory} disabled={!selectedCulture}>
-              Versionen
-            </Button>
-            <Tooltip title={t('library.publishTooltip')}>
-              <span>
-                <Button
-                  variant="text"
-                  size="small"
-                  startIcon={<PublicIcon />}
-                  onClick={() => void handlePublishCurrentCulture()}
-                  disabled={!selectedCulture || publishingCultureId === selectedCulture?.id}
-                >
-                  {publishingCultureId === selectedCulture?.id
-                    ? (isUpdatingOwnPublicCulture ? t('library.updating') : t('library.publishing'))
-                    : (isUpdatingOwnPublicCulture ? t('library.updateButton') : t('library.publishButton'))}
-                </Button>
-              </span>
-            </Tooltip>
-            <Box sx={{ flex: 1 }} />
-            <Tooltip title="Kultur löschen">
-              <span>
-                <Button
-                  aria-label="Kultur löschen"
-                  variant="text"
-                  color="error"
-                  size="small"
-                  startIcon={<DeleteIcon />}
-                  onClick={() => selectedCulture && handleDelete(selectedCulture)}
-                  disabled={!selectedCulture}
-                >
-                  {t('buttons.delete')}
-                </Button>
-              </span>
-            </Tooltip>
-          </Box>
-        </Box>
-      )}
-
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <CultureDetail
           cultures={cultures}
@@ -1072,6 +977,18 @@ function Cultures(): React.ReactElement {
           onOpenPublicLibrary={() => {
             void handleOpenPublicLibrary();
           }}
+          onEditCulture={handleEdit}
+          onCreatePlan={handleCreatePlantingPlan}
+          onOpenHistory={handleOpenHistory}
+          onPublishCulture={() => {
+            void handlePublishCurrentCulture();
+          }}
+          onDeleteCulture={handleDelete}
+          canCreatePlan={canCreatePlantingPlan}
+          isPublishingCulture={Boolean(selectedCulture && publishingCultureId === selectedCulture.id)}
+          publishActionLabel={publishingCultureId === selectedCulture?.id
+            ? (isUpdatingOwnPublicCulture ? t('library.updating') : t('library.publishing'))
+            : (isUpdatingOwnPublicCulture ? t('library.updateButton') : t('library.publishButton'))}
         />
       </Box>
 

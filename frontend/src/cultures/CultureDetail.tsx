@@ -15,6 +15,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
 import TuneIcon from '@mui/icons-material/Tune';
+import EditIcon from '@mui/icons-material/Edit';
+import AgricultureIcon from '@mui/icons-material/Agriculture';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import {
   Badge,
   Box,
@@ -42,6 +45,8 @@ import {
   IconButton,
   Popover,
   TextField,
+  Menu,
+  Tooltip,
 } from '@mui/material';
 import type { Culture } from '../api/api';
 import { SearchableSelect } from '../components/inputs/SearchableSelect';
@@ -56,6 +61,14 @@ interface CultureDetailProps {
   onCultureSelect: (culture: Culture | null) => void;
   onCreateCulture?: () => void;
   onOpenPublicLibrary?: () => void;
+  onEditCulture?: (culture: Culture) => void;
+  onCreatePlan?: () => void;
+  onOpenHistory?: () => void;
+  onPublishCulture?: () => void;
+  onDeleteCulture?: (culture: Culture) => void;
+  canCreatePlan?: boolean;
+  isPublishingCulture?: boolean;
+  publishActionLabel?: string;
 }
 
 const CULTURE_FILTERS_STORAGE_KEY = 'culturesDetailFiltersV1';
@@ -138,6 +151,14 @@ export function CultureDetail({
   onCultureSelect,
   onCreateCulture,
   onOpenPublicLibrary,
+  onEditCulture,
+  onCreatePlan,
+  onOpenHistory,
+  onPublishCulture,
+  onDeleteCulture,
+  canCreatePlan = true,
+  isPublishingCulture = false,
+  publishActionLabel,
 }: CultureDetailProps): React.ReactElement {
   const { t } = useTranslation('cultures');
   const [searchQuery, setSearchQuery] = useState('');
@@ -150,7 +171,9 @@ export function CultureDetail({
   const [yieldMax, setYieldMax] = useState('');
   const [selectedSowingMonths, setSelectedSowingMonths] = useState<number[]>([]);
   const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
+  const [headerMenuAnchorEl, setHeaderMenuAnchorEl] = useState<HTMLElement | null>(null);
   const isFilterPopoverOpen = Boolean(filterAnchorEl);
+  const isHeaderMenuOpen = Boolean(headerMenuAnchorEl);
 
   const activeFilterCount = useMemo(
     () => [
@@ -715,6 +738,34 @@ export function CultureDetail({
                     ) : null}
                   </Box>
                 </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                  <Tooltip title={t('buttons.edit')}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={() => onEditCulture?.(selectedCulture)}
+                        disabled={!onEditCulture}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title={canCreatePlan ? t('buttons.createPlantingPlan') : t('buttons.createPlantingPlanMissingBedsTooltip')}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        color="success"
+                        onClick={() => onCreatePlan?.()}
+                        disabled={!canCreatePlan || !onCreatePlan}
+                      >
+                        <AgricultureIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <IconButton size="small" onClick={(event) => setHeaderMenuAnchorEl(event.currentTarget)} aria-label="Weitere Aktionen">
+                    <MoreVertIcon fontSize="small" />
+                  </IconButton>
+                </Box>
                 {selectedCulture.display_color && (
                   <Box
                     sx={{
@@ -727,6 +778,24 @@ export function CultureDetail({
                   />
                 )}
               </Box>
+              <Menu
+                anchorEl={headerMenuAnchorEl}
+                open={isHeaderMenuOpen}
+                onClose={() => setHeaderMenuAnchorEl(null)}
+              >
+                <MenuItem onClick={() => { setHeaderMenuAnchorEl(null); onOpenHistory?.(); }}>
+                  Versionen
+                </MenuItem>
+                <MenuItem
+                  onClick={() => { setHeaderMenuAnchorEl(null); onPublishCulture?.(); }}
+                  disabled={isPublishingCulture}
+                >
+                  {publishActionLabel ?? t('library.publishButton')}
+                </MenuItem>
+                <MenuItem onClick={() => { setHeaderMenuAnchorEl(null); onDeleteCulture?.(selectedCulture); }} sx={{ color: 'error.main' }}>
+                  {t('buttons.delete')}
+                </MenuItem>
+              </Menu>
             </Box>
 
             <Divider sx={{ mb: 3 }} />
