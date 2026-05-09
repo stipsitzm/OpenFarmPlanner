@@ -816,8 +816,12 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
+                  },
                   gap: 2,
+                  justifyContent: 'start',
                 }}
               >
                 {selectedCulture.crop_family && (
@@ -873,8 +877,12 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
+                  },
                   gap: 2,
+                  justifyContent: 'start',
                 }}
               >
                 <Box>
@@ -916,8 +924,12 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
+                  },
                   gap: 2,
+                  justifyContent: 'start',
                 }}
               >
                 {selectedCulture.distance_within_row_cm !== null && selectedCulture.distance_within_row_cm !== undefined && (
@@ -963,8 +975,12 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
+                  },
                   gap: 2,
+                  justifyContent: 'start',
                 }}
               >
                 {seedRateRows.length > 0 && activeCultivationTypes.length <= 1 && (
@@ -1103,8 +1119,12 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
+                  },
                   gap: 2,
+                  justifyContent: 'start',
                 }}
               >
                 {selectedCulture.harvest_method && (
