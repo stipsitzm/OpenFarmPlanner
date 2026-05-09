@@ -407,6 +407,7 @@ export const buildMobileCreateForm = (
     culture:
       typeof prefill?.cultureId === "number" ? String(prefill.cultureId) : "",
     bed: typeof prefill?.bedId === "number" ? String(prefill.bedId) : "",
+    cultivation_type: "pre_cultivation",
     area_m2:
       prefilledArea !== null
         ? formatLocalizedNumber(prefilledArea, locale, {
