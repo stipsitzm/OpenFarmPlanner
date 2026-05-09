@@ -688,9 +688,9 @@ export function CultureDetail({
               })}
             </List>
           </Card>
-          <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { md: 'center' } }}>
             {selectedCulture ? (
-              <Card>
+              <Card sx={{ width: '100%', maxWidth: { md: 1120, xl: 1240 } }}>
                 <CardContent>
             {/* Header with crop name and badge */}
                   <Box sx={{ mb: 3 }}>
@@ -739,7 +739,7 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
                   gap: 2,
                 }}
               >
@@ -796,7 +796,7 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
                   gap: 2,
                 }}
               >
@@ -839,7 +839,7 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
                   gap: 2,
                 }}
               >
@@ -886,7 +886,7 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
                   gap: 2,
                 }}
               >
@@ -965,7 +965,14 @@ export function CultureDetail({
                   </Typography>
                 </Box>
               </Box>
-              <Box sx={{ mt: 3, ml: { xs: 0, sm: 2 } }}>
+              <Box
+                sx={{
+                  mt: 3,
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+                  gap: 2,
+                }}
+              >
                 <Typography variant="subtitle1" component="h3" gutterBottom>
                   {hasMultipleSupplierRows ? 'Saatgutdaten je Lieferant' : 'Lieferant'}
                 </Typography>
@@ -977,7 +984,7 @@ export function CultureDetail({
                 {orderedSupplierRows.length === 0 ? (
                   <Typography variant="body2" color="text.secondary">Keine Lieferantendaten vorhanden.</Typography>
                 ) : (
-                  <Stack spacing={2}>
+                  <Stack spacing={2} sx={{ gridColumn: '1 / -1' }}>
                     {orderedSupplierRows.map((row, index) => (
                       <Box key={row.id ?? `${row.supplier?.id ?? row.supplier_id ?? 'supplier'}-${index}`}>
                         {hasMultipleSupplierRows && index > 0 ? <Divider sx={{ mb: 2 }} /> : null}
@@ -1019,7 +1026,7 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
                   gap: 2,
                 }}
               >
