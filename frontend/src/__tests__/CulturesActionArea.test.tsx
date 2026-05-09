@@ -51,7 +51,29 @@ vi.mock('../api/api', async () => {
 });
 
 vi.mock('../cultures/CultureDetail', () => ({
-  CultureDetail: (): ReactElement => <div data-testid="culture-detail-mock" />,
+  CultureDetail: ({
+    cultures,
+    onCultureSelect,
+    onCreateCulture,
+    onCreatePlan,
+    onPublishCulture,
+    onEditCulture,
+  }: {
+    cultures: Array<{ id?: number; name: string }>;
+    onCultureSelect: (culture: { id?: number; name: string } | null) => void;
+    onCreateCulture?: () => void;
+    onCreatePlan?: () => void;
+    onPublishCulture?: () => void;
+    onEditCulture?: (culture: { id?: number; name: string }) => void;
+  }): ReactElement => (
+    <div data-testid="culture-detail-mock">
+      <button type="button" onClick={() => onCreateCulture?.()}>Kultur hinzufügen</button>
+      <button type="button" onClick={() => onPublishCulture?.()}>Veröffentlichen</button>
+      <button type="button" onClick={() => onCreatePlan?.()}>Anbauplan erstellen</button>
+      <button type="button" onClick={() => onEditCulture?.(cultures[0])}>Kultur bearbeiten</button>
+      <button type="button" onClick={() => onCultureSelect(cultures[0] ?? null)}>select-culture</button>
+    </div>
+  ),
 }));
 
 vi.mock('../auth/useAuth', () => ({

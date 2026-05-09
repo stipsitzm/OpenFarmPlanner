@@ -52,12 +52,8 @@ import {
   Stack,
 } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AgricultureIcon from '@mui/icons-material/Agriculture';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
-import PublicIcon from '@mui/icons-material/Public';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import {
   buildAllCulturesExport,
@@ -99,7 +95,6 @@ import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
-import BottomActionToolbar from '../components/layout/BottomActionToolbar';
 import { getFirstMissingCultivationPlanRequirement } from './requirementFlow';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 
@@ -950,14 +945,14 @@ function Cultures(): React.ReactElement {
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
-      <PageContainer>
+      <PageContainer variant="xwide">
         <ProjectRequiredState reason={missingProjectReason} />
       </PageContainer>
     );
   }
 
   return (
-    <PageContainer>
+    <PageContainer variant="xwide">
         <input
           ref={fileInputRef}
           type="file"
@@ -982,95 +977,25 @@ function Cultures(): React.ReactElement {
           onOpenPublicLibrary={() => {
             void handleOpenPublicLibrary();
           }}
+          onEditCulture={handleEdit}
+          onCreatePlan={handleCreatePlantingPlan}
+          onOpenHistory={handleOpenHistory}
+          onPublishCulture={() => {
+            void handlePublishCurrentCulture();
+          }}
+          onDeleteCulture={handleDelete}
+          canCreatePlan={canCreatePlantingPlan}
+          isPublishingCulture={Boolean(selectedCulture && publishingCultureId === selectedCulture.id)}
+          publishActionLabel={publishingCultureId === selectedCulture?.id
+            ? (isUpdatingOwnPublicCulture ? t('library.updating') : t('library.publishing'))
+            : (isUpdatingOwnPublicCulture
+              ? 'Öffentliche Kulturbibliothek aktualisieren'
+              : 'In Kulturbibliothek veröffentlichen')}
         />
       </Box>
 
-      {/* Action buttons for selected culture */}
       {cultures.length > 0 && (
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            mb: 2,
-            gap: 1.25,
-          }}
-        >
-          <BottomActionToolbar
-            leftActions={
-              <Tooltip title="Kultur löschen">
-                <span>
-                  <Button
-                    aria-label="Kultur löschen"
-                    variant="text"
-                    color="error"
-                    startIcon={<DeleteIcon />}
-                    onClick={() => selectedCulture && handleDelete(selectedCulture)}
-                    disabled={!selectedCulture}
-                  >
-                    {t('buttons.delete')}
-                  </Button>
-                </span>
-              </Tooltip>
-            }
-            rightActions={
-              <>
-                <Button variant="contained" onClick={handleAddNew}>
-                  Kultur hinzufügen
-                </Button>
-              <Button variant="outlined" onClick={handleOpenHistory} disabled={!selectedCulture}>
-                Versionen
-              </Button>
-              <Tooltip title="Kultur bearbeiten">
-                <span>
-                  <Button
-                    aria-label="Kultur bearbeiten"
-                    variant="outlined"
-                    startIcon={<EditIcon />}
-                    onClick={() => selectedCulture && handleEdit(selectedCulture)}
-                    disabled={!selectedCulture}
-                  >
-                    {t('buttons.edit')}
-                  </Button>
-                </span>
-              </Tooltip>
-              <Tooltip title={t('library.publishTooltip')}>
-                <span>
-                  <Button
-                    variant="outlined"
-                    startIcon={<PublicIcon />}
-                    onClick={() => void handlePublishCurrentCulture()}
-                    disabled={!selectedCulture || publishingCultureId === selectedCulture?.id}
-                  >
-                    {publishingCultureId === selectedCulture?.id
-                      ? (isUpdatingOwnPublicCulture ? t('library.updating') : t('library.publishing'))
-                      : (isUpdatingOwnPublicCulture ? t('library.updateButton') : t('library.publishButton'))}
-                  </Button>
-                </span>
-              </Tooltip>
-                <Tooltip
-                  title={
-                    canCreatePlantingPlan
-                      ? "Anbauplan erstellen"
-                      : t('buttons.createPlantingPlanMissingBedsTooltip')
-                  }
-                >
-                  <span>
-                    <Button
-                      aria-label="Anbauplan erstellen"
-                      variant="contained"
-                      color="success"
-                      startIcon={<AgricultureIcon />}
-                      onClick={handleCreatePlantingPlan}
-                      disabled={!canCreatePlantingPlan}
-                    >
-                      {t('buttons.createPlantingPlan')}
-                    </Button>
-                  </span>
-                </Tooltip>
-              </>
-            }
-          />
-
+        <Box sx={{ mb: 2 }}>
           {firstMissingPlanRequirement === 'beds' ? (
             <EmptyStateCard
               title={t('buttons.createPlantingPlanMissingBedsTitle')}

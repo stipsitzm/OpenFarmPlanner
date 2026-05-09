@@ -110,8 +110,8 @@ const PAGE_SYMBOL_DEFINITIONS: Partial<Record<HelpPageKey, SymbolDefinition[]>> 
     { key: 'add', icon: <AddIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
     { key: 'library', icon: <PublicIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
     { key: 'createPlan', icon: <AgricultureIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
-    { key: 'edit', icon: <EditIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
-    { key: 'more', icon: <MoreVertIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
+    { key: 'edit', icon: <EditIcon fontSize="small" sx={{ color: 'rgba(37, 111, 42, 0.86)' }} /> },
+    { key: 'more', icon: <MoreVertIcon fontSize="small" sx={{ color: 'text.secondary' }} /> },
     { key: 'delete', icon: <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} /> },
   ],
   plantingPlans: [

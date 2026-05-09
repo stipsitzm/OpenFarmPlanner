@@ -15,6 +15,12 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
 import TuneIcon from '@mui/icons-material/Tune';
+import EditIcon from '@mui/icons-material/Edit';
+import AgricultureIcon from '@mui/icons-material/Agriculture';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import PublicIcon from '@mui/icons-material/Public';
+import HistoryIcon from '@mui/icons-material/History';
+import DeleteIcon from '@mui/icons-material/Delete';
 import {
   Badge,
   Box,
@@ -42,6 +48,8 @@ import {
   IconButton,
   Popover,
   TextField,
+  Menu,
+  Tooltip,
 } from '@mui/material';
 import type { Culture } from '../api/api';
 import { SearchableSelect } from '../components/inputs/SearchableSelect';
@@ -56,6 +64,14 @@ interface CultureDetailProps {
   onCultureSelect: (culture: Culture | null) => void;
   onCreateCulture?: () => void;
   onOpenPublicLibrary?: () => void;
+  onEditCulture?: (culture: Culture) => void;
+  onCreatePlan?: () => void;
+  onOpenHistory?: () => void;
+  onPublishCulture?: () => void;
+  onDeleteCulture?: (culture: Culture) => void;
+  canCreatePlan?: boolean;
+  isPublishingCulture?: boolean;
+  publishActionLabel?: string;
 }
 
 const CULTURE_FILTERS_STORAGE_KEY = 'culturesDetailFiltersV1';
@@ -138,6 +154,14 @@ export function CultureDetail({
   onCultureSelect,
   onCreateCulture,
   onOpenPublicLibrary,
+  onEditCulture,
+  onCreatePlan,
+  onOpenHistory,
+  onPublishCulture,
+  onDeleteCulture,
+  canCreatePlan = true,
+  isPublishingCulture = false,
+  publishActionLabel,
 }: CultureDetailProps): React.ReactElement {
   const { t } = useTranslation('cultures');
   const [searchQuery, setSearchQuery] = useState('');
@@ -150,7 +174,26 @@ export function CultureDetail({
   const [yieldMax, setYieldMax] = useState('');
   const [selectedSowingMonths, setSelectedSowingMonths] = useState<number[]>([]);
   const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
+  const [headerMenuAnchorEl, setHeaderMenuAnchorEl] = useState<HTMLElement | null>(null);
   const isFilterPopoverOpen = Boolean(filterAnchorEl);
+  const isHeaderMenuOpen = Boolean(headerMenuAnchorEl);
+  const headerActionButtonSx = {
+    width: 34,
+    height: 34,
+    borderRadius: 0,
+    border: 'none',
+    backgroundColor: 'transparent',
+    transition: 'background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease',
+    '&:hover': {
+      backgroundColor: 'rgba(15, 23, 42, 0.08)',
+      boxShadow: '0 2px 6px rgba(15, 23, 42, 0.10)',
+      transform: 'translateY(-1px)',
+    },
+    '&:focus-visible': {
+      outline: '2px solid rgba(37, 111, 42, 0.28)',
+      outlineOffset: 1,
+    },
+  } as const;
 
   const activeFilterCount = useMemo(
     () => [
@@ -629,7 +672,7 @@ export function CultureDetail({
 
       {/* Detail View */}
       {!isLoading && cultures.length > 0 ? (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '350px minmax(0, 1fr)' }, gap: 1.5, alignItems: 'start' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '300px minmax(0, 1fr)', xl: '330px minmax(0, 1fr)' }, gap: 1.5, alignItems: 'start' }}>
           <Card
             sx={{
               width: '100%',
@@ -688,59 +731,150 @@ export function CultureDetail({
               })}
             </List>
           </Card>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { md: 'flex-start' } }}>
             {selectedCulture ? (
-              <Card>
+              <Card sx={{ width: '100%', maxWidth: { md: 1220, xl: 1400 } }}>
                 <CardContent>
             {/* Header with crop name and badge */}
                   <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                 <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="h4" component="h2">
-                    {selectedCulture.name}
-                  </Typography>
-                  {selectedCulture.variety && (
-                    <Typography variant="body2" color="text.secondary">
-                      {selectedCulture.variety}
-                    </Typography>
-                  )}
-                  <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-                    <Chip
-                      size="small"
-                      color={selectedCulture.origin_type === 'imported' ? 'secondary' : 'default'}
-                      label={selectedCulture.origin_type === 'imported' ? t('library.badges.imported') : t('library.badges.local')}
-                    />
-                    {selectedCulture.is_modified_from_source ? (
-                      <Chip size="small" color="warning" label={t('library.badges.modified')} />
+                  <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1.75 }}>
+                    {selectedCulture.display_color ? (
+                      <Box
+                        sx={{
+                          width: 4,
+                          borderRadius: 1,
+                          backgroundColor: selectedCulture.display_color,
+                          opacity: 0.75,
+                          my: 0.5,
+                          alignSelf: 'stretch',
+                          flexShrink: 0,
+                        }}
+                        aria-label="Kulturfarbe"
+                        title={selectedCulture.display_color}
+                      />
                     ) : null}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.25 }}>
+                      <Typography variant="h4" component="h2">
+                        {selectedCulture.name}
+                      </Typography>
+                      {selectedCulture.variety && (
+                        <Typography variant="body2" color="text.secondary">
+                          {selectedCulture.variety}
+                        </Typography>
+                      )}
+                      <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                        <Chip
+                          size="small"
+                          color={selectedCulture.origin_type === 'imported' ? 'secondary' : 'default'}
+                          label={selectedCulture.origin_type === 'imported' ? t('library.badges.imported') : t('library.badges.local')}
+                        />
+                        {selectedCulture.is_modified_from_source ? (
+                          <Chip size="small" color="warning" label={t('library.badges.modified')} />
+                        ) : null}
+                      </Box>
+                    </Box>
                   </Box>
                 </Box>
-                {selectedCulture.display_color && (
-                  <Box
+                <Box
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    border: '1px solid rgba(15, 23, 42, 0.10)',
+                    borderRadius: 1.5,
+                    backgroundColor: 'rgba(15, 23, 42, 0.03)',
+                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08)',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Tooltip title={t('buttons.edit')}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={() => onEditCulture?.(selectedCulture)}
+                        disabled={!onEditCulture}
+                        sx={{
+                          ...headerActionButtonSx,
+                          color: 'rgba(37, 111, 42, 0.86)',
+                          borderRight: '1px solid rgba(15, 23, 42, 0.08)',
+                          '&:hover': { backgroundColor: 'rgba(37, 111, 42, 0.12)' },
+                        }}
+                      >
+                        <EditIcon sx={{ fontSize: 18 }} />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title={canCreatePlan ? t('buttons.createPlantingPlan') : t('buttons.createPlantingPlanMissingBedsTooltip')}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={() => onCreatePlan?.()}
+                        disabled={!canCreatePlan || !onCreatePlan}
+                        sx={{
+                          ...headerActionButtonSx,
+                          color: 'success.main',
+                          borderRight: '1px solid rgba(15, 23, 42, 0.08)',
+                          '&:hover': { backgroundColor: 'rgba(37, 111, 42, 0.10)' },
+                        }}
+                      >
+                        <AgricultureIcon sx={{ fontSize: 18 }} />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <IconButton
+                    size="small"
+                    onClick={(event) => setHeaderMenuAnchorEl(event.currentTarget)}
+                    aria-label="Weitere Aktionen"
                     sx={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '8px',
-                      backgroundColor: selectedCulture.display_color,
-                      border: '1px solid #ccc',
+                      ...headerActionButtonSx,
+                      color: 'text.secondary',
                     }}
-                  />
-                )}
+                  >
+                    <MoreVertIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Box>
               </Box>
+              <Menu
+                anchorEl={headerMenuAnchorEl}
+                open={isHeaderMenuOpen}
+                onClose={() => setHeaderMenuAnchorEl(null)}
+              >
+                <MenuItem onClick={() => { setHeaderMenuAnchorEl(null); onOpenHistory?.(); }}>
+                  <HistoryIcon sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+                  Versionen
+                </MenuItem>
+                <MenuItem
+                  onClick={() => { setHeaderMenuAnchorEl(null); onPublishCulture?.(); }}
+                  disabled={isPublishingCulture}
+                  sx={{ color: 'text.primary' }}
+                >
+                  <PublicIcon sx={{ fontSize: 18, mr: 1, color: 'rgba(37, 111, 42, 0.78)' }} />
+                  {publishActionLabel ?? t('library.publishButton')}
+                </MenuItem>
+                <MenuItem onClick={() => { setHeaderMenuAnchorEl(null); onDeleteCulture?.(selectedCulture); }} sx={{ color: 'error.main' }}>
+                  <DeleteIcon sx={{ fontSize: 18, mr: 1, color: 'error.main' }} />
+                  {t('buttons.delete')}
+                </MenuItem>
+              </Menu>
             </Box>
 
             <Divider sx={{ mb: 3 }} />
 
             {/* General Information Section */}
-            <Box sx={{ mb: 4 }}>
+            <Box sx={{ mb: 4, p: 2.5, border: '1px solid #e5e7eb', borderRadius: 2 }}>
               <Typography variant="h6" gutterBottom>
                 Allgemeine Informationen
               </Typography>
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
+                  },
                   gap: 2,
+                  justifyContent: 'start',
                 }}
               >
                 {selectedCulture.crop_family && (
@@ -796,8 +930,12 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
+                  },
                   gap: 2,
+                  justifyContent: 'start',
                 }}
               >
                 <Box>
@@ -839,8 +977,12 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
+                  },
                   gap: 2,
+                  justifyContent: 'start',
                 }}
               >
                 {selectedCulture.distance_within_row_cm !== null && selectedCulture.distance_within_row_cm !== undefined && (
@@ -886,8 +1028,12 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
+                  },
                   gap: 2,
+                  justifyContent: 'start',
                 }}
               >
                 {seedRateRows.length > 0 && activeCultivationTypes.length <= 1 && (
@@ -965,7 +1111,14 @@ export function CultureDetail({
                   </Typography>
                 </Box>
               </Box>
-              <Box sx={{ mt: 3, ml: { xs: 0, sm: 2 } }}>
+              <Box
+                sx={{
+                  mt: 3,
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+                  gap: 2,
+                }}
+              >
                 <Typography variant="subtitle1" component="h3" gutterBottom>
                   {hasMultipleSupplierRows ? 'Saatgutdaten je Lieferant' : 'Lieferant'}
                 </Typography>
@@ -977,7 +1130,7 @@ export function CultureDetail({
                 {orderedSupplierRows.length === 0 ? (
                   <Typography variant="body2" color="text.secondary">Keine Lieferantendaten vorhanden.</Typography>
                 ) : (
-                  <Stack spacing={2}>
+                  <Stack spacing={2} sx={{ gridColumn: '1 / -1' }}>
                     {orderedSupplierRows.map((row, index) => (
                       <Box key={row.id ?? `${row.supplier?.id ?? row.supplier_id ?? 'supplier'}-${index}`}>
                         {hasMultipleSupplierRows && index > 0 ? <Divider sx={{ mb: 2 }} /> : null}
@@ -1019,8 +1172,12 @@ export function CultureDetail({
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
+                  },
                   gap: 2,
+                  justifyContent: 'start',
                 }}
               >
                 {selectedCulture.harvest_method && (
@@ -1062,17 +1219,17 @@ export function CultureDetail({
             <Divider sx={{ mb: 3 }} />
 
             {/* Notes Section */}
-            <Box>
+            <Box sx={{ p: 2.5, border: '1px solid #e5e7eb', borderRadius: 2 }}>
               <Typography variant="h6" gutterBottom>
                 Notizen
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: { xs: '100%', xl: 1180 } }}>
                 {selectedCulture.notes && (
                   <Box>
                     <Box
                       sx={{
                         '& h3': { mt: 2, mb: 1, fontSize: '1.05rem' },
-                        '& p': { mb: 1 },
+                        '& p': { mb: 1, maxWidth: '95ch' },
                         '& ul': { pl: 3, mb: 1 },
                         '& li': { mb: 0.5 },
                         '& a': { color: 'primary.main' },
