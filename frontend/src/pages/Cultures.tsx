@@ -50,6 +50,8 @@ import {
   Typography,
   Link,
   Stack,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
@@ -100,6 +102,8 @@ import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -284,6 +288,13 @@ function Cultures(): React.ReactElement {
       return;
     }
     const response = await cultureAPI.history(selectedCulture.id);
+    if (response.data.length <= 1) {
+      showSnackbar(
+        t('history.emptyState.title', { defaultValue: 'Keine weiteren Versionen verfügbar.' }),
+        'info',
+      );
+      return;
+    }
     setHistoryItems(response.data);
     setHistoryScope('culture');
     setHistoryOpen(true);
@@ -1212,38 +1223,49 @@ function Cultures(): React.ReactElement {
               ? t('history.titles.global')
               : t('history.titles.culture')}
         </DialogTitle>
-        <DialogContent>
-          <List>
-            {historyItems.map((item) => {
-              const historyTarget = getHistoryEntryTarget(item);
-              return (
-                <ListItem key={item.history_id} disableGutters>
-                  <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
-                    <ListItemText
-                      sx={{ mr: 1 }}
-                      primary={(
-                        <>
-                          {getHistoryEntryTitle(item, t)}
-                          {historyTarget ? (
-                            <>
-                              {' · '}
-                              <Link component={RouterLink} to={historyTarget} underline="hover" onClick={() => setHistoryOpen(false)}>
-                                {item.object_type === 'culture' ? t('history.objectTypes.culture') : t('history.objectTypes.plantingPlan')}
-                              </Link>
-                            </>
-                          ) : null}
-                        </>
-                      )}
-                      secondary={getHistoryEntryMeta(item, t, fallbackHistoryActorLabel)}
-                    />
-                    <Button onClick={() => handleRestoreVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      {t('history.restoreButton')}
-                    </Button>
-                  </Stack>
-                </ListItem>
-              );
-            })}
-          </List>
+        <DialogContent sx={{ pt: historyItems.length === 0 ? 1 : 2, pb: historyItems.length === 0 ? 1 : 2 }}>
+          {historyItems.length === 0 ? (
+            <Box sx={{ py: isMobile ? 0.5 : 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                {t('history.emptyState.title', { defaultValue: 'Keine weiteren Versionen verfügbar.' })}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                {t('history.emptyState.description', { defaultValue: 'Für diese Sorte existiert aktuell nur diese Version.' })}
+              </Typography>
+            </Box>
+          ) : (
+            <List>
+              {historyItems.map((item) => {
+                const historyTarget = getHistoryEntryTarget(item);
+                return (
+                  <ListItem key={item.history_id} disableGutters>
+                    <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
+                      <ListItemText
+                        sx={{ mr: 1 }}
+                        primary={(
+                          <>
+                            {getHistoryEntryTitle(item, t)}
+                            {historyTarget ? (
+                              <>
+                                {' · '}
+                                <Link component={RouterLink} to={historyTarget} underline="hover" onClick={() => setHistoryOpen(false)}>
+                                  {item.object_type === 'culture' ? t('history.objectTypes.culture') : t('history.objectTypes.plantingPlan')}
+                                </Link>
+                              </>
+                            ) : null}
+                          </>
+                        )}
+                        secondary={getHistoryEntryMeta(item, t, fallbackHistoryActorLabel)}
+                      />
+                      <Button onClick={() => handleRestoreVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        {t('history.restoreButton')}
+                      </Button>
+                    </Stack>
+                  </ListItem>
+                );
+              })}
+            </List>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setHistoryOpen(false)}>{t('history.closeButton')}</Button>
