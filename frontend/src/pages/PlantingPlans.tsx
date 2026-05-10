@@ -86,6 +86,7 @@ import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
 import EmptyStateCard from "../components/project/EmptyStateCard";
 
 const AREA_LABEL_SEPARATOR = " | ";
+const DATA_GRID_HEADER_LABEL_SX = { fontWeight: 600 };
 
 export const buildAreaColumnHeaderLabel = (
   includeLocation: boolean,
@@ -989,7 +990,11 @@ function PlantingPlans(): React.ReactElement {
         minWidth: dynamicWidths.harvestDate,
         editable: false,
         type: "date",
-        renderHeader: () => <span>{t("plantingPlans:columns.harvestStartDate")}</span>,
+        renderHeader: () => (
+          <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>
+            {t("plantingPlans:columns.harvestStartDate")}
+          </Box>
+        ),
         valueGetter: (value) => (value ? new Date(value) : null),
       },
       {
@@ -1000,7 +1005,11 @@ function PlantingPlans(): React.ReactElement {
         minWidth: dynamicWidths.harvestEndDate,
         editable: false,
         type: "date",
-        renderHeader: () => <span>{t("plantingPlans:columns.harvestEndDate")}</span>,
+        renderHeader: () => (
+          <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>
+            {t("plantingPlans:columns.harvestEndDate")}
+          </Box>
+        ),
         valueGetter: (value) => (value ? new Date(value) : null),
       },
       {
@@ -1014,7 +1023,9 @@ function PlantingPlans(): React.ReactElement {
         type: "number",
         renderHeader: () => (
           <Tooltip title={t("plantingPlans:tooltips.coupledFields")}>
-            <div>{t("plantingPlans:columns.areaM2")}</div>
+            <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>
+              {t("plantingPlans:columns.areaM2")}
+            </Box>
           </Tooltip>
         ),
         preProcessEditCellProps: (params) => {
@@ -1105,7 +1116,9 @@ function PlantingPlans(): React.ReactElement {
         type: "number",
         renderHeader: () => (
           <Tooltip title={t("plantingPlans:tooltips.plantsFromSpacing")}>
-            <div>{t("plantingPlans:columns.plantsCount")}</div>
+            <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>
+              {t("plantingPlans:columns.plantsCount")}
+            </Box>
           </Tooltip>
         ),
         preProcessEditCellProps: (params) => {

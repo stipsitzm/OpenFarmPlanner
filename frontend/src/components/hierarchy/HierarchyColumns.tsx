@@ -33,6 +33,7 @@ export const DEFAULT_HIERARCHY_COLUMN_WIDTHS: HierarchyColumnWidths = {
 };
 
 const EXPAND_ICON_SLOT_SIZE = 32;
+const DATA_GRID_HEADER_LABEL_SX = { fontWeight: 600 };
 
 interface NameCellCallbacks {
   onToggleExpand: (rowId: string | number) => void;
@@ -383,7 +384,7 @@ export function createHierarchyColumns(
       renderHeader: () => (
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
           <SwapVertIcon fontSize="small" aria-hidden="true" />
-          <span>{t('columns.length')}</span>
+          <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>{t('columns.length')}</Box>
         </Box>
       ),
       width: widths.dimensions,
@@ -399,7 +400,7 @@ export function createHierarchyColumns(
       renderHeader: () => (
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
           <SwapHorizIcon fontSize="small" aria-hidden="true" />
-          <span>{t('columns.width')}</span>
+          <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>{t('columns.width')}</Box>
         </Box>
       ),
       width: widths.dimensions,
