@@ -62,6 +62,7 @@ export function PublicCultureLibraryDialog({
   const [mobileStep, setMobileStep] = useState<'list' | 'detail'>('list');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobileLandscape = useMediaQuery(`${theme.breakpoints.down('sm')} and (orientation: landscape) and (max-height: 560px)`);
 
   useEffect(() => {
     if (!open) {
@@ -123,7 +124,16 @@ export function PublicCultureLibraryDialog({
   );
 
   const filterControls = (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, minmax(0, 1fr))' }, gap: 1, mb: 2 }}>
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: isMobileLandscape
+          ? 'repeat(2, minmax(0, 1fr))'
+          : { xs: '1fr', md: 'repeat(4, minmax(0, 1fr))' },
+        gap: 1,
+        mb: isMobileLandscape ? 1 : 2,
+      }}
+    >
       <FormControl size="small">
         <InputLabel>{t('library.filters.variety')}</InputLabel>
         <Select value={varietyFilter} label={t('library.filters.variety')} onChange={(event) => setVarietyFilter(event.target.value)}>
@@ -164,9 +174,38 @@ export function PublicCultureLibraryDialog({
   );
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth={isMobile ? false : 'md'} fullWidth fullScreen={isMobile}>
-      <DialogTitle>{t('library.dialogTitle')}</DialogTitle>
-      <DialogContent dividers sx={{ minHeight: isMobile ? 'auto' : 560, px: isMobile ? 1.25 : 3 }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth={isMobile ? false : 'md'}
+      fullWidth
+      fullScreen={isMobile && !isMobileLandscape}
+      PaperProps={{
+        sx: isMobileLandscape
+          ? {
+            width: 'calc(100vw - 32px)',
+            maxWidth: 'none',
+            height: 'calc(100vh - 24px)',
+            maxHeight: 'calc(100vh - 24px)',
+            m: 0,
+          }
+          : undefined,
+      }}
+    >
+      <DialogTitle sx={{ py: isMobileLandscape ? 1 : 2, px: isMobileLandscape ? 1.5 : 3 }}>
+        {t('library.dialogTitle')}
+      </DialogTitle>
+      <DialogContent
+        dividers
+        sx={{
+          minHeight: isMobile ? 'auto' : 560,
+          px: isMobileLandscape ? 1.25 : isMobile ? 1.25 : 3,
+          py: isMobileLandscape ? 1 : 2,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
         <TextField
           fullWidth
           label={t('library.searchLabel')}
@@ -177,7 +216,8 @@ export function PublicCultureLibraryDialog({
             onSearch(nextValue);
           }}
           InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} /> }}
-          sx={{ mb: 2 }}
+          size={isMobileLandscape ? 'small' : 'medium'}
+          sx={{ mb: isMobileLandscape ? 1 : 2 }}
         />
 
         {isMobile ? (
@@ -189,21 +229,23 @@ export function PublicCultureLibraryDialog({
               </Box>
             </AccordionSummary>
             <AccordionDetails sx={{ pt: 0.75, pb: 1 }}>
-              {filterControls}
+              <Box sx={{ '& > *': { mb: 0 } }}>
+                {filterControls}
+              </Box>
             </AccordionDetails>
           </Accordion>
         ) : filterControls}
 
         {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
 
-        <Box sx={{ position: 'relative', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : { xs: '1fr', md: '1.2fr 1fr' }, gap: 2, minHeight: isMobile ? 'auto' : 420 }}>
+        <Box sx={{ position: 'relative', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : { xs: '1fr', md: '1.2fr 1fr' }, gap: isMobileLandscape ? 1 : 2, minHeight: 0, flex: 1 }}>
           {loading ? (
             <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255,255,255,0.6)', zIndex: 1 }}>
               <CircularProgress />
             </Box>
           ) : null}
           {(!isMobile || mobileStep === 'list') ? (
-            <List sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, height: isMobile ? 'auto' : 420, overflowY: isMobile ? 'visible' : 'auto', scrollbarGutter: 'stable' }}>
+            <List sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, height: isMobile ? '100%' : 420, minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable' }}>
             {filteredCultures.length === 0 ? (
               <Typography color="text.secondary" sx={{ p: 2 }}>{t('library.empty')}</Typography>
             ) : filteredCultures.map((culture) => (
@@ -231,7 +273,7 @@ export function PublicCultureLibraryDialog({
           ) : null}
 
           {(!isMobile || mobileStep === 'detail') ? (
-            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: isMobile ? 1.5 : 2, minHeight: isMobile ? 'auto' : 420, maxHeight: isMobile ? 'none' : 420, overflowY: isMobile ? 'visible' : 'auto', scrollbarGutter: 'stable' }}>
+            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: isMobileLandscape ? 1.25 : isMobile ? 1.5 : 2, minHeight: isMobile ? '100%' : 420, maxHeight: isMobile ? 'none' : 420, overflowY: 'auto', scrollbarGutter: 'stable' }}>
               {isMobile ? (
                 <Button startIcon={<ArrowBackIcon />} size="small" sx={{ mb: 1 }} onClick={() => setMobileStep('list')}>
                   {t('common:actions.back', { defaultValue: 'Zurück' })}
@@ -269,7 +311,7 @@ export function PublicCultureLibraryDialog({
           ) : null}
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: isMobile ? 1.25 : 3, py: isMobile ? 1 : 1.5 }}>
+      <DialogActions sx={{ px: isMobileLandscape ? 1.25 : isMobile ? 1.25 : 3, py: isMobileLandscape ? 0.75 : isMobile ? 1 : 1.5 }}>
         <Button onClick={onClose}>{t('form.cancel')}</Button>
         <Button
           variant="contained"
