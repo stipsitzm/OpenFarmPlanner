@@ -27,7 +27,6 @@ import {
   useTheme,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TuneIcon from '@mui/icons-material/Tune';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
@@ -124,6 +123,14 @@ export function PublicCultureLibraryDialog({
     [filteredCultures, selectedId],
   );
 
+  const handleDialogClose = (): void => {
+    if (useMobileFilterLayout && mobileStep === 'detail') {
+      setMobileStep('list');
+      return;
+    }
+    onClose();
+  };
+
   const filterControls = (
     <Box
       sx={{
@@ -175,9 +182,9 @@ export function PublicCultureLibraryDialog({
   );
 
   return (
-    <Dialog
+      <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleDialogClose}
       maxWidth={useMobileFilterLayout ? false : 'md'}
       fullWidth
       fullScreen={useMobileFilterLayout && !isMobileLandscape}
@@ -275,11 +282,6 @@ export function PublicCultureLibraryDialog({
 
           {(!useMobileFilterLayout || mobileStep === 'detail') ? (
             <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: isMobileLandscape ? 1.25 : useMobileFilterLayout ? 1.5 : 2, minHeight: useMobileFilterLayout ? '100%' : 420, maxHeight: useMobileFilterLayout ? 'none' : 420, overflowY: 'auto', scrollbarGutter: 'stable' }}>
-              {useMobileFilterLayout ? (
-                <Button startIcon={<ArrowBackIcon />} size="small" sx={{ mb: 1 }} onClick={() => setMobileStep('list')}>
-                  {t('common:actions.back', { defaultValue: 'Zurück' })}
-                </Button>
-              ) : null}
             {selectedCulture ? (
               <>
                 <Typography variant="h6">{selectedCulture.name}</Typography>
