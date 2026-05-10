@@ -785,30 +785,32 @@ function RootLayout(): React.ReactElement {
       >
         <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, flexWrap: 'nowrap' }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
-          {!isDesktopUp ? (
-            <Typography
-              component="h1"
-              variant="subtitle1"
-              noWrap
-              sx={{
-                minWidth: 0,
-                maxWidth: { xs: 180, sm: 220 },
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                fontSize: { xs: '0.98rem', sm: '1.02rem' },
-                fontWeight: 600,
-                lineHeight: 1.2,
-              }}
-            >
-              {currentPageTitle}
-            </Typography>
-          ) : (
-            <Typography component="h1" variant="h5" noWrap sx={{ minWidth: 0, maxWidth: { sm: 180, md: 260 }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: { xs: '1rem', md: '1.25rem' }, fontWeight: 600 }}>
-              {currentPageTitle}
-            </Typography>
-          )}
-          {!isPhone && topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1 }}>
+            {!isDesktopUp ? (
+              <Typography
+                component="h1"
+                variant="subtitle1"
+                noWrap
+                sx={{
+                  minWidth: 0,
+                  maxWidth: { xs: 180, sm: 220 },
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontSize: { xs: '0.98rem', sm: '1.02rem' },
+                  fontWeight: 600,
+                  lineHeight: 1.2,
+                }}
+              >
+                {currentPageTitle}
+              </Typography>
+            ) : (
+              <Typography component="h1" variant="h5" noWrap sx={{ minWidth: 0, maxWidth: { sm: 180, md: 260 }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: { xs: '1rem', md: '1.25rem' }, fontWeight: 600 }}>
+                {currentPageTitle}
+              </Typography>
+            )}
+            {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
+          </Box>
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 0 }}>
           {isCulturesPage ? (
