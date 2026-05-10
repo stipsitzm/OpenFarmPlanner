@@ -62,7 +62,8 @@ export function PublicCultureLibraryDialog({
   const [mobileStep, setMobileStep] = useState<'list' | 'detail'>('list');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isMobileLandscape = useMediaQuery(`${theme.breakpoints.down('sm')} and (orientation: landscape) and (max-height: 560px)`);
+  const isMobileLandscape = useMediaQuery(`(orientation: landscape) and (max-height: 560px) and (max-width: 960px)`);
+  const useMobileFilterLayout = isMobile || isMobileLandscape;
 
   useEffect(() => {
     if (!open) {
@@ -177,9 +178,9 @@ export function PublicCultureLibraryDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth={isMobile ? false : 'md'}
+      maxWidth={useMobileFilterLayout ? false : 'md'}
       fullWidth
-      fullScreen={isMobile && !isMobileLandscape}
+      fullScreen={useMobileFilterLayout && !isMobileLandscape}
       PaperProps={{
         sx: isMobileLandscape
           ? {
@@ -198,8 +199,8 @@ export function PublicCultureLibraryDialog({
       <DialogContent
         dividers
         sx={{
-          minHeight: isMobile ? 'auto' : 560,
-          px: isMobileLandscape ? 1.25 : isMobile ? 1.25 : 3,
+          minHeight: useMobileFilterLayout ? 'auto' : 560,
+          px: isMobileLandscape ? 1.25 : useMobileFilterLayout ? 1.25 : 3,
           py: isMobileLandscape ? 1 : 2,
           display: 'flex',
           flexDirection: 'column',
@@ -220,7 +221,7 @@ export function PublicCultureLibraryDialog({
           sx={{ mb: isMobileLandscape ? 1 : 2 }}
         />
 
-        {isMobile ? (
+        {useMobileFilterLayout ? (
           <Accordion disableGutters elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 1.25 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 40 }}>
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
@@ -238,14 +239,14 @@ export function PublicCultureLibraryDialog({
 
         {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
 
-        <Box sx={{ position: 'relative', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : { xs: '1fr', md: '1.2fr 1fr' }, gap: isMobileLandscape ? 1 : 2, minHeight: 0, flex: 1 }}>
+        <Box sx={{ position: 'relative', display: 'grid', gridTemplateColumns: useMobileFilterLayout ? '1fr' : { xs: '1fr', md: '1.2fr 1fr' }, gap: isMobileLandscape ? 1 : 2, minHeight: 0, flex: 1 }}>
           {loading ? (
             <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255,255,255,0.6)', zIndex: 1 }}>
               <CircularProgress />
             </Box>
           ) : null}
-          {(!isMobile || mobileStep === 'list') ? (
-            <List sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, height: isMobile ? '100%' : 420, minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable' }}>
+          {(!useMobileFilterLayout || mobileStep === 'list') ? (
+            <List sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, height: useMobileFilterLayout ? '100%' : 420, minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable' }}>
             {filteredCultures.length === 0 ? (
               <Typography color="text.secondary" sx={{ p: 2 }}>{t('library.empty')}</Typography>
             ) : filteredCultures.map((culture) => (
@@ -254,7 +255,7 @@ export function PublicCultureLibraryDialog({
                   selected={culture.id === selectedId}
                   onClick={() => {
                     setSelectedId(culture.id);
-                    if (isMobile) {
+                    if (useMobileFilterLayout) {
                       setMobileStep('detail');
                     }
                   }}
@@ -272,9 +273,9 @@ export function PublicCultureLibraryDialog({
             </List>
           ) : null}
 
-          {(!isMobile || mobileStep === 'detail') ? (
-            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: isMobileLandscape ? 1.25 : isMobile ? 1.5 : 2, minHeight: isMobile ? '100%' : 420, maxHeight: isMobile ? 'none' : 420, overflowY: 'auto', scrollbarGutter: 'stable' }}>
-              {isMobile ? (
+          {(!useMobileFilterLayout || mobileStep === 'detail') ? (
+            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: isMobileLandscape ? 1.25 : useMobileFilterLayout ? 1.5 : 2, minHeight: useMobileFilterLayout ? '100%' : 420, maxHeight: useMobileFilterLayout ? 'none' : 420, overflowY: 'auto', scrollbarGutter: 'stable' }}>
+              {useMobileFilterLayout ? (
                 <Button startIcon={<ArrowBackIcon />} size="small" sx={{ mb: 1 }} onClick={() => setMobileStep('list')}>
                   {t('common:actions.back', { defaultValue: 'Zurück' })}
                 </Button>
