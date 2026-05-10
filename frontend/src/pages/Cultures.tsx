@@ -137,7 +137,6 @@ function Cultures(): React.ReactElement {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [historyScope, setHistoryScope] = useState<'culture' | 'global' | 'project'>('culture');
-  const [historyHintMessage, setHistoryHintMessage] = useState<string | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [aiMenuAnchor, setAiMenuAnchor] = useState<null | HTMLElement>(null);
   const aiEnrichmentEnabled = FEATURES.AI_ENRICHMENT;
@@ -248,10 +247,6 @@ function Cultures(): React.ReactElement {
     }
   }, [cultures, selectedCultureId, showForm, updateSelectedCultureId]);
 
-  useEffect(() => {
-    setHistoryHintMessage(null);
-  }, [selectedCultureId]);
-
   const handleCultureSelect = (culture: Culture | null) => {
     updateSelectedCultureId(culture?.id, 'internal');
   };
@@ -297,10 +292,9 @@ function Cultures(): React.ReactElement {
     }
     const response = await cultureAPI.history(selectedCulture.id);
     if (response.data.length <= 1) {
-      setHistoryHintMessage(t('history.emptyState.title', { defaultValue: 'Keine weiteren Versionen verfügbar.' }));
+      showSnackbar(t('history.emptyState.title', { defaultValue: 'Keine weiteren Versionen verfügbar.' }), 'info');
       return;
     }
-    setHistoryHintMessage(null);
     setHistoryItems(response.data);
     setHistoryScope('culture');
     setHistoryOpen(true);
@@ -1010,23 +1004,6 @@ function Cultures(): React.ReactElement {
               : t('library.publishButton'))}
         />
       </Box>
-      {historyHintMessage ? (
-        <Box sx={{ mb: 2 }}>
-          <EmptyStateCard
-            title={historyHintMessage}
-            description={t('history.emptyState.description', { defaultValue: 'Für diese Sorte existiert aktuell nur diese Version.' })}
-            containerSx={{
-              backgroundColor: 'rgba(76, 175, 80, 0.06)',
-              borderLeft: '3px solid',
-              borderLeftColor: 'success.main',
-              py: 1.25,
-              px: 1.5,
-            }}
-            titleSx={{ fontWeight: 500 }}
-          />
-        </Box>
-      ) : null}
-
       {cultures.length > 0 && (
         <Box sx={{ mb: 2 }}>
           {firstMissingPlanRequirement === 'beds' ? (
@@ -1399,14 +1376,30 @@ function Cultures(): React.ReactElement {
 
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
+        autoHideDuration={4200}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{
+          '& .MuiAlert-root': {
+            borderRadius: 2,
+            boxShadow: '0 6px 20px rgba(15, 23, 42, 0.12)',
+          },
+        }}
       >
         <Alert
           onClose={handleCloseSnackbar}
           severity={snackbar.severity}
-          sx={{ width: '100%' }}
+          variant="filled"
+          sx={{
+            width: '100%',
+            alignItems: 'center',
+            fontWeight: 500,
+            bgcolor: snackbar.severity === 'info' ? 'rgba(37, 111, 42, 0.96)' : undefined,
+            color: snackbar.severity === 'info' ? '#ffffff' : undefined,
+            '& .MuiAlert-icon': {
+              color: snackbar.severity === 'info' ? '#ffffff' : undefined,
+            },
+          }}
         >
           {snackbar.message}
         </Alert>
