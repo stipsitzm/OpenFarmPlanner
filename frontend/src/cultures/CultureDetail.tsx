@@ -688,13 +688,15 @@ export function CultureDetail({
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: '220px minmax(0, 1fr)',
-              md: '230px minmax(0, 1fr)',
-              lg: '300px minmax(0, 1fr)',
-              xl: '330px minmax(0, 1fr)',
-            },
+            gridTemplateColumns: useUnifiedMobileLayout
+              ? 'minmax(0, 1fr)'
+              : {
+                xs: '1fr',
+                sm: '220px minmax(0, 1fr)',
+                md: '230px minmax(0, 1fr)',
+                lg: '300px minmax(0, 1fr)',
+                xl: '330px minmax(0, 1fr)',
+              },
             gap: { xs: 1.25, lg: 1.5 },
             alignItems: 'start',
           }}
@@ -767,7 +769,7 @@ export function CultureDetail({
               })}
             </List>
           </Card>) : null}
-          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { sm: useUnifiedMobileLayout ? 'stretch' : 'flex-start' } }}>
+          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: 'flex-start' }}>
             {selectedCulture ? (
               <Card sx={{ width: '100%', maxWidth: useUnifiedMobileLayout ? '100%' : { sm: 960, lg: 1220, xl: 1400 } }}>
                 <CardContent sx={{ p: { xs: 1.5, sm: 2, lg: 3 } }}>
