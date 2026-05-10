@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../i18n';
 import type { PublicCulture } from '../api/types';
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
   Box,
   Button,
@@ -20,8 +23,13 @@ import {
   Select,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import TuneIcon from '@mui/icons-material/Tune';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 interface PublicCultureLibraryDialogProps {
   open: boolean;
@@ -51,6 +59,9 @@ export function PublicCultureLibraryDialog({
   const [supplierFilter, setSupplierFilter] = useState('');
   const [nutrientFilter, setNutrientFilter] = useState('');
   const [cropFamilyFilter, setCropFamilyFilter] = useState('');
+  const [mobileStep, setMobileStep] = useState<'list' | 'detail'>('list');
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
     if (!open) {
@@ -61,6 +72,7 @@ export function PublicCultureLibraryDialog({
         setSupplierFilter('');
         setNutrientFilter('');
         setCropFamilyFilter('');
+        setMobileStep('list');
       });
     }
   }, [open]);
@@ -110,10 +122,51 @@ export function PublicCultureLibraryDialog({
     [filteredCultures, selectedId],
   );
 
+  const filterControls = (
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, minmax(0, 1fr))' }, gap: 1, mb: 2 }}>
+      <FormControl size="small">
+        <InputLabel>{t('library.filters.variety')}</InputLabel>
+        <Select value={varietyFilter} label={t('library.filters.variety')} onChange={(event) => setVarietyFilter(event.target.value)}>
+          <MenuItem value="">{t('filters.all')}</MenuItem>
+          {varietyOptions.map((option) => (
+            <MenuItem key={option} value={option}>{option}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+      <FormControl size="small">
+        <InputLabel>{t('library.filters.supplier')}</InputLabel>
+        <Select value={supplierFilter} label={t('library.filters.supplier')} onChange={(event) => setSupplierFilter(event.target.value)}>
+          <MenuItem value="">{t('filters.all')}</MenuItem>
+          {supplierOptions.map((option) => (
+            <MenuItem key={option} value={option}>{option}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+      <FormControl size="small">
+        <InputLabel>{t('library.filters.nutrientDemand')}</InputLabel>
+        <Select value={nutrientFilter} label={t('library.filters.nutrientDemand')} onChange={(event) => setNutrientFilter(event.target.value)}>
+          <MenuItem value="">{t('filters.all')}</MenuItem>
+          {nutrientOptions.map((option) => (
+            <MenuItem key={option} value={option}>{nutrientLabel(option)}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+      <FormControl size="small">
+        <InputLabel>{t('library.filters.cropFamily')}</InputLabel>
+        <Select value={cropFamilyFilter} label={t('library.filters.cropFamily')} onChange={(event) => setCropFamilyFilter(event.target.value)}>
+          <MenuItem value="">{t('filters.all')}</MenuItem>
+          {cropFamilyOptions.map((option) => (
+            <MenuItem key={option} value={option}>{option}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    </Box>
+  );
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth={isMobile ? false : 'md'} fullWidth fullScreen={isMobile}>
       <DialogTitle>{t('library.dialogTitle')}</DialogTitle>
-      <DialogContent dividers sx={{ minHeight: 560 }}>
+      <DialogContent dividers sx={{ minHeight: isMobile ? 'auto' : 560, px: isMobile ? 1.25 : 3 }}>
         <TextField
           fullWidth
           label={t('library.searchLabel')}
@@ -127,104 +180,96 @@ export function PublicCultureLibraryDialog({
           sx={{ mb: 2 }}
         />
 
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, minmax(0, 1fr))' }, gap: 1, mb: 2 }}>
-          <FormControl size="small">
-            <InputLabel>{t('library.filters.variety')}</InputLabel>
-            <Select value={varietyFilter} label={t('library.filters.variety')} onChange={(event) => setVarietyFilter(event.target.value)}>
-              <MenuItem value="">{t('filters.all')}</MenuItem>
-              {varietyOptions.map((option) => (
-                <MenuItem key={option} value={option}>{option}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl size="small">
-            <InputLabel>{t('library.filters.supplier')}</InputLabel>
-            <Select value={supplierFilter} label={t('library.filters.supplier')} onChange={(event) => setSupplierFilter(event.target.value)}>
-              <MenuItem value="">{t('filters.all')}</MenuItem>
-              {supplierOptions.map((option) => (
-                <MenuItem key={option} value={option}>{option}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl size="small">
-            <InputLabel>{t('library.filters.nutrientDemand')}</InputLabel>
-            <Select value={nutrientFilter} label={t('library.filters.nutrientDemand')} onChange={(event) => setNutrientFilter(event.target.value)}>
-              <MenuItem value="">{t('filters.all')}</MenuItem>
-              {nutrientOptions.map((option) => (
-                <MenuItem key={option} value={option}>{nutrientLabel(option)}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl size="small">
-            <InputLabel>{t('library.filters.cropFamily')}</InputLabel>
-            <Select value={cropFamilyFilter} label={t('library.filters.cropFamily')} onChange={(event) => setCropFamilyFilter(event.target.value)}>
-              <MenuItem value="">{t('filters.all')}</MenuItem>
-              {cropFamilyOptions.map((option) => (
-                <MenuItem key={option} value={option}>{option}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
+        {isMobile ? (
+          <Accordion disableGutters elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 1.25 }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 40 }}>
+              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                <TuneIcon fontSize="small" />
+                <Typography variant="body2">{t('filters.title', { defaultValue: 'Filter' })}</Typography>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails sx={{ pt: 0.75, pb: 1 }}>
+              {filterControls}
+            </AccordionDetails>
+          </Accordion>
+        ) : filterControls}
 
         {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
 
-        <Box sx={{ position: 'relative', display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.2fr 1fr' }, gap: 2, minHeight: 420 }}>
+        <Box sx={{ position: 'relative', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : { xs: '1fr', md: '1.2fr 1fr' }, gap: 2, minHeight: isMobile ? 'auto' : 420 }}>
           {loading ? (
             <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255,255,255,0.6)', zIndex: 1 }}>
               <CircularProgress />
             </Box>
           ) : null}
-          <List sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, height: 420, overflowY: 'auto', scrollbarGutter: 'stable' }}>
+          {(!isMobile || mobileStep === 'list') ? (
+            <List sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, height: isMobile ? 'auto' : 420, overflowY: isMobile ? 'visible' : 'auto', scrollbarGutter: 'stable' }}>
             {filteredCultures.length === 0 ? (
               <Typography color="text.secondary" sx={{ p: 2 }}>{t('library.empty')}</Typography>
             ) : filteredCultures.map((culture) => (
                 <ListItemButton
                   key={culture.id}
                   selected={culture.id === selectedId}
-                  onClick={() => setSelectedId(culture.id)}
+                  onClick={() => {
+                    setSelectedId(culture.id);
+                    if (isMobile) {
+                      setMobileStep('detail');
+                    }
+                  }}
                   alignItems="flex-start"
+                  sx={{ py: 0.75, px: 1.25 }}
                 >
                   <ListItemText
                     primary={culture.variety ? `${culture.name} (${culture.variety})` : culture.name}
                     secondary={culture.supplier_name || culture.seed_supplier || t('noData')}
+                    primaryTypographyProps={{ fontSize: '0.92rem', lineHeight: 1.25 }}
+                    secondaryTypographyProps={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.2 }}
                   />
                 </ListItemButton>
               ))}
-          </List>
+            </List>
+          ) : null}
 
-          <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2, minHeight: 420, maxHeight: 420, overflowY: 'auto', scrollbarGutter: 'stable' }}>
+          {(!isMobile || mobileStep === 'detail') ? (
+            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: isMobile ? 1.5 : 2, minHeight: isMobile ? 'auto' : 420, maxHeight: isMobile ? 'none' : 420, overflowY: isMobile ? 'visible' : 'auto', scrollbarGutter: 'stable' }}>
+              {isMobile ? (
+                <Button startIcon={<ArrowBackIcon />} size="small" sx={{ mb: 1 }} onClick={() => setMobileStep('list')}>
+                  {t('common:actions.back', { defaultValue: 'Zurück' })}
+                </Button>
+              ) : null}
             {selectedCulture ? (
               <>
                 <Typography variant="h6">{selectedCulture.name}</Typography>
                 {selectedCulture.variety ? (
                   <Typography color="text.secondary" sx={{ mb: 1 }}>{selectedCulture.variety}</Typography>
                 ) : null}
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-                  <Chip size="small" label={`${t('library.versionLabel')} ${selectedCulture.version}`} />
+                <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1.5 }}>
+                  <Chip size="small" variant="outlined" label={`${t('library.versionLabel')} ${selectedCulture.version}`} />
                   {selectedCulture.created_by_label ? (
-                    <Chip size="small" label={`${t('library.createdByLabel')} ${selectedCulture.created_by_label}`} />
+                    <Chip size="small" variant="outlined" label={`${t('library.createdByLabel')} ${selectedCulture.created_by_label}`} />
                   ) : null}
                 </Box>
-                <Typography variant="body2" sx={{ mb: 1 }}>
+                <Typography variant="body2" sx={{ mb: 0.75 }}>
                   <strong>{t('form.supplier')}:</strong> {selectedCulture.supplier_name || selectedCulture.seed_supplier || t('noData')}
                 </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
+                <Typography variant="body2" sx={{ mb: 0.75 }}>
                   <strong>{t('form.growthDurationDays')}:</strong> {selectedCulture.growth_duration_days ?? t('noData')}
                 </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
+                <Typography variant="body2" sx={{ mb: 0.75 }}>
                   <strong>{t('form.harvestDurationDays')}:</strong> {selectedCulture.harvest_duration_days ?? t('noData')}
                 </Typography>
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>
                   <strong>{t('form.notes')}:</strong> {selectedCulture.notes || t('noData')}
                 </Typography>
               </>
             ) : (
               <Typography color="text.secondary">{t('library.selectPrompt')}</Typography>
             )}
-          </Box>
+            </Box>
+          ) : null}
         </Box>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ px: isMobile ? 1.25 : 3, py: isMobile ? 1 : 1.5 }}>
         <Button onClick={onClose}>{t('form.cancel')}</Button>
         <Button
           variant="contained"
