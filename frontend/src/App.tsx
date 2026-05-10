@@ -27,6 +27,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Paper,
   Snackbar,
   Stack,
   TextField,
@@ -262,6 +263,7 @@ function RootLayout(): React.ReactElement {
   const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
   const isLargeDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const isPhone = useMediaQuery(theme.breakpoints.down('sm'));
+  const isPhonePortrait = useMediaQuery(`${theme.breakpoints.down('sm')} and (orientation: portrait)`);
   const isTabletOrNarrowDesktop = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
@@ -1024,44 +1026,111 @@ function RootLayout(): React.ReactElement {
 
       <Dialog open={projectHistoryOpen} onClose={() => setProjectHistoryOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t('commandPalette.commands.openVersionHistory')}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ py: isPhonePortrait ? 1 : 2 }}>
           <List>
             {historyItems.map((item, index) => {
               const isCurrentVersion = index === 0;
               const historyTarget = getHistoryEntryTarget(item);
+              const title = getHistoryEntryTitle(item, tCultures);
+              const meta = getHistoryEntryMeta(item, tCultures, fallbackHistoryActorLabel);
 
               return (
-                <ListItem
-                  key={item.history_id}
-                  disableGutters
-                >
-                  <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
-                    <ListItemText
-                      sx={{ mr: 1 }}
-                      primary={(
-                        <>
-                          {getHistoryEntryTitle(item, tCultures)}
+                <ListItem key={item.history_id} disableGutters sx={{ mb: isPhonePortrait ? 1 : 0 }}>
+                  {isPhonePortrait ? (
+                    <Paper variant="outlined" sx={{ width: '100%', p: 1.25, borderRadius: 1.5 }}>
+                      <Stack spacing={1}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                          {isCurrentVersion
+                            ? <Chip label={t('commandPalette.currentVersion')} size="small" color="success" variant="outlined" />
+                            : <Chip label={t('commandPalette.restoreVersion')} size="small" variant="outlined" />}
                           {historyTarget ? (
-                            <>
-                              {' · '}
-                              <Link
-                                component={RouterLink}
-                                to={historyTarget}
-                                underline="hover"
-                                onClick={() => setProjectHistoryOpen(false)}
-                              >
-                                {item.object_type === 'culture' ? t('navigation:cultures') : t('navigation:plantingPlans')}
-                              </Link>
-                            </>
+                            <Link
+                              component={RouterLink}
+                              to={historyTarget}
+                              underline="hover"
+                              onClick={() => setProjectHistoryOpen(false)}
+                              sx={{ fontSize: '0.78rem', color: 'text.secondary', flexShrink: 0 }}
+                            >
+                              {item.object_type === 'culture' ? t('navigation:cultures') : t('navigation:plantingPlans')}
+                            </Link>
                           ) : null}
-                        </>
-                      )}
-                      secondary={getHistoryEntryMeta(item, tCultures, fallbackHistoryActorLabel)}
-                    />
-                    {isCurrentVersion
-                      ? <Chip label={t('commandPalette.currentVersion')} size="small" color="success" variant="outlined" />
-                      : <Button onClick={() => void handleRestoreProjectVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{t('commandPalette.restoreVersion')}</Button>}
-                  </Stack>
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 600,
+                            lineHeight: 1.35,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            wordBreak: 'normal',
+                            overflowWrap: 'break-word',
+                          }}
+                        >
+                          {title}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{
+                            lineHeight: 1.3,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            wordBreak: 'normal',
+                            overflowWrap: 'break-word',
+                          }}
+                        >
+                          {meta}
+                        </Typography>
+                        {!isCurrentVersion ? (
+                          <>
+                            <Divider />
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => void handleRestoreProjectVersion(item.history_id)}
+                              sx={{ alignSelf: 'flex-start', minHeight: 34 }}
+                            >
+                              {t('commandPalette.restoreVersion')}
+                            </Button>
+                          </>
+                        ) : null}
+                      </Stack>
+                    </Paper>
+                  ) : (
+                    <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
+                      <ListItemText
+                        sx={{ mr: 1 }}
+                        primary={(
+                          <>
+                            {title}
+                            {historyTarget ? (
+                              <>
+                                {' · '}
+                                <Link
+                                  component={RouterLink}
+                                  to={historyTarget}
+                                  underline="hover"
+                                  onClick={() => setProjectHistoryOpen(false)}
+                                >
+                                  {item.object_type === 'culture' ? t('navigation:cultures') : t('navigation:plantingPlans')}
+                                </Link>
+                              </>
+                            ) : null}
+                          </>
+                        )}
+                        secondary={meta}
+                      />
+                      {isCurrentVersion
+                        ? <Chip label={t('commandPalette.currentVersion')} size="small" color="success" variant="outlined" />
+                        : <Button onClick={() => void handleRestoreProjectVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{t('commandPalette.restoreVersion')}</Button>}
+                    </Stack>
+                  )}
                 </ListItem>
               );
             })}
