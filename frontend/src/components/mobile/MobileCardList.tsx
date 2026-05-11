@@ -1,6 +1,5 @@
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import { Box, Card, CardContent, Collapse, IconButton, Stack, Typography } from '@mui/material';
+import { Box, Card, CardContent, Collapse, Stack, Typography } from '@mui/material';
 
 export interface MobileCardListItem {
   id: string | number;
@@ -43,25 +42,59 @@ export function MobileCardList<T extends MobileCardListItem>({
           <Card key={item.id} variant="outlined">
             <CardContent sx={{ px: 1.5, py: 1.25, '&:last-child': { pb: 1.25 } }}>
               <Stack spacing={1}>
-                <Stack direction="row" spacing={1} alignItems="flex-start" justifyContent="space-between">
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.3, pr: 0.5 }}>
-                    {renderPrimary(item)}
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={() => onToggleExpanded(item.id)}
-                    aria-label={isExpanded ? detailsHideLabel : detailsShowLabel}
-                    sx={{ mt: -0.25, mr: -0.5, flexShrink: 0 }}
-                  >
-                    {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-                  </IconButton>
-                </Stack>
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => onToggleExpanded(item.id)}
+                  aria-expanded={isExpanded}
+                  aria-label={isExpanded ? detailsHideLabel : detailsShowLabel}
+                  sx={{
+                    border: 0,
+                    background: 'transparent',
+                    borderRadius: 1,
+                    p: 0.5,
+                    mx: -0.5,
+                    minHeight: 44,
+                    width: 'calc(100% + 8px)',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'background-color 120ms ease-in-out',
+                    '&:hover': { backgroundColor: 'action.hover' },
+                    '&:active': { backgroundColor: 'action.selected' },
+                    '&:focus-visible': {
+                      outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+                      outlineOffset: 1,
+                    },
+                  }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="flex-start" justifyContent="space-between">
+                    <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.3, pr: 0.5 }}>
+                        {renderPrimary(item)}
+                      </Typography>
+                      {renderSecondary ? (
+                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
+                          {renderSecondary(item)}
+                        </Typography>
+                      ) : null}
+                    </Stack>
 
-                {renderSecondary ? (
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
-                    {renderSecondary(item)}
-                  </Typography>
-                ) : null}
+                    <Box
+                      aria-hidden="true"
+                      sx={{
+                        mt: -0.25,
+                        mr: -0.5,
+                        flexShrink: 0,
+                        display: 'inline-flex',
+                        color: 'action.active',
+                        transition: 'transform 160ms ease-in-out',
+                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      }}
+                    >
+                      <ExpandMoreIcon fontSize="small" />
+                    </Box>
+                  </Stack>
+                </Box>
 
                 <Collapse in={isExpanded}>
                   <Box sx={{ pt: 0.25 }}>
