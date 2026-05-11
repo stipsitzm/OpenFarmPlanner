@@ -99,8 +99,8 @@ export default function Dashboard(): React.ReactElement {
       {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
 
       {!isSetupComplete ? (
-        <PageSurface variant="contentFit" sx={{ mb: 2, minWidth: { md: 560 }, width: '100%' }}>
-        <Card variant="outlined" sx={{ maxWidth: 860 }}>
+        <PageSurface variant="contentFit" sx={{ mb: 2, minWidth: { md: 480 } }}>
+        <Card variant="outlined" sx={{ width: 'fit-content', maxWidth: '100%' }}>
           <CardContent>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.75 }}>
               <SproutOutlinedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
@@ -147,8 +147,8 @@ export default function Dashboard(): React.ReactElement {
       ) : null}
 
       {(isSetupComplete || (!isSetupComplete && upcomingTasks.length > 0)) ? (
-      <PageSurface variant="contentFit" sx={{ minWidth: { md: 560 }, width: '100%' }}>
-      <Card variant="outlined">
+      <PageSurface variant="contentFit" sx={{ minWidth: { md: 460 } }}>
+      <Card variant="outlined" sx={{ width: 'fit-content', maxWidth: '100%' }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>{t('dashboard:tasks.title')}</Typography>
           {upcomingTasks.length === 0 ? (
