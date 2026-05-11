@@ -1542,7 +1542,7 @@ function PlantingPlans(): React.ReactElement {
   }, [canCreatePlan, isMobile, searchParams, setSearchParams]);
 
   return (
-    <PageContainer variant="wideWorkspaceTable">
+    <PageContainer variant="workspaceFullWidth">
 
       {areaWarning ? (
         <Alert severity="warning" sx={{ mb: 2 }}>

@@ -14,7 +14,6 @@ import {
   Box,
   Button,
   ButtonGroup,
-  Paper,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -456,22 +455,24 @@ function GanttChartPage(): React.ReactElement {
 
   if (loading) {
     return (
-      <PageContainer variant="full">
-        <p>{t('ganttChart:loading')}</p>
+      <PageContainer variant="workspaceFullWidth">
+        <Box sx={{ width: '100%', py: 2 }}>
+          <Typography variant="body1">{t('ganttChart:loading')}</Typography>
+        </Box>
       </PageContainer>
     );
   }
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
-      <PageContainer variant="full">
+      <PageContainer variant="workspaceFullWidth">
         <ProjectRequiredState reason={missingProjectReason} />
       </PageContainer>
     );
   }
 
   return (
-    <PageContainer variant="full">
+    <PageContainer variant="workspaceFullWidth">
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {hasCalendarRequirements ? (
@@ -505,7 +506,7 @@ function GanttChartPage(): React.ReactElement {
         ) : null}
 
         {!hasCalendarRequirements ? (
-          <Paper className="gantt-container-wrapper" sx={{ mt: 0.5 }}>
+          <Box className="gantt-container-wrapper" sx={{ mt: 0.5, border: '1px solid #e3e7df', borderRadius: 2, bgcolor: '#fff' }}>
             <Box sx={{ p: 2 }}>
               <EmptyStateCard
                 title={t('ganttChart:emptyStates.requirementsTitle')}
@@ -524,9 +525,9 @@ function GanttChartPage(): React.ReactElement {
                 ]}
               />
             </Box>
-          </Paper>
+          </Box>
         ) : (
-          <Paper className="gantt-container-wrapper" sx={{ mt: 0.5 }}>
+          <Box className="gantt-container-wrapper" sx={{ mt: 0.5, border: '1px solid #e3e7df', borderRadius: 2, bgcolor: '#fff' }}>
             <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
               <GanttChart
                 key={ganttRenderKey}
@@ -576,11 +577,11 @@ function GanttChartPage(): React.ReactElement {
                   : undefined}
               />
             </GanttRenderBoundary>
-          </Paper>
+          </Box>
         )}
 
         {hasCalendarRequirements && calendarMode === 'occupancy' && hasYieldData ? (
-          <Paper className="gantt-container-wrapper" sx={{ mt: 3, p: 2 }}>
+          <Box className="gantt-container-wrapper" sx={{ mt: 3, p: 2, border: '1px solid #e3e7df', borderRadius: 2, bgcolor: '#fff' }}>
             <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
               {t('ganttChart:yieldDistributionTitle')}
             </Typography>
@@ -641,7 +642,7 @@ function GanttChartPage(): React.ReactElement {
                   </Box>
                 </Box>
               </Box>
-          </Paper>
+          </Box>
         ) : null}
     </PageContainer>
   );
