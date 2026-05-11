@@ -772,7 +772,7 @@ export function CultureDetail({
           <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: 'flex-start' }}>
             {selectedCulture ? (
               <Card sx={{ width: '100%', maxWidth: useUnifiedMobileLayout ? '100%' : { sm: 960, lg: 1220, xl: 1400 } }}>
-                <CardContent sx={{ p: { xs: 1.5, sm: 2, lg: 3 } }}>
+                <CardContent sx={{ p: { xs: 1, sm: 2, lg: 3 } }}>
             {/* Header with crop name and badge */}
                   <Box sx={{ mb: { xs: 2, sm: 3 } }}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, sm: 2 }, mb: 0.75 }}>
@@ -930,7 +930,7 @@ export function CultureDetail({
             <Divider sx={{ mb: 3 }} />
 
             {/* General Information Section */}
-            <Box sx={{ mb: 4, p: 2.5, border: '1px solid #e5e7eb', borderRadius: 2 }}>
+            <Box sx={{ mb: 4, p: { xs: 1.5, sm: 2.5 }, border: '1px solid #e5e7eb', borderRadius: 2 }}>
               <Typography variant="h6" gutterBottom>
                 Allgemeine Informationen
               </Typography>
@@ -1287,7 +1287,7 @@ export function CultureDetail({
             <Divider sx={{ mb: 3 }} />
 
             {/* Notes Section */}
-            <Box sx={{ p: 2.5, border: '1px solid #e5e7eb', borderRadius: 2 }}>
+            <Box sx={{ p: { xs: 1.5, sm: 2.5 }, border: '1px solid #e5e7eb', borderRadius: 2 }}>
               <Typography variant="h6" gutterBottom>
                 Notizen
               </Typography>
