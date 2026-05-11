@@ -102,6 +102,7 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { getFirstMissingCultivationPlanRequirement } from './requirementFlow';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
+import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
@@ -757,10 +758,7 @@ function Cultures(): React.ReactElement {
     },
   ]), [handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, handleOpenPublicLibrary, selectedCulture]);
 
-  useEffect(() => {
-    setTopbarContextActions(contextActions);
-    return () => setTopbarContextActions([]);
-  }, [contextActions, setTopbarContextActions]);
+  useTopbarContextActions(setTopbarContextActions, contextActions);
 
   const commandSpecs = useMemo(() => createCulturesCommandSpecs({
     canRunEnrichmentForCulture,

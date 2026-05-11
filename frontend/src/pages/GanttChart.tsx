@@ -59,6 +59,7 @@ import {
   segmentedButtonGroupSx,
 } from '../components/buttons/segmentedControlStyles';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
+import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 
 interface WeeklyYieldCultureMeta {
   id: number;
@@ -426,34 +427,32 @@ function GanttChartPage(): React.ReactElement {
   }, [maxTotalYield]);
 
 
-  useEffect(() => {
-    const topbarActions: TopbarContextAction[] = [
-      {
-        id: 'calendar-mode-view',
-        label: t('ganttChart:modeViewOption'),
-        onClick: () => setEditMode(false),
-        active: !editMode,
-        hidden: calendarMode !== 'occupancy',
-        reserveSpace: true,
-        groupId: 'calendar-interaction-mode',
-        ariaLabel: t('ganttChart:modeAriaLabel'),
-        tooltip: t('ganttChart:modeViewTooltip'),
-      },
-      {
-        id: 'calendar-mode-edit',
-        label: t('ganttChart:modeEditOption'),
-        onClick: () => setEditMode(true),
-        active: editMode,
-        hidden: calendarMode !== 'occupancy',
-        reserveSpace: true,
-        groupId: 'calendar-interaction-mode',
-        ariaLabel: t('ganttChart:modeAriaLabel'),
-        tooltip: t('ganttChart:modeEditTooltip'),
-      },
-    ];
-    setTopbarContextActions(topbarActions);
-    return () => setTopbarContextActions([]);
-  }, [calendarMode, editMode, setTopbarContextActions, t]);
+  const topbarActions = useMemo<TopbarContextAction[]>(() => [
+    {
+      id: 'calendar-mode-view',
+      label: t('ganttChart:modeViewOption'),
+      onClick: () => setEditMode(false),
+      active: !editMode,
+      hidden: calendarMode !== 'occupancy',
+      reserveSpace: true,
+      groupId: 'calendar-interaction-mode',
+      ariaLabel: t('ganttChart:modeAriaLabel'),
+      tooltip: t('ganttChart:modeViewTooltip'),
+    },
+    {
+      id: 'calendar-mode-edit',
+      label: t('ganttChart:modeEditOption'),
+      onClick: () => setEditMode(true),
+      active: editMode,
+      hidden: calendarMode !== 'occupancy',
+      reserveSpace: true,
+      groupId: 'calendar-interaction-mode',
+      ariaLabel: t('ganttChart:modeAriaLabel'),
+      tooltip: t('ganttChart:modeEditTooltip'),
+    },
+  ], [calendarMode, editMode, t]);
+
+  useTopbarContextActions(setTopbarContextActions, topbarActions);
 
   if (loading) {
     return (
