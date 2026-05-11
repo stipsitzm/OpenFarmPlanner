@@ -14,6 +14,7 @@ import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
+import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 
@@ -188,56 +189,54 @@ export default function FieldsBedsPage(): React.ReactElement {
   }, [viewMode]);
 
 
-  useEffect(() => {
-    const contextActions: TopbarContextAction[] = [
-      {
-        id: 'fields-interaction-mode-view',
-        label: t('fields:graphical.viewModeOption'),
-        onClick: () => {
-          setInteractionMode('view');
-        },
-        active: interactionMode === 'view',
-        hidden: viewMode !== 'graphical',
-        reserveSpace: true,
-        ariaLabel: t('fields:graphical.modeAriaLabel'),
-        groupId: 'fields-interaction-mode',
+  const contextActions = useMemo<TopbarContextAction[]>(() => [
+    {
+      id: 'fields-interaction-mode-view',
+      label: t('fields:graphical.viewModeOption'),
+      onClick: () => {
+        setInteractionMode('view');
       },
-      {
-        id: 'fields-interaction-mode-edit',
-        label: t('fields:graphical.editModeOption'),
-        onClick: () => {
-          setInteractionMode('edit');
-        },
-        active: interactionMode === 'edit',
-        hidden: viewMode !== 'graphical',
-        reserveSpace: true,
-        ariaLabel: t('fields:graphical.modeAriaLabel'),
-        groupId: 'fields-interaction-mode',
+      active: interactionMode === 'view',
+      hidden: viewMode !== 'graphical',
+      reserveSpace: true,
+      ariaLabel: t('fields:graphical.modeAriaLabel'),
+      groupId: 'fields-interaction-mode',
+    },
+    {
+      id: 'fields-interaction-mode-edit',
+      label: t('fields:graphical.editModeOption'),
+      onClick: () => {
+        setInteractionMode('edit');
       },
-      {
-        id: 'fields-view-mode-list',
-        label: t('fields:representation.table'),
-        onClick: () => {
-          setViewMode('table');
-        },
-        active: viewMode === 'table',
-        ariaLabel: t('fields:representation.ariaLabel'),
-        groupId: 'fields-view-mode',
+      active: interactionMode === 'edit',
+      hidden: viewMode !== 'graphical',
+      reserveSpace: true,
+      ariaLabel: t('fields:graphical.modeAriaLabel'),
+      groupId: 'fields-interaction-mode',
+    },
+    {
+      id: 'fields-view-mode-list',
+      label: t('fields:representation.table'),
+      onClick: () => {
+        setViewMode('table');
       },
-      {
-        id: 'fields-view-mode-graphical',
-        label: t('fields:representation.graphical'),
-        onClick: () => {
-          setViewMode('graphical');
-        },
-        active: viewMode === 'graphical',
-        ariaLabel: t('fields:representation.ariaLabel'),
-        groupId: 'fields-view-mode',
+      active: viewMode === 'table',
+      ariaLabel: t('fields:representation.ariaLabel'),
+      groupId: 'fields-view-mode',
+    },
+    {
+      id: 'fields-view-mode-graphical',
+      label: t('fields:representation.graphical'),
+      onClick: () => {
+        setViewMode('graphical');
       },
-    ];
-    setTopbarContextActions(contextActions);
-    return () => setTopbarContextActions([]);
-  }, [interactionMode, setTopbarContextActions, t, viewMode]);
+      active: viewMode === 'graphical',
+      ariaLabel: t('fields:representation.ariaLabel'),
+      groupId: 'fields-view-mode',
+    },
+  ], [interactionMode, t, viewMode]);
+
+  useTopbarContextActions(setTopbarContextActions, contextActions);
 
   return (
     <>
