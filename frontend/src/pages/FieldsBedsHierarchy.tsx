@@ -64,6 +64,18 @@ const HIERARCHY_DATA_GRID_SX = {
   "& .MuiDataGrid-filler": {
     display: "none",
   },
+  "& .MuiDataGrid-scrollbarFiller": {
+    display: "none",
+  },
+  "& .MuiDataGrid-main": {
+    width: "fit-content",
+  },
+  "& .MuiDataGrid-virtualScrollerContent": {
+    width: "fit-content !important",
+  },
+  "& .MuiDataGrid-columnHeaders": {
+    width: "fit-content !important",
+  },
   "& .MuiDataGrid-columnHeader": {
     py: 0.25,
   },

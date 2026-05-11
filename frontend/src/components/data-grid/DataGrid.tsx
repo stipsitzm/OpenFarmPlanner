@@ -762,7 +762,13 @@ export function EditableDataGrid<T extends EditableRow>({
             ...dataGridSx,
             width: isContentSizedSurface ? 'fit-content' : '100%',
             minWidth: isContentSizedSurface ? 0 : '100%',
-            ...(shouldDisableTrailingFiller ? { '& .MuiDataGrid-filler': { display: 'none' } } : {}),
+            ...(shouldDisableTrailingFiller ? {
+              '& .MuiDataGrid-filler': { display: 'none' },
+              '& .MuiDataGrid-scrollbarFiller': { display: 'none' },
+              '& .MuiDataGrid-main': { width: 'fit-content' },
+              '& .MuiDataGrid-virtualScrollerContent': { width: 'fit-content !important' },
+              '& .MuiDataGrid-columnHeaders': { width: 'fit-content !important' },
+            } : {}),
           }}
           getRowClassName={(params) => {
             const rowKey = String(params.id);
