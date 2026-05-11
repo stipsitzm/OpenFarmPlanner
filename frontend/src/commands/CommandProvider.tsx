@@ -180,7 +180,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert severity="info" onClose={() => setHintOpen(false)}>
-          💡 Tipp: Drücke Alt+H für die allgemeine Hilfe.
+          💡 Tipp: Drücke Alt+K für die Command Palette.
         </Alert>
       </Snackbar>
     </CommandContext.Provider>

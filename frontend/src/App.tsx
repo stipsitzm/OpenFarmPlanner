@@ -544,8 +544,8 @@ function RootLayout(): React.ReactElement {
     onOpenAccountSettings: () => navigate('/app/account-settings'),
     onOpenVersionHistory: () => { void handleOpenProjectHistory(); },
     onLogout: () => { void handleLogout(); },
-    onOpenPalette: openCurrentPageHelp,
-    onOpenShortcuts: openGlobalHelp,
+    onOpenPalette: openPalette,
+    onOpenShortcuts: openCurrentPageHelp,
     labels: {
       nextPage: t('commandPalette.commands.nextPage'),
       previousPage: t('commandPalette.commands.previousPage'),
@@ -556,7 +556,7 @@ function RootLayout(): React.ReactElement {
       openAccountSettings: t('commandPalette.commands.openAccountSettings'),
       openVersionHistory: t('commandPalette.commands.openVersionHistory'),
       logout: t('commandPalette.commands.logout'),
-      openPalette: t('commandPalette.commands.contextShortcuts', { defaultValue: 'Kontextbezogene Tastenkürzel' }),
+      openPalette: t('commandPalette.label'),
       openShortcuts: t('commandPalette.commands.openShortcuts'),
     },
   }), [
@@ -1185,8 +1185,8 @@ function RootLayout(): React.ReactElement {
             </List>
             <Typography variant="subtitle2">Dialoge & Hilfe</Typography>
             <List dense disablePadding>
-              <ListItem><ListItemText primary={t('commandPalette.commands.openShortcuts')} secondary="Alt+H" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.contextShortcuts', { defaultValue: 'Kontextbezogene Tastenkürzel' })} secondary="Alt+K" /></ListItem>
+              <ListItem><ListItemText primary="Seitenhilfe öffnen" secondary="Alt+H" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.label')} secondary="Alt+K" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.closeDialog')} secondary="Esc" /></ListItem>
             </List>
           </Stack>
