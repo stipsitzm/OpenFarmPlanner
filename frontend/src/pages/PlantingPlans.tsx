@@ -1655,7 +1655,7 @@ function PlantingPlans(): React.ReactElement {
           sx={{ display: isMobile || shouldShowPrerequisiteState ? "none" : "block" }}
         >
           <EditableDataGrid<PlantingPlanRow>
-            layoutMode="workspace"
+            surfaceSizing="contentFit"
             columns={columns}
             api={plantingPlanAPI as unknown as DataGridAPI<PlantingPlanRow>}
             commandApiRef={gridCommandApiRef}
