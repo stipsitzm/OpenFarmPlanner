@@ -7,8 +7,7 @@ type PageContainerVariant =
   | 'xwide'
   | 'full'
   | 'compactCenteredTable'
-  | 'wideWorkspaceTable'
-  | 'workspaceFullWidth';
+  | 'wideWorkspaceTable';
 
 interface PageContainerProps {
   children: ReactNode;
@@ -24,7 +23,6 @@ const VARIANT_CLASSNAME: Record<PageContainerVariant, string> = {
   full: 'content--full',
   compactCenteredTable: 'content content--compact-centered-table',
   wideWorkspaceTable: 'content content--workspace-table',
-  workspaceFullWidth: 'content content--workspace-table',
 };
 
 function PageContainer({

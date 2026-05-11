@@ -139,7 +139,8 @@
   /* Intentionally bypass the standard centered max-width so wide data tables can use the full workspace width. */
   max-width: none;
   box-sizing: border-box;
-  padding: 0 24px;
+  /* Main already adds responsive horizontal gutters; extra container padding was the effective width limiter on wide pages. */
+  padding: 0;
   margin: 0;
 }
 
@@ -163,7 +164,6 @@
   .content--wide,
   .content--workspace,
   .content--xwide,
-  .content--workspace-table,
   .content--compact-centered-table,
   .content--full {
     padding: 0 16px;
@@ -176,7 +176,6 @@
   .content--wide,
   .content--workspace,
   .content--xwide,
-  .content--workspace-table,
   .content--compact-centered-table,
   .content--full {
     padding: 0 8px;

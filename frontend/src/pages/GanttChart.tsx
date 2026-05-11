@@ -455,7 +455,7 @@ function GanttChartPage(): React.ReactElement {
 
   if (loading) {
     return (
-      <PageContainer variant="workspaceFullWidth">
+      <PageContainer variant="wideWorkspaceTable">
         <Box sx={{ width: '100%', py: 2 }}>
           <Typography variant="body1">{t('ganttChart:loading')}</Typography>
         </Box>
@@ -465,14 +465,14 @@ function GanttChartPage(): React.ReactElement {
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
-      <PageContainer variant="workspaceFullWidth">
+      <PageContainer variant="wideWorkspaceTable">
         <ProjectRequiredState reason={missingProjectReason} />
       </PageContainer>
     );
   }
 
   return (
-    <PageContainer variant="workspaceFullWidth">
+    <PageContainer variant="wideWorkspaceTable">
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {hasCalendarRequirements ? (
