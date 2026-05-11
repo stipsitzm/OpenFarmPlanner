@@ -749,14 +749,14 @@ function RootLayout(): React.ReactElement {
                       mb: 0.75,
                       px: 1.25,
                       justifyContent: sidebarCollapsed ? 'center' : 'initial',
-                      color: isActive ? '#39463b' : '#5b564f',
+                      color: '#29332c',
                       bgcolor: isActive ? 'rgba(76, 135, 86, 0.13)' : 'transparent',
                       border: '1px solid rgba(76, 135, 86, 0)',
                       position: 'relative',
                       transition: 'background-color 140ms ease, color 140ms ease, border-color 140ms ease',
                       '&:hover': {
                         bgcolor: isActive ? 'rgba(76, 135, 86, 0.16)' : 'rgba(91, 130, 102, 0.09)',
-                        color: isActive ? '#39463b' : '#524d47',
+                        color: '#29332c',
                         borderColor: 'rgba(91, 130, 102, 0.14)',
                       },
                       '&::before': {
@@ -771,7 +771,7 @@ function RootLayout(): React.ReactElement {
                       },
                     }}
                   >
-                    <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 36, color: isActive ? '#3b6f47' : '#666057', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
+                    <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 36, color: '#2c4f33', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
                     {!sidebarCollapsed ? <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 500, fontSize: '0.95rem' }} /> : null}
                   </ListItemButton>
                 );
@@ -1022,16 +1022,16 @@ function RootLayout(): React.ReactElement {
                     borderRadius: 0,
                     px: 2,
                     py: 1.5,
-                    color: isActive ? '#39463b' : '#5b564f',
+                    color: '#29332c',
                     bgcolor: isActive ? 'rgba(80, 130, 90, 0.14)' : 'transparent',
                     transition: 'background-color 140ms ease, color 140ms ease',
                     '&:hover': {
                       bgcolor: isActive ? 'rgba(80, 130, 90, 0.18)' : 'rgba(91, 130, 102, 0.08)',
-                      color: isActive ? '#39463b' : '#524d47',
+                      color: '#29332c',
                     },
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: 36, color: isActive ? '#3b6f47' : '#666057', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
+                  <ListItemIcon sx={{ minWidth: 36, color: '#2c4f33', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
                   <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 500 }} />
                 </ListItemButton>
               </ListItem>
