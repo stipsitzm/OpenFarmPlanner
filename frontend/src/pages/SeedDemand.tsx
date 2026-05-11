@@ -7,7 +7,6 @@ import {
   FormControl,
   Link,
   MenuItem,
-  Paper,
   Select,
   Table,
   TableBody,
@@ -23,6 +22,7 @@ import { useTranslation } from '../i18n';
 import { useCommandContextTag } from '../commands/useCommandContext';
 import PageContainer from '../components/layout/PageContainer';
 import PageSurface from '../components/layout/PageSurface';
+import TableSurface from '../components/layout/TableSurface';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
@@ -180,7 +180,8 @@ export default function SeedDemandPage(): React.ReactElement {
         )}
 
         {!isLoading && !error && canCalculateSeedDemand && (
-          <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
+          <TableSurface sizingMode="contentFit">
+          <TableContainer sx={{ width: 'fit-content', maxWidth: '100%' }}>
             <Table
               sx={{
                 '& .MuiTableCell-root': { py: 1 },
@@ -289,6 +290,7 @@ export default function SeedDemandPage(): React.ReactElement {
               </Box>
             ) : null}
           </TableContainer>
+          </TableSurface>
         )}
       </PageSurface>
     </PageContainer>

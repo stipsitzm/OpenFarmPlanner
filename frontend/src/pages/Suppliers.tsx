@@ -10,7 +10,6 @@ import {
   DialogTitle,
   IconButton,
   Link,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -25,6 +24,7 @@ import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
 import PageSurface from '../components/layout/PageSurface';
+import TableSurface from '../components/layout/TableSurface';
 import type { Supplier } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
@@ -205,7 +205,8 @@ export default function Suppliers(): React.ReactElement {
             />
           </Box>
         ) : (
-          <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
+          <TableSurface sizingMode="compact">
+          <TableContainer sx={{ width: 'fit-content', maxWidth: '100%' }}>
             <Table size="medium" sx={{ width: 'auto' }}>
               <TableHead>
                 <TableRow>
@@ -250,6 +251,7 @@ export default function Suppliers(): React.ReactElement {
               </TableBody>
             </Table>
           </TableContainer>
+          </TableSurface>
         )}
       </PageSurface>
 
