@@ -132,6 +132,28 @@
   padding: 0 24px;
 }
 
+@media (max-width: 900px) {
+  .content,
+  .page-container,
+  .content--wide,
+  .content--workspace,
+  .content--xwide,
+  .content--full {
+    padding: 0 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .content,
+  .page-container,
+  .content--wide,
+  .content--workspace,
+  .content--xwide,
+  .content--full {
+    padding: 0 10px;
+  }
+}
+
 /* Error Message */
 .error-message {
   color: #d32f2f;

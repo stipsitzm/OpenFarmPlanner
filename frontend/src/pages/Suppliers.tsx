@@ -185,7 +185,7 @@ export default function Suppliers(): React.ReactElement {
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
       <PageContainer>
-        <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+        <Box sx={{ width: '100%' }}>
           <ProjectRequiredState reason={missingProjectReason} />
         </Box>
       </PageContainer>
@@ -194,7 +194,7 @@ export default function Suppliers(): React.ReactElement {
 
   return (
     <PageContainer>
-      <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+      <Box sx={{ width: '100%' }}>
         {suppliers.length === 0 ? (
           <Box sx={{ width: '100%', maxWidth: 880 }}>
             <EmptyStateCard
@@ -204,7 +204,7 @@ export default function Suppliers(): React.ReactElement {
             />
           </Box>
         ) : (
-          <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
+          <TableContainer component={Paper} sx={{ width: '100%', maxWidth: '100%' }}>
             <Table size="small" sx={{ width: 'auto' }}>
               <TableHead>
                 <TableRow>
