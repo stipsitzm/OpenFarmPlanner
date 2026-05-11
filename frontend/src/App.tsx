@@ -783,7 +783,10 @@ function RootLayout(): React.ReactElement {
       ) : null}
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', bgcolor: '#f2f0ea' }}>
       <Box sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
-        {navItems.map((item) => <RouterLink key={`sr-${item.to}`} to={item.to}>{item.label}</RouterLink>)}
+        {navItems.map((item) => {
+          const srLinkLabel = item.to === '/app/dashboard' ? 'Zur Übersicht' : item.label;
+          return <RouterLink key={`sr-${item.to}`} to={item.to} aria-label={srLinkLabel}>{item.label}</RouterLink>;
+        })}
       </Box>
       <AppBar
         position="sticky"
