@@ -644,9 +644,9 @@ function RootLayout(): React.ReactElement {
   }, [location.pathname]);
 
   return (
-    <Box className="app" sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f3f5f2' }}>
+    <Box className="app" sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f2f0ea' }}>
       {isDesktopUp ? (
-        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#dfe5de', bgcolor: '#f8f9f6', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
+        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#e1dbd0', bgcolor: '#f5f2eb', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
             {!sidebarCollapsed ? (
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1 }}>
@@ -749,14 +749,14 @@ function RootLayout(): React.ReactElement {
                       mb: 0.75,
                       px: 1.25,
                       justifyContent: sidebarCollapsed ? 'center' : 'initial',
-                      color: isActive ? '#2f4738' : '#475c4f',
+                      color: isActive ? '#39463b' : '#5b564f',
                       bgcolor: isActive ? 'rgba(76, 135, 86, 0.13)' : 'transparent',
                       border: '1px solid rgba(76, 135, 86, 0)',
                       position: 'relative',
                       transition: 'background-color 140ms ease, color 140ms ease, border-color 140ms ease',
                       '&:hover': {
                         bgcolor: isActive ? 'rgba(76, 135, 86, 0.16)' : 'rgba(91, 130, 102, 0.09)',
-                        color: isActive ? '#2f4738' : '#43584b',
+                        color: isActive ? '#39463b' : '#524d47',
                         borderColor: 'rgba(91, 130, 102, 0.14)',
                       },
                       '&::before': {
@@ -771,7 +771,7 @@ function RootLayout(): React.ReactElement {
                       },
                     }}
                   >
-                    <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 36, color: isActive ? '#356c42' : '#51685a', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
+                    <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 36, color: isActive ? '#3b6f47' : '#666057', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
                     {!sidebarCollapsed ? <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 500, fontSize: '0.95rem' }} /> : null}
                   </ListItemButton>
                 );
@@ -781,7 +781,7 @@ function RootLayout(): React.ReactElement {
           </Stack>
         </Box>
       ) : null}
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', bgcolor: '#f3f5f2' }}>
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', bgcolor: '#f2f0ea' }}>
       <Box sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
         {navItems.map((item) => <RouterLink key={`sr-${item.to}`} to={item.to}>{item.label}</RouterLink>)}
       </Box>
@@ -789,7 +789,7 @@ function RootLayout(): React.ReactElement {
         position="sticky"
         color="inherit"
         elevation={0}
-        sx={{ borderBottom: '1px solid', borderColor: '#e5e7eb', bgcolor: '#f8faf8', backdropFilter: 'saturate(120%) blur(2px)' }}
+        sx={{ borderBottom: '1px solid', borderColor: '#e4dfd4', bgcolor: '#f7f4ed', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
         <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, flexWrap: 'nowrap' }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
@@ -1000,7 +1000,7 @@ function RootLayout(): React.ReactElement {
         </Toolbar>
       </AppBar>
 
-      <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav} PaperProps={{ sx: { bgcolor: '#F5F6F5', borderRight: '1px solid #E5E7E5' } }}>
+      <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav} PaperProps={{ sx: { bgcolor: '#f5f2eb', borderRight: '1px solid #e1dbd0' } }}>
         <List sx={{ width: 280 }}>
           <ListItem sx={{ py: 1.5, px: 2 }}>
             <AppLogo size={26} showText to="/app/dashboard" />
@@ -1019,16 +1019,16 @@ function RootLayout(): React.ReactElement {
                     borderRadius: 0,
                     px: 2,
                     py: 1.5,
-                    color: isActive ? '#2f4738' : '#475c4f',
+                    color: isActive ? '#39463b' : '#5b564f',
                     bgcolor: isActive ? 'rgba(80, 130, 90, 0.14)' : 'transparent',
                     transition: 'background-color 140ms ease, color 140ms ease',
                     '&:hover': {
                       bgcolor: isActive ? 'rgba(80, 130, 90, 0.18)' : 'rgba(91, 130, 102, 0.08)',
-                      color: isActive ? '#2f4738' : '#43584b',
+                      color: isActive ? '#39463b' : '#524d47',
                     },
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: 36, color: isActive ? '#356c42' : '#51685a', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
+                  <ListItemIcon sx={{ minWidth: 36, color: isActive ? '#3b6f47' : '#666057', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
                   <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 500 }} />
                 </ListItemButton>
               </ListItem>
