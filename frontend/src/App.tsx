@@ -823,7 +823,7 @@ function RootLayout(): React.ReactElement {
             {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           </Box>
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflowX: isMobile ? 'auto' : 'visible', scrollbarWidth: 'thin' }}>
           {isCulturesPage ? (
             <>
               {cultureLibraryAction ? (
@@ -880,7 +880,7 @@ function RootLayout(): React.ReactElement {
               </Menu>
             </>
           ) : null}
-          {!isMobile ? (() => {
+          {(() => {
             const groups: TopbarContextAction[][] = [];
             genericTopbarContextActions.forEach((action) => {
               const lastGroup = groups[groups.length - 1];
@@ -907,6 +907,7 @@ function RootLayout(): React.ReactElement {
                     active: Boolean(action.active),
                     hidden: Boolean(action.hidden),
                   })}
+                  style={isMobile ? { minWidth: 0, paddingLeft: 8, paddingRight: 8, fontSize: '0.74rem' } : undefined}
                 >
                   {action.label}
                 </Button>
@@ -922,15 +923,15 @@ function RootLayout(): React.ReactElement {
                   key={`group-${group[0]?.groupId}-${index}`}
                   size="small"
                   variant="outlined"
-                  sx={segmentedButtonGroupSx}
+                  sx={{ ...segmentedButtonGroupSx, flexShrink: 0 }}
                 >
                   {content}
                 </ButtonGroup>
               ) : (
-                <Box key={`group-${index}`} sx={{ display: 'inline-flex' }}>{content}</Box>
+                <Box key={`group-${index}`} sx={{ display: 'inline-flex', flexShrink: 0 }}>{content}</Box>
               );
             });
-          })() : null}
+          })()}
           {topbarPrimaryAction ? (
             <Tooltip title={topbarPrimaryAction.label}>
               <Button
