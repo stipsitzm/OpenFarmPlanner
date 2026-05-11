@@ -61,6 +61,8 @@ const HIERARCHY_DATA_GRID_SX = {
   ...dataGridSx,
   width: "fit-content",
   maxWidth: "100%",
+  minWidth: "unset",
+  display: "inline-block",
   "& .MuiDataGrid-filler": {
     display: "none",
   },
