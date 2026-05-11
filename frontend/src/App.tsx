@@ -1200,23 +1200,34 @@ function RootLayout(): React.ReactElement {
         <DialogTitle>Version wiederherstellen?</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 1.5 }}>
-            Du bist dabei, das Projekt auf einen früheren Stand zurückzusetzen.
+            Du stellst eine frühere Version wieder her.
           </Typography>
           {pendingRestoreEntry ? (
             <Box sx={{ mb: 1.5 }}>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {getHistoryEntryTitle(pendingRestoreEntry, tCultures)}
+                {pendingRestoreEntry.object_display_name?.trim() || getHistoryEntryTitle(pendingRestoreEntry, tCultures)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Originalversion vom {formatHistoryTimestamp(pendingRestoreEntry.history_date)}
+                Bearbeitet am {formatHistoryTimestamp(pendingRestoreEntry.history_date)}
               </Typography>
             </Box>
           ) : null}
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
-            Die aktuelle Version geht nicht verloren. Es wird automatisch eine neue Version erstellt, sodass die Wiederherstellung später rückgängig gemacht werden kann.
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Rückgängig über den Versionsverlauf möglich.
+          <Box
+            sx={{
+              borderRadius: 1.5,
+              border: '1px solid',
+              borderColor: 'success.light',
+              bgcolor: 'rgba(76, 175, 80, 0.08)',
+              px: 1.25,
+              py: 1,
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              Die aktuelle Version bleibt erhalten. Vor der Wiederherstellung wird automatisch eine neue Version erstellt, sodass du jederzeit wieder zurückwechseln kannst.
+            </Typography>
+          </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+            Es gehen keine Daten verloren.
           </Typography>
         </DialogContent>
         <DialogActions>
