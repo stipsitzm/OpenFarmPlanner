@@ -184,7 +184,7 @@ export default function Suppliers(): React.ReactElement {
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
-      <PageContainer>
+      <PageContainer variant="xwide">
         <Box sx={{ width: '100%' }}>
           <ProjectRequiredState reason={missingProjectReason} />
         </Box>
@@ -193,8 +193,13 @@ export default function Suppliers(): React.ReactElement {
   }
 
   return (
-    <PageContainer>
-      <Box sx={{ width: '100%' }}>
+    <PageContainer variant="xwide">
+      <Box sx={{ width: '100%', maxWidth: 1600 }}>
+        <Box sx={{ mb: 1.5 }}>
+          <Box sx={{ color: 'text.secondary', fontSize: '0.92rem' }}>
+            Verwalte Saatgut- und Materiallieferanten für dein Projekt.
+          </Box>
+        </Box>
         {suppliers.length === 0 ? (
           <Box sx={{ width: '100%', maxWidth: 880 }}>
             <EmptyStateCard
@@ -205,26 +210,27 @@ export default function Suppliers(): React.ReactElement {
           </Box>
         ) : (
           <TableContainer component={Paper} sx={{ width: '100%', maxWidth: '100%' }}>
-            <Table size="small" sx={{ width: 'auto' }}>
+            <Table size="medium" sx={{ width: '100%' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell>{t('name')}</TableCell>
-                  <TableCell>{t('homepage')}</TableCell>
-                  <TableCell align="right">{t('actions')}</TableCell>
+                  <TableCell sx={{ py: 1.5 }}>{t('name')}</TableCell>
+                  <TableCell sx={{ py: 1.5 }}>{t('homepage')}</TableCell>
+                  <TableCell align="right" sx={{ py: 1.5, width: 120 }}>{t('actions')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {suppliers.map((supplier) => (
                   <TableRow key={supplier.id} hover>
-                    <TableCell>{supplier.name}</TableCell>
-                    <TableCell>
+                    <TableCell sx={{ py: 1.25 }}>{supplier.name}</TableCell>
+                    <TableCell sx={{ py: 1.25 }}>
                       {supplier.homepage_url ? (
                         <Link href={supplier.homepage_url} target="_blank" rel="noopener noreferrer" underline="hover">
                           {supplier.homepage_url}
                         </Link>
                       ) : null}
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ py: 1.25 }}>
+                      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                       <IconButton
                         size="small"
                         color="primary"
@@ -241,6 +247,7 @@ export default function Suppliers(): React.ReactElement {
                       >
                         <CloseIcon fontSize="small" />
                       </IconButton>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
