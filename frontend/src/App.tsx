@@ -540,8 +540,8 @@ function RootLayout(): React.ReactElement {
     onOpenAccountSettings: () => navigate('/app/account-settings'),
     onOpenVersionHistory: () => { void handleOpenProjectHistory(); },
     onLogout: () => { void handleLogout(); },
-    onOpenPalette: openPalette,
-    onOpenShortcuts: openCurrentPageHelp,
+    onOpenPalette: openCurrentPageHelp,
+    onOpenShortcuts: openGlobalHelp,
     labels: {
       nextPage: t('commandPalette.commands.nextPage'),
       previousPage: t('commandPalette.commands.previousPage'),
@@ -552,7 +552,7 @@ function RootLayout(): React.ReactElement {
       openAccountSettings: t('commandPalette.commands.openAccountSettings'),
       openVersionHistory: t('commandPalette.commands.openVersionHistory'),
       logout: t('commandPalette.commands.logout'),
-      openPalette: t('commandPalette.label'),
+      openPalette: t('commandPalette.commands.contextShortcuts', { defaultValue: 'Kontextbezogene Tastenkürzel' }),
       openShortcuts: t('commandPalette.commands.openShortcuts'),
     },
   }), [
@@ -1163,23 +1163,24 @@ function RootLayout(): React.ReactElement {
       <Dialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t('commandPalette.shortcutsTitle')}</DialogTitle>
         <DialogContent>
-          <List dense>
-            <ListItem>
-              <ListItemText primary={t('commandPalette.commands.openShortcuts')} secondary="Alt+H" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary={t('commandPalette.label')} secondary="Alt+K" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="–" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Sidebar ein-/ausklappen" secondary="Ctrl+B" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary={t('commandPalette.commands.closeDialog')} secondary="Esc" />
-            </ListItem>
-          </List>
+          <Stack spacing={1.5}>
+            <Typography variant="subtitle2">Navigation</Typography>
+            <List dense disablePadding>
+              <ListItem><ListItemText primary={t('commandPalette.commands.nextPage')} secondary="Ctrl+Shift+↓" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.previousPage')} secondary="Ctrl+Shift+↑" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="–" /></ListItem>
+            </List>
+            <Typography variant="subtitle2">Ansichten & Layout</Typography>
+            <List dense disablePadding>
+              <ListItem><ListItemText primary="Sidebar ein-/ausklappen" secondary="Ctrl+B" /></ListItem>
+            </List>
+            <Typography variant="subtitle2">Dialoge & Hilfe</Typography>
+            <List dense disablePadding>
+              <ListItem><ListItemText primary={t('commandPalette.commands.openShortcuts')} secondary="Alt+H" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.contextShortcuts', { defaultValue: 'Kontextbezogene Tastenkürzel' })} secondary="Alt+K" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.closeDialog')} secondary="Esc" /></ListItem>
+            </List>
+          </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShortcutsOpen(false)}>{t('common:actions.close')}</Button>
