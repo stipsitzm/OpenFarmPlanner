@@ -207,6 +207,16 @@ export function CultureDetail({
       outlineOffset: 1,
     },
   } as const;
+  const detailSectionGridSx = {
+    display: 'grid',
+    gridTemplateColumns: {
+      xs: '1fr',
+      sm: 'repeat(2, minmax(180px, 1fr))',
+      lg: 'repeat(3, minmax(180px, 1fr))',
+    },
+    gap: 2,
+    justifyContent: 'start',
+  } as const;
 
   const activeFilterCount = useMemo(
     () => [
@@ -769,10 +779,10 @@ export function CultureDetail({
               })}
             </List>
           </Card>) : null}
-          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: 'flex-start' }}>
+          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: 'center' }}>
             {selectedCulture ? (
-              <Card sx={{ width: '100%', maxWidth: useUnifiedMobileLayout ? '100%' : { sm: 960, lg: 1220, xl: 1400 } }}>
-                <CardContent sx={{ p: { xs: 1, sm: 2, lg: 3 } }}>
+              <Card sx={{ width: '100%', maxWidth: useUnifiedMobileLayout ? '100%' : { sm: 920, lg: 980, xl: 1040 } }}>
+                <CardContent sx={{ p: { xs: 1, sm: 2, lg: 2.5 } }}>
             {/* Header with crop name and badge */}
                   <Box sx={{ mb: { xs: 2, sm: 3 } }}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, sm: 2 }, mb: 0.75 }}>
@@ -927,24 +937,14 @@ export function CultureDetail({
               </Menu>
             </Box>
 
-            <Divider sx={{ mb: 3 }} />
+            <Divider sx={{ mb: 2.5 }} />
 
             {/* General Information Section */}
-            <Box sx={{ mb: 4, p: { xs: 1.5, sm: 2.5 }, border: '1px solid #e5e7eb', borderRadius: 2 }}>
+            <Box sx={{ mb: 3, p: { xs: 1.25, sm: 2 }, border: '1px solid #e5e7eb', borderRadius: 2 }}>
               <Typography variant="h6" gutterBottom>
                 Allgemeine Informationen
               </Typography>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: '1fr',
-                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
-                  },
-                  gap: 2,
-                  justifyContent: 'start',
-                }}
-              >
+              <Box sx={detailSectionGridSx}>
                 {selectedCulture.crop_family && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
@@ -988,24 +988,14 @@ export function CultureDetail({
               </Box>
             </Box>
 
-            <Divider sx={{ mb: 3 }} />
+            <Divider sx={{ mb: 2.5 }} />
 
             {/* Timing Section */}
-            <Box sx={{ mb: 4 }}>
+            <Box sx={{ mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Zeitplanung
               </Typography>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: '1fr',
-                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
-                  },
-                  gap: 2,
-                  justifyContent: 'start',
-                }}
-              >
+              <Box sx={detailSectionGridSx}>
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Wachstumszeitraum
@@ -1035,24 +1025,14 @@ export function CultureDetail({
               </Box>
             </Box>
 
-            <Divider sx={{ mb: 3 }} />
+            <Divider sx={{ mb: 2.5 }} />
 
             {/* Spacing Section */}
-            <Box sx={{ mb: 4 }}>
+            <Box sx={{ mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Abstände
               </Typography>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: '1fr',
-                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
-                  },
-                  gap: 2,
-                  justifyContent: 'start',
-                }}
-              >
+              <Box sx={detailSectionGridSx}>
                 {selectedCulture.distance_within_row_cm !== null && selectedCulture.distance_within_row_cm !== undefined && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
@@ -1086,30 +1066,24 @@ export function CultureDetail({
               </Box>
             </Box>
 
-            <Divider sx={{ mb: 3 }} />
+            <Divider sx={{ mb: 2.5 }} />
 
             {/* Seeding Section */}
-            <Box sx={{ mb: 4 }}>
+            <Box sx={{ mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Saatgut
               </Typography>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: '1fr',
-                    sm: 'repeat(auto-fit, minmax(180px, 260px))',
-                  },
-                  gap: 2,
-                  justifyContent: 'start',
-                }}
-              >
+              <Box sx={detailSectionGridSx}>
                 {seedRateRows.length > 0 && activeCultivationTypes.length <= 1 && (
-                  <Box sx={{ gridColumn: '1 / -1' }}>
+                  <Box>
                     <Typography variant="body2" color="text.secondary">Menge</Typography>
                     <Typography variant="body1">
                       {formatNumber(seedRateRows[0].value, t)} {formatSeedUnitLabel(seedRateRows[0].unit)}
                     </Typography>
+                  </Box>
+                )}
+                {seedRateRows.length > 0 && activeCultivationTypes.length <= 1 && (
+                  <Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                       Sicherheitszuschlag Saatgut
                     </Typography>
@@ -1179,14 +1153,7 @@ export function CultureDetail({
                   </Typography>
                 </Box>
               </Box>
-              <Box
-                sx={{
-                  mt: 3,
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
-                  gap: 2,
-                }}
-              >
+              <Box sx={{ mt: 2.5, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
                 <Typography variant="subtitle1" component="h3" gutterBottom>
                   {hasMultipleSupplierRows ? 'Saatgutdaten je Lieferant' : 'Lieferant'}
                 </Typography>
@@ -1196,7 +1163,10 @@ export function CultureDetail({
                   </Typography>
                 )}
                 {orderedSupplierRows.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">Keine Lieferantendaten vorhanden.</Typography>
+                  <Box sx={{ gridColumn: '1 / -1', display: 'inline-flex', alignItems: 'center', gap: 0.75, color: 'text.secondary' }}>
+                    <Typography variant="body2">ℹ️</Typography>
+                    <Typography variant="body2">Keine Lieferantendaten vorhanden.</Typography>
+                  </Box>
                 ) : (
                   <Stack spacing={2} sx={{ gridColumn: '1 / -1' }}>
                     {orderedSupplierRows.map((row, index) => (
