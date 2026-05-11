@@ -1177,7 +1177,7 @@ function RootLayout(): React.ReactElement {
             <List dense disablePadding>
               <ListItem><ListItemText primary={t('commandPalette.commands.nextPage')} secondary="Ctrl+Shift+↓" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.previousPage')} secondary="Ctrl+Shift+↑" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="–" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="Alt+V" /></ListItem>
             </List>
             <Typography variant="subtitle2">Ansichten & Layout</Typography>
             <List dense disablePadding>

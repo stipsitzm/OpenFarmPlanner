@@ -97,6 +97,8 @@ export function createRootCommands(options: RootCommandFactoryOptions): CommandS
       label: options.labels.openVersionHistory,
       keywords: ['versionen', 'verlauf', 'historie', 'projekt'],
       group: 'account',
+      shortcutHint: 'Alt+V',
+      keys: { alt: true, key: 'v' },
       contextTags: ['global'],
       isVisible: () => options.activeProjectId !== null,
       action: options.onOpenVersionHistory,
