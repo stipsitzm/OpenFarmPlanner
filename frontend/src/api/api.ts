@@ -129,6 +129,7 @@ export const plantingPlanAPI = {
   get: (id: number) => http.get<PlantingPlan>(`/planting-plans/${id}/`),
   create: (data: PlantingPlan) => http.post<PlantingPlan>('/planting-plans/', withActiveProject(data)),
   update: (id: number, data: PlantingPlan) => http.put<PlantingPlan>(`/planting-plans/${id}/`, withActiveProject(data)),
+  patch: (id: number, data: Partial<PlantingPlan>) => http.patch<PlantingPlan>(`/planting-plans/${id}/`, withActiveProject(data)),
   delete: (id: number) => http.delete(`/planting-plans/${id}/`),
   remainingArea: (params: { bed_id: number; start_date: string; end_date: string; exclude_plan_id?: number }) =>
     http.get<RemainingAreaResponse>('/planting-plans/remaining-area/', { params }),

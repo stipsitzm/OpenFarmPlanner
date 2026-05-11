@@ -1326,7 +1326,7 @@ function PlantingPlans(): React.ReactElement {
 
     setIsMobileNotesSaving(true);
     try {
-      await plantingPlanAPI.update(targetId, {
+      await plantingPlanAPI.patch(targetId, {
         notes: draftToSave,
       } as PlantingPlan);
 

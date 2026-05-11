@@ -10,7 +10,10 @@
     "graphicalFields": "Grafische Ansicht"
   },
   "fields": {
-    "plots": "Anbauflächen"
+    "plots": "Anbauflächen",
+    "bed": "Beet",
+    "planting_date": "Pflanzdatum",
+    "culture": "Kultur"
   },
   "common": {
     "actions": {
@@ -83,5 +86,8 @@
       "daysToLastHarvest": "Tage bis zur letzten Ernte"
     },
     "moreInfo": "Mehr Infos (Wikipedia)"
+  },
+  "validation": {
+    "required": "Dieses Feld ist erforderlich."
   }
 }
