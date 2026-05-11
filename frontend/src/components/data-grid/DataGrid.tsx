@@ -95,10 +95,6 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showRowEditActions?: boolean;
   onRowsStateChange?: (rows: T[]) => void;
   onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean; error: string }) => void;
-  /** @deprecated Use surfaceSizing instead. */
-  fitContentWidth?: boolean;
-  /** @deprecated Use surfaceSizing instead. */
-  layoutMode?: 'standard' | 'workspace';
   /**
    * Controls how the grid surface uses available page/workspace width:
    * - contentFit: fit to content and center, but never exceed container width
@@ -134,12 +130,9 @@ export function EditableDataGrid<T extends EditableRow>({
   showRowEditActions = false,
   onRowsStateChange,
   onLoadStateChange,
-  fitContentWidth = false,
-  layoutMode = 'standard',
   surfaceSizing,
 }: EditableDataGridProps<T>): React.ReactElement {
-  const resolvedSurfaceSizing = surfaceSizing
-    ?? (layoutMode === 'workspace' ? 'fullWorkspace' : 'contentFit');
+  const resolvedSurfaceSizing = surfaceSizing ?? 'contentFit';
   const isContentSizedSurface = resolvedSurfaceSizing === 'contentFit' || resolvedSurfaceSizing === 'compact';
   const shouldUseCompactContainer = resolvedSurfaceSizing === 'compact';
   const [rows, setRows] = useState<GridRowsProp<T>>([]);

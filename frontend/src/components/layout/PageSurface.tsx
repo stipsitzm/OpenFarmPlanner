@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from 'react';
 import { Box } from '@mui/material';
 
-type PageSurfaceVariant = 'standardCenteredPage' | 'compactCenteredTable' | 'wideWorkspace';
+type PageSurfaceVariant = 'standardCenteredPage' | 'compact' | 'contentFit' | 'fullWorkspace' | 'compactCenteredTable' | 'wideWorkspace';
 
 interface PageSurfaceProps {
   children: ReactNode;
@@ -11,6 +11,10 @@ interface PageSurfaceProps {
 
 const VARIANT_SX: Record<PageSurfaceVariant, Record<string, unknown>> = {
   standardCenteredPage: { width: '100%' },
+  compact: { width: 'fit-content', maxWidth: '100%', mx: 'auto' },
+  contentFit: { width: 'fit-content', maxWidth: '100%', mx: 'auto' },
+  fullWorkspace: { width: '100%', maxWidth: '100%' },
+  // Legacy aliases
   compactCenteredTable: { width: 'fit-content', maxWidth: '100%', mx: 'auto' },
   wideWorkspace: { width: '100%', maxWidth: '100%' },
 };

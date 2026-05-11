@@ -194,8 +194,8 @@ export default function Suppliers(): React.ReactElement {
   }
 
   return (
-    <PageContainer variant="compactCenteredTable">
-      <PageSurface variant="compactCenteredTable">
+    <PageContainer variant="compactCenteredPage">
+      <PageSurface variant="compact">
         {suppliers.length === 0 ? (
           <Box sx={{ width: '100%', maxWidth: 880 }}>
             <EmptyStateCard

@@ -134,7 +134,7 @@
   margin: var(--page-content-margin, 0 auto);
 }
 
-.content--workspace-table {
+.content--workspace-page {
   width: 100%;
   /* Intentionally bypass the standard centered max-width so wide data tables can use the full workspace width. */
   max-width: none;
@@ -144,7 +144,7 @@
   margin: 0;
 }
 
-.content--compact-centered-table {
+.content--compact-centered-page {
   width: 100%;
   max-width: 1360px;
   box-sizing: border-box;
@@ -164,7 +164,7 @@
   .content--wide,
   .content--workspace,
   .content--xwide,
-  .content--compact-centered-table,
+  .content--compact-centered-page,
   .content--full {
     padding: 0 16px;
   }
@@ -176,7 +176,7 @@
   .content--wide,
   .content--workspace,
   .content--xwide,
-  .content--compact-centered-table,
+  .content--compact-centered-page,
   .content--full {
     padding: 0 8px;
   }

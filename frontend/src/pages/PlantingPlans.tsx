@@ -1543,7 +1543,7 @@ function PlantingPlans(): React.ReactElement {
   }, [canCreatePlan, isMobile, searchParams, setSearchParams]);
 
   return (
-    <PageContainer variant="wideWorkspace">
+    <PageContainer variant="workspacePage">
 
       {areaWarning ? (
         <Alert severity="warning" sx={{ mb: 2 }}>
@@ -1651,7 +1651,7 @@ function PlantingPlans(): React.ReactElement {
         ) : null}
 
         <PageSurface
-          variant="wideWorkspace"
+          variant="fullWorkspace"
           sx={{ display: isMobile || shouldShowPrerequisiteState ? "none" : "block" }}
         >
           <EditableDataGrid<PlantingPlanRow>

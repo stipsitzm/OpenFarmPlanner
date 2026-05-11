@@ -2,14 +2,15 @@ import type { ReactElement, ReactNode } from 'react';
 
 type PageContainerVariant =
   | 'standardCenteredPage'
-  | 'wideWorkspace'
-  | 'compactCenteredTable'
+  | 'compactCenteredPage'
+  | 'workspacePage'
   | 'standard'
   | 'wide'
   | 'workspace'
   | 'xwide'
   | 'full'
-  | 'wideWorkspaceTable';
+  | 'wideWorkspace'
+  | 'compactCenteredTable';
 
 interface PageContainerProps {
   children: ReactNode;
@@ -20,17 +21,19 @@ interface PageContainerProps {
 const VARIANT_CLASSNAME: Record<PageContainerVariant, string> = {
   // Recommended categories:
   // - standardCenteredPage: default readable centered page width
-  // - compactCenteredTable: compact, centered table pages (e.g. Suppliers)
-  // - wideWorkspace: full workspace width for data-heavy pages (e.g. Planting Plans, Gantt)
+  // - compactCenteredPage: compact, centered pages (e.g. Suppliers)
+  // - workspacePage: full workspace width for data-heavy pages (e.g. Planting Plans, Gantt)
   standardCenteredPage: 'content',
-  wideWorkspace: 'content content--workspace-table',
-  compactCenteredTable: 'content content--compact-centered-table',
+  workspacePage: 'content content--workspace-page',
+  compactCenteredPage: 'content content--compact-centered-page',
+  // Legacy aliases kept for compatibility with older pages.
+  wideWorkspace: 'content content--workspace-page',
+  compactCenteredTable: 'content content--compact-centered-page',
   standard: 'content',
   wide: 'content content--wide',
   workspace: 'content content--workspace',
   xwide: 'content content--xwide',
   full: 'content--full',
-  wideWorkspaceTable: 'content content--workspace-table',
 };
 
 function PageContainer({

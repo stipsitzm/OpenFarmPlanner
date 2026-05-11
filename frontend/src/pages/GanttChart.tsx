@@ -456,8 +456,8 @@ function GanttChartPage(): React.ReactElement {
 
   if (loading) {
     return (
-      <PageContainer variant="wideWorkspace">
-        <PageSurface variant="wideWorkspace" sx={{ py: 2 }}>
+      <PageContainer variant="workspacePage">
+        <PageSurface variant="fullWorkspace" sx={{ py: 2 }}>
           <Typography variant="body1">{t('ganttChart:loading')}</Typography>
         </PageSurface>
       </PageContainer>
@@ -466,8 +466,8 @@ function GanttChartPage(): React.ReactElement {
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
-      <PageContainer variant="wideWorkspace">
-        <PageSurface variant="wideWorkspace">
+      <PageContainer variant="workspacePage">
+        <PageSurface variant="fullWorkspace">
           <ProjectRequiredState reason={missingProjectReason} />
         </PageSurface>
       </PageContainer>
@@ -475,7 +475,7 @@ function GanttChartPage(): React.ReactElement {
   }
 
   return (
-    <PageContainer variant="wideWorkspace">
+    <PageContainer variant="workspacePage">
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {hasCalendarRequirements ? (
@@ -509,7 +509,7 @@ function GanttChartPage(): React.ReactElement {
         ) : null}
 
         {!hasCalendarRequirements ? (
-          <PageSurface variant="wideWorkspace" sx={{ mt: 0.5 }}>
+          <PageSurface variant="fullWorkspace" sx={{ mt: 0.5 }}>
           <Box className="gantt-container-wrapper" sx={{ border: '1px solid #e3e7df', borderRadius: 2, bgcolor: '#fff' }}>
             <Box sx={{ p: 2 }}>
               <EmptyStateCard
@@ -532,7 +532,7 @@ function GanttChartPage(): React.ReactElement {
           </Box>
           </PageSurface>
         ) : (
-          <PageSurface variant="wideWorkspace" sx={{ mt: 0.5 }}>
+          <PageSurface variant="fullWorkspace" sx={{ mt: 0.5 }}>
           <Box className="gantt-container-wrapper" sx={{ border: '1px solid #e3e7df', borderRadius: 2, bgcolor: '#fff' }}>
             <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
               <GanttChart
@@ -588,7 +588,7 @@ function GanttChartPage(): React.ReactElement {
         )}
 
         {hasCalendarRequirements && calendarMode === 'occupancy' && hasYieldData ? (
-          <PageSurface variant="wideWorkspace" sx={{ mt: 3 }}>
+          <PageSurface variant="fullWorkspace" sx={{ mt: 3 }}>
           <Box className="gantt-container-wrapper" sx={{ p: 2, border: '1px solid #e3e7df', borderRadius: 2, bgcolor: '#fff' }}>
             <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
               {t('ganttChart:yieldDistributionTitle')}
