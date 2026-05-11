@@ -68,6 +68,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import PublicIcon from '@mui/icons-material/Public';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import { cultureAPI, projectAPI } from './api/api';
 import type { CultureHistoryEntry } from './api/types';
 import './App.css';
@@ -94,7 +95,7 @@ import {
   segmentedButtonGroupSx,
 } from './components/buttons/segmentedControlStyles';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
-import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
+import { getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './navigation/mainNavigation';
@@ -1057,7 +1058,11 @@ function RootLayout(): React.ReactElement {
               const isCurrentVersion = index === 0;
               const historyTarget = getHistoryEntryTarget(item);
               const title = getHistoryEntryTitle(item, tCultures);
-              const meta = getHistoryEntryMeta(item, tCultures, fallbackHistoryActorLabel);
+              const actorLabel = item.actor_label?.trim()
+                || item.history_user?.trim()
+                || fallbackHistoryActorLabel?.trim()
+                || 'Unbekannter Benutzer';
+              const timestampLabel = formatHistoryTimestamp(item.history_date);
 
               return (
                 <ListItem key={item.history_id} disableGutters sx={{ mb: isPhonePortrait ? 1 : 0 }}>
@@ -1096,22 +1101,15 @@ function RootLayout(): React.ReactElement {
                         >
                           {title}
                         </Typography>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{
-                            lineHeight: 1.3,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            wordBreak: 'normal',
-                            overflowWrap: 'break-word',
-                          }}
-                        >
-                          {meta}
-                        </Typography>
+                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                          <PersonOutlineIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                            Von {actorLabel}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            · {timestampLabel}
+                          </Typography>
+                        </Box>
                         {isCurrentVersion && item.action === 'restored' ? (
                           <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.3 }}>
                             Originalversion vom {formatHistoryTimestamp(item.history_date)}
@@ -1154,7 +1152,17 @@ function RootLayout(): React.ReactElement {
                             ) : null}
                           </>
                         )}
-                        secondary={meta}
+                        secondary={(
+                          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                            <PersonOutlineIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />
+                            <Typography component="span" variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                              Von {actorLabel}
+                            </Typography>
+                            <Typography component="span" variant="caption" color="text.secondary">
+                              · {timestampLabel}
+                            </Typography>
+                          </Box>
+                        )}
                       />
                       {isCurrentVersion
                         ? <Chip label={t('commandPalette.currentVersion')} size="small" color="success" variant="outlined" />
