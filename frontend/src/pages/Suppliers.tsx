@@ -24,6 +24,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
+import PageSurface from '../components/layout/PageSurface';
 import type { Supplier } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
@@ -194,7 +195,7 @@ export default function Suppliers(): React.ReactElement {
 
   return (
     <PageContainer variant="compactCenteredTable">
-      <Box sx={{ width: 'fit-content', maxWidth: '100%', mx: 'auto' }}>
+      <PageSurface variant="compactCenteredTable">
         {suppliers.length === 0 ? (
           <Box sx={{ width: '100%', maxWidth: 880 }}>
             <EmptyStateCard
@@ -250,7 +251,7 @@ export default function Suppliers(): React.ReactElement {
             </Table>
           </TableContainer>
         )}
-      </Box>
+      </PageSurface>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{draft.id ? t('edit') : t('create')}</DialogTitle>

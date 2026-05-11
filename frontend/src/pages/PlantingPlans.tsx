@@ -43,6 +43,7 @@ import {
   resolveCultivationTypeForAllowedOptions,
 } from "./plantingPlansUtils";
 import PageContainer from "../components/layout/PageContainer";
+import PageSurface from "../components/layout/PageSurface";
 import {
   plantingPlanAPI,
   cultureAPI,
@@ -1542,7 +1543,7 @@ function PlantingPlans(): React.ReactElement {
   }, [canCreatePlan, isMobile, searchParams, setSearchParams]);
 
   return (
-    <PageContainer variant="wideWorkspaceTable">
+    <PageContainer variant="wideWorkspace">
 
       {areaWarning ? (
         <Alert severity="warning" sx={{ mb: 2 }}>
@@ -1649,12 +1650,9 @@ function PlantingPlans(): React.ReactElement {
           </Box>
         ) : null}
 
-        <Box
-          sx={{
-            display: isMobile || shouldShowPrerequisiteState ? "none" : "block",
-            width: "100%",
-            maxWidth: "100%",
-          }}
+        <PageSurface
+          variant="wideWorkspace"
+          sx={{ display: isMobile || shouldShowPrerequisiteState ? "none" : "block" }}
         >
           <EditableDataGrid<PlantingPlanRow>
             layoutMode="workspace"
@@ -1870,7 +1868,7 @@ function PlantingPlans(): React.ReactElement {
               ],
             }}
           />
-        </Box>
+        </PageSurface>
 
       </Box>
 
