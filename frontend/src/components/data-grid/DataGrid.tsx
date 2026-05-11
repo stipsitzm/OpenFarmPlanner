@@ -96,6 +96,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
   onRowsStateChange?: (rows: T[]) => void;
   onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean; error: string }) => void;
   fitContentWidth?: boolean;
+  layoutMode?: 'standard' | 'workspace';
 }
 
 export function EditableDataGrid<T extends EditableRow>({
@@ -125,6 +126,7 @@ export function EditableDataGrid<T extends EditableRow>({
   onRowsStateChange,
   onLoadStateChange,
   fitContentWidth = false,
+  layoutMode = 'standard',
 }: EditableDataGridProps<T>): React.ReactElement {
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -710,8 +712,8 @@ export function EditableDataGrid<T extends EditableRow>({
     <>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
-      <Box sx={{ width: fitContentWidth ? 'fit-content' : '100%', maxWidth: '100%', overflowX: 'auto', overflowY: 'visible' }}>
-        <Box sx={{ display: 'block', width: fitContentWidth ? 'fit-content' : '100%', minWidth: 0 }}>
+      <Box sx={{ width: shouldUseFitContentWidth ? 'fit-content' : '100%', minWidth: '100%', maxWidth: '100%', overflowX: 'auto', overflowY: 'visible' }}>
+        <Box sx={{ display: 'block', width: shouldUseFitContentWidth ? 'fit-content' : '100%', minWidth: shouldUseFitContentWidth ? 0 : '100%' }}>
           <DataGrid
           rows={rows}
           columns={columnsWithActions}
@@ -732,7 +734,7 @@ export function EditableDataGrid<T extends EditableRow>({
           slots={{
             footer: CustomFooter,
           }}
-          sx={{ ...dataGridSx, width: fitContentWidth ? 'fit-content' : '100%' }}
+          sx={{ ...dataGridSx, width: shouldUseFitContentWidth ? 'fit-content' : '100%', minWidth: shouldUseFitContentWidth ? 0 : '100%' }}
           getRowClassName={(params) => {
             const rowKey = String(params.id);
             if (rowModesModel[params.id]?.mode === GridRowModes.Edit) {
@@ -805,3 +807,4 @@ export function EditableDataGrid<T extends EditableRow>({
     </>
   );
 }
+  const shouldUseFitContentWidth = fitContentWidth && layoutMode !== 'workspace';
