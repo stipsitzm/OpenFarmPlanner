@@ -1,5 +1,5 @@
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { Box, Card, CardContent, Collapse, Stack, Typography } from '@mui/material';
+import { Box, Card, CardActionArea, CardContent, Collapse, Stack, Typography } from '@mui/material';
 
 export interface MobileCardListItem {
   id: string | number;
@@ -42,20 +42,19 @@ export function MobileCardList<T extends MobileCardListItem>({
           <Card key={item.id} variant="outlined">
             <CardContent sx={{ px: 1.5, py: 1.25, '&:last-child': { pb: 1.25 } }}>
               <Stack spacing={1}>
-                <Box
+                <CardActionArea
                   component="button"
                   type="button"
                   onClick={() => onToggleExpanded(item.id)}
                   aria-expanded={isExpanded}
                   aria-label={isExpanded ? detailsHideLabel : detailsShowLabel}
                   sx={{
-                    border: 0,
-                    background: 'transparent',
+                    display: 'block',
                     borderRadius: 1,
+                    minHeight: 44,
+                    width: '100%',
                     p: 0.5,
                     mx: -0.5,
-                    minHeight: 44,
-                    width: 'calc(100% + 8px)',
                     textAlign: 'left',
                     cursor: 'pointer',
                     transition: 'background-color 120ms ease-in-out',
@@ -94,7 +93,7 @@ export function MobileCardList<T extends MobileCardListItem>({
                       <ExpandMoreIcon fontSize="small" />
                     </Box>
                   </Stack>
-                </Box>
+                </CardActionArea>
 
                 <Collapse in={isExpanded}>
                   <Box sx={{ pt: 0.25 }}>
