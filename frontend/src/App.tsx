@@ -333,6 +333,7 @@ function RootLayout(): React.ReactElement {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [globalHelpOpen, setGlobalHelpOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
+  const [pendingRestoreEntry, setPendingRestoreEntry] = useState<CultureHistoryEntry | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
@@ -361,14 +362,17 @@ function RootLayout(): React.ReactElement {
   const handleRestoreProjectVersion = async (historyId: number) => {
     try {
       await cultureAPI.projectRestore(historyId);
-      showSnackbar(t('commandPalette.feedback.versionRestored'), 'success');
+      showSnackbar('Version wiederhergestellt. Die vorherige Version wurde automatisch gespeichert.', 'success');
       setProjectHistoryOpen(false);
+      setPendingRestoreEntry(null);
       window.location.reload();
     } catch (error) {
       console.error('Error restoring project version:', error);
       showSnackbar(t('commandPalette.feedback.versionRestoreError'), 'error');
     }
   };
+
+  const formatHistoryTimestamp = (value: string): string => new Date(value).toLocaleString('de-DE');
 
   const handleOpenShortcuts = () => {
     handleGlobalMenuClose();
@@ -1060,8 +1064,8 @@ function RootLayout(): React.ReactElement {
                       <Stack spacing={1}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                           {isCurrentVersion
-                            ? <Chip label={t('commandPalette.currentVersion')} size="small" color="success" variant="outlined" />
-                            : <Chip label={t('commandPalette.restoreVersion')} size="small" variant="outlined" />}
+                            ? <Chip label="Aktuell" size="small" color="success" variant="outlined" />
+                            : <Chip label="Version" size="small" variant="outlined" />}
                           {historyTarget ? (
                             <Link
                               component={RouterLink}
@@ -1106,16 +1110,21 @@ function RootLayout(): React.ReactElement {
                         >
                           {meta}
                         </Typography>
+                        {isCurrentVersion && item.action === 'restored' ? (
+                          <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.3 }}>
+                            Originalversion vom {formatHistoryTimestamp(item.history_date)}
+                          </Typography>
+                        ) : null}
                         {!isCurrentVersion ? (
                           <>
                             <Divider />
                             <Button
                               variant="outlined"
                               size="small"
-                              onClick={() => void handleRestoreProjectVersion(item.history_id)}
+                              onClick={() => setPendingRestoreEntry(item)}
                               sx={{ alignSelf: 'flex-start', minHeight: 34 }}
                             >
-                              {t('commandPalette.restoreVersion')}
+                              Version wiederherstellen
                             </Button>
                           </>
                         ) : null}
@@ -1147,7 +1156,7 @@ function RootLayout(): React.ReactElement {
                       />
                       {isCurrentVersion
                         ? <Chip label={t('commandPalette.currentVersion')} size="small" color="success" variant="outlined" />
-                        : <Button onClick={() => void handleRestoreProjectVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{t('commandPalette.restoreVersion')}</Button>}
+                        : <Button onClick={() => setPendingRestoreEntry(item)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>Version wiederherstellen</Button>}
                     </Stack>
                   )}
                 </ListItem>
@@ -1187,6 +1196,43 @@ function RootLayout(): React.ReactElement {
         </DialogActions>
       </Dialog>
       <HelpDialog open={globalHelpOpen} onClose={closeGlobalHelp} />
+      <Dialog open={Boolean(pendingRestoreEntry)} onClose={() => setPendingRestoreEntry(null)} fullWidth maxWidth="xs">
+        <DialogTitle>Version wiederherstellen?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 1.5 }}>
+            Du bist dabei, das Projekt auf einen früheren Stand zurückzusetzen.
+          </Typography>
+          {pendingRestoreEntry ? (
+            <Box sx={{ mb: 1.5 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {getHistoryEntryTitle(pendingRestoreEntry, tCultures)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Originalversion vom {formatHistoryTimestamp(pendingRestoreEntry.history_date)}
+              </Typography>
+            </Box>
+          ) : null}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
+            Die aktuelle Version geht nicht verloren. Es wird automatisch eine neue Version erstellt, sodass die Wiederherstellung später rückgängig gemacht werden kann.
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Rückgängig über den Versionsverlauf möglich.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingRestoreEntry(null)}>Abbrechen</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (pendingRestoreEntry) {
+                void handleRestoreProjectVersion(pendingRestoreEntry.history_id);
+              }
+            }}
+          >
+            Version wiederherstellen
+          </Button>
+        </DialogActions>
+      </Dialog>
 
 
       <Dialog open={isCreateProjectOpen} onClose={closeCreateProjectDialog} fullWidth maxWidth="sm">
