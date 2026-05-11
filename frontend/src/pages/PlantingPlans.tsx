@@ -1542,7 +1542,7 @@ function PlantingPlans(): React.ReactElement {
   }, [canCreatePlan, isMobile, searchParams, setSearchParams]);
 
   return (
-    <PageContainer variant="xwide">
+    <PageContainer variant="wideWorkspaceTable">
 
       {areaWarning ? (
         <Alert severity="warning" sx={{ mb: 2 }}>
@@ -1652,7 +1652,7 @@ function PlantingPlans(): React.ReactElement {
         <Box
           sx={{
             display: isMobile || shouldShowPrerequisiteState ? "none" : "block",
-            width: "fit-content",
+            width: "100%",
             maxWidth: "100%",
           }}
         >
@@ -1671,7 +1671,6 @@ function PlantingPlans(): React.ReactElement {
             onLoadStateChange={({ loading, dataFetched }) => {
               setIsPlansLoading(loading || !dataFetched);
             }}
-            fitContentWidth
             createNewRow={() => ({
             id: -Date.now(),
             culture: 0,

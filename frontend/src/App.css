@@ -134,6 +134,22 @@
   margin: var(--page-content-margin, 0 auto);
 }
 
+.content--workspace-table {
+  width: 100%;
+  max-width: 1800px;
+  box-sizing: border-box;
+  padding: 0 24px;
+  margin: var(--page-content-margin, 0 auto);
+}
+
+.content--compact-centered-table {
+  width: 100%;
+  max-width: 1360px;
+  box-sizing: border-box;
+  padding: 0 24px;
+  margin: var(--page-content-margin, 0 auto);
+}
+
 .content--full {
   width: 100%;
   box-sizing: border-box;
@@ -146,6 +162,8 @@
   .content--wide,
   .content--workspace,
   .content--xwide,
+  .content--workspace-table,
+  .content--compact-centered-table,
   .content--full {
     padding: 0 16px;
   }
@@ -157,6 +175,8 @@
   .content--wide,
   .content--workspace,
   .content--xwide,
+  .content--workspace-table,
+  .content--compact-centered-table,
   .content--full {
     padding: 0 8px;
   }

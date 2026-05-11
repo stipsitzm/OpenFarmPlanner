@@ -1,6 +1,13 @@
 import type { ReactElement, ReactNode } from 'react';
 
-type PageContainerVariant = 'standard' | 'wide' | 'workspace' | 'xwide' | 'full';
+type PageContainerVariant =
+  | 'standard'
+  | 'wide'
+  | 'workspace'
+  | 'xwide'
+  | 'full'
+  | 'compactCenteredTable'
+  | 'wideWorkspaceTable';
 
 interface PageContainerProps {
   children: ReactNode;
@@ -14,6 +21,8 @@ const VARIANT_CLASSNAME: Record<PageContainerVariant, string> = {
   workspace: 'content content--workspace',
   xwide: 'content content--xwide',
   full: 'content--full',
+  compactCenteredTable: 'content content--compact-centered-table',
+  wideWorkspaceTable: 'content content--workspace-table',
 };
 
 function PageContainer({
