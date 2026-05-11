@@ -194,12 +194,7 @@ export default function Suppliers(): React.ReactElement {
 
   return (
     <PageContainer variant="xwide">
-      <Box sx={{ width: '100%', maxWidth: 1600 }}>
-        <Box sx={{ mb: 1.5 }}>
-          <Box sx={{ color: 'text.secondary', fontSize: '0.92rem' }}>
-            Verwalte Saatgut- und Materiallieferanten für dein Projekt.
-          </Box>
-        </Box>
+      <Box sx={{ width: '100%', maxWidth: 760 }}>
         {suppliers.length === 0 ? (
           <Box sx={{ width: '100%', maxWidth: 880 }}>
             <EmptyStateCard
@@ -209,13 +204,13 @@ export default function Suppliers(): React.ReactElement {
             />
           </Box>
         ) : (
-          <TableContainer component={Paper} sx={{ width: '100%', maxWidth: '100%' }}>
-            <Table size="medium" sx={{ width: '100%' }}>
+          <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
+            <Table size="medium" sx={{ width: 'auto' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ py: 1.5 }}>{t('name')}</TableCell>
-                  <TableCell sx={{ py: 1.5 }}>{t('homepage')}</TableCell>
-                  <TableCell align="right" sx={{ py: 1.5, width: 120 }}>{t('actions')}</TableCell>
+                  <TableCell sx={{ py: 1.5, minWidth: { xs: 140, sm: 180 } }}>{t('name')}</TableCell>
+                  <TableCell sx={{ py: 1.5, minWidth: { xs: 180, sm: 280 } }}>{t('homepage')}</TableCell>
+                  <TableCell align="right" sx={{ py: 1.5, width: 1, whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
