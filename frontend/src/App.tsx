@@ -101,6 +101,8 @@ import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './navigation/mainNavigation';
 import { PanelLeft } from 'lucide-react';
 
+const CONTENT_ALIGNMENT_MODE = 'centered';
+
 interface SnackbarState {
   open: boolean;
   message: string;
@@ -644,7 +646,7 @@ function RootLayout(): React.ReactElement {
   }, [location.pathname]);
 
   return (
-    <Box className="app" sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f2f0ea' }}>
+    <Box className={`app app--${CONTENT_ALIGNMENT_MODE}`} sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f2f0ea' }}>
       {isDesktopUp ? (
         <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#e1dbd0', bgcolor: '#f5f2eb', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
