@@ -128,6 +128,7 @@ export function EditableDataGrid<T extends EditableRow>({
   fitContentWidth = false,
   layoutMode = 'standard',
 }: EditableDataGridProps<T>): React.ReactElement {
+  const shouldUseFitContentWidth = fitContentWidth && layoutMode !== 'workspace';
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [error, setError] = useState<string>('');
@@ -807,4 +808,3 @@ export function EditableDataGrid<T extends EditableRow>({
     </>
   );
 }
-  const shouldUseFitContentWidth = fitContentWidth && layoutMode !== 'workspace';
