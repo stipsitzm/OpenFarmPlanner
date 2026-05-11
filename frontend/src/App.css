@@ -105,7 +105,7 @@
   width: 100%;
   max-width: 1360px;
   box-sizing: border-box;
-  padding: 0 24px;
+  padding: 0 16px;
   margin: var(--page-content-margin, 0 auto);
 }
 
@@ -113,7 +113,7 @@
   width: 100%;
   max-width: 1800px;
   box-sizing: border-box;
-  padding: 0 24px;
+  padding: 0 16px;
   margin: var(--page-content-margin, 0 auto);
 }
 
@@ -121,7 +121,7 @@
   width: 100%;
   max-width: min(1800px, calc(100vw - 48px));
   box-sizing: border-box;
-  padding: 0 24px;
+  padding: 0 16px;
   margin: var(--page-content-margin, 0 auto);
 }
 
@@ -130,7 +130,7 @@
   width: 100%;
   max-width: 1900px;
   box-sizing: border-box;
-  padding: 0 24px;
+  padding: 0 16px;
   margin: var(--page-content-margin, 0 auto);
 }
 
@@ -139,7 +139,7 @@
   /* Intentionally bypass the standard centered max-width so wide data tables can use the full workspace width. */
   max-width: none;
   box-sizing: border-box;
-  /* Main already adds responsive horizontal gutters; extra container padding was the effective width limiter on wide pages. */
+  /* RootLayout main owns the global page gutter; workspace pages keep container padding at 0 to avoid double horizontal spacing. */
   padding: 0;
   margin: 0;
 }
@@ -148,14 +148,14 @@
   width: 100%;
   max-width: 1360px;
   box-sizing: border-box;
-  padding: 0 24px;
+  padding: 0 16px;
   margin: var(--page-content-margin, 0 auto);
 }
 
 .content--full {
   width: 100%;
   box-sizing: border-box;
-  padding: 0 24px;
+  padding: 0 16px;
 }
 
 @media (max-width: 900px) {
