@@ -41,13 +41,20 @@
   "pages": {
     "dashboard": {
       "title": "Hilfe: Übersicht",
-      "intro": "Die Übersicht zeigt den aktuellen Stand deines Projekts und führt dich schnell zu den wichtigsten Bereichen.",
+      "intro": "Die Übersicht zeigt dir, was als Nächstes wichtig ist. Bei neuen Projekten führt sie dich mit einer Checkliste durch die ersten Schritte. Sobald Anbaupläne vorhanden sind, erscheinen hier die nächsten Aufgaben und Termine aus deiner Planung.",
       "sections": [
         {
           "title": "Bedienung",
           "points": [
-            "Nutze die Navigation, um Daten zu bearbeiten oder Planungen zu öffnen.",
-            "Verwende Schnellaktionen für häufige Aufgaben."
+            "Nutze die Checkliste, um fehlende Grunddaten Schritt für Schritt anzulegen.",
+            "Öffne die jeweiligen Bereiche, um Standorte, Anbauflächen, Kulturen oder Anbaupläne zu bearbeiten.",
+            "Prüfe die anstehenden Aufgaben, um Aussaat, Pflanzung, Anzucht und Ernte im Blick zu behalten."
+          ]
+        },
+        {
+          "title": "Hinweis",
+          "points": [
+            "Die Übersicht ist eine Zusammenfassung. Änderungen an den Daten machst du in den jeweiligen Fachseiten."
           ]
         }
       ]
