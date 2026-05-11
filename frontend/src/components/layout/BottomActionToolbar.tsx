@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Box, type SxProps, type Theme } from '@mui/material';
+import type { SystemStyleObject } from '@mui/system';
 
 interface BottomActionToolbarProps {
   leftActions?: ReactNode;
@@ -7,7 +8,7 @@ interface BottomActionToolbarProps {
   sx?: SxProps<Theme>;
 }
 
-const buttonAlignmentSx: SxProps<Theme> = {
+const buttonAlignmentSx: SystemStyleObject<Theme> = {
   '& .MuiButton-root': {
     minHeight: 40,
     alignSelf: 'stretch',

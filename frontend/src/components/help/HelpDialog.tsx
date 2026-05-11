@@ -78,7 +78,7 @@ export function HelpDialog({ open, onClose }: HelpDialogProps): ReactElement {
       <DialogTitle sx={{ pr: 6 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
           <Typography variant="h6" component="span">
-            {t('globalTitle', { defaultValue: t('title') })}
+            {t('globalTitle', { defaultValue: 'Überblick' })}
           </Typography>
           <IconButton
             aria-label={t('common:actions.close')}
@@ -92,14 +92,9 @@ export function HelpDialog({ open, onClose }: HelpDialogProps): ReactElement {
       </DialogTitle>
       <DialogContent sx={{ pb: 3 }}>
         <Stack spacing={2}>
-          <Box>
-            <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-              {t('heading')}
-            </Typography>
-            <Typography variant="body1">
-              {t('intro')}
-            </Typography>
-          </Box>
+          <Typography variant="body1">
+            {t('intro')}
+          </Typography>
 
           <Stack spacing={1.5}>
             {helpSections.map((section) => (

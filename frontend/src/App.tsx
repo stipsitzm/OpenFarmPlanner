@@ -27,6 +27,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Paper,
   Snackbar,
   Stack,
   TextField,
@@ -67,6 +68,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import PublicIcon from '@mui/icons-material/Public';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import { cultureAPI, projectAPI } from './api/api';
 import type { CultureHistoryEntry } from './api/types';
 import './App.css';
@@ -93,7 +95,7 @@ import {
   segmentedButtonGroupSx,
 } from './components/buttons/segmentedControlStyles';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
-import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
+import { getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './navigation/mainNavigation';
@@ -262,6 +264,7 @@ function RootLayout(): React.ReactElement {
   const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
   const isLargeDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const isPhone = useMediaQuery(theme.breakpoints.down('sm'));
+  const isPhonePortrait = useMediaQuery(`${theme.breakpoints.down('sm')} and (orientation: portrait)`);
   const isTabletOrNarrowDesktop = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
@@ -331,6 +334,7 @@ function RootLayout(): React.ReactElement {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [globalHelpOpen, setGlobalHelpOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
+  const [pendingRestoreEntry, setPendingRestoreEntry] = useState<CultureHistoryEntry | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
@@ -359,14 +363,17 @@ function RootLayout(): React.ReactElement {
   const handleRestoreProjectVersion = async (historyId: number) => {
     try {
       await cultureAPI.projectRestore(historyId);
-      showSnackbar(t('commandPalette.feedback.versionRestored'), 'success');
+      showSnackbar('Version wiederhergestellt. Die vorherige Version wurde automatisch gespeichert.', 'success');
       setProjectHistoryOpen(false);
+      setPendingRestoreEntry(null);
       window.location.reload();
     } catch (error) {
       console.error('Error restoring project version:', error);
       showSnackbar(t('commandPalette.feedback.versionRestoreError'), 'error');
     }
   };
+
+  const formatHistoryTimestamp = (value: string): string => new Date(value).toLocaleString('de-DE');
 
   const handleOpenShortcuts = () => {
     handleGlobalMenuClose();
@@ -637,9 +644,9 @@ function RootLayout(): React.ReactElement {
   }, [location.pathname]);
 
   return (
-    <Box className="app" sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f7f5' }}>
+    <Box className="app" sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f2f0ea' }}>
       {isDesktopUp ? (
-        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#E5E7E5', bgcolor: '#F5F6F5', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
+        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#e1dbd0', bgcolor: '#f5f2eb', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
             {!sidebarCollapsed ? (
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1 }}>
@@ -742,12 +749,15 @@ function RootLayout(): React.ReactElement {
                       mb: 0.75,
                       px: 1.25,
                       justifyContent: sidebarCollapsed ? 'center' : 'initial',
-                      color: isActive ? '#2F3A33' : '#3F4B45',
-                      bgcolor: isActive ? 'rgba(80, 130, 90, 0.14)' : 'transparent',
-                      border: '1px solid transparent',
+                      color: '#29332c',
+                      bgcolor: isActive ? 'rgba(76, 135, 86, 0.13)' : 'transparent',
+                      border: '1px solid rgba(76, 135, 86, 0)',
                       position: 'relative',
+                      transition: 'background-color 140ms ease, color 140ms ease, border-color 140ms ease',
                       '&:hover': {
-                        bgcolor: isActive ? 'rgba(80, 130, 90, 0.18)' : 'rgba(80, 120, 90, 0.08)',
+                        bgcolor: isActive ? 'rgba(76, 135, 86, 0.16)' : 'rgba(91, 130, 102, 0.09)',
+                        color: '#29332c',
+                        borderColor: 'rgba(91, 130, 102, 0.14)',
                       },
                       '&::before': {
                         content: '""',
@@ -757,11 +767,11 @@ function RootLayout(): React.ReactElement {
                         bottom: 8,
                         width: 3,
                         borderRadius: 999,
-                        bgcolor: isActive ? 'rgba(68, 112, 79, 0.58)' : 'transparent',
+                        bgcolor: isActive ? 'rgba(59, 116, 72, 0.52)' : 'transparent',
                       },
                     }}
                   >
-                    <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 36, color: 'inherit' }}>{item.icon}</ListItemIcon>
+                    <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 36, color: '#2c4f33', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
                     {!sidebarCollapsed ? <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 500, fontSize: '0.95rem' }} /> : null}
                   </ListItemButton>
                 );
@@ -771,25 +781,47 @@ function RootLayout(): React.ReactElement {
           </Stack>
         </Box>
       ) : null}
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', bgcolor: '#f5f7f5' }}>
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', bgcolor: '#f2f0ea' }}>
       <Box sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
-        {navItems.map((item) => <RouterLink key={`sr-${item.to}`} to={item.to}>{item.label}</RouterLink>)}
+        {navItems.map((item) => {
+          const srLinkLabel = item.to === '/app/dashboard' ? 'Zur Übersicht' : item.label;
+          return <RouterLink key={`sr-${item.to}`} to={item.to} aria-label={srLinkLabel}>{item.label}</RouterLink>;
+        })}
       </Box>
       <AppBar
         position="sticky"
         color="inherit"
         elevation={0}
-        sx={{ borderBottom: '1px solid', borderColor: '#e5e7eb', bgcolor: '#f8faf8', backdropFilter: 'saturate(120%) blur(2px)' }}
+        sx={{ borderBottom: '1px solid', borderColor: '#e4dfd4', bgcolor: '#f7f4ed', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
         <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, flexWrap: 'nowrap' }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
-          {!isDesktopUp ? <AppLogo size={24} showText={false} to="/app/dashboard" /> : null}
-          {!isPhone ? (
-            <Typography component="h1" variant="h5" noWrap sx={{ minWidth: 0, maxWidth: { sm: 180, md: 260 }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: { xs: '1rem', md: '1.25rem' }, fontWeight: 600 }}>
-              {currentPageTitle}
-            </Typography>
-          ) : null}
-          {!isPhone && topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1 }}>
+            {!isDesktopUp ? (
+              <Typography
+                component="h1"
+                variant="subtitle1"
+                noWrap
+                sx={{
+                  minWidth: 0,
+                  maxWidth: { xs: 180, sm: 220 },
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontSize: { xs: '0.98rem', sm: '1.02rem' },
+                  fontWeight: 600,
+                  lineHeight: 1.2,
+                }}
+              >
+                {currentPageTitle}
+              </Typography>
+            ) : (
+              <Typography component="h1" variant="h5" noWrap sx={{ minWidth: 0, maxWidth: { sm: 180, md: 260 }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: { xs: '1rem', md: '1.25rem' }, fontWeight: 600 }}>
+                {currentPageTitle}
+              </Typography>
+            )}
+            {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
+          </Box>
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 0 }}>
           {isCulturesPage ? (
@@ -971,7 +1003,7 @@ function RootLayout(): React.ReactElement {
         </Toolbar>
       </AppBar>
 
-      <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav} PaperProps={{ sx: { bgcolor: '#F5F6F5', borderRight: '1px solid #E5E7E5' } }}>
+      <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav} PaperProps={{ sx: { bgcolor: '#f5f2eb', borderRight: '1px solid #e1dbd0' } }}>
         <List sx={{ width: 280 }}>
           <ListItem sx={{ py: 1.5, px: 2 }}>
             <AppLogo size={26} showText to="/app/dashboard" />
@@ -990,14 +1022,16 @@ function RootLayout(): React.ReactElement {
                     borderRadius: 0,
                     px: 2,
                     py: 1.5,
-                    color: isActive ? '#2F3A33' : '#3F4B45',
+                    color: '#29332c',
                     bgcolor: isActive ? 'rgba(80, 130, 90, 0.14)' : 'transparent',
+                    transition: 'background-color 140ms ease, color 140ms ease',
                     '&:hover': {
-                      bgcolor: isActive ? 'rgba(80, 130, 90, 0.18)' : 'rgba(80, 120, 90, 0.08)',
+                      bgcolor: isActive ? 'rgba(80, 130, 90, 0.18)' : 'rgba(91, 130, 102, 0.08)',
+                      color: '#29332c',
                     },
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
+                  <ListItemIcon sx={{ minWidth: 36, color: '#2c4f33', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
                   <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 500 }} />
                 </ListItemButton>
               </ListItem>
@@ -1024,44 +1058,123 @@ function RootLayout(): React.ReactElement {
 
       <Dialog open={projectHistoryOpen} onClose={() => setProjectHistoryOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t('commandPalette.commands.openVersionHistory')}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ py: isPhonePortrait ? 1 : 2 }}>
           <List>
             {historyItems.map((item, index) => {
               const isCurrentVersion = index === 0;
               const historyTarget = getHistoryEntryTarget(item);
+              const title = getHistoryEntryTitle(item, tCultures);
+              const actorLabel = item.actor_label?.trim()
+                || item.history_user?.trim()
+                || fallbackHistoryActorLabel?.trim()
+                || 'Unbekannter Benutzer';
+              const timestampLabel = formatHistoryTimestamp(item.history_date);
 
               return (
-                <ListItem
-                  key={item.history_id}
-                  disableGutters
-                >
-                  <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
-                    <ListItemText
-                      sx={{ mr: 1 }}
-                      primary={(
-                        <>
-                          {getHistoryEntryTitle(item, tCultures)}
+                <ListItem key={item.history_id} disableGutters sx={{ mb: isPhonePortrait ? 1 : 0 }}>
+                  {isPhonePortrait ? (
+                    <Paper variant="outlined" sx={{ width: '100%', p: 1.25, borderRadius: 1.5 }}>
+                      <Stack spacing={1}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                          {isCurrentVersion
+                            ? <Chip label="Aktuell" size="small" color="success" variant="outlined" />
+                            : <Chip label="Version" size="small" variant="outlined" />}
                           {historyTarget ? (
-                            <>
-                              {' · '}
-                              <Link
-                                component={RouterLink}
-                                to={historyTarget}
-                                underline="hover"
-                                onClick={() => setProjectHistoryOpen(false)}
-                              >
-                                {item.object_type === 'culture' ? t('navigation:cultures') : t('navigation:plantingPlans')}
-                              </Link>
-                            </>
+                            <Link
+                              component={RouterLink}
+                              to={historyTarget}
+                              underline="hover"
+                              onClick={() => setProjectHistoryOpen(false)}
+                              sx={{ fontSize: '0.78rem', color: 'text.secondary', flexShrink: 0 }}
+                            >
+                              {item.object_type === 'culture' ? t('navigation:cultures') : t('navigation:plantingPlans')}
+                            </Link>
                           ) : null}
-                        </>
-                      )}
-                      secondary={getHistoryEntryMeta(item, tCultures, fallbackHistoryActorLabel)}
-                    />
-                    {isCurrentVersion
-                      ? <Chip label={t('commandPalette.currentVersion')} size="small" color="success" variant="outlined" />
-                      : <Button onClick={() => void handleRestoreProjectVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{t('commandPalette.restoreVersion')}</Button>}
-                  </Stack>
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 600,
+                            lineHeight: 1.35,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            wordBreak: 'normal',
+                            overflowWrap: 'break-word',
+                          }}
+                        >
+                          {title}
+                        </Typography>
+                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                          <PersonOutlineIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                            Von {actorLabel}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            · {timestampLabel}
+                          </Typography>
+                        </Box>
+                        {isCurrentVersion && item.action === 'restored' ? (
+                          <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.3 }}>
+                            Originalversion vom {formatHistoryTimestamp(item.history_date)}
+                          </Typography>
+                        ) : null}
+                        {!isCurrentVersion ? (
+                          <>
+                            <Divider />
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => setPendingRestoreEntry(item)}
+                              sx={{ alignSelf: 'flex-start', minHeight: 34 }}
+                            >
+                              Version wiederherstellen
+                            </Button>
+                          </>
+                        ) : null}
+                      </Stack>
+                    </Paper>
+                  ) : (
+                    <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
+                      <ListItemText
+                        sx={{ mr: 1 }}
+                        primary={(
+                          <>
+                            {title}
+                            {historyTarget ? (
+                              <>
+                                {' · '}
+                                <Link
+                                  component={RouterLink}
+                                  to={historyTarget}
+                                  underline="hover"
+                                  onClick={() => setProjectHistoryOpen(false)}
+                                >
+                                  {item.object_type === 'culture' ? t('navigation:cultures') : t('navigation:plantingPlans')}
+                                </Link>
+                              </>
+                            ) : null}
+                          </>
+                        )}
+                        secondary={(
+                          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                            <PersonOutlineIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />
+                            <Typography component="span" variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                              Von {actorLabel}
+                            </Typography>
+                            <Typography component="span" variant="caption" color="text.secondary">
+                              · {timestampLabel}
+                            </Typography>
+                          </Box>
+                        )}
+                      />
+                      {isCurrentVersion
+                        ? <Chip label={t('commandPalette.currentVersion')} size="small" color="success" variant="outlined" />
+                        : <Button onClick={() => setPendingRestoreEntry(item)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>Version wiederherstellen</Button>}
+                    </Stack>
+                  )}
                 </ListItem>
               );
             })}
@@ -1075,29 +1188,78 @@ function RootLayout(): React.ReactElement {
       <Dialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t('commandPalette.shortcutsTitle')}</DialogTitle>
         <DialogContent>
-          <List dense>
-            <ListItem>
-              <ListItemText primary={t('commandPalette.commands.openShortcuts')} secondary="Alt+H" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary={t('commandPalette.label')} secondary="Alt+K" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="–" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary="Sidebar ein-/ausklappen" secondary="Ctrl+B" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary={t('commandPalette.commands.closeDialog')} secondary="Esc" />
-            </ListItem>
-          </List>
+          <Stack spacing={1.5}>
+            <Typography variant="subtitle2">Navigation</Typography>
+            <List dense disablePadding>
+              <ListItem><ListItemText primary={t('commandPalette.commands.nextPage')} secondary="Ctrl+Shift+↓" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.previousPage')} secondary="Ctrl+Shift+↑" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="Alt+V" /></ListItem>
+            </List>
+            <Typography variant="subtitle2">Ansichten & Layout</Typography>
+            <List dense disablePadding>
+              <ListItem><ListItemText primary="Sidebar ein-/ausklappen" secondary="Ctrl+B" /></ListItem>
+            </List>
+            <Typography variant="subtitle2">Dialoge & Hilfe</Typography>
+            <List dense disablePadding>
+              <ListItem><ListItemText primary="Seitenhilfe öffnen" secondary="Alt+H" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.label')} secondary="Alt+K" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.closeDialog')} secondary="Esc" /></ListItem>
+            </List>
+          </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShortcutsOpen(false)}>{t('common:actions.close')}</Button>
         </DialogActions>
       </Dialog>
       <HelpDialog open={globalHelpOpen} onClose={closeGlobalHelp} />
+      <Dialog open={Boolean(pendingRestoreEntry)} onClose={() => setPendingRestoreEntry(null)} fullWidth maxWidth="xs">
+        <DialogTitle>Version wiederherstellen?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 1.5 }}>
+            Du stellst eine frühere Version wieder her.
+          </Typography>
+          {pendingRestoreEntry ? (
+            <Box sx={{ mb: 1.5 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {pendingRestoreEntry.object_display_name?.trim() || getHistoryEntryTitle(pendingRestoreEntry, tCultures)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Bearbeitet am {formatHistoryTimestamp(pendingRestoreEntry.history_date)}
+              </Typography>
+            </Box>
+          ) : null}
+          <Box
+            sx={{
+              borderRadius: 1.5,
+              border: '1px solid',
+              borderColor: 'success.light',
+              bgcolor: 'rgba(76, 175, 80, 0.08)',
+              px: 1.25,
+              py: 1,
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              Die aktuelle Version bleibt erhalten. Vor der Wiederherstellung wird automatisch eine neue Version erstellt, sodass du jederzeit wieder zurückwechseln kannst.
+            </Typography>
+          </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+            Es gehen keine Daten verloren.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingRestoreEntry(null)}>Abbrechen</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (pendingRestoreEntry) {
+                void handleRestoreProjectVersion(pendingRestoreEntry.history_id);
+              }
+            }}
+          >
+            Version wiederherstellen
+          </Button>
+        </DialogActions>
+      </Dialog>
 
 
       <Dialog open={isCreateProjectOpen} onClose={closeCreateProjectDialog} fullWidth maxWidth="sm">

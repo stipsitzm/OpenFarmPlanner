@@ -13,20 +13,17 @@ import type { Theme } from '@mui/material/styles';
 export const dataGridSx = {
   border: '1px solid #e5e7eb',
   borderRadius: 3,
-  backgroundColor: '#ffffff',
-  boxShadow: '0 1px 2px rgba(16, 24, 40, 0.04)',
+  backgroundColor: '#fbfcfa',
+  boxShadow: '0 1px 2px rgba(21, 31, 24, 0.03)',
   '& .MuiDataGrid-columnHeaders': {
-    backgroundColor: '#f8faf8',
-    borderBottom: '1px solid #e5e7eb',
+    backgroundColor: '#f5f7f4',
+    borderBottom: '1px solid #e3e8e3',
   },
   '& .MuiDataGrid-row': {
     minHeight: 44,
   },
-  '& .MuiDataGrid-row:nth-of-type(even)': {
-    backgroundColor: '#fbfcfb',
-  },
   '& .MuiDataGrid-row:hover': {
-    backgroundColor: '#f1f7f2',
+    backgroundColor: '#f1f5ef',
   },
   '& .MuiDataGrid-cell': {
     borderColor: '#edf1ee',
@@ -75,7 +72,7 @@ export const dataGridSx = {
   },
   '& .ofp-row-editing': {
     boxShadow: 'inset 3px 0 0 #1976d2',
-    backgroundColor: 'rgba(25, 118, 210, 0.04)',
+    backgroundColor: 'rgba(25, 118, 210, 0.05)',
   },
   '& .ofp-row-dirty': {
     boxShadow: 'inset 3px 0 0 #ed6c02',

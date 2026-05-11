@@ -123,9 +123,6 @@ export default function FieldsBedsPage(): React.ReactElement {
     reloadHierarchyAndLocations,
     t as never,
   );
-  const shouldShowGlobalAddButton = viewMode === 'table'
-    && !shouldShowProjectRequiredState
-    && locations.length <= 1;
   const handleGlobalAddField = useCallback((): void => {
     if (locations.length === 0) {
       navigate('/app/locations?create=true');

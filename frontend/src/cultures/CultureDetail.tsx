@@ -172,6 +172,10 @@ export function CultureDetail({
   const theme = useTheme();
   const isTabletLayout = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const isMobileLayout = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobileLandscapeLayout = useMediaQuery(
+    `${theme.breakpoints.between('sm', 'md')} and (orientation: landscape) and (max-height: 560px)`,
+  );
+  const useUnifiedMobileLayout = isMobileLayout || isMobileLandscapeLayout;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFamilyFilter, setSelectedFamilyFilter] = useState('');
   const [selectedCultivationFilter, setSelectedCultivationFilter] = useState('');
@@ -187,16 +191,16 @@ export function CultureDetail({
   const isFilterPopoverOpen = Boolean(filterAnchorEl);
   const isHeaderMenuOpen = Boolean(headerMenuAnchorEl);
   const headerActionButtonSx = {
-    width: isMobileLayout ? 30 : 34,
-    height: isMobileLayout ? 30 : 34,
-    borderRadius: isMobileLayout ? 0.75 : 0,
+    width: useUnifiedMobileLayout ? 30 : 34,
+    height: useUnifiedMobileLayout ? 30 : 34,
+    borderRadius: useUnifiedMobileLayout ? 0.75 : 0,
     border: 'none',
     backgroundColor: 'transparent',
     transition: 'background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease',
     '&:hover': {
       backgroundColor: 'rgba(15, 23, 42, 0.08)',
-      boxShadow: isMobileLayout ? 'none' : '0 2px 6px rgba(15, 23, 42, 0.10)',
-      transform: isMobileLayout ? 'none' : 'translateY(-1px)',
+      boxShadow: useUnifiedMobileLayout ? 'none' : '0 2px 6px rgba(15, 23, 42, 0.10)',
+      transform: useUnifiedMobileLayout ? 'none' : 'translateY(-1px)',
     },
     '&:focus-visible': {
       outline: '2px solid rgba(37, 111, 42, 0.28)',
@@ -684,18 +688,20 @@ export function CultureDetail({
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: '220px minmax(0, 1fr)',
-              md: '230px minmax(0, 1fr)',
-              lg: '300px minmax(0, 1fr)',
-              xl: '330px minmax(0, 1fr)',
-            },
+            gridTemplateColumns: useUnifiedMobileLayout
+              ? 'minmax(0, 1fr)'
+              : {
+                xs: '1fr',
+                sm: '220px minmax(0, 1fr)',
+                md: '230px minmax(0, 1fr)',
+                lg: '300px minmax(0, 1fr)',
+                xl: '330px minmax(0, 1fr)',
+              },
             gap: { xs: 1.25, lg: 1.5 },
             alignItems: 'start',
           }}
         >
-          {!isMobileLayout ? (<Card
+          {!useUnifiedMobileLayout ? (<Card
             sx={{
               width: '100%',
               flexShrink: 0,
@@ -763,9 +769,9 @@ export function CultureDetail({
               })}
             </List>
           </Card>) : null}
-          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: { sm: 'flex-start' } }}>
+          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: 'flex-start' }}>
             {selectedCulture ? (
-              <Card sx={{ width: '100%', maxWidth: { sm: 960, lg: 1220, xl: 1400 } }}>
+              <Card sx={{ width: '100%', maxWidth: useUnifiedMobileLayout ? '100%' : { sm: 960, lg: 1220, xl: 1400 } }}>
                 <CardContent sx={{ p: { xs: 1.5, sm: 2, lg: 3 } }}>
             {/* Header with crop name and badge */}
                   <Box sx={{ mb: { xs: 2, sm: 3 } }}>
@@ -788,7 +794,7 @@ export function CultureDetail({
                       />
                     ) : null}
                     <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.25 }}>
-                      {isMobileLayout ? (
+                      {useUnifiedMobileLayout ? (
                         <Box
                           component="button"
                           type="button"
@@ -844,9 +850,9 @@ export function CultureDetail({
                     display: 'inline-flex',
                     alignItems: 'center',
                     border: '1px solid rgba(15, 23, 42, 0.10)',
-                    borderRadius: isMobileLayout ? 1 : 1.5,
-                    backgroundColor: isMobileLayout ? 'rgba(15, 23, 42, 0.02)' : 'rgba(15, 23, 42, 0.03)',
-                    boxShadow: isMobileLayout ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.08)',
+                    borderRadius: useUnifiedMobileLayout ? 1 : 1.5,
+                    backgroundColor: useUnifiedMobileLayout ? 'rgba(15, 23, 42, 0.02)' : 'rgba(15, 23, 42, 0.03)',
+                    boxShadow: useUnifiedMobileLayout ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.08)',
                     overflow: 'hidden',
                   }}
                 >
@@ -863,7 +869,7 @@ export function CultureDetail({
                           '&:hover': { backgroundColor: 'rgba(37, 111, 42, 0.12)' },
                         }}
                       >
-                        <EditIcon sx={{ fontSize: isMobileLayout ? 16 : 18 }} />
+                        <EditIcon sx={{ fontSize: useUnifiedMobileLayout ? 16 : 18 }} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -880,7 +886,7 @@ export function CultureDetail({
                           '&:hover': { backgroundColor: 'rgba(37, 111, 42, 0.10)' },
                         }}
                       >
-                        <AgricultureIcon sx={{ fontSize: isMobileLayout ? 16 : 18 }} />
+                        <AgricultureIcon sx={{ fontSize: useUnifiedMobileLayout ? 16 : 18 }} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -893,7 +899,7 @@ export function CultureDetail({
                       color: 'text.secondary',
                     }}
                   >
-                    <MoreVertIcon sx={{ fontSize: isMobileLayout ? 16 : 18 }} />
+                    <MoreVertIcon sx={{ fontSize: useUnifiedMobileLayout ? 16 : 18 }} />
                   </IconButton>
                 </Box>
               </Box>
@@ -1320,7 +1326,7 @@ export function CultureDetail({
             ) : (
               <Card>
                 <CardContent>
-                  {isMobileLayout ? (
+                  {useUnifiedMobileLayout ? (
                     <Typography
                       component="button"
                       type="button"
@@ -1342,7 +1348,7 @@ export function CultureDetail({
       ) : null}
 
 
-      {isMobileLayout ? (
+      {useUnifiedMobileLayout ? (
         <Dialog fullScreen open={mobileSelectorOpen} onClose={() => setMobileSelectorOpen(false)}>
           <DialogTitle>Kultur auswählen</DialogTitle>
           <DialogContent sx={{ px: 1.5, pb: 2 }}>

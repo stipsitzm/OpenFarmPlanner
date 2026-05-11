@@ -98,7 +98,10 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
     );
   }, [allCommands, currentContextTags]);
 
-  const helpCommands = useMemo(() => getVisibleCommands(allCommands), [allCommands]);
+  const helpCommands = useMemo(
+    () => getVisibleCommands(allCommands).filter((command) => command.contextTags.some((tag) => currentContextTags.includes(tag))),
+    [allCommands, currentContextTags],
+  );
 
   const shortcutSpecs = useMemo<ShortcutSpec[]>(() => {
     const commandShortcuts: ShortcutSpec[] = activeCommands
@@ -143,7 +146,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
       {children}
       <CommandPalette open={paletteOpen} commands={activeCommands} onClose={closePalette} />
       <Dialog open={helpOpen} onClose={() => setHelpOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle>Tastenkürzel (Alt+H)</DialogTitle>
+        <DialogTitle>Kontextbezogene Tastenkürzel (Alt+K)</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
             Shortcuts sind browser-sicher und überschreiben keine üblichen Browser-Shortcuts.

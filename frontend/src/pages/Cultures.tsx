@@ -36,6 +36,8 @@ import {
   Box,
   Button,
   ButtonGroup,
+  Chip,
+  Divider,
   Dialog,
   DialogActions,
   DialogContent,
@@ -45,11 +47,14 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Paper,
   Snackbar,
   Tooltip,
   Typography,
   Link,
   Stack,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
@@ -100,6 +105,8 @@ import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation('cultures');
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -284,6 +291,10 @@ function Cultures(): React.ReactElement {
       return;
     }
     const response = await cultureAPI.history(selectedCulture.id);
+    if (response.data.length <= 1) {
+      showSnackbar(t('history.emptyState.title', { defaultValue: 'Keine weiteren Versionen verfügbar.' }), 'info');
+      return;
+    }
     setHistoryItems(response.data);
     setHistoryScope('culture');
     setHistoryOpen(true);
@@ -993,7 +1004,6 @@ function Cultures(): React.ReactElement {
               : t('library.publishButton'))}
         />
       </Box>
-
       {cultures.length > 0 && (
         <Box sx={{ mb: 2 }}>
           {firstMissingPlanRequirement === 'beds' ? (
@@ -1212,38 +1222,117 @@ function Cultures(): React.ReactElement {
               ? t('history.titles.global')
               : t('history.titles.culture')}
         </DialogTitle>
-        <DialogContent>
-          <List>
-            {historyItems.map((item) => {
-              const historyTarget = getHistoryEntryTarget(item);
-              return (
-                <ListItem key={item.history_id} disableGutters>
-                  <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
-                    <ListItemText
-                      sx={{ mr: 1 }}
-                      primary={(
-                        <>
-                          {getHistoryEntryTitle(item, t)}
-                          {historyTarget ? (
-                            <>
-                              {' · '}
-                              <Link component={RouterLink} to={historyTarget} underline="hover" onClick={() => setHistoryOpen(false)}>
-                                {item.object_type === 'culture' ? t('history.objectTypes.culture') : t('history.objectTypes.plantingPlan')}
+        <DialogContent sx={{ pt: historyItems.length === 0 ? 1 : 2, pb: historyItems.length === 0 ? 1 : 2 }}>
+          {historyItems.length === 0 ? (
+            <Box sx={{ py: isMobile ? 0.5 : 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                {t('history.emptyState.title', { defaultValue: 'Keine weiteren Versionen verfügbar.' })}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                {t('history.emptyState.description', { defaultValue: 'Für diese Sorte existiert aktuell nur diese Version.' })}
+              </Typography>
+            </Box>
+          ) : (
+            <List>
+              {historyItems.map((item) => {
+                const historyTarget = getHistoryEntryTarget(item);
+                const mobileTitle = getHistoryEntryTitle(item, t);
+                const mobileMeta = getHistoryEntryMeta(item, t, fallbackHistoryActorLabel);
+                return (
+                  <ListItem key={item.history_id} disableGutters sx={{ mb: isMobile ? 1 : 0 }}>
+                    {isMobile ? (
+                      <Paper variant="outlined" sx={{ width: '100%', p: 1.25, borderRadius: 1.5 }}>
+                        <Stack spacing={1}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                            <Chip
+                              size="small"
+                              label={item.object_type === 'culture' ? t('history.objectTypes.culture') : t('history.objectTypes.plantingPlan')}
+                              variant="outlined"
+                            />
+                            {historyTarget ? (
+                              <Link
+                                component={RouterLink}
+                                to={historyTarget}
+                                underline="hover"
+                                onClick={() => setHistoryOpen(false)}
+                                sx={{ fontSize: '0.78rem', color: 'text.secondary', flexShrink: 0 }}
+                              >
+                                {t('history.objectTypes.openTarget', { defaultValue: 'Öffnen' })}
                               </Link>
+                            ) : null}
+                          </Box>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 600,
+                              lineHeight: 1.35,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              wordBreak: 'normal',
+                              overflowWrap: 'break-word',
+                            }}
+                          >
+                            {mobileTitle}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{
+                              lineHeight: 1.3,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              wordBreak: 'normal',
+                              overflowWrap: 'break-word',
+                            }}
+                          >
+                            {mobileMeta}
+                          </Typography>
+                          <Divider />
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => handleRestoreVersion(item.history_id)}
+                            sx={{ alignSelf: 'flex-start', minHeight: 34 }}
+                          >
+                            {t('history.restoreButton')}
+                          </Button>
+                        </Stack>
+                      </Paper>
+                    ) : (
+                      <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
+                        <ListItemText
+                          sx={{ mr: 1 }}
+                          primary={(
+                            <>
+                              {mobileTitle}
+                              {historyTarget ? (
+                                <>
+                                  {' · '}
+                                  <Link component={RouterLink} to={historyTarget} underline="hover" onClick={() => setHistoryOpen(false)}>
+                                    {item.object_type === 'culture' ? t('history.objectTypes.culture') : t('history.objectTypes.plantingPlan')}
+                                  </Link>
+                                </>
+                              ) : null}
                             </>
-                          ) : null}
-                        </>
-                      )}
-                      secondary={getHistoryEntryMeta(item, t, fallbackHistoryActorLabel)}
-                    />
-                    <Button onClick={() => handleRestoreVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      {t('history.restoreButton')}
-                    </Button>
-                  </Stack>
-                </ListItem>
-              );
-            })}
-          </List>
+                          )}
+                          secondary={mobileMeta}
+                        />
+                        <Button onClick={() => handleRestoreVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          {t('history.restoreButton')}
+                        </Button>
+                      </Stack>
+                    )}
+                  </ListItem>
+                );
+              })}
+            </List>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setHistoryOpen(false)}>{t('history.closeButton')}</Button>
@@ -1287,14 +1376,30 @@ function Cultures(): React.ReactElement {
 
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
+        autoHideDuration={4200}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{
+          '& .MuiAlert-root': {
+            borderRadius: 2,
+            boxShadow: '0 6px 20px rgba(15, 23, 42, 0.12)',
+          },
+        }}
       >
         <Alert
           onClose={handleCloseSnackbar}
           severity={snackbar.severity}
-          sx={{ width: '100%' }}
+          variant="filled"
+          sx={{
+            width: '100%',
+            alignItems: 'center',
+            fontWeight: 500,
+            bgcolor: snackbar.severity === 'info' ? 'rgba(37, 111, 42, 0.96)' : undefined,
+            color: snackbar.severity === 'info' ? '#ffffff' : undefined,
+            '& .MuiAlert-icon': {
+              color: snackbar.severity === 'info' ? '#ffffff' : undefined,
+            },
+          }}
         >
           {snackbar.message}
         </Alert>
