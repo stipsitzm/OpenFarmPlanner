@@ -1319,21 +1319,26 @@ function PlantingPlans(): React.ReactElement {
   };
 
   const saveMobileNotes = async (): Promise<void> => {
-    if (!mobileNotesTarget?.id) {
+    if (isMobileNotesSaving || !mobileNotesTarget?.id) {
       return;
     }
 
+    const targetId = mobileNotesTarget.id;
+    const draftToSave = mobileNotesDraft;
+
     setIsMobileNotesSaving(true);
     try {
-      await plantingPlanAPI.update(mobileNotesTarget.id, {
-        notes: mobileNotesDraft,
+      await plantingPlanAPI.update(targetId, {
+        notes: draftToSave,
       } as PlantingPlan);
-      closeMobileNotesDialog();
+
       await gridCommandApiRef.current?.reload();
+      closeMobileNotesDialog();
     } catch (error) {
       setMobileCreateError(
         extractApiErrorMessage(error, t, t("plantingPlans:errors.save")),
       );
+    } finally {
       setIsMobileNotesSaving(false);
     }
   };

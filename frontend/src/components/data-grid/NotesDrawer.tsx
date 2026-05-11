@@ -33,7 +33,7 @@ export interface NotesDrawerProps {
   title: string;
   value: string;
   onChange: (value: string) => void;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
   onClose: () => void;
   loading?: boolean;
   noteId?: number;
@@ -306,8 +306,15 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
-      onSave();
+      void handleSaveClick();
     }
+  };
+
+  const handleSaveClick = async (): Promise<void> => {
+    if (loading) {
+      return;
+    }
+    await onSave();
   };
 
   return (
@@ -381,7 +388,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
 
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
           <Button onClick={onClose} disabled={loading} variant="outlined">{t('actions.cancel')}</Button>
-          <Button onClick={onSave} disabled={loading} variant="contained" color="primary" startIcon={loading ? <CircularProgress size={16} /> : undefined}>{t('actions.save')}</Button>
+          <Button onClick={() => void handleSaveClick()} disabled={loading} variant="contained" color="primary" startIcon={loading ? <CircularProgress size={16} /> : undefined}>{t('actions.save')}</Button>
         </Box>
       </Box>
 
