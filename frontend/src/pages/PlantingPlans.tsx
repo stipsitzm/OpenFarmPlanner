@@ -23,7 +23,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Fab,
   FormControl,
   InputLabel,
   MenuItem,
@@ -35,7 +34,6 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTranslation } from "../i18n";
@@ -1874,18 +1872,6 @@ function PlantingPlans(): React.ReactElement {
           />
         </Box>
 
-        {isMobile ? (
-          <Fab
-            color="primary"
-            variant="extended"
-            onClick={() => openMobileCreateDialog()}
-            sx={{ position: "fixed", bottom: 24, right: 16, zIndex: theme.zIndex.fab }}
-            aria-label={t("plantingPlans:mobile.fabAria")}
-          >
-            <AddIcon sx={{ mr: 0.75 }} />
-            {t("plantingPlans:mobile.fabLabel")}
-          </Fab>
-        ) : null}
       </Box>
 
       <Dialog open={isMobileCreateOpen} onClose={closeMobileCreateDialog} fullWidth maxWidth="sm">

@@ -931,15 +931,19 @@ function RootLayout(): React.ReactElement {
               );
             });
           })() : null}
-          {topbarPrimaryAction && (!isMobile || isCulturesPage) ? (
-            <Button
-              size="small"
-              variant="contained"
-              onClick={() => navigate(topbarPrimaryAction.to)}
-              sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 34 : 'auto', px: isPhone ? 0.75 : 1.5 }}
-            >
-              {isPhone ? '+' : `+ ${topbarPrimaryAction.label}`}
-            </Button>
+          {topbarPrimaryAction ? (
+            <Tooltip title={topbarPrimaryAction.label}>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={() => navigate(topbarPrimaryAction.to)}
+                aria-label={topbarPrimaryAction.label}
+                startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
+                sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.5 }}
+              >
+                {isPhone ? <AddIcon fontSize="small" /> : topbarPrimaryAction.label}
+              </Button>
+            </Tooltip>
           ) : null}
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: { xs: 1, md: 3 } }}>
