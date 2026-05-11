@@ -136,10 +136,11 @@
 
 .content--workspace-table {
   width: 100%;
-  max-width: 1800px;
+  /* Intentionally bypass the standard centered max-width so wide data tables can use the full workspace width. */
+  max-width: none;
   box-sizing: border-box;
   padding: 0 24px;
-  margin: var(--page-content-margin, 0 auto);
+  margin: 0;
 }
 
 .content--compact-centered-table {
