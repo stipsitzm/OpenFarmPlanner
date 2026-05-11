@@ -94,6 +94,26 @@ const theme = createTheme({
         },
       },
     },
+    MuiAlert: {
+      styleOverrides: {
+        standardInfo: {
+          backgroundColor: 'rgba(33, 150, 243, 0.08)',
+          color: '#24435f',
+        },
+        standardSuccess: {
+          backgroundColor: 'rgba(76, 175, 80, 0.10)',
+          color: '#2f5a35',
+        },
+        standardWarning: {
+          backgroundColor: 'rgba(237, 108, 2, 0.10)',
+          color: '#75491e',
+        },
+        standardError: {
+          backgroundColor: 'rgba(211, 47, 47, 0.09)',
+          color: '#6e2c2c',
+        },
+      },
+    },
     MuiTableCell: {
       styleOverrides: {
         head: {
