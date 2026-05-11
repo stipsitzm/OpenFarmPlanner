@@ -59,7 +59,11 @@ interface FieldsBedsHierarchyProps {
 
 const HIERARCHY_DATA_GRID_SX = {
   ...dataGridSx,
-  width: "100%",
+  width: "fit-content",
+  maxWidth: "100%",
+  "& .MuiDataGrid-filler": {
+    display: "none",
+  },
   "& .MuiDataGrid-columnHeader": {
     py: 0.25,
   },
@@ -925,7 +929,7 @@ function FieldsBedsHierarchy({
 
         <Box
           ref={tableWrapperRef}
-          sx={{ width: "100%", minWidth: 0, overflowX: "auto" }}
+          sx={{ width: "100%", minWidth: 0, overflowX: "auto", display: "flex", justifyContent: "center" }}
           onClick={() => setTreeActive(true)}
         >
           <DataGrid

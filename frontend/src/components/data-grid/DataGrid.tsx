@@ -135,6 +135,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const resolvedSurfaceSizing = surfaceSizing ?? 'contentFit';
   const isContentSizedSurface = resolvedSurfaceSizing === 'contentFit' || resolvedSurfaceSizing === 'compact';
   const shouldUseCompactContainer = resolvedSurfaceSizing === 'compact';
+  const shouldDisableTrailingFiller = isContentSizedSurface;
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [error, setError] = useState<string>('');
@@ -757,7 +758,12 @@ export function EditableDataGrid<T extends EditableRow>({
           slots={{
             footer: CustomFooter,
           }}
-          sx={{ ...dataGridSx, width: isContentSizedSurface ? 'fit-content' : '100%', minWidth: isContentSizedSurface ? 0 : '100%' }}
+          sx={{
+            ...dataGridSx,
+            width: isContentSizedSurface ? 'fit-content' : '100%',
+            minWidth: isContentSizedSurface ? 0 : '100%',
+            ...(shouldDisableTrailingFiller ? { '& .MuiDataGrid-filler': { display: 'none' } } : {}),
+          }}
           getRowClassName={(params) => {
             const rowKey = String(params.id);
             if (rowModesModel[params.id]?.mode === GridRowModes.Edit) {
