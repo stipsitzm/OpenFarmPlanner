@@ -22,6 +22,7 @@ import { bedAPI, cultureAPI, locationAPI, plantingPlanAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import { useCommandContextTag } from '../commands/useCommandContext';
 import PageContainer from '../components/layout/PageContainer';
+import PageSurface from '../components/layout/PageSurface';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
@@ -155,17 +156,17 @@ export default function SeedDemandPage(): React.ReactElement {
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
-      <PageContainer>
-        <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+      <PageContainer variant="standardCenteredPage">
+        <PageSurface variant="contentFit">
           <ProjectRequiredState reason={missingProjectReason} />
-        </Box>
+        </PageSurface>
       </PageContainer>
     );
   }
 
   return (
-    <PageContainer>
-      <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+    <PageContainer variant="standardCenteredPage">
+      <PageSurface variant="contentFit">
 
         {isLoading && <CircularProgress />}
         {error && <Alert severity="error">{error}</Alert>}
@@ -289,7 +290,7 @@ export default function SeedDemandPage(): React.ReactElement {
             ) : null}
           </TableContainer>
         )}
-      </Box>
+      </PageSurface>
     </PageContainer>
   );
 }
