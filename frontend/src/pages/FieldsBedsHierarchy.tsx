@@ -60,9 +60,7 @@ interface FieldsBedsHierarchyProps {
 const HIERARCHY_DATA_GRID_SX = {
   ...dataGridSx,
   width: "fit-content",
-  maxWidth: "100%",
-  minWidth: "unset",
-  display: "inline-block",
+  minWidth: 0,
   "& .MuiDataGrid-filler": {
     display: "none",
   },
@@ -943,9 +941,10 @@ function FieldsBedsHierarchy({
 
         <Box
           ref={tableWrapperRef}
-          sx={{ width: "100%", minWidth: 0, overflowX: "auto", display: "flex", justifyContent: "center" }}
+          sx={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "auto", overflowY: "visible", display: "flex", justifyContent: "center" }}
           onClick={() => setTreeActive(true)}
         >
+          <Box sx={{ display: "block", width: "fit-content", minWidth: 0, maxWidth: "100%" }}>
           <DataGrid
             rows={rows}
             columns={columns}
@@ -978,6 +977,7 @@ function FieldsBedsHierarchy({
             }}
             localeText={germanDataGridLocaleText}
           />
+          </Box>
         </Box>
       </Box>
 
