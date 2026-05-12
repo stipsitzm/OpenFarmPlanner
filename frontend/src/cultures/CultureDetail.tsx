@@ -707,7 +707,7 @@ export function CultureDetail({
                 lg: '300px minmax(0, 1fr)',
                 xl: '330px minmax(0, 1fr)',
               },
-            gap: { xs: 1.25, lg: 1.5 },
+            gap: { xs: 1.25, lg: 1.1, xl: 1.25 },
             alignItems: 'start',
           }}
         >
@@ -779,7 +779,7 @@ export function CultureDetail({
               })}
             </List>
           </Card>) : null}
-          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <Box sx={{ flex: 1, minWidth: 0, width: '100%', display: 'flex', justifyContent: 'flex-start' }}>
             {selectedCulture ? (
               <Card sx={{ width: '100%', maxWidth: useUnifiedMobileLayout ? '100%' : { sm: 920, lg: 980, xl: 1040 } }}>
                 <CardContent sx={{ p: { xs: 1, sm: 2, lg: 2.5 } }}>
