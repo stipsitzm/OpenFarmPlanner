@@ -1053,7 +1053,7 @@ function RootLayout(): React.ReactElement {
           width: '100%',
           // Global outer page gutter (single source of truth for workspace pages).
           // Uses smaller desktop gutters on wide monitors while keeping clear edge spacing.
-          px: { xs: 1.5, sm: 2, md: 2.5, lg: 2.25, xl: 2 },
+          px: { xs: 0, sm: 2, md: 2.5, lg: 2.25, xl: 2 },
           py: { xs: 1.5, md: 2.5 },
           display: 'flex',
           flexDirection: 'column',
