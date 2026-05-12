@@ -20,6 +20,12 @@ const paperByMode: Record<TableSizingMode, Record<string, unknown>> = {
   fullWorkspace: { width: '100%', maxWidth: '100%' },
 };
 
+const innerByMode: Record<TableSizingMode, Record<string, unknown>> = {
+  compact: { display: 'block', width: 'fit-content', minWidth: 0, maxWidth: '100%' },
+  contentFit: { display: 'block', width: 'fit-content', minWidth: 0, maxWidth: '100%' },
+  fullWorkspace: { display: 'block', width: '100%', minWidth: 0, maxWidth: '100%' },
+};
+
 export default function TableSurface({ sizingMode, children }: TableSurfaceProps): ReactElement {
   return (
     <Box sx={shellByMode[sizingMode]}>
@@ -34,7 +40,9 @@ export default function TableSurface({ sizingMode, children }: TableSurfaceProps
           '& .MuiTableCell-head': { fontWeight: 600 },
         }}
       >
-        {children}
+        <Box sx={innerByMode[sizingMode]}>
+          {children}
+        </Box>
       </Paper>
     </Box>
   );
