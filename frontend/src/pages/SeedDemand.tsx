@@ -181,7 +181,7 @@ export default function SeedDemandPage(): React.ReactElement {
 
         {!isLoading && !error && canCalculateSeedDemand && (
           <TableSurface sizingMode="contentFit">
-          <TableContainer sx={{ width: 'fit-content', maxWidth: '100%' }}>
+          <TableContainer>
             <Table
               sx={{
                 '& .MuiTableCell-root': { py: 1 },

@@ -206,8 +206,8 @@ export default function Suppliers(): React.ReactElement {
           </Box>
         ) : (
           <TableSurface sizingMode="compact">
-          <TableContainer sx={{ width: 'fit-content', maxWidth: '100%' }}>
-            <Table size="medium" sx={{ width: 'auto' }}>
+          <TableContainer>
+            <Table size="medium">
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ py: 1.5, minWidth: { xs: 140, sm: 180 } }}>{t('name')}</TableCell>

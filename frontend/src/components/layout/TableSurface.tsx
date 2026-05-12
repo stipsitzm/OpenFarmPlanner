@@ -23,7 +23,17 @@ const paperByMode: Record<TableSizingMode, Record<string, unknown>> = {
 export default function TableSurface({ sizingMode, children }: TableSurfaceProps): ReactElement {
   return (
     <Box sx={shellByMode[sizingMode]}>
-      <Paper variant="outlined" sx={{ ...paperByMode[sizingMode], borderRadius: 2, boxShadow: '0 1px 2px rgba(15, 23, 42, 0.06)' }}>
+      <Paper
+        variant="outlined"
+        sx={{
+          ...paperByMode[sizingMode],
+          borderRadius: 2,
+          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.06)',
+          '& .MuiTableContainer-root': { width: 'fit-content', maxWidth: '100%' },
+          '& .MuiTable-root': { width: 'auto' },
+          '& .MuiTableCell-head': { fontWeight: 600 },
+        }}
+      >
         {children}
       </Paper>
     </Box>
