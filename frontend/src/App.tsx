@@ -796,7 +796,7 @@ function RootLayout(): React.ReactElement {
         elevation={0}
         sx={{ borderBottom: '1px solid', borderColor: '#e4dfd4', bgcolor: '#f7f4ed', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
-        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 1, sm: 2, md: 3 }, flexWrap: 'nowrap' }}>
+        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 1, sm: 2, md: 3 }, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1 }}>
             {!isDesktopUp ? (
@@ -824,8 +824,8 @@ function RootLayout(): React.ReactElement {
             )}
             {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           </Box>
-          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflowX: isMobile ? 'auto' : 'visible', scrollbarWidth: 'thin' }}>
+          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, flexWrap: { xs: 'wrap', md: 'nowrap' }, width: { xs: '100%', md: 'auto' } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflowX: isMobile ? 'auto' : 'visible', scrollbarWidth: 'thin', order: { xs: 2, md: 1 }, width: { xs: '100%', md: 'auto' }, pt: { xs: 0.5, md: 0 } }}>
           {isCulturesPage ? (
             <>
               {cultureLibraryAction ? (
@@ -949,8 +949,7 @@ function RootLayout(): React.ReactElement {
             </Tooltip>
           ) : null}
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: { xs: 1, md: 3 } }}>
-          {!isPhone ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: { xs: 'auto', md: 3 }, order: { xs: 1, md: 2 }, width: { xs: '100%', md: 'auto' }, justifyContent: { xs: 'space-between', md: 'flex-start' } }}>
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
             aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}
@@ -961,15 +960,14 @@ function RootLayout(): React.ReactElement {
             sx={{
               color: 'text.primary',
               textTransform: 'none',
-              maxWidth: { sm: 190, md: 240, lg: 320 },
+              maxWidth: { xs: 210, sm: 190, md: 240, lg: 320 },
               minWidth: 0,
             }}
             startIcon={<FolderOpenOutlinedIcon fontSize="small" />}
-            endIcon={<KeyboardArrowDownIcon fontSize="small" />}
+            endIcon={!isPhone ? <KeyboardArrowDownIcon fontSize="small" /> : undefined}
           >
             <span className="project-switcher-label">{activeProjectLabel}</span>
           </Button>
-          ) : null}
           <ProjectMenu
             anchorEl={projectMenuAnchor}
             open={Boolean(projectMenuAnchor)}
