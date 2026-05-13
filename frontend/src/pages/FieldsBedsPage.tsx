@@ -1,4 +1,4 @@
-import { Alert, Box, Button, ButtonGroup, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, MenuItem, TextField, Tooltip, useMediaQuery } from '@mui/material';
+import { Alert, Box, Button, ButtonGroup, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField, useMediaQuery } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
@@ -16,8 +16,6 @@ import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import { getSegmentedActionButtonSx, segmentedButtonGroupSx } from '../components/buttons/segmentedControlStyles';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useTheme } from '@mui/material/styles';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
@@ -297,8 +295,8 @@ export default function FieldsBedsPage(): React.ReactElement {
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
         {isXs && !shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1.5 }}>
-            <ButtonGroup size="small" variant="outlined" sx={segmentedButtonGroupSx}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 1 }}>
+            <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, alignSelf: 'flex-start' }}>
               <Button
                 aria-label={t('fields:representation.table')}
                 aria-pressed={viewMode === 'table'}
@@ -322,28 +320,26 @@ export default function FieldsBedsPage(): React.ReactElement {
             </ButtonGroup>
             {viewMode === 'graphical' ? (
               <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, alignSelf: 'flex-start' }}>
-                <Tooltip title={t('fields:graphical.viewModeOption')}>
-                  <IconButton
-                    size="small"
-                    aria-label={t('fields:graphical.viewModeOption')}
-                    aria-pressed={interactionMode === 'view'}
-                    onClick={() => setInteractionMode('view')}
-                    sx={getSegmentedActionButtonSx({ active: interactionMode === 'view' })}
-                  >
-                    <VisibilityOutlinedIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title={t('fields:graphical.editModeOption')}>
-                  <IconButton
-                    size="small"
-                    aria-label={t('fields:graphical.editModeOption')}
-                    aria-pressed={interactionMode === 'edit'}
-                    onClick={() => setInteractionMode('edit')}
-                    sx={getSegmentedActionButtonSx({ active: interactionMode === 'edit' })}
-                  >
-                    <EditOutlinedIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                <Button
+                  aria-label={t('fields:graphical.viewModeOption')}
+                  aria-pressed={interactionMode === 'view'}
+                  variant={interactionMode === 'view' ? 'contained' : 'outlined'}
+                  color={interactionMode === 'view' ? 'success' : 'inherit'}
+                  onClick={() => setInteractionMode('view')}
+                  sx={getSegmentedActionButtonSx({ active: interactionMode === 'view' })}
+                >
+                  {t('fields:graphical.viewModeOption')}
+                </Button>
+                <Button
+                  aria-label={t('fields:graphical.editModeOption')}
+                  aria-pressed={interactionMode === 'edit'}
+                  variant={interactionMode === 'edit' ? 'contained' : 'outlined'}
+                  color={interactionMode === 'edit' ? 'success' : 'inherit'}
+                  onClick={() => setInteractionMode('edit')}
+                  sx={getSegmentedActionButtonSx({ active: interactionMode === 'edit' })}
+                >
+                  {t('fields:graphical.editModeOption')}
+                </Button>
               </ButtonGroup>
             ) : null}
           </Box>
