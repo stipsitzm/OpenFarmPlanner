@@ -17,6 +17,7 @@ import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
+const NOOP_SET_TOPBAR_ACTIONS = (): void => undefined;
 
 type ViewMode = 'table' | 'graphical';
 type InteractionMode = 'view' | 'edit';
@@ -43,7 +44,7 @@ export default function FieldsBedsPage(): React.ReactElement {
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
 
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
-  const setTopbarContextActions = outletContext?.setTopbarContextActions ?? (() => undefined);
+  const setTopbarContextActions = outletContext?.setTopbarContextActions ?? NOOP_SET_TOPBAR_ACTIONS;
 
   useCommandContextTag('areas');
 
