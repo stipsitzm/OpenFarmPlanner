@@ -109,6 +109,8 @@ import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './n
 import { PanelLeft } from 'lucide-react';
 
 const CONTENT_ALIGNMENT_MODE = 'centered';
+const ACTION_MENU_ITEM_ICON_SX = { minWidth: 32, color: 'text.secondary' } as const;
+const ACTION_MENU_ICON_PROPS = { fontSize: 'small' } as const;
 
 interface SnackbarState {
   open: boolean;
@@ -169,14 +171,13 @@ function ProjectMenu(props: ProjectMenuProps): React.ReactElement {
       )}
       <Divider />
       <MenuItem onClick={onOpenProjectSettings}>
+        <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
         {t('project.settings')}
       </MenuItem>
       <Divider />
       <MenuItem onClick={onOpenCreateProject}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <AddIcon fontSize="small" />
-          <span>{t('project.create')}</span>
-        </Stack>
+        <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><AddIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
+        {t('project.create')}
       </MenuItem>
     </Menu>
   );
@@ -223,26 +224,26 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
 
   const mobileMenuItems = [
     <MenuItem key="mobile-section-project" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Projektaktionen</MenuItem>,
-    <MenuItem key="mobile-project-switcher" onClick={onOpenProjectSwitcher}><ListItemIcon sx={{ minWidth: 32 }}><SwapHorizIcon fontSize="small" /></ListItemIcon>{t('projectSwitcher.ariaLabel')}</MenuItem>,
-    <MenuItem key="mobile-project-create" onClick={onOpenCreateProject}><ListItemIcon sx={{ minWidth: 32 }}><AddIcon fontSize="small" /></ListItemIcon>{t('project.create')}</MenuItem>,
-    <MenuItem key="mobile-project-settings" onClick={onOpenProjectSettings}><ListItemIcon sx={{ minWidth: 32 }}><SettingsOutlinedIcon fontSize="small" /></ListItemIcon>{t('project.settings')}</MenuItem>,
-    <MenuItem key="mobile-project-members" onClick={onOpenProjectMembers}><ListItemIcon sx={{ minWidth: 32 }}><GroupOutlinedIcon fontSize="small" /></ListItemIcon>{t('commandPalette.commands.openProjectMembers')}</MenuItem>,
-    <MenuItem key="mobile-project-history" onClick={() => void onOpenProjectHistory()} disabled={historyLoading}><ListItemIcon sx={{ minWidth: 32 }}><HistoryOutlinedIcon fontSize="small" /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
+    <MenuItem key="mobile-project-switcher" onClick={onOpenProjectSwitcher}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SwapHorizIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('projectSwitcher.ariaLabel')}</MenuItem>,
+    <MenuItem key="mobile-project-create" onClick={onOpenCreateProject}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><AddIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.create')}</MenuItem>,
+    <MenuItem key="mobile-project-settings" onClick={onOpenProjectSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.settings')}</MenuItem>,
+    <MenuItem key="mobile-project-members" onClick={onOpenProjectMembers}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><GroupOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openProjectMembers')}</MenuItem>,
+    <MenuItem key="mobile-project-history" onClick={() => void onOpenProjectHistory()} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
     <Divider key="mobile-divider-project-app" />,
     <MenuItem key="mobile-section-app" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>App</MenuItem>,
-    <MenuItem key="mobile-app-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={{ minWidth: 32 }}><KeyboardOutlinedIcon fontSize="small" /></ListItemIcon>Tastenkürzel</MenuItem>,
-    <MenuItem key="mobile-app-help" onClick={onOpenHelp}><ListItemIcon sx={{ minWidth: 32 }}><HelpOutlineIcon fontSize="small" /></ListItemIcon>App-Hilfe</MenuItem>,
-    <MenuItem key="mobile-app-account-settings" onClick={onOpenAccountSettings}><ListItemIcon sx={{ minWidth: 32 }}><SettingsOutlinedIcon fontSize="small" /></ListItemIcon>{t('accountSettings')}</MenuItem>,
+    <MenuItem key="mobile-app-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>Tastenkürzel</MenuItem>,
+    <MenuItem key="mobile-app-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>App-Hilfe</MenuItem>,
+    <MenuItem key="mobile-app-account-settings" onClick={onOpenAccountSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
     <Divider key="mobile-divider-app-account" />,
     <MenuItem key="mobile-section-account" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Account</MenuItem>,
-    <MenuItem key="mobile-account-logout" onClick={() => void onLogout()}><ListItemIcon sx={{ minWidth: 32 }}><LogoutIcon fontSize="small" /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
+    <MenuItem key="mobile-account-logout" onClick={() => void onLogout()}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
   ];
   const desktopMenuItems = [
-    <MenuItem key="desktop-history" onClick={() => void onOpenProjectHistory()} disabled={historyLoading}>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
-    <MenuItem key="desktop-account-settings" onClick={onOpenAccountSettings}>{t('accountSettings')}</MenuItem>,
-    <MenuItem key="desktop-shortcuts" onClick={onOpenShortcuts}>Tastenkürzel</MenuItem>,
-    <MenuItem key="desktop-help" onClick={onOpenHelp}>App-Hilfe</MenuItem>,
-    <MenuItem key="desktop-logout" onClick={() => void onLogout()}>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
+    <MenuItem key="desktop-history" onClick={() => void onOpenProjectHistory()} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
+    <MenuItem key="desktop-account-settings" onClick={onOpenAccountSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
+    <MenuItem key="desktop-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>Tastenkürzel</MenuItem>,
+    <MenuItem key="desktop-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>App-Hilfe</MenuItem>,
+    <MenuItem key="desktop-logout" onClick={() => void onLogout()}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
   ];
   return <Menu id="global-actions-menu" anchorEl={anchorEl} open={open} onClose={onClose}>{isMobile ? mobileMenuItems : desktopMenuItems}</Menu>;
 }
