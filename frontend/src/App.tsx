@@ -69,6 +69,13 @@ import PublicIcon from '@mui/icons-material/Public';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import KeyboardOutlinedIcon from '@mui/icons-material/KeyboardOutlined';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { cultureAPI, projectAPI } from './api/api';
 import type { CultureHistoryEntry } from './api/types';
 import './App.css';
@@ -181,12 +188,11 @@ interface GlobalMenuProps {
   historyLoading: boolean;
   userLabel: string;
   isMobile: boolean;
-  memberships: { project_id: number; project_name: string; role: 'admin' | 'member' }[];
-  activeProjectId: number | null;
-  isSwitchingProject: boolean;
   onClose: () => void;
-  onSwitchProject: (projectId: number) => Promise<void>;
+  onOpenProjectSwitcher: () => void;
+  onOpenCreateProject: () => void;
   onOpenProjectSettings: () => void;
+  onOpenProjectMembers: () => void;
   onOpenProjectHistory: () => Promise<void>;
   onOpenAccountSettings: () => void;
   onOpenShortcuts: () => void;
@@ -202,12 +208,11 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
     historyLoading,
     userLabel,
     isMobile,
-    memberships,
-    activeProjectId,
-    isSwitchingProject,
     onClose,
-    onSwitchProject,
+    onOpenProjectSwitcher,
+    onOpenCreateProject,
     onOpenProjectSettings,
+    onOpenProjectMembers,
     onOpenProjectHistory,
     onOpenAccountSettings,
     onOpenShortcuts,
@@ -225,48 +230,67 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
 >
       {isMobile ? (
         <>
-          <MenuItem disabled>{t('projectSwitcher.ariaLabel')}</MenuItem>
-          {memberships.length === 0 ? (
-            <MenuItem disabled>{t('projectSwitcher.zeroProjects')}</MenuItem>
-          ) : (
-            memberships.map((membership) => (
-              <MenuItem
-                key={`mobile-project-${membership.project_id}`}
-                onClick={() => void onSwitchProject(membership.project_id)}
-                selected={membership.project_id === activeProjectId}
-                disabled={isSwitchingProject}
-              >
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
-                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{membership.project_name}</span>
-                  {membership.project_id === activeProjectId ? <CheckIcon fontSize="small" /> : null}
-                </Stack>
-              </MenuItem>
-            ))
-          )}
+          <MenuItem disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Projektaktionen</MenuItem>
+          <MenuItem onClick={onOpenProjectSwitcher}>
+            <ListItemIcon sx={{ minWidth: 32 }}><SwapHorizIcon fontSize="small" /></ListItemIcon>
+            {t('projectSwitcher.ariaLabel')}
+          </MenuItem>
+          <MenuItem onClick={onOpenCreateProject}>
+            <ListItemIcon sx={{ minWidth: 32 }}><AddIcon fontSize="small" /></ListItemIcon>
+            {t('project.create')}
+          </MenuItem>
           <MenuItem onClick={onOpenProjectSettings}>
+            <ListItemIcon sx={{ minWidth: 32 }}><SettingsOutlinedIcon fontSize="small" /></ListItemIcon>
             {t('project.settings')}
           </MenuItem>
-          <MenuItem onClick={onOpenProjectSettings}>
+          <MenuItem onClick={onOpenProjectMembers}>
+            <ListItemIcon sx={{ minWidth: 32 }}><GroupOutlinedIcon fontSize="small" /></ListItemIcon>
             {t('commandPalette.commands.openProjectMembers')}
           </MenuItem>
+          <MenuItem onClick={() => void onOpenProjectHistory()} disabled={historyLoading}>
+            <ListItemIcon sx={{ minWidth: 32 }}><HistoryOutlinedIcon fontSize="small" /></ListItemIcon>
+            {t('commandPalette.commands.openVersionHistory')}
+          </MenuItem>
           <Divider />
+          <MenuItem disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>App</MenuItem>
+          <MenuItem onClick={onOpenShortcuts}>
+            <ListItemIcon sx={{ minWidth: 32 }}><KeyboardOutlinedIcon fontSize="small" /></ListItemIcon>
+            Tastenkürzel
+          </MenuItem>
+          <MenuItem onClick={onOpenHelp}>
+            <ListItemIcon sx={{ minWidth: 32 }}><HelpOutlineIcon fontSize="small" /></ListItemIcon>
+            App-Hilfe
+          </MenuItem>
+          <MenuItem onClick={onOpenAccountSettings}>
+            <ListItemIcon sx={{ minWidth: 32 }}><SettingsOutlinedIcon fontSize="small" /></ListItemIcon>
+            {t('accountSettings')}
+          </MenuItem>
+          <Divider />
+          <MenuItem disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Account</MenuItem>
+          <MenuItem onClick={() => void onLogout()}>
+            <ListItemIcon sx={{ minWidth: 32 }}><LogoutIcon fontSize="small" /></ListItemIcon>
+            {t('commandPalette.commands.logout')} {userLabel}
+          </MenuItem>
         </>
-      ) : null}
-      <MenuItem onClick={() => void onOpenProjectHistory()} disabled={historyLoading}>
-        {t('commandPalette.commands.openVersionHistory')}
-      </MenuItem>
-      <MenuItem onClick={onOpenAccountSettings}>
-        {t('accountSettings')}
-      </MenuItem>
-      <MenuItem onClick={onOpenShortcuts}>
-        Tastenkürzel
-      </MenuItem>
-      <MenuItem onClick={onOpenHelp}>
-        App-Hilfe
-      </MenuItem>
-      <MenuItem onClick={() => void onLogout()}>
-        {t('commandPalette.commands.logout')} {userLabel}
-      </MenuItem>
+      ) : (
+        <>
+          <MenuItem onClick={() => void onOpenProjectHistory()} disabled={historyLoading}>
+            {t('commandPalette.commands.openVersionHistory')}
+          </MenuItem>
+          <MenuItem onClick={onOpenAccountSettings}>
+            {t('accountSettings')}
+          </MenuItem>
+          <MenuItem onClick={onOpenShortcuts}>
+            Tastenkürzel
+          </MenuItem>
+          <MenuItem onClick={onOpenHelp}>
+            App-Hilfe
+          </MenuItem>
+          <MenuItem onClick={() => void onLogout()}>
+            {t('commandPalette.commands.logout')} {userLabel}
+          </MenuItem>
+        </>
+      )}
     </Menu>
   );
 }
@@ -315,6 +339,7 @@ function RootLayout(): React.ReactElement {
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [mobileProjectSwitcherOpen, setMobileProjectSwitcherOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(!isLargeDesktop);
   const [isSwitchingProject, setIsSwitchingProject] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
@@ -346,6 +371,13 @@ function RootLayout(): React.ReactElement {
 
   const handleGlobalMenuClose = () => {
     setGlobalMenuAnchor(null);
+  };
+  const handleOpenMobileProjectSwitcher = (): void => {
+    handleGlobalMenuClose();
+    setMobileProjectSwitcherOpen(true);
+  };
+  const handleCloseMobileProjectSwitcher = (): void => {
+    setMobileProjectSwitcherOpen(false);
   };
 
   const handleProjectMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -530,6 +562,7 @@ function RootLayout(): React.ReactElement {
   };
 
   const handleSwitchProject = async (projectId: number): Promise<void> => {
+    setMobileProjectSwitcherOpen(false);
     handleProjectMenuClose();
     if (projectId === activeProjectId) {
       return;
@@ -1038,12 +1071,11 @@ function RootLayout(): React.ReactElement {
             historyLoading={historyLoading}
             userLabel={user?.email ? `(${user.email})` : (user?.display_label ? `(${user.display_label})` : '')}
             isMobile={false}
-            memberships={memberships}
-            activeProjectId={activeProjectId}
-            isSwitchingProject={isSwitchingProject}
             onClose={handleGlobalMenuClose}
-            onSwitchProject={handleSwitchProject}
+            onOpenProjectSwitcher={handleOpenMobileProjectSwitcher}
+            onOpenCreateProject={handleOpenCreateProject}
             onOpenProjectSettings={handleOpenProjectSettings}
+            onOpenProjectMembers={handleOpenProjectSettings}
             onOpenProjectHistory={handleOpenProjectHistory}
             onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
             onOpenShortcuts={handleOpenShortcuts}
@@ -1071,12 +1103,11 @@ function RootLayout(): React.ReactElement {
                 historyLoading={historyLoading}
                 userLabel={user?.email ? `(${user.email})` : (user?.display_label ? `(${user.display_label})` : '')}
                 isMobile={isMobile}
-                memberships={memberships}
-                activeProjectId={activeProjectId}
-                isSwitchingProject={isSwitchingProject}
                 onClose={handleGlobalMenuClose}
-                onSwitchProject={handleSwitchProject}
+                onOpenProjectSwitcher={handleOpenMobileProjectSwitcher}
+                onOpenCreateProject={handleOpenCreateProject}
                 onOpenProjectSettings={handleOpenProjectSettings}
+                onOpenProjectMembers={handleOpenProjectSettings}
                 onOpenProjectHistory={handleOpenProjectHistory}
                 onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
                 onOpenShortcuts={handleOpenShortcuts}
@@ -1388,6 +1419,48 @@ function RootLayout(): React.ReactElement {
         </DialogActions>
       </Dialog>
       <HelpDialog open={globalHelpOpen} onClose={closeGlobalHelp} />
+      <Dialog open={mobileProjectSwitcherOpen} onClose={handleCloseMobileProjectSwitcher} fullWidth maxWidth="sm">
+        <DialogTitle>{t('projectSwitcher.ariaLabel')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="caption" sx={{ display: 'block', mb: 1.25, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+            Aktives Projekt
+          </Typography>
+          <Paper variant="outlined" sx={{ p: 1.25, mb: 2 }}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <CheckIcon fontSize="small" color="success" />
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>{activeProjectLabel}</Typography>
+            </Stack>
+          </Paper>
+          <Typography variant="caption" sx={{ display: 'block', mb: 1.25, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+            Projekte
+          </Typography>
+          <List dense sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, py: 0 }}>
+            {memberships.length === 0 ? (
+              <ListItem><ListItemText primary={t('projectSwitcher.zeroProjects')} /></ListItem>
+            ) : memberships.map((membership) => (
+              <ListItemButton
+                key={`switcher-${membership.project_id}`}
+                onClick={() => void handleSwitchProject(membership.project_id)}
+                selected={membership.project_id === activeProjectId}
+                disabled={isSwitchingProject}
+              >
+                <ListItemIcon sx={{ minWidth: 28 }}>
+                  {membership.project_id === activeProjectId ? <CheckIcon fontSize="small" color="success" /> : null}
+                </ListItemIcon>
+                <ListItemText primary={membership.project_name} />
+              </ListItemButton>
+            ))}
+          </List>
+          <Button
+            startIcon={<AddIcon fontSize="small" />}
+            variant="outlined"
+            onClick={handleOpenCreateProject}
+            sx={{ mt: 2, textTransform: 'none' }}
+          >
+            {t('project.create')}
+          </Button>
+        </DialogContent>
+      </Dialog>
       <Dialog open={Boolean(pendingRestoreEntry)} onClose={() => setPendingRestoreEntry(null)} fullWidth maxWidth="xs">
         <DialogTitle>Version wiederherstellen?</DialogTitle>
         <DialogContent>
