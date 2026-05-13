@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import {
   Alert,
@@ -42,6 +43,7 @@ import type { CommandSpec } from '../commands/types';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import { extractApiErrorMessage } from '../api/errors';
 import EmptyStateCard from '../components/project/EmptyStateCard';
+import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import {
   buildFieldOccupancyTaskGroups,
   buildOccupancyTooltipDetails,
@@ -73,6 +75,7 @@ interface WeeklyYieldChartColumn {
 }
 
 type CalendarMode = 'occupancy' | 'seedlings';
+const NOOP_SET_TOPBAR_ACTIONS = (_actions: TopbarContextAction[]): void => undefined;
 
 class GanttRenderBoundary extends React.Component<
   { fallback: React.ReactNode; children: React.ReactNode },
@@ -132,6 +135,11 @@ function GanttChartPage(): React.ReactElement {
 
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('occupancy');
   const [editMode, setEditMode] = useState(false);
+  const outletContext = useOutletContext<RootLayoutOutletContext | null>();
+  const setTopbarContextActions = useCallback((actions: TopbarContextAction[]): void => {
+    const setter = outletContext?.setTopbarContextActions ?? NOOP_SET_TOPBAR_ACTIONS;
+    setter(actions);
+  }, [outletContext]);
 
   const calendarCommands = useMemo<CommandSpec[]>(() => [
     {
@@ -148,6 +156,39 @@ function GanttChartPage(): React.ReactElement {
   ], [calendarMode, editMode]);
 
   useRegisterCommands('calendar-page', calendarCommands);
+
+  const topbarActions = useMemo<TopbarContextAction[]>(() => [
+    {
+      id: 'calendar-mode-view',
+      label: t('ganttChart:viewMode.view'),
+      icon: '👁️',
+      active: calendarMode === 'occupancy' && !editMode,
+      hidden: calendarMode !== 'occupancy',
+      tooltip: 'Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.',
+      onClick: () => {
+        setCalendarMode('occupancy');
+        setEditMode(false);
+      },
+    },
+    {
+      id: 'calendar-mode-edit',
+      label: t('ganttChart:viewMode.edit'),
+      icon: '✏️',
+      active: calendarMode === 'occupancy' && editMode,
+      hidden: calendarMode !== 'occupancy',
+      tooltip: 'Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.',
+      onClick: () => {
+        setCalendarMode('occupancy');
+        setEditMode(true);
+      },
+    },
+  ], [calendarMode, editMode, t]);
+  useEffect(() => {
+    setTopbarContextActions(topbarActions);
+    return () => {
+      setTopbarContextActions([]);
+    };
+  }, [setTopbarContextActions, topbarActions]);
 
   const currentYear = new Date().getFullYear();
   const [displayYear] = useState(currentYear);
