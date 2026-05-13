@@ -1,4 +1,4 @@
-import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from '@mui/material';
+import { Alert, Box, Button, ButtonGroup, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, MenuItem, TextField, Tooltip, useMediaQuery } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
@@ -15,7 +15,10 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
-import ModeToggle from '../components/ModeToggle';
+import { getSegmentedActionButtonSx, segmentedButtonGroupSx } from '../components/buttons/segmentedControlStyles';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import { useTheme } from '@mui/material/styles';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 const NOOP_SET_TOPBAR_ACTIONS = (): void => undefined;
@@ -25,6 +28,8 @@ type InteractionMode = 'view' | 'edit';
 
 export default function FieldsBedsPage(): React.ReactElement {
   const { t } = useTranslation(['fields', 'hierarchy']);
+  const theme = useTheme();
+  const isXs = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const location = useLocation();
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -191,16 +196,58 @@ export default function FieldsBedsPage(): React.ReactElement {
   }, [viewMode]);
 
 
-  const contextActions = useMemo<TopbarContextAction[]>(() => (
-    locations.length === 1 && !shouldShowProjectRequiredState
+  const contextActions = useMemo<TopbarContextAction[]>(() => {
+    const globalActions: TopbarContextAction[] = locations.length === 1 && !shouldShowProjectRequiredState
       ? [{
         id: 'fields-global-add-field',
         label: 'Parzelle hinzufügen',
         onClick: handleGlobalAddField,
         ariaLabel: 'Parzelle hinzufügen',
       }]
-      : []
-  ), [handleGlobalAddField, locations.length, shouldShowProjectRequiredState]);
+      : [];
+    if (isXs) {
+      return globalActions;
+    }
+    return [
+      ...globalActions,
+      {
+        id: 'fields-interaction-mode-view',
+        label: t('fields:graphical.viewModeOption'),
+        onClick: () => setInteractionMode('view'),
+        active: interactionMode === 'view',
+        hidden: viewMode !== 'graphical',
+        reserveSpace: true,
+        ariaLabel: t('fields:graphical.modeAriaLabel'),
+        groupId: 'fields-interaction-mode',
+      },
+      {
+        id: 'fields-interaction-mode-edit',
+        label: t('fields:graphical.editModeOption'),
+        onClick: () => setInteractionMode('edit'),
+        active: interactionMode === 'edit',
+        hidden: viewMode !== 'graphical',
+        reserveSpace: true,
+        ariaLabel: t('fields:graphical.modeAriaLabel'),
+        groupId: 'fields-interaction-mode',
+      },
+      {
+        id: 'fields-view-mode-list',
+        label: t('fields:representation.table'),
+        onClick: () => setViewMode('table'),
+        active: viewMode === 'table',
+        ariaLabel: t('fields:representation.ariaLabel'),
+        groupId: 'fields-view-mode',
+      },
+      {
+        id: 'fields-view-mode-graphical',
+        label: t('fields:representation.graphical'),
+        onClick: () => setViewMode('graphical'),
+        active: viewMode === 'graphical',
+        ariaLabel: t('fields:representation.ariaLabel'),
+        groupId: 'fields-view-mode',
+      },
+    ];
+  }, [handleGlobalAddField, interactionMode, isXs, locations.length, shouldShowProjectRequiredState, t, viewMode]);
 
   useTopbarContextActions(setTopbarContextActions, contextActions);
 
@@ -249,25 +296,55 @@ export default function FieldsBedsPage(): React.ReactElement {
       </PageContainer>
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
-        {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState ? (
+        {isXs && !shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1.5 }}>
-            <ModeToggle
-              label={t('fields:representation.label')}
-              ariaLabel={t('fields:representation.ariaLabel')}
-              viewLabel={t('fields:representation.table')}
-              editLabel={t('fields:representation.graphical')}
-              value={viewMode === 'table' ? 'view' : 'edit'}
-              onChange={(nextMode) => setViewMode(nextMode === 'view' ? 'table' : 'graphical')}
-            />
+            <ButtonGroup size="small" variant="outlined" sx={segmentedButtonGroupSx}>
+              <Button
+                aria-label={t('fields:representation.table')}
+                aria-pressed={viewMode === 'table'}
+                variant={viewMode === 'table' ? 'contained' : 'outlined'}
+                color={viewMode === 'table' ? 'success' : 'inherit'}
+                onClick={() => setViewMode('table')}
+                sx={getSegmentedActionButtonSx({ active: viewMode === 'table' })}
+              >
+                {t('fields:representation.table')}
+              </Button>
+              <Button
+                aria-label={t('fields:representation.graphical')}
+                aria-pressed={viewMode === 'graphical'}
+                variant={viewMode === 'graphical' ? 'contained' : 'outlined'}
+                color={viewMode === 'graphical' ? 'success' : 'inherit'}
+                onClick={() => setViewMode('graphical')}
+                sx={getSegmentedActionButtonSx({ active: viewMode === 'graphical' })}
+              >
+                {t('fields:representation.graphical')}
+              </Button>
+            </ButtonGroup>
             {viewMode === 'graphical' ? (
-              <ModeToggle
-                label={t('fields:graphical.viewMode')}
-                ariaLabel={t('fields:graphical.modeAriaLabel')}
-                viewLabel={t('fields:graphical.viewModeOption')}
-                editLabel={t('fields:graphical.editModeOption')}
-                value={interactionMode}
-                onChange={setInteractionMode}
-              />
+              <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, alignSelf: 'flex-start' }}>
+                <Tooltip title={t('fields:graphical.viewModeOption')}>
+                  <IconButton
+                    size="small"
+                    aria-label={t('fields:graphical.viewModeOption')}
+                    aria-pressed={interactionMode === 'view'}
+                    onClick={() => setInteractionMode('view')}
+                    sx={getSegmentedActionButtonSx({ active: interactionMode === 'view' })}
+                  >
+                    <VisibilityOutlinedIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title={t('fields:graphical.editModeOption')}>
+                  <IconButton
+                    size="small"
+                    aria-label={t('fields:graphical.editModeOption')}
+                    aria-pressed={interactionMode === 'edit'}
+                    onClick={() => setInteractionMode('edit')}
+                    sx={getSegmentedActionButtonSx({ active: interactionMode === 'edit' })}
+                  >
+                    <EditOutlinedIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </ButtonGroup>
             ) : null}
           </Box>
         ) : null}
