@@ -17,11 +17,11 @@ interface PageSurfaceProps {
 
 const VARIANT_SX: Record<PageSurfaceVariant, Record<string, unknown>> = {
   standardCenteredPage: { width: '100%' },
-  compact: { width: 'fit-content', maxWidth: '100%', mx: 'auto' },
-  contentFit: { width: 'fit-content', maxWidth: '100%', mx: 'auto' },
+  compact: { width: { xs: '100%', sm: 'fit-content' }, maxWidth: '100%', mx: { xs: 0, sm: 'auto' } },
+  contentFit: { width: { xs: '100%', sm: 'fit-content' }, maxWidth: '100%', mx: { xs: 0, sm: 'auto' } },
   fullWorkspace: { width: '100%', maxWidth: '100%' },
   // Legacy aliases
-  compactCenteredTable: { width: 'fit-content', maxWidth: '100%', mx: 'auto' },
+  compactCenteredTable: { width: { xs: '100%', sm: 'fit-content' }, maxWidth: '100%', mx: { xs: 0, sm: 'auto' } },
   wideWorkspace: { width: '100%', maxWidth: '100%' },
 };
 
