@@ -899,7 +899,7 @@ function RootLayout(): React.ReactElement {
           </Box>
           {!isPhone ? (
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, maxWidth: '100%', flex: 1, overflow: 'hidden' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flex: 1, overflow: 'hidden', pr: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flex: 1, justifyContent: 'flex-end', overflow: 'hidden', pr: 0.5 }}>
           {isCulturesPage ? (
             <>
               {cultureLibraryAction && !showDesktopCultureActionsOverflow ? (
@@ -911,7 +911,7 @@ function RootLayout(): React.ReactElement {
                       onClick={() => cultureLibraryAction.onClick()}
                       aria-label="Kulturbibliothek öffnen"
                       startIcon={<PublicIcon fontSize="small" />}
-                      sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: showIconOnlyCultureLibrary ? 36 : 0, maxWidth: 170, px: showIconOnlyCultureLibrary ? 0.75 : 1.25, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                      sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: showIconOnlyCultureLibrary ? 36 : 'auto', px: showIconOnlyCultureLibrary ? 0.75 : 1.25, flexShrink: 0 }}
                       disabled={cultureLibraryAction.disabled}
                     >
                       {!showIconOnlyCultureLibrary ? (showCompactCultureLibrary ? 'Bibliothek' : 'Kulturbibliothek') : null}
@@ -929,7 +929,7 @@ function RootLayout(): React.ReactElement {
                   aria-expanded={Boolean(cultureActionsMenuAnchor)}
                   onClick={handleCultureActionsMenuOpen}
                   endIcon={!isPhone ? <KeyboardArrowDownIcon fontSize="small" /> : undefined}
-                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 0, maxWidth: 150, px: isPhone ? 0.75 : 1.25, overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 0 }}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
                 >
                   {isPhone ? '⋯' : 'Import/Export'}
                 </Button>
@@ -1043,7 +1043,7 @@ function RootLayout(): React.ReactElement {
                 onClick={handleTopbarPrimaryAction}
                 aria-label={topbarPrimaryAction.label}
                 startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
-                sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 0, maxWidth: 180, px: isPhone ? 0.75 : 1.25, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
               >
                 {isPhone ? <AddIcon fontSize="small" /> : topbarPrimaryAction.label}
               </Button>
