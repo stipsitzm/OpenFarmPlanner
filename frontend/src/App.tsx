@@ -1194,6 +1194,26 @@ function RootLayout(): React.ReactElement {
                       Import/Export
                     </Button>
                   ) : null}
+                  <Menu
+                    id="culture-actions-menu-mobile"
+                    anchorEl={cultureActionsMenuAnchor}
+                    open={Boolean(cultureActionsMenuAnchor)}
+                    onClose={handleCultureActionsMenuClose}
+                  >
+                    {cultureImportExportActions.map((action) => (
+                      <MenuItem
+                        key={`mobile-${action.id}`}
+                        aria-label={action.ariaLabel ?? action.label}
+                        onClick={() => {
+                          action.onClick();
+                          handleCultureActionsMenuClose();
+                        }}
+                        disabled={action.disabled}
+                      >
+                        <ListItemText primary={action.label} secondary={action.shortcutHint} />
+                      </MenuItem>
+                    ))}
+                  </Menu>
                 </>
               ) : null}
               {(() => {
