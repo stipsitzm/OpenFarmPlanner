@@ -1,7 +1,16 @@
-{% load i18n %}{% autoescape off %}{% blocktrans with link=activation_link|safe %}Hello,
+Hallo,
 
-please activate your OpenFarmPlanner account by clicking the link below:
+du hast gerade ein Konto bei OpenFarmPlanner erstellt.
 
-{{ link }}
+Bitte bestätige deine Registrierung über den folgenden Link:
 
-If you did not create this account, you can ignore this email.{% endblocktrans %}{% endautoescape %}
+{{ activation_link }}
+
+OpenFarmPlanner ist eine Open-Source-Webanwendung zur Planung von Gemüsebau und CSA-Anbau.
+
+Falls du kein Konto erstellt hast, kannst du diese E-Mail ignorieren.
+
+Kontakt:
+{{ contact_email }}
+
+{{ project_website }}

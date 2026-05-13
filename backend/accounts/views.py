@@ -151,14 +151,39 @@ def _logout_all_user_sessions(user_id: int) -> None:
 
 
 def _send_activation_email(user: User) -> None:
+    """
+    Send multipart activation email with explicit sender metadata.
+
+    Deliverability note: multipart (text + HTML) improves compatibility across clients
+    and avoids HTML-only spam signals. We intentionally avoid no-reply senders so
+    recipients can contact support via a monitored sender mailbox and mailbox providers
+    see a trustworthy identity.
+    """
     activation_link = _build_frontend_token_link('/activate', user)
     with translation.override('de'):
-        subject = _('Activate your OpenFarmPlanner account')
-        body = render_to_string('accounts/emails/activation_email.txt', {
+        subject = 'OpenFarmPlanner – Registrierung bestätigen'
+        text_body = render_to_string('accounts/emails/activation_email.txt', {
             'activation_link': activation_link,
+            'contact_email': settings.SUPPORT_CONTACT_EMAIL,
+            'project_website': 'https://openfarmplanner.org',
+            'project_name': 'OpenFarmPlanner',
             'user': user,
         })
-    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email])
+        html_body = render_to_string('accounts/emails/activation_email.html', {
+            'activation_link': activation_link,
+            'contact_email': settings.SUPPORT_CONTACT_EMAIL,
+            'project_website': 'https://openfarmplanner.org',
+            'project_name': 'OpenFarmPlanner',
+            'user': user,
+        })
+    send_mail(
+        subject=subject,
+        message=text_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        html_message=html_body,
+        fail_silently=False,
+    )
 
 
 def _send_password_reset_email(user: User) -> None:
