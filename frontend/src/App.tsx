@@ -930,7 +930,7 @@ function RootLayout(): React.ReactElement {
                   aria-expanded={Boolean(cultureActionsMenuAnchor)}
                   onClick={handleCultureActionsMenuOpen}
                   endIcon={!isPhone ? <KeyboardArrowDownIcon fontSize="small" /> : undefined}
-                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 0, px: isPhone ? 0.75 : 1.25 }}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 0, maxWidth: 150, px: isPhone ? 0.75 : 1.25, overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 0 }}
                 >
                   {isPhone ? '⋯' : 'Import/Export'}
                 </Button>
@@ -945,7 +945,7 @@ function RootLayout(): React.ReactElement {
                   aria-expanded={Boolean(cultureActionsMenuAnchor)}
                   onClick={handleCultureActionsMenuOpen}
                   endIcon={<KeyboardArrowDownIcon fontSize="small" />}
-                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: 0, px: 1 }}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: 0, px: 1, flexShrink: 0 }}
                 >
                   Aktionen
                 </Button>
@@ -1018,7 +1018,7 @@ function RootLayout(): React.ReactElement {
                 );
                 return action.tooltip ? (
                   <Tooltip key={action.id} title={action.tooltip}>
-                    <Box component="span" sx={{ display: 'inline-flex' }}>{button}</Box>
+                    <Box component="span" sx={{ display: 'inline-flex', minWidth: 0 }}>{button}</Box>
                   </Tooltip>
                 ) : React.cloneElement(button, { key: action.id });
               });
@@ -1027,7 +1027,7 @@ function RootLayout(): React.ReactElement {
                   key={`group-${group[0]?.groupId}-${index}`}
                   size="small"
                   variant="outlined"
-                  sx={{ ...segmentedButtonGroupSx, flexShrink: 0 }}
+                  sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}
                 >
                   {content}
                 </ButtonGroup>
@@ -1044,7 +1044,7 @@ function RootLayout(): React.ReactElement {
                 onClick={handleTopbarPrimaryAction}
                 aria-label={topbarPrimaryAction.label}
                 startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
-                sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 0, px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
+                sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 0, maxWidth: 180, px: isPhone ? 0.75 : 1.25, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
               >
                 {isPhone ? <AddIcon fontSize="small" /> : topbarPrimaryAction.label}
               </Button>
