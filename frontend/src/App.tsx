@@ -683,6 +683,16 @@ function RootLayout(): React.ReactElement {
     if (location.pathname.startsWith('/app/fields-beds')) return fieldsGlobalAddAction ? { label: fieldsGlobalAddAction.label, to: '', onClick: fieldsGlobalAddAction.onClick } : null;
     return null;
   }, [fieldsGlobalAddAction, location.pathname]);
+  const handleTopbarPrimaryAction = useCallback((): void => {
+    if (!topbarPrimaryAction) {
+      return;
+    }
+    if (topbarPrimaryAction.onClick) {
+      topbarPrimaryAction.onClick();
+      return;
+    }
+    navigate(topbarPrimaryAction.to);
+  }, [navigate, topbarPrimaryAction]);
 
   return (
     <Box className={`app app--${CONTENT_ALIGNMENT_MODE}`} sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f2f0ea' }}>
@@ -979,13 +989,7 @@ function RootLayout(): React.ReactElement {
               <Button
                 size="small"
                 variant="contained"
-                onClick={() => {
-                  if (topbarPrimaryAction.onClick) {
-                    topbarPrimaryAction.onClick();
-                    return;
-                  }
-                  navigate(topbarPrimaryAction.to);
-                }}
+                onClick={handleTopbarPrimaryAction}
                 aria-label={topbarPrimaryAction.label}
                 startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
                 sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.5 }}
@@ -1058,6 +1062,19 @@ function RootLayout(): React.ReactElement {
           </Box>
           ) : (
             <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.25 }}>
+              {topbarPrimaryAction ? (
+                <Tooltip title={topbarPrimaryAction.label}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleTopbarPrimaryAction}
+                    aria-label={topbarPrimaryAction.label}
+                    sx={{ textTransform: 'none', minWidth: 32, px: 0.75, minHeight: 30 }}
+                  >
+                    <AddIcon fontSize="small" />
+                  </Button>
+                </Tooltip>
+              ) : null}
               <IconButton
                 aria-label="Mehr"
                 aria-controls={globalMenuAnchor ? 'global-actions-menu' : undefined}
@@ -1205,23 +1222,6 @@ function RootLayout(): React.ReactElement {
                   </Menu>,
                 ];
               })()}
-              {topbarPrimaryAction ? (
-                <Button
-                  size="small"
-                  variant="contained"
-                  onClick={() => {
-                    if (topbarPrimaryAction.onClick) {
-                      topbarPrimaryAction.onClick();
-                      return;
-                    }
-                    navigate(topbarPrimaryAction.to);
-                  }}
-                  aria-label={topbarPrimaryAction.label}
-                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
-                >
-                  <AddIcon fontSize="small" />
-                </Button>
-              ) : null}
             </Box>
           </Box>
         ) : null}
