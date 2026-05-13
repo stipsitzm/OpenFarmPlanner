@@ -375,7 +375,7 @@ function RootLayout(): React.ReactElement {
     setSnackbar({ open: true, message, severity });
   };
 
-  const handleOpenProjectHistory = async () => {
+  const handleOpenProjectHistory = useCallback(async () => {
     handleGlobalMenuClose();
     setHistoryLoading(true);
     try {
@@ -388,7 +388,7 @@ function RootLayout(): React.ReactElement {
     } finally {
       setHistoryLoading(false);
     }
-  };
+  }, [activeProjectId, showSnackbar, t]);
 
   const handleRestoreProjectVersion = async (historyId: number) => {
     try {
@@ -410,9 +410,9 @@ function RootLayout(): React.ReactElement {
     setShortcutsOpen(true);
   };
 
-  const openCurrentPageHelp = (): void => {
+  const openCurrentPageHelp = useCallback((): void => {
     window.dispatchEvent(new CustomEvent('ofp:open-page-help'));
-  };
+  }, []);
   const openGlobalHelp = (): void => {
     setGlobalHelpOpen(true);
   };
@@ -420,7 +420,7 @@ function RootLayout(): React.ReactElement {
     setGlobalHelpOpen(false);
   };
 
-  const handleLogout = async (): Promise<void> => {
+  const handleLogout = useCallback(async (): Promise<void> => {
     try {
       await logout();
       handleGlobalMenuClose();
@@ -429,9 +429,9 @@ function RootLayout(): React.ReactElement {
       console.error('Error logging out:', error);
       showSnackbar(t('commandPalette.feedback.logoutError'), 'error');
     }
-  };
+  }, [logout, navigate]);
 
-  const memberships = user?.memberships ?? [];
+  const memberships = useMemo(() => user?.memberships ?? [], [user?.memberships]);
   const activeMembership = memberships.find((membership) => membership.project_id === activeProjectId) ?? null;
   const activeProjectLabel = activeMembership?.project_name ?? t('projectSwitcher.noProject');
 
@@ -451,15 +451,15 @@ function RootLayout(): React.ReactElement {
     return () => window.removeEventListener(OPEN_CREATE_PROJECT_EVENT, handleCreateProjectRequest);
   }, [handleOpenCreateProject]);
 
-  const handleOpenProjectSettings = (): void => {
+  const handleOpenProjectSettings = useCallback((): void => {
     handleProjectMenuClose();
     navigate('/app/project-settings');
-  };
+  }, [handleProjectMenuClose, navigate]);
 
-  const applyProjectContextChange = async (projectId: number): Promise<void> => {
+  const applyProjectContextChange = useCallback(async (projectId: number): Promise<void> => {
     await switchActiveProject(projectId);
     window.location.reload();
-  };
+  }, [switchActiveProject]);
 
   const closeCreateProjectDialog = (): void => {
     setIsCreateProjectOpen(false);
@@ -549,7 +549,7 @@ function RootLayout(): React.ReactElement {
     }
   };
 
-  const handleSwitchProject = async (projectId: number): Promise<void> => {
+  const handleSwitchProject = useCallback(async (projectId: number): Promise<void> => {
     setMobileProjectSwitcherOpen(false);
     handleProjectMenuClose();
     if (projectId === activeProjectId) {
@@ -564,7 +564,7 @@ function RootLayout(): React.ReactElement {
     } finally {
       setIsSwitchingProject(false);
     }
-  };
+  }, [activeProjectId, applyProjectContextChange, handleProjectMenuClose, showSnackbar, t]);
 
   const activeMembershipRole = activeMembership?.role ?? null;
 
