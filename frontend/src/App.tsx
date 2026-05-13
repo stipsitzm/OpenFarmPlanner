@@ -107,7 +107,6 @@ import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './navigation/mainNavigation';
 import { PanelLeft } from 'lucide-react';
-import { OPEN_ADD_BED_EVENT } from './pages/fieldsBedsEvents';
 
 const CONTENT_ALIGNMENT_MODE = 'centered';
 const ACTION_MENU_ITEM_ICON_SX = { minWidth: 32, color: 'text.secondary' } as const;
@@ -304,7 +303,6 @@ function RootLayout(): React.ReactElement {
   const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
   const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileActionsOverflowAnchor, setMobileActionsOverflowAnchor] = useState<null | HTMLElement>(null);
-  const [areasAddMenuAnchor, setAreasAddMenuAnchor] = useState<null | HTMLElement>(null);
   const navItems = useMemo(() => ([
     { to: '/app/dashboard', label: t('dashboard'), activeAliases: [], keywords: ['übersicht', 'dashboard'], icon: <DashboardOutlinedIcon fontSize="small" /> },
     ...MAIN_NAV_ITEMS.map((item) => ({
@@ -486,12 +484,6 @@ function RootLayout(): React.ReactElement {
   const handleMobileActionsOverflowClose = () => {
     setMobileActionsOverflowAnchor(null);
   };
-  const handleAreasAddMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAreasAddMenuAnchor(event.currentTarget);
-  };
-  const handleAreasAddMenuClose = () => {
-    setAreasAddMenuAnchor(null);
-  };
   const isCulturesPage = location.pathname.startsWith('/app/cultures');
   const cultureLibraryAction = useMemo(
     () => topbarContextActions.find((action) => action.id === 'cultures-open-library'),
@@ -501,8 +493,12 @@ function RootLayout(): React.ReactElement {
     () => topbarContextActions.filter((action) => action.id !== 'cultures-open-library'),
     [topbarContextActions],
   );
+  const fieldsGlobalAddAction = useMemo(
+    () => topbarContextActions.find((action) => action.id === 'fields-global-add-field') ?? null,
+    [topbarContextActions],
+  );
   const genericTopbarContextActions = useMemo(
-    () => (isCulturesPage ? [] : topbarContextActions),
+    () => (isCulturesPage ? [] : topbarContextActions.filter((action) => action.id !== 'fields-global-add-field')),
     [isCulturesPage, topbarContextActions],
   );
   const showCompactCultureLibrary = isCulturesPage && (isTabletOrNarrowDesktop || isPhone);
@@ -684,9 +680,9 @@ function RootLayout(): React.ReactElement {
     if (location.pathname.startsWith('/app/cultures')) return { label: 'Kultur hinzufügen', to: '/app/cultures?create=true' };
     if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { label: 'Anbauplan hinzufügen', to: '/app/planting-plans?create=true' };
     if (location.pathname.startsWith('/app/suppliers')) return { label: 'Lieferant hinzufügen', to: '/app/suppliers?create=true' };
-    if (location.pathname.startsWith('/app/fields-beds')) return { label: 'Parzelle hinzufügen', to: '/app/fields-beds' };
+    if (location.pathname.startsWith('/app/fields-beds')) return fieldsGlobalAddAction ? { label: fieldsGlobalAddAction.label, to: '', onClick: fieldsGlobalAddAction.onClick } : null;
     return null;
-  }, [location.pathname]);
+  }, [fieldsGlobalAddAction, location.pathname]);
 
   return (
     <Box className={`app app--${CONTENT_ALIGNMENT_MODE}`} sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f2f0ea' }}>
@@ -983,9 +979,9 @@ function RootLayout(): React.ReactElement {
               <Button
                 size="small"
                 variant="contained"
-                onClick={(event) => {
-                  if (location.pathname.startsWith('/app/fields-beds')) {
-                    handleAreasAddMenuOpen(event);
+                onClick={() => {
+                  if (topbarPrimaryAction.onClick) {
+                    topbarPrimaryAction.onClick();
                     return;
                   }
                   navigate(topbarPrimaryAction.to);
@@ -1093,19 +1089,6 @@ function RootLayout(): React.ReactElement {
             </Box>
           )}
         </Toolbar>
-        {location.pathname.startsWith('/app/fields-beds') ? (
-          <Menu anchorEl={areasAddMenuAnchor} open={Boolean(areasAddMenuAnchor)} onClose={handleAreasAddMenuClose}>
-            <MenuItem onClick={() => { handleAreasAddMenuClose(); navigate('/app/locations?create=true'); }}>
-              Standort hinzufügen
-            </MenuItem>
-            <MenuItem onClick={() => { handleAreasAddMenuClose(); navigate('/app/fields-beds?create=true'); }}>
-              Parzelle hinzufügen
-            </MenuItem>
-            <MenuItem onClick={() => { handleAreasAddMenuClose(); window.dispatchEvent(new CustomEvent(OPEN_ADD_BED_EVENT)); }}>
-              Beet hinzufügen
-            </MenuItem>
-          </Menu>
-        ) : null}
         {isMobile ? (
           <Box className="mobile-action-scroll" sx={{ px: 0, pb: 0.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minHeight: 36, flexWrap: 'wrap', whiteSpace: 'normal', width: '100%' }}>
@@ -1226,9 +1209,9 @@ function RootLayout(): React.ReactElement {
                 <Button
                   size="small"
                   variant="contained"
-                  onClick={(event) => {
-                    if (location.pathname.startsWith('/app/fields-beds')) {
-                      handleAreasAddMenuOpen(event);
+                  onClick={() => {
+                    if (topbarPrimaryAction.onClick) {
+                      topbarPrimaryAction.onClick();
                       return;
                     }
                     navigate(topbarPrimaryAction.to);

@@ -190,6 +190,12 @@ export default function FieldsBedsPage(): React.ReactElement {
 
 
   const contextActions = useMemo<TopbarContextAction[]>(() => [
+    ...(locations.length === 1 && !shouldShowProjectRequiredState ? [{
+      id: 'fields-global-add-field',
+      label: 'Parzelle hinzufügen',
+      onClick: handleGlobalAddField,
+      ariaLabel: 'Parzelle hinzufügen',
+    }] satisfies TopbarContextAction[] : []),
     {
       id: 'fields-interaction-mode-view',
       label: t('fields:graphical.viewModeOption'),
@@ -234,7 +240,7 @@ export default function FieldsBedsPage(): React.ReactElement {
       ariaLabel: t('fields:representation.ariaLabel'),
       groupId: 'fields-view-mode',
     },
-  ], [interactionMode, t, viewMode]);
+  ], [handleGlobalAddField, interactionMode, locations.length, shouldShowProjectRequiredState, t, viewMode]);
 
   useTopbarContextActions(setTopbarContextActions, contextActions);
 
