@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Accordion,
   AccordionDetails,
@@ -440,8 +440,9 @@ export default function GraphicalFields({
   }, [locations]);
 
   useEffect(() => {
+    const timers = saveTimers.current;
     return () => {
-      Object.values(saveTimers.current).forEach((timer) => {
+      Object.values(timers).forEach((timer) => {
         window.clearTimeout(timer);
       });
     };
@@ -609,6 +610,22 @@ export default function GraphicalFields({
     });
   }, [fieldsByLocation, layoutsByField, locations]);
 
+  const getContentBoundsForLocation = useCallback((locationId: number): ContentBounds => {
+    const layout = locationLayouts.find((item) => item.location.id === locationId);
+    if (!layout) {
+      return toContentBounds({ width: stageWidth, height: stageHeight });
+    }
+
+    const fieldBounds = getContentBoundsFromRects(layout.fieldViewModels);
+    return (
+      fieldBounds ??
+      toContentBounds({
+        width: layout.contentWidth,
+        height: layout.contentHeight,
+      })
+    );
+  }, [locationLayouts, stageHeight, stageWidth]);
+
   useEffect(() => {
     if (!import.meta.env.DEV || import.meta.env.MODE === 'test') {
       return;
@@ -647,23 +664,7 @@ export default function GraphicalFields({
         sampleRects,
       });
     });
-  }, [locationLayouts, viewportByLocation, stageWidth, stageHeight]);
-
-  const getContentBoundsForLocation = (locationId: number): ContentBounds => {
-    const layout = locationLayouts.find((item) => item.location.id === locationId);
-    if (!layout) {
-      return toContentBounds({ width: stageWidth, height: stageHeight });
-    }
-
-    const fieldBounds = getContentBoundsFromRects(layout.fieldViewModels);
-    return (
-      fieldBounds ??
-      toContentBounds({
-        width: layout.contentWidth,
-        height: layout.contentHeight,
-      })
-    );
-  };
+  }, [getContentBoundsForLocation, locationLayouts, viewportByLocation, stageWidth, stageHeight]);
 
   const resetViewport = (locationId: number): void => {
     setViewportByLocation((prev) => {
@@ -680,7 +681,7 @@ export default function GraphicalFields({
     });
   };
 
-  const updateViewport = (
+  const updateViewport = useCallback((
     locationId: number,
     updater: (current: ViewportState) => ViewportState,
   ): void => {
@@ -702,7 +703,7 @@ export default function GraphicalFields({
       );
       return { ...prev, [locationId]: nextClamped };
     });
-  };
+  }, [getContentBoundsForLocation, stageHeight, stageWidth]);
 
   const handleZoom = (locationId: number, factor: number): void => {
     updateViewport(locationId, (current) =>
@@ -713,7 +714,7 @@ export default function GraphicalFields({
     );
   };
 
-  const handlePanByOffset = (
+  const handlePanByOffset = useCallback((
     locationId: number,
     deltaX: number,
     deltaY: number,
@@ -723,7 +724,7 @@ export default function GraphicalFields({
       x: current.x + deltaX,
       y: current.y + deltaY,
     }));
-  };
+  }, [updateViewport]);
 
   const handleStageWheel = (
     locationId: number,
@@ -1177,14 +1178,19 @@ export default function GraphicalFields({
 
   if (loading) {
     return (
-      <Box p={3}>
+      <Box sx={{ p: { xs: 0, sm: 3 } }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box p={3} ref={containerRef}>
+    <Box
+      ref={containerRef}
+      // This wrapper was the real xs gutter source on Anbauflächen mobile.
+      // Keep edge-aligned content on xs and preserve current spacing on sm+.
+      sx={{ p: { xs: 0, sm: 3 } }}
+    >
       <Stack
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"

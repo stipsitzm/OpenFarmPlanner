@@ -67,6 +67,16 @@
   font-size: 15px;
 }
 
+.mobile-action-scroll {
+  overflow-x: hidden;
+  overflow-y: visible;
+  white-space: normal;
+}
+
+.mobile-action-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .nav-link {
   color: white;
   text-decoration: none;
@@ -178,7 +188,11 @@
   .content--xwide,
   .content--compact-centered-page,
   .content--full {
-    padding: 0;
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
   }
 }
 

@@ -320,7 +320,7 @@ function FieldsBedsHierarchy({
     [navigate],
   );
 
-  const parseAreaExpression = (input: string): number | undefined => {
+  const parseAreaExpression = useCallback((input: string): number | undefined => {
     const normalizedInput = input.trim().replace(/,/g, ".");
     if (!normalizedInput) {
       return undefined;
@@ -348,7 +348,7 @@ function FieldsBedsHierarchy({
     }
 
     return Number.isFinite(product) ? product : undefined;
-  };
+  }, []);
 
   const normalizeAreaValue = (
     value: number | undefined,
@@ -359,7 +359,7 @@ function FieldsBedsHierarchy({
     return Math.round(value * 10) / 10;
   };
 
-  const parseAreaValue = (
+  const parseAreaValue = useCallback((
     value: number | string | undefined,
   ): number | undefined => {
     if (typeof value === "number") {
@@ -369,9 +369,9 @@ function FieldsBedsHierarchy({
       return parseAreaExpression(value);
     }
     return undefined;
-  };
+  }, [parseAreaExpression]);
 
-  const parseDimensionValue = (
+  const parseDimensionValue = useCallback((
     value: number | string | null | undefined,
   ): number | null | undefined => {
     if (value === null) return null;
@@ -385,7 +385,7 @@ function FieldsBedsHierarchy({
       return Number.isFinite(parsed) ? parsed : undefined;
     }
     return undefined;
-  };
+  }, []);
 
   const getBedAreaSum = (
     fieldId: number,
@@ -641,7 +641,7 @@ function FieldsBedsHierarchy({
     if (selectedRow.type === "bed" && selectedRow.field) {
       handleAddBed(selectedRow.field);
     }
-  }, [addField, handleAddBed, selectedRow]);
+  }, [addField, handleAddBed, selectedRow, t]);
 
   const handleEditSelected = useCallback(() => {
     if (!selectedRow) {
@@ -941,10 +941,10 @@ function FieldsBedsHierarchy({
 
         <Box
           ref={tableWrapperRef}
-          sx={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "auto", overflowY: "visible", display: "flex", justifyContent: "center" }}
+          sx={{ width: "100%", maxWidth: "100%", minWidth: 1, overflowX: "auto", overflowY: "visible", display: "block" }}
           onClick={() => setTreeActive(true)}
         >
-          <Box sx={{ display: "block", width: "fit-content", minWidth: 0, maxWidth: "100%" }}>
+          <Box sx={{ display: "inline-block", width: "fit-content", minWidth: 320, maxWidth: "100%" }}>
           <DataGrid
             rows={rows}
             columns={columns}

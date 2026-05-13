@@ -44,15 +44,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from './i18n';
 import { useCommandContext, useRegisterCommands } from './commands/useCommandContext';
 import { createRootCommands } from './commands/commands';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import Locations from './pages/Locations';
-import FieldsBedsPage from './pages/FieldsBedsPage';
-import Cultures from './pages/Cultures';
-import PlantingPlans from './pages/PlantingPlans';
-import GanttChart from './pages/GanttChart';
-import SeedDemandPage from './pages/SeedDemand';
-import Suppliers from './pages/Suppliers';
-import Dashboard from './pages/Dashboard';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
@@ -69,24 +61,18 @@ import PublicIcon from '@mui/icons-material/Public';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import KeyboardOutlinedIcon from '@mui/icons-material/KeyboardOutlined';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { cultureAPI, projectAPI } from './api/api';
 import type { CultureHistoryEntry } from './api/types';
 import './App.css';
 import { useAuth } from './auth/useAuth';
 import ProtectedRoute from './auth/ProtectedRoute';
-import HomePage from './pages/public/HomePage';
-import ImprintPage from './pages/public/ImprintPage';
-import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import ActivatePage from './pages/auth/ActivatePage';
-import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
-import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import ConfirmEmailChangePage from './pages/auth/ConfirmEmailChangePage';
-import ProjectSelectionPage from './pages/ProjectSelectionPage';
-import AccountSettingsPage from './pages/AccountSettingsPage';
-import ProjectSettingsPage from './pages/ProjectSettingsPage';
-import InvitationAcceptPage from './pages/InvitationAcceptPage';
 import AppLogo from './components/layout/AppLogo';
 import { HelpDialog } from './components/help/HelpDialog';
 import PageHelp from './components/help/PageHelp';
@@ -102,6 +88,29 @@ import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './n
 import { PanelLeft } from 'lucide-react';
 
 const CONTENT_ALIGNMENT_MODE = 'centered';
+const ACTION_MENU_ITEM_ICON_SX = { minWidth: 32, color: 'text.secondary' } as const;
+const ACTION_MENU_ICON_PROPS = { fontSize: 'small' } as const;
+const HomePage = React.lazy(() => import('./pages/public/HomePage'));
+const ImprintPage = React.lazy(() => import('./pages/public/ImprintPage'));
+const PrivacyPolicyPage = React.lazy(() => import('./pages/public/PrivacyPolicyPage'));
+const LoginPage = React.lazy(() => import('./pages/auth/LoginPage'));
+const RegisterPage = React.lazy(() => import('./pages/auth/RegisterPage'));
+const ActivatePage = React.lazy(() => import('./pages/auth/ActivatePage'));
+const ForgotPasswordPage = React.lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const ResetPasswordPage = React.lazy(() => import('./pages/auth/ResetPasswordPage'));
+const ConfirmEmailChangePage = React.lazy(() => import('./pages/auth/ConfirmEmailChangePage'));
+const ProjectSelectionPage = React.lazy(() => import('./pages/ProjectSelectionPage'));
+const AccountSettingsPage = React.lazy(() => import('./pages/AccountSettingsPage'));
+const ProjectSettingsPage = React.lazy(() => import('./pages/ProjectSettingsPage'));
+const InvitationAcceptPage = React.lazy(() => import('./pages/InvitationAcceptPage'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Locations = React.lazy(() => import('./pages/Locations'));
+const FieldsBedsPage = React.lazy(() => import('./pages/FieldsBedsPage'));
+const Cultures = React.lazy(() => import('./pages/Cultures'));
+const PlantingPlans = React.lazy(() => import('./pages/PlantingPlans'));
+const GanttChart = React.lazy(() => import('./pages/GanttChart'));
+const SeedDemandPage = React.lazy(() => import('./pages/SeedDemand'));
+const Suppliers = React.lazy(() => import('./pages/Suppliers'));
 
 interface SnackbarState {
   open: boolean;
@@ -162,14 +171,13 @@ function ProjectMenu(props: ProjectMenuProps): React.ReactElement {
       )}
       <Divider />
       <MenuItem onClick={onOpenProjectSettings}>
+        <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
         {t('project.settings')}
       </MenuItem>
       <Divider />
       <MenuItem onClick={onOpenCreateProject}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <AddIcon fontSize="small" />
-          <span>{t('project.create')}</span>
-        </Stack>
+        <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><AddIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
+        {t('project.create')}
       </MenuItem>
     </Menu>
   );
@@ -180,7 +188,12 @@ interface GlobalMenuProps {
   open: boolean;
   historyLoading: boolean;
   userLabel: string;
+  isMobile: boolean;
   onClose: () => void;
+  onOpenProjectSwitcher: () => void;
+  onOpenCreateProject: () => void;
+  onOpenProjectSettings: () => void;
+  onOpenProjectMembers: () => void;
   onOpenProjectHistory: () => Promise<void>;
   onOpenAccountSettings: () => void;
   onOpenShortcuts: () => void;
@@ -195,7 +208,12 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
     open,
     historyLoading,
     userLabel,
+    isMobile,
     onClose,
+    onOpenProjectSwitcher,
+    onOpenCreateProject,
+    onOpenProjectSettings,
+    onOpenProjectMembers,
     onOpenProjectHistory,
     onOpenAccountSettings,
     onOpenShortcuts,
@@ -204,30 +222,30 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
     t,
   } = props;
 
-  return (
-    <Menu
-      id="global-actions-menu"
-      anchorEl={anchorEl}
-      open={open}
-      onClose={onClose}
-    >
-      <MenuItem onClick={() => void onOpenProjectHistory()} disabled={historyLoading}>
-        {t('commandPalette.commands.openVersionHistory')}
-      </MenuItem>
-      <MenuItem onClick={onOpenAccountSettings}>
-        {t('accountSettings')}
-      </MenuItem>
-      <MenuItem onClick={onOpenShortcuts}>
-        Tastenkürzel
-      </MenuItem>
-      <MenuItem onClick={onOpenHelp}>
-        App-Hilfe
-      </MenuItem>
-      <MenuItem onClick={() => void onLogout()}>
-        {t('commandPalette.commands.logout')} {userLabel}
-      </MenuItem>
-    </Menu>
-  );
+  const mobileMenuItems = [
+    <MenuItem key="mobile-section-project" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Projektaktionen</MenuItem>,
+    <MenuItem key="mobile-project-switcher" onClick={onOpenProjectSwitcher}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SwapHorizIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('projectSwitcher.ariaLabel')}</MenuItem>,
+    <MenuItem key="mobile-project-create" onClick={onOpenCreateProject}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><AddIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.create')}</MenuItem>,
+    <MenuItem key="mobile-project-settings" onClick={onOpenProjectSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.settings')}</MenuItem>,
+    <MenuItem key="mobile-project-members" onClick={onOpenProjectMembers}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><GroupOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openProjectMembers')}</MenuItem>,
+    <MenuItem key="mobile-project-history" onClick={() => void onOpenProjectHistory()} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
+    <Divider key="mobile-divider-project-app" />,
+    <MenuItem key="mobile-section-app" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>App</MenuItem>,
+    <MenuItem key="mobile-app-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>Tastenkürzel</MenuItem>,
+    <MenuItem key="mobile-app-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>App-Hilfe</MenuItem>,
+    <MenuItem key="mobile-app-account-settings" onClick={onOpenAccountSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
+    <Divider key="mobile-divider-app-account" />,
+    <MenuItem key="mobile-section-account" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Account</MenuItem>,
+    <MenuItem key="mobile-account-logout" onClick={() => void onLogout()}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
+  ];
+  const desktopMenuItems = [
+    <MenuItem key="desktop-history" onClick={() => void onOpenProjectHistory()} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
+    <MenuItem key="desktop-account-settings" onClick={onOpenAccountSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
+    <MenuItem key="desktop-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>Tastenkürzel</MenuItem>,
+    <MenuItem key="desktop-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>App-Hilfe</MenuItem>,
+    <MenuItem key="desktop-logout" onClick={() => void onLogout()}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
+  ];
+  return <Menu id="global-actions-menu" anchorEl={anchorEl} open={open} onClose={onClose}>{isMobile ? mobileMenuItems : desktopMenuItems}</Menu>;
 }
 
 export interface TopbarContextAction {
@@ -266,6 +284,7 @@ function RootLayout(): React.ReactElement {
   const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
   const isLargeDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const isPhone = useMediaQuery(theme.breakpoints.down('sm'));
+  const isVeryNarrowMobile = useMediaQuery('(max-width:360px)');
   const isPhonePortrait = useMediaQuery(`${theme.breakpoints.down('sm')} and (orientation: portrait)`);
   const isTabletOrNarrowDesktop = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
@@ -274,6 +293,7 @@ function RootLayout(): React.ReactElement {
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [mobileProjectSwitcherOpen, setMobileProjectSwitcherOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(!isLargeDesktop);
   const [isSwitchingProject, setIsSwitchingProject] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
@@ -282,6 +302,7 @@ function RootLayout(): React.ReactElement {
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
   const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
+  const [mobileActionsOverflowAnchor, setMobileActionsOverflowAnchor] = useState<null | HTMLElement>(null);
   const navItems = useMemo(() => ([
     { to: '/app/dashboard', label: t('dashboard'), activeAliases: [], keywords: ['übersicht', 'dashboard'], icon: <DashboardOutlinedIcon fontSize="small" /> },
     ...MAIN_NAV_ITEMS.map((item) => ({
@@ -306,14 +327,21 @@ function RootLayout(): React.ReactElement {
   const handleGlobalMenuClose = () => {
     setGlobalMenuAnchor(null);
   };
+  const handleOpenMobileProjectSwitcher = (): void => {
+    handleGlobalMenuClose();
+    setMobileProjectSwitcherOpen(true);
+  };
+  const handleCloseMobileProjectSwitcher = (): void => {
+    setMobileProjectSwitcherOpen(false);
+  };
 
   const handleProjectMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setProjectMenuAnchor(event.currentTarget);
   };
 
-  const handleProjectMenuClose = () => {
+  const handleProjectMenuClose = useCallback(() => {
     setProjectMenuAnchor(null);
-  };
+  }, []);
   const closeMobileNav = () => {
     setMobileNavOpen(false);
   };
@@ -343,11 +371,11 @@ function RootLayout(): React.ReactElement {
     message: '',
     severity: 'success',
   });
-  const showSnackbar = (message: string, severity: 'success' | 'error') => {
+  const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
-  };
+  }, []);
 
-  const handleOpenProjectHistory = async () => {
+  const handleOpenProjectHistory = useCallback(async () => {
     handleGlobalMenuClose();
     setHistoryLoading(true);
     try {
@@ -360,7 +388,7 @@ function RootLayout(): React.ReactElement {
     } finally {
       setHistoryLoading(false);
     }
-  };
+  }, [showSnackbar, t]);
 
   const handleRestoreProjectVersion = async (historyId: number) => {
     try {
@@ -382,9 +410,9 @@ function RootLayout(): React.ReactElement {
     setShortcutsOpen(true);
   };
 
-  const openCurrentPageHelp = (): void => {
+  const openCurrentPageHelp = useCallback((): void => {
     window.dispatchEvent(new CustomEvent('ofp:open-page-help'));
-  };
+  }, []);
   const openGlobalHelp = (): void => {
     setGlobalHelpOpen(true);
   };
@@ -392,7 +420,7 @@ function RootLayout(): React.ReactElement {
     setGlobalHelpOpen(false);
   };
 
-  const handleLogout = async (): Promise<void> => {
+  const handleLogout = useCallback(async (): Promise<void> => {
     try {
       await logout();
       handleGlobalMenuClose();
@@ -401,9 +429,9 @@ function RootLayout(): React.ReactElement {
       console.error('Error logging out:', error);
       showSnackbar(t('commandPalette.feedback.logoutError'), 'error');
     }
-  };
+  }, [logout, navigate, showSnackbar, t]);
 
-  const memberships = user?.memberships ?? [];
+  const memberships = useMemo(() => user?.memberships ?? [], [user?.memberships]);
   const activeMembership = memberships.find((membership) => membership.project_id === activeProjectId) ?? null;
   const activeProjectLabel = activeMembership?.project_name ?? t('projectSwitcher.noProject');
 
@@ -423,15 +451,15 @@ function RootLayout(): React.ReactElement {
     return () => window.removeEventListener(OPEN_CREATE_PROJECT_EVENT, handleCreateProjectRequest);
   }, [handleOpenCreateProject]);
 
-  const handleOpenProjectSettings = (): void => {
+  const handleOpenProjectSettings = useCallback((): void => {
     handleProjectMenuClose();
     navigate('/app/project-settings');
-  };
+  }, [handleProjectMenuClose, navigate]);
 
-  const applyProjectContextChange = async (projectId: number): Promise<void> => {
+  const applyProjectContextChange = useCallback(async (projectId: number): Promise<void> => {
     await switchActiveProject(projectId);
     window.location.reload();
-  };
+  }, [switchActiveProject]);
 
   const closeCreateProjectDialog = (): void => {
     setIsCreateProjectOpen(false);
@@ -450,6 +478,12 @@ function RootLayout(): React.ReactElement {
   const handleCultureActionsMenuClose = () => {
     setCultureActionsMenuAnchor(null);
   };
+  const handleMobileActionsOverflowOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setMobileActionsOverflowAnchor(event.currentTarget);
+  };
+  const handleMobileActionsOverflowClose = () => {
+    setMobileActionsOverflowAnchor(null);
+  };
   const isCulturesPage = location.pathname.startsWith('/app/cultures');
   const cultureLibraryAction = useMemo(
     () => topbarContextActions.find((action) => action.id === 'cultures-open-library'),
@@ -459,14 +493,41 @@ function RootLayout(): React.ReactElement {
     () => topbarContextActions.filter((action) => action.id !== 'cultures-open-library'),
     [topbarContextActions],
   );
+  const fieldsGlobalAddAction = useMemo(
+    () => topbarContextActions.find((action) => action.id === 'fields-global-add-field') ?? null,
+    [topbarContextActions],
+  );
   const genericTopbarContextActions = useMemo(
-    () => (isCulturesPage ? [] : topbarContextActions),
+    () => (isCulturesPage ? [] : topbarContextActions.filter((action) => action.id !== 'fields-global-add-field')),
     [isCulturesPage, topbarContextActions],
+  );
+  const topbarModeControls = useMemo(
+    () => genericTopbarContextActions.filter((action) => (
+      action.groupId?.includes('mode')
+      || action.id.includes('view-mode')
+      || action.id.includes('interaction-mode')
+      || action.id.includes('calendar-mode')
+    )),
+    [genericTopbarContextActions],
+  );
+  const topbarOverflowActions = useMemo(
+    () => genericTopbarContextActions.filter((action) => !topbarModeControls.some((modeAction) => modeAction.id === action.id)),
+    [genericTopbarContextActions, topbarModeControls],
   );
   const showCompactCultureLibrary = isCulturesPage && (isTabletOrNarrowDesktop || isPhone);
   const showIconOnlyCultureLibrary = isCulturesPage && (isPhone || isTabletOrNarrowDesktop);
   const showCultureImportExportButton = isCulturesPage;
-
+  const hasVisibleMobileContextActions = useMemo(
+    () => [...topbarModeControls, ...topbarOverflowActions].some((action) => !action.hidden),
+    [topbarModeControls, topbarOverflowActions],
+  );
+  const hasMobileSecondaryRow = useMemo(
+    () => (
+      (isCulturesPage && (Boolean(cultureLibraryAction) || showCultureImportExportButton))
+      || hasVisibleMobileContextActions
+    ),
+    [cultureLibraryAction, hasVisibleMobileContextActions, isCulturesPage, showCultureImportExportButton],
+  );
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
       return;
@@ -488,7 +549,8 @@ function RootLayout(): React.ReactElement {
     }
   };
 
-  const handleSwitchProject = async (projectId: number): Promise<void> => {
+  const handleSwitchProject = useCallback(async (projectId: number): Promise<void> => {
+    setMobileProjectSwitcherOpen(false);
     handleProjectMenuClose();
     if (projectId === activeProjectId) {
       return;
@@ -502,7 +564,7 @@ function RootLayout(): React.ReactElement {
     } finally {
       setIsSwitchingProject(false);
     }
-  };
+  }, [activeProjectId, applyProjectContextChange, handleProjectMenuClose, showSnackbar, t]);
 
   const activeMembershipRole = activeMembership?.role ?? null;
 
@@ -641,9 +703,19 @@ function RootLayout(): React.ReactElement {
     if (location.pathname.startsWith('/app/cultures')) return { label: 'Kultur hinzufügen', to: '/app/cultures?create=true' };
     if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { label: 'Anbauplan hinzufügen', to: '/app/planting-plans?create=true' };
     if (location.pathname.startsWith('/app/suppliers')) return { label: 'Lieferant hinzufügen', to: '/app/suppliers?create=true' };
-    if (location.pathname.startsWith('/app/fields-beds')) return { label: 'Parzelle hinzufügen', to: '/app/fields-beds' };
+    if (location.pathname.startsWith('/app/fields-beds')) return fieldsGlobalAddAction ? { label: fieldsGlobalAddAction.label, to: '', onClick: fieldsGlobalAddAction.onClick } : null;
     return null;
-  }, [location.pathname]);
+  }, [fieldsGlobalAddAction, location.pathname]);
+  const handleTopbarPrimaryAction = useCallback((): void => {
+    if (!topbarPrimaryAction) {
+      return;
+    }
+    if (topbarPrimaryAction.onClick) {
+      topbarPrimaryAction.onClick();
+      return;
+    }
+    navigate(topbarPrimaryAction.to);
+  }, [navigate, topbarPrimaryAction]);
 
   return (
     <Box className={`app app--${CONTENT_ALIGNMENT_MODE}`} sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f2f0ea' }}>
@@ -796,7 +868,7 @@ function RootLayout(): React.ReactElement {
         elevation={0}
         sx={{ borderBottom: '1px solid', borderColor: '#e4dfd4', bgcolor: '#f7f4ed', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
-        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 1, sm: 2, md: 3 }, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
+        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: 'nowrap' }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1 }}>
             {!isDesktopUp ? (
@@ -824,8 +896,9 @@ function RootLayout(): React.ReactElement {
             )}
             {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           </Box>
-          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, flexWrap: { xs: 'wrap', md: 'nowrap' }, width: { xs: '100%', md: 'auto' } }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflowX: isMobile ? 'auto' : 'visible', scrollbarWidth: 'thin', order: { xs: 2, md: 1 }, width: { xs: '100%', md: 'auto' }, pt: { xs: 0.5, md: 0 } }}>
+          {!isPhone ? (
+          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, flex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflowX: 'auto', overflowY: 'hidden', pr: 0.5, scrollbarWidth: 'thin' }}>
           {isCulturesPage ? (
             <>
               {cultureLibraryAction ? (
@@ -884,7 +957,7 @@ function RootLayout(): React.ReactElement {
           ) : null}
           {(() => {
             const groups: TopbarContextAction[][] = [];
-            genericTopbarContextActions.forEach((action) => {
+            [...topbarModeControls, ...topbarOverflowActions].forEach((action) => {
               const lastGroup = groups[groups.length - 1];
               if (!lastGroup || !action.groupId || lastGroup[0]?.groupId !== action.groupId) {
                 groups.push([action]);
@@ -939,7 +1012,7 @@ function RootLayout(): React.ReactElement {
               <Button
                 size="small"
                 variant="contained"
-                onClick={() => navigate(topbarPrimaryAction.to)}
+                onClick={handleTopbarPrimaryAction}
                 aria-label={topbarPrimaryAction.label}
                 startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
                 sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.5 }}
@@ -949,7 +1022,7 @@ function RootLayout(): React.ReactElement {
             </Tooltip>
           ) : null}
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: { xs: 'auto', md: 3 }, order: { xs: 1, md: 2 }, width: { xs: '100%', md: 'auto' }, justifyContent: { xs: 'space-between', md: 'flex-start' } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 3 }}>
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
             aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}
@@ -995,7 +1068,12 @@ function RootLayout(): React.ReactElement {
             open={Boolean(globalMenuAnchor)}
             historyLoading={historyLoading}
             userLabel={user?.email ? `(${user.email})` : (user?.display_label ? `(${user.display_label})` : '')}
+            isMobile={false}
             onClose={handleGlobalMenuClose}
+            onOpenProjectSwitcher={handleOpenMobileProjectSwitcher}
+            onOpenCreateProject={handleOpenCreateProject}
+            onOpenProjectSettings={handleOpenProjectSettings}
+            onOpenProjectMembers={handleOpenProjectSettings}
             onOpenProjectHistory={handleOpenProjectHistory}
             onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
             onOpenShortcuts={handleOpenShortcuts}
@@ -1005,7 +1083,171 @@ function RootLayout(): React.ReactElement {
           />
             </Box>
           </Box>
+          ) : (
+            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.25 }}>
+              {topbarPrimaryAction ? (
+                <Tooltip title={topbarPrimaryAction.label}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleTopbarPrimaryAction}
+                    aria-label={topbarPrimaryAction.label}
+                    sx={{ textTransform: 'none', minWidth: 32, px: 0.75, minHeight: 30 }}
+                  >
+                    <AddIcon fontSize="small" />
+                  </Button>
+                </Tooltip>
+              ) : null}
+              <IconButton
+                aria-label="Mehr"
+                aria-controls={globalMenuAnchor ? 'global-actions-menu' : undefined}
+                aria-haspopup="true"
+                onClick={handleGlobalMenuOpen}
+                size="small"
+                sx={{ color: 'text.primary' }}
+              >
+                <MoreVertIcon fontSize="small" />
+              </IconButton>
+              <GlobalMenu
+                anchorEl={globalMenuAnchor}
+                open={Boolean(globalMenuAnchor)}
+                historyLoading={historyLoading}
+                userLabel={user?.email ? `(${user.email})` : (user?.display_label ? `(${user.display_label})` : '')}
+                isMobile={isPhone}
+                onClose={handleGlobalMenuClose}
+                onOpenProjectSwitcher={handleOpenMobileProjectSwitcher}
+                onOpenCreateProject={handleOpenCreateProject}
+                onOpenProjectSettings={handleOpenProjectSettings}
+                onOpenProjectMembers={handleOpenProjectSettings}
+                onOpenProjectHistory={handleOpenProjectHistory}
+                onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
+                onOpenShortcuts={handleOpenShortcuts}
+                onOpenHelp={openGlobalHelp}
+                onLogout={handleLogout}
+                t={t}
+              />
+            </Box>
+          )}
         </Toolbar>
+        {isPhone && hasMobileSecondaryRow ? (
+          <Box className="mobile-action-scroll" sx={{ px: 0, pb: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minHeight: 36, flexWrap: 'wrap', whiteSpace: 'normal', width: '100%' }}>
+              {isCulturesPage ? (
+                <>
+                  {cultureLibraryAction ? (
+                    <Tooltip title="Kulturbibliothek öffnen">
+                      <span>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => cultureLibraryAction.onClick()}
+                          aria-label="Kulturbibliothek öffnen"
+                          startIcon={<PublicIcon fontSize="small" />}
+                          sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
+                          disabled={cultureLibraryAction.disabled}
+                        >
+                          Bibliothek
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  ) : null}
+                  {showCultureImportExportButton || isMobile ? (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      aria-label="Import/Export öffnen"
+                      aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
+                      aria-haspopup="true"
+                      aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                      onClick={handleCultureActionsMenuOpen}
+                      sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
+                    >
+                      Import/Export
+                    </Button>
+                  ) : null}
+                </>
+              ) : null}
+              {(() => {
+                const groups: TopbarContextAction[][] = [];
+                [...topbarModeControls, ...topbarOverflowActions].forEach((action) => {
+                  const lastGroup = groups[groups.length - 1];
+                  if (!lastGroup || !action.groupId || lastGroup[0]?.groupId !== action.groupId) {
+                    groups.push([action]);
+                    return;
+                  }
+                  lastGroup.push(action);
+                });
+                const visibleGroups = isVeryNarrowMobile ? groups.slice(0, 2) : groups;
+                const overflowGroups = isVeryNarrowMobile ? groups.slice(2) : [];
+                const visibleNodes = visibleGroups.map((group, index) => {
+                  const isSegmentedGroup = group.length > 1 && group[0]?.groupId;
+                  const content = group.map((action) => (
+                    <Button
+                      key={action.id}
+                      size="small"
+                      variant={action.active ? 'contained' : 'outlined'}
+                      color={action.active ? 'success' : 'inherit'}
+                      onClick={action.onClick}
+                      aria-label={action.ariaLabel ?? action.label}
+                      aria-pressed={action.active}
+                      disabled={action.disabled}
+                      sx={{ ...getSegmentedActionButtonSx({ active: Boolean(action.active), hidden: Boolean(action.hidden) }), minHeight: 30, px: 1 }}
+                    >
+                      {action.label}
+                    </Button>
+                  ));
+                  return isSegmentedGroup ? (
+                    <ButtonGroup key={`mobile-group-${group[0]?.groupId}-${index}`} size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0 }}>
+                      {content}
+                    </ButtonGroup>
+                  ) : (
+                    <Box key={`mobile-group-${index}`} sx={{ display: 'inline-flex', flexShrink: 0 }}>{content}</Box>
+                  );
+                });
+                if (overflowGroups.length === 0) {
+                  return visibleNodes;
+                }
+                return [
+                  ...visibleNodes,
+                  <IconButton
+                    key="mobile-actions-overflow-trigger"
+                    size="small"
+                    aria-label="Weitere Aktionen"
+                    aria-controls={mobileActionsOverflowAnchor ? 'mobile-actions-overflow-menu' : undefined}
+                    aria-haspopup="true"
+                    aria-expanded={Boolean(mobileActionsOverflowAnchor)}
+                    onClick={handleMobileActionsOverflowOpen}
+                    sx={{ border: '1px solid', borderColor: 'divider' }}
+                  >
+                    <MoreVertIcon fontSize="small" />
+                  </IconButton>,
+                  <Menu
+                    key="mobile-actions-overflow-menu"
+                    id="mobile-actions-overflow-menu"
+                    anchorEl={mobileActionsOverflowAnchor}
+                    open={Boolean(mobileActionsOverflowAnchor)}
+                    onClose={handleMobileActionsOverflowClose}
+                  >
+                    {overflowGroups.flatMap((group, groupIndex) =>
+                      group.map((action) => (
+                        <MenuItem
+                          key={`mobile-overflow-action-${groupIndex}-${action.id}`}
+                          onClick={() => {
+                            action.onClick();
+                            handleMobileActionsOverflowClose();
+                          }}
+                          disabled={action.disabled}
+                        >
+                          {action.label}
+                        </MenuItem>
+                      ))
+                    )}
+                  </Menu>,
+                ];
+              })()}
+            </Box>
+          </Box>
+        ) : null}
       </AppBar>
 
       <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav} PaperProps={{ sx: { bgcolor: '#f5f2eb', borderRight: '1px solid #e1dbd0' } }}>
@@ -1059,6 +1301,15 @@ function RootLayout(): React.ReactElement {
           minWidth: 0,
         }}
       >
+        {memberships.length === 0 ? (
+          <Button
+            variant="contained"
+            onClick={handleOpenCreateProject}
+            sx={{ alignSelf: 'flex-start', mx: { xs: 1.5, sm: 0 } }}
+          >
+            {t('common:projectRequired.createFirstProjectAction')}
+          </Button>
+        ) : null}
         <Outlet context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
       </Box>
       </Box>
@@ -1219,6 +1470,48 @@ function RootLayout(): React.ReactElement {
         </DialogActions>
       </Dialog>
       <HelpDialog open={globalHelpOpen} onClose={closeGlobalHelp} />
+      <Dialog open={mobileProjectSwitcherOpen} onClose={handleCloseMobileProjectSwitcher} fullWidth maxWidth="sm">
+        <DialogTitle>{t('projectSwitcher.ariaLabel')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="caption" sx={{ display: 'block', mb: 1.25, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+            Aktives Projekt
+          </Typography>
+          <Paper variant="outlined" sx={{ p: 1.25, mb: 2 }}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <CheckIcon fontSize="small" color="success" />
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>{activeProjectLabel}</Typography>
+            </Stack>
+          </Paper>
+          <Typography variant="caption" sx={{ display: 'block', mb: 1.25, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+            Projekte
+          </Typography>
+          <List dense sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, py: 0 }}>
+            {memberships.length === 0 ? (
+              <ListItem><ListItemText primary={t('projectSwitcher.zeroProjects')} /></ListItem>
+            ) : memberships.map((membership) => (
+              <ListItemButton
+                key={`switcher-${membership.project_id}`}
+                onClick={() => void handleSwitchProject(membership.project_id)}
+                selected={membership.project_id === activeProjectId}
+                disabled={isSwitchingProject}
+              >
+                <ListItemIcon sx={{ minWidth: 28 }}>
+                  {membership.project_id === activeProjectId ? <CheckIcon fontSize="small" color="success" /> : null}
+                </ListItemIcon>
+                <ListItemText primary={membership.project_name} />
+              </ListItemButton>
+            ))}
+          </List>
+          <Button
+            startIcon={<AddIcon fontSize="small" />}
+            variant="outlined"
+            onClick={handleOpenCreateProject}
+            sx={{ mt: 2, textTransform: 'none' }}
+          >
+            {t('project.create')}
+          </Button>
+        </DialogContent>
+      </Dialog>
       <Dialog open={Boolean(pendingRestoreEntry)} onClose={() => setPendingRestoreEntry(null)} fullWidth maxWidth="xs">
         <DialogTitle>Version wiederherstellen?</DialogTitle>
         <DialogContent>
@@ -1328,43 +1621,47 @@ function TokenInvitationRedirect(): React.ReactElement {
   return <Navigate to={buildInvitationAcceptPath(token)} replace />;
 }
 
+function withLazyFallback(element: React.ReactElement): React.ReactElement {
+  return <Suspense fallback={null}>{element}</Suspense>;
+}
+
 function createAppRouter(basename: string) {
   return createBrowserRouter([
     {
       path: '/',
-      element: <HomePage />,
+      element: withLazyFallback(<HomePage />),
     },
     {
       path: '/impressum',
-      element: <ImprintPage />,
+      element: withLazyFallback(<ImprintPage />),
     },
     {
       path: '/datenschutz',
-      element: <PrivacyPolicyPage />,
+      element: withLazyFallback(<PrivacyPolicyPage />),
     },
     {
       path: '/login',
-      element: <LoginPage />,
+      element: withLazyFallback(<LoginPage />),
     },
     {
       path: '/register',
-      element: <RegisterPage />,
+      element: withLazyFallback(<RegisterPage />),
     },
     {
       path: '/activate',
-      element: <ActivatePage />,
+      element: withLazyFallback(<ActivatePage />),
     },
     {
       path: '/forgot-password',
-      element: <ForgotPasswordPage />,
+      element: withLazyFallback(<ForgotPasswordPage />),
     },
     {
       path: '/reset-password',
-      element: <ResetPasswordPage />,
+      element: withLazyFallback(<ResetPasswordPage />),
     },
     {
       path: '/confirm-email-change',
-      element: <ConfirmEmailChangePage />,
+      element: withLazyFallback(<ConfirmEmailChangePage />),
     },
     {
       path: '/invitation',
@@ -1372,7 +1669,7 @@ function createAppRouter(basename: string) {
     },
     {
       path: '/invite/accept',
-      element: <InvitationAcceptPage />,
+      element: withLazyFallback(<InvitationAcceptPage />),
     },
     {
       path: '/invite/:token',
@@ -1390,18 +1687,18 @@ function createAppRouter(basename: string) {
               index: true,
               loader: () => redirect('/app/dashboard'),
             },
-            { path: 'dashboard', element: <Dashboard /> },
-            { path: 'locations', element: <Locations /> },
-            { path: 'fields-beds', element: <FieldsBedsPage /> },
-            { path: 'cultures', element: <Cultures /> },
-            { path: 'anbauplaene', element: <PlantingPlans /> },
-            { path: 'suppliers', element: <Suppliers /> },
-            { path: 'planting-plans', element: <PlantingPlans /> },
-            { path: 'gantt-chart', element: <GanttChart /> },
-            { path: 'seed-demand', element: <SeedDemandPage /> },
-            { path: 'project-selection', element: <ProjectSelectionPage /> },
-            { path: 'account-settings', element: <AccountSettingsPage /> },
-            { path: 'project-settings', element: <ProjectSettingsPage /> },
+            { path: 'dashboard', element: withLazyFallback(<Dashboard />) },
+            { path: 'locations', element: withLazyFallback(<Locations />) },
+            { path: 'fields-beds', element: withLazyFallback(<FieldsBedsPage />) },
+            { path: 'cultures', element: withLazyFallback(<Cultures />) },
+            { path: 'anbauplaene', element: withLazyFallback(<PlantingPlans />) },
+            { path: 'suppliers', element: withLazyFallback(<Suppliers />) },
+            { path: 'planting-plans', element: withLazyFallback(<PlantingPlans />) },
+            { path: 'gantt-chart', element: withLazyFallback(<GanttChart />) },
+            { path: 'seed-demand', element: withLazyFallback(<SeedDemandPage />) },
+            { path: 'project-selection', element: withLazyFallback(<ProjectSelectionPage />) },
+            { path: 'account-settings', element: withLazyFallback(<AccountSettingsPage />) },
+            { path: 'project-settings', element: withLazyFallback(<ProjectSettingsPage />) },
           ],
         },
       ],
