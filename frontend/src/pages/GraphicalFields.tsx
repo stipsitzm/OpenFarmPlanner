@@ -649,7 +649,7 @@ export default function GraphicalFields({
     });
   }, [locationLayouts, viewportByLocation, stageWidth, stageHeight]);
 
-  const getContentBoundsForLocation = (locationId: number): ContentBounds => {
+  function getContentBoundsForLocation(locationId: number): ContentBounds {
     const layout = locationLayouts.find((item) => item.location.id === locationId);
     if (!layout) {
       return toContentBounds({ width: stageWidth, height: stageHeight });
@@ -663,7 +663,7 @@ export default function GraphicalFields({
         height: layout.contentHeight,
       })
     );
-  };
+  }
 
   const resetViewport = (locationId: number): void => {
     setViewportByLocation((prev) => {

@@ -641,7 +641,7 @@ function FieldsBedsHierarchy({
     if (selectedRow.type === "bed" && selectedRow.field) {
       handleAddBed(selectedRow.field);
     }
-  }, [addField, handleAddBed, selectedRow]);
+  }, [addField, handleAddBed, selectedRow, t]);
 
   const handleEditSelected = useCallback(() => {
     if (!selectedRow) {
