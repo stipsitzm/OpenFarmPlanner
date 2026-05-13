@@ -337,6 +337,22 @@ export default function GraphicalFields({
     });
   };
 
+  const getContentBoundsForLocation = useCallback((locationId: number): ContentBounds => {
+    const layout = locationLayouts.find((item) => item.location.id === locationId);
+    if (!layout) {
+      return toContentBounds({ width: stageWidth, height: stageHeight });
+    }
+
+    const fieldBounds = getContentBoundsFromRects(layout.fieldViewModels);
+    return (
+      fieldBounds ??
+      toContentBounds({
+        width: layout.contentWidth,
+        height: layout.contentHeight,
+      })
+    );
+  }, [locationLayouts, stageHeight, stageWidth]);
+
   useEffect(() => {
     const handleResize = (): void => {
       const fullscreenContainer =
@@ -648,22 +664,6 @@ export default function GraphicalFields({
       });
     });
   }, [locationLayouts, viewportByLocation, stageWidth, stageHeight]);
-
-  function getContentBoundsForLocation(locationId: number): ContentBounds {
-    const layout = locationLayouts.find((item) => item.location.id === locationId);
-    if (!layout) {
-      return toContentBounds({ width: stageWidth, height: stageHeight });
-    }
-
-    const fieldBounds = getContentBoundsFromRects(layout.fieldViewModels);
-    return (
-      fieldBounds ??
-      toContentBounds({
-        width: layout.contentWidth,
-        height: layout.contentHeight,
-      })
-    );
-  }
 
   const resetViewport = (locationId: number): void => {
     setViewportByLocation((prev) => {
