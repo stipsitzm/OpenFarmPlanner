@@ -44,15 +44,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from './i18n';
 import { useCommandContext, useRegisterCommands } from './commands/useCommandContext';
 import { createRootCommands } from './commands/commands';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import Locations from './pages/Locations';
-import FieldsBedsPage from './pages/FieldsBedsPage';
-import Cultures from './pages/Cultures';
-import PlantingPlans from './pages/PlantingPlans';
-import GanttChart from './pages/GanttChart';
-import SeedDemandPage from './pages/SeedDemand';
-import Suppliers from './pages/Suppliers';
-import Dashboard from './pages/Dashboard';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
@@ -81,19 +73,6 @@ import type { CultureHistoryEntry } from './api/types';
 import './App.css';
 import { useAuth } from './auth/useAuth';
 import ProtectedRoute from './auth/ProtectedRoute';
-import HomePage from './pages/public/HomePage';
-import ImprintPage from './pages/public/ImprintPage';
-import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import ActivatePage from './pages/auth/ActivatePage';
-import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
-import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import ConfirmEmailChangePage from './pages/auth/ConfirmEmailChangePage';
-import ProjectSelectionPage from './pages/ProjectSelectionPage';
-import AccountSettingsPage from './pages/AccountSettingsPage';
-import ProjectSettingsPage from './pages/ProjectSettingsPage';
-import InvitationAcceptPage from './pages/InvitationAcceptPage';
 import AppLogo from './components/layout/AppLogo';
 import { HelpDialog } from './components/help/HelpDialog';
 import PageHelp from './components/help/PageHelp';
@@ -111,6 +90,27 @@ import { PanelLeft } from 'lucide-react';
 const CONTENT_ALIGNMENT_MODE = 'centered';
 const ACTION_MENU_ITEM_ICON_SX = { minWidth: 32, color: 'text.secondary' } as const;
 const ACTION_MENU_ICON_PROPS = { fontSize: 'small' } as const;
+const HomePage = React.lazy(() => import('./pages/public/HomePage'));
+const ImprintPage = React.lazy(() => import('./pages/public/ImprintPage'));
+const PrivacyPolicyPage = React.lazy(() => import('./pages/public/PrivacyPolicyPage'));
+const LoginPage = React.lazy(() => import('./pages/auth/LoginPage'));
+const RegisterPage = React.lazy(() => import('./pages/auth/RegisterPage'));
+const ActivatePage = React.lazy(() => import('./pages/auth/ActivatePage'));
+const ForgotPasswordPage = React.lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const ResetPasswordPage = React.lazy(() => import('./pages/auth/ResetPasswordPage'));
+const ConfirmEmailChangePage = React.lazy(() => import('./pages/auth/ConfirmEmailChangePage'));
+const ProjectSelectionPage = React.lazy(() => import('./pages/ProjectSelectionPage'));
+const AccountSettingsPage = React.lazy(() => import('./pages/AccountSettingsPage'));
+const ProjectSettingsPage = React.lazy(() => import('./pages/ProjectSettingsPage'));
+const InvitationAcceptPage = React.lazy(() => import('./pages/InvitationAcceptPage'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Locations = React.lazy(() => import('./pages/Locations'));
+const FieldsBedsPage = React.lazy(() => import('./pages/FieldsBedsPage'));
+const Cultures = React.lazy(() => import('./pages/Cultures'));
+const PlantingPlans = React.lazy(() => import('./pages/PlantingPlans'));
+const GanttChart = React.lazy(() => import('./pages/GanttChart'));
+const SeedDemandPage = React.lazy(() => import('./pages/SeedDemand'));
+const Suppliers = React.lazy(() => import('./pages/Suppliers'));
 
 interface SnackbarState {
   open: boolean;
@@ -1612,43 +1612,47 @@ function TokenInvitationRedirect(): React.ReactElement {
   return <Navigate to={buildInvitationAcceptPath(token)} replace />;
 }
 
+function withLazyFallback(element: React.ReactElement): React.ReactElement {
+  return <Suspense fallback={null}>{element}</Suspense>;
+}
+
 function createAppRouter(basename: string) {
   return createBrowserRouter([
     {
       path: '/',
-      element: <HomePage />,
+      element: withLazyFallback(<HomePage />),
     },
     {
       path: '/impressum',
-      element: <ImprintPage />,
+      element: withLazyFallback(<ImprintPage />),
     },
     {
       path: '/datenschutz',
-      element: <PrivacyPolicyPage />,
+      element: withLazyFallback(<PrivacyPolicyPage />),
     },
     {
       path: '/login',
-      element: <LoginPage />,
+      element: withLazyFallback(<LoginPage />),
     },
     {
       path: '/register',
-      element: <RegisterPage />,
+      element: withLazyFallback(<RegisterPage />),
     },
     {
       path: '/activate',
-      element: <ActivatePage />,
+      element: withLazyFallback(<ActivatePage />),
     },
     {
       path: '/forgot-password',
-      element: <ForgotPasswordPage />,
+      element: withLazyFallback(<ForgotPasswordPage />),
     },
     {
       path: '/reset-password',
-      element: <ResetPasswordPage />,
+      element: withLazyFallback(<ResetPasswordPage />),
     },
     {
       path: '/confirm-email-change',
-      element: <ConfirmEmailChangePage />,
+      element: withLazyFallback(<ConfirmEmailChangePage />),
     },
     {
       path: '/invitation',
@@ -1656,7 +1660,7 @@ function createAppRouter(basename: string) {
     },
     {
       path: '/invite/accept',
-      element: <InvitationAcceptPage />,
+      element: withLazyFallback(<InvitationAcceptPage />),
     },
     {
       path: '/invite/:token',
@@ -1674,18 +1678,18 @@ function createAppRouter(basename: string) {
               index: true,
               loader: () => redirect('/app/dashboard'),
             },
-            { path: 'dashboard', element: <Dashboard /> },
-            { path: 'locations', element: <Locations /> },
-            { path: 'fields-beds', element: <FieldsBedsPage /> },
-            { path: 'cultures', element: <Cultures /> },
-            { path: 'anbauplaene', element: <PlantingPlans /> },
-            { path: 'suppliers', element: <Suppliers /> },
-            { path: 'planting-plans', element: <PlantingPlans /> },
-            { path: 'gantt-chart', element: <GanttChart /> },
-            { path: 'seed-demand', element: <SeedDemandPage /> },
-            { path: 'project-selection', element: <ProjectSelectionPage /> },
-            { path: 'account-settings', element: <AccountSettingsPage /> },
-            { path: 'project-settings', element: <ProjectSettingsPage /> },
+            { path: 'dashboard', element: withLazyFallback(<Dashboard />) },
+            { path: 'locations', element: withLazyFallback(<Locations />) },
+            { path: 'fields-beds', element: withLazyFallback(<FieldsBedsPage />) },
+            { path: 'cultures', element: withLazyFallback(<Cultures />) },
+            { path: 'anbauplaene', element: withLazyFallback(<PlantingPlans />) },
+            { path: 'suppliers', element: withLazyFallback(<Suppliers />) },
+            { path: 'planting-plans', element: withLazyFallback(<PlantingPlans />) },
+            { path: 'gantt-chart', element: withLazyFallback(<GanttChart />) },
+            { path: 'seed-demand', element: withLazyFallback(<SeedDemandPage />) },
+            { path: 'project-selection', element: withLazyFallback(<ProjectSelectionPage />) },
+            { path: 'account-settings', element: withLazyFallback(<AccountSettingsPage />) },
+            { path: 'project-settings', element: withLazyFallback(<ProjectSettingsPage />) },
           ],
         },
       ],
