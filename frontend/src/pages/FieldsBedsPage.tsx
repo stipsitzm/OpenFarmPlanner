@@ -15,6 +15,7 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
+import ModeToggle from '../components/ModeToggle';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 const NOOP_SET_TOPBAR_ACTIONS = (): void => undefined;
@@ -190,58 +191,16 @@ export default function FieldsBedsPage(): React.ReactElement {
   }, [viewMode]);
 
 
-  const contextActions = useMemo<TopbarContextAction[]>(() => [
-    ...(locations.length === 1 && !shouldShowProjectRequiredState ? [{
-      id: 'fields-global-add-field',
-      label: 'Parzelle hinzufügen',
-      onClick: handleGlobalAddField,
-      ariaLabel: 'Parzelle hinzufügen',
-    }] satisfies TopbarContextAction[] : []),
-    {
-      id: 'fields-interaction-mode-view',
-      label: t('fields:graphical.viewModeOption'),
-      onClick: () => {
-        setInteractionMode('view');
-      },
-      active: interactionMode === 'view',
-      hidden: viewMode !== 'graphical',
-      reserveSpace: true,
-      ariaLabel: t('fields:graphical.modeAriaLabel'),
-      groupId: 'fields-interaction-mode',
-    },
-    {
-      id: 'fields-interaction-mode-edit',
-      label: t('fields:graphical.editModeOption'),
-      onClick: () => {
-        setInteractionMode('edit');
-      },
-      active: interactionMode === 'edit',
-      hidden: viewMode !== 'graphical',
-      reserveSpace: true,
-      ariaLabel: t('fields:graphical.modeAriaLabel'),
-      groupId: 'fields-interaction-mode',
-    },
-    {
-      id: 'fields-view-mode-list',
-      label: t('fields:representation.table'),
-      onClick: () => {
-        setViewMode('table');
-      },
-      active: viewMode === 'table',
-      ariaLabel: t('fields:representation.ariaLabel'),
-      groupId: 'fields-view-mode',
-    },
-    {
-      id: 'fields-view-mode-graphical',
-      label: t('fields:representation.graphical'),
-      onClick: () => {
-        setViewMode('graphical');
-      },
-      active: viewMode === 'graphical',
-      ariaLabel: t('fields:representation.ariaLabel'),
-      groupId: 'fields-view-mode',
-    },
-  ], [handleGlobalAddField, interactionMode, locations.length, shouldShowProjectRequiredState, t, viewMode]);
+  const contextActions = useMemo<TopbarContextAction[]>(() => (
+    locations.length === 1 && !shouldShowProjectRequiredState
+      ? [{
+        id: 'fields-global-add-field',
+        label: 'Parzelle hinzufügen',
+        onClick: handleGlobalAddField,
+        ariaLabel: 'Parzelle hinzufügen',
+      }]
+      : []
+  ), [handleGlobalAddField, locations.length, shouldShowProjectRequiredState]);
 
   useTopbarContextActions(setTopbarContextActions, contextActions);
 
@@ -290,6 +249,28 @@ export default function FieldsBedsPage(): React.ReactElement {
       </PageContainer>
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1.5 }}>
+            <ModeToggle
+              label={t('fields:representation.label')}
+              ariaLabel={t('fields:representation.ariaLabel')}
+              viewLabel={t('fields:representation.table')}
+              editLabel={t('fields:representation.graphical')}
+              value={viewMode === 'table' ? 'view' : 'edit'}
+              onChange={(nextMode) => setViewMode(nextMode === 'view' ? 'table' : 'graphical')}
+            />
+            {viewMode === 'graphical' ? (
+              <ModeToggle
+                label={t('fields:graphical.viewMode')}
+                ariaLabel={t('fields:graphical.modeAriaLabel')}
+                viewLabel={t('fields:graphical.viewModeOption')}
+                editLabel={t('fields:graphical.editModeOption')}
+                value={interactionMode}
+                onChange={setInteractionMode}
+              />
+            ) : null}
+          </Box>
+        ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState && viewMode === 'graphical' ? (
           <GraphicalFields
             showTitle={false}

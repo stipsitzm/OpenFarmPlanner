@@ -35,7 +35,6 @@ import GanttChart, { ViewMode } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
 import './GanttChart.css';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
-import { useOutletContext } from 'react-router-dom';
 import PageContainer from '../components/layout/PageContainer';
 import PageSurface from '../components/layout/PageSurface';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
@@ -58,8 +57,6 @@ import {
   getSegmentedActionButtonSx,
   segmentedButtonGroupSx,
 } from '../components/buttons/segmentedControlStyles';
-import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
-import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 
 interface WeeklyYieldCultureMeta {
   id: number;
@@ -121,8 +118,6 @@ function formatIsoWeek(date: Date): string {
 function GanttChartPage(): React.ReactElement {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
-  const outletContext = useOutletContext<RootLayoutOutletContext | null>();
-  const setTopbarContextActions = outletContext?.setTopbarContextActions ?? (() => undefined);
   useCommandContextTag('calendar');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -426,33 +421,6 @@ function GanttChartPage(): React.ReactElement {
     });
   }, [maxTotalYield]);
 
-
-  const topbarActions = useMemo<TopbarContextAction[]>(() => [
-    {
-      id: 'calendar-mode-view',
-      label: t('ganttChart:modeViewOption'),
-      onClick: () => setEditMode(false),
-      active: !editMode,
-      hidden: calendarMode !== 'occupancy',
-      reserveSpace: true,
-      groupId: 'calendar-interaction-mode',
-      ariaLabel: t('ganttChart:modeAriaLabel'),
-      tooltip: t('ganttChart:modeViewTooltip'),
-    },
-    {
-      id: 'calendar-mode-edit',
-      label: t('ganttChart:modeEditOption'),
-      onClick: () => setEditMode(true),
-      active: editMode,
-      hidden: calendarMode !== 'occupancy',
-      reserveSpace: true,
-      groupId: 'calendar-interaction-mode',
-      ariaLabel: t('ganttChart:modeAriaLabel'),
-      tooltip: t('ganttChart:modeEditTooltip'),
-    },
-  ], [calendarMode, editMode, t]);
-
-  useTopbarContextActions(setTopbarContextActions, topbarActions);
 
   if (loading) {
     return (
