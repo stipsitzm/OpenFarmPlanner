@@ -107,6 +107,7 @@ import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './navigation/mainNavigation';
 import { PanelLeft } from 'lucide-react';
+import { OPEN_ADD_BED_EVENT } from './pages/fieldsBedsEvents';
 
 const CONTENT_ALIGNMENT_MODE = 'centered';
 const ACTION_MENU_ITEM_ICON_SX = { minWidth: 32, color: 'text.secondary' } as const;
@@ -303,6 +304,7 @@ function RootLayout(): React.ReactElement {
   const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
   const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileActionsOverflowAnchor, setMobileActionsOverflowAnchor] = useState<null | HTMLElement>(null);
+  const [areasAddMenuAnchor, setAreasAddMenuAnchor] = useState<null | HTMLElement>(null);
   const navItems = useMemo(() => ([
     { to: '/app/dashboard', label: t('dashboard'), activeAliases: [], keywords: ['übersicht', 'dashboard'], icon: <DashboardOutlinedIcon fontSize="small" /> },
     ...MAIN_NAV_ITEMS.map((item) => ({
@@ -483,6 +485,12 @@ function RootLayout(): React.ReactElement {
   };
   const handleMobileActionsOverflowClose = () => {
     setMobileActionsOverflowAnchor(null);
+  };
+  const handleAreasAddMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAreasAddMenuAnchor(event.currentTarget);
+  };
+  const handleAreasAddMenuClose = () => {
+    setAreasAddMenuAnchor(null);
   };
   const isCulturesPage = location.pathname.startsWith('/app/cultures');
   const cultureLibraryAction = useMemo(
@@ -975,7 +983,13 @@ function RootLayout(): React.ReactElement {
               <Button
                 size="small"
                 variant="contained"
-                onClick={() => navigate(topbarPrimaryAction.to)}
+                onClick={(event) => {
+                  if (location.pathname.startsWith('/app/fields-beds')) {
+                    handleAreasAddMenuOpen(event);
+                    return;
+                  }
+                  navigate(topbarPrimaryAction.to);
+                }}
                 aria-label={topbarPrimaryAction.label}
                 startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
                 sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.5 }}
@@ -1079,6 +1093,19 @@ function RootLayout(): React.ReactElement {
             </Box>
           )}
         </Toolbar>
+        {location.pathname.startsWith('/app/fields-beds') ? (
+          <Menu anchorEl={areasAddMenuAnchor} open={Boolean(areasAddMenuAnchor)} onClose={handleAreasAddMenuClose}>
+            <MenuItem onClick={() => { handleAreasAddMenuClose(); navigate('/app/locations?create=true'); }}>
+              Standort hinzufügen
+            </MenuItem>
+            <MenuItem onClick={() => { handleAreasAddMenuClose(); navigate('/app/fields-beds?create=true'); }}>
+              Parzelle hinzufügen
+            </MenuItem>
+            <MenuItem onClick={() => { handleAreasAddMenuClose(); window.dispatchEvent(new CustomEvent(OPEN_ADD_BED_EVENT)); }}>
+              Beet hinzufügen
+            </MenuItem>
+          </Menu>
+        ) : null}
         {isMobile ? (
           <Box className="mobile-action-scroll" sx={{ px: 0, pb: 0.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minHeight: 36, flexWrap: 'wrap', whiteSpace: 'normal', width: '100%' }}>
@@ -1199,7 +1226,13 @@ function RootLayout(): React.ReactElement {
                 <Button
                   size="small"
                   variant="contained"
-                  onClick={() => navigate(topbarPrimaryAction.to)}
+                  onClick={(event) => {
+                    if (location.pathname.startsWith('/app/fields-beds')) {
+                      handleAreasAddMenuOpen(event);
+                      return;
+                    }
+                    navigate(topbarPrimaryAction.to);
+                  }}
                   aria-label={topbarPrimaryAction.label}
                   sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
                 >

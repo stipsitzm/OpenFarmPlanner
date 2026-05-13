@@ -52,6 +52,7 @@ import {
 } from "../commands/useCommandContext";
 import type { CommandSpec } from "../commands/types";
 import { isTypingInEditableElement } from "../hooks/useKeyboardShortcuts";
+import { OPEN_ADD_BED_EVENT } from "./fieldsBedsEvents";
 
 interface FieldsBedsHierarchyProps {
   showTitle?: boolean;
@@ -642,6 +643,31 @@ function FieldsBedsHierarchy({
       handleAddBed(selectedRow.field);
     }
   }, [addField, handleAddBed, selectedRow]);
+
+  const handleGlobalAddBed = useCallback((): void => {
+    if (selectedRow?.type === "field" && selectedRow.fieldId) {
+      handleAddBed(selectedRow.fieldId);
+      return;
+    }
+    if (selectedRow?.type === "bed" && selectedRow.field) {
+      handleAddBed(selectedRow.field);
+      return;
+    }
+    const firstFieldId = fields[0]?.id;
+    if (typeof firstFieldId === "number") {
+      handleAddBed(firstFieldId);
+      return;
+    }
+    setError("Bitte zuerst eine Parzelle anlegen.");
+  }, [fields, handleAddBed, selectedRow]);
+
+  useEffect(() => {
+    const handleOpenAddBed = (): void => {
+      handleGlobalAddBed();
+    };
+    window.addEventListener(OPEN_ADD_BED_EVENT, handleOpenAddBed);
+    return () => window.removeEventListener(OPEN_ADD_BED_EVENT, handleOpenAddBed);
+  }, [handleGlobalAddBed]);
 
   const handleEditSelected = useCallback(() => {
     if (!selectedRow) {
