@@ -28,6 +28,7 @@ export default function FieldsBedsPage(): React.ReactElement {
   const { t } = useTranslation(['fields', 'hierarchy']);
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down('sm'));
+  const isVeryNarrowPhone = useMediaQuery('(max-width:360px)');
   const navigate = useNavigate();
   const location = useLocation();
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -295,15 +296,25 @@ export default function FieldsBedsPage(): React.ReactElement {
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
         {isXs && !shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 1 }}>
-            <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, alignSelf: 'flex-start' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 0.5,
+              flexWrap: isVeryNarrowPhone ? 'wrap' : 'nowrap',
+              minWidth: 0,
+              mb: 0.75,
+            }}
+          >
+            <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
               <Button
                 aria-label={t('fields:representation.table')}
                 aria-pressed={viewMode === 'table'}
                 variant={viewMode === 'table' ? 'contained' : 'outlined'}
                 color={viewMode === 'table' ? 'success' : 'inherit'}
                 onClick={() => setViewMode('table')}
-                sx={getSegmentedActionButtonSx({ active: viewMode === 'table' })}
+                sx={{ ...getSegmentedActionButtonSx({ active: viewMode === 'table' }), px: 1, minHeight: 30 }}
               >
                 {t('fields:representation.table')}
               </Button>
@@ -313,20 +324,20 @@ export default function FieldsBedsPage(): React.ReactElement {
                 variant={viewMode === 'graphical' ? 'contained' : 'outlined'}
                 color={viewMode === 'graphical' ? 'success' : 'inherit'}
                 onClick={() => setViewMode('graphical')}
-                sx={getSegmentedActionButtonSx({ active: viewMode === 'graphical' })}
+                sx={{ ...getSegmentedActionButtonSx({ active: viewMode === 'graphical' }), px: 1, minHeight: 30 }}
               >
                 {t('fields:representation.graphical')}
               </Button>
             </ButtonGroup>
             {viewMode === 'graphical' ? (
-              <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, alignSelf: 'flex-start' }}>
+              <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
                 <Button
                   aria-label={t('fields:graphical.viewModeOption')}
                   aria-pressed={interactionMode === 'view'}
                   variant={interactionMode === 'view' ? 'contained' : 'outlined'}
                   color={interactionMode === 'view' ? 'success' : 'inherit'}
                   onClick={() => setInteractionMode('view')}
-                  sx={getSegmentedActionButtonSx({ active: interactionMode === 'view' })}
+                  sx={{ ...getSegmentedActionButtonSx({ active: interactionMode === 'view' }), px: 1, minHeight: 30 }}
                 >
                   {t('fields:graphical.viewModeOption')}
                 </Button>
@@ -336,7 +347,7 @@ export default function FieldsBedsPage(): React.ReactElement {
                   variant={interactionMode === 'edit' ? 'contained' : 'outlined'}
                   color={interactionMode === 'edit' ? 'success' : 'inherit'}
                   onClick={() => setInteractionMode('edit')}
-                  sx={getSegmentedActionButtonSx({ active: interactionMode === 'edit' })}
+                  sx={{ ...getSegmentedActionButtonSx({ active: interactionMode === 'edit' }), px: 1, minHeight: 30 }}
                 >
                   {t('fields:graphical.editModeOption')}
                 </Button>
