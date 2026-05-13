@@ -33,7 +33,7 @@ export interface NotesDrawerProps {
   title: string;
   value: string;
   onChange: (value: string) => void;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
   onClose: () => void;
   loading?: boolean;
   noteId?: number;
@@ -306,8 +306,15 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
-      onSave();
+      void handleSaveClick();
     }
+  };
+
+  const handleSaveClick = async (): Promise<void> => {
+    if (loading) {
+      return;
+    }
+    await onSave();
   };
 
   return (
@@ -321,33 +328,42 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
 
         {noteId && (
           <Box sx={{ mb: 2 }} ref={attachmentsSectionRef} tabIndex={-1}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
-              <Button variant="outlined" component="label">
-                {t('notesDrawer.takePhoto')}
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  hidden
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) openCropDialog(file);
-                  }}
-                />
-              </Button>
-              <Button variant="outlined" component="label">
-                {t('notesDrawer.selectFromGallery')}
-                <input
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) openCropDialog(file);
-                  }}
-                />
-              </Button>
-              {uploading && <Typography variant="body2">{t('notesDrawer.uploading')}</Typography>}
+            <Stack
+              spacing={1}
+              sx={{
+                mb: 1.5,
+                width: '100%',
+                maxWidth: { xs: '100%', sm: 420 },
+              }}
+            >
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: '100%' }}>
+                <Button variant="outlined" component="label" sx={{ flex: 1, minHeight: 40 }}>
+                  {t('notesDrawer.takePhoto')}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) openCropDialog(file);
+                    }}
+                  />
+                </Button>
+                <Button variant="outlined" component="label" sx={{ flex: 1, minHeight: 40 }}>
+                  {t('notesDrawer.selectFromGallery')}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) openCropDialog(file);
+                    }}
+                  />
+                </Button>
+              </Stack>
+              {uploading ? <Typography variant="body2">{t('notesDrawer.uploading')}</Typography> : null}
             </Stack>
             {uploading && <LinearProgress variant="determinate" value={uploadProgress} />}
             <ImageList cols={4} rowHeight={84}>
@@ -381,7 +397,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
 
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
           <Button onClick={onClose} disabled={loading} variant="outlined">{t('actions.cancel')}</Button>
-          <Button onClick={onSave} disabled={loading} variant="contained" color="primary" startIcon={loading ? <CircularProgress size={16} /> : undefined}>{t('actions.save')}</Button>
+          <Button onClick={() => void handleSaveClick()} disabled={loading} variant="contained" color="primary" startIcon={loading ? <CircularProgress size={16} /> : undefined}>{t('actions.save')}</Button>
         </Box>
       </Box>
 

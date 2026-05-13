@@ -14,6 +14,14 @@
   min-height: 100vh;
 }
 
+.app.app--centered {
+  --page-content-margin: 0 auto;
+}
+
+.app.app--left {
+  --page-content-margin: 0;
+}
+
 /* Navigation Styles */
 .nav {
   width: 100%;
@@ -95,26 +103,26 @@
 .content,
 .page-container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1360px;
   box-sizing: border-box;
-  padding: 0 24px;
-  margin: 0 auto;
+  padding: 0 16px;
+  margin: var(--page-content-margin, 0 auto);
 }
 
 .content--wide {
   width: 100%;
   max-width: 1800px;
   box-sizing: border-box;
-  padding: 0 24px;
-  margin: 0 auto;
+  padding: 0 16px;
+  margin: var(--page-content-margin, 0 auto);
 }
 
 .content--workspace {
   width: 100%;
   max-width: min(1800px, calc(100vw - 48px));
   box-sizing: border-box;
-  padding: 0 24px;
-  margin: 0 auto;
+  padding: 0 16px;
+  margin: var(--page-content-margin, 0 auto);
 }
 
 
@@ -122,14 +130,56 @@
   width: 100%;
   max-width: 1900px;
   box-sizing: border-box;
-  padding: 0 24px;
-  margin: 0 auto;
+  padding: 0 16px;
+  margin: var(--page-content-margin, 0 auto);
+}
+
+.content--workspace-page {
+  width: 100%;
+  /* Intentionally bypass the standard centered max-width so wide data tables can use the full workspace width. */
+  max-width: none;
+  box-sizing: border-box;
+  /* RootLayout main owns the global page gutter; workspace pages keep container padding at 0 to avoid double horizontal spacing. */
+  padding: 0;
+  margin: 0;
+}
+
+.content--compact-centered-page {
+  width: 100%;
+  max-width: 1360px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  margin: var(--page-content-margin, 0 auto);
 }
 
 .content--full {
   width: 100%;
   box-sizing: border-box;
-  padding: 0 24px;
+  padding: 0 16px;
+}
+
+@media (max-width: 900px) {
+  .content,
+  .page-container,
+  .content--wide,
+  .content--workspace,
+  .content--xwide,
+  .content--compact-centered-page,
+  .content--full {
+    padding: 0 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .content,
+  .page-container,
+  .content--wide,
+  .content--workspace,
+  .content--xwide,
+  .content--compact-centered-page,
+  .content--full {
+    padding: 0;
+  }
 }
 
 /* Error Message */

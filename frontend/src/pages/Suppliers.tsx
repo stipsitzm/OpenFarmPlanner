@@ -10,7 +10,6 @@ import {
   DialogTitle,
   IconButton,
   Link,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -24,6 +23,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
+import PageSurface from '../components/layout/PageSurface';
+import TableSurface from '../components/layout/TableSurface';
 import type { Supplier } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
@@ -184,8 +185,8 @@ export default function Suppliers(): React.ReactElement {
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
-      <PageContainer>
-        <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+      <PageContainer variant="xwide">
+        <Box sx={{ width: '100%' }}>
           <ProjectRequiredState reason={missingProjectReason} />
         </Box>
       </PageContainer>
@@ -193,8 +194,8 @@ export default function Suppliers(): React.ReactElement {
   }
 
   return (
-    <PageContainer>
-      <Box sx={{ width: 'fit-content', maxWidth: '100%' }}>
+    <PageContainer variant="compactCenteredPage">
+      <PageSurface variant="compact">
         {suppliers.length === 0 ? (
           <Box sx={{ width: '100%', maxWidth: 880 }}>
             <EmptyStateCard
@@ -204,27 +205,29 @@ export default function Suppliers(): React.ReactElement {
             />
           </Box>
         ) : (
-          <TableContainer component={Paper} sx={{ width: 'fit-content', maxWidth: '100%' }}>
-            <Table size="small" sx={{ width: 'auto' }}>
+          <TableSurface sizingMode="compact">
+          <TableContainer>
+            <Table size="medium">
               <TableHead>
                 <TableRow>
-                  <TableCell>{t('name')}</TableCell>
-                  <TableCell>{t('homepage')}</TableCell>
-                  <TableCell align="right">{t('actions')}</TableCell>
+                  <TableCell sx={{ py: 1.5, minWidth: { xs: 140, sm: 180 } }}>{t('name')}</TableCell>
+                  <TableCell sx={{ py: 1.5, minWidth: { xs: 180, sm: 280 } }}>{t('homepage')}</TableCell>
+                  <TableCell align="right" sx={{ py: 1.5, width: 1, whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {suppliers.map((supplier) => (
                   <TableRow key={supplier.id} hover>
-                    <TableCell>{supplier.name}</TableCell>
-                    <TableCell>
+                    <TableCell sx={{ py: 1.25 }}>{supplier.name}</TableCell>
+                    <TableCell sx={{ py: 1.25 }}>
                       {supplier.homepage_url ? (
                         <Link href={supplier.homepage_url} target="_blank" rel="noopener noreferrer" underline="hover">
                           {supplier.homepage_url}
                         </Link>
                       ) : null}
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ py: 1.25 }}>
+                      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                       <IconButton
                         size="small"
                         color="primary"
@@ -241,14 +244,16 @@ export default function Suppliers(): React.ReactElement {
                       >
                         <CloseIcon fontSize="small" />
                       </IconButton>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
+          </TableSurface>
         )}
-      </Box>
+      </PageSurface>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{draft.id ? t('edit') : t('create')}</DialogTitle>

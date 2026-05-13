@@ -7,6 +7,7 @@ import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import SproutOutlinedIcon from '@mui/icons-material/SpaOutlined';
 import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, type Bed, type Culture, type Field, type Location, type PlantingPlan } from '../api/api';
 import PageContainer from '../components/layout/PageContainer';
+import PageSurface from '../components/layout/PageSurface';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import { getFirstMissingRequirement } from './requirementFlow';
@@ -88,8 +89,8 @@ export default function Dashboard(): React.ReactElement {
 
   const locationNameById = useMemo(() => new Map(locations.filter((l) => l.id !== undefined).map((l) => [l.id as number, l.name])), [locations]);
 
-  if (loading) return <PageContainer><Typography>{t('common:messages.loading')}</Typography></PageContainer>;
-  if (shouldShowProjectRequiredState && missingProjectReason) return <PageContainer><ProjectRequiredState reason={missingProjectReason} /></PageContainer>;
+  if (loading) return <PageContainer><PageSurface variant="contentFit"><Typography>{t('common:messages.loading')}</Typography></PageSurface></PageContainer>;
+  if (shouldShowProjectRequiredState && missingProjectReason) return <PageContainer><PageSurface variant="contentFit"><ProjectRequiredState reason={missingProjectReason} /></PageSurface></PageContainer>;
 
   const isSetupComplete = firstMissingRequirement === null;
 
@@ -98,7 +99,8 @@ export default function Dashboard(): React.ReactElement {
       {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
 
       {!isSetupComplete ? (
-        <Card variant="outlined" sx={{ mb: 2, maxWidth: 860 }}>
+        <PageSurface variant="contentFit" sx={{ mb: 2, minWidth: { md: 480 } }}>
+        <Card variant="outlined" sx={{ width: 'fit-content', maxWidth: '100%' }}>
           <CardContent>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.75 }}>
               <SproutOutlinedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
@@ -141,10 +143,12 @@ export default function Dashboard(): React.ReactElement {
             ) : null}
           </CardContent>
         </Card>
+        </PageSurface>
       ) : null}
 
       {(isSetupComplete || (!isSetupComplete && upcomingTasks.length > 0)) ? (
-      <Card variant="outlined">
+      <PageSurface variant="contentFit" sx={{ minWidth: { md: 460 } }}>
+      <Card variant="outlined" sx={{ width: 'fit-content', maxWidth: '100%' }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>{t('dashboard:tasks.title')}</Typography>
           {upcomingTasks.length === 0 ? (
@@ -164,6 +168,7 @@ export default function Dashboard(): React.ReactElement {
           )}
         </CardContent>
       </Card>
+      </PageSurface>
       ) : null}
     </PageContainer>
   );

@@ -95,7 +95,13 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showRowEditActions?: boolean;
   onRowsStateChange?: (rows: T[]) => void;
   onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean; error: string }) => void;
-  fitContentWidth?: boolean;
+  /**
+   * Controls how the grid surface uses available page/workspace width:
+   * - contentFit: fit to content and center, but never exceed container width
+   * - fullWorkspace: fill available workspace width
+   * - compact: compact content-sized mode for small tables
+   */
+  surfaceSizing?: 'contentFit' | 'fullWorkspace' | 'compact';
 }
 
 export function EditableDataGrid<T extends EditableRow>({
@@ -124,8 +130,12 @@ export function EditableDataGrid<T extends EditableRow>({
   showRowEditActions = false,
   onRowsStateChange,
   onLoadStateChange,
-  fitContentWidth = false,
+  surfaceSizing,
 }: EditableDataGridProps<T>): React.ReactElement {
+  const resolvedSurfaceSizing = surfaceSizing ?? 'contentFit';
+  const isContentSizedSurface = resolvedSurfaceSizing === 'contentFit' || resolvedSurfaceSizing === 'compact';
+  const shouldUseCompactContainer = resolvedSurfaceSizing === 'compact';
+  const shouldDisableTrailingFiller = isContentSizedSurface;
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [error, setError] = useState<string>('');
@@ -710,8 +720,24 @@ export function EditableDataGrid<T extends EditableRow>({
     <>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
-      <Box sx={{ width: fitContentWidth ? 'fit-content' : '100%', maxWidth: '100%', overflowX: 'auto', overflowY: 'visible' }}>
-        <Box sx={{ display: 'block', width: fitContentWidth ? 'fit-content' : '100%', minWidth: 0 }}>
+      <Box
+        sx={{
+          width: '100%',
+          maxWidth: '100%',
+          overflowX: 'auto',
+          overflowY: 'visible',
+          display: 'flex',
+          justifyContent: shouldUseCompactContainer || isContentSizedSurface ? 'center' : 'flex-start',
+        }}
+      >
+        <Box
+          sx={{
+            display: 'block',
+            width: isContentSizedSurface ? 'fit-content' : '100%',
+            minWidth: isContentSizedSurface ? 0 : '100%',
+            maxWidth: '100%',
+          }}
+        >
           <DataGrid
           rows={rows}
           columns={columnsWithActions}
@@ -732,7 +758,19 @@ export function EditableDataGrid<T extends EditableRow>({
           slots={{
             footer: CustomFooter,
           }}
-          sx={{ ...dataGridSx, width: fitContentWidth ? 'fit-content' : '100%' }}
+          sx={{
+            ...dataGridSx,
+            width: isContentSizedSurface ? 'fit-content' : '100%',
+            minWidth: isContentSizedSurface ? 0 : '100%',
+            display: isContentSizedSurface ? 'inline-block' : 'block',
+            ...(shouldDisableTrailingFiller ? {
+              '& .MuiDataGrid-filler': { display: 'none' },
+              '& .MuiDataGrid-scrollbarFiller': { display: 'none' },
+              '& .MuiDataGrid-main': { width: 'fit-content' },
+              '& .MuiDataGrid-virtualScrollerContent': { width: 'fit-content !important' },
+              '& .MuiDataGrid-columnHeaders': { width: 'fit-content !important' },
+            } : {}),
+          }}
           getRowClassName={(params) => {
             const rowKey = String(params.id);
             if (rowModesModel[params.id]?.mode === GridRowModes.Edit) {

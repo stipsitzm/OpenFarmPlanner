@@ -69,9 +69,9 @@ export default function FieldsBedsPage(): React.ReactElement {
       shortcutHint: 'Alt+G',
       keys: { alt: true, key: 'g' },
       contextTags: ['areas'],
-      isEnabled: () => viewMode !== 'graphical',
+      isEnabled: () => true,
       action: () => {
-        setViewMode('graphical');
+        setViewMode((prev) => (prev === 'graphical' ? 'table' : 'graphical'));
       },
     },
   ], [viewMode]);

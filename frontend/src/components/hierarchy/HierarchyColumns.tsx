@@ -29,7 +29,7 @@ export const DEFAULT_HIERARCHY_COLUMN_WIDTHS: HierarchyColumnWidths = {
   name: 280,
   area: 120,
   dimensions: 130,
-  notes: 320,
+  notes: 220,
 };
 
 const EXPAND_ICON_SLOT_SIZE = 32;
@@ -424,6 +424,8 @@ export function createHierarchyColumns(
       field: 'notes',
       headerName: t('common:fields.notes'),
       width: widths.notes,
+      minWidth: 180,
+      maxWidth: 260,
       editable: false,
       renderCell: (params) => {
         const value = (params.value as string) || '';

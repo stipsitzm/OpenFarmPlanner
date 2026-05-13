@@ -59,7 +59,23 @@ interface FieldsBedsHierarchyProps {
 
 const HIERARCHY_DATA_GRID_SX = {
   ...dataGridSx,
-  width: "100%",
+  width: "fit-content",
+  minWidth: 0,
+  "& .MuiDataGrid-filler": {
+    display: "none",
+  },
+  "& .MuiDataGrid-scrollbarFiller": {
+    display: "none",
+  },
+  "& .MuiDataGrid-main": {
+    width: "fit-content",
+  },
+  "& .MuiDataGrid-virtualScrollerContent": {
+    width: "fit-content !important",
+  },
+  "& .MuiDataGrid-columnHeaders": {
+    width: "fit-content !important",
+  },
   "& .MuiDataGrid-columnHeader": {
     py: 0.25,
   },
@@ -925,9 +941,10 @@ function FieldsBedsHierarchy({
 
         <Box
           ref={tableWrapperRef}
-          sx={{ width: "100%", minWidth: 0, overflowX: "auto" }}
+          sx={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "auto", overflowY: "visible", display: "flex", justifyContent: "center" }}
           onClick={() => setTreeActive(true)}
         >
+          <Box sx={{ display: "block", width: "fit-content", minWidth: 0, maxWidth: "100%" }}>
           <DataGrid
             rows={rows}
             columns={columns}
@@ -960,6 +977,7 @@ function FieldsBedsHierarchy({
             }}
             localeText={germanDataGridLocaleText}
           />
+          </Box>
         </Box>
       </Box>
 

@@ -23,7 +23,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Fab,
   FormControl,
   InputLabel,
   MenuItem,
@@ -35,7 +34,6 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTranslation } from "../i18n";
@@ -45,6 +43,7 @@ import {
   resolveCultivationTypeForAllowedOptions,
 } from "./plantingPlansUtils";
 import PageContainer from "../components/layout/PageContainer";
+import PageSurface from "../components/layout/PageSurface";
 import {
   plantingPlanAPI,
   cultureAPI,
@@ -1319,21 +1318,26 @@ function PlantingPlans(): React.ReactElement {
   };
 
   const saveMobileNotes = async (): Promise<void> => {
-    if (!mobileNotesTarget?.id) {
+    if (isMobileNotesSaving || !mobileNotesTarget?.id) {
       return;
     }
 
+    const targetId = mobileNotesTarget.id;
+    const draftToSave = mobileNotesDraft;
+
     setIsMobileNotesSaving(true);
     try {
-      await plantingPlanAPI.update(mobileNotesTarget.id, {
-        notes: mobileNotesDraft,
+      await plantingPlanAPI.patch(targetId, {
+        notes: draftToSave,
       } as PlantingPlan);
-      closeMobileNotesDialog();
+
       await gridCommandApiRef.current?.reload();
+      closeMobileNotesDialog();
     } catch (error) {
       setMobileCreateError(
         extractApiErrorMessage(error, t, t("plantingPlans:errors.save")),
       );
+    } finally {
       setIsMobileNotesSaving(false);
     }
   };
@@ -1539,7 +1543,7 @@ function PlantingPlans(): React.ReactElement {
   }, [canCreatePlan, isMobile, searchParams, setSearchParams]);
 
   return (
-    <PageContainer variant="xwide">
+    <PageContainer variant="workspacePage">
 
       {areaWarning ? (
         <Alert severity="warning" sx={{ mb: 2 }}>
@@ -1646,14 +1650,12 @@ function PlantingPlans(): React.ReactElement {
           </Box>
         ) : null}
 
-        <Box
-          sx={{
-            display: isMobile || shouldShowPrerequisiteState ? "none" : "block",
-            width: "fit-content",
-            maxWidth: "100%",
-          }}
+        <PageSurface
+          variant="fullWorkspace"
+          sx={{ display: isMobile || shouldShowPrerequisiteState ? "none" : "block" }}
         >
           <EditableDataGrid<PlantingPlanRow>
+            surfaceSizing="contentFit"
             columns={columns}
             api={plantingPlanAPI as unknown as DataGridAPI<PlantingPlanRow>}
             commandApiRef={gridCommandApiRef}
@@ -1668,7 +1670,6 @@ function PlantingPlans(): React.ReactElement {
             onLoadStateChange={({ loading, dataFetched }) => {
               setIsPlansLoading(loading || !dataFetched);
             }}
-            fitContentWidth
             createNewRow={() => ({
             id: -Date.now(),
             culture: 0,
@@ -1867,20 +1868,8 @@ function PlantingPlans(): React.ReactElement {
               ],
             }}
           />
-        </Box>
+        </PageSurface>
 
-        {isMobile ? (
-          <Fab
-            color="primary"
-            variant="extended"
-            onClick={() => openMobileCreateDialog()}
-            sx={{ position: "fixed", bottom: 24, right: 16, zIndex: theme.zIndex.fab }}
-            aria-label={t("plantingPlans:mobile.fabAria")}
-          >
-            <AddIcon sx={{ mr: 0.75 }} />
-            {t("plantingPlans:mobile.fabLabel")}
-          </Fab>
-        ) : null}
       </Box>
 
       <Dialog open={isMobileCreateOpen} onClose={closeMobileCreateDialog} fullWidth maxWidth="sm">
