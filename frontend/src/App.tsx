@@ -339,9 +339,9 @@ function RootLayout(): React.ReactElement {
     setProjectMenuAnchor(event.currentTarget);
   };
 
-  const handleProjectMenuClose = () => {
+  const handleProjectMenuClose = useCallback(() => {
     setProjectMenuAnchor(null);
-  };
+  }, []);
   const closeMobileNav = () => {
     setMobileNavOpen(false);
   };
@@ -371,9 +371,9 @@ function RootLayout(): React.ReactElement {
     message: '',
     severity: 'success',
   });
-  const showSnackbar = (message: string, severity: 'success' | 'error') => {
+  const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
-  };
+  }, []);
 
   const handleOpenProjectHistory = useCallback(async () => {
     handleGlobalMenuClose();
@@ -388,7 +388,7 @@ function RootLayout(): React.ReactElement {
     } finally {
       setHistoryLoading(false);
     }
-  }, [activeProjectId, showSnackbar, t]);
+  }, [showSnackbar, t]);
 
   const handleRestoreProjectVersion = async (historyId: number) => {
     try {
@@ -429,7 +429,7 @@ function RootLayout(): React.ReactElement {
       console.error('Error logging out:', error);
       showSnackbar(t('commandPalette.feedback.logoutError'), 'error');
     }
-  }, [logout, navigate]);
+  }, [logout, navigate, showSnackbar, t]);
 
   const memberships = useMemo(() => user?.memberships ?? [], [user?.memberships]);
   const activeMembership = memberships.find((membership) => membership.project_id === activeProjectId) ?? null;
