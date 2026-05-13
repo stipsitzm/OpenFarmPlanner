@@ -28,7 +28,6 @@ export default function FieldsBedsPage(): React.ReactElement {
   const { t } = useTranslation(['fields', 'hierarchy']);
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down('sm'));
-  const isVeryNarrowPhone = useMediaQuery('(max-width:360px)');
   const navigate = useNavigate();
   const location = useLocation();
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -260,59 +259,63 @@ export default function FieldsBedsPage(): React.ReactElement {
         {isXs && !shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState ? (
           <ContentViewControls
             primaryControls={(
-              <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
-              <Button
-                aria-label={t('fields:representation.table')}
-                aria-pressed={viewMode === 'table'}
-                variant={viewMode === 'table' ? 'contained' : 'outlined'}
-                color={viewMode === 'table' ? 'success' : 'inherit'}
-                onClick={() => setViewMode('table')}
-                sx={{ ...getSegmentedActionButtonSx({ active: viewMode === 'table' }), px: 1, minHeight: 30 }}
-              >
-                {t('fields:representation.table')}
-              </Button>
-              <Button
-                aria-label={t('fields:representation.graphical')}
-                aria-pressed={viewMode === 'graphical'}
-                variant={viewMode === 'graphical' ? 'contained' : 'outlined'}
-                color={viewMode === 'graphical' ? 'success' : 'inherit'}
-                onClick={() => setViewMode('graphical')}
-                sx={{ ...getSegmentedActionButtonSx({ active: viewMode === 'graphical' }), px: 1, minHeight: 30 }}
-              >
-                {t('fields:representation.graphical')}
-              </Button>
-              </ButtonGroup>
+              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.375, flexWrap: 'nowrap', minWidth: 0, whiteSpace: 'nowrap' }}>
+                <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
+                  <Button
+                    aria-label={t('fields:representation.table')}
+                    aria-pressed={viewMode === 'table'}
+                    variant={viewMode === 'table' ? 'contained' : 'outlined'}
+                    color={viewMode === 'table' ? 'success' : 'inherit'}
+                    onClick={() => setViewMode('table')}
+                    sx={{ ...getSegmentedActionButtonSx({ active: viewMode === 'table' }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                  >
+                    {t('fields:representation.table')}
+                  </Button>
+                  <Button
+                    aria-label={t('fields:representation.graphical')}
+                    aria-pressed={viewMode === 'graphical'}
+                    variant={viewMode === 'graphical' ? 'contained' : 'outlined'}
+                    color={viewMode === 'graphical' ? 'success' : 'inherit'}
+                    onClick={() => setViewMode('graphical')}
+                    sx={{ ...getSegmentedActionButtonSx({ active: viewMode === 'graphical' }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                  >
+                    {t('fields:representation.graphical')}
+                  </Button>
+                </ButtonGroup>
+                {viewMode === 'graphical' ? (
+                  <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
+                    <Button
+                      aria-label={t('fields:graphical.viewModeOption')}
+                      aria-pressed={interactionMode === 'view'}
+                      variant={interactionMode === 'view' ? 'contained' : 'outlined'}
+                      color={interactionMode === 'view' ? 'success' : 'inherit'}
+                      onClick={() => setInteractionMode('view')}
+                      sx={{ ...getSegmentedActionButtonSx({ active: interactionMode === 'view' }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                    >
+                      {t('fields:graphical.viewModeOption')}
+                    </Button>
+                    <Button
+                      aria-label={t('fields:graphical.editModeOption')}
+                      aria-pressed={interactionMode === 'edit'}
+                      variant={interactionMode === 'edit' ? 'contained' : 'outlined'}
+                      color={interactionMode === 'edit' ? 'success' : 'inherit'}
+                      onClick={() => setInteractionMode('edit')}
+                      sx={{ ...getSegmentedActionButtonSx({ active: interactionMode === 'edit' }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                    >
+                      {t('fields:graphical.editModeOption')}
+                    </Button>
+                  </ButtonGroup>
+                ) : null}
+              </Box>
             )}
-            secondaryControls={viewMode === 'graphical' ? (
-              <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
-                <Button
-                  aria-label={t('fields:graphical.viewModeOption')}
-                  aria-pressed={interactionMode === 'view'}
-                  variant={interactionMode === 'view' ? 'contained' : 'outlined'}
-                  color={interactionMode === 'view' ? 'success' : 'inherit'}
-                  onClick={() => setInteractionMode('view')}
-                  sx={{ ...getSegmentedActionButtonSx({ active: interactionMode === 'view' }), px: 1, minHeight: 30 }}
-                >
-                  {t('fields:graphical.viewModeOption')}
-                </Button>
-                <Button
-                  aria-label={t('fields:graphical.editModeOption')}
-                  aria-pressed={interactionMode === 'edit'}
-                  variant={interactionMode === 'edit' ? 'contained' : 'outlined'}
-                  color={interactionMode === 'edit' ? 'success' : 'inherit'}
-                  onClick={() => setInteractionMode('edit')}
-                  sx={{ ...getSegmentedActionButtonSx({ active: interactionMode === 'edit' }), px: 1, minHeight: 30 }}
-                >
-                  {t('fields:graphical.editModeOption')}
-                </Button>
-              </ButtonGroup>
-            ) : null}
             sx={{
               mb: 0.75,
               '& > div': {
-                flexWrap: isVeryNarrowPhone ? 'wrap' : 'nowrap',
+                flexWrap: 'nowrap',
                 minWidth: 0,
-                gap: 0.5,
+                gap: 0.375,
+                overflowX: 'auto',
+                whiteSpace: 'nowrap',
               },
             }}
           />
