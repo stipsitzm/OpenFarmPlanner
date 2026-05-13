@@ -941,10 +941,10 @@ function FieldsBedsHierarchy({
 
         <Box
           ref={tableWrapperRef}
-          sx={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "auto", overflowY: "visible", display: "block" }}
+          sx={{ width: "100%", maxWidth: "100%", minWidth: 1, overflowX: "auto", overflowY: "visible", display: "block" }}
           onClick={() => setTreeActive(true)}
         >
-          <Box sx={{ display: "inline-block", width: "fit-content", minWidth: "100%", maxWidth: "100%" }}>
+          <Box sx={{ display: "inline-block", width: "fit-content", minWidth: 320, maxWidth: "100%" }}>
           <DataGrid
             rows={rows}
             columns={columns}
