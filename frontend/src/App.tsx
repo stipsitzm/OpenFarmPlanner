@@ -897,10 +897,9 @@ function RootLayout(): React.ReactElement {
             )}
             {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           </Box>
-          {!isPhone ? <Box sx={{ flex: 1, minWidth: 0 }} /> : null}
           {!isPhone ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, maxWidth: '100%', flex: 1, justifyContent: 'flex-end', overflow: 'hidden' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, maxWidth: '100%', flex: 1, justifyContent: 'flex-end', overflow: 'hidden', pr: 0.25 }}>
+          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, maxWidth: '100%', flex: 1, overflow: 'hidden' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flex: 1, overflow: 'hidden', pr: 0.5 }}>
           {isCulturesPage ? (
             <>
               {cultureLibraryAction && !showDesktopCultureActionsOverflow ? (
@@ -1051,7 +1050,7 @@ function RootLayout(): React.ReactElement {
             </Tooltip>
           ) : null}
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1.5, flexShrink: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1, flexShrink: 0 }}>
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
             aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}
