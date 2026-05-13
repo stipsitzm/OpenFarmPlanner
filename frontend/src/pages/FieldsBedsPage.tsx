@@ -16,6 +16,7 @@ import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { getSegmentedActionButtonSx, segmentedButtonGroupSx } from '../components/buttons/segmentedControlStyles';
 import { useTheme } from '@mui/material/styles';
+import ContentViewControls from '../components/layout/ContentViewControls';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 const NOOP_SET_TOPBAR_ACTIONS = (): void => undefined;
@@ -27,7 +28,8 @@ export default function FieldsBedsPage(): React.ReactElement {
   const { t } = useTranslation(['fields', 'hierarchy']);
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down('sm'));
-    const navigate = useNavigate();
+  const isVeryNarrowPhone = useMediaQuery('(max-width:360px)');
+  const navigate = useNavigate();
   const location = useLocation();
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
@@ -256,18 +258,9 @@ export default function FieldsBedsPage(): React.ReactElement {
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
         {isXs && !shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState ? (
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 0.5,
-              flexWrap: isVeryNarrowPhone ? 'wrap' : 'nowrap',
-              minWidth: 0,
-              mb: 0.75,
-            }}
-          >
-            <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
+          <ContentViewControls
+            primaryControls={(
+              <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
               <Button
                 aria-label={t('fields:representation.table')}
                 aria-pressed={viewMode === 'table'}
@@ -288,8 +281,9 @@ export default function FieldsBedsPage(): React.ReactElement {
               >
                 {t('fields:representation.graphical')}
               </Button>
-            </ButtonGroup>
-            {viewMode === 'graphical' ? (
+              </ButtonGroup>
+            )}
+            secondaryControls={viewMode === 'graphical' ? (
               <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
                 <Button
                   aria-label={t('fields:graphical.viewModeOption')}
@@ -313,7 +307,15 @@ export default function FieldsBedsPage(): React.ReactElement {
                 </Button>
               </ButtonGroup>
             ) : null}
-          </Box>
+            sx={{
+              mb: 0.75,
+              '& > div': {
+                flexWrap: isVeryNarrowPhone ? 'wrap' : 'nowrap',
+                minWidth: 0,
+                gap: 0.5,
+              },
+            }}
+          />
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState && viewMode === 'graphical' ? (
           <GraphicalFields
