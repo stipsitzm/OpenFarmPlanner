@@ -896,8 +896,9 @@ function RootLayout(): React.ReactElement {
             )}
             {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           </Box>
+          {!isPhone ? <Box sx={{ flex: 1, minWidth: 0 }} /> : null}
           {!isPhone ? (
-          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, flex: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, flex: 1, justifyContent: 'flex-end' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflowX: 'auto', overflowY: 'hidden', pr: 0.5, scrollbarWidth: 'thin' }}>
           {isCulturesPage ? (
             <>
