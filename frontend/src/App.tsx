@@ -517,6 +517,7 @@ function RootLayout(): React.ReactElement {
   const showCompactCultureLibrary = isCulturesPage && (isTabletOrNarrowDesktop || isPhone);
   const showIconOnlyCultureLibrary = isCulturesPage && (isPhone || isTabletOrNarrowDesktop);
   const showCultureImportExportButton = isCulturesPage;
+  const showDesktopCultureActionsOverflow = isCulturesPage && !isPhone && !isLargeDesktop;
   const hasVisibleMobileContextActions = useMemo(
     () => [...topbarModeControls, ...topbarOverflowActions].some((action) => !action.hidden),
     [topbarModeControls, topbarOverflowActions],
@@ -902,7 +903,7 @@ function RootLayout(): React.ReactElement {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, maxWidth: '100%', flex: 1, justifyContent: 'flex-end', overflow: 'hidden', pr: 0.25 }}>
           {isCulturesPage ? (
             <>
-              {cultureLibraryAction ? (
+              {cultureLibraryAction && !showDesktopCultureActionsOverflow ? (
                 <Tooltip title="Kulturbibliothek öffnen">
                   <span>
                     <Button
@@ -919,7 +920,7 @@ function RootLayout(): React.ReactElement {
                   </span>
                 </Tooltip>
               ) : null}
-              {showCultureImportExportButton || isMobile ? (
+              {(showCultureImportExportButton || isMobile) && !showDesktopCultureActionsOverflow ? (
                 <Button
                   size="small"
                   variant="outlined"
@@ -934,12 +935,39 @@ function RootLayout(): React.ReactElement {
                   {isPhone ? '⋯' : 'Import/Export'}
                 </Button>
               ) : null}
+              {showDesktopCultureActionsOverflow ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  aria-label="Kultur-Aktionen öffnen"
+                  aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                  onClick={handleCultureActionsMenuOpen}
+                  endIcon={<KeyboardArrowDownIcon fontSize="small" />}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: 0, px: 1 }}
+                >
+                  Aktionen
+                </Button>
+              ) : null}
               <Menu
                 id="culture-actions-menu"
                 anchorEl={cultureActionsMenuAnchor}
                 open={Boolean(cultureActionsMenuAnchor)}
                 onClose={handleCultureActionsMenuClose}
               >
+                {showDesktopCultureActionsOverflow && cultureLibraryAction ? (
+                  <MenuItem
+                    aria-label={cultureLibraryAction.ariaLabel ?? cultureLibraryAction.label}
+                    onClick={() => {
+                      cultureLibraryAction.onClick();
+                      handleCultureActionsMenuClose();
+                    }}
+                    disabled={cultureLibraryAction.disabled}
+                  >
+                    <ListItemText primary={cultureLibraryAction.label} />
+                  </MenuItem>
+                ) : null}
                 {cultureImportExportActions.map((action) => (
                   <MenuItem
                     key={action.id}
