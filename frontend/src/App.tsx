@@ -284,6 +284,8 @@ function RootLayout(): React.ReactElement {
   const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
   const isLargeDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const isPhone = useMediaQuery(theme.breakpoints.down('sm'));
+  const isCoarseLowHeightViewport = useMediaQuery('(pointer: coarse) and (max-height: 500px)');
+  const isCompactTopbar = isPhone || isCoarseLowHeightViewport;
   const isVeryNarrowMobile = useMediaQuery('(max-width:360px)');
   const isPhonePortrait = useMediaQuery(`${theme.breakpoints.down('sm')} and (orientation: portrait)`);
   const isTabletOrNarrowDesktop = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
@@ -517,6 +519,7 @@ function RootLayout(): React.ReactElement {
   const showCompactCultureLibrary = isCulturesPage && (isTabletOrNarrowDesktop || isPhone);
   const showIconOnlyCultureLibrary = isCulturesPage && (isPhone || isTabletOrNarrowDesktop);
   const showCultureImportExportButton = isCulturesPage;
+  const showDesktopCultureActionsOverflow = isCulturesPage && !isPhone && !isLargeDesktop;
   const hasVisibleMobileContextActions = useMemo(
     () => [...topbarModeControls, ...topbarOverflowActions].some((action) => !action.hidden),
     [topbarModeControls, topbarOverflowActions],
@@ -868,9 +871,9 @@ function RootLayout(): React.ReactElement {
         elevation={0}
         sx={{ borderBottom: '1px solid', borderColor: '#e4dfd4', bgcolor: '#f7f4ed', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
-        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: 'nowrap' }}>
+        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: 'nowrap', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1 }}>
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflow: 'hidden' }}>
             {!isDesktopUp ? (
               <Typography
                 component="h1"
@@ -896,12 +899,12 @@ function RootLayout(): React.ReactElement {
             )}
             {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           </Box>
-          {!isPhone ? (
-          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, flex: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflowX: 'auto', overflowY: 'hidden', pr: 0.5, scrollbarWidth: 'thin' }}>
+          {!isCompactTopbar ? (
+          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, maxWidth: '100%', flex: 1, overflow: 'hidden' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flex: 1, justifyContent: 'flex-end', overflow: 'hidden', pr: 0.5 }}>
           {isCulturesPage ? (
             <>
-              {cultureLibraryAction ? (
+              {cultureLibraryAction && !showDesktopCultureActionsOverflow ? (
                 <Tooltip title="Kulturbibliothek öffnen">
                   <span>
                     <Button
@@ -910,7 +913,7 @@ function RootLayout(): React.ReactElement {
                       onClick={() => cultureLibraryAction.onClick()}
                       aria-label="Kulturbibliothek öffnen"
                       startIcon={<PublicIcon fontSize="small" />}
-                      sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: showIconOnlyCultureLibrary ? 36 : 'auto', px: showIconOnlyCultureLibrary ? 0.75 : 1.25 }}
+                      sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: showIconOnlyCultureLibrary ? 36 : 'auto', px: showIconOnlyCultureLibrary ? 0.75 : 1.25, flexShrink: 0 }}
                       disabled={cultureLibraryAction.disabled}
                     >
                       {!showIconOnlyCultureLibrary ? (showCompactCultureLibrary ? 'Bibliothek' : 'Kulturbibliothek') : null}
@@ -918,7 +921,7 @@ function RootLayout(): React.ReactElement {
                   </span>
                 </Tooltip>
               ) : null}
-              {showCultureImportExportButton || isMobile ? (
+              {(showCultureImportExportButton || isMobile) && !showDesktopCultureActionsOverflow ? (
                 <Button
                   size="small"
                   variant="outlined"
@@ -928,9 +931,24 @@ function RootLayout(): React.ReactElement {
                   aria-expanded={Boolean(cultureActionsMenuAnchor)}
                   onClick={handleCultureActionsMenuOpen}
                   endIcon={!isPhone ? <KeyboardArrowDownIcon fontSize="small" /> : undefined}
-                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25 }}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
                 >
                   {isPhone ? '⋯' : 'Import/Export'}
+                </Button>
+              ) : null}
+              {showDesktopCultureActionsOverflow ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  aria-label="Kultur-Aktionen öffnen"
+                  aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                  onClick={handleCultureActionsMenuOpen}
+                  endIcon={<KeyboardArrowDownIcon fontSize="small" />}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: 0, px: 1, flexShrink: 0 }}
+                >
+                  Aktionen
                 </Button>
               ) : null}
               <Menu
@@ -939,6 +957,18 @@ function RootLayout(): React.ReactElement {
                 open={Boolean(cultureActionsMenuAnchor)}
                 onClose={handleCultureActionsMenuClose}
               >
+                {showDesktopCultureActionsOverflow && cultureLibraryAction ? (
+                  <MenuItem
+                    aria-label={cultureLibraryAction.ariaLabel ?? cultureLibraryAction.label}
+                    onClick={() => {
+                      cultureLibraryAction.onClick();
+                      handleCultureActionsMenuClose();
+                    }}
+                    disabled={cultureLibraryAction.disabled}
+                  >
+                    <ListItemText primary={cultureLibraryAction.label} />
+                  </MenuItem>
+                ) : null}
                 {cultureImportExportActions.map((action) => (
                   <MenuItem
                     key={action.id}
@@ -989,7 +1019,7 @@ function RootLayout(): React.ReactElement {
                 );
                 return action.tooltip ? (
                   <Tooltip key={action.id} title={action.tooltip}>
-                    <Box component="span" sx={{ display: 'inline-flex' }}>{button}</Box>
+                    <Box component="span" sx={{ display: 'inline-flex', minWidth: 0 }}>{button}</Box>
                   </Tooltip>
                 ) : React.cloneElement(button, { key: action.id });
               });
@@ -998,12 +1028,12 @@ function RootLayout(): React.ReactElement {
                   key={`group-${group[0]?.groupId}-${index}`}
                   size="small"
                   variant="outlined"
-                  sx={{ ...segmentedButtonGroupSx, flexShrink: 0 }}
+                  sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}
                 >
                   {content}
                 </ButtonGroup>
               ) : (
-                <Box key={`group-${index}`} sx={{ display: 'inline-flex', flexShrink: 0 }}>{content}</Box>
+                <Box key={`group-${index}`} sx={{ display: 'inline-flex', flexShrink: 1, minWidth: 0 }}>{content}</Box>
               );
             });
           })()}
@@ -1015,14 +1045,14 @@ function RootLayout(): React.ReactElement {
                 onClick={handleTopbarPrimaryAction}
                 aria-label={topbarPrimaryAction.label}
                 startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
-                sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.5 }}
+                sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
               >
                 {isPhone ? <AddIcon fontSize="small" /> : topbarPrimaryAction.label}
               </Button>
             </Tooltip>
           ) : null}
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1, flexShrink: 0 }}>
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
             aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}
@@ -1113,7 +1143,7 @@ function RootLayout(): React.ReactElement {
                 open={Boolean(globalMenuAnchor)}
                 historyLoading={historyLoading}
                 userLabel={user?.email ? `(${user.email})` : (user?.display_label ? `(${user.display_label})` : '')}
-                isMobile={isPhone}
+                isMobile={isCompactTopbar}
                 onClose={handleGlobalMenuClose}
                 onOpenProjectSwitcher={handleOpenMobileProjectSwitcher}
                 onOpenCreateProject={handleOpenCreateProject}
@@ -1129,7 +1159,7 @@ function RootLayout(): React.ReactElement {
             </Box>
           )}
         </Toolbar>
-        {isPhone && hasMobileSecondaryRow ? (
+        {isCompactTopbar && hasMobileSecondaryRow ? (
           <Box className="mobile-action-scroll" sx={{ px: 0, pb: 0.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minHeight: 36, flexWrap: 'wrap', whiteSpace: 'normal', width: '100%' }}>
               {isCulturesPage ? (
@@ -1165,6 +1195,26 @@ function RootLayout(): React.ReactElement {
                       Import/Export
                     </Button>
                   ) : null}
+                  <Menu
+                    id="culture-actions-menu-mobile"
+                    anchorEl={cultureActionsMenuAnchor}
+                    open={Boolean(cultureActionsMenuAnchor)}
+                    onClose={handleCultureActionsMenuClose}
+                  >
+                    {cultureImportExportActions.map((action) => (
+                      <MenuItem
+                        key={`mobile-${action.id}`}
+                        aria-label={action.ariaLabel ?? action.label}
+                        onClick={() => {
+                          action.onClick();
+                          handleCultureActionsMenuClose();
+                        }}
+                        disabled={action.disabled}
+                      >
+                        <ListItemText primary={action.label} secondary={action.shortcutHint} />
+                      </MenuItem>
+                    ))}
+                  </Menu>
                 </>
               ) : null}
               {(() => {
