@@ -501,6 +501,19 @@ function RootLayout(): React.ReactElement {
     () => (isCulturesPage ? [] : topbarContextActions.filter((action) => action.id !== 'fields-global-add-field')),
     [isCulturesPage, topbarContextActions],
   );
+  const topbarModeControls = useMemo(
+    () => genericTopbarContextActions.filter((action) => (
+      action.groupId?.includes('mode')
+      || action.id.includes('view-mode')
+      || action.id.includes('interaction-mode')
+      || action.id.includes('calendar-mode')
+    )),
+    [genericTopbarContextActions],
+  );
+  const topbarOverflowActions = useMemo(
+    () => genericTopbarContextActions.filter((action) => !topbarModeControls.some((modeAction) => modeAction.id === action.id)),
+    [genericTopbarContextActions, topbarModeControls],
+  );
   const showCompactCultureLibrary = isCulturesPage && (isTabletOrNarrowDesktop || isPhone);
   const showIconOnlyCultureLibrary = isCulturesPage && (isPhone || isTabletOrNarrowDesktop);
   const showCultureImportExportButton = isCulturesPage;
@@ -934,7 +947,7 @@ function RootLayout(): React.ReactElement {
           ) : null}
           {(() => {
             const groups: TopbarContextAction[][] = [];
-            genericTopbarContextActions.forEach((action) => {
+            [...topbarModeControls, ...topbarOverflowActions].forEach((action) => {
               const lastGroup = groups[groups.length - 1];
               if (!lastGroup || !action.groupId || lastGroup[0]?.groupId !== action.groupId) {
                 groups.push([action]);
@@ -1146,7 +1159,7 @@ function RootLayout(): React.ReactElement {
               ) : null}
               {(() => {
                 const groups: TopbarContextAction[][] = [];
-                genericTopbarContextActions.forEach((action) => {
+                [...topbarModeControls, ...topbarOverflowActions].forEach((action) => {
                   const lastGroup = groups[groups.length - 1];
                   if (!lastGroup || !action.groupId || lastGroup[0]?.groupId !== action.groupId) {
                     groups.push([action]);
