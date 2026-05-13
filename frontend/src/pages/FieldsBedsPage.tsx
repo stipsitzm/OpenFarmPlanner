@@ -14,7 +14,6 @@ import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
-import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import { getSegmentedActionButtonSx, segmentedButtonGroupSx } from '../components/buttons/segmentedControlStyles';
 import { useTheme } from '@mui/material/styles';
 
@@ -28,8 +27,7 @@ export default function FieldsBedsPage(): React.ReactElement {
   const { t } = useTranslation(['fields', 'hierarchy']);
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down('sm'));
-  const isVeryNarrowPhone = useMediaQuery('(max-width:360px)');
-  const navigate = useNavigate();
+    const navigate = useNavigate();
   const location = useLocation();
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
@@ -204,51 +202,13 @@ export default function FieldsBedsPage(): React.ReactElement {
         ariaLabel: 'Parzelle hinzufügen',
       }]
       : [];
-    if (isXs) {
-      return globalActions;
-    }
-    return [
-      ...globalActions,
-      {
-        id: 'fields-interaction-mode-view',
-        label: t('fields:graphical.viewModeOption'),
-        onClick: () => setInteractionMode('view'),
-        active: interactionMode === 'view',
-        hidden: viewMode !== 'graphical',
-        reserveSpace: true,
-        ariaLabel: t('fields:graphical.modeAriaLabel'),
-        groupId: 'fields-interaction-mode',
-      },
-      {
-        id: 'fields-interaction-mode-edit',
-        label: t('fields:graphical.editModeOption'),
-        onClick: () => setInteractionMode('edit'),
-        active: interactionMode === 'edit',
-        hidden: viewMode !== 'graphical',
-        reserveSpace: true,
-        ariaLabel: t('fields:graphical.modeAriaLabel'),
-        groupId: 'fields-interaction-mode',
-      },
-      {
-        id: 'fields-view-mode-list',
-        label: t('fields:representation.table'),
-        onClick: () => setViewMode('table'),
-        active: viewMode === 'table',
-        ariaLabel: t('fields:representation.ariaLabel'),
-        groupId: 'fields-view-mode',
-      },
-      {
-        id: 'fields-view-mode-graphical',
-        label: t('fields:representation.graphical'),
-        onClick: () => setViewMode('graphical'),
-        active: viewMode === 'graphical',
-        ariaLabel: t('fields:representation.ariaLabel'),
-        groupId: 'fields-view-mode',
-      },
-    ];
-  }, [handleGlobalAddField, interactionMode, isXs, locations.length, shouldShowProjectRequiredState, t, viewMode]);
+    return globalActions;
+  }, [handleGlobalAddField, locations.length, shouldShowProjectRequiredState]);
 
-  useTopbarContextActions(setTopbarContextActions, contextActions);
+  useEffect(() => {
+    setTopbarContextActions(contextActions);
+    return () => setTopbarContextActions([]);
+  }, [contextActions, setTopbarContextActions]);
 
   return (
     <>
