@@ -63,7 +63,7 @@ export default function FieldsBedsPage(): React.ReactElement {
     },
     {
       id: 'areas.showGraphicalView',
-      label: 'Grafikansicht umschalten',
+      label: 'Grafikansicht',
       group: 'navigation',
       keywords: ['grafik', 'grafisch', 'anbauflächen'],
       shortcutHint: 'Alt+G',
