@@ -868,9 +868,9 @@ function RootLayout(): React.ReactElement {
         elevation={0}
         sx={{ borderBottom: '1px solid', borderColor: '#e4dfd4', bgcolor: '#f7f4ed', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
-        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: 'nowrap' }}>
+        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: 'nowrap', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1 }}>
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflow: 'hidden' }}>
             {!isDesktopUp ? (
               <Typography
                 component="h1"
@@ -898,8 +898,8 @@ function RootLayout(): React.ReactElement {
           </Box>
           {!isPhone ? <Box sx={{ flex: 1, minWidth: 0 }} /> : null}
           {!isPhone ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, flex: 1, justifyContent: 'flex-end' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflowX: 'auto', overflowY: 'hidden', pr: 0.5, scrollbarWidth: 'thin' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, maxWidth: '100%', flex: 1, justifyContent: 'flex-end', overflow: 'hidden' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, maxWidth: '100%', flex: 1, justifyContent: 'flex-end', overflow: 'hidden', pr: 0.25 }}>
           {isCulturesPage ? (
             <>
               {cultureLibraryAction ? (
@@ -911,7 +911,7 @@ function RootLayout(): React.ReactElement {
                       onClick={() => cultureLibraryAction.onClick()}
                       aria-label="Kulturbibliothek öffnen"
                       startIcon={<PublicIcon fontSize="small" />}
-                      sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: showIconOnlyCultureLibrary ? 36 : 'auto', px: showIconOnlyCultureLibrary ? 0.75 : 1.25 }}
+                      sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: showIconOnlyCultureLibrary ? 36 : 0, maxWidth: 170, px: showIconOnlyCultureLibrary ? 0.75 : 1.25, overflow: 'hidden', textOverflow: 'ellipsis' }}
                       disabled={cultureLibraryAction.disabled}
                     >
                       {!showIconOnlyCultureLibrary ? (showCompactCultureLibrary ? 'Bibliothek' : 'Kulturbibliothek') : null}
@@ -929,7 +929,7 @@ function RootLayout(): React.ReactElement {
                   aria-expanded={Boolean(cultureActionsMenuAnchor)}
                   onClick={handleCultureActionsMenuOpen}
                   endIcon={!isPhone ? <KeyboardArrowDownIcon fontSize="small" /> : undefined}
-                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25 }}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 0, px: isPhone ? 0.75 : 1.25 }}
                 >
                   {isPhone ? '⋯' : 'Import/Export'}
                 </Button>
@@ -1004,7 +1004,7 @@ function RootLayout(): React.ReactElement {
                   {content}
                 </ButtonGroup>
               ) : (
-                <Box key={`group-${index}`} sx={{ display: 'inline-flex', flexShrink: 0 }}>{content}</Box>
+                <Box key={`group-${index}`} sx={{ display: 'inline-flex', flexShrink: 1, minWidth: 0 }}>{content}</Box>
               );
             });
           })()}
@@ -1016,14 +1016,14 @@ function RootLayout(): React.ReactElement {
                 onClick={handleTopbarPrimaryAction}
                 aria-label={topbarPrimaryAction.label}
                 startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
-                sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.5 }}
+                sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 0, px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
               >
                 {isPhone ? <AddIcon fontSize="small" /> : topbarPrimaryAction.label}
               </Button>
             </Tooltip>
           ) : null}
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1.5, flexShrink: 0 }}>
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
             aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}
