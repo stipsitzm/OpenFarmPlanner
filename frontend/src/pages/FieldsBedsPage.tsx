@@ -146,7 +146,7 @@ export default function FieldsBedsPage(): React.ReactElement {
     setTargetLocationId(firstLocation?.id ?? '');
     setNewFieldName('');
     setAddFieldDialogOpen(true);
-  }, [addField, locations, navigate, t]);
+  }, [locations, navigate]);
 
   const handleConfirmAddField = useCallback((): void => {
     if (typeof targetLocationId !== 'number' || !newFieldName.trim()) {
