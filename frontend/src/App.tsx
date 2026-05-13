@@ -180,7 +180,13 @@ interface GlobalMenuProps {
   open: boolean;
   historyLoading: boolean;
   userLabel: string;
+  isMobile: boolean;
+  memberships: { project_id: number; project_name: string; role: 'admin' | 'member' }[];
+  activeProjectId: number | null;
+  isSwitchingProject: boolean;
   onClose: () => void;
+  onSwitchProject: (projectId: number) => Promise<void>;
+  onOpenProjectSettings: () => void;
   onOpenProjectHistory: () => Promise<void>;
   onOpenAccountSettings: () => void;
   onOpenShortcuts: () => void;
@@ -195,7 +201,13 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
     open,
     historyLoading,
     userLabel,
+    isMobile,
+    memberships,
+    activeProjectId,
+    isSwitchingProject,
     onClose,
+    onSwitchProject,
+    onOpenProjectSettings,
     onOpenProjectHistory,
     onOpenAccountSettings,
     onOpenShortcuts,
@@ -210,7 +222,36 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
       anchorEl={anchorEl}
       open={open}
       onClose={onClose}
-    >
+>
+      {isMobile ? (
+        <>
+          <MenuItem disabled>{t('projectSwitcher.ariaLabel')}</MenuItem>
+          {memberships.length === 0 ? (
+            <MenuItem disabled>{t('projectSwitcher.zeroProjects')}</MenuItem>
+          ) : (
+            memberships.map((membership) => (
+              <MenuItem
+                key={`mobile-project-${membership.project_id}`}
+                onClick={() => void onSwitchProject(membership.project_id)}
+                selected={membership.project_id === activeProjectId}
+                disabled={isSwitchingProject}
+              >
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{membership.project_name}</span>
+                  {membership.project_id === activeProjectId ? <CheckIcon fontSize="small" /> : null}
+                </Stack>
+              </MenuItem>
+            ))
+          )}
+          <MenuItem onClick={onOpenProjectSettings}>
+            {t('project.settings')}
+          </MenuItem>
+          <MenuItem onClick={onOpenProjectSettings}>
+            {t('commandPalette.commands.openProjectMembers')}
+          </MenuItem>
+          <Divider />
+        </>
+      ) : null}
       <MenuItem onClick={() => void onOpenProjectHistory()} disabled={historyLoading}>
         {t('commandPalette.commands.openVersionHistory')}
       </MenuItem>
@@ -796,7 +837,7 @@ function RootLayout(): React.ReactElement {
         elevation={0}
         sx={{ borderBottom: '1px solid', borderColor: '#e4dfd4', bgcolor: '#f7f4ed', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
-        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 1, sm: 2, md: 3 }, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
+        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 1, sm: 2, md: 3 }, flexWrap: 'nowrap' }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1 }}>
             {!isDesktopUp ? (
@@ -824,8 +865,9 @@ function RootLayout(): React.ReactElement {
             )}
             {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           </Box>
-          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, flexWrap: { xs: 'wrap', md: 'nowrap' }, width: { xs: '100%', md: 'auto' } }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflowX: isMobile ? 'auto' : 'visible', scrollbarWidth: 'thin', order: { xs: 2, md: 1 }, width: { xs: '100%', md: 'auto' }, pt: { xs: 0.5, md: 0 } }}>
+          {!isMobile ? (
+          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1 }}>
           {isCulturesPage ? (
             <>
               {cultureLibraryAction ? (
@@ -949,7 +991,7 @@ function RootLayout(): React.ReactElement {
             </Tooltip>
           ) : null}
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: { xs: 'auto', md: 3 }, order: { xs: 1, md: 2 }, width: { xs: '100%', md: 'auto' }, justifyContent: { xs: 'space-between', md: 'flex-start' } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 3 }}>
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
             aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}
@@ -995,7 +1037,13 @@ function RootLayout(): React.ReactElement {
             open={Boolean(globalMenuAnchor)}
             historyLoading={historyLoading}
             userLabel={user?.email ? `(${user.email})` : (user?.display_label ? `(${user.display_label})` : '')}
+            isMobile={false}
+            memberships={memberships}
+            activeProjectId={activeProjectId}
+            isSwitchingProject={isSwitchingProject}
             onClose={handleGlobalMenuClose}
+            onSwitchProject={handleSwitchProject}
+            onOpenProjectSettings={handleOpenProjectSettings}
             onOpenProjectHistory={handleOpenProjectHistory}
             onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
             onOpenShortcuts={handleOpenShortcuts}
@@ -1005,7 +1053,128 @@ function RootLayout(): React.ReactElement {
           />
             </Box>
           </Box>
+          ) : (
+            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.25 }}>
+              <IconButton
+                aria-label="Mehr"
+                aria-controls={globalMenuAnchor ? 'global-actions-menu' : undefined}
+                aria-haspopup="true"
+                onClick={handleGlobalMenuOpen}
+                size="small"
+                sx={{ color: 'text.primary' }}
+              >
+                <MoreVertIcon fontSize="small" />
+              </IconButton>
+              <GlobalMenu
+                anchorEl={globalMenuAnchor}
+                open={Boolean(globalMenuAnchor)}
+                historyLoading={historyLoading}
+                userLabel={user?.email ? `(${user.email})` : (user?.display_label ? `(${user.display_label})` : '')}
+                isMobile={isMobile}
+                memberships={memberships}
+                activeProjectId={activeProjectId}
+                isSwitchingProject={isSwitchingProject}
+                onClose={handleGlobalMenuClose}
+                onSwitchProject={handleSwitchProject}
+                onOpenProjectSettings={handleOpenProjectSettings}
+                onOpenProjectHistory={handleOpenProjectHistory}
+                onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
+                onOpenShortcuts={handleOpenShortcuts}
+                onOpenHelp={openGlobalHelp}
+                onLogout={handleLogout}
+                t={t}
+              />
+            </Box>
+          )}
         </Toolbar>
+        {isMobile ? (
+          <Box className="mobile-action-scroll" sx={{ px: 1, pb: 0.5 }}>
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minHeight: 36, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+              {isCulturesPage ? (
+                <>
+                  {cultureLibraryAction ? (
+                    <Tooltip title="Kulturbibliothek öffnen">
+                      <span>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => cultureLibraryAction.onClick()}
+                          aria-label="Kulturbibliothek öffnen"
+                          startIcon={<PublicIcon fontSize="small" />}
+                          sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
+                          disabled={cultureLibraryAction.disabled}
+                        >
+                          Bibliothek
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  ) : null}
+                  {showCultureImportExportButton || isMobile ? (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      aria-label="Import/Export öffnen"
+                      aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
+                      aria-haspopup="true"
+                      aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                      onClick={handleCultureActionsMenuOpen}
+                      sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
+                    >
+                      Import/Export
+                    </Button>
+                  ) : null}
+                </>
+              ) : null}
+              {(() => {
+                const groups: TopbarContextAction[][] = [];
+                genericTopbarContextActions.forEach((action) => {
+                  const lastGroup = groups[groups.length - 1];
+                  if (!lastGroup || !action.groupId || lastGroup[0]?.groupId !== action.groupId) {
+                    groups.push([action]);
+                    return;
+                  }
+                  lastGroup.push(action);
+                });
+                return groups.map((group, index) => {
+                  const isSegmentedGroup = group.length > 1 && group[0]?.groupId;
+                  const content = group.map((action) => (
+                    <Button
+                      key={action.id}
+                      size="small"
+                      variant={action.active ? 'contained' : 'outlined'}
+                      color={action.active ? 'success' : 'inherit'}
+                      onClick={action.onClick}
+                      aria-label={action.ariaLabel ?? action.label}
+                      aria-pressed={action.active}
+                      disabled={action.disabled}
+                      sx={{ ...getSegmentedActionButtonSx({ active: Boolean(action.active), hidden: Boolean(action.hidden) }), minHeight: 30, px: 1 }}
+                    >
+                      {action.label}
+                    </Button>
+                  ));
+                  return isSegmentedGroup ? (
+                    <ButtonGroup key={`mobile-group-${group[0]?.groupId}-${index}`} size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0 }}>
+                      {content}
+                    </ButtonGroup>
+                  ) : (
+                    <Box key={`mobile-group-${index}`} sx={{ display: 'inline-flex', flexShrink: 0 }}>{content}</Box>
+                  );
+                });
+              })()}
+              {topbarPrimaryAction ? (
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={() => navigate(topbarPrimaryAction.to)}
+                  aria-label={topbarPrimaryAction.label}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
+                >
+                  <AddIcon fontSize="small" />
+                </Button>
+              ) : null}
+            </Box>
+          </Box>
+        ) : null}
       </AppBar>
 
       <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav} PaperProps={{ sx: { bgcolor: '#f5f2eb', borderRight: '1px solid #e1dbd0' } }}>

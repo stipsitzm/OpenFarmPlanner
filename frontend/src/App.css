@@ -67,6 +67,18 @@
   font-size: 15px;
 }
 
+.mobile-action-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-action-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .nav-link {
   color: white;
   text-decoration: none;
