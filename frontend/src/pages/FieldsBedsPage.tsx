@@ -245,7 +245,7 @@ export default function FieldsBedsPage(): React.ReactElement {
     if (isXs) {
       return globalActions;
     }
-    return [...globalActions, ...viewModeActions, ...interactionModeActions];
+    return [...globalActions, ...interactionModeActions, ...viewModeActions];
   }, [
     handleGlobalAddField,
     interactionModeActions,
