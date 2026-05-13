@@ -160,7 +160,7 @@ function GanttChartPage(): React.ReactElement {
   const topbarActions = useMemo<TopbarContextAction[]>(() => [
     {
       id: 'calendar-mode-view',
-      label: t('ganttChart:viewMode.view'),
+      label: t('ganttChart:modeViewOption', { defaultValue: 'Ansicht' }),
       icon: '👁️',
       active: calendarMode === 'occupancy' && !editMode,
       hidden: calendarMode !== 'occupancy',
@@ -172,7 +172,7 @@ function GanttChartPage(): React.ReactElement {
     },
     {
       id: 'calendar-mode-edit',
-      label: t('ganttChart:viewMode.edit'),
+      label: t('ganttChart:modeEditOption', { defaultValue: 'Bearbeiten' }),
       icon: '✏️',
       active: calendarMode === 'occupancy' && editMode,
       hidden: calendarMode !== 'occupancy',

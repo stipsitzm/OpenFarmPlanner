@@ -14,9 +14,9 @@ import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
-import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import { getSegmentedActionButtonSx, segmentedButtonGroupSx } from '../components/buttons/segmentedControlStyles';
 import { useTheme } from '@mui/material/styles';
+import ContentViewControls from '../components/layout/ContentViewControls';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 const NOOP_SET_TOPBAR_ACTIONS = (): void => undefined;
@@ -28,7 +28,6 @@ export default function FieldsBedsPage(): React.ReactElement {
   const { t } = useTranslation(['fields', 'hierarchy']);
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down('sm'));
-  const isVeryNarrowPhone = useMediaQuery('(max-width:360px)');
   const navigate = useNavigate();
   const location = useLocation();
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -194,6 +193,45 @@ export default function FieldsBedsPage(): React.ReactElement {
     }
   }, [viewMode]);
 
+  const viewModeActions = useMemo<TopbarContextAction[]>(() => ([
+    {
+      id: 'fields-view-mode-list',
+      label: t('fields:representation.table'),
+      onClick: () => setViewMode('table'),
+      active: viewMode === 'table',
+      ariaLabel: t('fields:representation.ariaLabel'),
+      groupId: 'fields-view-mode',
+    },
+    {
+      id: 'fields-view-mode-graphical',
+      label: t('fields:representation.graphical'),
+      onClick: () => setViewMode('graphical'),
+      active: viewMode === 'graphical',
+      ariaLabel: t('fields:representation.ariaLabel'),
+      groupId: 'fields-view-mode',
+    },
+  ]), [t, viewMode]);
+
+  const interactionModeActions = useMemo<TopbarContextAction[]>(() => ([
+    {
+      id: 'fields-interaction-mode-view',
+      label: t('fields:graphical.viewModeOption'),
+      onClick: () => setInteractionMode('view'),
+      active: interactionMode === 'view',
+      hidden: viewMode !== 'graphical',
+      ariaLabel: t('fields:graphical.modeAriaLabel'),
+      groupId: 'fields-interaction-mode',
+    },
+    {
+      id: 'fields-interaction-mode-edit',
+      label: t('fields:graphical.editModeOption'),
+      onClick: () => setInteractionMode('edit'),
+      active: interactionMode === 'edit',
+      hidden: viewMode !== 'graphical',
+      ariaLabel: t('fields:graphical.modeAriaLabel'),
+      groupId: 'fields-interaction-mode',
+    },
+  ]), [interactionMode, t, viewMode]);
 
   const contextActions = useMemo<TopbarContextAction[]>(() => {
     const globalActions: TopbarContextAction[] = locations.length === 1 && !shouldShowProjectRequiredState
@@ -207,48 +245,20 @@ export default function FieldsBedsPage(): React.ReactElement {
     if (isXs) {
       return globalActions;
     }
-    return [
-      ...globalActions,
-      {
-        id: 'fields-interaction-mode-view',
-        label: t('fields:graphical.viewModeOption'),
-        onClick: () => setInteractionMode('view'),
-        active: interactionMode === 'view',
-        hidden: viewMode !== 'graphical',
-        reserveSpace: true,
-        ariaLabel: t('fields:graphical.modeAriaLabel'),
-        groupId: 'fields-interaction-mode',
-      },
-      {
-        id: 'fields-interaction-mode-edit',
-        label: t('fields:graphical.editModeOption'),
-        onClick: () => setInteractionMode('edit'),
-        active: interactionMode === 'edit',
-        hidden: viewMode !== 'graphical',
-        reserveSpace: true,
-        ariaLabel: t('fields:graphical.modeAriaLabel'),
-        groupId: 'fields-interaction-mode',
-      },
-      {
-        id: 'fields-view-mode-list',
-        label: t('fields:representation.table'),
-        onClick: () => setViewMode('table'),
-        active: viewMode === 'table',
-        ariaLabel: t('fields:representation.ariaLabel'),
-        groupId: 'fields-view-mode',
-      },
-      {
-        id: 'fields-view-mode-graphical',
-        label: t('fields:representation.graphical'),
-        onClick: () => setViewMode('graphical'),
-        active: viewMode === 'graphical',
-        ariaLabel: t('fields:representation.ariaLabel'),
-        groupId: 'fields-view-mode',
-      },
-    ];
-  }, [handleGlobalAddField, interactionMode, isXs, locations.length, shouldShowProjectRequiredState, t, viewMode]);
+    return [...globalActions, ...interactionModeActions, ...viewModeActions];
+  }, [
+    handleGlobalAddField,
+    interactionModeActions,
+    isXs,
+    locations.length,
+    shouldShowProjectRequiredState,
+    viewModeActions,
+  ]);
 
-  useTopbarContextActions(setTopbarContextActions, contextActions);
+  useEffect(() => {
+    setTopbarContextActions(contextActions);
+    return () => setTopbarContextActions([]);
+  }, [contextActions, setTopbarContextActions]);
 
   return (
     <>
@@ -296,64 +306,68 @@ export default function FieldsBedsPage(): React.ReactElement {
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
         {isXs && !shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState ? (
-          <Box
+          <ContentViewControls
+            primaryControls={(
+              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.375, flexWrap: 'nowrap', minWidth: 0, whiteSpace: 'nowrap' }}>
+                <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
+                  <Button
+                    aria-label={viewModeActions[0].ariaLabel ?? viewModeActions[0].label}
+                    aria-pressed={viewModeActions[0].active}
+                    variant={viewModeActions[0].active ? 'contained' : 'outlined'}
+                    color={viewModeActions[0].active ? 'success' : 'inherit'}
+                    onClick={viewModeActions[0].onClick}
+                    sx={{ ...getSegmentedActionButtonSx({ active: Boolean(viewModeActions[0].active) }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                  >
+                    {viewModeActions[0].label}
+                  </Button>
+                  <Button
+                    aria-label={viewModeActions[1].ariaLabel ?? viewModeActions[1].label}
+                    aria-pressed={viewModeActions[1].active}
+                    variant={viewModeActions[1].active ? 'contained' : 'outlined'}
+                    color={viewModeActions[1].active ? 'success' : 'inherit'}
+                    onClick={viewModeActions[1].onClick}
+                    sx={{ ...getSegmentedActionButtonSx({ active: Boolean(viewModeActions[1].active) }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                  >
+                    {viewModeActions[1].label}
+                  </Button>
+                </ButtonGroup>
+                {interactionModeActions.every((action) => !action.hidden) ? (
+                  <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
+                    <Button
+                      aria-label={interactionModeActions[0].ariaLabel ?? interactionModeActions[0].label}
+                      aria-pressed={interactionModeActions[0].active}
+                      variant={interactionModeActions[0].active ? 'contained' : 'outlined'}
+                      color={interactionModeActions[0].active ? 'success' : 'inherit'}
+                      onClick={interactionModeActions[0].onClick}
+                      sx={{ ...getSegmentedActionButtonSx({ active: Boolean(interactionModeActions[0].active) }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                    >
+                      {interactionModeActions[0].label}
+                    </Button>
+                    <Button
+                      aria-label={interactionModeActions[1].ariaLabel ?? interactionModeActions[1].label}
+                      aria-pressed={interactionModeActions[1].active}
+                      variant={interactionModeActions[1].active ? 'contained' : 'outlined'}
+                      color={interactionModeActions[1].active ? 'success' : 'inherit'}
+                      onClick={interactionModeActions[1].onClick}
+                      sx={{ ...getSegmentedActionButtonSx({ active: Boolean(interactionModeActions[1].active) }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                    >
+                      {interactionModeActions[1].label}
+                    </Button>
+                  </ButtonGroup>
+                ) : null}
+              </Box>
+            )}
             sx={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 0.5,
-              flexWrap: isVeryNarrowPhone ? 'wrap' : 'nowrap',
-              minWidth: 0,
               mb: 0.75,
+              '& > div': {
+                flexWrap: 'nowrap',
+                minWidth: 0,
+                gap: 0.375,
+                overflowX: 'auto',
+                whiteSpace: 'nowrap',
+              },
             }}
-          >
-            <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
-              <Button
-                aria-label={t('fields:representation.table')}
-                aria-pressed={viewMode === 'table'}
-                variant={viewMode === 'table' ? 'contained' : 'outlined'}
-                color={viewMode === 'table' ? 'success' : 'inherit'}
-                onClick={() => setViewMode('table')}
-                sx={{ ...getSegmentedActionButtonSx({ active: viewMode === 'table' }), px: 1, minHeight: 30 }}
-              >
-                {t('fields:representation.table')}
-              </Button>
-              <Button
-                aria-label={t('fields:representation.graphical')}
-                aria-pressed={viewMode === 'graphical'}
-                variant={viewMode === 'graphical' ? 'contained' : 'outlined'}
-                color={viewMode === 'graphical' ? 'success' : 'inherit'}
-                onClick={() => setViewMode('graphical')}
-                sx={{ ...getSegmentedActionButtonSx({ active: viewMode === 'graphical' }), px: 1, minHeight: 30 }}
-              >
-                {t('fields:representation.graphical')}
-              </Button>
-            </ButtonGroup>
-            {viewMode === 'graphical' ? (
-              <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
-                <Button
-                  aria-label={t('fields:graphical.viewModeOption')}
-                  aria-pressed={interactionMode === 'view'}
-                  variant={interactionMode === 'view' ? 'contained' : 'outlined'}
-                  color={interactionMode === 'view' ? 'success' : 'inherit'}
-                  onClick={() => setInteractionMode('view')}
-                  sx={{ ...getSegmentedActionButtonSx({ active: interactionMode === 'view' }), px: 1, minHeight: 30 }}
-                >
-                  {t('fields:graphical.viewModeOption')}
-                </Button>
-                <Button
-                  aria-label={t('fields:graphical.editModeOption')}
-                  aria-pressed={interactionMode === 'edit'}
-                  variant={interactionMode === 'edit' ? 'contained' : 'outlined'}
-                  color={interactionMode === 'edit' ? 'success' : 'inherit'}
-                  onClick={() => setInteractionMode('edit')}
-                  sx={{ ...getSegmentedActionButtonSx({ active: interactionMode === 'edit' }), px: 1, minHeight: 30 }}
-                >
-                  {t('fields:graphical.editModeOption')}
-                </Button>
-              </ButtonGroup>
-            ) : null}
-          </Box>
+          />
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState && viewMode === 'graphical' ? (
           <GraphicalFields
