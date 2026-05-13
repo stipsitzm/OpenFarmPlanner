@@ -517,7 +517,17 @@ function RootLayout(): React.ReactElement {
   const showCompactCultureLibrary = isCulturesPage && (isTabletOrNarrowDesktop || isPhone);
   const showIconOnlyCultureLibrary = isCulturesPage && (isPhone || isTabletOrNarrowDesktop);
   const showCultureImportExportButton = isCulturesPage;
-
+  const hasVisibleMobileContextActions = useMemo(
+    () => [...topbarModeControls, ...topbarOverflowActions].some((action) => !action.hidden),
+    [topbarModeControls, topbarOverflowActions],
+  );
+  const hasMobileSecondaryRow = useMemo(
+    () => (
+      (isCulturesPage && (Boolean(cultureLibraryAction) || showCultureImportExportButton))
+      || hasVisibleMobileContextActions
+    ),
+    [cultureLibraryAction, hasVisibleMobileContextActions, isCulturesPage, showCultureImportExportButton],
+  );
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
       return;
@@ -1119,7 +1129,7 @@ function RootLayout(): React.ReactElement {
             </Box>
           )}
         </Toolbar>
-        {isMobile ? (
+        {isMobile && hasMobileSecondaryRow ? (
           <Box className="mobile-action-scroll" sx={{ px: 0, pb: 0.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minHeight: 36, flexWrap: 'wrap', whiteSpace: 'normal', width: '100%' }}>
               {isCulturesPage ? (
