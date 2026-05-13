@@ -896,7 +896,7 @@ function RootLayout(): React.ReactElement {
             )}
             {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
           </Box>
-          {!isMobile ? (
+          {!isPhone ? (
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1 }}>
           {isCulturesPage ? (
@@ -1113,7 +1113,7 @@ function RootLayout(): React.ReactElement {
                 open={Boolean(globalMenuAnchor)}
                 historyLoading={historyLoading}
                 userLabel={user?.email ? `(${user.email})` : (user?.display_label ? `(${user.display_label})` : '')}
-                isMobile={isMobile}
+                isMobile={isPhone}
                 onClose={handleGlobalMenuClose}
                 onOpenProjectSwitcher={handleOpenMobileProjectSwitcher}
                 onOpenCreateProject={handleOpenCreateProject}
@@ -1129,7 +1129,7 @@ function RootLayout(): React.ReactElement {
             </Box>
           )}
         </Toolbar>
-        {isMobile && hasMobileSecondaryRow ? (
+        {isPhone && hasMobileSecondaryRow ? (
           <Box className="mobile-action-scroll" sx={{ px: 0, pb: 0.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minHeight: 36, flexWrap: 'wrap', whiteSpace: 'normal', width: '100%' }}>
               {isCulturesPage ? (
