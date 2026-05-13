@@ -1177,14 +1177,19 @@ export default function GraphicalFields({
 
   if (loading) {
     return (
-      <Box p={3}>
+      <Box sx={{ p: { xs: 0, sm: 3 } }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box p={3} ref={containerRef}>
+    <Box
+      ref={containerRef}
+      // This wrapper was the real xs gutter source on Anbauflächen mobile.
+      // Keep edge-aligned content on xs and preserve current spacing on sm+.
+      sx={{ p: { xs: 0, sm: 3 } }}
+    >
       <Stack
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
