@@ -193,6 +193,45 @@ export default function FieldsBedsPage(): React.ReactElement {
     }
   }, [viewMode]);
 
+  const viewModeActions = useMemo<TopbarContextAction[]>(() => ([
+    {
+      id: 'fields-view-mode-list',
+      label: t('fields:representation.table'),
+      onClick: () => setViewMode('table'),
+      active: viewMode === 'table',
+      ariaLabel: t('fields:representation.ariaLabel'),
+      groupId: 'fields-view-mode',
+    },
+    {
+      id: 'fields-view-mode-graphical',
+      label: t('fields:representation.graphical'),
+      onClick: () => setViewMode('graphical'),
+      active: viewMode === 'graphical',
+      ariaLabel: t('fields:representation.ariaLabel'),
+      groupId: 'fields-view-mode',
+    },
+  ]), [t, viewMode]);
+
+  const interactionModeActions = useMemo<TopbarContextAction[]>(() => ([
+    {
+      id: 'fields-interaction-mode-view',
+      label: t('fields:graphical.viewModeOption'),
+      onClick: () => setInteractionMode('view'),
+      active: interactionMode === 'view',
+      hidden: viewMode !== 'graphical',
+      ariaLabel: t('fields:graphical.modeAriaLabel'),
+      groupId: 'fields-interaction-mode',
+    },
+    {
+      id: 'fields-interaction-mode-edit',
+      label: t('fields:graphical.editModeOption'),
+      onClick: () => setInteractionMode('edit'),
+      active: interactionMode === 'edit',
+      hidden: viewMode !== 'graphical',
+      ariaLabel: t('fields:graphical.modeAriaLabel'),
+      groupId: 'fields-interaction-mode',
+    },
+  ]), [interactionMode, t, viewMode]);
 
   const contextActions = useMemo<TopbarContextAction[]>(() => {
     const globalActions: TopbarContextAction[] = locations.length === 1 && !shouldShowProjectRequiredState
@@ -203,8 +242,18 @@ export default function FieldsBedsPage(): React.ReactElement {
         ariaLabel: 'Parzelle hinzufügen',
       }]
       : [];
-    return globalActions;
-  }, [handleGlobalAddField, locations.length, shouldShowProjectRequiredState]);
+    if (isXs) {
+      return globalActions;
+    }
+    return [...globalActions, ...viewModeActions, ...interactionModeActions];
+  }, [
+    handleGlobalAddField,
+    interactionModeActions,
+    isXs,
+    locations.length,
+    shouldShowProjectRequiredState,
+    viewModeActions,
+  ]);
 
   useEffect(() => {
     setTopbarContextActions(contextActions);
@@ -262,47 +311,47 @@ export default function FieldsBedsPage(): React.ReactElement {
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.375, flexWrap: 'nowrap', minWidth: 0, whiteSpace: 'nowrap' }}>
                 <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
                   <Button
-                    aria-label={t('fields:representation.table')}
-                    aria-pressed={viewMode === 'table'}
-                    variant={viewMode === 'table' ? 'contained' : 'outlined'}
-                    color={viewMode === 'table' ? 'success' : 'inherit'}
-                    onClick={() => setViewMode('table')}
-                    sx={{ ...getSegmentedActionButtonSx({ active: viewMode === 'table' }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                    aria-label={viewModeActions[0].ariaLabel ?? viewModeActions[0].label}
+                    aria-pressed={viewModeActions[0].active}
+                    variant={viewModeActions[0].active ? 'contained' : 'outlined'}
+                    color={viewModeActions[0].active ? 'success' : 'inherit'}
+                    onClick={viewModeActions[0].onClick}
+                    sx={{ ...getSegmentedActionButtonSx({ active: Boolean(viewModeActions[0].active) }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
                   >
-                    {t('fields:representation.table')}
+                    {viewModeActions[0].label}
                   </Button>
                   <Button
-                    aria-label={t('fields:representation.graphical')}
-                    aria-pressed={viewMode === 'graphical'}
-                    variant={viewMode === 'graphical' ? 'contained' : 'outlined'}
-                    color={viewMode === 'graphical' ? 'success' : 'inherit'}
-                    onClick={() => setViewMode('graphical')}
-                    sx={{ ...getSegmentedActionButtonSx({ active: viewMode === 'graphical' }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                    aria-label={viewModeActions[1].ariaLabel ?? viewModeActions[1].label}
+                    aria-pressed={viewModeActions[1].active}
+                    variant={viewModeActions[1].active ? 'contained' : 'outlined'}
+                    color={viewModeActions[1].active ? 'success' : 'inherit'}
+                    onClick={viewModeActions[1].onClick}
+                    sx={{ ...getSegmentedActionButtonSx({ active: Boolean(viewModeActions[1].active) }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
                   >
-                    {t('fields:representation.graphical')}
+                    {viewModeActions[1].label}
                   </Button>
                 </ButtonGroup>
-                {viewMode === 'graphical' ? (
+                {interactionModeActions.every((action) => !action.hidden) ? (
                   <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
                     <Button
-                      aria-label={t('fields:graphical.viewModeOption')}
-                      aria-pressed={interactionMode === 'view'}
-                      variant={interactionMode === 'view' ? 'contained' : 'outlined'}
-                      color={interactionMode === 'view' ? 'success' : 'inherit'}
-                      onClick={() => setInteractionMode('view')}
-                      sx={{ ...getSegmentedActionButtonSx({ active: interactionMode === 'view' }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                      aria-label={interactionModeActions[0].ariaLabel ?? interactionModeActions[0].label}
+                      aria-pressed={interactionModeActions[0].active}
+                      variant={interactionModeActions[0].active ? 'contained' : 'outlined'}
+                      color={interactionModeActions[0].active ? 'success' : 'inherit'}
+                      onClick={interactionModeActions[0].onClick}
+                      sx={{ ...getSegmentedActionButtonSx({ active: Boolean(interactionModeActions[0].active) }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
                     >
-                      {t('fields:graphical.viewModeOption')}
+                      {interactionModeActions[0].label}
                     </Button>
                     <Button
-                      aria-label={t('fields:graphical.editModeOption')}
-                      aria-pressed={interactionMode === 'edit'}
-                      variant={interactionMode === 'edit' ? 'contained' : 'outlined'}
-                      color={interactionMode === 'edit' ? 'success' : 'inherit'}
-                      onClick={() => setInteractionMode('edit')}
-                      sx={{ ...getSegmentedActionButtonSx({ active: interactionMode === 'edit' }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                      aria-label={interactionModeActions[1].ariaLabel ?? interactionModeActions[1].label}
+                      aria-pressed={interactionModeActions[1].active}
+                      variant={interactionModeActions[1].active ? 'contained' : 'outlined'}
+                      color={interactionModeActions[1].active ? 'success' : 'inherit'}
+                      onClick={interactionModeActions[1].onClick}
+                      sx={{ ...getSegmentedActionButtonSx({ active: Boolean(interactionModeActions[1].active) }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
                     >
-                      {t('fields:graphical.editModeOption')}
+                      {interactionModeActions[1].label}
                     </Button>
                   </ButtonGroup>
                 ) : null}
