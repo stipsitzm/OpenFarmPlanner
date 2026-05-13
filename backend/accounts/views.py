@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sessions.models import Session
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.utils import timezone, translation
@@ -151,14 +151,39 @@ def _logout_all_user_sessions(user_id: int) -> None:
 
 
 def _send_activation_email(user: User) -> None:
+    """
+    Send multipart activation email with explicit sender and reply-to metadata.
+
+    Deliverability note: multipart (text + HTML) improves compatibility across clients
+    and avoids HTML-only spam signals. We intentionally avoid no-reply senders so
+    recipients can contact support and mailbox providers see a trustworthy identity.
+    """
     activation_link = _build_frontend_token_link('/activate', user)
     with translation.override('de'):
-        subject = _('Activate your OpenFarmPlanner account')
-        body = render_to_string('accounts/emails/activation_email.txt', {
+        subject = 'OpenFarmPlanner – Registrierung bestätigen'
+        text_body = render_to_string('accounts/emails/activation_email.txt', {
             'activation_link': activation_link,
+            'contact_email': settings.SUPPORT_CONTACT_EMAIL,
+            'project_website': 'https://openfarmplanner.org',
+            'project_name': 'OpenFarmPlanner',
             'user': user,
         })
-    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email])
+        html_body = render_to_string('accounts/emails/activation_email.html', {
+            'activation_link': activation_link,
+            'contact_email': settings.SUPPORT_CONTACT_EMAIL,
+            'project_website': 'https://openfarmplanner.org',
+            'project_name': 'OpenFarmPlanner',
+            'user': user,
+        })
+    email_message = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[user.email],
+        reply_to=[settings.DEFAULT_REPLY_TO_EMAIL],
+    )
+    email_message.attach_alternative(html_body, 'text/html')
+    email_message.send(fail_silently=False)
 
 
 def _send_password_reset_email(user: User) -> None:

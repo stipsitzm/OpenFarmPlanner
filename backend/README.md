@@ -68,7 +68,7 @@ For production, configure these environment variables:
 - `SESSION_COOKIE_SECURE` - Secure session cookies in HTTPS deployments
 - `CSRF_COOKIE_SECURE` - Secure CSRF cookies in HTTPS deployments
 - `SECURE_HSTS_SECONDS` - HSTS max-age for production
-- `EMAIL_HOST_PASSWORD` - SMTP password for `noreply@zwiebelzopf.at`
+- `EMAIL_HOST_PASSWORD` - SMTP password for `info@openfarmplanner.org`
 - `PUBLIC_FRONTEND_URL` - Public frontend base URL used in activation, password reset, and invitation links
 - `FRONTEND_URL` - Optional local/development fallback for frontend links
 - `URL_PREFIX` - Optional backend URL prefix (default: root). Example: `openfarmplanner` for legacy prefixed routing.
@@ -82,9 +82,10 @@ EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
 EMAIL_HOST=mail.uberspace.de
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
-EMAIL_HOST_USER=noreply@zwiebelzopf.at
+EMAIL_HOST_USER=info@openfarmplanner.org
 EMAIL_HOST_PASSWORD=<your-secret-password>
-DEFAULT_FROM_EMAIL=OpenFarmPlanner <noreply@zwiebelzopf.at>
+DEFAULT_FROM_EMAIL=OpenFarmPlanner <info@openfarmplanner.org>
+DEFAULT_REPLY_TO_EMAIL=info@openfarmplanner.org
 PUBLIC_FRONTEND_URL=https://your-frontend-domain.tld
 ```
 
@@ -137,3 +138,11 @@ Auth endpoints are available under `/api/auth/`:
 - Email behavior is environment-driven (console backend in development by default).
 
 See `.env.example` and `config/settings.py` for all available backend configuration options.
+
+
+### Activation email deliverability notes
+
+- Activation messages are sent as multipart emails (`text/plain` + `text/html`) so older and security-focused clients can reliably render them and mailbox providers do not classify them as HTML-only automation.
+- The sender uses `OpenFarmPlanner <info@openfarmplanner.org>` and no `noreply` mailbox. This improves user trust and helps long-term sender reputation because recipients can reply when needed.
+- A `Reply-To` header is set to `info@openfarmplanner.org` so user responses route to a monitored inbox.
+- The HTML template intentionally stays simple (single button plus visible fallback URL, no tracking pixels, no image-heavy marketing layout).

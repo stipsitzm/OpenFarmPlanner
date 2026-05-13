@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+  <body style="margin:0; padding:0; background:#f8fafc; color:#111827; font-family:Arial, Helvetica, sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc; padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px; background:#ffffff; border:1px solid #e5e7eb; border-radius:8px;">
+            <tr>
+              <td style="padding:24px; font-size:16px; line-height:1.6;">
+                <p style="margin:0 0 16px 0;">Hallo,</p>
+                <p style="margin:0 0 16px 0;">du hast gerade ein Konto bei OpenFarmPlanner erstellt.</p>
+                <p style="margin:0 0 16px 0;">Bitte bestätige deine Registrierung über den folgenden Link:</p>
+                <p style="margin:0 0 20px 0;">
+                  <a href="{{ activation_link }}" style="display:inline-block; background:#2563eb; color:#ffffff; text-decoration:none; padding:10px 16px; border-radius:6px;">Registrierung bestätigen</a>
+                </p>
+                <p style="margin:0 0 8px 0;">Falls der Button nicht funktioniert, kopiere bitte diesen Link in deinen Browser:</p>
+                <p style="margin:0 0 16px 0; word-break:break-all;"><a href="{{ activation_link }}" style="color:#1d4ed8; text-decoration:underline;">{{ activation_link }}</a></p>
+                <p style="margin:0 0 16px 0;">OpenFarmPlanner ist eine Open-Source-Webanwendung zur Planung von Gemüsebau und CSA-Anbau.</p>
+                <p style="margin:0 0 24px 0;">Falls du kein Konto erstellt hast, kannst du diese E-Mail ignorieren.</p>
+                <hr style="border:none; border-top:1px solid #e5e7eb; margin:0 0 16px 0;">
+                <p style="margin:0; font-size:13px; color:#4b5563;">
+                  {{ project_name }}<br>
+                  <a href="{{ project_website }}" style="color:#4b5563;">{{ project_website }}</a><br>
+                  <a href="mailto:{{ contact_email }}" style="color:#4b5563;">{{ contact_email }}</a>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
