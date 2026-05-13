@@ -68,11 +68,9 @@
 }
 
 .mobile-action-scroll {
-  overflow-x: auto;
-  overflow-y: hidden;
-  white-space: nowrap;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
+  overflow-y: visible;
+  white-space: normal;
 }
 
 .mobile-action-scroll::-webkit-scrollbar {

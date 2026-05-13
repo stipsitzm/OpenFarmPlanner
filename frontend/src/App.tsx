@@ -284,6 +284,7 @@ function RootLayout(): React.ReactElement {
   const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
   const isLargeDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const isPhone = useMediaQuery(theme.breakpoints.down('sm'));
+  const isVeryNarrowMobile = useMediaQuery('(max-width:360px)');
   const isPhonePortrait = useMediaQuery(`${theme.breakpoints.down('sm')} and (orientation: portrait)`);
   const isTabletOrNarrowDesktop = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
@@ -301,6 +302,7 @@ function RootLayout(): React.ReactElement {
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
   const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
+  const [mobileActionsOverflowAnchor, setMobileActionsOverflowAnchor] = useState<null | HTMLElement>(null);
   const navItems = useMemo(() => ([
     { to: '/app/dashboard', label: t('dashboard'), activeAliases: [], keywords: ['übersicht', 'dashboard'], icon: <DashboardOutlinedIcon fontSize="small" /> },
     ...MAIN_NAV_ITEMS.map((item) => ({
@@ -475,6 +477,12 @@ function RootLayout(): React.ReactElement {
 
   const handleCultureActionsMenuClose = () => {
     setCultureActionsMenuAnchor(null);
+  };
+  const handleMobileActionsOverflowOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setMobileActionsOverflowAnchor(event.currentTarget);
+  };
+  const handleMobileActionsOverflowClose = () => {
+    setMobileActionsOverflowAnchor(null);
   };
   const isCulturesPage = location.pathname.startsWith('/app/cultures');
   const cultureLibraryAction = useMemo(
@@ -1073,7 +1081,7 @@ function RootLayout(): React.ReactElement {
         </Toolbar>
         {isMobile ? (
           <Box className="mobile-action-scroll" sx={{ px: 1, pb: 0.5 }}>
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minHeight: 36, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minHeight: 36, flexWrap: 'wrap', whiteSpace: 'normal', width: '100%' }}>
               {isCulturesPage ? (
                 <>
                   {cultureLibraryAction ? (
@@ -1119,7 +1127,9 @@ function RootLayout(): React.ReactElement {
                   }
                   lastGroup.push(action);
                 });
-                return groups.map((group, index) => {
+                const visibleGroups = isVeryNarrowMobile ? groups.slice(0, 2) : groups;
+                const overflowGroups = isVeryNarrowMobile ? groups.slice(2) : [];
+                const visibleNodes = visibleGroups.map((group, index) => {
                   const isSegmentedGroup = group.length > 1 && group[0]?.groupId;
                   const content = group.map((action) => (
                     <Button
@@ -1144,6 +1154,46 @@ function RootLayout(): React.ReactElement {
                     <Box key={`mobile-group-${index}`} sx={{ display: 'inline-flex', flexShrink: 0 }}>{content}</Box>
                   );
                 });
+                if (overflowGroups.length === 0) {
+                  return visibleNodes;
+                }
+                return [
+                  ...visibleNodes,
+                  <IconButton
+                    key="mobile-actions-overflow-trigger"
+                    size="small"
+                    aria-label="Weitere Aktionen"
+                    aria-controls={mobileActionsOverflowAnchor ? 'mobile-actions-overflow-menu' : undefined}
+                    aria-haspopup="true"
+                    aria-expanded={Boolean(mobileActionsOverflowAnchor)}
+                    onClick={handleMobileActionsOverflowOpen}
+                    sx={{ border: '1px solid', borderColor: 'divider' }}
+                  >
+                    <MoreVertIcon fontSize="small" />
+                  </IconButton>,
+                  <Menu
+                    key="mobile-actions-overflow-menu"
+                    id="mobile-actions-overflow-menu"
+                    anchorEl={mobileActionsOverflowAnchor}
+                    open={Boolean(mobileActionsOverflowAnchor)}
+                    onClose={handleMobileActionsOverflowClose}
+                  >
+                    {overflowGroups.flatMap((group, groupIndex) =>
+                      group.map((action) => (
+                        <MenuItem
+                          key={`mobile-overflow-action-${groupIndex}-${action.id}`}
+                          onClick={() => {
+                            action.onClick();
+                            handleMobileActionsOverflowClose();
+                          }}
+                          disabled={action.disabled}
+                        >
+                          {action.label}
+                        </MenuItem>
+                      ))
+                    )}
+                  </Menu>,
+                ];
               })()}
               {topbarPrimaryAction ? (
                 <Button
