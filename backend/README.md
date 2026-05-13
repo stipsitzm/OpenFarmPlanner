@@ -85,7 +85,6 @@ EMAIL_USE_TLS=True
 EMAIL_HOST_USER=info@openfarmplanner.org
 EMAIL_HOST_PASSWORD=<your-secret-password>
 DEFAULT_FROM_EMAIL=OpenFarmPlanner <info@openfarmplanner.org>
-DEFAULT_REPLY_TO_EMAIL=info@openfarmplanner.org
 PUBLIC_FRONTEND_URL=https://your-frontend-domain.tld
 ```
 
@@ -144,5 +143,5 @@ See `.env.example` and `config/settings.py` for all available backend configurat
 
 - Activation messages are sent as multipart emails (`text/plain` + `text/html`) so older and security-focused clients can reliably render them and mailbox providers do not classify them as HTML-only automation.
 - The sender uses `OpenFarmPlanner <info@openfarmplanner.org>` and no `noreply` mailbox. This improves user trust and helps long-term sender reputation because recipients can reply when needed.
-- A `Reply-To` header is set to `info@openfarmplanner.org` so user responses route to a monitored inbox.
+- The sender mailbox is a monitored `info@openfarmplanner.org` address so recipients can reply directly when needed.
 - The HTML template intentionally stays simple (single button plus visible fallback URL, no tracking pixels, no image-heavy marketing layout).
