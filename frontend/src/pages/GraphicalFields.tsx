@@ -440,8 +440,9 @@ export default function GraphicalFields({
   }, [locations]);
 
   useEffect(() => {
+    const timers = saveTimers.current;
     return () => {
-      Object.values(saveTimers.current).forEach((timer) => {
+      Object.values(timers).forEach((timer) => {
         window.clearTimeout(timer);
       });
     };
@@ -680,7 +681,7 @@ export default function GraphicalFields({
     });
   };
 
-  const updateViewport = (
+  const updateViewport = useCallback((
     locationId: number,
     updater: (current: ViewportState) => ViewportState,
   ): void => {
@@ -702,7 +703,7 @@ export default function GraphicalFields({
       );
       return { ...prev, [locationId]: nextClamped };
     });
-  };
+  }, [getContentBoundsForLocation, stageHeight, stageWidth]);
 
   const handleZoom = (locationId: number, factor: number): void => {
     updateViewport(locationId, (current) =>
@@ -713,7 +714,7 @@ export default function GraphicalFields({
     );
   };
 
-  const handlePanByOffset = (
+  const handlePanByOffset = useCallback((
     locationId: number,
     deltaX: number,
     deltaY: number,
@@ -723,7 +724,7 @@ export default function GraphicalFields({
       x: current.x + deltaX,
       y: current.y + deltaY,
     }));
-  };
+  }, [updateViewport]);
 
   const handleStageWheel = (
     locationId: number,
