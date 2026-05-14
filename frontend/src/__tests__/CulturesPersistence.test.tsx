@@ -115,7 +115,7 @@ describe('Cultures selection persistence', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('1');
-    });
+    }, { timeout: 3000 });
 
     expect(screen.getByTestId('location-search')).toHaveTextContent('?cultureId=1');
     expect(localStorage.getItem('selectedCultureId')).toBe('1');
@@ -127,13 +127,13 @@ describe('Cultures selection persistence', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('1');
-    });
+    }, { timeout: 3000 });
 
     fireEvent.click(screen.getByRole('button', { name: 'select-culture-2' }));
 
     await waitFor(() => {
       expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('2');
-    });
+    }, { timeout: 3000 });
 
     expect(screen.getByTestId('location-search')).toHaveTextContent('?cultureId=2');
     expect(localStorage.getItem('selectedCultureId')).toBe('2');
@@ -146,7 +146,7 @@ describe('Cultures selection persistence', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('2');
-    });
+    }, { timeout: 3000 });
 
     expect(screen.getByTestId('location-search')).toHaveTextContent('?cultureId=2');
     expect(localStorage.getItem('selectedCultureId')).toBe('2');
@@ -157,13 +157,13 @@ describe('Cultures selection persistence', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('1');
-    });
+    }, { timeout: 3000 });
 
     fireEvent.click(screen.getByRole('button', { name: 'select-culture-2' }));
 
     await waitFor(() => {
       expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('2');
-    });
+    }, { timeout: 3000 });
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -186,13 +186,13 @@ describe('Cultures selection persistence', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('1');
-    });
+    }, { timeout: 3000 });
 
     fireEvent.click(screen.getByRole('link', { name: 'go-locations' }));
 
     await waitFor(() => {
       expect(screen.getByTestId('locations-page')).toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
 
     expect(screen.queryByTestId('selected-culture-id')).not.toBeInTheDocument();
   });

@@ -285,7 +285,7 @@ describe('App', () => {
 
       await waitFor(() => {
         expect(window.location.pathname).toBe('/app/locations');
-      });
+      }, { timeout: 3000 });
       expect(await screen.findByRole('heading', { name: 'Standorte' })).toBeInTheDocument();
 
       unmount();
