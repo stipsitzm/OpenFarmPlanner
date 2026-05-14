@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from '../App';
 import { resolveRouterBasename } from '../routerBasename';
 import { CommandProvider } from '../commands/CommandProvider';
@@ -250,6 +250,46 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Lieferanten' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ Lieferant anlegen' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Speichern' })).not.toBeInTheDocument();
+  });
+
+  it('navigates from split/detail pages through the sidebar without being pulled back', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: null,
+      last_project_id: null,
+      resolved_project_id: null,
+      needs_project_selection: false,
+      memberships: [],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+    };
+    authState.activeProjectId = null;
+
+    for (const initialPath of ['/app/cultures', '/app/anbauplaene']) {
+      window.history.pushState({}, '', initialPath);
+      const { unmount } = render(<CommandProvider><App /></CommandProvider>);
+
+      await screen.findByText(translations.navigation.locations);
+      const locationsLink = screen
+        .getAllByRole('link', { name: translations.navigation.locations })
+        .find((link) => link.getAttribute('href') === '/app/locations');
+      expect(locationsLink).toBeDefined();
+      if (!locationsLink) {
+        throw new Error('Locations sidebar link was not found');
+      }
+      fireEvent.click(locationsLink);
+
+      await waitFor(() => {
+        expect(window.location.pathname).toBe('/app/locations');
+      });
+      expect(await screen.findByRole('heading', { name: 'Standorte' })).toBeInTheDocument();
+
+      unmount();
+    }
   });
 
 

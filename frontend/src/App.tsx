@@ -573,8 +573,7 @@ function RootLayout(): React.ReactElement {
   const activeMembershipRole = activeMembership?.role ?? null;
 
   const getCurrentRouteFromLocation = useCallback((): string => {
-    const pathname = window.location.pathname || location.pathname;
-    return normalizeMainRoutePath(pathname);
+    return normalizeMainRoutePath(location.pathname);
   }, [location.pathname]);
 
   const navigateRelativePage = useCallback((direction: 1 | -1): void => {

@@ -7,8 +7,8 @@
  * @returns The Planting Plans page component
  */
 
-import { useState, useEffect, useMemo, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useCallback, useState, useEffect, useMemo, useRef } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type {
   GridCellParams,
   GridColDef,
@@ -427,7 +427,9 @@ function PlantingPlans(): React.ReactElement {
   const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
@@ -459,6 +461,28 @@ function PlantingPlans(): React.ReactElement {
   const [isMobileNotesSaving, setIsMobileNotesSaving] = useState(false);
   const mobilePrefillHandledRef = useRef(false);
   const createIntentHandledRef = useRef(false);
+
+  const replacePlantingPlanSearchParams = useCallback((nextParams: URLSearchParams): void => {
+    const browserPathname = window.location.pathname;
+    if (browserPathname.includes("/app/") && !browserPathname.endsWith(location.pathname)) {
+      return;
+    }
+
+    const nextSearch = nextParams.toString();
+    const currentSearch = location.search.startsWith("?") ? location.search.slice(1) : location.search;
+    if (nextSearch === currentSearch) {
+      return;
+    }
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+        hash: location.hash,
+      },
+      { replace: true },
+    );
+  }, [location.hash, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     if (isMobile) {
@@ -713,11 +737,11 @@ function PlantingPlans(): React.ReactElement {
     }
 
     if (hasChanges) {
-      setSearchParams(newParams, { replace: true });
+      replacePlantingPlanSearchParams(newParams);
     }
 
     urlParamProcessedRef.current = true;
-  }, [initialSelection, searchParams, setSearchParams]);
+  }, [initialSelection, replacePlantingPlanSearchParams, searchParams]);
 
   /**
    * Fetch cultures and beds for dropdowns
@@ -1546,9 +1570,9 @@ function PlantingPlans(): React.ReactElement {
     handleCreatePlan();
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("create");
-    setSearchParams(nextParams, { replace: true });
+    replacePlantingPlanSearchParams(nextParams);
     createIntentHandledRef.current = true;
-  }, [canCreatePlan, handleCreatePlan, searchParams, setSearchParams]);
+  }, [canCreatePlan, handleCreatePlan, replacePlantingPlanSearchParams, searchParams]);
 
   return (
     <PageContainer variant="workspacePage">
