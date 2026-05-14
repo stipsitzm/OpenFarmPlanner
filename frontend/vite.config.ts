@@ -47,6 +47,13 @@ export default defineConfig({
     testTimeout: 10000,
     hookTimeout: 10000,
     teardownTimeout: 5000,
+    pool: process.env.CI ? 'forks' : 'threads',
+    poolOptions: {
+      forks: {
+        singleFork: Boolean(process.env.CI),
+      },
+    },
+    fileParallelism: !process.env.CI,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
     server: {
