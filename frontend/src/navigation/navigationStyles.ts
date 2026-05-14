@@ -112,6 +112,12 @@ export const getNavigationIconSx = (
 export const getNavigationTextProps = (isActive: boolean) => ({
   fontWeight: isActive ? 600 : 500,
   fontSize: '0.95rem',
+  sx: (theme: Theme) => ({
+    color: isActive ? theme.palette.navigation.activeText : theme.palette.navigation.inactiveText,
+    '.MuiListItemButton-root:hover &': {
+      color: isActive ? theme.palette.navigation.activeText : theme.palette.navigation.inactiveHoverText,
+    },
+  }),
 });
 
 export const mobileNavigationDrawerPaperSx: SxProps<Theme> = (theme) => ({
@@ -141,6 +147,12 @@ export const getMobileNavigationItemSx = (isActive: boolean): SxProps<Theme> => 
 
 export const getMobileNavigationTextProps = (isActive: boolean) => ({
   fontWeight: isActive ? 600 : 500,
+  sx: (theme: Theme) => ({
+    color: isActive ? theme.palette.navigation.activeText : theme.palette.navigation.inactiveText,
+    '.MuiListItemButton-root:hover &': {
+      color: isActive ? theme.palette.navigation.activeText : theme.palette.navigation.inactiveHoverText,
+    },
+  }),
 });
 
 export const getMobileNavigationIconSx = (isActive: boolean): SxProps<Theme> => (theme) => ({

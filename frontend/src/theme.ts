@@ -124,7 +124,7 @@ const theme = createTheme({
       inactiveHoverIcon: '#000000',
       hoverBackground: 'rgba(76, 135, 86, 0.07)',
       hoverBorder: 'rgba(76, 135, 86, 0.12)',
-      activeText: '#000000',
+      activeText: '#1f6224',
       activeIcon: '#1f6224',
       activeBackground: 'rgba(76, 135, 86, 0.13)',
       activeHoverBackground: 'rgba(76, 135, 86, 0.17)',
