@@ -1310,7 +1310,7 @@ function RootLayout(): React.ReactElement {
           minWidth: 0,
         }}
       >
-        <Outlet context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
+        <Outlet key={location.pathname} context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
       </Box>
       </Box>
 
