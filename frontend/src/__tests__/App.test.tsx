@@ -175,7 +175,7 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Projekt anlegen' })).toBeInTheDocument();
   });
 
-  it('opens the same create-project dialog from empty-state CTA for users without projects', async () => {
+  it('opens the create-project dialog from the project switcher for users without projects', async () => {
     authState.user = {
       id: 1,
       email: 'demo@example.com',
@@ -194,11 +194,12 @@ describe('App', () => {
     window.history.pushState({}, '', '/app/fields-beds');
 
     render(<CommandProvider><App /></CommandProvider>);
-    fireEvent.click(await screen.findByRole('button', { name: 'Erstes Projekt anlegen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
+    fireEvent.click(await screen.findByText('Neues Projekt'));
     expect(await screen.findByRole('heading', { name: 'Projekt anlegen' })).toBeInTheDocument();
   });
 
-  it('does not show cultures load error for users without projects and shows project-required CTA', async () => {
+  it('does not show cultures load error for users without projects', async () => {
     authState.user = {
       id: 1,
       email: 'demo@example.com',
@@ -218,11 +219,11 @@ describe('App', () => {
 
     render(<CommandProvider><App /></CommandProvider>);
 
-    expect(await screen.findByRole('button', { name: 'Erstes Projekt anlegen' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Kulturen' })).toBeInTheDocument();
     expect(screen.queryByText('Fehler beim Laden der Kulturen')).not.toBeInTheDocument();
   });
 
-  it('shows project-required state on suppliers page for users without projects', async () => {
+  it('does not open supplier creation from query intent for users without projects', async () => {
     authState.user = {
       id: 1,
       email: 'demo@example.com',
@@ -242,7 +243,7 @@ describe('App', () => {
 
     render(<CommandProvider><App /></CommandProvider>);
 
-    expect(await screen.findByRole('button', { name: 'Erstes Projekt anlegen' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Lieferanten' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ Lieferant anlegen' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Speichern' })).not.toBeInTheDocument();
   });

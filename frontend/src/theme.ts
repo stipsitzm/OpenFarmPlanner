@@ -1,6 +1,6 @@
 // Central MUI theme configuration
 // Controls colors, shapes, and component style overrides.
-import { createTheme } from '@mui/material/styles';
+import { alpha, createTheme } from '@mui/material/styles';
 import type {} from '@mui/x-data-grid/themeAugmentation';
 
 const theme = createTheme({
@@ -36,7 +36,10 @@ const theme = createTheme({
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#9c27b0',
+      main: '#256f2a',
+      dark: '#1b5e20',
+      light: '#4f9853',
+      contrastText: '#ffffff',
     },
     error: {
       main: '#d32f2f',
@@ -73,6 +76,46 @@ const theme = createTheme({
             backgroundColor: '#1f6224',
           },
         },
+        outlined: ({ theme }) => ({
+          color: theme.palette.primary.main,
+          borderColor: theme.palette.primary.main,
+          '&:hover': {
+            color: theme.palette.primary.dark,
+            borderColor: theme.palette.primary.dark,
+            backgroundColor: alpha(theme.palette.primary.main, 0.08),
+          },
+          '&.Mui-focusVisible': {
+            outline: `2px solid ${theme.palette.primary.light}`,
+            outlineOffset: 2,
+          },
+          '&:active': {
+            color: theme.palette.primary.dark,
+            borderColor: theme.palette.primary.dark,
+            backgroundColor: alpha(theme.palette.primary.main, 0.12),
+          },
+          '&.Mui-disabled': {
+            borderColor: theme.palette.action.disabledBackground,
+            color: theme.palette.action.disabled,
+          },
+        }),
+        outlinedSecondary: ({ theme }) => ({
+          color: theme.palette.secondary.main,
+          borderColor: theme.palette.secondary.main,
+          '&:hover': {
+            color: theme.palette.secondary.dark,
+            borderColor: theme.palette.secondary.dark,
+            backgroundColor: alpha(theme.palette.secondary.main, 0.08),
+          },
+          '&.Mui-focusVisible': {
+            outline: `2px solid ${theme.palette.secondary.light}`,
+            outlineOffset: 2,
+          },
+          '&:active': {
+            color: theme.palette.secondary.dark,
+            borderColor: theme.palette.secondary.dark,
+            backgroundColor: alpha(theme.palette.secondary.main, 0.12),
+          },
+        }),
         startIcon: {
           display: 'inline-flex',
           alignItems: 'center',
