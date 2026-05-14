@@ -1702,6 +1702,10 @@ function createAppRouter(basename: string) {
       element: withLazyFallback(<ActivatePage />),
     },
     {
+      path: '/activate/:uid/:token',
+      element: withLazyFallback(<ActivatePage />),
+    },
+    {
       path: '/forgot-password',
       element: withLazyFallback(<ForgotPasswordPage />),
     },
