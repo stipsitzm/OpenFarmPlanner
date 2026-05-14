@@ -82,15 +82,15 @@ interface CultureDetailProps {
 const CULTURE_FILTERS_STORAGE_KEY = 'culturesDetailFiltersV1';
 
 interface PersistedCultureFilters {
-  searchQuery?: string;
-  selectedFamilyFilter?: string;
-  selectedCultivationFilter?: string;
-  selectedNutrientFilter?: string;
-  growthDaysMin?: string;
-  growthDaysMax?: string;
-  yieldMin?: string;
-  yieldMax?: string;
-  selectedSowingMonths?: number[];
+  searchQuery: string;
+  selectedFamilyFilter: string;
+  selectedCultivationFilter: string;
+  selectedNutrientFilter: string;
+  growthDaysMin: string;
+  growthDaysMax: string;
+  yieldMin: string;
+  yieldMax: string;
+  selectedSowingMonths: number[];
 }
 
 /**
@@ -176,15 +176,53 @@ export function CultureDetail({
     `${theme.breakpoints.between('sm', 'md')} and (orientation: landscape) and (max-height: 560px)`,
   );
   const useUnifiedMobileLayout = isMobileLayout || isMobileLandscapeLayout;
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFamilyFilter, setSelectedFamilyFilter] = useState('');
-  const [selectedCultivationFilter, setSelectedCultivationFilter] = useState('');
-  const [selectedNutrientFilter, setSelectedNutrientFilter] = useState('');
-  const [growthDaysMin, setGrowthDaysMin] = useState('');
-  const [growthDaysMax, setGrowthDaysMax] = useState('');
-  const [yieldMin, setYieldMin] = useState('');
-  const [yieldMax, setYieldMax] = useState('');
-  const [selectedSowingMonths, setSelectedSowingMonths] = useState<number[]>([]);
+  
+  // Initialize filters from sessionStorage
+  const initializeFilters = (): PersistedCultureFilters => {
+    const raw = window.sessionStorage.getItem(CULTURE_FILTERS_STORAGE_KEY);
+    if (!raw) {
+      return {
+        searchQuery: '',
+        selectedFamilyFilter: '',
+        selectedCultivationFilter: '',
+        selectedNutrientFilter: '',
+        growthDaysMin: '',
+        growthDaysMax: '',
+        yieldMin: '',
+        yieldMax: '',
+        selectedSowingMonths: [],
+      };
+    }
+    try {
+      const parsed = JSON.parse(raw) as PersistedCultureFilters;
+      return {
+        searchQuery: parsed.searchQuery ?? '',
+        selectedFamilyFilter: parsed.selectedFamilyFilter ?? '',
+        selectedCultivationFilter: parsed.selectedCultivationFilter ?? '',
+        selectedNutrientFilter: parsed.selectedNutrientFilter ?? '',
+        growthDaysMin: parsed.growthDaysMin ?? '',
+        growthDaysMax: parsed.growthDaysMax ?? '',
+        yieldMin: parsed.yieldMin ?? '',
+        yieldMax: parsed.yieldMax ?? '',
+        selectedSowingMonths: Array.isArray(parsed.selectedSowingMonths) ? parsed.selectedSowingMonths : [],
+      };
+    } catch {
+      window.sessionStorage.removeItem(CULTURE_FILTERS_STORAGE_KEY);
+      return {
+        searchQuery: '',
+        selectedFamilyFilter: '',
+        selectedCultivationFilter: '',
+        selectedNutrientFilter: '',
+        growthDaysMin: '',
+        growthDaysMax: '',
+        yieldMin: '',
+        yieldMax: '',
+        selectedSowingMonths: [],
+      };
+    }
+  };
+
+  const [filters, setFilters] = useState<PersistedCultureFilters>(initializeFilters);
   const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
   const [headerMenuAnchorEl, setHeaderMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [mobileSelectorOpen, setMobileSelectorOpen] = useState(false);
@@ -219,26 +257,20 @@ export function CultureDetail({
   } as const;
 
   const activeFilterCount = useMemo(
-    () => [
-      selectedFamilyFilter,
-      selectedCultivationFilter,
-      selectedNutrientFilter,
-      growthDaysMin,
-      growthDaysMax,
-      yieldMin,
-      yieldMax,
-      selectedSowingMonths.length > 0 ? 'months' : '',
-    ].filter((value) => value.length > 0).length,
-    [
-      growthDaysMax,
-      growthDaysMin,
-      selectedCultivationFilter,
-      selectedFamilyFilter,
-      selectedNutrientFilter,
-      selectedSowingMonths.length,
-      yieldMax,
-      yieldMin,
-    ],
+    () => {
+      const filterValues = [
+        filters.selectedFamilyFilter,
+        filters.selectedCultivationFilter,
+        filters.selectedNutrientFilter,
+        filters.growthDaysMin,
+        filters.growthDaysMax,
+        filters.yieldMin,
+        filters.yieldMax,
+        filters.selectedSowingMonths.length > 0 ? 'months' : '',
+      ];
+      return filterValues.filter((v) => typeof v === 'string' && v.length > 0).length;
+    },
+    [filters],
   );
 
   const familyOptions = useMemo(
@@ -249,6 +281,14 @@ export function CultureDetail({
     )).sort((left, right) => left.localeCompare(right, 'de')),
     [cultures]
   );
+
+  // Helper functions to update individual filter fields
+  const updateFilter = <K extends keyof PersistedCultureFilters>(
+    key: K,
+    value: PersistedCultureFilters[K],
+  ) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
 
   const monthFormatter = useMemo(
     () => new Intl.DateTimeFormat('de-DE', { month: 'short' }),
@@ -263,57 +303,16 @@ export function CultureDetail({
     [monthFormatter],
   );
 
+  // Persist filters to sessionStorage whenever they change
   useEffect(() => {
-    const raw = window.sessionStorage.getItem(CULTURE_FILTERS_STORAGE_KEY);
-    if (!raw) {
-      return;
-    }
-    try {
-      const parsed = JSON.parse(raw) as PersistedCultureFilters;
-      setSearchQuery(parsed.searchQuery ?? '');
-      setSelectedFamilyFilter(parsed.selectedFamilyFilter ?? '');
-      setSelectedCultivationFilter(parsed.selectedCultivationFilter ?? '');
-      setSelectedNutrientFilter(parsed.selectedNutrientFilter ?? '');
-      setGrowthDaysMin(parsed.growthDaysMin ?? '');
-      setGrowthDaysMax(parsed.growthDaysMax ?? '');
-      setYieldMin(parsed.yieldMin ?? '');
-      setYieldMax(parsed.yieldMax ?? '');
-      setSelectedSowingMonths(Array.isArray(parsed.selectedSowingMonths) ? parsed.selectedSowingMonths : []);
-    } catch {
-      window.sessionStorage.removeItem(CULTURE_FILTERS_STORAGE_KEY);
-    }
-  }, []);
-
-  useEffect(() => {
-    const payload: PersistedCultureFilters = {
-      searchQuery,
-      selectedFamilyFilter,
-      selectedCultivationFilter,
-      selectedNutrientFilter,
-      growthDaysMin,
-      growthDaysMax,
-      yieldMin,
-      yieldMax,
-      selectedSowingMonths,
-    };
-    window.sessionStorage.setItem(CULTURE_FILTERS_STORAGE_KEY, JSON.stringify(payload));
-  }, [
-    growthDaysMax,
-    growthDaysMin,
-    searchQuery,
-    selectedCultivationFilter,
-    selectedFamilyFilter,
-    selectedNutrientFilter,
-    selectedSowingMonths,
-    yieldMax,
-    yieldMin,
-  ]);
+    window.sessionStorage.setItem(CULTURE_FILTERS_STORAGE_KEY, JSON.stringify(filters));
+  }, [filters]);
 
   const filteredCultures = useMemo(() => {
-    const parsedGrowthDaysMin = growthDaysMin ? Number(growthDaysMin) : null;
-    const parsedGrowthDaysMax = growthDaysMax ? Number(growthDaysMax) : null;
-    const parsedYieldMin = yieldMin ? Number(yieldMin) : null;
-    const parsedYieldMax = yieldMax ? Number(yieldMax) : null;
+    const parsedGrowthDaysMin = filters.growthDaysMin ? Number(filters.growthDaysMin) : null;
+    const parsedGrowthDaysMax = filters.growthDaysMax ? Number(filters.growthDaysMax) : null;
+    const parsedYieldMin = filters.yieldMin ? Number(filters.yieldMin) : null;
+    const parsedYieldMax = filters.yieldMax ? Number(filters.yieldMax) : null;
 
     const getSowingMonths = (culture: Culture): number[] => {
       const dynamicCulture = culture as Culture & {
@@ -336,34 +335,34 @@ export function CultureDetail({
       return [];
     };
 
-    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const normalizedQuery = filters.searchQuery.trim().toLowerCase();
     return cultures.filter((culture) => {
       const cultureName = culture.name?.toLowerCase() ?? '';
       const nameMatches = normalizedQuery.length === 0 || cultureName.includes(normalizedQuery);
-      const familyMatches = selectedFamilyFilter.length === 0 || culture.crop_family === selectedFamilyFilter;
+      const familyMatches = filters.selectedFamilyFilter.length === 0 || culture.crop_family === filters.selectedFamilyFilter;
       const cultivationValues = culture.cultivation_types && culture.cultivation_types.length > 0
         ? culture.cultivation_types
         : (culture.cultivation_type ? [culture.cultivation_type] : []);
       const cultivationMatches = (
-        selectedCultivationFilter.length === 0
-        || (selectedCultivationFilter === 'both'
+        filters.selectedCultivationFilter.length === 0
+        || (filters.selectedCultivationFilter === 'both'
           ? cultivationValues.includes('direct_sowing') && cultivationValues.includes('pre_cultivation')
-          : cultivationValues.includes(selectedCultivationFilter as 'direct_sowing' | 'pre_cultivation'))
+          : cultivationValues.includes(filters.selectedCultivationFilter as 'direct_sowing' | 'pre_cultivation'))
       );
       const growthValue = typeof culture.growth_duration_days === 'number' ? culture.growth_duration_days : null;
       const growthMatches = (
         (parsedGrowthDaysMin === null || (growthValue !== null && growthValue >= parsedGrowthDaysMin))
         && (parsedGrowthDaysMax === null || (growthValue !== null && growthValue <= parsedGrowthDaysMax))
       );
-      const nutrientMatches = selectedNutrientFilter.length === 0 || culture.nutrient_demand === selectedNutrientFilter;
+      const nutrientMatches = filters.selectedNutrientFilter.length === 0 || culture.nutrient_demand === filters.selectedNutrientFilter;
       const yieldValue = typeof culture.expected_yield === 'number' ? culture.expected_yield : null;
       const yieldMatches = (
         (parsedYieldMin === null || (yieldValue !== null && yieldValue >= parsedYieldMin))
         && (parsedYieldMax === null || (yieldValue !== null && yieldValue <= parsedYieldMax))
       );
       const sowingMonths = getSowingMonths(culture);
-      const sowingMatches = selectedSowingMonths.length === 0
-        || selectedSowingMonths.some((month) => sowingMonths.includes(month));
+      const sowingMatches = filters.selectedSowingMonths.length === 0
+        || filters.selectedSowingMonths.some((month) => sowingMonths.includes(month));
 
       return nameMatches
         && familyMatches
@@ -375,15 +374,7 @@ export function CultureDetail({
     });
   }, [
     cultures,
-    growthDaysMax,
-    growthDaysMin,
-    searchQuery,
-    selectedCultivationFilter,
-    selectedFamilyFilter,
-    selectedNutrientFilter,
-    selectedSowingMonths,
-    yieldMax,
-    yieldMin,
+    filters,
   ]);
 
   const cultureOptions: SearchableSelectOption<Culture>[] = useMemo(
@@ -416,7 +407,12 @@ export function CultureDetail({
   );
 
   const selectedCulture = selectedOption?.data ?? null;
-  const supplierRows = selectedCulture?.supplier_data ?? [];
+  
+  const supplierRows = useMemo(
+    () => selectedCulture?.supplier_data ?? [],
+    [selectedCulture?.supplier_data],
+  );
+
   const orderedSupplierRows = useMemo(() => {
     if (supplierRows.length <= 1) {
       return supplierRows;
@@ -538,8 +534,8 @@ export function CultureDetail({
               textFieldSx={{
                 width: '100%',
               }}
-              inputValue={searchQuery}
-              onInputChange={setSearchQuery}
+              inputValue={filters.searchQuery}
+              onInputChange={(value) => updateFilter('searchQuery', value)}
               endAdornment={(
                 <IconButton
                   size="small"
@@ -577,9 +573,9 @@ export function CultureDetail({
               <InputLabel id="culture-family-filter-label">{t('filters.cropFamily')}</InputLabel>
               <Select
                 labelId="culture-family-filter-label"
-                value={selectedFamilyFilter}
+                value={filters.selectedFamilyFilter}
                 label={t('filters.cropFamily')}
-                onChange={(event) => setSelectedFamilyFilter(event.target.value)}
+                onChange={(event) => updateFilter('selectedFamilyFilter', event.target.value)}
               >
                 <MenuItem value="">{t('filters.all')}</MenuItem>
                 {familyOptions.map((family) => (
@@ -591,9 +587,9 @@ export function CultureDetail({
               <InputLabel id="culture-method-filter-label">{t('filters.cultivationType')}</InputLabel>
               <Select
                 labelId="culture-method-filter-label"
-                value={selectedCultivationFilter}
+                value={filters.selectedCultivationFilter}
                 label={t('filters.cultivationType')}
-                onChange={(event) => setSelectedCultivationFilter(event.target.value)}
+                onChange={(event) => updateFilter('selectedCultivationFilter', event.target.value)}
               >
                 <MenuItem value="">{t('filters.all')}</MenuItem>
                 <MenuItem value="direct_sowing">{t('filters.directSowing')}</MenuItem>
@@ -605,9 +601,9 @@ export function CultureDetail({
               <InputLabel id="culture-nutrient-filter-label">{t('filters.nutrientDemand')}</InputLabel>
               <Select
                 labelId="culture-nutrient-filter-label"
-                value={selectedNutrientFilter}
+                value={filters.selectedNutrientFilter}
                 label={t('filters.nutrientDemand')}
-                onChange={(event) => setSelectedNutrientFilter(event.target.value)}
+                onChange={(event) => updateFilter('selectedNutrientFilter', event.target.value)}
               >
                 <MenuItem value="">{t('filters.all')}</MenuItem>
                 <MenuItem value="low">{t('filters.nutrientLow')}</MenuItem>
@@ -619,16 +615,16 @@ export function CultureDetail({
               size="small"
               type="number"
               label={t('filters.growthDaysMin')}
-              value={growthDaysMin}
-              onChange={(event) => setGrowthDaysMin(event.target.value)}
+              value={filters.growthDaysMin}
+              onChange={(event) => updateFilter('growthDaysMin', event.target.value)}
               sx={{ minWidth: '100%' }}
             />
             <TextField
               size="small"
               type="number"
               label={t('filters.growthDaysMax')}
-              value={growthDaysMax}
-              onChange={(event) => setGrowthDaysMax(event.target.value)}
+              value={filters.growthDaysMax}
+              onChange={(event) => updateFilter('growthDaysMax', event.target.value)}
               sx={{ minWidth: '100%' }}
             />
             <FormControl size="small" sx={{ minWidth: '100%' }}>
@@ -636,9 +632,9 @@ export function CultureDetail({
               <Select
                 multiple
                 labelId="culture-sowing-month-filter-label"
-                value={selectedSowingMonths}
+                value={filters.selectedSowingMonths}
                 label={t('filters.sowingMonths')}
-                onChange={(event) => setSelectedSowingMonths(event.target.value as number[])}
+                onChange={(event) => updateFilter('selectedSowingMonths', event.target.value as number[])}
                 renderValue={(selected) => (
                   (selected as number[])
                     .map((value) => monthOptions.find((option) => option.value === value)?.label ?? value)
@@ -654,31 +650,33 @@ export function CultureDetail({
               size="small"
               type="number"
               label={t('filters.yieldMin')}
-              value={yieldMin}
-              onChange={(event) => setYieldMin(event.target.value)}
+              value={filters.yieldMin}
+              onChange={(event) => updateFilter('yieldMin', event.target.value)}
               sx={{ minWidth: '100%' }}
             />
             <TextField
               size="small"
               type="number"
               label={t('filters.yieldMax')}
-              value={yieldMax}
-              onChange={(event) => setYieldMax(event.target.value)}
+              value={filters.yieldMax}
+              onChange={(event) => updateFilter('yieldMax', event.target.value)}
               sx={{ minWidth: '100%' }}
             />
             <Button
               variant="text"
               size="small"
               onClick={() => {
-                setSearchQuery('');
-                setSelectedFamilyFilter('');
-                setSelectedCultivationFilter('');
-                setSelectedNutrientFilter('');
-                setGrowthDaysMin('');
-                setGrowthDaysMax('');
-                setYieldMin('');
-                setYieldMax('');
-                setSelectedSowingMonths([]);
+                setFilters({
+                  searchQuery: '',
+                  selectedFamilyFilter: '',
+                  selectedCultivationFilter: '',
+                  selectedNutrientFilter: '',
+                  growthDaysMin: '',
+                  growthDaysMax: '',
+                  yieldMin: '',
+                  yieldMax: '',
+                  selectedSowingMonths: [],
+                });
                 setFilterAnchorEl(null);
               }}
               sx={{ alignSelf: 'flex-end', whiteSpace: 'nowrap' }}
@@ -1369,8 +1367,8 @@ export function CultureDetail({
           title={t('emptyOnboarding.title')}
           description={t('emptyOnboarding.description')}
           actions={[
-            { label: t('emptyOnboarding.createAction'), onClick: onCreateCulture },
             { label: t('emptyOnboarding.openLibraryAction'), onClick: onOpenPublicLibrary },
+            { label: t('emptyOnboarding.createAction'), onClick: onCreateCulture },
           ]}
         />
       )}
@@ -1388,9 +1386,17 @@ export function CultureDetail({
               <Button
                 variant="outlined"
                 onClick={() => {
-                  setSearchQuery('');
-                  setSelectedFamilyFilter('');
-                  setSelectedCultivationFilter('');
+                  setFilters({
+                    searchQuery: '',
+                    selectedFamilyFilter: '',
+                    selectedCultivationFilter: '',
+                    selectedNutrientFilter: '',
+                    growthDaysMin: '',
+                    growthDaysMax: '',
+                    yieldMin: '',
+                    yieldMax: '',
+                    selectedSowingMonths: [],
+                  });
                 }}
               >
                 {t('emptySearch.resetAction')}

@@ -3,6 +3,7 @@
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from rest_framework import serializers
 
 from .enum_normalization import normalize_seed_rate_unit
@@ -156,6 +157,7 @@ class LocationSerializer(serializers.ModelSerializer):
 
 class SupplierSerializer(serializers.ModelSerializer):
     created = serializers.BooleanField(read_only=True, default=False)
+    homepage_url = serializers.CharField(required=False, allow_blank=True, max_length=200)
     
     def get_image_file(self, obj):
         if not obj.image_file_id:
@@ -169,12 +171,43 @@ class SupplierSerializer(serializers.ModelSerializer):
         if value is None:
             return []
         if not isinstance(value, list):
-            raise serializers.ValidationError('Expected a list of domain strings.')
+            raise serializers.ValidationError('Bitte geben Sie eine Liste von Domains an.')
         normalized = Supplier.normalize_allowed_domains(value)
         invalid = [domain for domain in normalized if not Supplier._is_valid_domain(Supplier._normalize_domain(domain))]
         if invalid:
-            raise serializers.ValidationError('Allowed domains must be valid hostnames without scheme or path.')
+            raise serializers.ValidationError('Domains müssen gültige Hostnamen ohne Schema oder Pfad sein.')
         return normalized
+
+    def validate_homepage_url(self, value):
+        homepage_url = (value or '').strip()
+        if not homepage_url:
+            return ''
+        if not homepage_url.startswith(('http://', 'https://')):
+            homepage_url = f'https://{homepage_url}'
+        from django.core.validators import URLValidator
+
+        try:
+            URLValidator()(homepage_url)
+        except ValidationError as exc:
+            raise serializers.ValidationError('Bitte geben Sie eine gültige URL ein.') from exc
+        return homepage_url
+
+    def validate_name(self, value):
+        from .utils import normalize_supplier_name
+
+        name = (value or '').strip()
+        if not name:
+            raise serializers.ValidationError('Dieses Feld ist erforderlich.')
+        project = _resolve_active_project_from_serializer(self)
+        if project is None:
+            return name
+        normalized = normalize_supplier_name(name) or ''
+        queryset = Supplier.objects.filter(project=project, name_normalized=normalized)
+        if self.instance is not None:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError('Ein Lieferant mit diesem Namen existiert bereits.')
+        return name
 
 
     class Meta:
@@ -487,15 +520,22 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
             if project is None:
                 raise serializers.ValidationError({'supplier': 'Supplier is required.'})
 
-            supplier, _ = Supplier.objects.get_or_create(
-                project=project,
-                name_normalized=normalize_supplier_name(supplier_name_input) or '',
-                defaults={
-                    'name': supplier_name_input.strip(),
-                    'homepage_url': 'https://example.invalid',
-                    'project': project,
-                },
-            )
+            normalized = normalize_supplier_name(supplier_name_input) or ''
+            try:
+                with transaction.atomic():
+                    supplier, _ = Supplier.objects.get_or_create(
+                        project=project,
+                        name_normalized=normalized,
+                        defaults={
+                            'name': supplier_name_input.strip(),
+                            'homepage_url': 'https://example.invalid',
+                            'project': project,
+                        },
+                    )
+            except IntegrityError as exc:
+                supplier = Supplier.objects.filter(project=project, name_normalized=normalized).first()
+                if supplier is None:
+                    raise serializers.ValidationError({'supplier': 'Lieferant konnte nicht gespeichert werden.'}) from exc
             attrs['supplier'] = supplier
             attrs['supplier_name'] = supplier.name
 
@@ -1044,15 +1084,22 @@ class CultureSerializer(serializers.ModelSerializer):
                     slug='gelawi-zwiebelzopf',
                     defaults={'name': 'Gelawi Zwiebelzopf', 'description': '', 'is_active': True},
                 )
-            supplier, created = Supplier.objects.get_or_create(
-                name_normalized=normalize_supplier_name(supplier_name) or '',
-                project=project,
-                defaults={
-                    'name': supplier_name,
-                    'homepage_url': 'https://example.invalid',
-                    'project': project,
-                },
-            )
+            normalized = normalize_supplier_name(supplier_name) or ''
+            try:
+                with transaction.atomic():
+                    supplier, _created = Supplier.objects.get_or_create(
+                        name_normalized=normalized,
+                        project=project,
+                        defaults={
+                            'name': supplier_name,
+                            'homepage_url': 'https://example.invalid',
+                            'project': project,
+                        },
+                    )
+            except IntegrityError as exc:
+                supplier = Supplier.objects.filter(project=project, name_normalized=normalized).first()
+                if supplier is None:
+                    raise serializers.ValidationError({'supplier': 'Lieferant konnte nicht gespeichert werden.'}) from exc
             attrs['supplier'] = supplier
 
         # Keep variety optional for compatibility with existing API/tests.

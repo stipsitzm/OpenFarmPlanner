@@ -7,8 +7,8 @@
  * @returns The Planting Plans page component
  */
 
-import { useState, useEffect, useMemo, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useCallback, useState, useEffect, useMemo, useRef } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type {
   GridCellParams,
   GridColDef,
@@ -76,6 +76,7 @@ import ProjectRequiredState from "../components/project/ProjectRequiredState";
 import {
   useCommandContextTag,
   useRegisterCommands,
+  useRegisterCreateActions,
 } from "../commands/useCommandContext";
 import type { CommandSpec } from "../commands/types";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
@@ -426,7 +427,9 @@ function PlantingPlans(): React.ReactElement {
   const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
@@ -458,6 +461,28 @@ function PlantingPlans(): React.ReactElement {
   const [isMobileNotesSaving, setIsMobileNotesSaving] = useState(false);
   const mobilePrefillHandledRef = useRef(false);
   const createIntentHandledRef = useRef(false);
+
+  const replacePlantingPlanSearchParams = useCallback((nextParams: URLSearchParams): void => {
+    const browserPathname = window.location.pathname;
+    if (browserPathname.includes("/app/") && !browserPathname.endsWith(location.pathname)) {
+      return;
+    }
+
+    const nextSearch = nextParams.toString();
+    const currentSearch = location.search.startsWith("?") ? location.search.slice(1) : location.search;
+    if (nextSearch === currentSearch) {
+      return;
+    }
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+        hash: location.hash,
+      },
+      { replace: true },
+    );
+  }, [location.hash, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     if (isMobile) {
@@ -712,11 +737,11 @@ function PlantingPlans(): React.ReactElement {
     }
 
     if (hasChanges) {
-      setSearchParams(newParams, { replace: true });
+      replacePlantingPlanSearchParams(newParams);
     }
 
     urlParamProcessedRef.current = true;
-  }, [initialSelection, searchParams, setSearchParams]);
+  }, [initialSelection, replacePlantingPlanSearchParams, searchParams]);
 
   /**
    * Fetch cultures and beds for dropdowns
@@ -763,15 +788,6 @@ function PlantingPlans(): React.ReactElement {
    */
   const commands = useMemo<CommandSpec[]>(
     () => [
-      {
-        id: "plans.create",
-        label: "Neuer Anbauplan (Alt+Shift+N)",
-        group: 'navigation',
-        keywords: ["anbauplan", "neu", "create"],
-                        contextTags: ["plans"],
-        isEnabled: () => Boolean(gridCommandApiRef.current),
-        action: () => gridCommandApiRef.current?.addRow(),
-      },
       {
         id: "plans.edit",
         label: "Anbauplan bearbeiten (Alt+E)",
@@ -1523,6 +1539,26 @@ function PlantingPlans(): React.ReactElement {
   const shouldShowNoPlansState = canCreatePlan && !hasPlans;
   const isInitialLoading = !shouldShowProjectRequiredState && (isHierarchyLoading || isPlansLoading);
 
+  const handleCreatePlan = (): void => {
+    if (isMobile) {
+      openMobileCreateDialog();
+      return;
+    }
+    gridCommandApiRef.current?.addRow();
+  };
+
+  const createActions = useMemo(() => [
+    {
+      id: "create-planting-plan",
+      label: t("plantingPlans:addButton"),
+      shortcut: "Alt+Shift+N",
+      disabled: !canCreatePlan || shouldShowProjectRequiredState,
+      handler: handleCreatePlan,
+    },
+  ], [canCreatePlan, handleCreatePlan, shouldShowProjectRequiredState, t]);
+
+  useRegisterCreateActions("plans-page", createActions);
+
   useEffect(() => {
     if (createIntentHandledRef.current || !canCreatePlan) {
       return;
@@ -1531,16 +1567,12 @@ function PlantingPlans(): React.ReactElement {
       return;
     }
 
-    if (isMobile) {
-      openMobileCreateDialog();
-    } else {
-      gridCommandApiRef.current?.addRow();
-    }
+    handleCreatePlan();
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("create");
-    setSearchParams(nextParams, { replace: true });
+    replacePlantingPlanSearchParams(nextParams);
     createIntentHandledRef.current = true;
-  }, [canCreatePlan, isMobile, searchParams, setSearchParams]);
+  }, [canCreatePlan, handleCreatePlan, replacePlantingPlanSearchParams, searchParams]);
 
   return (
     <PageContainer variant="workspacePage">
@@ -1559,9 +1591,10 @@ function PlantingPlans(): React.ReactElement {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: "1px dashed #d1d5db",
+              border: "1px dashed",
+              borderColor: "surface.surfaceSoftBorder",
               borderRadius: 2,
-              bgcolor: "#fafbfa",
+              bgcolor: "surface.surfaceBackground",
             }}
           >
             <Stack spacing={1.25} alignItems="center">
@@ -1577,6 +1610,10 @@ function PlantingPlans(): React.ReactElement {
             description={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.description`)}
             actions={[
               ...(firstMissingRequirement === "beds" ? [{ label: t("plantingPlans:emptyStates.actions.createAreas"), to: "/app/fields-beds" }] : []),
+              ...(firstMissingRequirement === "cultures" ? [
+                { label: t("plantingPlans:emptyStates.actions.openCultureLibrary"), to: "/app/cultures?library=true" },
+                { label: t("plantingPlans:emptyStates.actions.addCulture"), to: "/app/cultures?create=true" },
+              ] : []),
             ]}
           />
         ) : shouldShowNoPlansState ? (
@@ -1849,7 +1886,7 @@ function PlantingPlans(): React.ReactElement {
           saveErrorMessage={t("plantingPlans:errors.save")}
           deleteErrorMessage={t("plantingPlans:errors.delete")}
           deleteConfirmMessage={t("plantingPlans:confirmDelete")}
-          addButtonLabel={`${t("plantingPlans:addButton")} (Alt+N)`}
+          addButtonLabel={`${t("plantingPlans:addButton")} (Alt+Shift+N)`}
           showDeleteAction={true}
           showFooterEditControls={false}
           showRowEditActions={true}

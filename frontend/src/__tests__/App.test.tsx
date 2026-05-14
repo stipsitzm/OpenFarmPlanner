@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from '../App';
 import { resolveRouterBasename } from '../routerBasename';
 import { CommandProvider } from '../commands/CommandProvider';
@@ -31,11 +31,15 @@ vi.mock('../commands/useCommandContext', () => ({
     openPalette: vi.fn(),
     closePalette: vi.fn(),
     registerCommands: vi.fn(() => () => {}),
+    registerCreateActions: vi.fn(() => () => {}),
     setContextTag: vi.fn(),
     currentContextTags: ['global'],
+    activeCreateActions: [],
+    runPrimaryCreateAction: vi.fn(),
   }),
   useCommandContextTag: vi.fn(),
   useRegisterCommands: vi.fn(),
+  useRegisterCreateActions: vi.fn(),
 }));
 
 describe('App', () => {
@@ -175,7 +179,7 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Projekt anlegen' })).toBeInTheDocument();
   });
 
-  it('opens the same create-project dialog from empty-state CTA for users without projects', async () => {
+  it('opens the create-project dialog from the project switcher for users without projects', async () => {
     authState.user = {
       id: 1,
       email: 'demo@example.com',
@@ -194,11 +198,12 @@ describe('App', () => {
     window.history.pushState({}, '', '/app/fields-beds');
 
     render(<CommandProvider><App /></CommandProvider>);
-    fireEvent.click(await screen.findByRole('button', { name: 'Erstes Projekt anlegen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
+    fireEvent.click(await screen.findByText('Neues Projekt'));
     expect(await screen.findByRole('heading', { name: 'Projekt anlegen' })).toBeInTheDocument();
   });
 
-  it('does not show cultures load error for users without projects and shows project-required CTA', async () => {
+  it('does not show cultures load error for users without projects', async () => {
     authState.user = {
       id: 1,
       email: 'demo@example.com',
@@ -218,11 +223,11 @@ describe('App', () => {
 
     render(<CommandProvider><App /></CommandProvider>);
 
-    expect(await screen.findByRole('button', { name: 'Erstes Projekt anlegen' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Kulturen' })).toBeInTheDocument();
     expect(screen.queryByText('Fehler beim Laden der Kulturen')).not.toBeInTheDocument();
   });
 
-  it('shows project-required state on suppliers page for users without projects', async () => {
+  it('does not open supplier creation from query intent for users without projects', async () => {
     authState.user = {
       id: 1,
       email: 'demo@example.com',
@@ -242,9 +247,49 @@ describe('App', () => {
 
     render(<CommandProvider><App /></CommandProvider>);
 
-    expect(await screen.findByRole('button', { name: 'Erstes Projekt anlegen' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Lieferanten' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ Lieferant anlegen' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Speichern' })).not.toBeInTheDocument();
+  });
+
+  it('navigates from split/detail pages through the sidebar without being pulled back', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: null,
+      last_project_id: null,
+      resolved_project_id: null,
+      needs_project_selection: false,
+      memberships: [],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+    };
+    authState.activeProjectId = null;
+
+    for (const initialPath of ['/app/cultures', '/app/anbauplaene']) {
+      window.history.pushState({}, '', initialPath);
+      const { unmount } = render(<CommandProvider><App /></CommandProvider>);
+
+      await screen.findByText(translations.navigation.locations);
+      const locationsLink = screen
+        .getAllByRole('link', { name: translations.navigation.locations })
+        .find((link) => link.getAttribute('href') === '/app/locations');
+      expect(locationsLink).toBeDefined();
+      if (!locationsLink) {
+        throw new Error('Locations sidebar link was not found');
+      }
+      fireEvent.click(locationsLink);
+
+      await waitFor(() => {
+        expect(window.location.pathname).toBe('/app/locations');
+      });
+      expect(await screen.findByRole('heading', { name: 'Standorte' })).toBeInTheDocument();
+
+      unmount();
+    }
   });
 
 

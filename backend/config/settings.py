@@ -230,14 +230,19 @@ FRONTEND_URL = _frontend_url_from_env or 'http://localhost:5173'
 _public_frontend_url_from_env = _env_str('PUBLIC_FRONTEND_URL', '')
 PUBLIC_FRONTEND_URL = _public_frontend_url_from_env or FRONTEND_URL
 
+parsed_public_frontend_url = urlparse(PUBLIC_FRONTEND_URL)
+
 if not DEBUG:
     if SECRET_KEY == 'django-insecure-ov1io#b(%s+zc#ue30exe(t(sa3d7xf*i4biy7zh*yx95pzitd':
         raise ImproperlyConfigured('SECRET_KEY must be set explicitly when DEBUG is False.')
-    parsed_public_frontend_url = urlparse(PUBLIC_FRONTEND_URL)
     if not parsed_public_frontend_url.scheme or not parsed_public_frontend_url.netloc:
         raise ImproperlyConfigured('PUBLIC_FRONTEND_URL must be an absolute URL when DEBUG is False.')
-    if (parsed_public_frontend_url.hostname or '').lower() in {'localhost', '127.0.0.1', '::1'}:
-        raise ImproperlyConfigured('PUBLIC_FRONTEND_URL must not point to localhost when DEBUG is False.')
+
+if (
+    DJANGO_ENV not in {'development', 'test'}
+    and (parsed_public_frontend_url.hostname or '').lower() in {'localhost', '127.0.0.1', '::1'}
+):
+    raise ImproperlyConfigured('PUBLIC_FRONTEND_URL must not point to localhost outside local development.')
 
 PROJECT_INVITATION_EXPIRY_DAYS = int(_env_str('PROJECT_INVITATION_EXPIRY_DAYS', '14') or '14')
 AGENT_LOGIN_ENABLED = _env_str('AGENT_LOGIN_ENABLED', 'False').lower() in ('true', '1', 'yes')

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   SELECTED_CULTURE_STORAGE_KEY,
   getStoredCultureId,
@@ -14,7 +14,9 @@ type UseSelectedCultureSyncResult = {
 };
 
 export function useSelectedCultureSync(): UseSelectedCultureSyncResult {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const selectedCultureParam = searchParams.get('cultureId');
   const selectedCultureIdFromQuery = parseCultureId(selectedCultureParam);
 
@@ -31,6 +33,30 @@ export function useSelectedCultureSync(): UseSelectedCultureSyncResult {
     selectionSyncSourceRef.current = source;
     setSelectedCultureId((currentId) => (currentId === id ? currentId : id));
   }, []);
+
+  const replaceCultureSearchParams = useCallback((updateParams: (params: URLSearchParams) => URLSearchParams): void => {
+    const browserPathname = window.location.pathname;
+    if (browserPathname.includes('/app/') && !browserPathname.endsWith(location.pathname)) {
+      return;
+    }
+
+    const nextParams = updateParams(new URLSearchParams(location.search));
+    const nextSearch = nextParams.toString();
+    const currentSearch = location.search.startsWith('?') ? location.search.slice(1) : location.search;
+
+    if (nextSearch === currentSearch) {
+      return;
+    }
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+        hash: location.hash,
+      },
+      { replace: true },
+    );
+  }, [location.hash, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     if (selectionSyncSourceRef.current === 'internal') {
@@ -65,11 +91,11 @@ export function useSelectedCultureSync(): UseSelectedCultureSyncResult {
         return;
       }
 
-      setSearchParams((params) => {
+      replaceCultureSearchParams((params) => {
         const nextParams = new URLSearchParams(params);
         nextParams.delete('cultureId');
         return nextParams;
-      }, { replace: true });
+      });
       selectionSyncSourceRef.current = null;
       return;
     }
@@ -86,13 +112,13 @@ export function useSelectedCultureSync(): UseSelectedCultureSyncResult {
       return;
     }
 
-    setSearchParams((params) => {
+    replaceCultureSearchParams((params) => {
       const nextParams = new URLSearchParams(params);
       nextParams.set('cultureId', String(selectedCultureId));
       return nextParams;
-    }, { replace: true });
+    });
     selectionSyncSourceRef.current = null;
-  }, [selectedCultureId, selectedCultureParam, setSearchParams]);
+  }, [replaceCultureSearchParams, selectedCultureId, selectedCultureParam]);
 
   return {
     selectedCultureId,

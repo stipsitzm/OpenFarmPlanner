@@ -67,7 +67,7 @@ import {
   buildSingleCultureFilename,
   downloadJsonFile,
 } from '../cultures/exportUtils';
-import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
+import { useCommandContextTag, useRegisterCommands, useRegisterCreateActions } from '../commands/useCommandContext';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
 import {
@@ -420,6 +420,27 @@ function Cultures(): React.ReactElement {
     await fetchPublicCultures();
   }, [fetchPublicCultures]);
 
+  useEffect(() => {
+    if (shouldShowProjectRequiredState || publicLibraryOpen) {
+      return;
+    }
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('library') !== 'true') {
+      return;
+    }
+
+    void handleOpenPublicLibrary();
+    searchParams.delete('library');
+    const nextSearch = searchParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+      },
+      { replace: true },
+    );
+  }, [handleOpenPublicLibrary, location.pathname, location.search, navigate, publicLibraryOpen, shouldShowProjectRequiredState]);
+
   const handleImportPublicCulture = async (publicCulture: PublicCulture) => {
     try {
       setPublicLibraryImportingId(publicCulture.id);
@@ -760,13 +781,23 @@ function Cultures(): React.ReactElement {
 
   useTopbarContextActions(setTopbarContextActions, contextActions);
 
+  const createActions = useMemo(() => [
+    {
+      id: 'create-culture',
+      label: 'Kultur hinzufügen',
+      shortcut: 'Alt+Shift+N',
+      handler: handleAddNew,
+    },
+  ], [handleAddNew]);
+
+  useRegisterCreateActions('cultures-page', createActions);
+
   const commandSpecs = useMemo(() => createCulturesCommandSpecs({
     canRunEnrichmentForCulture,
     cultures,
     enableAiEnrichment: aiEnrichmentEnabled,
     enrichmentLoading,
     goToRelativeCulture,
-    handleCreateCulture: handleAddNew,
     handleCreatePlantingPlan,
     handleDelete,
     handleEdit,
@@ -782,7 +813,6 @@ function Cultures(): React.ReactElement {
     cultures,
     enrichmentLoading,
     goToRelativeCulture,
-    handleAddNew,
     handleCreatePlantingPlan,
     handleDelete,
     handleEdit,

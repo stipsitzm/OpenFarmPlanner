@@ -16,13 +16,14 @@ from django.conf import settings
 from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q, Count
 from django.db.models.functions import Coalesce, Ceil, Cast
 from django.http import HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect
 from rest_framework import viewsets, status, generics, parsers, permissions
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.core.files.storage import default_storage
@@ -748,7 +749,7 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
     
     Provides list, create, retrieve, update, and delete operations
     for seed suppliers. Supports filtering by name via query parameter.
-    POST endpoint implements get-or-create behavior.
+    POST endpoint rejects duplicate names within the active project.
     
     Attributes:
         queryset: All Supplier objects ordered by name
@@ -758,7 +759,10 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
     serializer_class = SupplierSerializer
 
     def perform_update(self, serializer):
-        instance = serializer.save()
+        try:
+            instance = serializer.save()
+        except IntegrityError as exc:
+            raise DRFValidationError({'name': ['Ein Lieferant mit diesem Namen existiert bereits.']}) from exc
         self.create_project_revision(f"Supplier updated #{instance.pk}")
 
     def perform_destroy(self, instance):
@@ -789,26 +793,18 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
         return queryset
     
     def create(self, request, *args, **kwargs):
-        """Create or get existing supplier by name.
-        
-        Implements get-or-create behavior based on normalized name.
-        Returns existing supplier if one with the same normalized name exists.
+        """Create a supplier with project-scoped duplicate-name validation.
         
         :param request: HTTP request containing supplier data
         :return: Response with supplier data and created flag
         """
-        name = request.data.get('name', '').strip()
-        homepage_url = request.data.get('homepage_url', '').strip()
+        name = (request.data.get('name') or '').strip()
+        homepage_url = (request.data.get('homepage_url') or '').strip()
         allowed_domains = request.data.get('allowed_domains', [])
 
         if not name:
             return Response(
-                {'name': 'This field is required.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        if not homepage_url:
-            return Response(
-                {'homepage_url': 'This field is required.'},
+                {'name': ['Dieses Feld ist erforderlich.']},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -821,56 +817,59 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
         from django.core.exceptions import ValidationError as DjangoValidationError
         url_validator = URLValidator()
         try:
-            url_validator(homepage_url)
+            if homepage_url:
+                url_validator(homepage_url)
         except DjangoValidationError:
             return Response(
-                {'homepage_url': 'Enter a valid URL.'},
+                {'homepage_url': ['Bitte geben Sie eine gültige URL ein.']},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         # Validate allowed_domains
-        if allowed_domains and isinstance(allowed_domains, list):
+        if allowed_domains and not isinstance(allowed_domains, list):
+            return Response(
+                {'allowed_domains': ['Bitte geben Sie eine Liste von Domains an.']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if allowed_domains:
             normalized_domains = Supplier.normalize_allowed_domains(allowed_domains)
             invalid = [domain for domain in normalized_domains if not Supplier._is_valid_domain(Supplier._normalize_domain(domain))]
             if invalid:
                 return Response(
-                    {'allowed_domains': f'Invalid domain(s): {", ".join(invalid)}. Domains must be valid hostnames without scheme or path.'},
+                    {'allowed_domains': [f'Ungültige Domain(s): {", ".join(invalid)}. Domains müssen gültige Hostnamen ohne Schema oder Pfad sein.']},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-        # Get or create supplier by normalized name
+        # Check normalized duplicates before relying on the database constraint.
         from .utils import normalize_supplier_name
         normalized = normalize_supplier_name(name) or ''
+
+        duplicate_error = {'name': ['Ein Lieferant mit diesem Namen existiert bereits.']}
+        if Supplier.objects.filter(project=request.active_project, name_normalized=normalized).exists():
+            raise DRFValidationError(duplicate_error)
 
         supplier_defaults = {
             'name': name,
             'homepage_url': homepage_url,
             'allowed_domains': Supplier.normalize_allowed_domains(allowed_domains) if isinstance(allowed_domains, list) else [],
+            'project': request.active_project,
         }
-        supplier, created = Supplier.objects.get_or_create(
-            name_normalized=normalized,
-            project=request.active_project,
-            defaults={**supplier_defaults, 'project': request.active_project}
-        )
-        if not created:
-            update_fields: list[str] = []
-            if homepage_url and supplier.homepage_url != homepage_url:
-                supplier.homepage_url = homepage_url
-                update_fields.append('homepage_url')
-            if isinstance(allowed_domains, list):
-                supplier.allowed_domains = Supplier.normalize_allowed_domains(allowed_domains)
-                update_fields.append('allowed_domains')
-            if update_fields:
-                supplier.save()
+        try:
+            with transaction.atomic():
+                supplier = Supplier.objects.create(**supplier_defaults)
+        except IntegrityError as exc:
+            if Supplier.objects.filter(project=request.active_project, name_normalized=normalized).exists():
+                raise DRFValidationError(duplicate_error) from exc
+            raise
         
         serializer = self.get_serializer(supplier)
         data = serializer.data
-        data['created'] = created
+        data['created'] = True
         
-        self.create_project_revision(f"Supplier {'created' if created else 'used'} #{supplier.pk}")
+        self.create_project_revision(f"Supplier created #{supplier.pk}")
         return Response(
             data,
-            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+            status=status.HTTP_201_CREATED
         )
 
 

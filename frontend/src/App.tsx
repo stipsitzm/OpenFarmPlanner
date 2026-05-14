@@ -85,6 +85,20 @@ import { getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHis
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './navigation/mainNavigation';
+import {
+  getMobileNavigationIconSx,
+  getMobileNavigationItemSx,
+  getNavigationIconSx,
+  getNavigationItemSx,
+  getNavigationShellSx,
+  getNavigationTextProps,
+  getNavigationToggleButtonSx,
+  getMobileNavigationTextProps,
+  mobileNavigationDrawerPaperSx,
+  navigationLogoLinkSx,
+  navigationLogoTextSx,
+  navigationTooltipSx,
+} from './navigation/navigationStyles';
 import { PanelLeft } from 'lucide-react';
 
 const CONTENT_ALIGNMENT_MODE = 'centered';
@@ -291,7 +305,7 @@ function RootLayout(): React.ReactElement {
   const isTabletOrNarrowDesktop = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
-  const { openPalette } = useCommandContext();
+  const { activeCreateActions, openPalette, runPrimaryCreateAction } = useCommandContext();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -305,6 +319,10 @@ function RootLayout(): React.ReactElement {
   const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
   const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileActionsOverflowAnchor, setMobileActionsOverflowAnchor] = useState<null | HTMLElement>(null);
+  useEffect(() => {
+    setTopbarContextActions([]);
+  }, [location.pathname]);
+
   const navItems = useMemo(() => ([
     { to: '/app/dashboard', label: t('dashboard'), activeAliases: [], keywords: ['übersicht', 'dashboard'], icon: <DashboardOutlinedIcon fontSize="small" /> },
     ...MAIN_NAV_ITEMS.map((item) => ({
@@ -572,8 +590,7 @@ function RootLayout(): React.ReactElement {
   const activeMembershipRole = activeMembership?.role ?? null;
 
   const getCurrentRouteFromLocation = useCallback((): string => {
-    const pathname = window.location.pathname || location.pathname;
-    return normalizeMainRoutePath(pathname);
+    return normalizeMainRoutePath(location.pathname);
   }, [location.pathname]);
 
   const navigateRelativePage = useCallback((direction: 1 | -1): void => {
@@ -702,13 +719,19 @@ function RootLayout(): React.ReactElement {
     return null;
   }, [location.pathname]);
   const topbarPrimaryAction = useMemo(() => {
-    if (location.pathname.startsWith('/app/locations')) return { label: 'Standort hinzufügen', to: '/app/locations?create=true' };
-    if (location.pathname.startsWith('/app/cultures')) return { label: 'Kultur hinzufügen', to: '/app/cultures?create=true' };
-    if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { label: 'Anbauplan hinzufügen', to: '/app/planting-plans?create=true' };
-    if (location.pathname.startsWith('/app/suppliers')) return { label: 'Lieferant hinzufügen', to: '/app/suppliers?create=true' };
+    if (activeCreateActions.length > 0) {
+      const isSingleCreateAction = activeCreateActions.length === 1;
+      const primaryCreateAction = activeCreateActions[0];
+      const label = isSingleCreateAction ? primaryCreateAction.label : 'Neu erstellen...';
+      return {
+        label,
+        tooltip: `${label} (${primaryCreateAction.shortcut ?? 'Alt+Shift+N'})`,
+        onClick: runPrimaryCreateAction,
+      };
+    }
     if (location.pathname.startsWith('/app/fields-beds')) return fieldsGlobalAddAction ? { label: fieldsGlobalAddAction.label, to: '', onClick: fieldsGlobalAddAction.onClick } : null;
     return null;
-  }, [fieldsGlobalAddAction, location.pathname]);
+  }, [activeCreateActions, fieldsGlobalAddAction, location.pathname, runPrimaryCreateAction]);
   const handleTopbarPrimaryAction = useCallback((): void => {
     if (!topbarPrimaryAction) {
       return;
@@ -717,14 +740,16 @@ function RootLayout(): React.ReactElement {
       topbarPrimaryAction.onClick();
       return;
     }
-    navigate(topbarPrimaryAction.to);
+    if ('to' in topbarPrimaryAction && topbarPrimaryAction.to) {
+      navigate(topbarPrimaryAction.to);
+    }
   }, [navigate, topbarPrimaryAction]);
 
   return (
-    <Box className={`app app--${CONTENT_ALIGNMENT_MODE}`} sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f2f0ea' }}>
+    <Box className={`app app--${CONTENT_ALIGNMENT_MODE}`} sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'surface.appBackground', position: 'relative', isolation: 'isolate' }}>
       {isDesktopUp ? (
-        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#e1dbd0', bgcolor: '#f5f2eb', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
-          <Stack sx={{ height: '100%' }}>
+        <Box component="aside" sx={getNavigationShellSx(sidebarWidth)}>
+          <Stack sx={{ height: '100%', minHeight: 0, width: '100%' }}>
             {!sidebarCollapsed ? (
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1 }}>
                 <Box
@@ -732,23 +757,7 @@ function RootLayout(): React.ReactElement {
                   to="/app/dashboard"
                   aria-label="Zur Übersicht"
                   title="Zur Übersicht"
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    minWidth: 0,
-                    flex: 1,
-                    borderRadius: 1,
-                    px: 0.5,
-                    py: 0.25,
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    '&:hover': { bgcolor: 'rgba(80, 120, 90, 0.08)' },
-                    '&:focus-visible': {
-                      outline: 'none',
-                      boxShadow: '0 0 0 2px rgba(80, 130, 90, 0.22)',
-                    },
-                  }}
+                  sx={navigationLogoLinkSx}
                 >
                   <Box
                     component="img"
@@ -759,7 +768,7 @@ function RootLayout(): React.ReactElement {
                   <Typography
                     variant="subtitle2"
                     noWrap
-                    sx={{ color: '#2F3A33', letterSpacing: 0.1 }}
+                    sx={navigationLogoTextSx}
                   >
                     OpenFarmPlanner
                   </Typography>
@@ -768,19 +777,13 @@ function RootLayout(): React.ReactElement {
                   title="Seitenleiste schließen"
                   placement="right"
                   enterDelay={350}
-                  slotProps={{ tooltip: { sx: { bgcolor: '#1F2A24', fontSize: '0.72rem', px: 1, py: 0.5 } } }}
+                  slotProps={{ tooltip: { sx: navigationTooltipSx } }}
                 >
                   <IconButton
                     aria-label="Sidebar einklappen"
                     onClick={toggleSidebarCollapsed}
                     size="small"
-                    sx={{
-                      width: 30,
-                      height: 30,
-                      color: '#4E5A53',
-                      cursor: 'w-resize',
-                      '&:hover': { bgcolor: 'rgba(80, 120, 90, 0.08)' },
-                    }}
+                    sx={getNavigationToggleButtonSx('w-resize')}
                   >
                     <PanelLeft size={18} strokeWidth={1.8} />
                   </IconButton>
@@ -792,26 +795,20 @@ function RootLayout(): React.ReactElement {
                   title="Seitenleiste öffnen"
                   placement="right"
                   enterDelay={350}
-                  slotProps={{ tooltip: { sx: { bgcolor: '#1F2A24', fontSize: '0.72rem', px: 1, py: 0.5 } } }}
+                  slotProps={{ tooltip: { sx: navigationTooltipSx } }}
                 >
                   <IconButton
                     aria-label="Sidebar ausklappen"
                     onClick={toggleSidebarCollapsed}
                     size="small"
-                    sx={{
-                      width: 30,
-                      height: 30,
-                      color: '#4E5A53',
-                      cursor: 'e-resize',
-                      '&:hover': { bgcolor: 'rgba(80, 120, 90, 0.08)' },
-                    }}
+                    sx={getNavigationToggleButtonSx('e-resize')}
                   >
                     <PanelLeft size={18} strokeWidth={1.8} />
                   </IconButton>
                 </Tooltip>
               </Stack>
             )}
-            <List sx={{ px: 1, pt: 0.5 }}>
+            <List sx={{ px: 1, pt: 0.5, pb: 1, flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
               {navItems.map((item) => {
                 const isActive = location.pathname === item.to || item.activeAliases.includes(location.pathname);
                 const entry = (
@@ -820,36 +817,10 @@ function RootLayout(): React.ReactElement {
                     component={NavLink}
                     to={item.to}
                     selected={isActive}
-                    sx={{
-                      minHeight: 44,
-                      borderRadius: 1.5,
-                      mb: 0.75,
-                      px: 1.25,
-                      justifyContent: sidebarCollapsed ? 'center' : 'initial',
-                      color: '#29332c',
-                      bgcolor: isActive ? 'rgba(76, 135, 86, 0.13)' : 'transparent',
-                      border: '1px solid rgba(76, 135, 86, 0)',
-                      position: 'relative',
-                      transition: 'background-color 140ms ease, color 140ms ease, border-color 140ms ease',
-                      '&:hover': {
-                        bgcolor: isActive ? 'rgba(76, 135, 86, 0.16)' : 'rgba(91, 130, 102, 0.09)',
-                        color: '#29332c',
-                        borderColor: 'rgba(91, 130, 102, 0.14)',
-                      },
-                      '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        left: 0,
-                        top: 8,
-                        bottom: 8,
-                        width: 3,
-                        borderRadius: 999,
-                        bgcolor: isActive ? 'rgba(59, 116, 72, 0.52)' : 'transparent',
-                      },
-                    }}
+                    sx={getNavigationItemSx(isActive, sidebarCollapsed)}
                   >
-                    <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 36, color: '#2c4f33', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
-                    {!sidebarCollapsed ? <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 500, fontSize: '0.95rem' }} /> : null}
+                    <ListItemIcon sx={getNavigationIconSx(isActive, sidebarCollapsed)}>{item.icon}</ListItemIcon>
+                    {!sidebarCollapsed ? <ListItemText primary={item.label} primaryTypographyProps={getNavigationTextProps(isActive)} /> : null}
                   </ListItemButton>
                 );
                 return sidebarCollapsed ? <Tooltip key={item.to} title={item.label} placement="right">{entry}</Tooltip> : entry;
@@ -858,7 +829,7 @@ function RootLayout(): React.ReactElement {
           </Stack>
         </Box>
       ) : null}
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', bgcolor: '#f2f0ea' }}>
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', bgcolor: 'surface.contentBackground' }}>
       <Box sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
         {navItems.map((item) => {
           const srLinkLabel = item.to === '/app/dashboard' ? 'Zur Übersicht' : item.label;
@@ -869,7 +840,7 @@ function RootLayout(): React.ReactElement {
         position="sticky"
         color="inherit"
         elevation={0}
-        sx={{ borderBottom: '1px solid', borderColor: '#e4dfd4', bgcolor: '#f7f4ed', backdropFilter: 'saturate(120%) blur(2px)' }}
+        sx={{ borderBottom: '1px solid', borderColor: 'surface.surfaceBorder', bgcolor: 'surface.topbarBackground', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
         <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: 'nowrap', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
           {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
@@ -1038,12 +1009,12 @@ function RootLayout(): React.ReactElement {
             });
           })()}
           {topbarPrimaryAction ? (
-            <Tooltip title={topbarPrimaryAction.label}>
+            <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
               <Button
                 size="small"
                 variant="contained"
                 onClick={handleTopbarPrimaryAction}
-                aria-label={topbarPrimaryAction.label}
+                aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
                 startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
                 sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
               >
@@ -1116,12 +1087,12 @@ function RootLayout(): React.ReactElement {
           ) : (
             <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.25 }}>
               {topbarPrimaryAction ? (
-                <Tooltip title={topbarPrimaryAction.label}>
+                <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
                   <Button
                     size="small"
                     variant="contained"
                     onClick={handleTopbarPrimaryAction}
-                    aria-label={topbarPrimaryAction.label}
+                    aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
                     sx={{ textTransform: 'none', minWidth: 32, px: 0.75, minHeight: 30 }}
                   >
                     <AddIcon fontSize="small" />
@@ -1300,36 +1271,23 @@ function RootLayout(): React.ReactElement {
         ) : null}
       </AppBar>
 
-      <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav} PaperProps={{ sx: { bgcolor: '#f5f2eb', borderRight: '1px solid #e1dbd0' } }}>
-        <List sx={{ width: 280 }}>
+      <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav} PaperProps={{ sx: mobileNavigationDrawerPaperSx }}>
+        <List sx={{ width: 280, flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
           <ListItem sx={{ py: 1.5, px: 2 }}>
             <AppLogo size={26} showText to="/app/dashboard" />
           </ListItem>
           {navItems.map((item) => {
             const isActive = location.pathname === item.to || item.activeAliases.includes(location.pathname);
             return (
-              <ListItem key={item.to} disablePadding>
-                <ListItemButton
-                  onClick={() => {
-                    navigate(item.to);
-                    closeMobileNav();
-                  }}
-                  sx={{
-                    justifyContent: 'flex-start',
-                    borderRadius: 0,
-                    px: 2,
-                    py: 1.5,
-                    color: '#29332c',
-                    bgcolor: isActive ? 'rgba(80, 130, 90, 0.14)' : 'transparent',
-                    transition: 'background-color 140ms ease, color 140ms ease',
-                    '&:hover': {
-                      bgcolor: isActive ? 'rgba(80, 130, 90, 0.18)' : 'rgba(91, 130, 102, 0.08)',
-                      color: '#29332c',
-                    },
-                  }}
+                <ListItem key={item.to} disablePadding>
+                  <ListItemButton
+                  component={NavLink}
+                  to={item.to}
+                  onClick={closeMobileNav}
+                  sx={getMobileNavigationItemSx(isActive)}
                 >
-                  <ListItemIcon sx={{ minWidth: 36, color: '#2c4f33', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 500 }} />
+                  <ListItemIcon sx={getMobileNavigationIconSx(isActive)}>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.label} primaryTypographyProps={getMobileNavigationTextProps(isActive)} />
                 </ListItemButton>
               </ListItem>
             );
@@ -1351,15 +1309,6 @@ function RootLayout(): React.ReactElement {
           minWidth: 0,
         }}
       >
-        {memberships.length === 0 ? (
-          <Button
-            variant="contained"
-            onClick={handleOpenCreateProject}
-            sx={{ alignSelf: 'flex-start', mx: { xs: 1.5, sm: 0 } }}
-          >
-            {t('common:projectRequired.createFirstProjectAction')}
-          </Button>
-        ) : null}
         <Outlet context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
       </Box>
       </Box>
@@ -1499,6 +1448,7 @@ function RootLayout(): React.ReactElement {
           <Stack spacing={1.5}>
             <Typography variant="subtitle2">Navigation</Typography>
             <List dense disablePadding>
+              <ListItem><ListItemText primary="Neu erstellen" secondary="Alt+Shift+N" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.nextPage')} secondary="Ctrl+Shift+↓" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.previousPage')} secondary="Ctrl+Shift+↑" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="Alt+V" /></ListItem>
@@ -1699,6 +1649,10 @@ function createAppRouter(basename: string) {
     },
     {
       path: '/activate',
+      element: withLazyFallback(<ActivatePage />),
+    },
+    {
+      path: '/activate/:uid/:token',
       element: withLazyFallback(<ActivatePage />),
     },
     {

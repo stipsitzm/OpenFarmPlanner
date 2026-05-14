@@ -23,13 +23,14 @@ const toIsoDate = (value: Date): string => value.toISOString().slice(0, 10);
 
 const parseIsoDate = (value?: string): Date | null => {
   if (!value) return null;
-  const parsed = new Date(`${value}T00:00:00`);
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
 const addDays = (value: Date, days: number): Date => {
   const next = new Date(value);
-  next.setDate(next.getDate() + days);
+  next.setUTCDate(next.getUTCDate() + days);
   return next;
 };
 

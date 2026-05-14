@@ -181,7 +181,7 @@ describe('GanttChartPage', () => {
     );
 
     expect(await screen.findByText('Es ist aktuell kein Projekt ausgewählt.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Projekt auswählen' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Projekt auswählen' })).toHaveAttribute('href', '/app/project-selection');
     expect(screen.queryByText('Fehler beim Laden der Daten')).not.toBeInTheDocument();
     expect(mocks.locationList).not.toHaveBeenCalled();
   });

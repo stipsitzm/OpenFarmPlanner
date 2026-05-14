@@ -261,13 +261,12 @@ class AgentLoginToken(models.Model):
 class Supplier(TimestampedModel):
     """A seed supplier or manufacturer."""
 
-    name = models.CharField(max_length=200, unique=True, help_text="Supplier name")
-    homepage_url = models.URLField(help_text="Supplier homepage URL")
+    name = models.CharField(max_length=200, help_text="Supplier name")
+    homepage_url = models.URLField(blank=True, help_text="Supplier homepage URL")
     slug = models.SlugField(max_length=200, unique=True, blank=True)
     allowed_domains = models.JSONField(default=list, blank=True)
     name_normalized = models.CharField(
         max_length=200,
-        unique=True,
         editable=False,
         help_text="Normalized name for deduplication"
     )
@@ -354,7 +353,7 @@ class Supplier(TimestampedModel):
             domains = self._derive_default_allowed_domains()
         invalid = [domain for domain in domains if not self._is_valid_domain(self._normalize_domain(domain))]
         if invalid:
-            raise ValidationError({'allowed_domains': 'Allowed domains must be valid hostnames without scheme or path.'})
+            raise ValidationError({'allowed_domains': 'Domains müssen gültige Hostnamen ohne Schema oder Pfad sein.'})
         self.allowed_domains = domains
 
     def save(self, *args: Any, **kwargs: Any) -> None:
@@ -378,6 +377,9 @@ class Supplier(TimestampedModel):
 
     class Meta:
         ordering = ['name']
+        constraints = [
+            models.UniqueConstraint(fields=['project', 'name_normalized'], name='unique_supplier_name_per_project'),
+        ]
 
 
 

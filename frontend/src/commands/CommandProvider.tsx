@@ -5,6 +5,7 @@ import {
   DialogTitle,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
   Snackbar,
   Typography,
@@ -12,7 +13,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CommandPalette } from './CommandPalette';
 import { getRunnableCommands, getVisibleCommands } from './commands';
-import type { CommandContextTag, CommandSpec } from './types';
+import type { CommandContextTag, CommandSpec, CreateAction } from './types';
 import type { ShortcutSpec } from '../hooks/useKeyboardShortcuts';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { CommandContext } from './commandContextShared';
@@ -28,12 +29,20 @@ const CONTEXT_TITLES: Record<CommandContextTag, string> = {
 };
 
 const SHORTCUT_HINT_KEY = 'ofp.shortcutHintSeen';
+const CREATE_SHORTCUT_HINT = 'Alt+Shift+N';
+const CREATE_SHORTCUT_KEYS = { alt: true, shift: true, key: 'n' } as const;
+
+const getAvailableCreateActions = (actions: CreateAction[]): CreateAction[] => actions
+  .filter((action) => !action.hidden && !action.disabled)
+  .sort((first, second) => (first.priority ?? 0) - (second.priority ?? 0) || first.label.localeCompare(second.label));
 
 export function CommandProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [createChooserOpen, setCreateChooserOpen] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
   const [commandsByScope, setCommandsByScope] = useState<Record<string, CommandSpec[]>>({});
+  const [createActionsByScope, setCreateActionsByScope] = useState<Record<string, CreateAction[]>>({});
   const [contextTagMap, setContextTagMap] = useState<Record<CommandContextTag, boolean>>({ global: true } as Record<CommandContextTag, boolean>);
   const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
 
@@ -77,6 +86,18 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
     };
   }, []);
 
+  const registerCreateActions = useCallback((scope: string, actions: CreateAction[]) => {
+    setCreateActionsByScope((previous) => ({ ...previous, [scope]: actions }));
+
+    return () => {
+      setCreateActionsByScope((previous) => {
+        const nextState = { ...previous };
+        delete nextState[scope];
+        return nextState;
+      });
+    };
+  }, []);
+
   const setContextTag = useCallback((tag: CommandContextTag, active: boolean) => {
     setContextTagMap((previous) => {
       if (previous[tag] === active) {
@@ -91,16 +112,55 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
   }, []);
 
   const allCommands = useMemo(() => Object.values(commandsByScope).flat(), [commandsByScope]);
+  const activeCreateActions = useMemo(
+    () => getAvailableCreateActions(Object.values(createActionsByScope).flat()),
+    [createActionsByScope],
+  );
+
+  const runPrimaryCreateAction = useCallback(() => {
+    if (activeCreateActions.length === 1) {
+      activeCreateActions[0].handler();
+      return;
+    }
+    if (activeCreateActions.length > 1) {
+      setCreateChooserOpen(true);
+    }
+  }, [activeCreateActions]);
+
+  const createCommand = useMemo<CommandSpec | null>(() => {
+    if (activeCreateActions.length === 0) {
+      return null;
+    }
+    const label = activeCreateActions.length === 1
+      ? `${activeCreateActions[0].label} (${CREATE_SHORTCUT_HINT})`
+      : `Neu erstellen... (${CREATE_SHORTCUT_HINT})`;
+    return {
+      id: 'global.createNew',
+      label,
+      group: 'navigation',
+      keywords: ['neu', 'erstellen', 'create', 'new'],
+      shortcutHint: CREATE_SHORTCUT_HINT,
+      keys: CREATE_SHORTCUT_KEYS,
+      contextTags: ['global'],
+      isEnabled: () => activeCreateActions.length > 0,
+      action: runPrimaryCreateAction,
+    };
+  }, [activeCreateActions, runPrimaryCreateAction]);
+
+  const commandsWithCreateAction = useMemo(
+    () => (createCommand ? [createCommand, ...allCommands] : allCommands),
+    [allCommands, createCommand],
+  );
 
   const activeCommands = useMemo(() => {
     return getRunnableCommands(
-      allCommands.filter((command) => command.contextTags.every((tag) => currentContextTags.includes(tag))),
+      commandsWithCreateAction.filter((command) => command.contextTags.every((tag) => currentContextTags.includes(tag))),
     );
-  }, [allCommands, currentContextTags]);
+  }, [commandsWithCreateAction, currentContextTags]);
 
   const helpCommands = useMemo(
-    () => getVisibleCommands(allCommands).filter((command) => command.contextTags.some((tag) => currentContextTags.includes(tag))),
-    [allCommands, currentContextTags],
+    () => getVisibleCommands(commandsWithCreateAction).filter((command) => command.contextTags.some((tag) => currentContextTags.includes(tag))),
+    [commandsWithCreateAction, currentContextTags],
   );
 
   const shortcutSpecs = useMemo<ShortcutSpec[]>(() => {
@@ -137,14 +197,50 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
   }, [helpCommands]);
 
   const contextValue = useMemo(
-    () => ({ registerCommands, setContextTag, openPalette, closePalette, currentContextTags }),
-    [closePalette, currentContextTags, openPalette, registerCommands, setContextTag],
+    () => ({
+      registerCommands,
+      registerCreateActions,
+      setContextTag,
+      openPalette,
+      closePalette,
+      currentContextTags,
+      activeCreateActions,
+      runPrimaryCreateAction,
+    }),
+    [
+      activeCreateActions,
+      closePalette,
+      currentContextTags,
+      openPalette,
+      registerCommands,
+      registerCreateActions,
+      runPrimaryCreateAction,
+      setContextTag,
+    ],
   );
 
   return (
     <CommandContext.Provider value={contextValue}>
       {children}
       <CommandPalette open={paletteOpen} commands={activeCommands} onClose={closePalette} />
+      <Dialog open={createChooserOpen} onClose={() => setCreateChooserOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Neu erstellen...</DialogTitle>
+        <DialogContent>
+          <List dense>
+            {activeCreateActions.map((action) => (
+              <ListItemButton
+                key={action.id}
+                onClick={() => {
+                  setCreateChooserOpen(false);
+                  action.handler();
+                }}
+              >
+                <ListItemText primary={action.label} secondary={action.shortcut ?? CREATE_SHORTCUT_HINT} />
+              </ListItemButton>
+            ))}
+          </List>
+        </DialogContent>
+      </Dialog>
       <Dialog open={helpOpen} onClose={() => setHelpOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>Kontextbezogene Tastenkürzel (Alt+K)</DialogTitle>
         <DialogContent>

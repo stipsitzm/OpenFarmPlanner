@@ -27,18 +27,17 @@ export default function AppLogo({ to = '/app/dashboard', size = 28, showText = t
         py: 0.35,
         borderRadius: 1,
         border: '1px solid transparent',
-        backgroundColor: isActive ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
-        boxShadow: isActive ? 'inset 0 0 0 1px rgba(255, 255, 255, 0.12)' : 'none',
+        backgroundColor: isActive ? 'navigation.activeBackground' : 'transparent',
+        boxShadow: 'none',
         transition: 'background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease',
         '&:hover': {
-          backgroundColor: isActive ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.08)',
-          borderColor: 'rgba(255, 255, 255, 0.2)',
+          backgroundColor: isActive ? 'navigation.activeHoverBackground' : 'navigation.hoverBackground',
+          borderColor: isActive ? 'navigation.activeHoverBorder' : 'navigation.hoverBorder',
         },
         '&:focus-visible': {
           outline: 'none',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          borderColor: 'rgba(255, 255, 255, 0.3)',
-          boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.35)',
+          borderColor: 'navigation.activeHoverBorder',
+          boxShadow: (theme) => `0 0 0 2px ${theme.palette.navigation.focusRing}`,
         },
       }}
       aria-label="Zur Übersicht"
@@ -51,7 +50,7 @@ export default function AppLogo({ to = '/app/dashboard', size = 28, showText = t
         sx={{ height: size, width: size, borderRadius: 0.5, flexShrink: 0 }}
       />
       {showText ? (
-        <Box component="span" sx={{ fontWeight: 600, fontSize: 16, whiteSpace: 'nowrap' }}>
+        <Box component="span" sx={{ fontWeight: 600, fontSize: 16, whiteSpace: 'nowrap', color: isActive ? 'navigation.activeText' : 'navigation.inactiveText' }}>
           OpenFarmPlanner
         </Box>
       ) : null}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
   Alert,
@@ -30,12 +30,18 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
+import { useRegisterCreateActions } from '../commands/useCommandContext';
 
 interface SupplierDraft {
   id?: number;
   name: string;
   homepage_url: string;
 };
+
+interface SupplierFieldErrors {
+  name?: string;
+  homepage_url?: string;
+}
 
 const normalizeUrl = (input: string): string => {
   const trimmed = input.trim();
@@ -67,12 +73,32 @@ export default function Suppliers(): React.ReactElement {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<SupplierFieldErrors>({});
   const [draft, setDraft] = useState<SupplierDraft>({ name: '', homepage_url: '' });
 
   const loadSuppliers = async (): Promise<void> => {
     const response = await supplierAPI.list();
     setSuppliers(response.data.results || []);
   };
+
+  const openCreate = useCallback((): void => {
+    setDraft({ name: '', homepage_url: '' });
+    setError('');
+    setFieldErrors({});
+    setDialogOpen(true);
+  }, []);
+
+  const createActions = useMemo(() => [
+    {
+      id: 'create-supplier',
+      label: t('create'),
+      shortcut: 'Alt+Shift+N',
+      disabled: shouldShowProjectRequiredState,
+      handler: openCreate,
+    },
+  ], [openCreate, shouldShowProjectRequiredState, t]);
+
+  useRegisterCreateActions('suppliers-page', createActions);
 
   useEffect(() => {
     if (shouldShowProjectRequiredState) {
@@ -96,8 +122,7 @@ export default function Suppliers(): React.ReactElement {
       return;
     }
 
-    setDraft({ name: '', homepage_url: '' });
-    setDialogOpen(true);
+    openCreate();
     searchParams.delete('create');
     const nextSearch = searchParams.toString();
     navigate(
@@ -107,7 +132,7 @@ export default function Suppliers(): React.ReactElement {
       },
       { replace: true },
     );
-  }, [location.pathname, location.search, navigate, shouldShowProjectRequiredState]);
+  }, [location.pathname, location.search, navigate, openCreate, shouldShowProjectRequiredState]);
 
   const openEdit = (supplier: Supplier): void => {
     setDraft({
@@ -115,21 +140,24 @@ export default function Suppliers(): React.ReactElement {
       name: supplier.name,
       homepage_url: supplier.homepage_url ?? '',
     });
+    setError('');
+    setFieldErrors({});
     setDialogOpen(true);
   };
 
-  const canSave = useMemo(() => draft.name.trim().length > 0 && draft.homepage_url.trim().length > 0, [draft]);
+  const canSave = useMemo(() => draft.name.trim().length > 0, [draft]);
 
   const saveSupplier = async (): Promise<void> => {
     try {
       setError('');
+      setFieldErrors({});
       
       // Normalize URL (prepend https:// if no protocol)
       const normalizedUrl = normalizeUrl(draft.homepage_url);
       
       // Client-side URL validation
       if (normalizedUrl && !isValidUrl(normalizedUrl)) {
-        setError(t('invalidUrl'));
+        setFieldErrors({ homepage_url: t('invalidUrl') });
         return;
       }
       
@@ -148,19 +176,25 @@ export default function Suppliers(): React.ReactElement {
     } catch (saveError) {
       console.error('Error saving supplier', saveError);
       
-      // Better error handling for backend validation errors
       if (axios.isAxiosError(saveError) && saveError.response?.data) {
-        const errorData = saveError.response.data;
-        if (typeof errorData.homepage_url === 'string') {
-          setError(errorData.homepage_url);
-        } else if (typeof errorData.name === 'string') {
-          setError(errorData.name);
-        } else {
-          setError(t('saveError'));
+        const errorData = saveError.response.data as Record<string, unknown>;
+        const fieldErrorValue = (value: unknown): string | undefined => {
+          if (typeof value === 'string') return value;
+          if (Array.isArray(value)) {
+            return value.filter((entry): entry is string => typeof entry === 'string').join(' ');
+          }
+          return undefined;
+        };
+        const nextFieldErrors = {
+          name: fieldErrorValue(errorData.name),
+          homepage_url: fieldErrorValue(errorData.homepage_url),
+        };
+        if (nextFieldErrors.name || nextFieldErrors.homepage_url) {
+          setFieldErrors(nextFieldErrors);
+          return;
         }
-      } else {
-        setError(t('saveError'));
       }
+      setError(t('saveError'));
     }
   };
 
@@ -258,15 +292,30 @@ export default function Suppliers(): React.ReactElement {
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{draft.id ? t('edit') : t('create')}</DialogTitle>
         <DialogContent>
-          <TextField margin="dense" fullWidth label={t('name')} value={draft.name} onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))} />
+          <TextField
+            margin="dense"
+            fullWidth
+            label={t('name')}
+            value={draft.name}
+            error={Boolean(fieldErrors.name)}
+            helperText={fieldErrors.name}
+            onChange={(e) => {
+              const value = e.target.value;
+              setDraft((prev) => ({ ...prev, name: value }));
+              setFieldErrors((prev) => ({ ...prev, name: undefined }));
+            }}
+          />
           <TextField
             margin="dense"
             fullWidth
             label={t('homepage')}
             value={draft.homepage_url}
+            error={Boolean(fieldErrors.homepage_url)}
+            helperText={fieldErrors.homepage_url}
             onChange={(e) => {
               const value = e.target.value;
               setDraft((prev) => ({ ...prev, homepage_url: value }));
+              setFieldErrors((prev) => ({ ...prev, homepage_url: undefined }));
             }}
           />
           {error ? <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert> : null}

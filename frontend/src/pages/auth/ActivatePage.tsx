@@ -1,6 +1,6 @@
 import { Alert, Button, Container, Stack, Typography } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
-import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { projectAPI } from '../../api/api';
 import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
@@ -10,6 +10,7 @@ type ActivateStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export default function ActivatePage(): React.ReactElement {
   const [searchParams] = useSearchParams();
+  const { uid: uidFromPath, token: tokenFromPath } = useParams<{ uid?: string; token?: string }>();
   const { activate, switchActiveProject } = useAuth();
   const { t } = useTranslation(['auth', 'projectInvitations']);
   const navigate = useNavigate();
@@ -18,8 +19,11 @@ export default function ActivatePage(): React.ReactElement {
   const processedActivationRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const uid = searchParams.get('uid');
-    const token = searchParams.get('token');
+    const uidFromQuery = searchParams.get('uid');
+    const tokenFromQuery = searchParams.get('token') ?? searchParams.get('amp;token');
+
+    const uid = uidFromQuery?.trim() || uidFromPath?.trim() || null;
+    const token = tokenFromQuery?.trim() || tokenFromPath?.trim() || null;
 
     if (!uid || !token) {
       queueMicrotask(() => {
@@ -75,7 +79,7 @@ export default function ActivatePage(): React.ReactElement {
         setMessage(err instanceof Error ? err.message : t('auth:activate.failed'));
       }
     })();
-  }, [activate, navigate, searchParams, switchActiveProject, t]);
+  }, [activate, navigate, searchParams, switchActiveProject, t, tokenFromPath, uidFromPath]);
 
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>

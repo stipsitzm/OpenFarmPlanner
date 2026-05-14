@@ -127,7 +127,13 @@ export function usePersistentSortModel({
 
     const newSearch = searchParams.toString();
     const nextUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}${window.location.hash}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (nextUrl === currentUrl) {
+      return;
+    }
+
     window.history.replaceState(window.history.state, '', nextUrl);
+    window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
   }, [persistInUrl, tableKey]);
 
   return {
