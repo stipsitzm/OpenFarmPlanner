@@ -11,27 +11,29 @@ import type { Theme } from '@mui/material/styles';
  * Common styles for MUI DataGrid components
  */
 export const dataGridSx = {
-  border: '1px solid #e5e7eb',
+  border: '1px solid',
+  borderColor: 'surface.surfaceSoftBorder',
   borderRadius: 3,
-  backgroundColor: '#fbfcfa',
+  backgroundColor: 'surface.surfaceBackground',
   boxShadow: '0 1px 2px rgba(21, 31, 24, 0.03)',
   '& .MuiDataGrid-columnHeaders': {
-    backgroundColor: '#f5f7f4',
-    borderBottom: '1px solid #e3e8e3',
+    backgroundColor: 'surface.surfaceSubtleBackground',
+    borderBottom: '1px solid',
+    borderBottomColor: 'surface.surfaceSoftBorder',
   },
   '& .MuiDataGrid-row': {
     minHeight: 44,
   },
   '& .MuiDataGrid-row:hover': {
-    backgroundColor: '#f1f5ef',
+    backgroundColor: 'surface.surfaceHoverBackground',
   },
   '& .MuiDataGrid-cell': {
-    borderColor: '#edf1ee',
+    borderColor: 'surface.surfaceSoftBorder',
     transition: 'background-color 0.15s ease',
   },
   '& .MuiDataGrid-cell--editable': {
     bgcolor: (theme: Theme) =>
-      theme.palette.mode === 'dark' ? '#383838' : '#fff',
+      theme.palette.mode === 'dark' ? '#383838' : theme.palette.surface.surfaceBackground,
     cursor: 'pointer',
   },
   '& .MuiDataGrid-cell--editable:hover': {
@@ -92,7 +94,7 @@ export const dataGridFooterSx = {
   borderColor: 'divider',
   position: 'sticky',
   bottom: 0,
-  backgroundColor: '#fff',
+  backgroundColor: 'surface.surfaceBackground',
   zIndex: 2,
 };
 

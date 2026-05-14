@@ -1591,9 +1591,10 @@ function PlantingPlans(): React.ReactElement {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: "1px dashed #d1d5db",
+              border: "1px dashed",
+              borderColor: "surface.surfaceSoftBorder",
               borderRadius: 2,
-              bgcolor: "#fafbfa",
+              bgcolor: "surface.surfaceBackground",
             }}
           >
             <Stack spacing={1.25} alignItems="center">

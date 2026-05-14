@@ -3,6 +3,74 @@
 import { alpha, createTheme } from '@mui/material/styles';
 import type {} from '@mui/x-data-grid/themeAugmentation';
 
+const surfaceColors = {
+  appBackground: '#ffffff',
+  sidebarBackground: '#ffffff',
+  topbarBackground: '#ffffff',
+  contentBackground: '#faf9f5',
+  surfaceBackground: '#ffffff',
+  surfaceSubtleBackground: '#f8faf6',
+  surfaceHoverBackground: '#f3f7f0',
+  surfaceBorder: '#e7e1d6',
+  surfaceSoftBorder: '#ece8df',
+} as const;
+
+declare module '@mui/material/styles' {
+  interface SurfacePalette {
+    appBackground: string;
+    sidebarBackground: string;
+    topbarBackground: string;
+    contentBackground: string;
+    surfaceBackground: string;
+    surfaceSubtleBackground: string;
+    surfaceHoverBackground: string;
+    surfaceBorder: string;
+    surfaceSoftBorder: string;
+  }
+
+  interface Palette {
+    surface: SurfacePalette;
+    navigation: {
+      inactiveText: string;
+      inactiveIcon: string;
+      inactiveHoverText: string;
+      inactiveHoverIcon: string;
+      hoverBackground: string;
+      hoverBorder: string;
+      activeText: string;
+      activeIcon: string;
+      activeBackground: string;
+      activeHoverBackground: string;
+      activeBorder: string;
+      activeHoverBorder: string;
+      activeAccent: string;
+      focusRing: string;
+      tooltipBackground: string;
+    };
+  }
+
+  interface PaletteOptions {
+    surface?: SurfacePalette;
+    navigation?: {
+      inactiveText: string;
+      inactiveIcon: string;
+      inactiveHoverText: string;
+      inactiveHoverIcon: string;
+      hoverBackground: string;
+      hoverBorder: string;
+      activeText: string;
+      activeIcon: string;
+      activeBackground: string;
+      activeHoverBackground: string;
+      activeBorder: string;
+      activeHoverBorder: string;
+      activeAccent: string;
+      focusRing: string;
+      tooltipBackground: string;
+    };
+  }
+}
+
 const theme = createTheme({
   typography: {
     h5: {
@@ -44,6 +112,28 @@ const theme = createTheme({
     error: {
       main: '#d32f2f',
     },
+    background: {
+      default: surfaceColors.appBackground,
+      paper: surfaceColors.surfaceBackground,
+    },
+    surface: surfaceColors,
+    navigation: {
+      inactiveText: '#000000',
+      inactiveIcon: '#000000',
+      inactiveHoverText: '#000000',
+      inactiveHoverIcon: '#000000',
+      hoverBackground: 'rgba(76, 135, 86, 0.07)',
+      hoverBorder: 'rgba(76, 135, 86, 0.12)',
+      activeText: '#1f6224',
+      activeIcon: '#1f6224',
+      activeBackground: 'rgba(76, 135, 86, 0.13)',
+      activeHoverBackground: 'rgba(76, 135, 86, 0.17)',
+      activeBorder: 'rgba(76, 135, 86, 0.16)',
+      activeHoverBorder: 'rgba(76, 135, 86, 0.24)',
+      activeAccent: 'rgba(31, 98, 36, 0.58)',
+      focusRing: 'rgba(80, 130, 90, 0.22)',
+      tooltipBackground: '#1f2a24',
+    },
   },
   shape: {
     // Global border radius (affects Button, TextField, etc.)
@@ -54,6 +144,7 @@ const theme = createTheme({
     MuiDialogContent: {
       styleOverrides: {
         root: {
+          backgroundColor: surfaceColors.surfaceBackground,
           '.MuiDialogTitle-root + &': {
             paddingTop: 12,
           },
@@ -158,6 +249,30 @@ const theme = createTheme({
         endIcon: {
           display: 'inline-flex',
           alignItems: 'center',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+        },
+        outlined: {
+          borderColor: surfaceColors.surfaceSoftBorder,
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          backgroundColor: surfaceColors.surfaceBackground,
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: surfaceColors.surfaceBackground,
         },
       },
     },

@@ -25,8 +25,9 @@ export default function BottomActionToolbar({ leftActions, rightActions, sx }: B
     <Box
       sx={[
         {
-          borderTop: '1px solid #e5e7eb',
-          bgcolor: '#f8faf8',
+          borderTop: '1px solid',
+          borderColor: 'surface.surfaceSoftBorder',
+          bgcolor: 'surface.surfaceSubtleBackground',
           px: { xs: 1.25, md: 1.5 },
           py: 1.25,
           borderRadius: 2,
