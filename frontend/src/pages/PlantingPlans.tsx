@@ -1577,6 +1577,10 @@ function PlantingPlans(): React.ReactElement {
             description={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.description`)}
             actions={[
               ...(firstMissingRequirement === "beds" ? [{ label: t("plantingPlans:emptyStates.actions.createAreas"), to: "/app/fields-beds" }] : []),
+              ...(firstMissingRequirement === "cultures" ? [
+                { label: t("plantingPlans:emptyStates.actions.openCultureLibrary"), to: "/app/cultures?library=true" },
+                { label: t("plantingPlans:emptyStates.actions.addCulture"), to: "/app/cultures?create=true" },
+              ] : []),
             ]}
           />
         ) : shouldShowNoPlansState ? (

@@ -1369,8 +1369,8 @@ export function CultureDetail({
           title={t('emptyOnboarding.title')}
           description={t('emptyOnboarding.description')}
           actions={[
-            { label: t('emptyOnboarding.createAction'), onClick: onCreateCulture },
             { label: t('emptyOnboarding.openLibraryAction'), onClick: onOpenPublicLibrary },
+            { label: t('emptyOnboarding.createAction'), onClick: onCreateCulture },
           ]}
         />
       )}

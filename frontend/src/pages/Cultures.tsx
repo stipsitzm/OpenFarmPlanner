@@ -420,6 +420,27 @@ function Cultures(): React.ReactElement {
     await fetchPublicCultures();
   }, [fetchPublicCultures]);
 
+  useEffect(() => {
+    if (shouldShowProjectRequiredState || publicLibraryOpen) {
+      return;
+    }
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('library') !== 'true') {
+      return;
+    }
+
+    void handleOpenPublicLibrary();
+    searchParams.delete('library');
+    const nextSearch = searchParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+      },
+      { replace: true },
+    );
+  }, [handleOpenPublicLibrary, location.pathname, location.search, navigate, publicLibraryOpen, shouldShowProjectRequiredState]);
+
   const handleImportPublicCulture = async (publicCulture: PublicCulture) => {
     try {
       setPublicLibraryImportingId(publicCulture.id);

@@ -1351,15 +1351,6 @@ function RootLayout(): React.ReactElement {
           minWidth: 0,
         }}
       >
-        {memberships.length === 0 ? (
-          <Button
-            variant="contained"
-            onClick={handleOpenCreateProject}
-            sx={{ alignSelf: 'flex-start', mx: { xs: 1.5, sm: 0 } }}
-          >
-            {t('common:projectRequired.createFirstProjectAction')}
-          </Button>
-        ) : null}
         <Outlet context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
       </Box>
       </Box>

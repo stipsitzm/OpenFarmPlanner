@@ -85,6 +85,8 @@
     },
     "actions": {
       "createAreas": "Zu Anbauflächen",
+      "openCultureLibrary": "Kulturbibliothek öffnen",
+      "addCulture": "Kultur hinzufügen",
       "createPlan": "Anbauplan hinzufügen"
     }
   }

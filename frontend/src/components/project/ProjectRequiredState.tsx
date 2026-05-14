@@ -1,8 +1,7 @@
-import { Alert, Box, Button, Stack, Typography } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import type { MissingProjectReason } from "../../hooks/useProjectRequirement";
 import { useTranslation } from "../../i18n";
 import { openProjectCreationFlow } from "../../projects/projectCreationFlow";
+import EmptyStateCard from "./EmptyStateCard";
 
 interface ProjectRequiredStateProps {
   reason: MissingProjectReason;
@@ -11,7 +10,6 @@ interface ProjectRequiredStateProps {
 export default function ProjectRequiredState({
   reason,
 }: ProjectRequiredStateProps): React.ReactElement {
-  const navigate = useNavigate();
   const { t } = useTranslation("common");
 
   const isCreateFlow = reason === "no_projects";
@@ -26,27 +24,14 @@ export default function ProjectRequiredState({
     : "projectRequired.selectProjectAction";
 
   return (
-    <Alert severity="info">
-      <Stack spacing={1.5}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-          {t(titleKey)}
-        </Typography>
-        <Typography variant="body2">{t(descriptionKey)}</Typography>
-        <Box>
-          <Button
-            variant="contained"
-            onClick={() => {
-              if (isCreateFlow) {
-                openProjectCreationFlow();
-                return;
-              }
-              navigate("/app/project-selection");
-            }}
-          >
-            {t(actionLabelKey)}
-          </Button>
-        </Box>
-      </Stack>
-    </Alert>
+    <EmptyStateCard
+      title={t(titleKey)}
+      description={t(descriptionKey)}
+      actions={[
+        isCreateFlow
+          ? { label: t(actionLabelKey), onClick: openProjectCreationFlow }
+          : { label: t(actionLabelKey), to: "/app/project-selection" },
+      ]}
+    />
   );
 }
