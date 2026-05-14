@@ -8,7 +8,7 @@
  * @returns The main App component with routing
  */
 
-import { createBrowserRouter, RouterProvider, Outlet, NavLink, Link as RouterLink, redirect, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, Link as RouterLink, redirect, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import {
   Alert,
   AppBar,
@@ -814,9 +814,8 @@ function RootLayout(): React.ReactElement {
                 const entry = (
                   <ListItemButton
                     key={item.to}
-                    component={NavLink}
-                    to={item.to}
                     selected={isActive}
+                    onClick={() => navigate(item.to)}
                     sx={getNavigationItemSx(isActive, sidebarCollapsed)}
                   >
                     <ListItemIcon sx={getNavigationIconSx(isActive, sidebarCollapsed)}>{item.icon}</ListItemIcon>
@@ -1281,9 +1280,11 @@ function RootLayout(): React.ReactElement {
             return (
                 <ListItem key={item.to} disablePadding>
                   <ListItemButton
-                  component={NavLink}
-                  to={item.to}
-                  onClick={closeMobileNav}
+                  selected={isActive}
+                  onClick={() => {
+                    navigate(item.to);
+                    closeMobileNav();
+                  }}
                   sx={getMobileNavigationItemSx(isActive)}
                 >
                   <ListItemIcon sx={getMobileNavigationIconSx(isActive)}>{item.icon}</ListItemIcon>
