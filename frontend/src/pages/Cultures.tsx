@@ -1132,21 +1132,13 @@ function Cultures(): React.ReactElement {
         </DialogActions>
       </Dialog>
 
-      {/* Form Dialog */}
-      <Dialog
-        open={showForm}
-        onClose={handleCancel}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogContent>
-          <CultureForm
-            culture={editingCulture}
-            onSave={handleSave}
-            onCancel={handleCancel}
-          />
-        </DialogContent>
-      </Dialog>
+      {showForm ? (
+        <CultureForm
+          culture={editingCulture}
+          onSave={handleSave}
+          onCancel={handleCancel}
+        />
+      ) : null}
 
       <CulturesImportDialog
         open={importDialogOpen}
