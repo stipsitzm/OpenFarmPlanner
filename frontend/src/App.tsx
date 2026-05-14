@@ -1719,7 +1719,7 @@ function App(): React.ReactElement {
   const currentPath = window.location.pathname;
   const basename = resolveRouterBasename(configuredBase, currentPath);
 
-  const router = createAppRouter(basename);
+  const router = useMemo(() => createAppRouter(basename), [basename]);
 
   return <RouterProvider router={router} />;
 }
