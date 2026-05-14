@@ -37,6 +37,7 @@ export default function EmptyStateCard({
         p: 2,
         width: '100%',
         maxWidth: 880,
+        mx: 'auto',
         borderColor: 'success.200',
         backgroundColor: 'success.50',
         borderLeft: 4,
