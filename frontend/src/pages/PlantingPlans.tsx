@@ -430,6 +430,7 @@ function PlantingPlans(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const isPlantingPlansRoute = location.pathname.endsWith('/anbauplaene') || location.pathname.endsWith('/planting-plans');
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
@@ -463,8 +464,7 @@ function PlantingPlans(): React.ReactElement {
   const createIntentHandledRef = useRef(false);
 
   const replacePlantingPlanSearchParams = useCallback((nextParams: URLSearchParams): void => {
-    const browserPathname = window.location.pathname;
-    if (browserPathname.includes("/app/") && !browserPathname.endsWith(location.pathname)) {
+    if (!isPlantingPlansRoute) {
       return;
     }
 
@@ -482,7 +482,7 @@ function PlantingPlans(): React.ReactElement {
       },
       { replace: true },
     );
-  }, [location.hash, location.pathname, location.search, navigate]);
+  }, [isPlantingPlansRoute, location.hash, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     if (isMobile) {

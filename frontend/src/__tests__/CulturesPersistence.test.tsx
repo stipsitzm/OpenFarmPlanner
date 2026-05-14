@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import type { ReactElement } from 'react';
 import Cultures from '../pages/Cultures';
 import { CommandProvider } from '../commands/CommandProvider';
@@ -73,8 +73,19 @@ function renderCultures(initialEntry = '/cultures'): void {
             </>
           )}
         />
+        <Route path="/locations" element={<div data-testid="locations-page">locations</div>} />
       </Routes>
     </MemoryRouter>
+  );
+}
+
+function CrossRouteHarness(): ReactElement {
+  return (
+    <>
+      <Link to="/locations">go-locations</Link>
+      <SearchIndicator />
+      <CommandProvider><Cultures /></CommandProvider>
+    </>
   );
 }
 
@@ -161,5 +172,28 @@ describe('Cultures selection persistence', () => {
 
     expect(firstSelectionOfTwo).toBeGreaterThan(-1);
     expect(valuesAfterSelectingTwo).not.toContain(1);
+  });
+
+  it('does not navigate back to cultures after leaving the route', async () => {
+    render(
+      <MemoryRouter initialEntries={['/cultures?cultureId=1']}>
+        <Routes>
+          <Route path="/cultures" element={<CrossRouteHarness />} />
+          <Route path="/locations" element={<div data-testid="locations-page">locations</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('1');
+    });
+
+    fireEvent.click(screen.getByRole('link', { name: 'go-locations' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('locations-page')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('selected-culture-id')).not.toBeInTheDocument();
   });
 });
