@@ -19,7 +19,6 @@ export function useSelectedCultureSync(): UseSelectedCultureSyncResult {
   const navigate = useNavigate();
   const selectedCultureParam = searchParams.get('cultureId');
   const selectedCultureIdFromQuery = parseCultureId(selectedCultureParam);
-  const isCulturesRoute = location.pathname.endsWith('/cultures');
 
   const selectionSyncSourceRef = useRef<SelectionSyncSource>(null);
   const [selectedCultureId, setSelectedCultureId] = useState<number | undefined>(() => {
@@ -36,7 +35,8 @@ export function useSelectedCultureSync(): UseSelectedCultureSyncResult {
   }, []);
 
   const replaceCultureSearchParams = useCallback((updateParams: (params: URLSearchParams) => URLSearchParams): void => {
-    if (!isCulturesRoute) {
+    const browserPathname = window.location.pathname;
+    if (browserPathname.includes('/app/') && !browserPathname.endsWith(location.pathname)) {
       return;
     }
 
@@ -56,7 +56,7 @@ export function useSelectedCultureSync(): UseSelectedCultureSyncResult {
       },
       { replace: true },
     );
-  }, [isCulturesRoute, location.hash, location.pathname, location.search, navigate]);
+  }, [location.hash, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     if (selectionSyncSourceRef.current === 'internal') {

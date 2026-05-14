@@ -252,10 +252,10 @@ function Cultures(): React.ReactElement {
     updateSelectedCultureId(culture?.id, 'internal');
   };
 
-  const handleAddNew = () => {
+  const handleAddNew = useCallback(() => {
     setEditingCulture(undefined);
     setShowForm(true);
-  };
+  }, []);
 
   useEffect(() => {
     if (shouldShowProjectRequiredState || showForm) {
@@ -276,7 +276,7 @@ function Cultures(): React.ReactElement {
       },
       { replace: true },
     );
-  }, [location.pathname, location.search, navigate, shouldShowProjectRequiredState, showForm]);
+  }, [handleAddNew, location.pathname, location.search, navigate, shouldShowProjectRequiredState, showForm]);
 
   const handleEdit = (culture: Culture) => {
     setEditingCulture(culture);

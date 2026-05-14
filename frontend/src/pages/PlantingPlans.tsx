@@ -430,7 +430,6 @@ function PlantingPlans(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const isPlantingPlansRoute = location.pathname.endsWith('/anbauplaene') || location.pathname.endsWith('/planting-plans');
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
@@ -464,7 +463,8 @@ function PlantingPlans(): React.ReactElement {
   const createIntentHandledRef = useRef(false);
 
   const replacePlantingPlanSearchParams = useCallback((nextParams: URLSearchParams): void => {
-    if (!isPlantingPlansRoute) {
+    const browserPathname = window.location.pathname;
+    if (browserPathname.includes("/app/") && !browserPathname.endsWith(location.pathname)) {
       return;
     }
 
@@ -482,7 +482,7 @@ function PlantingPlans(): React.ReactElement {
       },
       { replace: true },
     );
-  }, [isPlantingPlansRoute, location.hash, location.pathname, location.search, navigate]);
+  }, [location.hash, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     if (isMobile) {
@@ -1286,7 +1286,7 @@ function PlantingPlans(): React.ReactElement {
     });
   };
 
-  const openMobileCreateDialog = (
+  const openMobileCreateDialog = useCallback((
     prefill?: { cultureId?: number | null; bedId?: number | null },
   ): void => {
     setMobileCreateError("");
@@ -1294,7 +1294,7 @@ function PlantingPlans(): React.ReactElement {
     setMobileCreateForm(buildMobileCreateForm(numberLocale, beds, prefill));
     setMobileLastEditedField(null);
     setIsMobileCreateOpen(true);
-  };
+  }, [beds, numberLocale]);
 
   const closeMobileCreateDialog = (): void => {
     setIsMobileCreateOpen(false);
@@ -1318,7 +1318,7 @@ function PlantingPlans(): React.ReactElement {
       bedId: initialSelection.bedId,
     });
     mobilePrefillHandledRef.current = true;
-  }, [isMobile, initialSelection.cultureId, initialSelection.bedId, beds, numberLocale]);
+  }, [isMobile, initialSelection.cultureId, initialSelection.bedId, beds.length, openMobileCreateDialog]);
 
   const openMobileNotesDialog = (row: PlantingPlanRow): void => {
     setMobileNotesTarget(row);
@@ -1539,13 +1539,13 @@ function PlantingPlans(): React.ReactElement {
   const shouldShowNoPlansState = canCreatePlan && !hasPlans;
   const isInitialLoading = !shouldShowProjectRequiredState && (isHierarchyLoading || isPlansLoading);
 
-  const handleCreatePlan = (): void => {
+  const handleCreatePlan = useCallback((): void => {
     if (isMobile) {
       openMobileCreateDialog();
       return;
     }
     gridCommandApiRef.current?.addRow();
-  };
+  }, [isMobile, openMobileCreateDialog]);
 
   const createActions = useMemo(() => [
     {
