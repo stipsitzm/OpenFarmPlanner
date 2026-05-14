@@ -4,7 +4,7 @@ du hast gerade ein Konto bei OpenFarmPlanner erstellt.
 
 Bitte bestätige deine Registrierung über den folgenden Link:
 
-{{ activation_link }}
+{{ activation_link|safe }}
 
 OpenFarmPlanner ist eine Open-Source-Webanwendung zur Planung von Gemüsebau und CSA-Anbau.
 
