@@ -519,7 +519,7 @@ function GanttChartPage(): React.ReactElement {
 
         {!hasCalendarRequirements ? (
           <PageSurface variant="fullWorkspace" sx={{ mt: 0.5 }}>
-          <Box className="gantt-container-wrapper" sx={{ border: '1px solid #e3e7df', borderRadius: 2, bgcolor: '#fff' }}>
+          <Box className="gantt-container-wrapper" sx={{ border: '1px solid', borderColor: 'surface.surfaceSoftBorder', borderRadius: 2, bgcolor: 'surface.surfaceBackground' }}>
             <Box sx={{ p: 2 }}>
               <EmptyStateCard
                 title={t('ganttChart:emptyStates.requirementsTitle')}
@@ -542,7 +542,7 @@ function GanttChartPage(): React.ReactElement {
           </PageSurface>
         ) : (
           <PageSurface variant="fullWorkspace" sx={{ mt: 0.5 }}>
-          <Box className="gantt-container-wrapper" sx={{ border: '1px solid #e3e7df', borderRadius: 2, bgcolor: '#fff' }}>
+          <Box className="gantt-container-wrapper" sx={{ border: '1px solid', borderColor: 'surface.surfaceSoftBorder', borderRadius: 2, bgcolor: 'surface.surfaceBackground' }}>
             <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
               <GanttChart
                 key={ganttRenderKey}
@@ -598,7 +598,7 @@ function GanttChartPage(): React.ReactElement {
 
         {hasCalendarRequirements && calendarMode === 'occupancy' && hasYieldData ? (
           <PageSurface variant="fullWorkspace" sx={{ mt: 3 }}>
-          <Box className="gantt-container-wrapper" sx={{ p: 2, border: '1px solid #e3e7df', borderRadius: 2, bgcolor: '#fff' }}>
+          <Box className="gantt-container-wrapper" sx={{ p: 2, border: '1px solid', borderColor: 'surface.surfaceSoftBorder', borderRadius: 2, bgcolor: 'surface.surfaceBackground' }}>
             <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
               {t('ganttChart:yieldDistributionTitle')}
             </Typography>
