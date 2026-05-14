@@ -85,7 +85,6 @@ import { getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHis
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './navigation/mainNavigation';
-import { NAVIGATION_COLORS, getNavigationItemSx, getNavigationIconSx, getMobileNavigationItemSx, getMobileNavigationIconSx } from './navigation/navigationStyles';
 import { PanelLeft } from 'lucide-react';
 
 const CONTENT_ALIGNMENT_MODE = 'centered';
@@ -731,7 +730,7 @@ function RootLayout(): React.ReactElement {
   return (
     <Box className={`app app--${CONTENT_ALIGNMENT_MODE}`} sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f2f0ea' }}>
       {isDesktopUp ? (
-        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: NAVIGATION_COLORS.sidebar.border, bgcolor: NAVIGATION_COLORS.sidebar.background, transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
+        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#e1dbd0', bgcolor: '#f5f2eb', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
             {!sidebarCollapsed ? (
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1 }}>
@@ -751,10 +750,10 @@ function RootLayout(): React.ReactElement {
                     py: 0.25,
                     textDecoration: 'none',
                     color: 'inherit',
-                    '&:hover': { bgcolor: NAVIGATION_COLORS.sidebar.logo.hoverBackground },
+                    '&:hover': { bgcolor: 'rgba(80, 120, 90, 0.08)' },
                     '&:focus-visible': {
                       outline: 'none',
-                      boxShadow: `0 0 0 2px rgba(76, 135, 86, 0.22)`,
+                      boxShadow: '0 0 0 2px rgba(80, 130, 90, 0.22)',
                     },
                   }}
                 >
@@ -767,7 +766,7 @@ function RootLayout(): React.ReactElement {
                   <Typography
                     variant="subtitle2"
                     noWrap
-                    sx={{ color: NAVIGATION_COLORS.sidebar.logo.text, letterSpacing: 0.1 }}
+                    sx={{ color: '#2F3A33', letterSpacing: 0.1 }}
                   >
                     OpenFarmPlanner
                   </Typography>
@@ -785,9 +784,9 @@ function RootLayout(): React.ReactElement {
                     sx={{
                       width: 30,
                       height: 30,
-                      color: NAVIGATION_COLORS.sidebar.toggleButton.icon,
+                      color: '#4E5A53',
                       cursor: 'w-resize',
-                      '&:hover': { bgcolor: NAVIGATION_COLORS.sidebar.toggleButton.hoverBackground },
+                      '&:hover': { bgcolor: 'rgba(80, 120, 90, 0.08)' },
                     }}
                   >
                     <PanelLeft size={18} strokeWidth={1.8} />
@@ -809,9 +808,9 @@ function RootLayout(): React.ReactElement {
                     sx={{
                       width: 30,
                       height: 30,
-                      color: NAVIGATION_COLORS.sidebar.toggleButton.icon,
+                      color: '#4E5A53',
                       cursor: 'e-resize',
-                      '&:hover': { bgcolor: NAVIGATION_COLORS.sidebar.toggleButton.hoverBackground },
+                      '&:hover': { bgcolor: 'rgba(80, 120, 90, 0.08)' },
                     }}
                   >
                     <PanelLeft size={18} strokeWidth={1.8} />
@@ -828,9 +827,35 @@ function RootLayout(): React.ReactElement {
                     component={NavLink}
                     to={item.to}
                     selected={isActive}
-                    sx={getNavigationItemSx(isActive, sidebarCollapsed)}
+                    sx={{
+                      minHeight: 44,
+                      borderRadius: 1.5,
+                      mb: 0.75,
+                      px: 1.25,
+                      justifyContent: sidebarCollapsed ? 'center' : 'initial',
+                      color: '#29332c',
+                      bgcolor: isActive ? 'rgba(76, 135, 86, 0.13)' : 'transparent',
+                      border: '1px solid rgba(76, 135, 86, 0)',
+                      position: 'relative',
+                      transition: 'background-color 140ms ease, color 140ms ease, border-color 140ms ease',
+                      '&:hover': {
+                        bgcolor: isActive ? 'rgba(76, 135, 86, 0.16)' : 'rgba(91, 130, 102, 0.09)',
+                        color: '#29332c',
+                        borderColor: 'rgba(91, 130, 102, 0.14)',
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        left: 0,
+                        top: 8,
+                        bottom: 8,
+                        width: 3,
+                        borderRadius: 999,
+                        bgcolor: isActive ? 'rgba(59, 116, 72, 0.52)' : 'transparent',
+                      },
+                    }}
                   >
-                    <ListItemIcon sx={getNavigationIconSx(isActive, sidebarCollapsed)}>{item.icon}</ListItemIcon>
+                    <ListItemIcon sx={{ minWidth: sidebarCollapsed ? 0 : 36, color: '#2c4f33', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
                     {!sidebarCollapsed ? <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 500, fontSize: '0.95rem' }} /> : null}
                   </ListItemButton>
                 );
@@ -1282,7 +1307,7 @@ function RootLayout(): React.ReactElement {
         ) : null}
       </AppBar>
 
-      <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav} PaperProps={{ sx: { bgcolor: NAVIGATION_COLORS.drawer.background, borderRight: `1px solid ${NAVIGATION_COLORS.drawer.border}` } }}>
+      <Drawer anchor="left" open={mobileNavOpen} onClose={closeMobileNav} PaperProps={{ sx: { bgcolor: '#f5f2eb', borderRight: '1px solid #e1dbd0' } }}>
         <List sx={{ width: 280 }}>
           <ListItem sx={{ py: 1.5, px: 2 }}>
             <AppLogo size={26} showText to="/app/dashboard" />
@@ -1292,13 +1317,24 @@ function RootLayout(): React.ReactElement {
             return (
               <ListItem key={item.to} disablePadding>
                 <ListItemButton
-                  onClick={() => {
-                    navigate(item.to);
-                    closeMobileNav();
+                  component={NavLink}
+                  to={item.to}
+                  onClick={closeMobileNav}
+                  sx={{
+                    justifyContent: 'flex-start',
+                    borderRadius: 0,
+                    px: 2,
+                    py: 1.5,
+                    color: '#29332c',
+                    bgcolor: isActive ? 'rgba(80, 130, 90, 0.14)' : 'transparent',
+                    transition: 'background-color 140ms ease, color 140ms ease',
+                    '&:hover': {
+                      bgcolor: isActive ? 'rgba(80, 130, 90, 0.18)' : 'rgba(91, 130, 102, 0.08)',
+                      color: '#29332c',
+                    },
                   }}
-                  sx={getMobileNavigationItemSx(isActive)}
                 >
-                  <ListItemIcon sx={getMobileNavigationIconSx(isActive)}>{item.icon}</ListItemIcon>
+                  <ListItemIcon sx={{ minWidth: 36, color: '#2c4f33', transition: 'color 140ms ease' }}>{item.icon}</ListItemIcon>
                   <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 600 : 500 }} />
                 </ListItemButton>
               </ListItem>
