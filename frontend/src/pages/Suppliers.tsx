@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
   Alert,
@@ -30,6 +30,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
+import { useRegisterCreateActions } from '../commands/useCommandContext';
 
 interface SupplierDraft {
   id?: number;
@@ -80,6 +81,25 @@ export default function Suppliers(): React.ReactElement {
     setSuppliers(response.data.results || []);
   };
 
+  const openCreate = useCallback((): void => {
+    setDraft({ name: '', homepage_url: '' });
+    setError('');
+    setFieldErrors({});
+    setDialogOpen(true);
+  }, []);
+
+  const createActions = useMemo(() => [
+    {
+      id: 'create-supplier',
+      label: t('create'),
+      shortcut: 'Alt+Shift+N',
+      disabled: shouldShowProjectRequiredState,
+      handler: openCreate,
+    },
+  ], [openCreate, shouldShowProjectRequiredState, t]);
+
+  useRegisterCreateActions('suppliers-page', createActions);
+
   useEffect(() => {
     if (shouldShowProjectRequiredState) {
       setSuppliers([]);
@@ -102,10 +122,7 @@ export default function Suppliers(): React.ReactElement {
       return;
     }
 
-    setDraft({ name: '', homepage_url: '' });
-    setError('');
-    setFieldErrors({});
-    setDialogOpen(true);
+    openCreate();
     searchParams.delete('create');
     const nextSearch = searchParams.toString();
     navigate(
@@ -115,7 +132,7 @@ export default function Suppliers(): React.ReactElement {
       },
       { replace: true },
     );
-  }, [location.pathname, location.search, navigate, shouldShowProjectRequiredState]);
+  }, [location.pathname, location.search, navigate, openCreate, shouldShowProjectRequiredState]);
 
   const openEdit = (supplier: Supplier): void => {
     setDraft({

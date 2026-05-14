@@ -291,7 +291,7 @@ function RootLayout(): React.ReactElement {
   const isTabletOrNarrowDesktop = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
-  const { openPalette } = useCommandContext();
+  const { activeCreateActions, openPalette, runPrimaryCreateAction } = useCommandContext();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -702,13 +702,19 @@ function RootLayout(): React.ReactElement {
     return null;
   }, [location.pathname]);
   const topbarPrimaryAction = useMemo(() => {
-    if (location.pathname.startsWith('/app/locations')) return { label: 'Standort hinzufügen', to: '/app/locations?create=true' };
-    if (location.pathname.startsWith('/app/cultures')) return { label: 'Kultur hinzufügen', to: '/app/cultures?create=true' };
-    if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { label: 'Anbauplan hinzufügen', to: '/app/planting-plans?create=true' };
-    if (location.pathname.startsWith('/app/suppliers')) return { label: 'Lieferant hinzufügen', to: '/app/suppliers?create=true' };
+    if (activeCreateActions.length > 0) {
+      const isSingleCreateAction = activeCreateActions.length === 1;
+      const primaryCreateAction = activeCreateActions[0];
+      const label = isSingleCreateAction ? primaryCreateAction.label : 'Neu erstellen...';
+      return {
+        label,
+        tooltip: `${label} (${primaryCreateAction.shortcut ?? 'Alt+Shift+N'})`,
+        onClick: runPrimaryCreateAction,
+      };
+    }
     if (location.pathname.startsWith('/app/fields-beds')) return fieldsGlobalAddAction ? { label: fieldsGlobalAddAction.label, to: '', onClick: fieldsGlobalAddAction.onClick } : null;
     return null;
-  }, [fieldsGlobalAddAction, location.pathname]);
+  }, [activeCreateActions, fieldsGlobalAddAction, location.pathname, runPrimaryCreateAction]);
   const handleTopbarPrimaryAction = useCallback((): void => {
     if (!topbarPrimaryAction) {
       return;
@@ -717,7 +723,9 @@ function RootLayout(): React.ReactElement {
       topbarPrimaryAction.onClick();
       return;
     }
-    navigate(topbarPrimaryAction.to);
+    if ('to' in topbarPrimaryAction && topbarPrimaryAction.to) {
+      navigate(topbarPrimaryAction.to);
+    }
   }, [navigate, topbarPrimaryAction]);
 
   return (
@@ -1038,12 +1046,12 @@ function RootLayout(): React.ReactElement {
             });
           })()}
           {topbarPrimaryAction ? (
-            <Tooltip title={topbarPrimaryAction.label}>
+            <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
               <Button
                 size="small"
                 variant="contained"
                 onClick={handleTopbarPrimaryAction}
-                aria-label={topbarPrimaryAction.label}
+                aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
                 startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
                 sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
               >
@@ -1116,12 +1124,12 @@ function RootLayout(): React.ReactElement {
           ) : (
             <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.25 }}>
               {topbarPrimaryAction ? (
-                <Tooltip title={topbarPrimaryAction.label}>
+                <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
                   <Button
                     size="small"
                     variant="contained"
                     onClick={handleTopbarPrimaryAction}
-                    aria-label={topbarPrimaryAction.label}
+                    aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
                     sx={{ textTransform: 'none', minWidth: 32, px: 0.75, minHeight: 30 }}
                   >
                     <AddIcon fontSize="small" />
@@ -1490,6 +1498,7 @@ function RootLayout(): React.ReactElement {
           <Stack spacing={1.5}>
             <Typography variant="subtitle2">Navigation</Typography>
             <List dense disablePadding>
+              <ListItem><ListItemText primary="Neu erstellen" secondary="Alt+Shift+N" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.nextPage')} secondary="Ctrl+Shift+↓" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.previousPage')} secondary="Ctrl+Shift+↑" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="Alt+V" /></ListItem>

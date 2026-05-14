@@ -20,6 +20,10 @@ vi.mock("../hooks/useProjectRequirement", () => ({
   useProjectRequirement: () => projectRequirementState,
 }));
 
+vi.mock("../commands/useCommandContext", () => ({
+  useRegisterCreateActions: vi.fn(),
+}));
+
 vi.mock("../api/api", async () => {
   const actual = await vi.importActual<typeof import("../api/api")>("../api/api");
   return {

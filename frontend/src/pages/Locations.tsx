@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -26,6 +26,7 @@ import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useRegisterCreateActions } from '../commands/useCommandContext';
 
 type SoilType = NonNullable<Location['soil_type']>;
 type Exposure = NonNullable<Location['exposure']>;
@@ -148,13 +149,25 @@ function Locations(): React.ReactElement {
     void loadData();
   }, [loadData, shouldShowProjectRequiredState]);
 
-  const openCreateDialog = (): void => {
+  const openCreateDialog = useCallback((): void => {
     setEditingLocation(null);
     setFormState(emptyForm);
     setFormError('');
     setFormErrorField(null);
     setDialogOpen(true);
-  };
+  }, []);
+
+  const createActions = useMemo(() => [
+    {
+      id: 'create-location',
+      label: t('locations:addButton'),
+      shortcut: 'Alt+Shift+N',
+      disabled: shouldShowProjectRequiredState,
+      handler: openCreateDialog,
+    },
+  ], [openCreateDialog, shouldShowProjectRequiredState, t]);
+
+  useRegisterCreateActions('locations-page', createActions);
 
   useEffect(() => {
     if (shouldShowProjectRequiredState || dialogOpen) {
@@ -175,7 +188,7 @@ function Locations(): React.ReactElement {
       },
       { replace: true },
     );
-  }, [dialogOpen, location.pathname, location.search, navigate, shouldShowProjectRequiredState]);
+  }, [dialogOpen, location.pathname, location.search, navigate, openCreateDialog, shouldShowProjectRequiredState]);
 
   const openEditDialog = (location: Location): void => {
     setEditingLocation(location);

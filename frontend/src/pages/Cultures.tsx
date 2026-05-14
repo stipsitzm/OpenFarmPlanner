@@ -67,7 +67,7 @@ import {
   buildSingleCultureFilename,
   downloadJsonFile,
 } from '../cultures/exportUtils';
-import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
+import { useCommandContextTag, useRegisterCommands, useRegisterCreateActions } from '../commands/useCommandContext';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
 import {
@@ -781,13 +781,23 @@ function Cultures(): React.ReactElement {
 
   useTopbarContextActions(setTopbarContextActions, contextActions);
 
+  const createActions = useMemo(() => [
+    {
+      id: 'create-culture',
+      label: 'Kultur hinzufügen',
+      shortcut: 'Alt+Shift+N',
+      handler: handleAddNew,
+    },
+  ], [handleAddNew]);
+
+  useRegisterCreateActions('cultures-page', createActions);
+
   const commandSpecs = useMemo(() => createCulturesCommandSpecs({
     canRunEnrichmentForCulture,
     cultures,
     enableAiEnrichment: aiEnrichmentEnabled,
     enrichmentLoading,
     goToRelativeCulture,
-    handleCreateCulture: handleAddNew,
     handleCreatePlantingPlan,
     handleDelete,
     handleEdit,
@@ -803,7 +813,6 @@ function Cultures(): React.ReactElement {
     cultures,
     enrichmentLoading,
     goToRelativeCulture,
-    handleAddNew,
     handleCreatePlantingPlan,
     handleDelete,
     handleEdit,

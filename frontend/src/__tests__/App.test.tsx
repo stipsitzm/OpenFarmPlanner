@@ -31,11 +31,15 @@ vi.mock('../commands/useCommandContext', () => ({
     openPalette: vi.fn(),
     closePalette: vi.fn(),
     registerCommands: vi.fn(() => () => {}),
+    registerCreateActions: vi.fn(() => () => {}),
     setContextTag: vi.fn(),
     currentContextTags: ['global'],
+    activeCreateActions: [],
+    runPrimaryCreateAction: vi.fn(),
   }),
   useCommandContextTag: vi.fn(),
   useRegisterCommands: vi.fn(),
+  useRegisterCreateActions: vi.fn(),
 }));
 
 describe('App', () => {

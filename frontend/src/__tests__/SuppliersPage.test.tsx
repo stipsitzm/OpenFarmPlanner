@@ -24,6 +24,10 @@ vi.mock('../hooks/useProjectRequirement', () => ({
   useProjectRequirement: () => ({ shouldShowProjectRequiredState: false, missingProjectReason: null }),
 }));
 
+vi.mock('../commands/useCommandContext', () => ({
+  useRegisterCreateActions: vi.fn(),
+}));
+
 describe('Suppliers page empty and table states', () => {
   beforeEach(() => {
     vi.clearAllMocks();

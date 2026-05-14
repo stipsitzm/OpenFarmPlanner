@@ -28,6 +28,7 @@ vi.mock('../pages/GraphicalFields', () => ({
 vi.mock('../commands/useCommandContext', () => ({
   useCommandContextTag: vi.fn(),
   useRegisterCommands: vi.fn(),
+  useRegisterCreateActions: vi.fn(),
 }));
 
 vi.mock('../api/api', async () => {

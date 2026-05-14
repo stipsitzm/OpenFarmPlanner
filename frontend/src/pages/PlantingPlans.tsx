@@ -76,6 +76,7 @@ import ProjectRequiredState from "../components/project/ProjectRequiredState";
 import {
   useCommandContextTag,
   useRegisterCommands,
+  useRegisterCreateActions,
 } from "../commands/useCommandContext";
 import type { CommandSpec } from "../commands/types";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
@@ -763,15 +764,6 @@ function PlantingPlans(): React.ReactElement {
    */
   const commands = useMemo<CommandSpec[]>(
     () => [
-      {
-        id: "plans.create",
-        label: "Neuer Anbauplan (Alt+Shift+N)",
-        group: 'navigation',
-        keywords: ["anbauplan", "neu", "create"],
-                        contextTags: ["plans"],
-        isEnabled: () => Boolean(gridCommandApiRef.current),
-        action: () => gridCommandApiRef.current?.addRow(),
-      },
       {
         id: "plans.edit",
         label: "Anbauplan bearbeiten (Alt+E)",
@@ -1523,6 +1515,26 @@ function PlantingPlans(): React.ReactElement {
   const shouldShowNoPlansState = canCreatePlan && !hasPlans;
   const isInitialLoading = !shouldShowProjectRequiredState && (isHierarchyLoading || isPlansLoading);
 
+  const handleCreatePlan = (): void => {
+    if (isMobile) {
+      openMobileCreateDialog();
+      return;
+    }
+    gridCommandApiRef.current?.addRow();
+  };
+
+  const createActions = useMemo(() => [
+    {
+      id: "create-planting-plan",
+      label: t("plantingPlans:addButton"),
+      shortcut: "Alt+Shift+N",
+      disabled: !canCreatePlan || shouldShowProjectRequiredState,
+      handler: handleCreatePlan,
+    },
+  ], [canCreatePlan, handleCreatePlan, shouldShowProjectRequiredState, t]);
+
+  useRegisterCreateActions("plans-page", createActions);
+
   useEffect(() => {
     if (createIntentHandledRef.current || !canCreatePlan) {
       return;
@@ -1531,16 +1543,12 @@ function PlantingPlans(): React.ReactElement {
       return;
     }
 
-    if (isMobile) {
-      openMobileCreateDialog();
-    } else {
-      gridCommandApiRef.current?.addRow();
-    }
+    handleCreatePlan();
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("create");
     setSearchParams(nextParams, { replace: true });
     createIntentHandledRef.current = true;
-  }, [canCreatePlan, isMobile, searchParams, setSearchParams]);
+  }, [canCreatePlan, handleCreatePlan, searchParams, setSearchParams]);
 
   return (
     <PageContainer variant="workspacePage">
@@ -1853,7 +1861,7 @@ function PlantingPlans(): React.ReactElement {
           saveErrorMessage={t("plantingPlans:errors.save")}
           deleteErrorMessage={t("plantingPlans:errors.delete")}
           deleteConfirmMessage={t("plantingPlans:confirmDelete")}
-          addButtonLabel={`${t("plantingPlans:addButton")} (Alt+N)`}
+          addButtonLabel={`${t("plantingPlans:addButton")} (Alt+Shift+N)`}
           showDeleteAction={true}
           showFooterEditControls={false}
           showRowEditActions={true}

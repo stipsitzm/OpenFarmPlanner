@@ -11,6 +11,16 @@ export type CommandContextTag =
 
 export type CommandGroup = 'project' | 'account' | 'navigation' | 'help';
 
+export interface CreateAction {
+  id: string;
+  label: string;
+  shortcut?: string;
+  priority?: number;
+  disabled?: boolean;
+  hidden?: boolean;
+  handler: () => void;
+}
+
 export interface CommandSpec {
   id: string;
   label: string;

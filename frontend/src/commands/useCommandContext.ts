@@ -1,6 +1,6 @@
 import { useContext, useEffect } from 'react';
 import { CommandContext, type CommandContextValue } from './commandContextShared';
-import type { CommandContextTag, CommandSpec } from './types';
+import type { CommandContextTag, CommandSpec, CreateAction } from './types';
 
 export function useCommandContext(): CommandContextValue {
   const context = useContext(CommandContext);
@@ -26,4 +26,12 @@ export function useRegisterCommands(scope: string, commands: CommandSpec[]): voi
   useEffect(() => {
     return registerCommands(scope, commands);
   }, [commands, registerCommands, scope]);
+}
+
+export function useRegisterCreateActions(scope: string, actions: CreateAction[]): void {
+  const { registerCreateActions } = useCommandContext();
+
+  useEffect(() => {
+    return registerCreateActions(scope, actions);
+  }, [actions, registerCreateActions, scope]);
 }
