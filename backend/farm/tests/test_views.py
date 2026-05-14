@@ -60,20 +60,59 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.data['name'], 'New Supplier Inc.')
 
     def test_supplier_create_existing(self):
-        """Test creating supplier with exact duplicate name returns existing"""
+        """Test creating supplier with exact duplicate name returns a field error."""
         data = {'name': 'Test Supplier Co.', 'homepage_url': 'https://test-supplier.example'}
         response = self.client.post('/openfarmplanner/api/suppliers/', data)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(Supplier.objects.count(), 1)
-        self.assertEqual(response.data['id'], self.supplier.id)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Supplier.objects.count(), 1)
+        self.assertIn('name', response.data)
+        self.assertEqual(str(response.data['name'][0]), 'Ein Lieferant mit diesem Namen existiert bereits.')
 
     def test_supplier_create_normalized_match(self):
-        """Test creating supplier with normalized match returns existing"""
+        """Test creating supplier with normalized match returns a field error."""
         data = {'name': '  TEST SUPPLIER co.  ', 'homepage_url': 'https://test-supplier.example'}
         response = self.client.post('/openfarmplanner/api/suppliers/', data)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(Supplier.objects.count(), 1)
-        self.assertEqual(response.data['id'], self.supplier.id)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Supplier.objects.count(), 1)
+        self.assertIn('name', response.data)
+
+    def test_supplier_create_allows_same_normalized_name_in_different_projects(self):
+        """Test creating the same supplier name in two projects."""
+        other_project = Project.objects.create(name='Other Project', slug='other-project')
+        ProjectMembership.objects.create(user=self.user, project=other_project, role='admin')
+        response = self.client.post(
+            '/openfarmplanner/api/suppliers/',
+            {'name': self.supplier.name, 'homepage_url': 'https://other-supplier.example'},
+            HTTP_X_PROJECT_ID=str(other_project.id),
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['name'], self.supplier.name)
+        self.assertEqual(Supplier.objects.filter(name_normalized=self.supplier.name_normalized).count(), 2)
+
+    def test_supplier_create_rejects_trimmed_case_duplicate(self):
+        """Test creating normalized duplicates with whitespace and casing differences."""
+        Supplier.objects.create(name='Reinsaat', homepage_url='https://reinsaat.example', project=self.project)
+        response = self.client.post(
+            '/openfarmplanner/api/suppliers/',
+            {'name': ' reinsaat ', 'homepage_url': 'https://reinsaat-two.example'},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('name', response.data)
+
+    def test_supplier_create_allows_empty_homepage_url(self):
+        """Test creating supplier without a website."""
+        response = self.client.post('/openfarmplanner/api/suppliers/', {'name': 'Supplier Without Website', 'homepage_url': ''})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['homepage_url'], '')
+
+    def test_supplier_create_allows_full_homepage_url(self):
+        """Test creating supplier with a full website URL."""
+        response = self.client.post(
+            '/openfarmplanner/api/suppliers/',
+            {'name': 'Supplier With Website', 'homepage_url': 'https://supplier.example/path'},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['homepage_url'], 'https://supplier.example/path')
 
     def test_supplier_update_not_limited_by_list_slice(self):
         """Supplier updates must work even if list endpoint shows only first 20 rows."""
@@ -126,7 +165,7 @@ class ApiEndpointsTest(DRFAPITestCase):
 
     def test_supplier_create_with_invalid_url_returns_400(self):
         """Test creating supplier with invalid homepage_url returns 400."""
-        invalid_urls = ['invalid-url', 'htp://broken.com', 'just-text', '']
+        invalid_urls = ['invalid-url', 'htp://broken.com', 'just-text']
         for invalid_url in invalid_urls:
             data = {
                 'name': f'Test Supplier {invalid_url}',
