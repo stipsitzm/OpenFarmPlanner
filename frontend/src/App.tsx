@@ -305,6 +305,10 @@ function RootLayout(): React.ReactElement {
   const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
   const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileActionsOverflowAnchor, setMobileActionsOverflowAnchor] = useState<null | HTMLElement>(null);
+  useEffect(() => {
+    setTopbarContextActions([]);
+  }, [location.pathname]);
+
   const navItems = useMemo(() => ([
     { to: '/app/dashboard', label: t('dashboard'), activeAliases: [], keywords: ['übersicht', 'dashboard'], icon: <DashboardOutlinedIcon fontSize="small" /> },
     ...MAIN_NAV_ITEMS.map((item) => ({
@@ -728,9 +732,9 @@ function RootLayout(): React.ReactElement {
   }, [navigate, topbarPrimaryAction]);
 
   return (
-    <Box className={`app app--${CONTENT_ALIGNMENT_MODE}`} sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f2f0ea' }}>
+    <Box className={`app app--${CONTENT_ALIGNMENT_MODE}`} sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f2f0ea', position: 'relative', isolation: 'isolate' }}>
       {isDesktopUp ? (
-        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#e1dbd0', bgcolor: '#f5f2eb', transition: 'width 0.25s ease', position: 'relative', overflow: 'visible' }}>
+        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid', borderColor: '#e1dbd0', bgcolor: '#f5f2eb', transition: 'width 0.25s ease', position: 'sticky', top: 0, alignSelf: 'flex-start', zIndex: (theme) => theme.zIndex.modal + 2, pointerEvents: 'auto', overflow: 'visible' }}>
           <Stack sx={{ height: '100%' }}>
             {!sidebarCollapsed ? (
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1 }}>
