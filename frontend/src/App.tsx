@@ -828,7 +828,7 @@ function RootLayout(): React.ReactElement {
                 const entry = (
                   <ListItemButton
                     key={item.to}
-                    component={RouterLink}
+                    component={RouterLink as React.ElementType}
                     to={item.to}
                     selected={isActive}
                     sx={getNavigationItemSx(isActive, sidebarCollapsed)}
@@ -1295,7 +1295,7 @@ function RootLayout(): React.ReactElement {
             return (
                 <ListItem key={item.to} disablePadding>
                   <ListItemButton
-                  component={RouterLink}
+                  component={RouterLink as React.ElementType}
                   to={item.to}
                   selected={isActive}
                   onClick={closeMobileNav}
