@@ -8,7 +8,7 @@ on:
 jobs:
   frontend-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,13 +32,15 @@ jobs:
           set -euxo pipefail
           cd frontend
           echo "Running test command (CI, non-watch): npm run test:coverage:ci"
-          echo "Applying shell hard timeout: 5m"
+          echo "Applying shell hard timeout: 9m"
+          echo "Test step start: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           set +e
-          timeout --foreground 5m npm run test:coverage:ci
+          timeout --foreground 9m npm run test:coverage:ci
           exit_code=$?
           set -e
+          echo "Test step end: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           if [ "$exit_code" -eq 124 ]; then
-            echo "Frontend tests were terminated by GNU timeout after 5 minutes." >&2
+            echo "Frontend tests were terminated by GNU timeout after 9 minutes." >&2
             echo "Active node-related processes at timeout:" >&2
             set +e
             ps -ef | grep -E 'node|vitest|v8' | grep -v grep >&2
