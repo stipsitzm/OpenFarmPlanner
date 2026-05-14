@@ -8,7 +8,7 @@
  * @returns The main App component with routing
  */
 
-import { createBrowserRouter, RouterProvider, Outlet, Link as RouterLink, redirect, useLocation, useMatches, useNavigate, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, Link as RouterLink, redirect, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import {
   Alert,
   AppBar,
@@ -280,10 +280,6 @@ export interface RootLayoutOutletContext {
   setTopbarContextActions: (actions: TopbarContextAction[]) => void;
 }
 
-type AppRouteHandle = {
-  pageTitle?: string;
-};
-
 
 /**
  * Root layout component with navigation.
@@ -297,7 +293,6 @@ function RootLayout(): React.ReactElement {
   );
   const navigate = useNavigate();
   const location = useLocation();
-  const matches = useMatches();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
@@ -709,18 +704,9 @@ function RootLayout(): React.ReactElement {
   
   const sidebarWidth = sidebarCollapsed ? 64 : 240;
   const currentPageTitle = useMemo(() => {
-    const matchedPageTitle = [...matches]
-      .reverse()
-      .map((match) => (match.handle as AppRouteHandle | undefined)?.pageTitle)
-      .find((title): title is string => typeof title === 'string' && title.length > 0);
-
-    if (matchedPageTitle) {
-      return matchedPageTitle;
-    }
-
     const activeItem = navItems.find((item) => location.pathname === item.to || item.activeAliases.includes(location.pathname));
     return activeItem?.label ?? '';
-  }, [location.pathname, matches, navItems]);
+  }, [location.pathname, navItems]);
   const topbarHelpConfig = useMemo(() => {
     if (location.pathname.startsWith('/app/dashboard')) return { pageKey: 'dashboard' as const, label: 'Hilfe zu Übersicht' };
     if (location.pathname.startsWith('/app/locations')) return { pageKey: 'locations' as const, label: 'Hilfe zu Standorte' };
@@ -1706,15 +1692,15 @@ function createAppRouter(basename: string) {
               index: true,
               loader: () => redirect('/app/dashboard'),
             },
-            { path: 'dashboard', element: withLazyFallback(<Dashboard />), handle: { pageTitle: 'Übersicht' } satisfies AppRouteHandle },
-            { path: 'locations', element: withLazyFallback(<Locations />), handle: { pageTitle: 'Standorte' } satisfies AppRouteHandle },
-            { path: 'fields-beds', element: withLazyFallback(<FieldsBedsPage />), handle: { pageTitle: 'Anbauflächen' } satisfies AppRouteHandle },
-            { path: 'cultures', element: withLazyFallback(<Cultures />), handle: { pageTitle: 'Kulturen' } satisfies AppRouteHandle },
-            { path: 'anbauplaene', element: withLazyFallback(<PlantingPlans />), handle: { pageTitle: 'Anbaupläne' } satisfies AppRouteHandle },
-            { path: 'suppliers', element: withLazyFallback(<Suppliers />), handle: { pageTitle: 'Lieferanten' } satisfies AppRouteHandle },
-            { path: 'planting-plans', element: withLazyFallback(<PlantingPlans />), handle: { pageTitle: 'Anbaupläne' } satisfies AppRouteHandle },
-            { path: 'gantt-chart', element: withLazyFallback(<GanttChart />), handle: { pageTitle: 'Anbaukalender' } satisfies AppRouteHandle },
-            { path: 'seed-demand', element: withLazyFallback(<SeedDemandPage />), handle: { pageTitle: 'Saatgutbedarf' } satisfies AppRouteHandle },
+            { path: 'dashboard', element: withLazyFallback(<Dashboard />) },
+            { path: 'locations', element: withLazyFallback(<Locations />) },
+            { path: 'fields-beds', element: withLazyFallback(<FieldsBedsPage />) },
+            { path: 'cultures', element: withLazyFallback(<Cultures />) },
+            { path: 'anbauplaene', element: withLazyFallback(<PlantingPlans />) },
+            { path: 'suppliers', element: withLazyFallback(<Suppliers />) },
+            { path: 'planting-plans', element: withLazyFallback(<PlantingPlans />) },
+            { path: 'gantt-chart', element: withLazyFallback(<GanttChart />) },
+            { path: 'seed-demand', element: withLazyFallback(<SeedDemandPage />) },
             { path: 'project-selection', element: withLazyFallback(<ProjectSelectionPage />) },
             { path: 'account-settings', element: withLazyFallback(<AccountSettingsPage />) },
             { path: 'project-settings', element: withLazyFallback(<ProjectSettingsPage />) },
