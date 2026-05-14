@@ -238,7 +238,10 @@ if not DEBUG:
     if not parsed_public_frontend_url.scheme or not parsed_public_frontend_url.netloc:
         raise ImproperlyConfigured('PUBLIC_FRONTEND_URL must be an absolute URL when DEBUG is False.')
 
-if DJANGO_ENV != 'development' and (parsed_public_frontend_url.hostname or '').lower() in {'localhost', '127.0.0.1', '::1'}:
+if (
+    DJANGO_ENV not in {'development', 'test'}
+    and (parsed_public_frontend_url.hostname or '').lower() in {'localhost', '127.0.0.1', '::1'}
+):
     raise ImproperlyConfigured('PUBLIC_FRONTEND_URL must not point to localhost outside local development.')
 
 PROJECT_INVITATION_EXPIRY_DAYS = int(_env_str('PROJECT_INVITATION_EXPIRY_DAYS', '14') or '14')

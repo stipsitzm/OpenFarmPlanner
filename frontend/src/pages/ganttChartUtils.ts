@@ -73,7 +73,13 @@ export interface OccupancyTooltipDetail {
 
 export function parseDateString(dateStr: string): Date {
   const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function addUtcDays(value: Date, days: number): Date {
+  const next = new Date(value);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
 }
 
 export function getDefaultCultureColor(cultureName: string): string {
@@ -446,8 +452,7 @@ export function buildSeedlingTaskGroups({
     }
 
     const transplantDate = parseDateString(plan.planting_date);
-    const propagationStartDate = new Date(transplantDate);
-    propagationStartDate.setDate(propagationStartDate.getDate() - propagationDurationDays);
+    const propagationStartDate = addUtcDays(transplantDate, -propagationDurationDays);
 
     if (transplantDate < visStart || propagationStartDate > visEnd) {
       return;
