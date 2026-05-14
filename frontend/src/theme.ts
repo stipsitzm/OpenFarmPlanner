@@ -66,16 +66,37 @@ const theme = createTheme({
         root: {
           padding: '8px 24px',
           textTransform: 'none',
+          textDecoration: 'none',
           fontSize: '0.95rem',
           fontWeight: 600,
           lineHeight: 1.3,
-        },
-        containedPrimary: {
-          color: '#ffffff',
-          '&:hover': {
-            backgroundColor: '#1f6224',
+          '&:hover, &:focus, &:focus-visible, &:active, &:visited': {
+            textDecoration: 'none',
           },
         },
+        containedPrimary: ({ theme }) => ({
+          color: theme.palette.primary.contrastText,
+          backgroundColor: theme.palette.primary.main,
+          '&:hover': {
+            color: theme.palette.primary.contrastText,
+            backgroundColor: theme.palette.primary.dark,
+          },
+          '&:visited': {
+            color: theme.palette.primary.contrastText,
+          },
+          '&.Mui-focusVisible': {
+            color: theme.palette.primary.contrastText,
+            outline: `2px solid ${theme.palette.primary.light}`,
+            outlineOffset: 2,
+          },
+          '&:active': {
+            color: theme.palette.primary.contrastText,
+            backgroundColor: theme.palette.primary.dark,
+          },
+          '&.Mui-disabled': {
+            color: theme.palette.action.disabled,
+          },
+        }),
         outlined: ({ theme }) => ({
           color: theme.palette.primary.main,
           borderColor: theme.palette.primary.main,
@@ -84,7 +105,12 @@ const theme = createTheme({
             borderColor: theme.palette.primary.dark,
             backgroundColor: alpha(theme.palette.primary.main, 0.08),
           },
+          '&:visited': {
+            color: theme.palette.primary.main,
+          },
           '&.Mui-focusVisible': {
+            color: theme.palette.primary.dark,
+            borderColor: theme.palette.primary.dark,
             outline: `2px solid ${theme.palette.primary.light}`,
             outlineOffset: 2,
           },
@@ -106,7 +132,12 @@ const theme = createTheme({
             borderColor: theme.palette.secondary.dark,
             backgroundColor: alpha(theme.palette.secondary.main, 0.08),
           },
+          '&:visited': {
+            color: theme.palette.secondary.main,
+          },
           '&.Mui-focusVisible': {
+            color: theme.palette.secondary.dark,
+            borderColor: theme.palette.secondary.dark,
             outline: `2px solid ${theme.palette.secondary.light}`,
             outlineOffset: 2,
           },
@@ -114,6 +145,10 @@ const theme = createTheme({
             color: theme.palette.secondary.dark,
             borderColor: theme.palette.secondary.dark,
             backgroundColor: alpha(theme.palette.secondary.main, 0.12),
+          },
+          '&.Mui-disabled': {
+            borderColor: theme.palette.action.disabledBackground,
+            color: theme.palette.action.disabled,
           },
         }),
         startIcon: {
