@@ -47,6 +47,7 @@ describe('App', () => {
     authState.user = null;
     authState.isLoading = false;
     authState.activeProjectId = null;
+    localStorage.clear();
     window.history.pushState({}, '', '/');
   });
 
@@ -252,7 +253,7 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: 'Speichern' })).not.toBeInTheDocument();
   });
 
-  it('navigates from split/detail pages through the sidebar without being pulled back', async () => {
+  it('navigates from split/detail pages through the sidebar without URL and content diverging', async () => {
     authState.user = {
       id: 1,
       email: 'demo@example.com',
@@ -269,7 +270,13 @@ describe('App', () => {
     };
     authState.activeProjectId = null;
 
-    for (const initialPath of ['/app/cultures', '/app/anbauplaene']) {
+    for (const { initialPath, previousHeading } of [
+      { initialPath: '/app/cultures', previousHeading: 'Kulturen' },
+      { initialPath: '/app/planting-plans', previousHeading: 'Anbaupläne' },
+    ]) {
+      if (initialPath === '/app/cultures') {
+        localStorage.setItem('selectedCultureId', '1');
+      }
       window.history.pushState({}, '', initialPath);
       const { unmount } = render(<CommandProvider><App /></CommandProvider>);
 
@@ -285,10 +292,12 @@ describe('App', () => {
 
       await waitFor(() => {
         expect(window.location.pathname).toBe('/app/locations');
-      });
+      }, { timeout: 3000 });
       expect(await screen.findByRole('heading', { name: 'Standorte' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: previousHeading })).not.toBeInTheDocument();
 
       unmount();
+      localStorage.clear();
     }
   });
 

@@ -44,7 +44,11 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.ts',
-    testTimeout: 15000,
+    testTimeout: 10000,
+    hookTimeout: 10000,
+    teardownTimeout: 5000,
+    pool: process.env.CI ? 'forks' : 'threads',
+    fileParallelism: !process.env.CI,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
     server: {

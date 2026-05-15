@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { getFirstMissingCultivationPlanRequirement } from '../pages/requirementFlow';
+import {
+  getFirstMissingCultivationPlanRequirement,
+  getFirstMissingProjectSetupStep,
+  getProjectSetupAction,
+} from '../pages/requirementFlow';
 
 describe('getFirstMissingCultivationPlanRequirement', () => {
   it('returns beds when beds are missing but location and field exist', () => {
@@ -18,5 +22,31 @@ describe('getFirstMissingCultivationPlanRequirement', () => {
       hasBeds: true,
       hasCultures: true,
     })).toBeNull();
+  });
+});
+
+describe('project setup actions', () => {
+  it('returns the first missing setup step including fields before beds', () => {
+    expect(getFirstMissingProjectSetupStep({
+      hasLocations: true,
+      hasFields: false,
+      hasBeds: false,
+      hasCultures: false,
+      hasPlans: false,
+    })).toBe('fields');
+  });
+
+  it('uses the shared add-field route that opens the fields-beds create flow', () => {
+    expect(getProjectSetupAction('fields')).toEqual({
+      labelKey: 'common:setupActions.createField',
+      to: '/app/fields-beds?create=true',
+    });
+  });
+
+  it('uses the shared add-bed route that opens the fields-beds bed create flow', () => {
+    expect(getProjectSetupAction('beds')).toEqual({
+      labelKey: 'common:setupActions.createBed',
+      to: '/app/fields-beds?createBed=true',
+    });
   });
 });

@@ -80,7 +80,7 @@ import {
 } from "../commands/useCommandContext";
 import type { CommandSpec } from "../commands/types";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
-import { getFirstMissingRequirement } from "./requirementFlow";
+import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction } from "./requirementFlow";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
 import EmptyStateCard from "../components/project/EmptyStateCard";
@@ -1286,7 +1286,7 @@ function PlantingPlans(): React.ReactElement {
     });
   };
 
-  const openMobileCreateDialog = (
+  const openMobileCreateDialog = useCallback((
     prefill?: { cultureId?: number | null; bedId?: number | null },
   ): void => {
     setMobileCreateError("");
@@ -1294,7 +1294,7 @@ function PlantingPlans(): React.ReactElement {
     setMobileCreateForm(buildMobileCreateForm(numberLocale, beds, prefill));
     setMobileLastEditedField(null);
     setIsMobileCreateOpen(true);
-  };
+  }, [beds, numberLocale]);
 
   const closeMobileCreateDialog = (): void => {
     setIsMobileCreateOpen(false);
@@ -1318,7 +1318,7 @@ function PlantingPlans(): React.ReactElement {
       bedId: initialSelection.bedId,
     });
     mobilePrefillHandledRef.current = true;
-  }, [isMobile, initialSelection.cultureId, initialSelection.bedId, beds, numberLocale]);
+  }, [isMobile, initialSelection.cultureId, initialSelection.bedId, beds.length, openMobileCreateDialog]);
 
   const openMobileNotesDialog = (row: PlantingPlanRow): void => {
     setMobileNotesTarget(row);
@@ -1525,27 +1525,32 @@ function PlantingPlans(): React.ReactElement {
     }
   };
   const hasLocations = locations.length > 0;
+  const hasFields = fields.length > 0;
   const hasCultures = cultures.length > 0;
   const hasBeds = beds.length > 0;
   const hasPlans = mobileRows.length > 0;
-  const firstMissingRequirement = getFirstMissingRequirement({
+  const firstMissingRequirement = getFirstMissingCultivationPlanRequirement({
     hasLocations,
+    hasFields,
     hasBeds,
     hasCultures,
-    hasPlans,
   });
-  const canCreatePlan = firstMissingRequirement === "plans" || firstMissingRequirement === null;
+  const canCreatePlan = firstMissingRequirement === null;
   const shouldShowPrerequisiteState = !canCreatePlan;
   const shouldShowNoPlansState = canCreatePlan && !hasPlans;
   const isInitialLoading = !shouldShowProjectRequiredState && (isHierarchyLoading || isPlansLoading);
+  const primaryPrerequisiteAction = firstMissingRequirement
+    ? getProjectSetupAction(firstMissingRequirement)
+    : null;
+  const createPlanAction = getProjectSetupAction("plans");
 
-  const handleCreatePlan = (): void => {
+  const handleCreatePlan = useCallback((): void => {
     if (isMobile) {
       openMobileCreateDialog();
       return;
     }
     gridCommandApiRef.current?.addRow();
-  };
+  }, [isMobile, openMobileCreateDialog]);
 
   const createActions = useMemo(() => [
     {
@@ -1609,10 +1614,11 @@ function PlantingPlans(): React.ReactElement {
             title={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.title`)}
             description={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.description`)}
             actions={[
-              ...(firstMissingRequirement === "beds" ? [{ label: t("plantingPlans:emptyStates.actions.createAreas"), to: "/app/fields-beds" }] : []),
+              ...(primaryPrerequisiteAction ? [
+                { label: t(primaryPrerequisiteAction.labelKey), to: primaryPrerequisiteAction.to },
+              ] : []),
               ...(firstMissingRequirement === "cultures" ? [
                 { label: t("plantingPlans:emptyStates.actions.openCultureLibrary"), to: "/app/cultures?library=true" },
-                { label: t("plantingPlans:emptyStates.actions.addCulture"), to: "/app/cultures?create=true" },
               ] : []),
             ]}
           />
@@ -1620,7 +1626,7 @@ function PlantingPlans(): React.ReactElement {
           <EmptyStateCard
             title={t("plantingPlans:emptyStates.states.plans.title")}
             description={t("plantingPlans:emptyStates.states.plans.description")}
-            actions={[{ label: t("plantingPlans:emptyStates.actions.createPlan"), to: "/app/planting-plans?create=true" }]}
+            actions={[{ label: t(createPlanAction.labelKey), to: createPlanAction.to }]}
           />
         ) : null}
 

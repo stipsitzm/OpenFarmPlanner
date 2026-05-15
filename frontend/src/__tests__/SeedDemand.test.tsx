@@ -4,12 +4,13 @@ import { MemoryRouter } from 'react-router-dom';
 import SeedDemandPage from '../pages/SeedDemand';
 import { CommandProvider } from '../commands/CommandProvider';
 
-const { listMock, saveSelectionMock, cultureListMock, planListMock, locationListMock, bedListMock } = vi.hoisted(() => ({
+const { listMock, saveSelectionMock, cultureListMock, planListMock, locationListMock, fieldListMock, bedListMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   saveSelectionMock: vi.fn(),
   cultureListMock: vi.fn(),
   planListMock: vi.fn(),
   locationListMock: vi.fn(),
+  fieldListMock: vi.fn(),
   bedListMock: vi.fn(),
 }));
 const projectRequirementState = vi.hoisted(() => ({
@@ -33,6 +34,9 @@ vi.mock('../api/api', async () => {
     },
     locationAPI: {
       list: locationListMock,
+    },
+    fieldAPI: {
+      list: fieldListMock,
     },
     bedAPI: {
       list: bedListMock,
@@ -61,6 +65,7 @@ describe('SeedDemandPage', () => {
     });
     planListMock.mockResolvedValue({ data: { results: [{ id: 1 }] } });
     locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hof' }] } });
+    fieldListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Feld 1', location: 1 }] } });
     bedListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Beet 1' }] } });
   });
 
@@ -81,8 +86,31 @@ describe('SeedDemandPage', () => {
     });
     expect(screen.queryByText('seedDemand.columns.culture')).not.toBeInTheDocument();
     expect(screen.queryByText('Keine Einträge vorhanden')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'seedDemand.progressive.locations.action' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'seedDemand.progressive.beds.action' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'common:setupActions.createLocation' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'common:setupActions.createBed' })).not.toBeInTheDocument();
+  });
+
+  it('shows field-step requirement when a location exists but no fields exist', async () => {
+    listMock.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
+    fieldListMock.mockResolvedValue({ data: { results: [] } });
+    bedListMock.mockResolvedValue({ data: { results: [] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('seedDemand.progressive.fields.title')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('link', { name: 'common:setupActions.createField' })).toHaveAttribute(
+      'href',
+      '/app/fields-beds?create=true',
+    );
+    expect(screen.queryByRole('link', { name: 'common:setupActions.createBed' })).not.toBeInTheDocument();
   });
 
   it('shows culture-step requirement when locations and beds exist but cultures are missing', async () => {
@@ -101,7 +129,7 @@ describe('SeedDemandPage', () => {
     await waitFor(() => {
       expect(screen.getByText('seedDemand.progressive.cultures.title')).toBeInTheDocument();
     });
-    expect(screen.getByRole('link', { name: 'seedDemand.progressive.cultures.action' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'common:setupActions.createCulture' })).toBeInTheDocument();
   });
 
   it('shows plan-step requirement when cultures exist but plans are missing', async () => {
@@ -122,7 +150,7 @@ describe('SeedDemandPage', () => {
     await waitFor(() => {
       expect(screen.getByText('seedDemand.progressive.plans.title')).toBeInTheDocument();
     });
-    expect(screen.getByRole('link', { name: 'seedDemand.progressive.plans.action' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'common:setupActions.createPlan' })).toBeInTheDocument();
   });
 
   it('shows no-results empty state when requirements are fulfilled but no rows are calculated', async () => {

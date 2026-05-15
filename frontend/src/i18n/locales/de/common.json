@@ -35,6 +35,13 @@
     "project": "Projekt"
   },
   "project": "Projekt",
+  "setupActions": {
+    "createLocation": "Standort hinzufügen",
+    "createField": "Parzelle hinzufügen",
+    "createBed": "Beet hinzufügen",
+    "createCulture": "Kultur hinzufügen",
+    "createPlan": "Anbauplan hinzufügen"
+  },
   "notes": {
     "empty": "Keine Notizen",
     "editEmpty": "Notiz hinzufügen",

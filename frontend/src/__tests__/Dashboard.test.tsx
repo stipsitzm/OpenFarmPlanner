@@ -59,6 +59,10 @@ describe('Dashboard', () => {
     render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
     expect(await screen.findByText('Projektstart')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Parzelle hinzufügen' })).toHaveAttribute(
+      'href',
+      '/app/fields-beds?create=true',
+    );
     expect(screen.queryByText('Starte deine Anbauplanung')).not.toBeInTheDocument();
   });
 

@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:coverage:ci": "vitest run --coverage --reporter=verbose",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "mutation:test": "stryker run",

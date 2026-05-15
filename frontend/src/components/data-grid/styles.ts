@@ -33,7 +33,9 @@ export const dataGridSx = {
   },
   '& .MuiDataGrid-cell--editable': {
     bgcolor: (theme: Theme) =>
-      theme.palette.mode === 'dark' ? '#383838' : theme.palette.surface.surfaceBackground,
+      theme.palette.mode === 'dark'
+        ? '#383838'
+        : (theme.palette.surface?.surfaceBackground ?? theme.palette.background.paper),
     cursor: 'pointer',
   },
   '& .MuiDataGrid-cell--editable:hover': {

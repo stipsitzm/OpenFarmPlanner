@@ -15,7 +15,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "../i18n";
 import { DataGrid, GridRowModes } from "@mui/x-data-grid";
 import { germanDataGridLocaleText } from "../components/data-grid/localeText";
@@ -130,6 +130,7 @@ function FieldsBedsHierarchy({
 
   const { t } = useTranslation("hierarchy");
   const navigate = useNavigate();
+  const location = useLocation();
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [selectedRowId, setSelectedRowId] = useState<string | number | null>(
     null,
@@ -312,6 +313,32 @@ function FieldsBedsHierarchy({
     },
     [addBed, ensureExpanded, fields, setPendingEditRow],
   );
+
+  useEffect(() => {
+    if (!location.pathname.startsWith("/app/fields-beds")) {
+      return;
+    }
+
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("createBed") !== "true" || loading) {
+      return;
+    }
+
+    const firstField = fields.find((field) => field.id !== undefined);
+    if (firstField?.id !== undefined) {
+      handleAddBed(firstField.id);
+    }
+
+    searchParams.delete("createBed");
+    const nextSearch = searchParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+      },
+      { replace: true },
+    );
+  }, [fields, handleAddBed, loading, location.pathname, location.search, navigate]);
 
   const handleCreatePlantingPlan = useCallback(
     (bedId: number): void => {
@@ -888,28 +915,18 @@ function FieldsBedsHierarchy({
 
 
   const shouldShowMissingDimensionsHint = useMemo(() => {
-    const dimensionalRows = rows.filter(
-      (row): row is HierarchyRow => row.type === "field" || row.type === "bed",
-    );
-    if (dimensionalRows.length === 0) {
-      return false;
-    }
-
-    const incompleteRows = dimensionalRows.filter((row) => {
-      const length = parseDimensionValue(row.length_m);
-      const width = parseDimensionValue(row.width_m);
-      const area = parseAreaValue(row.area_sqm);
+    const hasBeds = beds.length > 0;
+    const allBedsMissingLengthAndWidth = beds.every((bed) => {
+      const length = parseDimensionValue(bed.length_m);
+      const width = parseDimensionValue(bed.width_m);
       const hasLength = Number.isFinite(length ?? NaN);
       const hasWidth = Number.isFinite(width ?? NaN);
-      const hasArea = Number.isFinite(area ?? NaN);
-      const hasComputableArea = hasArea || (hasLength && hasWidth);
-      return !hasLength || !hasWidth || !hasComputableArea;
+
+      return !hasLength && !hasWidth;
     });
 
-    const completeRowsCount = dimensionalRows.length - incompleteRows.length;
-    const incompleteShare = incompleteRows.length / dimensionalRows.length;
-    return completeRowsCount === 0 || (dimensionalRows.length >= 4 && incompleteShare >= 0.75);
-  }, [parseAreaValue, parseDimensionValue, rows]);
+    return hasBeds && allBedsMissingLengthAndWidth;
+  }, [beds, parseDimensionValue]);
 
   const rowSelectionModel = useMemo(
     () => ({

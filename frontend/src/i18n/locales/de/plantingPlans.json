@@ -70,6 +70,10 @@
         "title": "Du kannst noch keinen Anbauplan hinzufügen.",
         "description": "Lege zuerst einen Standort an."
       },
+      "fields": {
+        "title": "Du kannst noch keinen Anbauplan hinzufügen.",
+        "description": "Lege als Nächstes eine Parzelle an."
+      },
       "beds": {
         "title": "Du hast noch keine Beete angelegt.",
         "description": "Beete sind die Grundlage für Anbaupläne. Lege jetzt dein erstes Beet an."
@@ -84,6 +88,8 @@
       }
     },
     "actions": {
+      "createLocation": "Standort hinzufügen",
+      "createField": "Parzelle hinzufügen",
       "createAreas": "Zu Anbauflächen",
       "openCultureLibrary": "Kulturbibliothek öffnen",
       "addCulture": "Kultur hinzufügen",

@@ -13,6 +13,7 @@ import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperat
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
+import { getProjectSetupAction } from './requirementFlow';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { getSegmentedActionButtonSx, segmentedButtonGroupSx } from '../components/buttons/segmentedControlStyles';
 import { useTheme } from '@mui/material/styles';
@@ -25,7 +26,7 @@ type ViewMode = 'table' | 'graphical';
 type InteractionMode = 'view' | 'edit';
 
 export default function FieldsBedsPage(): React.ReactElement {
-  const { t } = useTranslation(['fields', 'hierarchy']);
+  const { t } = useTranslation(['fields', 'hierarchy', 'common']);
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
@@ -129,23 +130,30 @@ export default function FieldsBedsPage(): React.ReactElement {
     reloadHierarchyAndLocations,
     t as never,
   );
-  const handleGlobalAddField = useCallback((): void => {
-    if (locations.length === 0) {
-      navigate('/app/locations?create=true');
-      return;
-    }
-
+  const openAddFieldDialog = useCallback((): boolean => {
     if (locations.length === 1 && locations[0]?.id !== undefined) {
       setTargetLocationId(locations[0].id);
       setNewFieldName('');
       setAddFieldDialogOpen(true);
-      return;
+      return true;
     }
+
     const firstLocation = locations.find((location) => location.id !== undefined);
-    setTargetLocationId(firstLocation?.id ?? '');
+    if (firstLocation?.id === undefined) {
+      return false;
+    }
+
+    setTargetLocationId(firstLocation.id);
     setNewFieldName('');
     setAddFieldDialogOpen(true);
-  }, [locations, navigate]);
+    return true;
+  }, [locations]);
+
+  const handleGlobalAddField = useCallback((): void => {
+    if (!openAddFieldDialog()) {
+      navigate('/app/locations?create=true');
+    }
+  }, [navigate, openAddFieldDialog]);
 
   const handleConfirmAddField = useCallback((): void => {
     if (typeof targetLocationId !== 'number' || !newFieldName.trim()) {
@@ -164,7 +172,16 @@ export default function FieldsBedsPage(): React.ReactElement {
     if (searchParams.get('create') !== 'true') {
       return;
     }
-    handleGlobalAddField();
+
+    if (shouldShowProjectRequiredState || !hasAreaDataLoaded || isAreaDataLoading) {
+      return;
+    }
+
+    if (!openAddFieldDialog()) {
+      navigate('/app/locations?create=true', { replace: true });
+      return;
+    }
+
     searchParams.delete('create');
     const nextSearch = searchParams.toString();
     navigate(
@@ -174,7 +191,15 @@ export default function FieldsBedsPage(): React.ReactElement {
       },
       { replace: true },
     );
-  }, [handleGlobalAddField, location.pathname, location.search, navigate]);
+  }, [
+    hasAreaDataLoaded,
+    isAreaDataLoading,
+    location.pathname,
+    location.search,
+    navigate,
+    openAddFieldDialog,
+    shouldShowProjectRequiredState,
+  ]);
 
 
   useEffect(() => {
@@ -186,6 +211,9 @@ export default function FieldsBedsPage(): React.ReactElement {
   const hasBeds = bedsCount > 0;
   const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && (!hasLocations || !hasFields);
   const shouldShowMissingBedsHint = hasFields && !hasBeds;
+  const createLocationAction = getProjectSetupAction('locations');
+  const createFieldAction = getProjectSetupAction('fields');
+  const createBedAction = getProjectSetupAction('beds');
 
   useEffect(() => {
     if (viewMode === 'graphical') {
@@ -286,6 +314,7 @@ export default function FieldsBedsPage(): React.ReactElement {
                 {t('hierarchy:messages.noBedsHintAfterIcon')}
               </Box>
             )}
+            actions={[{ label: t(createBedAction.labelKey), to: createBedAction.to }]}
           />
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldShowAreasEmptyState ? (
@@ -297,8 +326,8 @@ export default function FieldsBedsPage(): React.ReactElement {
               { label: t('hierarchy:columns.field'), done: hasFields },
             ]}
             actions={[
-              ...(!hasLocations ? [{ label: t('hierarchy:emptyAreas.actions.createLocation'), onClick: () => navigate('/app/locations?create=true') }] : []),
-              ...(hasLocations && !hasFields ? [{ label: t('hierarchy:emptyAreas.actions.createField'), onClick: handleGlobalAddField }] : []),
+              ...(!hasLocations ? [{ label: t(createLocationAction.labelKey), onClick: () => navigate(createLocationAction.to) }] : []),
+              ...(hasLocations && !hasFields ? [{ label: t(createFieldAction.labelKey), onClick: handleGlobalAddField }] : []),
             ]}
           />
         ) : null}
