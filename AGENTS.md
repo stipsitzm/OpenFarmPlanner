@@ -51,18 +51,29 @@ Follow existing placement patterns before creating new directories.
 
 ## Frontend Rules
 - UI text must always use i18n resources.
-- Never hardcode German strings directly into components.
+- Never hardcode user-visible strings directly into components, dialogs, tables, filters, tooltips, snackbars, or form helpers.
+- New or changed UI text must include German translations in the relevant i18n namespace.
+- Never render raw enum values, backend field names, or technical API error payloads directly in the UI. Map them to user-friendly localized labels or messages first.
 - Prefer reusable components over page-local implementations.
 - Reuse existing layout and topbar patterns.
 - Maintain responsive behavior.
 - Avoid layout shifts during state changes.
+- Use TypeScript for frontend code; do not introduce plain JavaScript where TypeScript is possible.
+- Use PascalCase for component names and `useSomething` names for hooks.
+- Prefer strongly typed props and avoid `any`.
+- Avoid deprecated MUI APIs; use current patterns such as `slotProps.htmlInput` instead of `inputProps`.
 
 ## Backend Rules
+- Backend packages are managed with PDM. Use `pdm` commands and do not introduce `pip install`, `requirements.txt`, or `setup.py`.
+- Follow PEP 8.
 - Use Python type hints everywhere.
+- New or changed Python functions and methods should include complete parameter and return type hints.
 - Keep views thin.
 - Put business logic into services where appropriate.
 - Avoid database writes inside GET endpoints.
 - Keep API responses predictable and stable.
+- Use SI units internally for physical measurements stored in the database, and convert units only at system boundaries such as serializers, forms, or API layers.
+- Document physical units in model `help_text`, docstrings, or API/schema descriptions where units are not obvious.
 
 ## GitHub Push Workflow
 - This repository should use the SSH GitHub remote:
