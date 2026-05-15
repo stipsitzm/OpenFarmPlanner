@@ -16,6 +16,11 @@
 - Keep functions small, focused, and readable.
 - Write clean, maintainable, and well-structured code.
 
+## GitHub Push Workflow
+- This repository should use the SSH GitHub remote: `git@github.com:stipsitzm/OpenFarmPlanner.git`.
+- If `origin` is set to the HTTPS GitHub URL and a push is requested, update it to the SSH URL before pushing.
+- Do not repeatedly check SSH authentication before every push. Assume SSH works for this workspace unless a push fails with an authentication or connectivity error.
+
 ## Commit and PR Title Rules (AI Agents)
 - All commit messages and PR titles must use Conventional Commits.
 - Use only these prefixes: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `build`, `perf`.
