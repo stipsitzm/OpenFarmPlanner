@@ -1,8 +1,8 @@
 import { Box, Button, Paper, Typography, type SxProps, type Theme } from '@mui/material';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { Link as RouterLink, UNSAFE_LocationContext } from 'react-router-dom';
 import RequirementChecklist from './RequirementChecklist';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
 
 export interface EmptyStateAction {
   label: string;
@@ -29,14 +29,15 @@ export default function EmptyStateCard({
   containerSx,
   titleSx,
 }: EmptyStateCardProps): React.ReactElement {
-  const location = useLocation();
+  const locationContext = useContext(UNSAFE_LocationContext);
+  const currentPathname = locationContext?.location.pathname ?? window.location.pathname;
   const visibleActions = actions.filter((action) => {
     if (!action.to || action.onClick) {
       return true;
     }
 
     const target = new URL(action.to, window.location.origin);
-    return target.pathname !== location.pathname || target.search !== '' || target.hash !== '';
+    return target.pathname !== currentPathname || target.search !== '' || target.hash !== '';
   });
 
   return (

@@ -47,6 +47,21 @@ describe('Empty state components', () => {
     expect(screen.getByRole('link', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
   });
 
+  it('renders without requiring a router context', () => {
+    render(
+      <EmptyStateCard
+        title="Noch keine Kulturen vorhanden"
+        description="Öffne die Kulturbibliothek oder lege eine eigene Kultur an."
+        actions={[
+          { label: 'Kulturbibliothek öffnen', onClick: () => undefined },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Noch keine Kulturen vorhanden')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kulturbibliothek öffnen' })).toBeInTheDocument();
+  });
+
   it('shows requirement states without duplicated status text', () => {
     render(
       <RequirementChecklist
