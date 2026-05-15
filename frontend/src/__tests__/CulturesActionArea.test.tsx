@@ -241,9 +241,9 @@ describe('Cultures action area', () => {
 
     const createPlanButton = await screen.findByRole('button', { name: 'Anbauplan erstellen' });
     expect(createPlanButton).toBeDisabled();
-    const fieldsBedsLink = await screen.findByRole('link', { name: 'Beet hinzufügen' });
+    const fieldsBedsLink = await screen.findByRole('link', { name: 'Anbauflächen öffnen' });
     expect(fieldsBedsLink).toBeInTheDocument();
-    expect(fieldsBedsLink).toHaveAttribute('href', '/app/fields-beds?createBed=true');
+    expect(fieldsBedsLink).toHaveAttribute('href', '/app/fields-beds');
     expect(screen.queryByRole('link', { name: 'Beet anlegen' })).not.toBeInTheDocument();
 
     fireEvent.mouseOver(createPlanButton.parentElement as HTMLElement);

@@ -43,10 +43,10 @@ describe('project setup actions', () => {
     });
   });
 
-  it('uses the shared add-bed route that opens the fields-beds bed create flow', () => {
+  it('uses the shared beds step action that opens the fields-beds page', () => {
     expect(getProjectSetupAction('beds')).toEqual({
-      labelKey: 'common:setupActions.createBed',
-      to: '/app/fields-beds?createBed=true',
+      labelKey: 'common:setupActions.openAreas',
+      to: '/app/fields-beds',
     });
   });
 });
