@@ -100,12 +100,12 @@ import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
-import { getFirstMissingCultivationPlanRequirement } from './requirementFlow';
+import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction } from './requirementFlow';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 
 function Cultures(): React.ReactElement {
-  const { t } = useTranslation('cultures');
+  const { t } = useTranslation(['cultures', 'common']);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const location = useLocation();
@@ -619,6 +619,9 @@ function Cultures(): React.ReactElement {
     hasBeds,
     hasCultures: cultures.length > 0,
   });
+  const firstMissingPlanAction = firstMissingPlanRequirement
+    ? getProjectSetupAction(firstMissingPlanRequirement)
+    : null;
   const canCreatePlantingPlan = Boolean(selectedCulture) && firstMissingPlanRequirement === null;
   const isUpdatingOwnPublicCulture = Boolean(selectedCulture?.owned_public_culture_id);
   const dialogCostInfo = getDialogCostInfo(enrichmentResult);
@@ -1034,11 +1037,27 @@ function Cultures(): React.ReactElement {
       </Box>
       {cultures.length > 0 && (
         <Box sx={{ mb: 2 }}>
+          {firstMissingPlanRequirement === 'fields' ? (
+            <EmptyStateCard
+              title={t('buttons.createPlantingPlanMissingFieldsTitle')}
+              description={t('buttons.createPlantingPlanDisabled.fields')}
+              actions={firstMissingPlanAction ? [{ label: t(firstMissingPlanAction.labelKey), to: firstMissingPlanAction.to }] : []}
+              containerSx={{
+                backgroundColor: 'rgba(76, 175, 80, 0.06)',
+                borderLeft: '3px solid',
+                borderLeftColor: 'success.main',
+                py: 1.25,
+                px: 1.5,
+              }}
+              titleSx={{ fontWeight: 500 }}
+            />
+          ) : null}
+
           {firstMissingPlanRequirement === 'beds' ? (
             <EmptyStateCard
               title={t('buttons.createPlantingPlanMissingBedsTitle')}
               description={t('buttons.createPlantingPlanDisabled.beds')}
-              actions={[{ label: t('buttons.goToFieldsBeds'), to: '/app/fields-beds' }]}
+              actions={firstMissingPlanAction ? [{ label: t(firstMissingPlanAction.labelKey), to: firstMissingPlanAction.to }] : []}
               containerSx={{
                 backgroundColor: 'rgba(76, 175, 80, 0.06)',
                 borderLeft: '3px solid',

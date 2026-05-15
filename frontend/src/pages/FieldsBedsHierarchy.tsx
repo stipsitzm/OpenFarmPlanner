@@ -15,7 +15,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "../i18n";
 import { DataGrid, GridRowModes } from "@mui/x-data-grid";
 import { germanDataGridLocaleText } from "../components/data-grid/localeText";
@@ -130,6 +130,7 @@ function FieldsBedsHierarchy({
 
   const { t } = useTranslation("hierarchy");
   const navigate = useNavigate();
+  const location = useLocation();
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [selectedRowId, setSelectedRowId] = useState<string | number | null>(
     null,
@@ -312,6 +313,32 @@ function FieldsBedsHierarchy({
     },
     [addBed, ensureExpanded, fields, setPendingEditRow],
   );
+
+  useEffect(() => {
+    if (!location.pathname.startsWith("/app/fields-beds")) {
+      return;
+    }
+
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("createBed") !== "true" || loading) {
+      return;
+    }
+
+    const firstField = fields.find((field) => field.id !== undefined);
+    if (firstField?.id !== undefined) {
+      handleAddBed(firstField.id);
+    }
+
+    searchParams.delete("createBed");
+    const nextSearch = searchParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+      },
+      { replace: true },
+    );
+  }, [fields, handleAddBed, loading, location.pathname, location.search, navigate]);
 
   const handleCreatePlantingPlan = useCallback(
     (bedId: number): void => {

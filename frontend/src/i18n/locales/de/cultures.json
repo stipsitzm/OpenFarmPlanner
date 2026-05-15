@@ -231,6 +231,11 @@
         "description": "Lege zuerst einen Standort an, damit du Flächen und Beete planen kannst.",
         "action": "Standort hinzufügen"
       },
+      "fields": {
+        "title": "Noch kein Saatgutbedarf berechenbar",
+        "description": "Lege als Nächstes eine Parzelle an, damit Beete geplant werden können.",
+        "action": "Parzelle hinzufügen"
+      },
       "beds": {
         "title": "Noch kein Saatgutbedarf berechenbar",
         "description": "Lege als Nächstes Beete an, damit Kulturen einer Fläche zugeordnet werden können.",
@@ -315,6 +320,7 @@
     "deleteConfirm": "Möchten Sie diese Kultur wirklich löschen?",
     "createPlantingPlan": "Anbauplan hinzufügen",
     "goToFieldsBeds": "Zu Anbauflächen",
+    "createField": "Parzelle hinzufügen",
     "createPlantingPlanDisabled": {
       "locations": "Du brauchst zuerst mindestens einen Standort, um einen Anbauplan zu erstellen.",
       "fields": "Du brauchst zuerst mindestens eine Parzelle, um einen Anbauplan zu erstellen.",
@@ -322,6 +328,7 @@
       "cultures": "Du brauchst zuerst mindestens eine Kultur, um einen Anbauplan zu erstellen.",
       "null": "Anbauplan hinzufügen"
     },
+    "createPlantingPlanMissingFieldsTitle": "Um einen Anbauplan zu erstellen, brauchst du mindestens eine Parzelle.",
     "aiComplete": "Kultur vervollständigen (KI)",
     "aiReresearch": "Kultur komplett neu recherchieren (KI)",
     "aiCompleteAll": "Alle Kulturen vervollständigen (KI)",

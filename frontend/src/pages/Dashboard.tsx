@@ -10,16 +10,8 @@ import PageContainer from '../components/layout/PageContainer';
 import PageSurface from '../components/layout/PageSurface';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
-import { getFirstMissingRequirement } from './requirementFlow';
+import { getFirstMissingProjectSetupStep, getProjectSetupAction } from './requirementFlow';
 import { deriveLocationTasks } from './locationDerivedTasks';
-
-const NEXT_STEP_CONFIG = {
-  locations: { actionKey: 'dashboard:checklist.location', to: '/app/locations?create=true' },
-  fields: { actionKey: 'dashboard:checklist.field', to: '/app/fields-beds' },
-  beds: { actionKey: 'dashboard:checklist.bed', to: '/app/fields-beds' },
-  cultures: { actionKey: 'dashboard:checklist.culture', to: '/app/cultures?create=true' },
-  plans: { actionKey: 'dashboard:checklist.plan', to: '/app/planting-plans?create=true' },
-} as const;
 
 export default function Dashboard(): React.ReactElement {
   const { t, i18n } = useTranslation(['dashboard', 'common']);
@@ -60,18 +52,13 @@ export default function Dashboard(): React.ReactElement {
     void fetchData();
   }, [shouldShowProjectRequiredState, t]);
 
-  const firstMissingRequirement = getFirstMissingRequirement({ hasLocations: locations.length > 0, hasBeds: beds.length > 0, hasCultures: cultures.length > 0, hasPlans: plans.length > 0 });
-  const firstMissingChecklistStep = (locations.length === 0
-    ? 'locations'
-    : fields.length === 0
-      ? 'fields'
-      : beds.length === 0
-        ? 'beds'
-        : cultures.length === 0
-          ? 'cultures'
-          : plans.length === 0
-            ? 'plans'
-            : null);
+  const firstMissingChecklistStep = getFirstMissingProjectSetupStep({
+    hasLocations: locations.length > 0,
+    hasFields: fields.length > 0,
+    hasBeds: beds.length > 0,
+    hasCultures: cultures.length > 0,
+    hasPlans: plans.length > 0,
+  });
   const locale = i18n.resolvedLanguage === 'de' ? 'de-DE' : 'en-US';
 
   const checklistItems = [
@@ -92,7 +79,8 @@ export default function Dashboard(): React.ReactElement {
   if (loading) return <PageContainer><PageSurface variant="contentFit"><Typography>{t('common:messages.loading')}</Typography></PageSurface></PageContainer>;
   if (shouldShowProjectRequiredState && missingProjectReason) return <PageContainer><PageSurface variant="contentFit"><ProjectRequiredState reason={missingProjectReason} /></PageSurface></PageContainer>;
 
-  const isSetupComplete = firstMissingRequirement === null;
+  const isSetupComplete = firstMissingChecklistStep === null;
+  const nextSetupAction = firstMissingChecklistStep ? getProjectSetupAction(firstMissingChecklistStep) : null;
 
   return (
     <PageContainer>
@@ -136,9 +124,9 @@ export default function Dashboard(): React.ReactElement {
                 );
               })}
             </Stack>
-            {firstMissingChecklistStep ? (
-              <Button component={RouterLink} to={NEXT_STEP_CONFIG[firstMissingChecklistStep].to} variant="contained">
-                {t(NEXT_STEP_CONFIG[firstMissingChecklistStep].actionKey)}
+            {nextSetupAction ? (
+              <Button component={RouterLink} to={nextSetupAction.to} variant="contained">
+                {t(nextSetupAction.labelKey)}
               </Button>
             ) : null}
           </CardContent>

@@ -17,7 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import { seedDemandAPI, type SeedDemand } from '../api/api';
-import { bedAPI, cultureAPI, locationAPI, plantingPlanAPI } from '../api/api';
+import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import { useCommandContextTag } from '../commands/useCommandContext';
 import PageContainer from '../components/layout/PageContainer';
@@ -26,6 +26,7 @@ import TableSurface from '../components/layout/TableSurface';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
+import { getFirstMissingProjectSetupStep, getProjectSetupAction } from './requirementFlow';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
@@ -43,7 +44,7 @@ const formatPackageSelection = (row: SeedDemand, t: (key: string) => string): st
 
 export default function SeedDemandPage(): React.ReactElement {
   useCommandContextTag('seedDemand');
-  const { t } = useTranslation('cultures');
+  const { t } = useTranslation(['cultures', 'common']);
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const [rows, setRows] = useState<SeedDemand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,37 +53,57 @@ export default function SeedDemandPage(): React.ReactElement {
   const [planCount, setPlanCount] = useState(0);
   const [hasCulturesWithSeedData, setHasCulturesWithSeedData] = useState(false);
   const [locationCount, setLocationCount] = useState(0);
+  const [fieldCount, setFieldCount] = useState(0);
   const [bedCount, setBedCount] = useState(0);
   const hasPlans = planCount > 0;
   const hasSeedData = hasCulturesWithSeedData;
-  const canCalculateSeedDemand = locationCount > 0 && bedCount > 0 && cultureCount > 0 && hasPlans && hasSeedData;
+  const canCalculateSeedDemand = locationCount > 0 && fieldCount > 0 && bedCount > 0 && cultureCount > 0 && hasPlans && hasSeedData;
+  const firstMissingSetupStep = getFirstMissingProjectSetupStep({
+    hasLocations: locationCount > 0,
+    hasFields: fieldCount > 0,
+    hasBeds: bedCount > 0,
+    hasCultures: cultureCount > 0,
+    hasPlans,
+  });
   const missingRequirement = useMemo(() => {
-    if (locationCount === 0) {
+    if (firstMissingSetupStep === 'locations') {
+      const action = getProjectSetupAction(firstMissingSetupStep);
       return {
         title: t('seedDemand.progressive.locations.title'),
         description: t('seedDemand.progressive.locations.description'),
-        action: { label: t('seedDemand.progressive.locations.action'), to: '/app/locations' },
+        action: { label: t(action.labelKey), to: action.to },
       };
     }
-    if (bedCount === 0) {
+    if (firstMissingSetupStep === 'fields') {
+      const action = getProjectSetupAction(firstMissingSetupStep);
+      return {
+        title: t('seedDemand.progressive.fields.title'),
+        description: t('seedDemand.progressive.fields.description'),
+        action: { label: t(action.labelKey), to: action.to },
+      };
+    }
+    if (firstMissingSetupStep === 'beds') {
+      const action = getProjectSetupAction(firstMissingSetupStep);
       return {
         title: t('seedDemand.progressive.beds.title'),
         description: t('seedDemand.progressive.beds.description'),
-        action: { label: t('seedDemand.progressive.beds.action'), to: '/app/fields-beds' },
+        action: { label: t(action.labelKey), to: action.to },
       };
     }
-    if (cultureCount === 0) {
+    if (firstMissingSetupStep === 'cultures') {
+      const action = getProjectSetupAction(firstMissingSetupStep);
       return {
         title: t('seedDemand.progressive.cultures.title'),
         description: t('seedDemand.progressive.cultures.description'),
-        action: { label: t('seedDemand.progressive.cultures.action'), to: '/app/cultures' },
+        action: { label: t(action.labelKey), to: action.to },
       };
     }
-    if (!hasPlans) {
+    if (firstMissingSetupStep === 'plans') {
+      const action = getProjectSetupAction(firstMissingSetupStep);
       return {
         title: t('seedDemand.progressive.plans.title'),
         description: t('seedDemand.progressive.plans.description'),
-        action: { label: t('seedDemand.progressive.plans.action'), to: '/app/planting-plans' },
+        action: { label: t(action.labelKey), to: action.to },
       };
     }
     if (!hasSeedData) {
@@ -100,7 +121,7 @@ export default function SeedDemandPage(): React.ReactElement {
       };
     }
     return null;
-  }, [bedCount, cultureCount, hasPlans, hasSeedData, locationCount, t]);
+  }, [firstMissingSetupStep, hasSeedData, t]);
 
   const loadRows = async () => {
     setIsLoading(true);
@@ -108,16 +129,18 @@ export default function SeedDemandPage(): React.ReactElement {
     try {
       const response = await seedDemandAPI.list();
       setRows(response.data.results ?? []);
-      const [culturesResponse, plansResponse, locationsResponse, bedsResponse] = await Promise.all([
+      const [culturesResponse, plansResponse, locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
         cultureAPI.list(),
         plantingPlanAPI.list(),
         locationAPI.list(),
+        fieldAPI.list(),
         bedAPI.list(),
       ]);
       const cultures = culturesResponse.data.results;
       setCultureCount(cultures.length);
       setPlanCount(plansResponse.data.results.length);
       setLocationCount(locationsResponse.data.results.length);
+      setFieldCount(fieldsResponse.data.results.length);
       setBedCount(bedsResponse.data.results.length);
       setHasCulturesWithSeedData(cultures.some((culture) => (
         culture.seed_rate_value !== null
@@ -149,6 +172,7 @@ export default function SeedDemandPage(): React.ReactElement {
       setIsLoading(false);
       setError(null);
       setHasCulturesWithSeedData(false);
+      setFieldCount(0);
       return;
     }
     void loadRows();

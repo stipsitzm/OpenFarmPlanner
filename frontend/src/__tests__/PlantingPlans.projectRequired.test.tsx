@@ -106,4 +106,21 @@ describe("PlantingPlans project requirement state", () => {
     expect(screen.queryByText("Kultur fehlt")).not.toBeInTheDocument();
     expect(screen.queryByText("Beet fehlt")).not.toBeInTheDocument();
   });
+
+  it("opens the add-field flow when a location exists but no fields exist", async () => {
+    apiMocks.locationList.mockResolvedValue({ data: { results: [{ id: 1, name: "Hof" }] } });
+
+    render(
+      <MemoryRouter>
+        <PlantingPlans />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Lege als Nächstes eine Parzelle an.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Parzelle hinzufügen" })).toHaveAttribute(
+      "href",
+      "/app/fields-beds?create=true",
+    );
+    expect(screen.queryByRole("link", { name: "Zu Anbauflächen" })).not.toBeInTheDocument();
+  });
 });

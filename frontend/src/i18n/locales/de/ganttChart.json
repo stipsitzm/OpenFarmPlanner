@@ -96,6 +96,11 @@
       "missing": "Standort fehlt",
       "done": "Standort vorhanden"
     },
+    "field": {
+      "label": "Parzelle",
+      "missing": "Parzelle fehlt",
+      "done": "Parzelle vorhanden"
+    },
     "culture": {
       "label": "Kultur",
       "missing": "Kultur fehlt",
@@ -118,6 +123,7 @@
     "actions": {
       "createLocation": "Standort hinzufügen",
       "createCulture": "Kultur hinzufügen",
+      "createField": "Parzelle hinzufügen",
       "createAreas": "Zu Anbauflächen",
       "createPlan": "Anbauplan hinzufügen"
     }

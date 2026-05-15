@@ -13,6 +13,7 @@ import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperat
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
+import { getProjectSetupAction } from './requirementFlow';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { getSegmentedActionButtonSx, segmentedButtonGroupSx } from '../components/buttons/segmentedControlStyles';
 import { useTheme } from '@mui/material/styles';
@@ -25,7 +26,7 @@ type ViewMode = 'table' | 'graphical';
 type InteractionMode = 'view' | 'edit';
 
 export default function FieldsBedsPage(): React.ReactElement {
-  const { t } = useTranslation(['fields', 'hierarchy']);
+  const { t } = useTranslation(['fields', 'hierarchy', 'common']);
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
@@ -186,6 +187,9 @@ export default function FieldsBedsPage(): React.ReactElement {
   const hasBeds = bedsCount > 0;
   const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && (!hasLocations || !hasFields);
   const shouldShowMissingBedsHint = hasFields && !hasBeds;
+  const createLocationAction = getProjectSetupAction('locations');
+  const createFieldAction = getProjectSetupAction('fields');
+  const createBedAction = getProjectSetupAction('beds');
 
   useEffect(() => {
     if (viewMode === 'graphical') {
@@ -286,6 +290,7 @@ export default function FieldsBedsPage(): React.ReactElement {
                 {t('hierarchy:messages.noBedsHintAfterIcon')}
               </Box>
             )}
+            actions={[{ label: t(createBedAction.labelKey), to: createBedAction.to }]}
           />
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldShowAreasEmptyState ? (
@@ -297,8 +302,8 @@ export default function FieldsBedsPage(): React.ReactElement {
               { label: t('hierarchy:columns.field'), done: hasFields },
             ]}
             actions={[
-              ...(!hasLocations ? [{ label: t('hierarchy:emptyAreas.actions.createLocation'), onClick: () => navigate('/app/locations?create=true') }] : []),
-              ...(hasLocations && !hasFields ? [{ label: t('hierarchy:emptyAreas.actions.createField'), onClick: handleGlobalAddField }] : []),
+              ...(!hasLocations ? [{ label: t(createLocationAction.labelKey), onClick: () => navigate(createLocationAction.to) }] : []),
+              ...(hasLocations && !hasFields ? [{ label: t(createFieldAction.labelKey), onClick: handleGlobalAddField }] : []),
             ]}
           />
         ) : null}
