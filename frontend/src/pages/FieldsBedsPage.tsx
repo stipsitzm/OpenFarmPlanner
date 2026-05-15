@@ -130,23 +130,30 @@ export default function FieldsBedsPage(): React.ReactElement {
     reloadHierarchyAndLocations,
     t as never,
   );
-  const handleGlobalAddField = useCallback((): void => {
-    if (locations.length === 0) {
-      navigate('/app/locations?create=true');
-      return;
-    }
-
+  const openAddFieldDialog = useCallback((): boolean => {
     if (locations.length === 1 && locations[0]?.id !== undefined) {
       setTargetLocationId(locations[0].id);
       setNewFieldName('');
       setAddFieldDialogOpen(true);
-      return;
+      return true;
     }
+
     const firstLocation = locations.find((location) => location.id !== undefined);
-    setTargetLocationId(firstLocation?.id ?? '');
+    if (firstLocation?.id === undefined) {
+      return false;
+    }
+
+    setTargetLocationId(firstLocation.id);
     setNewFieldName('');
     setAddFieldDialogOpen(true);
-  }, [locations, navigate]);
+    return true;
+  }, [locations]);
+
+  const handleGlobalAddField = useCallback((): void => {
+    if (!openAddFieldDialog()) {
+      navigate('/app/locations?create=true');
+    }
+  }, [navigate, openAddFieldDialog]);
 
   const handleConfirmAddField = useCallback((): void => {
     if (typeof targetLocationId !== 'number' || !newFieldName.trim()) {
@@ -165,7 +172,16 @@ export default function FieldsBedsPage(): React.ReactElement {
     if (searchParams.get('create') !== 'true') {
       return;
     }
-    handleGlobalAddField();
+
+    if (shouldShowProjectRequiredState || !hasAreaDataLoaded || isAreaDataLoading) {
+      return;
+    }
+
+    if (!openAddFieldDialog()) {
+      navigate('/app/locations?create=true', { replace: true });
+      return;
+    }
+
     searchParams.delete('create');
     const nextSearch = searchParams.toString();
     navigate(
@@ -175,7 +191,15 @@ export default function FieldsBedsPage(): React.ReactElement {
       },
       { replace: true },
     );
-  }, [handleGlobalAddField, location.pathname, location.search, navigate]);
+  }, [
+    hasAreaDataLoaded,
+    isAreaDataLoading,
+    location.pathname,
+    location.search,
+    navigate,
+    openAddFieldDialog,
+    shouldShowProjectRequiredState,
+  ]);
 
 
   useEffect(() => {
