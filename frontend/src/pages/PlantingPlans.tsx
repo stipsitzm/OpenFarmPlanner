@@ -1609,6 +1609,9 @@ function PlantingPlans(): React.ReactElement {
             title={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.title`)}
             description={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.description`)}
             actions={[
+              ...(firstMissingRequirement === "locations" ? [
+                { label: t("plantingPlans:emptyStates.actions.createLocation"), to: "/app/locations?create=true" },
+              ] : []),
               ...(firstMissingRequirement === "beds" ? [{ label: t("plantingPlans:emptyStates.actions.createAreas"), to: "/app/fields-beds" }] : []),
               ...(firstMissingRequirement === "cultures" ? [
                 { label: t("plantingPlans:emptyStates.actions.openCultureLibrary"), to: "/app/cultures?library=true" },

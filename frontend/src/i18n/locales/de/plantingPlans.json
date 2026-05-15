@@ -84,6 +84,7 @@
       }
     },
     "actions": {
+      "createLocation": "Standort hinzufügen",
       "createAreas": "Zu Anbauflächen",
       "openCultureLibrary": "Kulturbibliothek öffnen",
       "addCulture": "Kultur hinzufügen",

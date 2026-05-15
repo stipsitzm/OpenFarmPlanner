@@ -98,8 +98,11 @@ describe("PlantingPlans project requirement state", () => {
 
     expect(await screen.findByText("Du kannst noch keinen Anbauplan hinzufügen.")).toBeInTheDocument();
     expect(screen.getByText("Lege zuerst einen Standort an.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Standort hinzufügen" })).toHaveAttribute(
+      "href",
+      "/app/locations?create=true",
+    );
     expect(screen.queryByText("Standort fehlt")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Standort anlegen" })).not.toBeInTheDocument();
     expect(screen.queryByText("Kultur fehlt")).not.toBeInTheDocument();
     expect(screen.queryByText("Beet fehlt")).not.toBeInTheDocument();
   });
