@@ -39,6 +39,8 @@
     "createLocation": "Standort hinzufügen",
     "createField": "Parzelle hinzufügen",
     "createBed": "Beet hinzufügen",
+    "openAreas": "Anbauflächen öffnen",
+    "openCultureLibrary": "Kulturbibliothek öffnen",
     "createCulture": "Kultur hinzufügen",
     "createPlan": "Anbauplan hinzufügen"
   },

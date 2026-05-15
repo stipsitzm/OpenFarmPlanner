@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
@@ -26,7 +26,7 @@ import TableSurface from '../components/layout/TableSurface';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
-import { getFirstMissingProjectSetupStep, getProjectSetupAction } from './requirementFlow';
+import { getFirstMissingProjectSetupStep, getProjectSetupAction, getProjectSetupActions } from './requirementFlow';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
@@ -65,37 +65,36 @@ export default function SeedDemandPage(): React.ReactElement {
     hasCultures: cultureCount > 0,
     hasPlans,
   });
+  const getTranslatedSetupActions = useCallback((step: NonNullable<typeof firstMissingSetupStep>) => (
+    getProjectSetupActions(step).map((action) => ({ label: t(action.labelKey), to: action.to }))
+  ), [t]);
   const missingRequirement = useMemo(() => {
     if (firstMissingSetupStep === 'locations') {
-      const action = getProjectSetupAction(firstMissingSetupStep);
       return {
         title: t('seedDemand.progressive.locations.title'),
         description: t('seedDemand.progressive.locations.description'),
-        action: { label: t(action.labelKey), to: action.to },
+        actions: getTranslatedSetupActions(firstMissingSetupStep),
       };
     }
     if (firstMissingSetupStep === 'fields') {
-      const action = getProjectSetupAction(firstMissingSetupStep);
       return {
         title: t('seedDemand.progressive.fields.title'),
         description: t('seedDemand.progressive.fields.description'),
-        action: { label: t(action.labelKey), to: action.to },
+        actions: getTranslatedSetupActions(firstMissingSetupStep),
       };
     }
     if (firstMissingSetupStep === 'beds') {
-      const action = getProjectSetupAction(firstMissingSetupStep);
       return {
         title: t('seedDemand.progressive.beds.title'),
         description: t('seedDemand.progressive.beds.description'),
-        action: { label: t(action.labelKey), to: action.to },
+        actions: getTranslatedSetupActions(firstMissingSetupStep),
       };
     }
     if (firstMissingSetupStep === 'cultures') {
-      const action = getProjectSetupAction(firstMissingSetupStep);
       return {
         title: t('seedDemand.progressive.cultures.title'),
         description: t('seedDemand.progressive.cultures.description'),
-        action: { label: t(action.labelKey), to: action.to },
+        actions: getTranslatedSetupActions(firstMissingSetupStep),
       };
     }
     if (firstMissingSetupStep === 'plans') {
@@ -103,7 +102,7 @@ export default function SeedDemandPage(): React.ReactElement {
       return {
         title: t('seedDemand.progressive.plans.title'),
         description: t('seedDemand.progressive.plans.description'),
-        action: { label: t(action.labelKey), to: action.to },
+        actions: [{ label: t(action.labelKey), to: action.to }],
       };
     }
     if (!hasSeedData) {
@@ -117,11 +116,11 @@ export default function SeedDemandPage(): React.ReactElement {
             </Typography>
           </>
         ),
-        action: { label: t('seedDemand.progressive.seedData.action'), to: '/app/cultures' },
+        actions: [{ label: t('seedDemand.progressive.seedData.action'), to: '/app/cultures' }],
       };
     }
     return null;
-  }, [firstMissingSetupStep, hasSeedData, t]);
+  }, [firstMissingSetupStep, getTranslatedSetupActions, hasSeedData, t]);
 
   const loadRows = async () => {
     setIsLoading(true);
@@ -199,7 +198,7 @@ export default function SeedDemandPage(): React.ReactElement {
           <EmptyStateCard
             title={missingRequirement?.title ?? t('seedDemand.emptyStates.requirementsTitle')}
             description={missingRequirement?.description ?? t('seedDemand.emptyStates.requirementsDescription')}
-            actions={missingRequirement ? [missingRequirement.action] : []}
+            actions={missingRequirement?.actions ?? []}
           />
         )}
 

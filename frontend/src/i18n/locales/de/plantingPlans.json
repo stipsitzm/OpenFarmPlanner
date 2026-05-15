@@ -23,7 +23,8 @@
   },
   "tooltips": {
     "coupledFields": "Genutzte Fläche: Mit Pflanzenanzahl gekoppelt. Änderungen aktualisieren automatisch den anderen Wert.",
-    "plantsFromSpacing": "Pflanzenanzahl: Mit genutzter Fläche gekoppelt. Änderungen aktualisieren automatisch den anderen Wert."
+    "plantsFromSpacing": "Pflanzenanzahl: Mit genutzter Fläche gekoppelt. Änderungen aktualisieren automatisch den anderen Wert.",
+    "calculatedHarvestDate": "Wird automatisch aus Pflanzdatum und den Daten der Kulturbibliothek berechnet."
   },
   "errors": {
     "load": "Fehler beim Laden der Anbaupläne",
@@ -76,7 +77,7 @@
       },
       "beds": {
         "title": "Du hast noch keine Beete angelegt.",
-        "description": "Beete sind die Grundlage für Anbaupläne. Lege jetzt dein erstes Beet an."
+        "description": "Beete sind die Grundlage für Anbaupläne. Öffne die Anbauflächen und füge ein Beet über eine Parzelle hinzu."
       },
       "cultures": {
         "title": "Du hast noch keine Kulturen angelegt.",

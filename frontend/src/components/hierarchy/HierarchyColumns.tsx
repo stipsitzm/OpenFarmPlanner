@@ -17,6 +17,7 @@ import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
 import { AddBedIcon } from './AddBedIcon';
 import { getPlainExcerpt } from '../data-grid/markdown';
+import { getCalculatedColumnProps } from '../data-grid/calculatedColumns';
 
 export interface HierarchyColumnWidths {
   name: number;
@@ -330,8 +331,6 @@ const renderDimensionCell = (
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             color: hasDisplayValue ? 'text.primary' : 'text.secondary',
-            borderBottom: hasDisplayValue ? 'none' : '1px dashed',
-            borderBottomColor: hasDisplayValue ? 'transparent' : 'divider',
           }}
         >
           {hasDisplayValue ? String(displayValue) : '—'}
@@ -339,6 +338,13 @@ const renderDimensionCell = (
       </Box>
     </Tooltip>
   );
+};
+
+const renderCalculatedValueCell = (params: GridRenderCellParams<HierarchyRow>): ReactElement => {
+  const displayValue = params.formattedValue ?? params.value;
+  const hasDisplayValue = displayValue !== null && displayValue !== undefined && String(displayValue).trim() !== '';
+
+  return <Box component="span">{hasDisplayValue ? String(displayValue) : '—'}</Box>;
 };
 
 export function createHierarchyColumns(
@@ -415,10 +421,12 @@ export function createHierarchyColumns(
       headerName: t('hierarchy:columns.area'),
       width: widths.area,
       type: 'string',
-      editable: true,
+      ...getCalculatedColumnProps<HierarchyRow>({
+        headerName: t('hierarchy:columns.area'),
+        tooltip: t('hierarchy:tooltips.calculatedArea'),
+      }),
       valueGetter: (_value, row: HierarchyRow) => calculateAreaValue(row),
-      cellClassName: (params) => getDimensionCellClassName(params.row, 'area'),
-      renderCell: (params) => renderDimensionCell(params, 'area', t),
+      renderCell: renderCalculatedValueCell,
     },
     {
       field: 'notes',

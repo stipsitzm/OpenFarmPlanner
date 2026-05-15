@@ -10,10 +10,15 @@ export interface ProjectSetupAction {
 const PROJECT_SETUP_ACTIONS: Record<ProjectSetupStep, ProjectSetupAction> = {
   locations: { labelKey: 'common:setupActions.createLocation', to: '/app/locations?create=true' },
   fields: { labelKey: 'common:setupActions.createField', to: '/app/fields-beds?create=true' },
-  beds: { labelKey: 'common:setupActions.createBed', to: '/app/fields-beds?createBed=true' },
+  beds: { labelKey: 'common:setupActions.openAreas', to: '/app/fields-beds' },
   cultures: { labelKey: 'common:setupActions.createCulture', to: '/app/cultures?create=true' },
   plans: { labelKey: 'common:setupActions.createPlan', to: '/app/planting-plans?create=true' },
 };
+
+const CULTURE_SETUP_ACTIONS: ProjectSetupAction[] = [
+  { labelKey: 'common:setupActions.openCultureLibrary', to: '/app/cultures?library=true' },
+  PROJECT_SETUP_ACTIONS.cultures,
+];
 
 interface RequirementState {
   hasLocations: boolean;
@@ -52,6 +57,13 @@ export function getFirstMissingProjectSetupStep(state: ProjectSetupState): Proje
 
 export function getProjectSetupAction(step: ProjectSetupStep): ProjectSetupAction {
   return PROJECT_SETUP_ACTIONS[step];
+}
+
+export function getProjectSetupActions(step: ProjectSetupStep): ProjectSetupAction[] {
+  if (step === 'cultures') {
+    return CULTURE_SETUP_ACTIONS;
+  }
+  return [getProjectSetupAction(step)];
 }
 
 export function getFirstMissingCultivationPlanRequirement(

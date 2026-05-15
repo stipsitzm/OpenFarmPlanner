@@ -39,7 +39,8 @@
   "tooltips": {
     "expand": "Eintrag aufklappen",
     "collapse": "Eintrag zuklappen",
-    "addField": "Parzelle hinzufügen"
+    "addField": "Parzelle hinzufügen",
+    "calculatedArea": "Wird automatisch aus Länge × Breite berechnet. Nicht direkt bearbeitbar."
   },
   "messages": {
     "createLocationFirst": "Bitte erstellen Sie zuerst einen Standort.",

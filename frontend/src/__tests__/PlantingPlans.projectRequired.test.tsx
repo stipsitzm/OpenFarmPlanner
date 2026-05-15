@@ -123,4 +123,24 @@ describe("PlantingPlans project requirement state", () => {
     );
     expect(screen.queryByRole("link", { name: "Zu Anbauflächen" })).not.toBeInTheDocument();
   });
+
+  it("shows the culture library as the primary action when cultures are missing", async () => {
+    apiMocks.locationList.mockResolvedValue({ data: { results: [{ id: 1, name: "Hof" }] } });
+    apiMocks.fieldList.mockResolvedValue({ data: { results: [{ id: 2, name: "Nord", location: 1 }] } });
+    apiMocks.bedList.mockResolvedValue({ data: { results: [{ id: 3, name: "Beet A", field: 2 }] } });
+
+    render(
+      <MemoryRouter>
+        <PlantingPlans />
+      </MemoryRouter>,
+    );
+
+    const libraryLink = await screen.findByRole("link", { name: "Kulturbibliothek öffnen" });
+    const createCultureLink = screen.getByRole("link", { name: "Kultur hinzufügen" });
+
+    expect(libraryLink).toHaveAttribute("href", "/app/cultures?library=true");
+    expect(libraryLink.className).toContain("MuiButton-contained");
+    expect(createCultureLink).toHaveAttribute("href", "/app/cultures?create=true");
+    expect(createCultureLink.className).toContain("MuiButton-outlined");
+  });
 });

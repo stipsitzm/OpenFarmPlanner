@@ -6,6 +6,10 @@
  */
 
 import type { Theme } from '@mui/material/styles';
+import { CALCULATED_COLUMN_CELL_CLASS, CALCULATED_COLUMN_HEADER_CLASS } from './calculatedColumns';
+
+const CALCULATED_COLUMN_BACKGROUND = '#F5F5F5';
+const CALCULATED_COLUMN_TEXT = 'rgba(0,0,0,0.85)';
 
 /**
  * Common styles for MUI DataGrid components
@@ -80,6 +84,20 @@ export const dataGridSx = {
   },
   '& .ofp-row-dirty': {
     boxShadow: 'inset 3px 0 0 #ed6c02',
+  },
+  [`& .${CALCULATED_COLUMN_HEADER_CLASS}`]: {
+    backgroundColor: CALCULATED_COLUMN_BACKGROUND,
+    color: CALCULATED_COLUMN_TEXT,
+  },
+  [`& .${CALCULATED_COLUMN_HEADER_CLASS}:hover`]: {
+    backgroundColor: CALCULATED_COLUMN_BACKGROUND,
+  },
+  [`& .${CALCULATED_COLUMN_CELL_CLASS}`]: {
+    backgroundColor: CALCULATED_COLUMN_BACKGROUND,
+    color: CALCULATED_COLUMN_TEXT,
+  },
+  [`& .MuiDataGrid-row:hover .${CALCULATED_COLUMN_CELL_CLASS}`]: {
+    backgroundColor: CALCULATED_COLUMN_BACKGROUND,
   },
 };
 

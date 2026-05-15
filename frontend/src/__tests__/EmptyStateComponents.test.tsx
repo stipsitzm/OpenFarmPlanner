@@ -29,6 +29,39 @@ describe('Empty state components', () => {
     expect(secondary.className).toContain('MuiButton-outlined');
   });
 
+  it('does not render same-route link actions without navigation intent', () => {
+    render(
+      <MemoryRouter initialEntries={['/app/fields-beds']}>
+        <EmptyStateCard
+          title="Es sind noch keine Beete vorhanden."
+          description="Füge Beete über das Plus-Symbol bei der jeweiligen Parzelle hinzu."
+          actions={[
+            { label: 'Anbauflächen öffnen', to: '/app/fields-beds' },
+            { label: 'Parzelle hinzufügen', to: '/app/fields-beds?create=true' },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('link', { name: 'Anbauflächen öffnen' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
+  });
+
+  it('renders without requiring a router context', () => {
+    render(
+      <EmptyStateCard
+        title="Noch keine Kulturen vorhanden"
+        description="Öffne die Kulturbibliothek oder lege eine eigene Kultur an."
+        actions={[
+          { label: 'Kulturbibliothek öffnen', onClick: () => undefined },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Noch keine Kulturen vorhanden')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kulturbibliothek öffnen' })).toBeInTheDocument();
+  });
+
   it('shows requirement states without duplicated status text', () => {
     render(
       <RequirementChecklist

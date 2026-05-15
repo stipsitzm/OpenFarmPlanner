@@ -238,8 +238,8 @@
       },
       "beds": {
         "title": "Noch kein Saatgutbedarf berechenbar",
-        "description": "Lege als Nächstes Beete an, damit Kulturen einer Fläche zugeordnet werden können.",
-        "action": "Beet hinzufügen"
+        "description": "Öffne die Anbauflächen und füge ein Beet über eine Parzelle hinzu, damit Kulturen einer Fläche zugeordnet werden können.",
+        "action": "Anbauflächen öffnen"
       },
       "cultures": {
         "title": "Noch kein Saatgutbedarf berechenbar",
