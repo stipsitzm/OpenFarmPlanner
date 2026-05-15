@@ -65,6 +65,7 @@ import { AreaM2EditCell } from "../components/data-grid/AreaM2EditCell";
 import {
   EditableDataGrid,
   createSingleSelectColumn,
+  getCalculatedColumnProps,
   type EditableRow,
   type DataGridAPI,
   type SearchableSelectOption,
@@ -80,7 +81,7 @@ import {
 } from "../commands/useCommandContext";
 import type { CommandSpec } from "../commands/types";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
-import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction } from "./requirementFlow";
+import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction, getProjectSetupActions } from "./requirementFlow";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
 import EmptyStateCard from "../components/project/EmptyStateCard";
@@ -1000,31 +1001,25 @@ function PlantingPlans(): React.ReactElement {
       {
         field: "harvest_date",
         headerName: t("plantingPlans:columns.harvestStartDate"),
-        description: "",
         flex: 0,
         minWidth: dynamicWidths.harvestDate,
-        editable: false,
+        ...getCalculatedColumnProps<PlantingPlanRow>({
+          headerName: t("plantingPlans:columns.harvestStartDate"),
+          tooltip: t("plantingPlans:tooltips.calculatedHarvestDate"),
+        }),
         type: "date",
-        renderHeader: () => (
-          <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>
-            {t("plantingPlans:columns.harvestStartDate")}
-          </Box>
-        ),
         valueGetter: (value) => (value ? new Date(value) : null),
       },
       {
         field: "harvest_end_date",
         headerName: t("plantingPlans:columns.harvestEndDate"),
-        description: "",
         flex: 0,
         minWidth: dynamicWidths.harvestEndDate,
-        editable: false,
+        ...getCalculatedColumnProps<PlantingPlanRow>({
+          headerName: t("plantingPlans:columns.harvestEndDate"),
+          tooltip: t("plantingPlans:tooltips.calculatedHarvestDate"),
+        }),
         type: "date",
-        renderHeader: () => (
-          <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>
-            {t("plantingPlans:columns.harvestEndDate")}
-          </Box>
-        ),
         valueGetter: (value) => (value ? new Date(value) : null),
       },
       {
@@ -1539,9 +1534,9 @@ function PlantingPlans(): React.ReactElement {
   const shouldShowPrerequisiteState = !canCreatePlan;
   const shouldShowNoPlansState = canCreatePlan && !hasPlans;
   const isInitialLoading = !shouldShowProjectRequiredState && (isHierarchyLoading || isPlansLoading);
-  const primaryPrerequisiteAction = firstMissingRequirement
-    ? getProjectSetupAction(firstMissingRequirement)
-    : null;
+  const prerequisiteActions = firstMissingRequirement
+    ? getProjectSetupActions(firstMissingRequirement)
+    : [];
   const createPlanAction = getProjectSetupAction("plans");
 
   const handleCreatePlan = useCallback((): void => {
@@ -1613,14 +1608,7 @@ function PlantingPlans(): React.ReactElement {
           <EmptyStateCard
             title={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.title`)}
             description={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.description`)}
-            actions={[
-              ...(primaryPrerequisiteAction ? [
-                { label: t(primaryPrerequisiteAction.labelKey), to: primaryPrerequisiteAction.to },
-              ] : []),
-              ...(firstMissingRequirement === "cultures" ? [
-                { label: t("plantingPlans:emptyStates.actions.openCultureLibrary"), to: "/app/cultures?library=true" },
-              ] : []),
-            ]}
+            actions={prerequisiteActions.map((action) => ({ label: t(action.labelKey), to: action.to }))}
           />
         ) : shouldShowNoPlansState ? (
           <EmptyStateCard

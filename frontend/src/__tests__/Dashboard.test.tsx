@@ -66,6 +66,22 @@ describe('Dashboard', () => {
     expect(screen.queryByText('Starte deine Anbauplanung')).not.toBeInTheDocument();
   });
 
+  it('shows the culture library as the primary next action when cultures are missing', async () => {
+    mocks.locationList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hof' }] } });
+    mocks.fieldList.mockResolvedValue({ data: { results: [{ id: 2, name: 'Nord', location: 1 }] } });
+    mocks.bedList.mockResolvedValue({ data: { results: [{ id: 3, name: 'Beet A', field: 2 }] } });
+
+    render(<MemoryRouter><Dashboard /></MemoryRouter>);
+
+    const libraryLink = await screen.findByRole('link', { name: 'Kulturbibliothek öffnen' });
+    const createCultureLink = screen.getByRole('link', { name: 'Kultur hinzufügen' });
+
+    expect(libraryLink).toHaveAttribute('href', '/app/cultures?library=true');
+    expect(libraryLink.className).toContain('MuiButton-contained');
+    expect(createCultureLink).toHaveAttribute('href', '/app/cultures?create=true');
+    expect(createCultureLink.className).toContain('MuiButton-outlined');
+  });
+
   it('shows aggregated upcoming tasks and ready state when setup is complete', async () => {
     mocks.locationList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hof' }] } });
     mocks.fieldList.mockResolvedValue({ data: { results: [{ id: 2, name: 'Nord', location: 1 }] } });

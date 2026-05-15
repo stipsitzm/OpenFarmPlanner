@@ -29,3 +29,16 @@ export const normalizeMainRoutePath = (pathname: string): string => {
   }
   return normalizedPath === '/' ? '/app/dashboard' : `/app${normalizedPath}`;
 };
+
+export const getActiveMainRouteFromPathname = (pathname: string): string | null => {
+  const normalizedPath = normalizeMainRoutePath(pathname);
+  const aliasedPath = normalizedPath === '/app/planting-plans'
+    ? '/app/anbauplaene'
+    : normalizedPath;
+
+  const matchingRoute = KEYBOARD_NAV_ROUTES
+    .filter((route) => aliasedPath === route || aliasedPath.startsWith(`${route}/`))
+    .sort((first, second) => second.length - first.length)[0];
+
+  return matchingRoute ?? null;
+};

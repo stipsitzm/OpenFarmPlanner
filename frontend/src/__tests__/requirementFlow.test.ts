@@ -3,6 +3,7 @@ import {
   getFirstMissingCultivationPlanRequirement,
   getFirstMissingProjectSetupStep,
   getProjectSetupAction,
+  getProjectSetupActions,
 } from '../pages/requirementFlow';
 
 describe('getFirstMissingCultivationPlanRequirement', () => {
@@ -48,5 +49,18 @@ describe('project setup actions', () => {
       labelKey: 'common:setupActions.openAreas',
       to: '/app/fields-beds',
     });
+  });
+
+  it('orders culture setup actions with the library first', () => {
+    expect(getProjectSetupActions('cultures')).toEqual([
+      {
+        labelKey: 'common:setupActions.openCultureLibrary',
+        to: '/app/cultures?library=true',
+      },
+      {
+        labelKey: 'common:setupActions.createCulture',
+        to: '/app/cultures?create=true',
+      },
+    ]);
   });
 });

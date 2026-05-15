@@ -54,7 +54,7 @@ import {
   type GanttTask,
   type GanttTaskGroup,
 } from './ganttChartUtils';
-import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction } from './requirementFlow';
+import { getFirstMissingCultivationPlanRequirement, getProjectSetupActions } from './requirementFlow';
 import {
   getSegmentedActionButtonSx,
   segmentedButtonGroupSx,
@@ -369,9 +369,9 @@ function GanttChartPage(): React.ReactElement {
   });
   const firstMissingRequirement = firstMissingPrerequisite ?? (hasPlantingPlans ? null : 'plans');
   const hasCalendarRequirements = firstMissingRequirement === null;
-  const primaryRequirementAction = firstMissingRequirement
-    ? getProjectSetupAction(firstMissingRequirement)
-    : null;
+  const requirementActions = firstMissingRequirement
+    ? getProjectSetupActions(firstMissingRequirement)
+    : [];
 
   const renderOccupancyTooltip = useCallback(({ task }: { task: GanttTask }) => (
     <Box sx={{ p: 0.5 }}>
@@ -537,9 +537,7 @@ function GanttChartPage(): React.ReactElement {
                   ...(firstMissingRequirement === 'cultures' ? [{ label: t('ganttChart:requirements.culture.label'), done: false, missingLabel: t('ganttChart:requirements.culture.missing') }] : []),
                   ...(firstMissingRequirement === 'plans' ? [{ label: t('ganttChart:requirements.plan.label'), done: false, missingLabel: t('ganttChart:requirements.plan.missing') }] : []),
                 ]}
-                actions={[
-                  ...(primaryRequirementAction ? [{ label: t(primaryRequirementAction.labelKey), to: primaryRequirementAction.to }] : []),
-                ]}
+                actions={requirementActions.map((action) => ({ label: t(action.labelKey), to: action.to }))}
               />
             </Box>
           </Box>

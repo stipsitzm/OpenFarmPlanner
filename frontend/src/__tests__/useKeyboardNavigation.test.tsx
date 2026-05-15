@@ -2,13 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 
-const { navigateMock, useNavigateMock } = vi.hoisted(() => ({
+const { navigateMock, useLocationMock, useNavigateMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
+  useLocationMock: vi.fn(),
   useNavigateMock: vi.fn(),
 }));
 useNavigateMock.mockImplementation(() => navigateMock);
+useLocationMock.mockImplementation(() => ({ pathname: window.location.pathname }));
 
 vi.mock('react-router-dom', () => ({
+  useLocation: useLocationMock,
   useNavigate: useNavigateMock,
 }));
 
@@ -22,13 +25,14 @@ describe('useKeyboardNavigation', () => {
     vi.clearAllMocks();
     window.history.pushState({}, '', '/anbauplaene');
     document.body.innerHTML = '';
+    useLocationMock.mockImplementation(() => ({ pathname: window.location.pathname }));
   });
 
-  it('navigates to next route on Ctrl+Shift+ArrowRight from Anbaupläne', () => {
+  it('navigates to next route on Ctrl+Shift+ArrowDown from Anbaupläne', () => {
     render(<TestComponent />);
 
     const event = new KeyboardEvent('keydown', {
-      key: 'ArrowRight',
+      key: 'ArrowDown',
       ctrlKey: true,
       shiftKey: true,
       bubbles: true,
@@ -39,13 +43,13 @@ describe('useKeyboardNavigation', () => {
     expect(navigateMock).toHaveBeenCalledWith('/app/gantt-chart');
   });
 
-  it('wraps to last route on Ctrl+Shift+ArrowLeft from Anbaupläne', () => {
+  it('wraps to last route on Ctrl+Shift+ArrowUp from Anbaupläne', () => {
     window.history.pushState({}, '', '/anbauplaene');
     render(<TestComponent />);
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
-        key: 'ArrowLeft',
+        key: 'ArrowUp',
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,
@@ -56,13 +60,13 @@ describe('useKeyboardNavigation', () => {
   });
 
 
-  it('navigates from gantt to seed-demand on Ctrl+Shift+ArrowRight', () => {
+  it('navigates from gantt to seed-demand on Ctrl+Shift+ArrowDown', () => {
     window.history.pushState({}, '', '/gantt-chart');
     render(<TestComponent />);
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
-        key: 'ArrowRight',
+        key: 'ArrowDown',
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,
@@ -73,13 +77,13 @@ describe('useKeyboardNavigation', () => {
   });
 
 
-  it('wraps to Übersicht when pressing Ctrl+Shift+ArrowRight from the last page', () => {
+  it('wraps to Übersicht when pressing Ctrl+Shift+ArrowDown from the last page', () => {
     window.history.pushState({}, '', '/suppliers');
     render(<TestComponent />);
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
-        key: 'ArrowRight',
+        key: 'ArrowDown',
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,
@@ -95,7 +99,7 @@ describe('useKeyboardNavigation', () => {
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
-        key: 'ArrowRight',
+        key: 'ArrowDown',
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,
@@ -112,7 +116,7 @@ describe('useKeyboardNavigation', () => {
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
-        key: 'ArrowRight',
+        key: 'ArrowDown',
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,
@@ -131,7 +135,7 @@ describe('useKeyboardNavigation', () => {
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
-        key: 'ArrowRight',
+        key: 'ArrowDown',
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,
@@ -146,7 +150,7 @@ describe('useKeyboardNavigation', () => {
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
-        key: 'ArrowRight',
+        key: 'ArrowDown',
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,
@@ -163,7 +167,7 @@ describe('useKeyboardNavigation', () => {
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
-        key: 'ArrowRight',
+        key: 'ArrowDown',
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,
@@ -179,7 +183,7 @@ describe('useKeyboardNavigation', () => {
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
-        key: 'ArrowRight',
+        key: 'ArrowDown',
         ctrlKey: true,
         shiftKey: false,
         bubbles: true,
@@ -188,7 +192,7 @@ describe('useKeyboardNavigation', () => {
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
-        key: 'ArrowRight',
+        key: 'ArrowDown',
         ctrlKey: true,
         shiftKey: true,
         altKey: true,
@@ -199,13 +203,13 @@ describe('useKeyboardNavigation', () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it('navigates from Übersicht to Standorte on Ctrl+Shift+ArrowRight', () => {
+  it('navigates from Übersicht to Standorte on Ctrl+Shift+ArrowDown', () => {
     window.history.pushState({}, '', '/app/dashboard');
     render(<TestComponent />);
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
-        key: 'ArrowRight',
+        key: 'ArrowDown',
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,
@@ -215,13 +219,13 @@ describe('useKeyboardNavigation', () => {
     expect(navigateMock).toHaveBeenCalledWith('/app/locations');
   });
 
-  it('wraps to Lieferanten on Ctrl+Shift+ArrowLeft from Übersicht', () => {
+  it('wraps to Lieferanten on Ctrl+Shift+ArrowUp from Übersicht', () => {
     window.history.pushState({}, '', '/app/dashboard');
     render(<TestComponent />);
 
     window.dispatchEvent(
       new KeyboardEvent('keydown', {
-        key: 'ArrowLeft',
+        key: 'ArrowUp',
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,
@@ -229,5 +233,41 @@ describe('useKeyboardNavigation', () => {
     );
 
     expect(navigateMock).toHaveBeenCalledWith('/app/suppliers');
+  });
+
+  it('uses the current router pathname after normal navigation changes', () => {
+    let pathname = '/app/locations';
+    useLocationMock.mockImplementation(() => ({ pathname }));
+    const { rerender } = render(<TestComponent />);
+
+    pathname = '/app/gantt-chart';
+    rerender(<TestComponent />);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+      })
+    );
+
+    expect(navigateMock).toHaveBeenCalledWith('/app/seed-demand');
+  });
+
+  it('uses nested app routes to determine the active navigation item', () => {
+    window.history.pushState({}, '', '/app/cultures/42');
+    render(<TestComponent />);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+      })
+    );
+
+    expect(navigateMock).toHaveBeenCalledWith('/app/anbauplaene');
   });
 });

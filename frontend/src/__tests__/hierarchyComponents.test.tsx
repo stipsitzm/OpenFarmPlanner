@@ -319,18 +319,33 @@ describe('hierarchy components and behaviors', () => {
 
     const lengthColumn = columns.find((column) => column.field === 'length_m');
     const widthColumn = columns.find((column) => column.field === 'width_m');
-    const areaColumn = columns.find((column) => column.field === 'area_sqm');
-
     const incompleteRow = { id: 1, type: 'field', level: 1, length_m: null, width_m: 3, area_sqm: null };
     const completeRow = { id: 2, type: 'bed', level: 2, length_m: 5, width_m: 2, area_sqm: null };
 
     expect(lengthColumn?.cellClassName?.({ row: incompleteRow } as never)).toContain('ofp-hierarchy-cell-missing-dimension');
     expect(widthColumn?.cellClassName?.({ row: incompleteRow } as never)).toBe('');
-    expect(areaColumn?.cellClassName?.({ row: incompleteRow } as never)).toContain('ofp-hierarchy-cell-missing-dimension');
 
     expect(lengthColumn?.cellClassName?.({ row: completeRow } as never)).toBe('');
     expect(widthColumn?.cellClassName?.({ row: completeRow } as never)).toBe('');
-    expect(areaColumn?.cellClassName?.({ row: completeRow } as never)).toBe('');
+  });
+
+  it('marks area as a calculated non-editable column', () => {
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+    );
+
+    const areaColumn = columns.find((column) => column.field === 'area_sqm');
+
+    expect(areaColumn?.editable).toBe(false);
+    expect(areaColumn?.cellClassName).toBe('ofp-cell-calculated');
+    expect(areaColumn?.headerClassName).toBe('ofp-header-calculated');
   });
 
   it('updates footer messaging and add action based on location count', async () => {

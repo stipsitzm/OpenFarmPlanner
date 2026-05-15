@@ -129,7 +129,14 @@ describe('SeedDemandPage', () => {
     await waitFor(() => {
       expect(screen.getByText('seedDemand.progressive.cultures.title')).toBeInTheDocument();
     });
-    expect(screen.getByRole('link', { name: 'common:setupActions.createCulture' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'common:setupActions.openCultureLibrary' })).toHaveAttribute(
+      'href',
+      '/app/cultures?library=true',
+    );
+    expect(screen.getByRole('link', { name: 'common:setupActions.createCulture' })).toHaveAttribute(
+      'href',
+      '/app/cultures?create=true',
+    );
   });
 
   it('shows plan-step requirement when cultures exist but plans are missing', async () => {

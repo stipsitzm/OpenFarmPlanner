@@ -1,7 +1,7 @@
 /**
  * Custom hook for keyboard navigation between main views.
  *
- * Provides Ctrl+Shift+ArrowRight and Ctrl+Shift+ArrowLeft shortcuts to cycle through
+ * Provides Ctrl+Shift+ArrowDown and Ctrl+Shift+ArrowUp shortcuts to cycle through
  * the main application routes in a circular manner.
  * These shortcuts don't conflict with browser navigation or tab switching.
  * Shortcuts are disabled when focus is on input or textarea elements.
@@ -9,12 +9,15 @@
  * @returns void
  */
 
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ORDERED_APP_ROUTES, normalizeMainRoutePath } from '../navigation/mainNavigation';
+import { useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { getActiveMainRouteFromPathname, ORDERED_APP_ROUTES } from '../navigation/mainNavigation';
 
 export function useKeyboardNavigation(): void {
   const navigate = useNavigate();
+  const location = useLocation();
+  const currentPathnameRef = useRef(location.pathname);
+  currentPathnameRef.current = location.pathname;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
@@ -22,7 +25,7 @@ export function useKeyboardNavigation(): void {
         event.ctrlKey &&
         event.shiftKey &&
         !event.altKey &&
-        (event.key === 'ArrowRight' || event.key === 'ArrowLeft');
+        (event.key === 'ArrowDown' || event.key === 'ArrowUp');
 
       if (!isNavigationShortcut) {
         return;
@@ -39,15 +42,15 @@ export function useKeyboardNavigation(): void {
 
       event.preventDefault();
 
-      const normalizedPath = normalizeMainRoutePath(window.location.pathname || '/');
-      const currentIndex = ORDERED_APP_ROUTES.indexOf(normalizedPath);
+      const currentRoute = getActiveMainRouteFromPathname(currentPathnameRef.current);
+      const currentIndex = currentRoute ? ORDERED_APP_ROUTES.indexOf(currentRoute) : -1;
       if (currentIndex === -1) {
-        console.warn(`[keyboard-nav] Unknown route "${normalizedPath}" (pathname: "${window.location.pathname}"). Falling back to dashboard.`);
+        console.warn(`[keyboard-nav] Unknown route for pathname "${currentPathnameRef.current}". Falling back to dashboard.`);
         navigate('/app/dashboard');
         return;
       }
 
-      const direction = event.key === 'ArrowRight' ? 1 : -1;
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
       const nextIndex = (currentIndex + direction + ORDERED_APP_ROUTES.length) % ORDERED_APP_ROUTES.length;
 
       navigate(ORDERED_APP_ROUTES[nextIndex]);

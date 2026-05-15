@@ -10,7 +10,7 @@ import PageContainer from '../components/layout/PageContainer';
 import PageSurface from '../components/layout/PageSurface';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
-import { getFirstMissingProjectSetupStep, getProjectSetupAction } from './requirementFlow';
+import { getFirstMissingProjectSetupStep, getProjectSetupActions } from './requirementFlow';
 import { deriveLocationTasks } from './locationDerivedTasks';
 
 export default function Dashboard(): React.ReactElement {
@@ -80,7 +80,7 @@ export default function Dashboard(): React.ReactElement {
   if (shouldShowProjectRequiredState && missingProjectReason) return <PageContainer><PageSurface variant="contentFit"><ProjectRequiredState reason={missingProjectReason} /></PageSurface></PageContainer>;
 
   const isSetupComplete = firstMissingChecklistStep === null;
-  const nextSetupAction = firstMissingChecklistStep ? getProjectSetupAction(firstMissingChecklistStep) : null;
+  const nextSetupActions = firstMissingChecklistStep ? getProjectSetupActions(firstMissingChecklistStep) : [];
 
   return (
     <PageContainer>
@@ -124,10 +124,19 @@ export default function Dashboard(): React.ReactElement {
                 );
               })}
             </Stack>
-            {nextSetupAction ? (
-              <Button component={RouterLink} to={nextSetupAction.to} variant="contained">
-                {t(nextSetupAction.labelKey)}
-              </Button>
+            {nextSetupActions.length > 0 ? (
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                {nextSetupActions.map((action, index) => (
+                  <Button
+                    key={action.to}
+                    component={RouterLink}
+                    to={action.to}
+                    variant={index === 0 ? 'contained' : 'outlined'}
+                  >
+                    {t(action.labelKey)}
+                  </Button>
+                ))}
+              </Stack>
             ) : null}
           </CardContent>
         </Card>

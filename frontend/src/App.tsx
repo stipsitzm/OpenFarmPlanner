@@ -84,7 +84,7 @@ import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
-import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, normalizeMainRoutePath } from './navigation/mainNavigation';
+import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, getActiveMainRouteFromPathname, normalizeMainRoutePath } from './navigation/mainNavigation';
 import {
   getMobileNavigationIconSx,
   getMobileNavigationItemSx,
@@ -293,6 +293,7 @@ function RootLayout(): React.ReactElement {
   );
   const navigate = useNavigate();
   const location = useLocation();
+  const currentPathnameRef = React.useRef(location.pathname);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
@@ -319,6 +320,8 @@ function RootLayout(): React.ReactElement {
   const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
   const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileActionsOverflowAnchor, setMobileActionsOverflowAnchor] = useState<null | HTMLElement>(null);
+  currentPathnameRef.current = location.pathname;
+
   useEffect(() => {
     setTopbarContextActions([]);
   }, [location.pathname]);
@@ -590,15 +593,16 @@ function RootLayout(): React.ReactElement {
   const activeMembershipRole = activeMembership?.role ?? null;
 
   const getCurrentRouteFromLocation = useCallback((): string => {
-    return normalizeMainRoutePath(location.pathname);
-  }, [location.pathname]);
+    const pathname = currentPathnameRef.current;
+    return getActiveMainRouteFromPathname(pathname) ?? normalizeMainRoutePath(pathname);
+  }, []);
 
   const navigateRelativePage = useCallback((direction: 1 | -1): void => {
     const currentRoute = getCurrentRouteFromLocation();
     const currentIndex = KEYBOARD_NAV_ROUTES.indexOf(currentRoute);
 
     if (currentIndex === -1) {
-      console.warn(`[keyboard-nav] Unknown route "${currentRoute}" (pathname: "${window.location.pathname}"). Falling back to dashboard.`);
+      console.warn(`[keyboard-nav] Unknown route "${currentRoute}" (pathname: "${currentPathnameRef.current}"). Falling back to dashboard.`);
       navigate('/app/dashboard');
       return;
     }
@@ -616,7 +620,7 @@ function RootLayout(): React.ReactElement {
   }, [navigateRelativePage]);
 
   const globalCommands = useMemo(() => createRootCommands({
-    currentPath: normalizeMainRoutePath(location.pathname),
+    currentPath: getCurrentRouteFromLocation(),
     activeProjectId,
     isProjectAdmin: activeMembershipRole === 'admin',
     memberships,
@@ -647,6 +651,7 @@ function RootLayout(): React.ReactElement {
   }), [
     activeMembershipRole,
     activeProjectId,
+    getCurrentRouteFromLocation,
     goToNextPage,
     goToPreviousPage,
     handleLogout,
@@ -654,7 +659,6 @@ function RootLayout(): React.ReactElement {
     handleOpenProjectHistory,
     handleOpenProjectSettings,
     handleSwitchProject,
-    location.pathname,
     memberships,
     navigate,
     openCurrentPageHelp,

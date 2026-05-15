@@ -27,6 +27,8 @@ export { SearchableSelectEditCell } from './SearchableSelectEditCell';
 export type { SearchableSelectOption, SearchableSelectEditCellProps } from './SearchableSelectEditCell';
 export { createSearchableSelectColumn, createSingleSelectColumn } from './columns';
 export type { SearchableSelectColumnConfig } from './columns';
+export { getCalculatedColumnProps } from './calculatedColumns';
+export type { DataGridColumnState } from './calculatedColumns';
 
 export { handleEditableCellClick, handleRowEditStop } from './handlers';
 
