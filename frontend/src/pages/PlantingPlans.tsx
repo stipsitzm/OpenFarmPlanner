@@ -940,7 +940,15 @@ function PlantingPlans(): React.ReactElement {
         minWidth: dynamicWidths.bed,
         maxWidth: BED_COLUMN_MAX_WIDTH,
         editable: true,
-        sortable: false,
+        valueGetter: (_value, row) => {
+          const gridRow = row as PlantingPlanRow;
+          const locationName = gridRow.location_name ?? "";
+          const fieldName = gridRow.field_name ?? "";
+          const bedName = gridRow.bed_name ?? "";
+          return [locationName, fieldName, bedName].filter(Boolean).join(" | ");
+        },
+        sortComparator: (value1, value2) =>
+          String(value1 ?? "").localeCompare(String(value2 ?? ""), "de"),
         renderCell: (params) => {
           const row = params.row as PlantingPlanRow;
           const label = bedLabelById.get(row.bed) ?? "—";
