@@ -72,7 +72,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
   api: DataGridAPI<T>; // API handler for CRUD operations
   createNewRow: () => T; // Function to create a new empty row
   mapToRow: (item: T) => T; // Function to map API data to grid row
-  mapToApiData: (row: T) => Partial<T>; // Function to map grid row to API data for create/update
+  mapToApiData: (row: T) => Partial<T> | Promise<Partial<T>>; // Function to map grid row to API data for create/update
   validateRow: (row: T) => string | null; // Function to validate row before save
   loadErrorMessage: string; // Error message when loading fails
   saveErrorMessage: string; // Error message when save fails
@@ -166,7 +166,8 @@ export function EditableDataGrid<T extends EditableRow>({
       return updatedRow;
     }
 
-    const response = await api.update(numericId, mapToApiData(updatedRow));
+    const apiData = await mapToApiData(updatedRow);
+    const response = await api.update(numericId, apiData);
     if (!response.data.id) {
       throw new Error('API response missing ID');
     }
@@ -416,7 +417,8 @@ export function EditableDataGrid<T extends EditableRow>({
     try {
       if (newRow.isNew) {
         // Create new item via API
-        const response = await api.create(mapToApiData(newRow));
+        const apiData = await mapToApiData(newRow);
+        const response = await api.create(apiData);
         setError('');
         if (!response.data.id) {
           throw new Error('API response missing ID');
@@ -435,7 +437,8 @@ export function EditableDataGrid<T extends EditableRow>({
         return savedRow;
       } else {
         // Update existing item via API
-        const response = await api.update(newRow.id, mapToApiData(newRow));
+        const apiData = await mapToApiData(newRow);
+        const response = await api.update(newRow.id, apiData);
         setError('');
         if (!response.data.id) {
           throw new Error('API response missing ID');

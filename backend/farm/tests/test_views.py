@@ -924,10 +924,11 @@ class ApiEndpointsTest(DRFAPITestCase):
         response2 = self.client.post('/openfarmplanner/api/planting-plans/', data2)
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('area_usage_sqm', response2.data)
-        self.assertIn(
-            'Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten.',
-            response2.data['area_usage_sqm'][0],
-        )
+        self.assertEqual(response2.data['area_usage_sqm']['errorCode'], 'bed_area_exceeded')
+        self.assertEqual(float(response2.data['area_usage_sqm']['bedArea']), 20.0)
+        self.assertEqual(float(response2.data['area_usage_sqm']['alreadyUsedArea']), 12.0)
+        self.assertEqual(float(response2.data['area_usage_sqm']['requestedArea']), 10.0)
+        self.assertEqual(float(response2.data['area_usage_sqm']['availableArea']), 8.0)
 
     def test_planting_plan_area_validation_non_overlapping_plans_allowed(self):
         """Test API allows non-overlapping plans even when their total sum is above bed capacity."""

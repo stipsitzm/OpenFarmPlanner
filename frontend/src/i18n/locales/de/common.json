@@ -88,7 +88,10 @@
     "required": "Dieses Feld ist erforderlich.",
     "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
     "minLength": "Mindestens {{count}} Zeichen erforderlich.",
-    "invalidNumberExample": "Bitte gib einen gültigen Zahlenwert ein, z. B. 3,9"
+    "invalidNumberExample": "Bitte gib einen gültigen Zahlenwert ein, z. B. 3,9",
+    "areaInputPositive": "Der Wert muss größer als 0 sein.",
+    "bedAreaExceeded": "Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.",
+    "availableArea": "Verfügbare Restfläche"
   },
   "projectRequired": {
     "noProjectsTitle": "Du hast noch kein Projekt.",
