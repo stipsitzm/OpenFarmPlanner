@@ -228,6 +228,11 @@ describe('CultureForm', () => {
     render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
 
     fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Neue Karotte' } });
+
+    await waitFor(() => expect(cultureDuplicateCheckMock).toHaveBeenCalledWith(
+      { name: 'Neue Karotte', variety: 'Nantaise', exclude_id: 1 },
+      expect.any(AbortSignal),
+    ));
     fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
