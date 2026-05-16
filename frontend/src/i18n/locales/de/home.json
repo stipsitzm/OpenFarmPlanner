@@ -2,8 +2,8 @@
   "landing": {
     "title": "OpenFarmPlanner",
     "betaBadge": "Beta",
-    "subtitle": "Einfache Anbauplanung als Gemüse-Anbauplaner für CSA (Community Supported Agriculture), Solawi und Marktgärtnerei.",
-    "description": "OpenFarmPlanner unterstützt kleinteiligen Gemüsebau mit klarer Planung von Kulturen, Beeten, Anbauflächen, Anbauzeiträumen und Saatterminen.",
+    "subtitle": "Gemüse-Anbauplaner für CSA (Community Supported Agriculture), Solidarische Landwirtschaften und Marktgärtnereien.",
+    "description": "Verwalte Kulturen, Anbauflächen und Anbauzeiträume übersichtlich an einem Ort.",
     "actions": {
       "openApp": "Anmelden",
       "register": "Registrieren"
@@ -11,8 +11,8 @@
   },
   "statusNote": "OpenFarmPlanner befindet sich aktuell in der Beta-Phase und wird laufend weiterentwickelt.",
   "statusOpenSource": {
-    "text": "OpenFarmPlanner ist Open Source: Du kannst auf GitHub mitentwickeln oder die Software selbst hosten.",
-    "linkLabel": "Open-Source-Projekt auf GitHub",
+    "text": "Als Open-Source-Projekt freuen wir uns über Feedback, Ideen und Mitentwicklung.",
+    "linkLabel": "Projekt auf GitHub",
     "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
   },
   "footer": {
