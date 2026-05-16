@@ -1,6 +1,7 @@
 /**
  * BasicInfoSection: Name, Variety, Crop Family, Nutrient Demand
  */
+import type { ReactNode } from 'react';
 import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { fieldSx } from './styles.tsx';
 import type { Culture } from '../../api/types';
@@ -11,9 +12,10 @@ interface BasicInfoSectionProps {
   errors: Record<string, string>;
   onChange: <K extends keyof Culture>(name: K, value: Culture[K]) => void;
   t: TFunction;
+  identityHint?: ReactNode;
 }
 
-export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSectionProps) {
+export function BasicInfoSection({ formData, errors, onChange, t, identityHint }: BasicInfoSectionProps) {
   return (
     <>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -38,6 +40,7 @@ export function BasicInfoSection({ formData, errors, onChange, t }: BasicInfoSec
           helperText={errors.variety}
         />
       </Box>
+      {identityHint}
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <TextField
           sx={fieldSx}

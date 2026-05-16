@@ -975,6 +975,29 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
             return Culture.all_objects.filter(project=self.request.active_project).prefetch_related('supplier_data__supplier')
         return Culture.objects.filter(project=self.request.active_project).prefetch_related('supplier_data__supplier')
 
+    @action(detail=False, methods=['get'], url_path='duplicate-check')
+    def duplicate_check(self, request):
+        """Check whether a culture identity already exists in the active project."""
+        from .utils import normalize_text
+
+        normalized_name = normalize_text(request.query_params.get('name'))
+        normalized_variety = normalize_text(request.query_params.get('variety'))
+        if not normalized_name or not normalized_variety:
+            return Response({'exists': False})
+
+        queryset = self.get_queryset().filter(
+            name_normalized=normalized_name,
+            variety_normalized=normalized_variety,
+        )
+        exclude_id = request.query_params.get('exclude_id')
+        if exclude_id:
+            try:
+                queryset = queryset.exclude(pk=int(exclude_id))
+            except (TypeError, ValueError):
+                pass
+
+        return Response({'exists': queryset.exists()})
+
     def _resolve_supplier(self, culture_data: dict) -> Supplier | None:
         """Resolve supplier from culture data using supplier_id or supplier_name.
         
@@ -1553,6 +1576,32 @@ class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
         if variety:
             queryset = queryset.filter(variety__icontains=variety)
         return queryset
+
+    @action(detail=False, methods=['get'], url_path='match')
+    def match(self, request):
+        """Check whether an exact normalized public culture match exists."""
+        from .utils import normalize_text
+
+        normalized_name = normalize_text(request.query_params.get('name'))
+        normalized_variety = normalize_text(request.query_params.get('variety'))
+        if not normalized_name or not normalized_variety:
+            return Response({'exists': False, 'culture': None})
+
+        culture = self.queryset.filter(
+            name_normalized=normalized_name,
+            variety_normalized=normalized_variety,
+        ).only('id', 'name', 'variety', 'published_at').order_by('-published_at', '-id').first()
+        if culture is None:
+            return Response({'exists': False, 'culture': None})
+
+        return Response({
+            'exists': True,
+            'culture': {
+                'id': culture.id,
+                'name': culture.name,
+                'variety': culture.variety,
+            },
+        })
 
     @action(detail=True, methods=['post'], url_path='import')
     def import_to_project(self, request, pk=None):

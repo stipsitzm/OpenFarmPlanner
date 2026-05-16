@@ -2,8 +2,8 @@
   "landing": {
     "title": "OpenFarmPlanner",
     "betaBadge": "Beta",
-    "subtitle": "Einfache Anbauplanung für solidarische Landwirtschaften und kleinteiligen Gemüsebau.",
-    "description": "OpenFarmPlanner hilft dabei, Kulturen, Anbauflächen und Anbauzeiträume übersichtlich zu verwalten.",
+    "subtitle": "Gemüse-Anbauplaner für CSA (Community Supported Agriculture), Solidarische Landwirtschaften und Marktgärtnereien.",
+    "description": "Verwalte Kulturen, Anbauflächen und Anbauzeiträume übersichtlich an einem Ort.",
     "actions": {
       "openApp": "Anmelden",
       "register": "Registrieren"

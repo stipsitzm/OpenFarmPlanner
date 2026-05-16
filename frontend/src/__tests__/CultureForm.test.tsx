@@ -9,8 +9,10 @@ vi.mock('../i18n', () => ({
   }),
 }));
 
-const { navigateMock, supplierListMock } = vi.hoisted(() => ({
+const { cultureDuplicateCheckMock, navigateMock, publicCultureMatchMock, supplierListMock } = vi.hoisted(() => ({
+  cultureDuplicateCheckMock: vi.fn().mockResolvedValue({ data: { exists: false } }),
   navigateMock: vi.fn(),
+  publicCultureMatchMock: vi.fn().mockResolvedValue({ data: { exists: false, culture: null } }),
   supplierListMock: vi.fn().mockResolvedValue({ data: { results: [] } }),
 }));
 
@@ -22,6 +24,14 @@ vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
   return {
     ...actual,
+    cultureAPI: {
+      ...actual.cultureAPI,
+      duplicateCheck: cultureDuplicateCheckMock,
+    },
+    publicCultureAPI: {
+      ...actual.publicCultureAPI,
+      match: publicCultureMatchMock,
+    },
     supplierAPI: {
       list: supplierListMock,
     },
@@ -29,18 +39,20 @@ vi.mock('../api/api', async () => {
 });
 
 vi.mock('../cultures/sections/BasicInfoSection', () => ({
-  BasicInfoSection: ({ formData, onChange }: { formData: Partial<Culture>; onChange: <K extends keyof Culture>(name: K, value: Culture[K]) => void }) => (
+  BasicInfoSection: ({ formData, errors, onChange }: { formData: Partial<Culture>; errors: Record<string, string>; onChange: <K extends keyof Culture>(name: K, value: Culture[K]) => void }) => (
     <div>
       <input
         aria-label="name-input"
         value={formData.name ?? ''}
         onChange={(event) => onChange('name', event.target.value)}
       />
+      {errors.name ? <span>{errors.name}</span> : null}
       <input
         aria-label="variety-input"
         value={formData.variety ?? ''}
         onChange={(event) => onChange('variety', event.target.value)}
       />
+      {errors.variety ? <span>{errors.variety}</span> : null}
     </div>
   ),
 }));
@@ -86,6 +98,10 @@ const CULTURE_B: Culture = {
 describe('CultureForm', () => {
   beforeEach(() => {
     navigateMock.mockReset();
+    cultureDuplicateCheckMock.mockReset();
+    cultureDuplicateCheckMock.mockResolvedValue({ data: { exists: false } });
+    publicCultureMatchMock.mockReset();
+    publicCultureMatchMock.mockResolvedValue({ data: { exists: false, culture: null } });
     supplierListMock.mockReset();
     supplierListMock.mockResolvedValue({ data: { results: [] } });
   });
@@ -180,12 +196,37 @@ describe('CultureForm', () => {
     expect(screen.getByText('form.supplierDataSectionTitle')).toBeInTheDocument();
   });
 
+  it('shows duplicate culture validation and blocks saving', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    cultureDuplicateCheckMock.mockResolvedValueOnce({ data: { exists: true } });
+
+    render(<CultureForm onSave={onSave} onCancel={() => {}} />);
+
+    fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Karotte' } });
+    fireEvent.change(screen.getByLabelText('variety-input'), { target: { value: 'Nantaise' } });
+
+    await waitFor(() => expect(cultureDuplicateCheckMock).toHaveBeenCalledWith(
+      { name: 'Karotte', variety: 'Nantaise', exclude_id: undefined },
+      expect.any(AbortSignal),
+    ));
+    expect(await screen.findByText('form.duplicateNameVariety')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'form.create' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'form.create' }));
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   it('saves changed form data when editing a culture', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
 
     render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
 
     fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Neue Karotte' } });
+
+    await waitFor(() => expect(cultureDuplicateCheckMock).toHaveBeenCalledWith(
+      { name: 'Neue Karotte', variety: 'Nantaise', exclude_id: 1 },
+      expect.any(AbortSignal),
+    ));
     fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
@@ -279,65 +320,31 @@ describe('CultureForm', () => {
     expect(await screen.findByText('messages.updateError')).toBeInTheDocument();
   });
 
-  it('scrolls dialog content with arrow and page keys, even when an input is focused', () => {
+  it('keeps focus inside the dialog when opened', async () => {
+    render(<CultureForm culture={CULTURE_A} onSave={vi.fn().mockResolvedValue(undefined)} onCancel={() => {}} />);
+
+    const dialogRoot = document.querySelector('.MuiDialog-root') as HTMLElement | null;
+    expect(dialogRoot).toBeTruthy();
+    await waitFor(() => expect(dialogRoot).toContainElement(document.activeElement as HTMLElement));
+  });
+
+  it('keeps normal input keyboard handling without scrolling dialog content', () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const scrollByMock = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
-      value: scrollByMock,
-      configurable: true,
-      writable: true,
-    });
 
     render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
-    const content = document.querySelector('.MuiDialogContent-root');
+    const content = document.querySelector('.MuiDialogContent-root') as HTMLDivElement | null;
     expect(content).toBeTruthy();
+    Object.defineProperty(content, 'clientHeight', { value: 100, configurable: true });
+    Object.defineProperty(content, 'scrollHeight', { value: 500, configurable: true });
 
     const nameInput = screen.getByLabelText('name-input');
     (nameInput as HTMLInputElement).focus();
 
     fireEvent.keyDown(nameInput, { key: 'ArrowDown' });
     fireEvent.keyDown(nameInput, { key: 'PageDown' });
+    fireEvent.keyDown(nameInput, { key: ' ' });
 
-    expect(scrollByMock).toHaveBeenCalled();
-  });
-
-  it('scrolls dialog content with keyboard when no field is focused', () => {
-    const onSave = vi.fn().mockResolvedValue(undefined);
-    const scrollByMock = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
-      value: scrollByMock,
-      configurable: true,
-      writable: true,
-    });
-
-    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
-
-    const nameInput = screen.getByLabelText('name-input');
-    (nameInput as HTMLInputElement).focus();
-    (nameInput as HTMLInputElement).blur();
-
-    fireEvent.keyDown(window, { key: 'ArrowDown' });
-
-    expect(scrollByMock).toHaveBeenCalled();
-  });
-
-  it('scrolls dialog content when focus is on dialog actions', () => {
-    const onSave = vi.fn().mockResolvedValue(undefined);
-    const scrollByMock = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
-      value: scrollByMock,
-      configurable: true,
-      writable: true,
-    });
-
-    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
-
-    const saveButton = screen.getByRole('button', { name: 'form.save' });
-    (saveButton as HTMLButtonElement).focus();
-
-    fireEvent.keyDown(window, { key: 'PageDown' });
-
-    expect(scrollByMock).toHaveBeenCalled();
+    expect(content?.scrollTop).toBe(0);
   });
 
 });

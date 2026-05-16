@@ -36,6 +36,7 @@ function translatedOrFallback(t: TFunction, key: string, fallback: string): stri
 const backendMessageMap: Record<string, string> = {
   'this field is required.': 'validation.required',
   'a culture with this name already exists.': 'validation.cultureNameUnique',
+  'a culture with this name and variety already exists.': 'form.duplicateNameVariety',
   'enter a valid email address.': 'validation.invalidEmail',
   'no public cultures found': 'errors.noPublicCultures',
   'bed not found.': 'errors.bedNotFound',

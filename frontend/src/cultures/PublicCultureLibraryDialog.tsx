@@ -36,6 +36,8 @@ interface PublicCultureLibraryDialogProps {
   error: string | null;
   cultures: PublicCulture[];
   importingId: number | null;
+  initialSelectedId?: number | null;
+  initialQuery?: string;
   onClose: () => void;
   onSearch: (query: string) => void;
   onImport: (culture: PublicCulture) => void;
@@ -47,6 +49,8 @@ export function PublicCultureLibraryDialog({
   error,
   cultures,
   importingId,
+  initialSelectedId = null,
+  initialQuery = '',
   onClose,
   onSearch,
   onImport,
@@ -63,6 +67,22 @@ export function PublicCultureLibraryDialog({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isMobileLandscape = useMediaQuery(`(orientation: landscape) and (max-height: 560px) and (max-width: 960px)`);
   const useMobileFilterLayout = isMobile || isMobileLandscape;
+
+  useEffect(() => {
+    if (open) {
+      setQuery(initialQuery);
+      setSelectedId(initialSelectedId);
+      setVarietyFilter('');
+      setSupplierFilter('');
+      setNutrientFilter('');
+      setCropFamilyFilter('');
+      if (initialSelectedId && useMobileFilterLayout) {
+        setMobileStep('detail');
+      } else {
+        setMobileStep('list');
+      }
+    }
+  }, [initialQuery, initialSelectedId, open, useMobileFilterLayout]);
 
   useEffect(() => {
     if (!open) {
@@ -113,10 +133,13 @@ export function PublicCultureLibraryDialog({
   }), [cropFamilyFilter, cultures, normalizedQuery, nutrientFilter, supplierFilter, varietyFilter]);
 
   useEffect(() => {
+    if (loading || (initialSelectedId && selectedId === initialSelectedId && cultures.length === 0)) {
+      return;
+    }
     if (selectedId && !filteredCultures.some((entry) => entry.id === selectedId)) {
       setSelectedId(null);
     }
-  }, [filteredCultures, selectedId]);
+  }, [cultures.length, filteredCultures, initialSelectedId, loading, selectedId]);
 
   const selectedCulture = useMemo(
     () => filteredCultures.find((entry) => entry.id === selectedId) ?? null,
