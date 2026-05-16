@@ -908,11 +908,17 @@ class CultureSerializer(serializers.ModelSerializer):
             'name',
             getattr(self.instance, 'name', None) if self.instance else None,
         )
+        raw_variety = attrs.get(
+            'variety',
+            getattr(self.instance, 'variety', '') if self.instance else '',
+        )
         normalized_name = normalize_text(raw_name)
+        normalized_variety = normalize_text(raw_variety)
         if not normalized_name:
             errors['name'] = 'Name is required.'
         else:
             attrs['name'] = ' '.join(str(raw_name).split())
+            attrs['variety'] = ' '.join(str(raw_variety).split())
             request = self.context.get('request')
             project = attrs.get('project')
             if project is None and request is not None:
@@ -922,24 +928,31 @@ class CultureSerializer(serializers.ModelSerializer):
 
             if project is not None:
                 instance_name_normalized = None
+                instance_variety_normalized = None
                 if self.instance is not None:
                     instance_name_normalized = normalize_text(getattr(self.instance, 'name', None))
+                    instance_variety_normalized = normalize_text(getattr(self.instance, 'variety', None))
 
-                # Keep existing duplicate records editable when the normalized name
-                # is unchanged on update. This preserves compatibility with legacy
-                # data that may already contain duplicates.
-                if self.instance is not None and instance_name_normalized == normalized_name:
+                # Keep existing duplicate records editable when the normalized
+                # identity is unchanged on update. This preserves compatibility
+                # with legacy data that may already contain duplicates.
+                if (
+                    self.instance is not None
+                    and instance_name_normalized == normalized_name
+                    and instance_variety_normalized == normalized_variety
+                ):
                     pass
                 else:
                     existing_name_query = Culture.all_objects.filter(
                         project=project,
                         deleted_at__isnull=True,
                         name_normalized=normalized_name,
+                        variety_normalized=normalized_variety,
                     )
                     if self.instance is not None:
                         existing_name_query = existing_name_query.exclude(pk=self.instance.pk)
                     if existing_name_query.exists():
-                        errors['name'] = 'A culture with this name already exists.'
+                        errors['name'] = 'A culture with this name and variety already exists.'
 
         cultivation_types = attrs.get(
             'cultivation_types',

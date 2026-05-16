@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../i18n';
-import type { Culture, Supplier } from '../api/types';
+import type { Culture, PublicCultureMatchResponse, Supplier } from '../api/types';
 import { extractApiErrorMessage } from '../api/errors';
 import {
   Dialog,
@@ -22,6 +22,7 @@ import {
   DialogContent,
   DialogActions,
   Alert,
+  Box,
   Button,
   Typography,
   TextField,
@@ -30,7 +31,7 @@ import {
   IconButton,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { supplierAPI } from '../api/api';
+import { cultureAPI, publicCultureAPI, supplierAPI } from '../api/api';
 import { useDialogKeyboardScroll } from '../hooks/useDialogKeyboardScroll';
 import { useNavigate } from 'react-router-dom';
 import { validateCulture } from './validation';
@@ -46,6 +47,7 @@ interface CultureFormProps {
   culture?: Culture;
   onSave: (culture: Culture) => Promise<void>;
   onCancel: () => void;
+  onViewPublicLibraryMatch?: (culture: NonNullable<PublicCultureMatchResponse['culture']>) => void;
 }
 
 // Default color for display color picker
@@ -83,6 +85,28 @@ const EMPTY_CULTURE: Partial<Culture> = {
   seed_rate_pre_cultivation_value: null,
   seed_rate_pre_cultivation_unit: null,
   seed_packages: [],
+};
+
+const DUPLICATE_CHECK_DEBOUNCE_MS = 400;
+
+const normalizeCultureIdentityValue = (value: string | undefined | null): string | null => {
+  if (!value) {
+    return null;
+  }
+  const normalized = value.split(/\s+/).filter(Boolean).join(' ').toLowerCase();
+  return normalized || null;
+};
+
+const buildCultureIdentityKey = (
+  name: string | undefined | null,
+  variety: string | undefined | null,
+): string | null => {
+  const normalizedName = normalizeCultureIdentityValue(name);
+  const normalizedVariety = normalizeCultureIdentityValue(variety);
+  if (!normalizedName || !normalizedVariety) {
+    return null;
+  }
+  return `${normalizedName}\u0000${normalizedVariety}`;
 };
 
 const buildInitialFormData = (culture?: Culture): Partial<Culture> => {
@@ -128,6 +152,7 @@ export function CultureForm({
   culture,
   onSave,
   onCancel,
+  onViewPublicLibraryMatch,
 }: CultureFormProps): React.ReactElement {
   const { t } = useTranslation('cultures');
   const navigate = useNavigate();
@@ -148,12 +173,20 @@ export function CultureForm({
   // Local form state (no autosave)
   const [formData, setFormData] = useState<Partial<Culture>>(buildInitialFormData(culture));
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [duplicateErrorKey, setDuplicateErrorKey] = useState<string>('');
+  const [isDuplicateChecking, setIsDuplicateChecking] = useState(false);
+  const [projectDuplicateClearedKey, setProjectDuplicateClearedKey] = useState<string | null>(null);
+  const [publicLibraryMatch, setPublicLibraryMatch] = useState<PublicCultureMatchResponse['culture']>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [supplierOptions, setSupplierOptions] = useState<Supplier[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
   const dialogContentRef = useDialogKeyboardScroll(true);
   const supplierOptionsRef = useRef<Supplier[]>([]);
+  const duplicateCheckSequenceRef = useRef(0);
+  const publicLibraryMatchSequenceRef = useRef(0);
+  const currentIdentityKeyRef = useRef<string | null>(null);
+  const publicLibraryMatchCacheRef = useRef<Map<string, PublicCultureMatchResponse['culture']>>(new Map());
 
   const loadSuppliers = useCallback(async () => {
     try {
@@ -202,6 +235,10 @@ export function CultureForm({
   useEffect(() => {
     setFormData(buildInitialFormData(culture));
     setErrors({});
+    setDuplicateErrorKey('');
+    setIsDuplicateChecking(false);
+    setProjectDuplicateClearedKey(null);
+    setPublicLibraryMatch(null);
     setIsDirty(false);
     setIsValid(true);
     setSaveError('');
@@ -226,12 +263,135 @@ export function CultureForm({
     return result.isValid;
   };
 
+  const currentIdentityKey = buildCultureIdentityKey(formData.name, formData.variety);
+  currentIdentityKeyRef.current = currentIdentityKey;
+
+  useEffect(() => {
+    const name = formData.name ?? '';
+    const variety = formData.variety ?? '';
+    const identityKey = buildCultureIdentityKey(name, variety);
+    const originalIdentityKey = buildCultureIdentityKey(culture?.name, culture?.variety);
+    const currentSequence = duplicateCheckSequenceRef.current + 1;
+    duplicateCheckSequenceRef.current = currentSequence;
+    setDuplicateErrorKey('');
+    setProjectDuplicateClearedKey(null);
+
+    if (!identityKey) {
+      setIsDuplicateChecking(false);
+      return;
+    }
+
+    if (culture?.id && identityKey === originalIdentityKey) {
+      setIsDuplicateChecking(false);
+      setProjectDuplicateClearedKey(identityKey);
+      return;
+    }
+
+    setIsDuplicateChecking(true);
+    const abortController = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      cultureAPI.duplicateCheck(
+        {
+          name,
+          variety,
+          exclude_id: culture?.id,
+        },
+        abortController.signal,
+      )
+        .then((response) => {
+          if (duplicateCheckSequenceRef.current !== currentSequence || identityKey !== currentIdentityKeyRef.current) {
+            return;
+          }
+          setDuplicateErrorKey(response.data.exists ? 'form.duplicateNameVariety' : '');
+          setProjectDuplicateClearedKey(response.data.exists ? null : identityKey);
+        })
+        .catch(() => {
+          if (
+            duplicateCheckSequenceRef.current !== currentSequence
+            || abortController.signal.aborted
+            || identityKey !== currentIdentityKeyRef.current
+          ) {
+            return;
+          }
+          setDuplicateErrorKey('');
+          setProjectDuplicateClearedKey(null);
+        })
+        .finally(() => {
+          if (duplicateCheckSequenceRef.current === currentSequence) {
+            setIsDuplicateChecking(false);
+          }
+        });
+    }, DUPLICATE_CHECK_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      abortController.abort();
+    };
+  }, [culture?.id, culture?.name, culture?.variety, formData.name, formData.variety]);
+
+  useEffect(() => {
+    const name = formData.name ?? '';
+    const variety = formData.variety ?? '';
+    const identityKey = buildCultureIdentityKey(name, variety);
+    const currentSequence = publicLibraryMatchSequenceRef.current + 1;
+    publicLibraryMatchSequenceRef.current = currentSequence;
+    setPublicLibraryMatch(null);
+
+    if (!identityKey || projectDuplicateClearedKey !== identityKey) {
+      return;
+    }
+
+    if (publicLibraryMatchCacheRef.current.has(identityKey)) {
+      setPublicLibraryMatch(publicLibraryMatchCacheRef.current.get(identityKey) ?? null);
+      return;
+    }
+
+    const abortController = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      publicCultureAPI.match({ name, variety }, abortController.signal)
+        .then((response) => {
+          if (
+            publicLibraryMatchSequenceRef.current !== currentSequence
+            || identityKey !== currentIdentityKeyRef.current
+            || projectDuplicateClearedKey !== identityKey
+          ) {
+            return;
+          }
+          const match = response.data.exists ? response.data.culture : null;
+          publicLibraryMatchCacheRef.current.set(identityKey, match);
+          setPublicLibraryMatch(match);
+        })
+        .catch(() => {
+          if (
+            publicLibraryMatchSequenceRef.current !== currentSequence
+            || abortController.signal.aborted
+            || identityKey !== currentIdentityKeyRef.current
+            || projectDuplicateClearedKey !== identityKey
+          ) {
+            return;
+          }
+          publicLibraryMatchCacheRef.current.set(identityKey, null);
+          setPublicLibraryMatch(null);
+        });
+    }, DUPLICATE_CHECK_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      abortController.abort();
+    };
+  }, [formData.name, formData.variety, projectDuplicateClearedKey]);
+
   // Handle field changes
   // Strongly typed change handler
   const handleChange = <K extends keyof Culture>(name: K, value: Culture[K]) => {
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
       setIsDirty(true);
+      if (name === 'name' || name === 'variety') {
+        setDuplicateErrorKey('');
+        setProjectDuplicateClearedKey(null);
+        setPublicLibraryMatch(null);
+      }
       validateAndSet(updated);
       return updated;
     });
@@ -241,6 +401,7 @@ export function CultureForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateAndSet(formData)) return;
+    if (duplicateErrorKey || isDuplicateChecking) return;
     setIsSaving(true);
     try {
       await saveCulture(formData);
@@ -254,6 +415,9 @@ export function CultureForm({
   };
 
   const supplierRows = formData.supplier_data ?? [];
+  const displayErrors = duplicateErrorKey
+    ? { ...errors, variety: errors.variety || t(duplicateErrorKey) }
+    : errors;
 
   const updateSupplierRow = (index: number, patch: Record<string, unknown>) => {
     const nextRows = supplierRows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row));
@@ -310,7 +474,48 @@ export function CultureForm({
             <Typography variant="body2" color="text.secondary">
               {t('form.generalInfoSectionDescription')}
             </Typography>
-            <BasicInfoSection formData={formData} errors={errors} onChange={handleChange} t={t} />
+            <BasicInfoSection
+              formData={formData}
+              errors={displayErrors}
+              onChange={handleChange}
+              t={t}
+              identityHint={publicLibraryMatch && currentIdentityKey !== null && projectDuplicateClearedKey === currentIdentityKey && !duplicateErrorKey && !isDuplicateChecking ? (
+                <Box
+                  sx={(theme) => ({
+                    display: 'flex',
+                    alignItems: { xs: 'flex-start', sm: 'center' },
+                    justifyContent: 'space-between',
+                    gap: 1.5,
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    px: 1.5,
+                    py: 1,
+                    borderLeft: `4px solid ${theme.palette.primary.main}`,
+                    borderRadius: 1,
+                    bgcolor: 'rgba(76, 135, 86, 0.10)',
+                    color: 'text.primary',
+                  })}
+                >
+                  <Typography variant="body2" sx={{ lineHeight: 1.35 }}>
+                    {t('form.publicLibraryMatchHint')}
+                  </Typography>
+                  {onViewPublicLibraryMatch ? (
+                    <Button
+                      variant="text"
+                      size="small"
+                      onClick={() => onViewPublicLibraryMatch(publicLibraryMatch)}
+                      sx={{
+                        flexShrink: 0,
+                        px: 1,
+                        py: 0.5,
+                        color: 'primary.dark',
+                      }}
+                    >
+                      {t('form.viewPublicLibraryMatch')}
+                    </Button>
+                  ) : null}
+                </Box>
+              ) : null}
+            />
             <TimingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <HarvestSection formData={formData} errors={errors} onChange={handleChange} t={t} />
             <SpacingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
@@ -437,7 +642,7 @@ export function CultureForm({
           ) : null}
           {isDirty && (
             <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
-              {isValid
+              {isValid && !duplicateErrorKey
                 ? t('messages.unsavedChanges', { defaultValue: 'Ungespeicherte Änderungen' })
                 : t('messages.fixErrors', { defaultValue: 'Bitte beheben Sie die Validierungsfehler' })}
             </Typography>
@@ -448,7 +653,7 @@ export function CultureForm({
           <Button
             type="submit"
             variant="contained"
-            disabled={isSaving || !isValid}
+            disabled={isSaving || !isValid || Boolean(duplicateErrorKey) || isDuplicateChecking}
           >
             {isSaving
               ? t('messages.saving', { defaultValue: 'Speichern...' })

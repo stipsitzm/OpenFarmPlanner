@@ -409,25 +409,80 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertIn('display_color', response.data)
         self.assertTrue(response.data['display_color'].startswith('#'))
 
-    def test_culture_create_rejects_duplicate_name(self):
+    def test_culture_create_allows_same_name_with_different_variety(self):
         data = {
             'name': self.culture.name,
             'variety': 'Different Variety',
             'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('name', response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_culture_create_rejects_duplicate_name_case_and_whitespace_insensitive(self):
+    def test_culture_create_rejects_duplicate_name_and_variety(self):
+        existing = Culture.objects.create(
+            name='Duplicate Test Culture',
+            variety='Nantaise',
+            project=self.project,
+        )
         data = {
-            'name': f"  {self.culture.name.upper()}  ",
-            'variety': 'Another Variety',
+            'name': existing.name,
+            'variety': existing.variety,
             'project': self.project.id,
         }
         response = self.client.post('/openfarmplanner/api/cultures/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('name', response.data)
+
+    def test_culture_create_rejects_duplicate_name_and_variety_case_and_whitespace_insensitive(self):
+        existing = Culture.objects.create(
+            name='Duplicate Whitespace Culture',
+            variety='Nantaise',
+            project=self.project,
+        )
+        data = {
+            'name': f"  {existing.name.upper()}  ",
+            'variety': f"  {existing.variety.upper()}  ",
+            'project': self.project.id,
+        }
+        response = self.client.post('/openfarmplanner/api/cultures/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('name', response.data)
+
+    def test_culture_duplicate_check_is_project_scoped_and_excludes_public_cultures(self):
+        Culture.objects.create(name='Tomate', variety='Roma', project=self.project)
+        other_project = Project.objects.create(name='Other Project', slug='other-project')
+        Culture.objects.create(name='Paprika', variety='Sweet', project=other_project)
+        PublicCulture.objects.create(name='Bohne', variety='Neckargold', status='published')
+
+        matching_response = self.client.get(
+            '/openfarmplanner/api/cultures/duplicate-check/',
+            {'name': ' tomate ', 'variety': 'ROMA'},
+        )
+        other_project_response = self.client.get(
+            '/openfarmplanner/api/cultures/duplicate-check/',
+            {'name': 'Paprika', 'variety': 'Sweet'},
+        )
+        public_response = self.client.get(
+            '/openfarmplanner/api/cultures/duplicate-check/',
+            {'name': 'Bohne', 'variety': 'Neckargold'},
+        )
+
+        self.assertEqual(matching_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(matching_response.data['exists'])
+        self.assertFalse(other_project_response.data['exists'])
+        self.assertFalse(public_response.data['exists'])
+
+    def test_public_culture_match_returns_exact_normalized_match(self):
+        PublicCulture.objects.create(name='Tomate', variety='Roma', status='published')
+
+        response = self.client.get(
+            '/openfarmplanner/api/public-cultures/match/',
+            {'name': ' tomate ', 'variety': 'ROMA'},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['exists'])
+        self.assertEqual(response.data['culture']['name'], 'Tomate')
     
     def test_culture_create_with_all_fields(self):
         """Test creating culture with all manual planning fields"""

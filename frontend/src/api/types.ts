@@ -179,6 +179,15 @@ export interface PublicCultureDuplicateCandidate {
   created_by_label?: string;
 }
 
+export interface CultureDuplicateCheckResponse {
+  exists: boolean;
+}
+
+export interface PublicCultureMatchResponse {
+  exists: boolean;
+  culture: Pick<PublicCulture, 'id' | 'name' | 'variety'> | null;
+}
+
 export interface PublishPublicCultureDuplicateError {
   code: 'duplicate_public_culture';
   detail: string;

@@ -11,8 +11,10 @@ import type {
   YieldCalendarWeek,
   NoteAttachment,
   CultureHistoryEntry,
+  CultureDuplicateCheckResponse,
   MediaFileRef,
   PublicCulture,
+  PublicCultureMatchResponse,
   PublicCultureDuplicateCandidate,
   PublishPublicCultureResponse,
   RemainingAreaResponse,
@@ -51,6 +53,8 @@ const withActiveProject = <T extends object>(data: T): T | (T & { project: numbe
 export const cultureAPI = {
   list: (url = '/cultures/') => http.get<PaginatedResponse<Culture>>(url),
   get: (id: number) => http.get<Culture>(`/cultures/${id}/`),
+  duplicateCheck: (params: { name: string; variety: string; exclude_id?: number }, signal?: AbortSignal) =>
+    http.get<CultureDuplicateCheckResponse>('/cultures/duplicate-check/', { params, signal }),
   create: (data: Culture) => http.post<Culture>('/cultures/', withActiveProject(data)),
   update: (id: number, data: Culture) => http.put<Culture>(`/cultures/${id}/`, withActiveProject(data)),
   delete: (id: number) => http.delete(`/cultures/${id}/`),
@@ -93,8 +97,10 @@ export const cultureAPI = {
 
 
 export const publicCultureAPI = {
-  list: (params?: { q?: string }) => http.get<PaginatedResponse<PublicCulture>>('/public-cultures/', { params }),
+  list: (params?: { q?: string; name?: string; variety?: string }) => http.get<PaginatedResponse<PublicCulture>>('/public-cultures/', { params }),
   get: (id: number) => http.get<PublicCulture>(`/public-cultures/${id}/`),
+  match: (params: { name: string; variety: string }, signal?: AbortSignal) =>
+    http.get<PublicCultureMatchResponse>('/public-cultures/match/', { params, signal }),
   importToProject: (id: number) => http.post<Culture>(`/public-cultures/${id}/import/`, {}),
 };
 

@@ -9,8 +9,10 @@ vi.mock('../i18n', () => ({
   }),
 }));
 
-const { navigateMock, supplierListMock } = vi.hoisted(() => ({
+const { cultureDuplicateCheckMock, navigateMock, publicCultureMatchMock, supplierListMock } = vi.hoisted(() => ({
+  cultureDuplicateCheckMock: vi.fn().mockResolvedValue({ data: { exists: false } }),
   navigateMock: vi.fn(),
+  publicCultureMatchMock: vi.fn().mockResolvedValue({ data: { exists: false, culture: null } }),
   supplierListMock: vi.fn().mockResolvedValue({ data: { results: [] } }),
 }));
 
@@ -22,6 +24,14 @@ vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
   return {
     ...actual,
+    cultureAPI: {
+      ...actual.cultureAPI,
+      duplicateCheck: cultureDuplicateCheckMock,
+    },
+    publicCultureAPI: {
+      ...actual.publicCultureAPI,
+      match: publicCultureMatchMock,
+    },
     supplierAPI: {
       list: supplierListMock,
     },
@@ -29,18 +39,20 @@ vi.mock('../api/api', async () => {
 });
 
 vi.mock('../cultures/sections/BasicInfoSection', () => ({
-  BasicInfoSection: ({ formData, onChange }: { formData: Partial<Culture>; onChange: <K extends keyof Culture>(name: K, value: Culture[K]) => void }) => (
+  BasicInfoSection: ({ formData, errors, onChange }: { formData: Partial<Culture>; errors: Record<string, string>; onChange: <K extends keyof Culture>(name: K, value: Culture[K]) => void }) => (
     <div>
       <input
         aria-label="name-input"
         value={formData.name ?? ''}
         onChange={(event) => onChange('name', event.target.value)}
       />
+      {errors.name ? <span>{errors.name}</span> : null}
       <input
         aria-label="variety-input"
         value={formData.variety ?? ''}
         onChange={(event) => onChange('variety', event.target.value)}
       />
+      {errors.variety ? <span>{errors.variety}</span> : null}
     </div>
   ),
 }));
@@ -86,6 +98,10 @@ const CULTURE_B: Culture = {
 describe('CultureForm', () => {
   beforeEach(() => {
     navigateMock.mockReset();
+    cultureDuplicateCheckMock.mockReset();
+    cultureDuplicateCheckMock.mockResolvedValue({ data: { exists: false } });
+    publicCultureMatchMock.mockReset();
+    publicCultureMatchMock.mockResolvedValue({ data: { exists: false, culture: null } });
     supplierListMock.mockReset();
     supplierListMock.mockResolvedValue({ data: { results: [] } });
   });
@@ -178,6 +194,32 @@ describe('CultureForm', () => {
 
     expect(screen.getByText('form.generalInfoSectionTitle')).toBeInTheDocument();
     expect(screen.getByText('form.supplierDataSectionTitle')).toBeInTheDocument();
+  });
+
+  it('shows duplicate culture validation and blocks saving', async () => {
+    vi.useFakeTimers();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    cultureDuplicateCheckMock.mockResolvedValueOnce({ data: { exists: true } });
+
+    try {
+      render(<CultureForm onSave={onSave} onCancel={() => {}} />);
+
+      fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Karotte' } });
+      fireEvent.change(screen.getByLabelText('variety-input'), { target: { value: 'Nantaise' } });
+      vi.advanceTimersByTime(400);
+
+      await waitFor(() => expect(cultureDuplicateCheckMock).toHaveBeenCalledWith(
+        { name: 'Karotte', variety: 'Nantaise', exclude_id: undefined },
+        expect.any(AbortSignal),
+      ));
+      expect(await screen.findByText('form.duplicateNameVariety')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'form.create' })).toBeDisabled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'form.create' }));
+      expect(onSave).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('saves changed form data when editing a culture', async () => {

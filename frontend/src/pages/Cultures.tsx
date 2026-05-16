@@ -155,6 +155,8 @@ function Cultures(): React.ReactElement {
   const [publicLibraryError, setPublicLibraryError] = useState<string | null>(null);
   const [publicCultures, setPublicCultures] = useState<PublicCulture[]>([]);
   const [publicLibraryImportingId, setPublicLibraryImportingId] = useState<number | null>(null);
+  const [publicLibraryInitialSelectedId, setPublicLibraryInitialSelectedId] = useState<number | null>(null);
+  const [publicLibraryInitialQuery, setPublicLibraryInitialQuery] = useState('');
   const [publishingCultureId, setPublishingCultureId] = useState<number | null>(null);
   const [hasLocations, setHasLocations] = useState(false);
   const [hasFields, setHasFields] = useState(false);
@@ -401,11 +403,17 @@ function Cultures(): React.ReactElement {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const fetchPublicCultures = useCallback(async (query = '') => {
+  const fetchPublicCultures = useCallback(async (
+    query = '',
+    exactMatch?: { name: string; variety?: string },
+  ) => {
     try {
       setPublicLibraryLoading(true);
       setPublicLibraryError(null);
-      const response = await publicCultureAPI.list(query ? { q: query } : undefined);
+      const params = exactMatch
+        ? { name: exactMatch.name, variety: exactMatch.variety || '' }
+        : query ? { q: query } : undefined;
+      const response = await publicCultureAPI.list(params);
       setPublicCultures(dedupePublicCultures(response.data.results));
     } catch (error) {
       console.error('Error fetching public cultures:', error);
@@ -416,8 +424,19 @@ function Cultures(): React.ReactElement {
   }, [t]);
 
   const handleOpenPublicLibrary = useCallback(async () => {
+    setPublicLibraryInitialSelectedId(null);
+    setPublicLibraryInitialQuery('');
     setPublicLibraryOpen(true);
     await fetchPublicCultures();
+  }, [fetchPublicCultures]);
+
+  const handleViewPublicLibraryMatch = useCallback(async (match: Pick<PublicCulture, 'id' | 'name' | 'variety'>) => {
+    setShowForm(false);
+    setEditingCulture(undefined);
+    setPublicLibraryInitialSelectedId(match.id);
+    setPublicLibraryInitialQuery(`${match.name} ${match.variety || ''}`.trim());
+    setPublicLibraryOpen(true);
+    await fetchPublicCultures('', { name: match.name, variety: match.variety });
   }, [fetchPublicCultures]);
 
   useEffect(() => {
@@ -1122,6 +1141,8 @@ function Cultures(): React.ReactElement {
         error={publicLibraryError}
         cultures={publicCultures}
         importingId={publicLibraryImportingId}
+        initialSelectedId={publicLibraryInitialSelectedId}
+        initialQuery={publicLibraryInitialQuery}
         onClose={() => setPublicLibraryOpen(false)}
         onSearch={(query) => {
           void fetchPublicCultures(query);
@@ -1156,6 +1177,7 @@ function Cultures(): React.ReactElement {
           culture={editingCulture}
           onSave={handleSave}
           onCancel={handleCancel}
+          onViewPublicLibraryMatch={(match) => void handleViewPublicLibraryMatch(match)}
         />
       ) : null}
 
