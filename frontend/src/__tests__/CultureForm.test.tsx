@@ -279,65 +279,92 @@ describe('CultureForm', () => {
     expect(await screen.findByText('messages.updateError')).toBeInTheDocument();
   });
 
-  it('scrolls dialog content with arrow and page keys, even when an input is focused', () => {
+  it('focuses the scrollable dialog content when opened', async () => {
+    render(<CultureForm culture={CULTURE_A} onSave={vi.fn().mockResolvedValue(undefined)} onCancel={() => {}} />);
+
+    const content = document.querySelector('.MuiDialogContent-root') as HTMLDivElement | null;
+    expect(content).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(content));
+  });
+
+  it('keeps normal input keyboard handling without scrolling dialog content', () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const scrollByMock = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
-      value: scrollByMock,
-      configurable: true,
-      writable: true,
-    });
 
     render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
-    const content = document.querySelector('.MuiDialogContent-root');
+    const content = document.querySelector('.MuiDialogContent-root') as HTMLDivElement | null;
     expect(content).toBeTruthy();
+    Object.defineProperty(content, 'clientHeight', { value: 100, configurable: true });
+    Object.defineProperty(content, 'scrollHeight', { value: 500, configurable: true });
 
     const nameInput = screen.getByLabelText('name-input');
     (nameInput as HTMLInputElement).focus();
 
     fireEvent.keyDown(nameInput, { key: 'ArrowDown' });
     fireEvent.keyDown(nameInput, { key: 'PageDown' });
+    fireEvent.keyDown(nameInput, { key: ' ' });
 
-    expect(scrollByMock).toHaveBeenCalled();
+    expect(content?.scrollTop).toBe(0);
   });
 
-  it('scrolls dialog content with keyboard when no field is focused', () => {
+  it('scrolls dialog content with keyboard when the dialog content is focused', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const scrollByMock = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
-      value: scrollByMock,
-      configurable: true,
-      writable: true,
-    });
 
     render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
 
-    const nameInput = screen.getByLabelText('name-input');
-    (nameInput as HTMLInputElement).focus();
-    (nameInput as HTMLInputElement).blur();
+    const content = document.querySelector('.MuiDialogContent-root') as HTMLDivElement | null;
+    expect(content).toBeTruthy();
+    Object.defineProperty(content, 'clientHeight', { value: 100, configurable: true });
+    Object.defineProperty(content, 'scrollHeight', { value: 500, configurable: true });
+    await waitFor(() => expect(document.activeElement).toBe(content));
 
     fireEvent.keyDown(window, { key: 'ArrowDown' });
+    fireEvent.keyDown(window, { key: 'PageDown' });
+    fireEvent.keyDown(window, { key: ' ' });
+    fireEvent.keyDown(window, { key: 'Home' });
+    fireEvent.keyDown(window, { key: 'End' });
 
-    expect(scrollByMock).toHaveBeenCalled();
+    expect(content?.scrollTop).toBe(400);
+  });
+
+  it('keeps scroll keys trapped when dialog content is already at a boundary', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const backgroundKeyHandler = vi.fn();
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+
+    const content = document.querySelector('.MuiDialogContent-root') as HTMLDivElement | null;
+    expect(content).toBeTruthy();
+    Object.defineProperty(content, 'clientHeight', { value: 100, configurable: true });
+    Object.defineProperty(content, 'scrollHeight', { value: 500, configurable: true });
+    await waitFor(() => expect(document.activeElement).toBe(content));
+    content!.scrollTop = 400;
+
+    window.addEventListener('keydown', backgroundKeyHandler);
+    const event = new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true, cancelable: true });
+    const wasNotCanceled = window.dispatchEvent(event);
+    window.removeEventListener('keydown', backgroundKeyHandler);
+
+    expect(content?.scrollTop).toBe(400);
+    expect(event.defaultPrevented).toBe(true);
+    expect(wasNotCanceled).toBe(false);
+    expect(backgroundKeyHandler).not.toHaveBeenCalled();
   });
 
   it('scrolls dialog content when focus is on dialog actions', () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    const scrollByMock = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
-      value: scrollByMock,
-      configurable: true,
-      writable: true,
-    });
 
     render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+    const content = document.querySelector('.MuiDialogContent-root') as HTMLDivElement | null;
+    expect(content).toBeTruthy();
+    Object.defineProperty(content, 'clientHeight', { value: 100, configurable: true });
+    Object.defineProperty(content, 'scrollHeight', { value: 500, configurable: true });
 
     const saveButton = screen.getByRole('button', { name: 'form.save' });
     (saveButton as HTMLButtonElement).focus();
 
     fireEvent.keyDown(window, { key: 'PageDown' });
 
-    expect(scrollByMock).toHaveBeenCalled();
+    expect(content?.scrollTop).toBe(200);
   });
 
 });

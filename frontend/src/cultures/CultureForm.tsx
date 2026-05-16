@@ -31,6 +31,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { supplierAPI } from '../api/api';
+import { useDialogKeyboardScroll } from '../hooks/useDialogKeyboardScroll';
 import { useNavigate } from 'react-router-dom';
 import { validateCulture } from './validation';
 import { BasicInfoSection } from './sections/BasicInfoSection';
@@ -151,7 +152,7 @@ export function CultureForm({
   const [supplierOptions, setSupplierOptions] = useState<Supplier[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
-  const dialogContentRef = useRef<HTMLDivElement | null>(null);
+  const dialogContentRef = useDialogKeyboardScroll(true);
   const supplierOptionsRef = useRef<Supplier[]>([]);
 
   const loadSuppliers = useCallback(async () => {
@@ -277,64 +278,6 @@ export function CultureForm({
     const currentPackages = supplierRows[supplierIndex]?.packaging_sizes ?? [];
     updateSupplierRow(supplierIndex, { packaging_sizes: currentPackages.filter((_pkg, index) => index !== packageIndex) });
   };
-  const handleDialogContentScrollKey = (event: { key: string; altKey: boolean; ctrlKey: boolean; metaKey: boolean; preventDefault: () => void }, contentElement: HTMLDivElement) => {
-    if (event.altKey || event.ctrlKey || event.metaKey) {
-      return;
-    }
-
-    const key = event.key;
-    let delta = 0;
-
-    if (key === 'ArrowDown') {
-      delta = 40;
-    } else if (key === 'ArrowUp') {
-      delta = -40;
-    } else if (key === 'PageDown') {
-      delta = Math.max(200, Math.floor(contentElement.clientHeight * 0.9));
-    } else if (key === 'PageUp') {
-      delta = -Math.max(200, Math.floor(contentElement.clientHeight * 0.9));
-    } else if (key === 'Home') {
-      contentElement.scrollTo({ top: 0, behavior: 'auto' });
-      event.preventDefault();
-      return;
-    } else if (key === 'End') {
-      contentElement.scrollTo({ top: contentElement.scrollHeight, behavior: 'auto' });
-      event.preventDefault();
-      return;
-    } else {
-      return;
-    }
-
-    contentElement.scrollBy({ top: delta, behavior: 'auto' });
-    event.preventDefault();
-  };
-
-  const handleDialogContentKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    handleDialogContentScrollKey(event, event.currentTarget);
-  };
-
-  useEffect(() => {
-    const onWindowKeyDown = (event: KeyboardEvent) => {
-      const contentElement = dialogContentRef.current;
-      if (!contentElement) {
-        return;
-      }
-
-      const activeElement = document.activeElement;
-      const isNoElementFocused = !activeElement || activeElement === document.body || activeElement === document.documentElement;
-      const dialogElement = contentElement.closest('[role="dialog"]');
-      const isFocusInsideDialog = Boolean(dialogElement && activeElement && dialogElement.contains(activeElement));
-      if (!isNoElementFocused && !contentElement.contains(activeElement) && !isFocusInsideDialog) {
-        return;
-      }
-
-      handleDialogContentScrollKey(event, contentElement);
-    };
-
-    window.addEventListener('keydown', onWindowKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onWindowKeyDown, { capture: true });
-  }, []);
-
   return (
     <Dialog
       open
@@ -350,7 +293,18 @@ export function CultureForm({
         <DialogTitle id="culture-form-dialog-title">
           {isEdit ? t('form.editTitle') : t('form.createTitle')}
         </DialogTitle>
-        <DialogContent ref={dialogContentRef} dividers sx={{ maxHeight: '70vh' }} onKeyDownCapture={handleDialogContentKeyDown}>
+        <DialogContent
+          ref={dialogContentRef}
+          dividers
+          sx={{
+            maxHeight: '70vh',
+            overscrollBehavior: 'contain',
+            '&:focus': {
+              outline: 'none',
+            },
+          }}
+          tabIndex={-1}
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 8 }}>
             <Typography variant="h6">{t('form.generalInfoSectionTitle')}</Typography>
             <Typography variant="body2" color="text.secondary">
