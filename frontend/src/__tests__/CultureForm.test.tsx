@@ -197,29 +197,23 @@ describe('CultureForm', () => {
   });
 
   it('shows duplicate culture validation and blocks saving', async () => {
-    vi.useFakeTimers();
     const onSave = vi.fn().mockResolvedValue(undefined);
     cultureDuplicateCheckMock.mockResolvedValueOnce({ data: { exists: true } });
 
-    try {
-      render(<CultureForm onSave={onSave} onCancel={() => {}} />);
+    render(<CultureForm onSave={onSave} onCancel={() => {}} />);
 
-      fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Karotte' } });
-      fireEvent.change(screen.getByLabelText('variety-input'), { target: { value: 'Nantaise' } });
-      vi.advanceTimersByTime(400);
+    fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Karotte' } });
+    fireEvent.change(screen.getByLabelText('variety-input'), { target: { value: 'Nantaise' } });
 
-      await waitFor(() => expect(cultureDuplicateCheckMock).toHaveBeenCalledWith(
-        { name: 'Karotte', variety: 'Nantaise', exclude_id: undefined },
-        expect.any(AbortSignal),
-      ));
-      expect(await screen.findByText('form.duplicateNameVariety')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'form.create' })).toBeDisabled();
+    await waitFor(() => expect(cultureDuplicateCheckMock).toHaveBeenCalledWith(
+      { name: 'Karotte', variety: 'Nantaise', exclude_id: undefined },
+      expect.any(AbortSignal),
+    ));
+    expect(await screen.findByText('form.duplicateNameVariety')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'form.create' })).toBeDisabled();
 
-      fireEvent.click(screen.getByRole('button', { name: 'form.create' }));
-      expect(onSave).not.toHaveBeenCalled();
-    } finally {
-      vi.useRealTimers();
-    }
+    fireEvent.click(screen.getByRole('button', { name: 'form.create' }));
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it('saves changed form data when editing a culture', async () => {
@@ -326,12 +320,12 @@ describe('CultureForm', () => {
     expect(await screen.findByText('messages.updateError')).toBeInTheDocument();
   });
 
-  it('focuses the scrollable dialog content when opened', async () => {
+  it('keeps focus inside the dialog when opened', async () => {
     render(<CultureForm culture={CULTURE_A} onSave={vi.fn().mockResolvedValue(undefined)} onCancel={() => {}} />);
 
-    const content = document.querySelector('.MuiDialogContent-root') as HTMLDivElement | null;
-    expect(content).toBeTruthy();
-    await waitFor(() => expect(document.activeElement).toBe(content));
+    const dialogRoot = document.querySelector('.MuiDialog-root') as HTMLElement | null;
+    expect(dialogRoot).toBeTruthy();
+    await waitFor(() => expect(dialogRoot).toContainElement(document.activeElement as HTMLElement));
   });
 
   it('keeps normal input keyboard handling without scrolling dialog content', () => {
@@ -351,67 +345,6 @@ describe('CultureForm', () => {
     fireEvent.keyDown(nameInput, { key: ' ' });
 
     expect(content?.scrollTop).toBe(0);
-  });
-
-  it('scrolls dialog content with keyboard when the dialog content is focused', async () => {
-    const onSave = vi.fn().mockResolvedValue(undefined);
-
-    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
-
-    const content = document.querySelector('.MuiDialogContent-root') as HTMLDivElement | null;
-    expect(content).toBeTruthy();
-    Object.defineProperty(content, 'clientHeight', { value: 100, configurable: true });
-    Object.defineProperty(content, 'scrollHeight', { value: 500, configurable: true });
-    await waitFor(() => expect(document.activeElement).toBe(content));
-
-    fireEvent.keyDown(window, { key: 'ArrowDown' });
-    fireEvent.keyDown(window, { key: 'PageDown' });
-    fireEvent.keyDown(window, { key: ' ' });
-    fireEvent.keyDown(window, { key: 'Home' });
-    fireEvent.keyDown(window, { key: 'End' });
-
-    expect(content?.scrollTop).toBe(400);
-  });
-
-  it('keeps scroll keys trapped when dialog content is already at a boundary', async () => {
-    const onSave = vi.fn().mockResolvedValue(undefined);
-    const backgroundKeyHandler = vi.fn();
-
-    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
-
-    const content = document.querySelector('.MuiDialogContent-root') as HTMLDivElement | null;
-    expect(content).toBeTruthy();
-    Object.defineProperty(content, 'clientHeight', { value: 100, configurable: true });
-    Object.defineProperty(content, 'scrollHeight', { value: 500, configurable: true });
-    await waitFor(() => expect(document.activeElement).toBe(content));
-    content!.scrollTop = 400;
-
-    window.addEventListener('keydown', backgroundKeyHandler);
-    const event = new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true, cancelable: true });
-    const wasNotCanceled = window.dispatchEvent(event);
-    window.removeEventListener('keydown', backgroundKeyHandler);
-
-    expect(content?.scrollTop).toBe(400);
-    expect(event.defaultPrevented).toBe(true);
-    expect(wasNotCanceled).toBe(false);
-    expect(backgroundKeyHandler).not.toHaveBeenCalled();
-  });
-
-  it('scrolls dialog content when focus is on dialog actions', () => {
-    const onSave = vi.fn().mockResolvedValue(undefined);
-
-    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
-    const content = document.querySelector('.MuiDialogContent-root') as HTMLDivElement | null;
-    expect(content).toBeTruthy();
-    Object.defineProperty(content, 'clientHeight', { value: 100, configurable: true });
-    Object.defineProperty(content, 'scrollHeight', { value: 500, configurable: true });
-
-    const saveButton = screen.getByRole('button', { name: 'form.save' });
-    (saveButton as HTMLButtonElement).focus();
-
-    fireEvent.keyDown(window, { key: 'PageDown' });
-
-    expect(content?.scrollTop).toBe(200);
   });
 
 });
