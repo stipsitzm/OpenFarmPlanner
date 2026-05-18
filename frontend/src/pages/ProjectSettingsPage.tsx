@@ -16,9 +16,10 @@ export default function ProjectSettingsPage(): React.ReactElement {
   const { t } = useTranslation('projectInvitations');
   const navigate = useNavigate();
   const { user, refreshUser, activeProjectId } = useAuth();
+  const resolvedActiveProjectId = activeProjectId ?? Number(window.localStorage.getItem('activeProjectId'));
   const activeMembership = useMemo(
-    () => (user?.memberships ?? []).find((membership) => membership.project_id === activeProjectId),
-    [activeProjectId, user?.memberships],
+    () => (user?.memberships ?? []).find((membership) => membership.project_id === resolvedActiveProjectId),
+    [resolvedActiveProjectId, user?.memberships],
   );
 
   const [email, setEmail] = useState('');
@@ -196,10 +197,11 @@ export default function ProjectSettingsPage(): React.ReactElement {
       return;
     }
 
+    const deletedProjectId = activeMembership.project_id;
     setIsDeletingProject(true);
     setFeedback(null);
     try {
-      await projectAPI.delete(activeMembership.project_id);
+      await projectAPI.delete(deletedProjectId);
       setDeleteDialogOpen(false);
       setDeleteConfirmationText('');
       await refreshUser();
@@ -207,6 +209,26 @@ export default function ProjectSettingsPage(): React.ReactElement {
         detail: {
           message: t('projectDelete.success'),
           severity: 'success',
+          actionLabel: t('projectDelete.undo'),
+          onAction: async (): Promise<void> => {
+            try {
+              await projectAPI.restore(deletedProjectId);
+              await refreshUser();
+              window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
+                detail: {
+                  message: t('projectDelete.restoreSuccess'),
+                  severity: 'success',
+                },
+              }));
+            } catch {
+              window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
+                detail: {
+                  message: t('projectDelete.restoreError'),
+                  severity: 'error',
+                },
+              }));
+            }
+          },
         },
       }));
       navigate('/app/project-selection', { replace: true });

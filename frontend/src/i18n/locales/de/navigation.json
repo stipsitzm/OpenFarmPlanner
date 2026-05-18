@@ -36,6 +36,22 @@
     "admin": "Admin",
     "member": "Mitglied"
   },
+  "projectTrash": {
+    "title": "Papierkorb",
+    "empty": "Der Papierkorb ist leer.",
+    "loadError": "Gelöschte Projekte konnten nicht geladen werden.",
+    "deletedDays_zero": "heute gelöscht",
+    "deletedDays_one": "gelöscht vor {{count}} Tag",
+    "deletedDays_other": "gelöscht vor {{count}} Tagen",
+    "deletedUnknown": "Löschzeitpunkt unbekannt",
+    "restore": "Wiederherstellen",
+    "restoreSuccess": "Projekt wurde wiederhergestellt",
+    "restoreError": "Projekt konnte nicht wiederhergestellt werden.",
+    "permanentDelete": "Endgültig löschen",
+    "permanentConfirm": "Projekt {{name}} endgültig löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "permanentSuccess": "Projekt wurde endgültig gelöscht.",
+    "permanentError": "Projekt konnte nicht endgültig gelöscht werden."
+  },
   "commandGroups": {
     "project": "Projekt",
     "account": "Konto",

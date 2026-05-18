@@ -5,7 +5,7 @@ export const NAVIGATION_TRANSITIONS = {
   icon: 'color 140ms ease',
 } as const;
 
-export const getNavigationShellSx = (width: number): SxProps<Theme> => (theme) => ({
+export const getNavigationShellSx = (width: number, sidebarCollapsed = false): SxProps<Theme> => (theme) => ({
   width,
   height: '100dvh',
   minHeight: '100vh',
@@ -22,6 +22,12 @@ export const getNavigationShellSx = (width: number): SxProps<Theme> => (theme) =
   zIndex: theme.zIndex.modal + 2,
   pointerEvents: 'auto',
   overflow: 'hidden',
+  cursor: sidebarCollapsed ? 'pointer' : 'default',
+  '&:hover': sidebarCollapsed
+    ? {
+      bgcolor: theme.palette.navigation.hoverBackground,
+    }
+    : undefined,
 });
 
 export const navigationLogoLinkSx: SxProps<Theme> = (theme) => ({

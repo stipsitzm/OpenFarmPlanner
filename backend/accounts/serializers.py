@@ -92,14 +92,24 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_default_project_id(self, obj: User) -> int | None:
         settings = getattr(obj, 'project_settings', None)
-        return getattr(settings, 'default_project_id', None)
+        project = getattr(settings, 'default_project', None)
+        if project is None or project.deleted_at is not None:
+            return None
+        return project.id
 
     def get_last_project_id(self, obj: User) -> int | None:
         settings = getattr(obj, 'project_settings', None)
-        return getattr(settings, 'last_project_id', None)
+        project = getattr(settings, 'last_project', None)
+        if project is None or project.deleted_at is not None:
+            return None
+        return project.id
 
     def get_memberships(self, obj: User) -> list[dict[str, str | int]]:
-        rows = ProjectMembership.objects.select_related('project').filter(user=obj, project__is_active=True)
+        rows = ProjectMembership.objects.select_related('project').filter(
+            user=obj,
+            project__is_active=True,
+            project__deleted_at__isnull=True,
+        )
         return [
             {
                 'project_id': row.project_id,

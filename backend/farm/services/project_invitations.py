@@ -184,7 +184,12 @@ def get_invitation_by_token(token: str) -> ProjectInvitation:
     :param token: Invitation token.
     :return: Invitation object.
     """
-    invitation = ProjectInvitation.objects.select_related('project', 'invited_by', 'accepted_by', 'revoked_by').filter(token=token).first()
+    invitation = (
+        ProjectInvitation.objects
+        .select_related('project', 'invited_by', 'accepted_by', 'revoked_by')
+        .filter(token=token, project__deleted_at__isnull=True)
+        .first()
+    )
     if not invitation:
         logger.warning('Invitation token lookup failed', extra={'token': token})
         raise InvitationFlowError('invalid_token', 'Invalid invitation token.')

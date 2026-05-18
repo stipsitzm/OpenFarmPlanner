@@ -130,11 +130,15 @@ interface SnackbarState {
   open: boolean;
   message: string;
   severity: 'success' | 'error';
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 interface GlobalSnackbarEventDetail {
   message: string;
   severity: 'success' | 'error';
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 interface ProjectMenuProps {
@@ -388,6 +392,21 @@ function RootLayout(): React.ReactElement {
     });
   };
 
+  const handleCollapsedSidebarBackgroundClick = (event: React.MouseEvent<HTMLElement>): void => {
+    if (!sidebarCollapsed) {
+      return;
+    }
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    if (target.closest('a, button, input, textarea, select, [role="button"], [role="link"], [tabindex]')) {
+      return;
+    }
+    setSidebarCollapsed(false);
+    window.localStorage.setItem('openfarmplanner.sidebarCollapsed', 'false');
+  };
+
   const [projectHistoryOpen, setProjectHistoryOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [globalHelpOpen, setGlobalHelpOpen] = useState(false);
@@ -399,8 +418,8 @@ function RootLayout(): React.ReactElement {
     message: '',
     severity: 'success',
   });
-  const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
-    setSnackbar({ open: true, message, severity });
+  const showSnackbar = useCallback((message: string, severity: 'success' | 'error', actionLabel?: string, onAction?: () => void) => {
+    setSnackbar({ open: true, message, severity, actionLabel, onAction });
   }, []);
 
   useEffect(() => {
@@ -409,7 +428,7 @@ function RootLayout(): React.ReactElement {
       if (!detail?.message) {
         return;
       }
-      showSnackbar(detail.message, detail.severity ?? 'success');
+      showSnackbar(detail.message, detail.severity ?? 'success', detail.actionLabel, detail.onAction);
     };
 
     window.addEventListener('ofp:show-snackbar', handleGlobalSnackbar);
@@ -770,7 +789,11 @@ function RootLayout(): React.ReactElement {
   return (
     <Box className={`app app--${CONTENT_ALIGNMENT_MODE}`} sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'surface.appBackground', position: 'relative', isolation: 'isolate' }}>
       {isDesktopUp ? (
-        <Box component="aside" sx={getNavigationShellSx(sidebarWidth)}>
+        <Box
+          component="aside"
+          onClick={handleCollapsedSidebarBackgroundClick}
+          sx={getNavigationShellSx(sidebarWidth, sidebarCollapsed)}
+        >
           <Stack sx={{ height: '100%', minHeight: 0, width: '100%' }}>
             {!sidebarCollapsed ? (
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.5, py: 1, gap: 1 }}>
@@ -1618,7 +1641,23 @@ function RootLayout(): React.ReactElement {
         onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+        <Alert
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+          action={snackbar.actionLabel && snackbar.onAction ? (
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => {
+                setSnackbar((prev) => ({ ...prev, open: false }));
+                snackbar.onAction?.();
+              }}
+            >
+              {snackbar.actionLabel}
+            </Button>
+          ) : undefined}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>

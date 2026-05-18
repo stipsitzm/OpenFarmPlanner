@@ -69,6 +69,7 @@ class Project(TimestampedModel):
     slug = models.SlugField(max_length=220, unique=True)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['name']

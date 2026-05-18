@@ -2301,7 +2301,7 @@ class MyProjectsView(APIView):
             except (TypeError, ValueError):
                 return Response({'detail': 'Invalid agent project binding.'}, status=status.HTTP_403_FORBIDDEN)
 
-            project = get_object_or_404(Project, id=bound_project_id, is_active=True)
+            project = get_object_or_404(Project, id=bound_project_id, is_active=True, deleted_at__isnull=True)
             return Response([
                 {
                     'project': ProjectSerializer(project).data,
@@ -2314,6 +2314,7 @@ class MyProjectsView(APIView):
         memberships = ProjectMembership.objects.select_related('project').filter(
             user=request.user,
             project__is_active=True,
+            project__deleted_at__isnull=True,
         )
         payload = []
         for membership in memberships:
@@ -2339,7 +2340,12 @@ class ProjectSwitchView(APIView):
         except (TypeError, ValueError):
             return Response({'detail': 'Invalid project_id.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        membership = ProjectMembership.objects.filter(user=request.user, project_id=project_id, project__is_active=True).first()
+        membership = ProjectMembership.objects.filter(
+            user=request.user,
+            project_id=project_id,
+            project__is_active=True,
+            project__deleted_at__isnull=True,
+        ).first()
         if membership is None:
             return Response({'detail': 'Not a member of the selected project.'}, status=status.HTTP_403_FORBIDDEN)
 
@@ -2366,10 +2372,16 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProjectSerializer
-    queryset = Project.objects.filter(is_active=True)
+    queryset = Project.objects.filter(is_active=True, deleted_at__isnull=True)
 
     def get_queryset(self):
-        return Project.objects.filter(memberships__user=self.request.user, is_active=True).distinct()
+        queryset = Project.objects.filter(memberships__user=self.request.user, is_active=True).distinct()
+        if self.request.query_params.get('deleted') in {'1', 'true', 'True'}:
+            return queryset.filter(
+                memberships__role=ProjectMembership.ROLE_ADMIN,
+                deleted_at__isnull=False,
+            )
+        return queryset.filter(deleted_at__isnull=True)
 
     def perform_create(self, serializer):
         project = serializer.save(slug=_build_unique_project_slug(serializer.validated_data['name']))
@@ -2392,6 +2404,35 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def destroy(self, request: Request, *args: object, **kwargs: object) -> Response:
         project = self.get_object()
         require_project_admin(request.user, project.id, request)
+        project.deleted_at = timezone.now()
+        project.save(update_fields=['deleted_at', 'updated_at'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'])
+    def restore(self, request: Request, pk: str | None = None) -> Response:
+        project = get_object_or_404(
+            Project.objects.filter(
+                memberships__user=request.user,
+                is_active=True,
+                deleted_at__isnull=False,
+            ),
+            pk=pk,
+        )
+        require_project_admin(request.user, project.id, request)
+        project.deleted_at = None
+        project.save(update_fields=['deleted_at', 'updated_at'])
+        return Response(ProjectSerializer(project).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['delete'])
+    def permanent(self, request: Request, pk: str | None = None) -> Response:
+        project = get_object_or_404(
+            Project.objects.filter(
+                memberships__user=request.user,
+                deleted_at__isnull=False,
+            ),
+            pk=pk,
+        )
+        require_project_admin(request.user, project.id, request)
         project.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -2400,12 +2441,14 @@ class ProjectMembersView(APIView):
     """List and mutate project memberships."""
 
     def get(self, request, project_id: int):
-        memberships = ProjectMembership.objects.select_related('user').filter(project_id=project_id, user__is_active=True)
+        project = get_object_or_404(Project, id=project_id, is_active=True, deleted_at__isnull=True)
+        memberships = ProjectMembership.objects.select_related('user').filter(project=project, user__is_active=True)
         if not memberships.filter(user=request.user).exists():
             return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
         return Response(ProjectMembershipSerializer(memberships, many=True).data)
 
     def patch(self, request, project_id: int):
+        get_object_or_404(Project, id=project_id, is_active=True, deleted_at__isnull=True)
         require_project_admin(request.user, project_id, request=request)
         membership_id = request.data.get('membership_id')
         role = request.data.get('role')
@@ -2423,6 +2466,7 @@ class ProjectMembersView(APIView):
         return Response(ProjectMembershipSerializer(membership).data)
 
     def delete(self, request, project_id: int):
+        get_object_or_404(Project, id=project_id, is_active=True, deleted_at__isnull=True)
         require_project_admin(request.user, project_id, request=request)
         membership_id = request.data.get('membership_id')
         membership = get_object_or_404(ProjectMembership, id=membership_id, project_id=project_id)
@@ -2440,6 +2484,7 @@ class ProjectInvitationView(APIView):
     """Create and list project invitations."""
 
     def get(self, request, project_id: int):
+        get_object_or_404(Project, id=project_id, is_active=True, deleted_at__isnull=True)
         require_project_admin(request.user, project_id, request=request)
         invitations = ProjectInvitation.objects.filter(project_id=project_id).order_by('-created_at')
         return Response(ProjectInvitationSerializer(invitations, many=True).data)
@@ -2448,7 +2493,7 @@ class ProjectInvitationView(APIView):
         require_project_admin(request.user, project_id, request=request)
         serializer = ProjectInvitationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        project = get_object_or_404(Project, id=project_id, is_active=True)
+        project = get_object_or_404(Project, id=project_id, is_active=True, deleted_at__isnull=True)
 
         try:
             result = create_or_resend_invitation(
@@ -2601,6 +2646,7 @@ class RevokeProjectInvitationView(APIView):
     """Revoke open invitations as project admin."""
 
     def post(self, request, project_id: int, invitation_id: int):
+        get_object_or_404(Project, id=project_id, is_active=True, deleted_at__isnull=True)
         require_project_admin(request.user, project_id, request=request)
         invitation = get_object_or_404(ProjectInvitation, id=invitation_id, project_id=project_id)
         result = revoke_invitation(invitation=invitation, actor=request.user)
