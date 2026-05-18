@@ -703,10 +703,12 @@ class ProjectScopedMixin:
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
         request.active_project = get_active_project_or_400(request)
-        Location.objects.get_or_create(
-            project=request.active_project,
-            defaults={'name': 'Hauptstandort'},
-        )
+        has_locations = Location.objects.filter(project=request.active_project).exists()
+        if not has_locations:
+            Location.objects.create(
+                project=request.active_project,
+                name='Hauptstandort',
+            )
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -2361,10 +2363,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         project = serializer.save(slug=_build_unique_project_slug(serializer.validated_data['name']))
-        Location.objects.get_or_create(
-            project=project,
-            defaults={'name': 'Hauptstandort'},
-        )
+        if not Location.objects.filter(project=project).exists():
+            Location.objects.create(
+                project=project,
+                name='Hauptstandort',
+            )
         ProjectMembership.objects.get_or_create(
             user=self.request.user,
             project=project,
