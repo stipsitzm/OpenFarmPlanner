@@ -24,6 +24,7 @@ from django.shortcuts import get_object_or_404, redirect
 from rest_framework import viewsets, status, generics, parsers, permissions
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.core.files.storage import default_storage
@@ -700,15 +701,23 @@ class ProjectRevisionMixin:
 class ProjectScopedMixin:
     """Resolve active project from request and hard-scope querysets."""
 
+    ensure_default_location = False
+
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
         request.active_project = get_active_project_or_400(request)
-        has_locations = Location.objects.filter(project=request.active_project).exists()
-        if not has_locations:
-            Location.objects.create(
-                project=request.active_project,
-                name='Hauptstandort',
-            )
+        if self.ensure_default_location:
+            self.ensure_active_project_location()
+
+    def ensure_active_project_location(self) -> None:
+        """Create the default location for legacy projects that do not have one."""
+        has_locations = Location.objects.filter(project=self.request.active_project).exists()
+        if has_locations:
+            return
+        Location.objects.create(
+            project=self.request.active_project,
+            name='Hauptstandort',
+        )
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -734,6 +743,7 @@ class LocationViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
     """
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
+    ensure_default_location = True
 
     def perform_create(self, serializer):
         instance = serializer.save(project=self.request.active_project)
@@ -2378,6 +2388,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
             settings_obj.default_project = project
         settings_obj.last_project = project
         settings_obj.save()
+
+    def destroy(self, request: Request, *args: object, **kwargs: object) -> Response:
+        project = self.get_object()
+        require_project_admin(request.user, project.id, request)
+        project.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ProjectMembersView(APIView):

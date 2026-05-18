@@ -132,6 +132,11 @@ interface SnackbarState {
   severity: 'success' | 'error';
 }
 
+interface GlobalSnackbarEventDetail {
+  message: string;
+  severity: 'success' | 'error';
+}
+
 interface ProjectMenuProps {
   anchorEl: HTMLElement | null;
   open: boolean;
@@ -397,6 +402,19 @@ function RootLayout(): React.ReactElement {
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
   }, []);
+
+  useEffect(() => {
+    const handleGlobalSnackbar = (event: Event): void => {
+      const detail = (event as CustomEvent<GlobalSnackbarEventDetail>).detail;
+      if (!detail?.message) {
+        return;
+      }
+      showSnackbar(detail.message, detail.severity ?? 'success');
+    };
+
+    window.addEventListener('ofp:show-snackbar', handleGlobalSnackbar);
+    return () => window.removeEventListener('ofp:show-snackbar', handleGlobalSnackbar);
+  }, [showSnackbar]);
 
   const handleOpenProjectHistory = useCallback(async () => {
     handleGlobalMenuClose();

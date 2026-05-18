@@ -1,6 +1,8 @@
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { projectAPI, type ProjectInvitationPayload, type ProjectMemberPayload } from '../api/api';
 import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
@@ -12,8 +14,8 @@ interface InviteFeedback {
 
 export default function ProjectSettingsPage(): React.ReactElement {
   const { t } = useTranslation('projectInvitations');
-  const { user, refreshUser } = useAuth();
-  const activeProjectId = Number(window.localStorage.getItem('activeProjectId'));
+  const navigate = useNavigate();
+  const { user, refreshUser, activeProjectId } = useAuth();
   const activeMembership = useMemo(
     () => (user?.memberships ?? []).find((membership) => membership.project_id === activeProjectId),
     [activeProjectId, user?.memberships],
@@ -30,10 +32,14 @@ export default function ProjectSettingsPage(): React.ReactElement {
   const [projectNameDraft, setProjectNameDraft] = useState('');
   const [isSavingProjectName, setIsSavingProjectName] = useState(false);
   const [isEditingProjectName, setIsEditingProjectName] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
 
   const isProjectAdmin = activeMembership?.role === 'admin';
   const canManageMembers = isProjectAdmin;
   const normalizedProjectName = projectNameDraft.trim();
+  const canDeleteProject = deleteConfirmationText === (activeMembership?.project_name ?? '');
   const canSaveProjectName = isProjectAdmin
     && normalizedProjectName.length >= 2
     && normalizedProjectName !== (activeMembership?.project_name ?? '');
@@ -175,6 +181,40 @@ export default function ProjectSettingsPage(): React.ReactElement {
     setProjectNameDraft(activeMembership?.project_name ?? '');
     setIsEditingProjectName(false);
     setFeedback(null);
+  };
+
+  const handleDeleteDialogClose = (): void => {
+    if (isDeletingProject) {
+      return;
+    }
+    setDeleteDialogOpen(false);
+    setDeleteConfirmationText('');
+  };
+
+  const handleProjectDelete = async (): Promise<void> => {
+    if (!activeMembership || !isProjectAdmin || !canDeleteProject) {
+      return;
+    }
+
+    setIsDeletingProject(true);
+    setFeedback(null);
+    try {
+      await projectAPI.delete(activeMembership.project_id);
+      setDeleteDialogOpen(false);
+      setDeleteConfirmationText('');
+      await refreshUser();
+      window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
+        detail: {
+          message: t('projectDelete.success'),
+          severity: 'success',
+        },
+      }));
+      navigate('/app/project-selection', { replace: true });
+    } catch {
+      setFeedback({ severity: 'error', text: t('projectDelete.error') });
+    } finally {
+      setIsDeletingProject(false);
+    }
   };
 
   const handleRevoke = async (invitationId: number): Promise<void> => {
@@ -397,6 +437,23 @@ export default function ProjectSettingsPage(): React.ReactElement {
         {invitationStatus}
       </Stack>
 
+      {isProjectAdmin ? (
+        <Box sx={{ mt: 4, border: '1px solid', borderColor: 'error.main', borderRadius: 1, p: 2.5 }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>{t('projectDelete.dangerTitle')}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {t('projectDelete.dangerDescription')}
+          </Typography>
+          <Button
+            color="error"
+            variant="contained"
+            startIcon={<DeleteOutlineIcon />}
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            {t('projectDelete.openButton')}
+          </Button>
+        </Box>
+      ) : null}
+
       <Dialog open={pendingRemovalMember !== null} onClose={() => setPendingRemovalMember(null)} fullWidth maxWidth="xs">
         <DialogTitle>{t('removeDialogTitle')}</DialogTitle>
         <DialogContent>
@@ -415,6 +472,41 @@ export default function ProjectSettingsPage(): React.ReactElement {
             onClick={() => pendingRemovalMember ? void handleRemoveMember(pendingRemovalMember.id, pendingRemovalMember.user === user?.id) : undefined}
           >
             {t('removeDialogConfirm')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onClose={handleDeleteDialogClose} fullWidth maxWidth="sm">
+        <DialogTitle>{t('projectDelete.dialogTitle')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography>
+              {t('projectDelete.dialogText')}
+            </Typography>
+            <Typography sx={{ fontWeight: 600 }}>
+              {t('projectLabel', { name: activeMembership.project_name })}
+            </Typography>
+            <TextField
+              label={t('projectDelete.confirmationLabel')}
+              value={deleteConfirmationText}
+              onChange={(event) => setDeleteConfirmationText(event.target.value)}
+              disabled={isDeletingProject}
+              fullWidth
+              autoFocus
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteDialogClose} disabled={isDeletingProject}>
+            {t('projectDelete.cancel')}
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => void handleProjectDelete()}
+            disabled={!canDeleteProject || isDeletingProject}
+          >
+            {t('projectDelete.confirm')}
           </Button>
         </DialogActions>
       </Dialog>

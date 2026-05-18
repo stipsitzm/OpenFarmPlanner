@@ -267,6 +267,8 @@ export const projectAPI = {
     http.post<ProjectPayload>('/projects/', data),
   update: (projectId: number, data: { name: string }) =>
     http.patch<ProjectPayload>(`/projects/${projectId}/`, data),
+  delete: (projectId: number) =>
+    http.delete(`/projects/${projectId}/`),
   invite: (projectId: number, data: { email: string; role: 'admin' | 'member' }) =>
     http.post(`/projects/${projectId}/invitations/`, data),
   listMembers: (projectId: number) =>

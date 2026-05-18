@@ -10,6 +10,18 @@
     "error": "Projektname konnte nicht aktualisiert werden.",
     "minLength": "Mindestens 2 Zeichen."
   },
+  "projectDelete": {
+    "dangerTitle": "Gefahrenbereich",
+    "dangerDescription": "Aktionen in diesem Bereich können nicht rückgängig gemacht werden.",
+    "openButton": "Projekt löschen",
+    "dialogTitle": "Projekt wirklich löschen?",
+    "dialogText": "Dieses Projekt inklusive Standorten, Anbauflächen, Kulturen, Anbauplänen und allen zugehörigen Daten wird dauerhaft gelöscht.",
+    "confirmationLabel": "Gib den Projektnamen zur Bestätigung ein",
+    "cancel": "Abbrechen",
+    "confirm": "Projekt endgültig löschen",
+    "success": "Projekt wurde gelöscht",
+    "error": "Projekt konnte nicht gelöscht werden."
+  },
   "inviteSectionTitle": "Nutzer einladen",
   "emailLabel": "E-Mail",
   "roleLabel": "Rolle",
