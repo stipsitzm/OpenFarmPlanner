@@ -40,12 +40,15 @@ export default function FieldsBedsPage(): React.ReactElement {
   const [fieldsCount, setFieldsCount] = useState(0);
   const [bedsCount, setBedsCount] = useState(0);
   const [globalActionError, setGlobalActionError] = useState<string>('');
+  const [globalActionSuccess, setGlobalActionSuccess] = useState<string>('');
   const [hierarchyRenderKey, setHierarchyRenderKey] = useState(0);
   const [addFieldDialogOpen, setAddFieldDialogOpen] = useState(false);
   const [newFieldName, setNewFieldName] = useState('');
   const [targetLocationId, setTargetLocationId] = useState<number | ''>('');
   const [isAreaDataLoading, setIsAreaDataLoading] = useState(false);
   const [hasAreaDataLoaded, setHasAreaDataLoaded] = useState(false);
+  const [addLocationDialogOpen, setAddLocationDialogOpen] = useState(false);
+  const [newLocationName, setNewLocationName] = useState('');
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
 
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
@@ -151,9 +154,27 @@ export default function FieldsBedsPage(): React.ReactElement {
 
   const handleGlobalAddField = useCallback((): void => {
     if (!openAddFieldDialog()) {
-      navigate('/app/locations?create=true');
+      setGlobalActionError(t('hierarchy:messages.createLocationError'));
     }
-  }, [navigate, openAddFieldDialog]);
+  }, [openAddFieldDialog, t]);
+
+  const handleCreateAdditionalLocation = useCallback(async (): Promise<void> => {
+    const trimmedName = newLocationName.trim();
+    if (!trimmedName) {
+      return;
+    }
+    try {
+      await locationAPI.create({ name: trimmedName });
+      setAddLocationDialogOpen(false);
+      setNewLocationName('');
+      await reloadHierarchyAndLocations();
+      setGlobalActionError('');
+      setGlobalActionSuccess(t('hierarchy:messages.locationCreated'));
+    } catch (error) {
+      console.error('Error creating additional location:', error);
+      setGlobalActionError(t('hierarchy:messages.createLocationError'));
+    }
+  }, [newLocationName, reloadHierarchyAndLocations, t]);
 
   const handleConfirmAddField = useCallback((): void => {
     if (typeof targetLocationId !== 'number' || !newFieldName.trim()) {
@@ -211,8 +232,6 @@ export default function FieldsBedsPage(): React.ReactElement {
   const hasBeds = bedsCount > 0;
   const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && (!hasLocations || !hasFields);
   const shouldShowMissingBedsHint = hasFields && !hasBeds;
-  const createLocationAction = getProjectSetupAction('locations');
-  const createFieldAction = getProjectSetupAction('fields');
   const createBedAction = getProjectSetupAction('beds');
 
   useEffect(() => {
@@ -296,6 +315,11 @@ export default function FieldsBedsPage(): React.ReactElement {
             {globalActionError}
           </Alert>
         ) : null}
+        {globalActionSuccess ? (
+          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setGlobalActionSuccess('')}>
+            {globalActionSuccess}
+          </Alert>
+        ) : null}
         {shouldShowProjectRequiredState && missingProjectReason ? (
           <ProjectRequiredState reason={missingProjectReason} />
         ) : null}
@@ -321,13 +345,9 @@ export default function FieldsBedsPage(): React.ReactElement {
           <EmptyStateCard
             title={t('hierarchy:emptyAreas.title')}
             description={t('hierarchy:emptyAreas.description')}
-            checklist={[
-              { label: t('hierarchy:columns.location'), done: hasLocations },
-              { label: t('hierarchy:columns.field'), done: hasFields },
-            ]}
             actions={[
-              ...(!hasLocations ? [{ label: t(createLocationAction.labelKey), onClick: () => navigate(createLocationAction.to) }] : []),
-              ...(hasLocations && !hasFields ? [{ label: t(createFieldAction.labelKey), onClick: handleGlobalAddField }] : []),
+              { label: t('hierarchy:actions.addField'), onClick: handleGlobalAddField },
+              { label: t('hierarchy:actions.addAdditionalLocation'), onClick: () => setAddLocationDialogOpen(true), variant: 'text' },
             ]}
           />
         ) : null}
@@ -439,6 +459,27 @@ export default function FieldsBedsPage(): React.ReactElement {
           <Button onClick={() => setAddFieldDialogOpen(false)}>{t('common:actions.cancel')}</Button>
           <Button onClick={handleConfirmAddField} variant="contained" disabled={!newFieldName.trim() || typeof targetLocationId !== 'number'}>
             {t('hierarchy:dialogs.addField.submit')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={addLocationDialogOpen} onClose={() => setAddLocationDialogOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>{t('hierarchy:dialogs.addAdditionalLocation.title')}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ color: 'text.secondary', mb: 2, mt: 1 }}>
+            {t('hierarchy:dialogs.addAdditionalLocation.description')}
+          </Box>
+          <TextField
+            margin="dense"
+            fullWidth
+            label={t('hierarchy:dialogs.addAdditionalLocation.nameLabel')}
+            value={newLocationName}
+            onChange={(event) => setNewLocationName(event.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddLocationDialogOpen(false)}>{t('common:actions.cancel')}</Button>
+          <Button onClick={() => void handleCreateAdditionalLocation()} variant="contained" color="success" disabled={!newLocationName.trim()}>
+            {t('hierarchy:dialogs.addAdditionalLocation.submit')}
           </Button>
         </DialogActions>
       </Dialog>
