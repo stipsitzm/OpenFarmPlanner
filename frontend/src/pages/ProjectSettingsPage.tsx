@@ -460,11 +460,19 @@ export default function ProjectSettingsPage(): React.ReactElement {
       </Stack>
 
       {isProjectAdmin ? (
-        <Box sx={{ mt: 4, border: '1px solid', borderColor: 'error.main', borderRadius: 1, p: 2.5 }}>
-          <Typography variant="h6" sx={{ mb: 1 }}>{t('projectDelete.dangerTitle')}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {t('projectDelete.dangerDescription')}
+        <Box sx={{ mt: 5, border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2.5, bgcolor: 'background.paper' }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>{t('projectDelete.managementTitle')}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t('projectDelete.managementDescription')}
           </Typography>
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {t('projectDelete.shortInfoTitle')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {t('projectDelete.shortInfoText')}
+            </Typography>
+          </Box>
           <Button
             color="error"
             variant="contained"

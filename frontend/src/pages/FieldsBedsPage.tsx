@@ -231,6 +231,7 @@ export default function FieldsBedsPage(): React.ReactElement {
   const hasFields = fieldsCount > 0;
   const hasBeds = bedsCount > 0;
   const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && (!hasLocations || !hasFields);
+  const shouldShowMissingFieldsState = hasLocations && !hasFields;
   const shouldShowMissingBedsHint = hasFields && !hasBeds;
   const createBedAction = getProjectSetupAction('beds');
 
@@ -343,8 +344,13 @@ export default function FieldsBedsPage(): React.ReactElement {
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldShowAreasEmptyState ? (
           <EmptyStateCard
-            title={t('hierarchy:emptyAreas.title')}
-            description={t('hierarchy:emptyAreas.description')}
+            title={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldTitle') : t('hierarchy:emptyAreas.title')}
+            description={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldDescription') : t('hierarchy:emptyAreas.description')}
+            checklist={!hasLocations ? [{
+              label: t('hierarchy:columns.location'),
+              done: false,
+              missingLabel: t('hierarchy:emptyAreas.missingLocationLabel'),
+            }] : []}
             actions={[
               { label: t('hierarchy:actions.addField'), onClick: handleGlobalAddField },
               { label: t('hierarchy:actions.addAdditionalLocation'), onClick: () => setAddLocationDialogOpen(true), variant: 'text' },

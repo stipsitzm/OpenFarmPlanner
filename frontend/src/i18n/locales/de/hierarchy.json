@@ -79,8 +79,11 @@
     }
   },
   "emptyAreas": {
-    "title": "Lege deine erste Anbaufläche an.",
+    "title": "Noch keine Anbauflächen vorhanden",
     "description": "Du kannst mit einer Parzelle starten und darin später Beete anlegen.",
+    "missingLocationLabel": "Standort fehlt",
+    "missingFieldTitle": "Parzelle fehlt",
+    "missingFieldDescription": "Lege eine Parzelle an, um darin später Beete zu erfassen.",
     "actions": {
       "createLocation": "Standort hinzufügen",
       "createField": "Parzelle hinzufügen",

@@ -11,8 +11,10 @@
     "minLength": "Mindestens 2 Zeichen."
   },
   "projectDelete": {
-    "dangerTitle": "Gefahrenbereich",
-    "dangerDescription": "Gelöschte Projekte können innerhalb von 30 Tagen wiederhergestellt werden.",
+    "managementTitle": "Projekt verwalten",
+    "managementDescription": "Zusätzliche Aktionen für dieses Projekt.",
+    "shortInfoTitle": "Kurzinfo:",
+    "shortInfoText": "Gelöschte Projekte können innerhalb von 30 Tagen wiederhergestellt werden.",
     "openButton": "Projekt löschen",
     "dialogTitle": "Projekt wirklich löschen?",
     "dialogText": "Dieses Projekt inklusive Standorten, Anbauflächen, Kulturen, Anbauplänen und allen zugehörigen Daten wird in den Papierkorb verschoben.",

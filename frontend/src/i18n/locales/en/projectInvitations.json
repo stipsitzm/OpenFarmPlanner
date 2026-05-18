@@ -11,8 +11,10 @@
     "minLength": "At least 2 characters."
   },
   "projectDelete": {
-    "dangerTitle": "Danger zone",
-    "dangerDescription": "Deleted projects can be restored within 30 days.",
+    "managementTitle": "Manage project",
+    "managementDescription": "Additional actions for this project.",
+    "shortInfoTitle": "Quick info:",
+    "shortInfoText": "Deleted projects can be restored within 30 days.",
     "openButton": "Delete project",
     "dialogTitle": "Really delete project?",
     "dialogText": "This project, including locations, fields, crops, planting plans, and all related data, will be moved to the trash.",
