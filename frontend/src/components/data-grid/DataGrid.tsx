@@ -388,18 +388,19 @@ export function EditableDataGrid<T extends EditableRow>({
         const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
 
         if (isEditing) {
-          Object.entries(values).forEach(([fieldKey, fieldValue]) => {
+          const editUpdates = Object.entries(values).flatMap(([fieldKey, fieldValue]) => {
             if (fieldKey === 'id' || fieldKey === 'isNew') {
-              return;
+              return [];
             }
-            void gridApiRef.current
-              .setEditCellValue({
+            return [
+              gridApiRef.current.setEditCellValue({
                 id: rowId,
                 field: fieldKey,
                 value: fieldValue,
-              })
-              .catch(() => undefined);
+              }),
+            ];
           });
+          void Promise.allSettled(editUpdates);
         }
 
         setRows((previousRows) =>
