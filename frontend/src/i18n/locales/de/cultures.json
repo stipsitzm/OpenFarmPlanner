@@ -231,8 +231,8 @@
     "progressive": {
       "locations": {
         "title": "Noch kein Saatgutbedarf berechenbar",
-        "description": "Lege zuerst einen Standort an, damit du Flächen und Beete planen kannst.",
-        "action": "Standort hinzufügen"
+        "description": "Lege zuerst eine Parzelle an, damit du Beete planen kannst.",
+        "action": "Parzelle hinzufügen"
       },
       "fields": {
         "title": "Noch kein Saatgutbedarf berechenbar",

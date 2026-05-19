@@ -90,7 +90,7 @@ export default function InvitationAcceptPage(): React.ReactElement {
         setStatus("success");
         setMessage(t("acceptPage.addedToProject"));
         window.setTimeout(
-          () => navigate("/app/locations", { replace: true }),
+          () => navigate("/app/fields-beds", { replace: true }),
           1200,
         );
       } catch (acceptError: unknown) {
@@ -112,7 +112,7 @@ export default function InvitationAcceptPage(): React.ReactElement {
           setStatus("success");
           setMessage(t(`result.${code}`));
           window.setTimeout(
-            () => navigate("/app/locations", { replace: true }),
+            () => navigate("/app/fields-beds", { replace: true }),
             1200,
           );
           return;
@@ -198,7 +198,7 @@ export default function InvitationAcceptPage(): React.ReactElement {
         {status === "error" ? <Alert severity="error">{message}</Alert> : null}
         <Button
           variant="outlined"
-          onClick={() => navigate("/app/locations", { replace: true })}
+          onClick={() => navigate("/app/fields-beds", { replace: true })}
         >
           {t("openApp")}
         </Button>

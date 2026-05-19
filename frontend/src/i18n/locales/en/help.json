@@ -6,7 +6,7 @@
   "intro": "OpenFarmPlanner consists of several pages that work together:",
   "sections": [
     {
-      "title": "Locations / Growing areas",
+      "title": "Growing areas",
       "points": [
         "Create locations, fields, and beds here."
       ]
@@ -37,7 +37,7 @@
     }
   ],
   "workflowTitle": "Workflow",
-  "workflow": "Locations → Growing areas → Cultures → Planting plans → Planting calendar → Seed demand",
+  "workflow": "Growing areas → Cultures → Planting plans → Planting calendar → Seed demand",
   "pages": {
     "dashboard": {
       "title": "Help: Overview",

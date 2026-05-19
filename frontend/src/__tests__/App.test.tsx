@@ -96,7 +96,8 @@ describe('App', () => {
 
     render(<CommandProvider><App /></CommandProvider>);
 
-    expect(await screen.findByText(translations.navigation.locations)).toBeInTheDocument();
+    expect(await screen.findByText('Anbauflächen')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: translations.navigation.locations })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Zur Übersicht' })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'Zur Übersicht' }).length).toBeGreaterThan(0);
     expect(screen.getByText(translations.navigation.cultures)).toBeInTheDocument();
@@ -280,20 +281,20 @@ describe('App', () => {
       window.history.pushState({}, '', initialPath);
       const { unmount } = render(<CommandProvider><App /></CommandProvider>);
 
-      await screen.findByText(translations.navigation.locations);
-      const locationsLink = screen
-        .getAllByRole('link', { name: translations.navigation.locations })
-        .find((link) => link.getAttribute('href') === '/app/locations');
-      expect(locationsLink).toBeDefined();
-      if (!locationsLink) {
-        throw new Error('Locations sidebar link was not found');
+      await screen.findByText('Anbauflächen');
+      const fieldsBedsLink = screen
+        .getAllByRole('link', { name: 'Anbauflächen' })
+        .find((link) => link.getAttribute('href') === '/app/fields-beds');
+      expect(fieldsBedsLink).toBeDefined();
+      if (!fieldsBedsLink) {
+        throw new Error('Fields and beds sidebar link was not found');
       }
-      fireEvent.click(locationsLink);
+      fireEvent.click(fieldsBedsLink);
 
       await waitFor(() => {
-        expect(window.location.pathname).toBe('/app/locations');
+        expect(window.location.pathname).toBe('/app/fields-beds');
       }, { timeout: 3000 });
-      expect(await screen.findByRole('heading', { name: 'Standorte' })).toBeInTheDocument();
+      expect(await screen.findByText('Anbauflächen')).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: previousHeading })).not.toBeInTheDocument();
 
       unmount();

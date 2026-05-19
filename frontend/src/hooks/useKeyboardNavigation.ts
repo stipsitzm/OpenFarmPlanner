@@ -11,7 +11,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getActiveMainRouteFromPathname, ORDERED_APP_ROUTES } from '../navigation/mainNavigation';
+import { getKeyboardNavigationRouteFromPathname, ORDERED_APP_ROUTES } from '../navigation/mainNavigation';
 
 export function useKeyboardNavigation(): void {
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ export function useKeyboardNavigation(): void {
 
       event.preventDefault();
 
-      const currentRoute = getActiveMainRouteFromPathname(currentPathnameRef.current);
+      const currentRoute = getKeyboardNavigationRouteFromPathname(currentPathnameRef.current);
       const currentIndex = currentRoute ? ORDERED_APP_ROUTES.indexOf(currentRoute) : -1;
       if (currentIndex === -1) {
         console.warn(`[keyboard-nav] Unknown route for pathname "${currentPathnameRef.current}". Falling back to dashboard.`);

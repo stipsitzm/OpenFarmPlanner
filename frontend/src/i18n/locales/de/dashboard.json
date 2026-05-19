@@ -5,9 +5,9 @@
   },
   "emptyState": {
     "title": "Starte deine Anbauplanung",
-    "description": "Lege zuerst einen Standort an. Danach kannst du Anbauflächen, Kulturen und Anbaupläne erfassen.",
-    "shortDescription": "Lege zuerst einen Standort an.",
-    "action": "Standort hinzufügen"
+    "description": "Lege zuerst eine Parzelle an. Danach kannst du Kulturen und Anbaupläne erfassen.",
+    "shortDescription": "Lege zuerst eine Parzelle an.",
+    "action": "Parzelle hinzufügen"
   },
   "tasks": {
     "title": "Anstehende Aufgaben",

@@ -6,7 +6,6 @@ export interface MainNavigationItem {
 }
 
 export const MAIN_NAV_ITEMS: MainNavigationItem[] = [
-  { to: '/app/locations', labelKey: 'locations', keywords: ['standorte', 'standort'] },
   { to: '/app/fields-beds', labelKey: 'fieldsAndBeds', keywords: ['anbauflächen', 'felder', 'beete'] },
   { to: '/app/cultures', labelKey: 'cultures', keywords: ['kulturen', 'kultur'] },
   { to: '/app/anbauplaene', labelKey: 'plantingPlans', activeAliases: ['/app/planting-plans'], keywords: ['anbaupläne', 'pläne', 'planung'] },
@@ -41,4 +40,18 @@ export const getActiveMainRouteFromPathname = (pathname: string): string | null 
     .sort((first, second) => second.length - first.length)[0];
 
   return matchingRoute ?? null;
+};
+
+export const getKeyboardNavigationRouteFromPathname = (pathname: string): string | null => {
+  const activeRoute = getActiveMainRouteFromPathname(pathname);
+  if (activeRoute) {
+    return activeRoute;
+  }
+
+  const normalizedPath = normalizeMainRoutePath(pathname);
+  if (normalizedPath === '/app/locations' || normalizedPath.startsWith('/app/locations/')) {
+    return '/app/dashboard';
+  }
+
+  return null;
 };

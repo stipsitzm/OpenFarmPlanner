@@ -6,7 +6,7 @@
   "intro": "OpenFarmPlanner besteht aus mehreren Seiten, die zusammenarbeiten:",
   "sections": [
     {
-      "title": "Standorte / Anbauflächen",
+      "title": "Anbauflächen",
       "points": [
         "Hier legst du Standorte, Parzellen und Beete an."
       ]
@@ -37,7 +37,7 @@
     }
   ],
   "workflowTitle": "Workflow",
-  "workflow": "Standorte → Anbauflächen → Kulturen → Anbaupläne → Anbaukalender → Saatgutbedarf",
+  "workflow": "Anbauflächen → Kulturen → Anbaupläne → Anbaukalender → Saatgutbedarf",
   "pages": {
     "dashboard": {
       "title": "Hilfe: Übersicht",
@@ -47,7 +47,7 @@
           "title": "Bedienung",
           "points": [
             "Nutze die Checkliste, um fehlende Grunddaten Schritt für Schritt anzulegen.",
-            "Öffne die jeweiligen Bereiche, um Standorte, Anbauflächen, Kulturen oder Anbaupläne zu bearbeiten.",
+            "Öffne die jeweiligen Bereiche, um Anbauflächen, Kulturen oder Anbaupläne zu bearbeiten.",
             "Prüfe die anstehenden Aufgaben, um Aussaat, Pflanzung, Anzucht und Ernte im Blick zu behalten."
           ]
         },

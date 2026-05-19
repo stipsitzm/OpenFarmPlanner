@@ -41,7 +41,7 @@ export default function ProjectSelectionPage(): React.ReactElement {
 
   const openProject = async (projectId: number): Promise<void> => {
     await switchActiveProject(projectId);
-    navigate('/app/locations', { replace: true });
+    navigate('/app/fields-beds', { replace: true });
   };
 
   const showSnackbar = (message: string, severity: 'success' | 'error'): void => {

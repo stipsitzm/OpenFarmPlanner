@@ -44,6 +44,23 @@ describe('project setup actions', () => {
     });
   });
 
+  it('uses the fields-beds create flow as the primary location setup action', () => {
+    expect(getProjectSetupAction('locations')).toEqual({
+      labelKey: 'common:setupActions.createField',
+      to: '/app/fields-beds?create=true',
+    });
+    expect(getProjectSetupActions('locations')).toEqual([
+      {
+        labelKey: 'common:setupActions.createField',
+        to: '/app/fields-beds?create=true',
+      },
+      {
+        labelKey: 'common:setupActions.createLocation',
+        to: '/app/locations?create=true',
+      },
+    ]);
+  });
+
   it('uses the shared beds step action that opens the fields-beds page', () => {
     expect(getProjectSetupAction('beds')).toEqual({
       labelKey: 'common:setupActions.openAreas',

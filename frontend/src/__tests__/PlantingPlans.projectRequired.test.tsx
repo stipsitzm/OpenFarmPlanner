@@ -89,7 +89,7 @@ describe("PlantingPlans project requirement state", () => {
     expect(apiMocks.bedList).not.toHaveBeenCalled();
   });
 
-  it("shows only location-specific next step when no locations exist", async () => {
+  it("shows the fields-beds setup entry when no locations exist", async () => {
     render(
       <MemoryRouter>
         <PlantingPlans />
@@ -97,7 +97,11 @@ describe("PlantingPlans project requirement state", () => {
     );
 
     expect(await screen.findByText("Du kannst noch keinen Anbauplan hinzufügen.")).toBeInTheDocument();
-    expect(screen.getByText("Lege zuerst einen Standort an.")).toBeInTheDocument();
+    expect(screen.getByText("Lege zuerst eine Parzelle an.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Parzelle hinzufügen" })).toHaveAttribute(
+      "href",
+      "/app/fields-beds?create=true",
+    );
     expect(screen.getByRole("link", { name: "Standort hinzufügen" })).toHaveAttribute(
       "href",
       "/app/locations?create=true",
