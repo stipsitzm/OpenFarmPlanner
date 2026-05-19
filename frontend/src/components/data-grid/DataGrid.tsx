@@ -96,6 +96,8 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showRowEditActions?: boolean;
   onRowsStateChange?: (rows: T[]) => void;
   onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean; error: string }) => void;
+  onBeforeSaveRow?: (row: T) => boolean;
+  isSaveErrorHandled?: (error: unknown) => boolean;
   /**
    * Controls how the grid surface uses available page/workspace width:
    * - contentFit: fit to content and center, but never exceed container width
@@ -131,6 +133,8 @@ export function EditableDataGrid<T extends EditableRow>({
   showRowEditActions = false,
   onRowsStateChange,
   onLoadStateChange,
+  onBeforeSaveRow,
+  isSaveErrorHandled,
   surfaceSizing,
 }: EditableDataGridProps<T>): React.ReactElement {
   const gridApiRef = useGridApiRef();
@@ -329,6 +333,25 @@ export function EditableDataGrid<T extends EditableRow>({
     }));
   }, []);
 
+  const getDraftRow = useCallback((rowId: GridRowId): T | null => {
+    const api = gridApiRef.current;
+    if (!api) {
+      return null;
+    }
+    return api.getRowWithUpdatedValues(rowId, '') as T | null;
+  }, [gridApiRef]);
+
+  const shouldSaveRow = useCallback((rowId: GridRowId): boolean => {
+    if (!onBeforeSaveRow) {
+      return true;
+    }
+    const draftRow = getDraftRow(rowId);
+    if (!draftRow) {
+      return true;
+    }
+    return onBeforeSaveRow(draftRow);
+  }, [getDraftRow, onBeforeSaveRow]);
+
   const handleSaveAllDirtyRows = useCallback((): void => {
     const editingRowIds = Object.entries(rowModesModel)
       .filter(([, mode]) => mode.mode === GridRowModes.Edit)
@@ -336,21 +359,28 @@ export function EditableDataGrid<T extends EditableRow>({
     if (editingRowIds.length === 0) {
       return;
     }
+    const saveableRowIds = editingRowIds.filter((rowId) => shouldSaveRow(rowId));
+    if (saveableRowIds.length === 0) {
+      return;
+    }
     setRowModesModel((oldModel) => {
       const nextModel = { ...oldModel };
-      for (const rowId of editingRowIds) {
+      for (const rowId of saveableRowIds) {
         nextModel[rowId] = { mode: GridRowModes.View };
       }
       return nextModel;
     });
-  }, [rowModesModel]);
+  }, [rowModesModel, shouldSaveRow]);
 
   const handleSaveRow = useCallback((rowId: GridRowId): void => {
+    if (!shouldSaveRow(rowId)) {
+      return;
+    }
     setRowModesModel((oldModel) => ({
       ...oldModel,
       [rowId]: { mode: GridRowModes.View },
     }));
-  }, []);
+  }, [shouldSaveRow]);
 
   const handleEditSelectedRow = (): void => {
     const selectedRowId = selectedRowIds[0];
@@ -388,13 +418,14 @@ export function EditableDataGrid<T extends EditableRow>({
         const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
         const targetRow = rowsById.get(rowKey) as T | undefined;
 
-        if (isEditing) {
+        const api = gridApiRef.current;
+        if (isEditing && api) {
           const editUpdates = Object.entries(values).flatMap(([fieldKey, fieldValue]) => {
             if (fieldKey === 'id' || fieldKey === 'isNew') {
               return [];
             }
             return [
-              gridApiRef.current.setEditCellValue({
+              api.setEditCellValue({
                 id: rowId,
                 field: fieldKey,
                 value: fieldValue,
@@ -504,6 +535,10 @@ export function EditableDataGrid<T extends EditableRow>({
         return mappedRow;
       }
     } catch (err) {
+      if (isSaveErrorHandled?.(err)) {
+        console.error('Error saving data:', err);
+        throw err;
+      }
       // Extract user-friendly error message
       const errorMessage = extractApiErrorMessage(err, t, saveErrorMessage);
       setError(errorMessage);
@@ -517,6 +552,9 @@ export function EditableDataGrid<T extends EditableRow>({
    */
   const handleProcessRowUpdateError = (error: unknown): void => {
     console.error('Row update error:', error);
+    if (isSaveErrorHandled?.(error)) {
+      return;
+    }
     if (error instanceof Error && error.message) {
       setError(error.message);
       return;
