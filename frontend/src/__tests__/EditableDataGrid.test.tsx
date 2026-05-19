@@ -19,6 +19,11 @@ vi.mock('../i18n', () => ({
 
 vi.mock('@mui/x-data-grid', async () => {
   const React = await import('react');
+  const useGridApiRef = vi.fn(() => ({
+    current: {
+      setEditCellValue: vi.fn().mockResolvedValue(true),
+    },
+  }));
   const GridRowModes = { Edit: 'edit', View: 'view' };
   const GridRowEditStopReasons = {
     rowFocusOut: 'rowFocusOut',

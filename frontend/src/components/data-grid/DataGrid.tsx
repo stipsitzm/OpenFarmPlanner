@@ -403,16 +403,32 @@ export function EditableDataGrid<T extends EditableRow>({
           void Promise.allSettled(editUpdates);
         }
 
-        setRows((previousRows) =>
-          previousRows.map((row) =>
+        setRows((previousRows) => {
+          const nextRows = previousRows.map((row) =>
             String(row.id) === rowKey ? ({ ...row, ...values } as T) : row,
-          ),
-        );
+          );
+          const targetRow = nextRows.find((row) => String(row.id) === rowKey) as T | undefined;
+          if (targetRow) {
+            const fieldErrors = getRowValidationErrors?.(targetRow) ?? {};
+            setActiveValidationErrors((prev) => ({
+              ...prev,
+              [rowKey]: fieldErrors,
+            }));
+          }
+          return nextRows;
+        });
         setDirtyRowIds((previous) => {
           const next = new Set(previous);
           next.add(rowKey);
           return next;
         });
+        setRowModesModel((previousModel) => ({
+          ...previousModel,
+          [rowId]: {
+            ...(previousModel[rowId] ?? {}),
+            mode: GridRowModes.Edit,
+          },
+        }));
       },
       reload: fetchData,
     };
@@ -420,7 +436,7 @@ export function EditableDataGrid<T extends EditableRow>({
     return () => {
       commandApiRef.current = null;
     };
-  }, [commandApiRef, fetchData, gridApiRef, rowModesModel, selectedRowIds]);
+  }, [commandApiRef, fetchData, getRowValidationErrors, gridApiRef, rowModesModel, selectedRowIds]);
 
 
   /**
