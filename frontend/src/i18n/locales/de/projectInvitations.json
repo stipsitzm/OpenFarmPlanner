@@ -10,6 +10,23 @@
     "error": "Projektname konnte nicht aktualisiert werden.",
     "minLength": "Mindestens 2 Zeichen."
   },
+  "projectDelete": {
+    "managementTitle": "Projekt verwalten",
+    "managementDescription": "Zusätzliche Aktionen für dieses Projekt.",
+    "shortInfoTitle": "Kurzinfo:",
+    "shortInfoText": "Gelöschte Projekte können innerhalb von 30 Tagen wiederhergestellt werden.",
+    "openButton": "Projekt löschen",
+    "dialogTitle": "Projekt wirklich löschen?",
+    "dialogText": "Dieses Projekt inklusive Standorten, Anbauflächen, Kulturen, Anbauplänen und allen zugehörigen Daten wird in den Papierkorb verschoben.",
+    "confirmationLabel": "Gib den Projektnamen zur Bestätigung ein",
+    "cancel": "Abbrechen",
+    "confirm": "Projekt löschen",
+    "success": "Projekt wurde gelöscht",
+    "undo": "Rückgängig",
+    "restoreSuccess": "Projekt wurde wiederhergestellt",
+    "restoreError": "Projekt konnte nicht wiederhergestellt werden.",
+    "error": "Projekt konnte nicht gelöscht werden."
+  },
   "inviteSectionTitle": "Nutzer einladen",
   "emailLabel": "E-Mail",
   "roleLabel": "Rolle",

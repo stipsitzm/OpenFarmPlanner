@@ -1479,8 +1479,8 @@ class CultureRestoreSerializer(serializers.Serializer):
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
-        fields = ['id', 'name', 'slug', 'description', 'is_active', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'slug', 'is_active', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'slug', 'description', 'is_active', 'deleted_at', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'slug', 'is_active', 'deleted_at', 'created_at', 'updated_at']
 
 
 class ProjectMembershipSerializer(serializers.ModelSerializer):

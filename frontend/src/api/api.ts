@@ -211,6 +211,7 @@ export interface ProjectPayload {
   slug: string;
   description: string;
   is_active: boolean;
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -267,6 +268,14 @@ export const projectAPI = {
     http.post<ProjectPayload>('/projects/', data),
   update: (projectId: number, data: { name: string }) =>
     http.patch<ProjectPayload>(`/projects/${projectId}/`, data),
+  delete: (projectId: number) =>
+    http.delete(`/projects/${projectId}/`),
+  listDeleted: () =>
+    http.get<PaginatedResponse<ProjectPayload> | ProjectPayload[]>('/projects/', { params: { deleted: true } }),
+  restore: (projectId: number) =>
+    http.post<ProjectPayload>(`/projects/${projectId}/restore/`),
+  permanentDelete: (projectId: number) =>
+    http.delete(`/projects/${projectId}/permanent/`),
   invite: (projectId: number, data: { email: string; role: 'admin' | 'member' }) =>
     http.post(`/projects/${projectId}/invitations/`, data),
   listMembers: (projectId: number) =>

@@ -35,6 +35,22 @@
     "admin": "Admin",
     "member": "Member"
   },
+  "projectTrash": {
+    "title": "Trash",
+    "empty": "The trash is empty.",
+    "loadError": "Deleted projects could not be loaded.",
+    "deletedDays_zero": "deleted today",
+    "deletedDays_one": "deleted {{count}} day ago",
+    "deletedDays_other": "deleted {{count}} days ago",
+    "deletedUnknown": "Deletion date unknown",
+    "restore": "Restore",
+    "restoreSuccess": "Project was restored",
+    "restoreError": "Project could not be restored.",
+    "permanentDelete": "Permanently delete",
+    "permanentConfirm": "Permanently delete project {{name}}? This action cannot be undone.",
+    "permanentSuccess": "Project was permanently deleted.",
+    "permanentError": "Project could not be permanently deleted."
+  },
   "commandGroups": {
     "project": "Project",
     "account": "Account",

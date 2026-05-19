@@ -6,7 +6,7 @@ export interface MainNavigationItem {
 }
 
 export const MAIN_NAV_ITEMS: MainNavigationItem[] = [
-  { to: '/app/locations', labelKey: 'locations', keywords: ['standorte', 'orte', 'locations'] },
+  { to: '/app/locations', labelKey: 'locations', keywords: ['standorte', 'standort'] },
   { to: '/app/fields-beds', labelKey: 'fieldsAndBeds', keywords: ['anbauflächen', 'felder', 'beete'] },
   { to: '/app/cultures', labelKey: 'cultures', keywords: ['kulturen', 'kultur'] },
   { to: '/app/anbauplaene', labelKey: 'plantingPlans', activeAliases: ['/app/planting-plans'], keywords: ['anbaupläne', 'pläne', 'planung'] },

@@ -52,7 +52,9 @@
     "noBedsHintDescription": "Füge Beete über das Plus-Symbol bei der jeweiligen Parzelle hinzu.",
     "missingDimensionsHint": "Länge und Breite sind wichtig für Flächenberechnungen, Saatgutbedarf und Anbauplanung.",
     "missingDimensionsHintOptional": "Du kannst die Werte später ergänzen.",
-    "missingDimensionsCellTooltip": "Für Flächenberechnung erforderlich."
+    "missingDimensionsCellTooltip": "Für Flächenberechnung erforderlich.",
+    "createLocationError": "Fehler beim Erstellen des Standorts.",
+    "locationCreated": "Standort wurde angelegt."
   },
   "prompts": {
     "newFieldName": "Name der neuen Parzelle:",
@@ -60,18 +62,28 @@
   },
   "actions": {
     "addField": "Parzelle hinzufügen",
-    "createLocation": "Standort hinzufügen"
+    "createLocation": "Standort hinzufügen",
+    "addAdditionalLocation": "Mehrere Orte? Weiteren Standort hinzufügen"
   },
   "dialogs": {
     "addField": {
       "title": "Parzelle hinzufügen",
       "nameLabel": "Name der Parzelle",
       "submit": "Hinzufügen"
+    },
+    "addAdditionalLocation": {
+      "title": "Weiteren Standort hinzufügen",
+      "description": "Standorte helfen, Flächen an verschiedenen Orten getrennt zu verwalten. Für ein Projekt mit nur einem Ort musst du nichts weiter einrichten.",
+      "nameLabel": "Name des Standorts",
+      "submit": "Standort anlegen"
     }
   },
   "emptyAreas": {
     "title": "Noch keine Anbauflächen vorhanden",
-    "description": "Anbauflächen bestehen aus Standorten, Parzellen und Beeten. Lege zuerst einen Standort an und ergänze danach Parzellen und Beete.",
+    "description": "Du kannst mit einer Parzelle starten und darin später Beete anlegen.",
+    "missingLocationLabel": "Standort fehlt",
+    "missingFieldTitle": "Parzelle fehlt",
+    "missingFieldDescription": "Lege eine Parzelle an, um darin später Beete zu erfassen.",
     "actions": {
       "createLocation": "Standort hinzufügen",
       "createField": "Parzelle hinzufügen",

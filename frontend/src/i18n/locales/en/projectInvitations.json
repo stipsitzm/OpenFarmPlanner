@@ -10,6 +10,23 @@
     "error": "Project name could not be updated.",
     "minLength": "At least 2 characters."
   },
+  "projectDelete": {
+    "managementTitle": "Manage project",
+    "managementDescription": "Additional actions for this project.",
+    "shortInfoTitle": "Quick info:",
+    "shortInfoText": "Deleted projects can be restored within 30 days.",
+    "openButton": "Delete project",
+    "dialogTitle": "Really delete project?",
+    "dialogText": "This project, including locations, fields, crops, planting plans, and all related data, will be moved to the trash.",
+    "confirmationLabel": "Enter the project name to confirm",
+    "cancel": "Cancel",
+    "confirm": "Delete project",
+    "success": "Project was deleted",
+    "undo": "Undo",
+    "restoreSuccess": "Project was restored",
+    "restoreError": "Project could not be restored.",
+    "error": "Project could not be deleted."
+  },
   "inviteSectionTitle": "Invite users",
   "emailLabel": "Email",
   "roleLabel": "Role",
