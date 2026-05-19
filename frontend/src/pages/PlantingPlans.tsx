@@ -27,6 +27,7 @@ import {
   InputLabel,
   MenuItem,
   Select,
+  Snackbar,
   Stack,
   TextField,
   Tooltip,
@@ -54,7 +55,7 @@ import {
   type Culture,
   type Bed,
 } from "../api/api";
-import type { CultivationType, Field, Location } from "../api/types";
+import type { CultivationType, Field, Location, RemainingAreaResponse } from "../api/types";
 import { extractApiErrorMessage } from "../api/errors";
 import {
   formatLocalizedNumber,
@@ -179,10 +180,22 @@ const toNumericValue = (value: unknown): number | null => {
   return null;
 };
 
+const toOptionalString = (value: unknown): string | undefined =>
+  typeof value === "string" ? value : undefined;
+
+const addDaysToIsoDate = (value: string, days: number): string | null => {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  date.setDate(date.getDate() + days);
+  return toIsoDateString(date);
+};
+
 interface HierarchySelectionRow {
   location_id?: number;
   field_id?: number;
-  bed?: number;
+  bed?: number | string;
 }
 
 export const normalizeSelectionAfterLocationChange = (
@@ -323,7 +336,7 @@ export const filterBedOptionsBySelection = (
     return true;
   });
 
-const buildBedDisplayLabel = (
+export const buildBedDisplayLabel = (
   locationName: string | null | undefined,
   fieldName: string | null | undefined,
   bedName: string | null | undefined,
@@ -351,6 +364,19 @@ const buildBedDisplayLabel = (
   }
 
   return `${combinedName} (${formatAreaM2(areaSqm, locale)})`;
+};
+
+export const resolveBedCellValue = (
+  value: unknown,
+  row: HierarchySelectionRow,
+): number => {
+  const cellBedId = toNumericValue(value);
+  if (cellBedId !== null) {
+    return cellBedId;
+  }
+
+  const rowBedId = toNumericValue(row.bed);
+  return rowBedId ?? 0;
 };
 
 const createEmptyMobileCreateForm = (): MobileCreateFormState => ({
@@ -435,7 +461,10 @@ function PlantingPlans(): React.ReactElement {
   const [locations, setLocations] = useState<Location[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
-  const [areaWarning, setAreaWarning] = useState<string>("");
+  const [areaNotice, setAreaNotice] = useState<{
+    message: string;
+    severity: "info" | "warning";
+  } | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<PlantingPlanRow | null>(
@@ -693,6 +722,93 @@ function PlantingPlans(): React.ReactElement {
     };
   }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, hasMultipleLocationsWithBeds, numberLocale, t]);
 
+  const getBedLabelForRow = useCallback(
+    (row: PlantingPlanRow | null | undefined): string => {
+      if (!row) {
+        return "—";
+      }
+
+      const bedId = resolveBedCellValue(row.bed, row);
+      const linkedBed = bedById.get(bedId);
+      const linkedField = linkedBed ? fieldById.get(linkedBed.field) : undefined;
+      const locationName = linkedField
+        ? locationById.get(linkedField.location)?.name
+        : toOptionalString(row.location_name);
+
+      if (linkedBed) {
+        return buildBedDisplayLabel(
+          locationName,
+          linkedBed.field_name ?? linkedField?.name ?? toOptionalString(row.field_name),
+          linkedBed.name,
+          toNumericValue(linkedBed.area_sqm),
+          hasMultipleLocationsWithBeds,
+          numberLocale,
+        );
+      }
+
+      return buildBedDisplayLabel(
+        toOptionalString(row.location_name),
+        toOptionalString(row.field_name),
+        toOptionalString(row.bed_name),
+        null,
+        hasMultipleLocationsWithBeds,
+        numberLocale,
+      );
+    },
+    [
+      bedById,
+      fieldById,
+      hasMultipleLocationsWithBeds,
+      locationById,
+      numberLocale,
+    ],
+  );
+
+  const getAreaIntervalForRow = useCallback(
+    (row: PlantingPlanRow): { startDate: string; endDate: string } | null => {
+      const startDate = toIsoDateString(row.planting_date);
+      if (!startDate) {
+        return null;
+      }
+
+      const explicitEndDate =
+        toIsoDateString(row.harvest_end_date) ??
+        toIsoDateString(row.harvest_date);
+      if (explicitEndDate) {
+        return { startDate, endDate: explicitEndDate };
+      }
+
+      const culture = cultures.find((item) => item.id === row.culture);
+      const growthDays = culture?.growth_duration_days ?? 0;
+      const harvestDays = culture?.harvest_duration_days ?? 0;
+      const totalDays = growthDays + (growthDays && harvestDays ? harvestDays : 0);
+      const derivedEndDate = totalDays > 0 ? addDaysToIsoDate(startDate, totalDays) : startDate;
+
+      return { startDate, endDate: derivedEndDate ?? startDate };
+    },
+    [cultures],
+  );
+
+  const fetchRemainingAreaForRow = useCallback(
+    async (row: PlantingPlanRow): Promise<RemainingAreaResponse | null> => {
+      const bedId = resolveBedCellValue(row.bed, row);
+      const interval = getAreaIntervalForRow(row);
+      if (!bedId || !interval) {
+        return null;
+      }
+
+      const response = await plantingPlanAPI.remainingArea({
+        bed_id: bedId,
+        start_date: interval.startDate,
+        end_date: interval.endDate,
+        ...(row.id > 0 ? { exclude_plan_id: row.id } : {}),
+      });
+
+      return response.data;
+    },
+    [getAreaIntervalForRow],
+  );
+
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
    */
@@ -940,26 +1056,29 @@ function PlantingPlans(): React.ReactElement {
         minWidth: dynamicWidths.bed,
         maxWidth: BED_COLUMN_MAX_WIDTH,
         editable: true,
-        valueGetter: (_value, row) => {
-          const gridRow = row as PlantingPlanRow;
-          const locationName = gridRow.location_name ?? "";
-          const fieldName = gridRow.field_name ?? "";
-          const bedName = gridRow.bed_name ?? "";
-          return [locationName, fieldName, bedName].filter(Boolean).join(" | ");
+        type: "singleSelect",
+        valueOptions: bedOptions,
+        valueFormatter: (_value, row) => getBedLabelForRow(row as PlantingPlanRow),
+        sortComparator: (_value1, _value2, cellParams1, cellParams2) => {
+          const row1 = cellParams1.api.getRow(cellParams1.id) as PlantingPlanRow | null;
+          const row2 = cellParams2.api.getRow(cellParams2.id) as PlantingPlanRow | null;
+          return getBedLabelForRow(row1).localeCompare(
+            getBedLabelForRow(row2),
+            "de",
+          );
         },
-        sortComparator: (value1, value2) =>
-          String(value1 ?? "").localeCompare(String(value2 ?? ""), "de"),
         renderCell: (params) => {
           const row = params.row as PlantingPlanRow;
-          const label = bedLabelById.get(row.bed) ?? "—";
+          const label = getBedLabelForRow(row);
           return <CompactAreaCell label={label} />;
         },
         renderEditCell: (params) => {
           const row = params.row as PlantingPlanRow;
-          const label = bedLabelById.get(row.bed) ?? "—";
+          const bedId = resolveBedCellValue(params.value, row);
+          const label = getBedLabelForRow({ ...row, bed: bedId });
           return (
             <AreaAssignmentDialog
-              bedId={typeof row.bed === "number" ? row.bed : Number(row.bed)}
+              bedId={bedId || null}
               beds={beds}
               fields={fields}
               locations={locations}
@@ -977,7 +1096,7 @@ function PlantingPlans(): React.ReactElement {
         },
         valueSetter: (value, row) => {
           const nextRow = row as PlantingPlanRow;
-          const numericValue = typeof value === "number" ? value : Number(value);
+          const numericValue = resolveBedCellValue(value, nextRow);
           const selectedBed = bedById.get(numericValue);
           const isNewRow = Boolean(nextRow.isNew);
           const currentArea = nextRow.area_m2;
@@ -1073,45 +1192,20 @@ function PlantingPlans(): React.ReactElement {
               bedAreaSqm={selectedBed?.area_sqm}
               fallbackValue={derivedArea}
               locale={numberLocale}
+              formatArea={(value) => formatAreaM2(value, numberLocale)}
+              areaExceededMessage={t("plantingPlans:validation.areaExceedsRemaining")}
+              availableAreaLabel={t("plantingPlans:validation.availableArea")}
+              applyAvailableAreaLabel={t("plantingPlans:actions.useAvailableArea")}
               onLastEditedFieldChange={() => {
                 lastEditedFieldRef.current = "area_m2";
+                setAreaNotice(null);
               }}
-              normalizeAreaOnBlur={async (value) => {
-                const bedId =
-                  typeof row.bed === "number" ? row.bed : Number(row.bed);
-                const startDate = toIsoDateString(row.planting_date);
-                const endDate =
-                  toIsoDateString(row.harvest_end_date) ??
-                  toIsoDateString(row.harvest_date) ??
-                  startDate;
-
-                if (!bedId || !startDate || !endDate || value === null) {
-                  return value;
+              getAvailableAreaOnBlur={async (value) => {
+                if (value === null) {
+                  return null;
                 }
-
-                const requestParams = {
-                  bed_id: bedId,
-                  start_date: startDate,
-                  end_date: endDate,
-                  ...(row.id > 0 ? { exclude_plan_id: row.id } : {}),
-                };
-
-                const response =
-                  await plantingPlanAPI.remainingArea(requestParams);
-                const remaining = response.data.remaining_area_sqm;
-
-                if (value > remaining) {
-                  setAreaWarning(
-                    `Fläche wurde auf Restfläche begrenzt (${formatAreaM2(remaining, numberLocale)}). Bitte Speichern bestätigen, dann wird der Restwert übernommen.`,
-                  );
-                  return remaining;
-                }
-
-                if (areaWarning) {
-                  setAreaWarning("");
-                }
-
-                return value;
+                const remainingArea = await fetchRemainingAreaForRow(row);
+                return remainingArea?.remaining_area_sqm ?? null;
               }}
             />
           );
@@ -1142,6 +1236,7 @@ function PlantingPlans(): React.ReactElement {
         preProcessEditCellProps: (params) => {
           if (params.hasChanged) {
             lastEditedFieldRef.current = "plants_count";
+            setAreaNotice(null);
           }
           return params.props;
         },
@@ -1186,10 +1281,11 @@ function PlantingPlans(): React.ReactElement {
       cultureOptions,
       cultures,
       dynamicWidths,
+      fetchRemainingAreaForRow,
+      getBedLabelForRow,
       areaColumnLabel,
       fieldBedColumnLabel,
       numberLocale,
-      areaWarning,
       t,
     ],
   );
@@ -1240,8 +1336,8 @@ function PlantingPlans(): React.ReactElement {
         : null;
       return buildBedDisplayLabel(
         locationName,
-        linkedBed.name,
         linkedBed.field_name ?? linkedField?.name,
+        linkedBed.name,
         toNumericValue(linkedBed.area_sqm),
         includeLocation,
         numberLocale,
@@ -1425,20 +1521,41 @@ function PlantingPlans(): React.ReactElement {
     const usePlantsInput =
       mobileLastEditedField === "plants_count" ||
       (!mobileLastEditedField && !hasAreaInput && hasPlantsInput);
-    const areaPayload =
-      hasAreaInput || hasPlantsInput
-        ? {
-            area_input_value: usePlantsInput
-              ? parsedPlants
-              : parsedArea,
-            area_input_unit: usePlantsInput ? "PLANTS" : "M2",
-          }
-        : typeof selectedBed?.area_sqm === "number"
-          ? {
-              area_input_value: selectedBed.area_sqm,
-              area_input_unit: "M2" as const,
-            }
-          : {};
+    let areaPayload: Partial<PlantingPlan> = {};
+    if (hasAreaInput || hasPlantsInput) {
+      areaPayload = {
+        area_input_value: usePlantsInput
+          ? parsedPlants ?? undefined
+          : parsedArea ?? undefined,
+        area_input_unit: usePlantsInput ? "PLANTS" : "M2",
+      };
+    } else if (selectedBed) {
+      const remainingArea = await fetchRemainingAreaForRow({
+        id: mobileEditId ?? -Date.now(),
+        culture: Number(mobileCreateForm.culture),
+        bed: Number(mobileCreateForm.bed),
+        planting_date: mobileCreateForm.planting_date,
+        cultivation_type: mobileCreateForm.cultivation_type,
+      } as PlantingPlanRow);
+      const availableArea = remainingArea?.remaining_area_sqm ?? null;
+      if (availableArea !== null && availableArea > 0) {
+        areaPayload = {
+          area_input_value: availableArea,
+          area_input_unit: "M2" as const,
+        };
+        setAreaNotice({
+          message: t("plantingPlans:feedback.areaAutoFilled", {
+            area: formatAreaM2(availableArea, numberLocale),
+          }),
+          severity: "info",
+        });
+      } else if (availableArea !== null) {
+        setAreaNotice({
+          message: t("plantingPlans:validation.noAvailableArea"),
+          severity: "warning",
+        });
+      }
+    }
 
     try {
       await plantingPlanAPI.create({
@@ -1495,20 +1612,41 @@ function PlantingPlans(): React.ReactElement {
     const usePlantsInput =
       mobileLastEditedField === "plants_count" ||
       (!mobileLastEditedField && !hasAreaInput && hasPlantsInput);
-    const areaPayload =
-      hasAreaInput || hasPlantsInput
-        ? {
-            area_input_value: usePlantsInput
-              ? parsedPlants
-              : parsedArea,
-            area_input_unit: usePlantsInput ? "PLANTS" : "M2",
-          }
-        : typeof selectedBed?.area_sqm === "number"
-          ? {
-              area_input_value: selectedBed.area_sqm,
-              area_input_unit: "M2" as const,
-            }
-          : {};
+    let areaPayload: Partial<PlantingPlan> = {};
+    if (hasAreaInput || hasPlantsInput) {
+      areaPayload = {
+        area_input_value: usePlantsInput
+          ? parsedPlants ?? undefined
+          : parsedArea ?? undefined,
+        area_input_unit: usePlantsInput ? "PLANTS" : "M2",
+      };
+    } else if (selectedBed) {
+      const remainingArea = await fetchRemainingAreaForRow({
+        id: mobileEditId,
+        culture: Number(mobileCreateForm.culture),
+        bed: Number(mobileCreateForm.bed),
+        planting_date: mobileCreateForm.planting_date,
+        cultivation_type: mobileCreateForm.cultivation_type,
+      } as PlantingPlanRow);
+      const availableArea = remainingArea?.remaining_area_sqm ?? null;
+      if (availableArea !== null && availableArea > 0) {
+        areaPayload = {
+          area_input_value: availableArea,
+          area_input_unit: "M2" as const,
+        };
+        setAreaNotice({
+          message: t("plantingPlans:feedback.areaAutoFilled", {
+            area: formatAreaM2(availableArea, numberLocale),
+          }),
+          severity: "info",
+        });
+      } else if (availableArea !== null) {
+        setAreaNotice({
+          message: t("plantingPlans:validation.noAvailableArea"),
+          severity: "warning",
+        });
+      }
+    }
 
     try {
       await plantingPlanAPI.update(mobileEditId, {
@@ -1585,11 +1723,20 @@ function PlantingPlans(): React.ReactElement {
   return (
     <PageContainer variant="workspacePage">
 
-      {areaWarning ? (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          {areaWarning}
+      <Snackbar
+        open={areaNotice !== null}
+        autoHideDuration={5000}
+        onClose={() => setAreaNotice(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          severity={areaNotice?.severity ?? "info"}
+          variant="filled"
+          onClose={() => setAreaNotice(null)}
+        >
+          {areaNotice?.message}
         </Alert>
-      ) : null}
+      </Snackbar>
 
       <Box sx={{ width: "100%" }}>
         {isInitialLoading ? (
@@ -1767,7 +1914,7 @@ function PlantingPlans(): React.ReactElement {
               note_attachment_count: plan.note_attachment_count ?? 0,
             };
           }}
-          mapToApiData={(row) => {
+          mapToApiData={async (row) => {
             const plantingDate = toIsoDateString(row.planting_date) ?? "";
 
             // Ensure culture and bed are numeric IDs, not label strings
@@ -1821,12 +1968,25 @@ function PlantingPlans(): React.ReactElement {
               apiData.area_input_unit = "PLANTS";
             }
 
-            if (
-              apiData.area_input_value === undefined &&
-              typeof selectedBed?.area_sqm === "number"
-            ) {
-              apiData.area_input_value = selectedBed.area_sqm;
-              apiData.area_input_unit = "M2";
+            if (apiData.area_input_value === undefined && selectedBed) {
+              const remainingArea = await fetchRemainingAreaForRow(row);
+              const availableArea = remainingArea?.remaining_area_sqm ?? null;
+
+              if (availableArea !== null && availableArea > 0) {
+                apiData.area_input_value = availableArea;
+                apiData.area_input_unit = "M2";
+                setAreaNotice({
+                  message: t("plantingPlans:feedback.areaAutoFilled", {
+                    area: formatAreaM2(availableArea, numberLocale),
+                  }),
+                  severity: "info",
+                });
+              } else if (availableArea !== null) {
+                setAreaNotice({
+                  message: t("plantingPlans:validation.noAvailableArea"),
+                  severity: "warning",
+                });
+              }
             }
 
             // Clear last edited field after use
@@ -1863,7 +2023,7 @@ function PlantingPlans(): React.ReactElement {
               typeof row.area_m2 === "number" &&
               row.area_m2 > selectedBed.area_sqm
             ) {
-              return "Fläche darf die Beetfläche nicht überschreiten.";
+              return t("plantingPlans:validation.areaExceedsRemaining");
             }
 
             return null;
@@ -1990,6 +2150,7 @@ function PlantingPlans(): React.ReactElement {
                       : previous.plants_count,
                 }));
                 setMobileLastEditedField("area_m2");
+                setAreaNotice(null);
               }}
               slotProps={{ htmlInput: { inputMode: "decimal" } }}
             />
@@ -2013,6 +2174,7 @@ function PlantingPlans(): React.ReactElement {
                       : previous.area_m2,
                 }));
                 setMobileLastEditedField("plants_count");
+                setAreaNotice(null);
               }}
               slotProps={{ htmlInput: { inputMode: "numeric" } }}
             />

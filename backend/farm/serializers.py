@@ -17,6 +17,7 @@ from .seed_units import (
     SEED_RATE_UNIT_SEEDS_PER_PLANT,
     SEED_RATE_UNITS,
 )
+from .services_area import calculate_remaining_bed_area
 
 from .models import (
     Bed,
@@ -1307,6 +1308,32 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
 
         if not instance.culture_id or not instance.bed_id:
             return attrs
+
+        active_period = instance._get_active_period()
+        if instance.area_usage_sqm is not None and active_period is not None:
+            active_start, active_end = active_period
+            remaining_payload = calculate_remaining_bed_area(
+                bed_id=instance.bed_id,
+                start_date=active_start,
+                end_date=active_end,
+                exclude_plan_id=instance.pk,
+            )
+            requested_area = instance.area_usage_sqm
+            if not isinstance(requested_area, Decimal):
+                requested_area = Decimal(str(requested_area))
+            available_area = remaining_payload['remaining_area_sqm']
+
+            if requested_area > available_area:
+                raise serializers.ValidationError({
+                    'area_usage_sqm': {
+                        'errorCode': 'bed_area_exceeded',
+                        'message': 'Requested area exceeds the available bed area for the selected period.',
+                        'bedArea': remaining_payload['bed_area_sqm'],
+                        'alreadyUsedArea': remaining_payload['overlapping_used_area_sqm'],
+                        'requestedArea': requested_area,
+                        'availableArea': available_area,
+                    }
+                })
 
         try:
             instance.clean()

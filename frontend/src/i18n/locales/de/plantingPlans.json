@@ -18,6 +18,12 @@
   "labels": {
     "coupled": "gekoppelt"
   },
+  "actions": {
+    "useAvailableArea": "Maximal verfügbare Fläche übernehmen"
+  },
+  "feedback": {
+    "areaAutoFilled": "Verfügbare Restfläche automatisch verwendet: {{area}}"
+  },
   "placeholders": {
     "selectCultivationType": "Anbauart wählen"
   },
@@ -36,7 +42,10 @@
     "cultureRequired": "Kultur ist ein Pflichtfeld",
     "bedRequired": "Beet ist ein Pflichtfeld",
     "cultivationTypeRequired": "Anbauart ist ein Pflichtfeld",
-    "requiredFields": "Folgende Pflichtfelder müssen ausgefüllt werden: {{fields}}"
+    "requiredFields": "Folgende Pflichtfelder müssen ausgefüllt werden: {{fields}}",
+    "areaExceedsRemaining": "Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.",
+    "availableArea": "Verfügbare Restfläche",
+    "noAvailableArea": "Für dieses Beet ist im gewählten Zeitraum keine freie Fläche mehr verfügbar."
   },
   "confirmDelete": "Möchten Sie diesen Anbauplan wirklich löschen?",
   "addButton": "Anbauplan hinzufügen",

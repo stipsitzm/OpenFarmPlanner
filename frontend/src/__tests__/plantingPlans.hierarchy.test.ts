@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { Bed, Field } from "../api/types";
 import {
   buildAreaColumnHeaderLabel,
+  buildBedDisplayLabel,
   collectHierarchyAvailability,
   filterBedOptionsBySelection,
   filterFieldOptionsByLocation,
   normalizeSelectionAfterBedChange,
   normalizeSelectionAfterFieldChange,
   normalizeSelectionAfterLocationChange,
+  resolveBedCellValue,
 } from "../pages/PlantingPlans";
 
 const fields: Field[] = [
@@ -28,6 +30,28 @@ describe("PlantingPlans hierarchy normalization", () => {
     expect(
       buildAreaColumnHeaderLabel(false, "Standort", "Parzelle", "Beet"),
     ).toBe("Parzelle | Beet");
+  });
+
+  it("builds combined bed labels with optional area", () => {
+    expect(
+      buildBedDisplayLabel(
+        "Sonnengarten",
+        "Parzelle Nord",
+        "Beet 1",
+        7,
+        true,
+        "de-DE",
+      ),
+    ).toBe("Sonnengarten | Parzelle Nord | Beet 1 (7,00 m²)");
+  });
+
+  it("keeps the numeric bed ID when the grid cell value is a composed label", () => {
+    const row = { location_id: 1, field_id: 10, bed: 100 };
+
+    expect(
+      resolveBedCellValue("Sonnengarten | Parzelle Nord | Beet 1", row),
+    ).toBe(100);
+    expect(resolveBedCellValue(200, row)).toBe(200);
   });
 
   it("excludes locations and fields without beds from availability", () => {

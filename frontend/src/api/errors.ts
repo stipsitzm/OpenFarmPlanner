@@ -13,6 +13,7 @@ import axios, { AxiosError } from 'axios';
 type TFunction = (key: string, options?: Record<string, unknown>) => string;
 
 const fieldLabelFallbacks: Record<string, string> = {
+  area_input_value: 'Fläche',
   area_usage_sqm: 'Fläche (m²)',
   area_sqm: 'Fläche (m²)',
   planting_date: 'Pflanzdatum',
@@ -43,7 +44,44 @@ const backendMessageMap: Record<string, string> = {
   'uploaded file exceeds the 10mb size limit.': 'errors.fileTooLarge',
   'uploaded file is not a valid image.': 'errors.invalidImage',
   'please enter a valid numeric value, e.g. 3.9.': 'validation.invalidNumberExample',
+  'area input value must be greater than 0.': 'validation.areaInputPositive',
 };
+
+function formatAreaValue(value: unknown): string {
+  const numericValue = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return String(value ?? '');
+  }
+  return `${numericValue.toLocaleString('de-DE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} m²`;
+}
+
+function localizeStructuredBackendError(
+  value: Record<string, unknown>,
+  t: TFunction,
+): string | null {
+  if (value.errorCode === 'bed_area_exceeded') {
+    const message = translatedOrFallback(
+      t,
+      'validation.bedAreaExceeded',
+      'Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.',
+    );
+    const availableAreaLabel = translatedOrFallback(
+      t,
+      'validation.availableArea',
+      'Verfügbare Restfläche',
+    );
+    return `${message}\n${availableAreaLabel}: ${formatAreaValue(value.availableArea)}`;
+  }
+
+  if (typeof value.message === 'string') {
+    return localizeBackendMessage(value.message, t);
+  }
+
+  return null;
+}
 
 function localizeBackendMessage(message: string, t: TFunction): string {
   const normalized = message.trim().toLowerCase();
@@ -152,13 +190,33 @@ export function extractApiErrorMessage(
             fieldName = fieldLabelFallbacks[field] ?? field;
           }
           if (Array.isArray(value)) {
-            value.forEach((msg: string) => {
-              const errorMsg = `${fieldName}: ${localizeBackendMessage(msg, t)}`;
-              errors.push(errorMsg);
+            value.forEach((msg: unknown) => {
+              if (typeof msg === 'string') {
+                const errorMsg = `${fieldName}: ${localizeBackendMessage(msg, t)}`;
+                errors.push(errorMsg);
+                return;
+              }
+              if (msg && typeof msg === 'object') {
+                const structuredMessage = localizeStructuredBackendError(
+                  msg as Record<string, unknown>,
+                  t,
+                );
+                if (structuredMessage) {
+                  errors.push(`${fieldName}: ${structuredMessage}`);
+                }
+              }
             });
           } else if (typeof value === 'string') {
             const errorMsg = `${fieldName}: ${localizeBackendMessage(value, t)}`;
             errors.push(errorMsg);
+          } else if (value && typeof value === 'object') {
+            const structuredMessage = localizeStructuredBackendError(
+              value as Record<string, unknown>,
+              t,
+            );
+            if (structuredMessage) {
+              errors.push(`${fieldName}: ${structuredMessage}`);
+            }
           }
         });
 
