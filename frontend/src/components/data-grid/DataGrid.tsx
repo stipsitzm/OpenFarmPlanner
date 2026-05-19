@@ -386,6 +386,7 @@ export function EditableDataGrid<T extends EditableRow>({
       setDraftValues: (rowId, values) => {
         const rowKey = String(rowId);
         const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
+        const targetRow = rowsById.get(rowKey) as T | undefined;
 
         if (isEditing) {
           const editUpdates = Object.entries(values).flatMap(([fieldKey, fieldValue]) => {
@@ -403,20 +404,19 @@ export function EditableDataGrid<T extends EditableRow>({
           void Promise.allSettled(editUpdates);
         }
 
-        setRows((previousRows) => {
-          const nextRows = previousRows.map((row) =>
+        setRows((previousRows) =>
+          previousRows.map((row) =>
             String(row.id) === rowKey ? ({ ...row, ...values } as T) : row,
-          );
-          const targetRow = nextRows.find((row) => String(row.id) === rowKey) as T | undefined;
-          if (targetRow) {
-            const fieldErrors = getRowValidationErrors?.(targetRow) ?? {};
-            setActiveValidationErrors((prev) => ({
-              ...prev,
-              [rowKey]: fieldErrors,
-            }));
-          }
-          return nextRows;
-        });
+          ),
+        );
+        if (targetRow) {
+          const nextRow = { ...targetRow, ...values } as T;
+          const fieldErrors = getRowValidationErrors?.(nextRow) ?? {};
+          setActiveValidationErrors((prev) => ({
+            ...prev,
+            [rowKey]: fieldErrors,
+          }));
+        }
         setDirtyRowIds((previous) => {
           const next = new Set(previous);
           next.add(rowKey);
@@ -436,7 +436,7 @@ export function EditableDataGrid<T extends EditableRow>({
     return () => {
       commandApiRef.current = null;
     };
-  }, [commandApiRef, fetchData, getRowValidationErrors, gridApiRef, rowModesModel, selectedRowIds]);
+  }, [commandApiRef, fetchData, getRowValidationErrors, gridApiRef, rowModesModel, rowsById, selectedRowIds]);
 
 
   /**
