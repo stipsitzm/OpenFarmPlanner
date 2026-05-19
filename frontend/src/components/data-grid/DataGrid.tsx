@@ -417,7 +417,7 @@ export function EditableDataGrid<T extends EditableRow>({
     return () => {
       commandApiRef.current = null;
     };
-  }, [commandApiRef, fetchData, rowModesModel, selectedRowIds]);
+  }, [commandApiRef, fetchData, gridApiRef, rowModesModel, selectedRowIds]);
 
 
   /**
