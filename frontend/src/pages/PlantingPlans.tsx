@@ -35,6 +35,7 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import EditIcon from "@mui/icons-material/Edit";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTranslation } from "../i18n";
@@ -464,6 +465,12 @@ function PlantingPlans(): React.ReactElement {
   const [areaNotice, setAreaNotice] = useState<{
     message: string;
     severity: "info" | "warning";
+  } | null>(null);
+  const [areaValidationNotice, setAreaValidationNotice] = useState<{
+    rowId: string;
+    bedArea: number;
+    availableArea: number;
+    requestedArea: number;
   } | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
@@ -1193,12 +1200,15 @@ function PlantingPlans(): React.ReactElement {
               fallbackValue={derivedArea}
               locale={numberLocale}
               formatArea={(value) => formatAreaM2(value, numberLocale)}
-              areaExceededMessage={t("plantingPlans:validation.areaExceedsRemaining")}
               availableAreaLabel={t("plantingPlans:validation.availableArea")}
-              applyAvailableAreaLabel={t("plantingPlans:actions.useAvailableArea")}
-              bedAreaDetailsLabel={t("plantingPlans:validation.bedArea")}
-              alreadyAllocatedDetailsLabel={t("plantingPlans:validation.alreadyAllocated")}
-              requestedAreaDetailsLabel={t("plantingPlans:validation.requestedArea")}
+              onAreaExceeded={(details) => {
+                setAreaValidationNotice(details);
+              }}
+              onAreaExceededResolved={(rowId) => {
+                setAreaValidationNotice((previous) =>
+                  previous?.rowId === rowId ? null : previous,
+                );
+              }}
               onLastEditedFieldChange={() => {
                 lastEditedFieldRef.current = "area_m2";
                 setAreaNotice(null);
@@ -1742,6 +1752,50 @@ function PlantingPlans(): React.ReactElement {
       </Snackbar>
 
       <Box sx={{ width: "100%" }}>
+        {areaValidationNotice ? (
+          <Alert
+            severity="error"
+            variant="outlined"
+            icon={<WarningAmberRoundedIcon fontSize="small" />}
+            sx={{
+              mb: 2,
+              bgcolor: "error.lighter",
+              borderColor: "error.light",
+              "& .MuiAlert-message": { width: "100%" },
+            }}
+            action={
+              <Button
+                size="small"
+                variant="outlined"
+                color="error"
+                onClick={() => {
+                  const commandApi = gridCommandApiRef.current;
+                  if (!commandApi) {
+                    return;
+                  }
+                  commandApi.setDraftValues(areaValidationNotice.rowId, {
+                    area_m2: areaValidationNotice.availableArea,
+                  });
+                  setAreaValidationNotice(null);
+                }}
+              >
+                {t("plantingPlans:actions.useAvailableArea")}
+              </Button>
+            }
+          >
+            <Stack spacing={0.5}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {t("plantingPlans:validation.areaExceedsRemaining")}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t("plantingPlans:validation.bedArea")}: {formatAreaM2(areaValidationNotice.bedArea, numberLocale)} · {t("plantingPlans:validation.alreadyAllocated")}: {formatAreaM2(Math.max(areaValidationNotice.bedArea - areaValidationNotice.availableArea, 0), numberLocale)} · {t("plantingPlans:validation.requestedArea")}: {formatAreaM2(areaValidationNotice.requestedArea, numberLocale)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t("plantingPlans:validation.availableArea")}: {formatAreaM2(areaValidationNotice.availableArea, numberLocale)}
+              </Typography>
+            </Stack>
+          </Alert>
+        ) : null}
         {isInitialLoading ? (
           <Box
             sx={{

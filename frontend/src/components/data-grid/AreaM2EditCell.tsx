@@ -5,8 +5,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
-import { Box, Button, Stack, TextField, Typography } from '@mui/material';
+import { TextField } from '@mui/material';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
 import { formatLocalizedNumber, parseLocalizedNumber } from '../../utils/numberLocalization';
@@ -17,12 +16,14 @@ export interface AreaM2EditCellProps extends GridRenderEditCellParams {
   getAvailableAreaOnBlur?: (value: number | null) => Promise<number | null>;
   fallbackValue?: number | null;
   formatArea: (value: number) => string;
-  areaExceededMessage: string;
   availableAreaLabel: string;
-  applyAvailableAreaLabel: string;
-  bedAreaDetailsLabel: string;
-  alreadyAllocatedDetailsLabel: string;
-  requestedAreaDetailsLabel: string;
+  onAreaExceeded?: (details: {
+    rowId: string;
+    bedArea: number;
+    availableArea: number;
+    requestedArea: number;
+  }) => void;
+  onAreaExceededResolved?: (rowId: string) => void;
   locale: string;
 }
 
@@ -37,12 +38,9 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     getAvailableAreaOnBlur,
     fallbackValue,
     formatArea,
-    areaExceededMessage,
     availableAreaLabel,
-    applyAvailableAreaLabel,
-    bedAreaDetailsLabel,
-    alreadyAllocatedDetailsLabel,
-    requestedAreaDetailsLabel,
+    onAreaExceeded,
+    onAreaExceededResolved,
     locale,
   } = props;
   const apiRef = useGridApiContext();
@@ -122,6 +120,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     setInputValue(val);
     setAvailableArea(null);
     setShowAvailableAreaError(false);
+    onAreaExceededResolved?.(String(id));
     const parsedValue = parseLocalizedNumber(val, locale);
     await applyValue(parsedValue);
   };
@@ -142,99 +141,41 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     ) {
       setAvailableArea(nextAvailableArea);
       setShowAvailableAreaError(true);
+      onAreaExceeded?.({
+        rowId: String(id),
+        bedArea: bedAreaSqm ?? nextAvailableArea,
+        availableArea: nextAvailableArea,
+        requestedArea: parsedValue,
+      });
       return;
     }
     setAvailableArea(null);
     setShowAvailableAreaError(false);
+    onAreaExceededResolved?.(String(id));
   };
-
-  const handleApplyAvailableArea = async (): Promise<void> => {
-    if (availableArea === null) {
-      return;
-    }
-    setInputValue(
-      formatLocalizedNumber(availableArea, locale, {
-        useGrouping: false,
-        maximumFractionDigits: 2,
-      })
-    );
-    setShowAvailableAreaError(false);
-    await applyValue(availableArea);
-  };
-
-  const requestedArea = parseLocalizedNumber(inputValue, locale);
-  const alreadyAllocatedArea =
-    availableArea !== null && bedAreaSqm !== undefined && bedAreaSqm !== null
-      ? Math.max(bedAreaSqm - availableArea, 0)
-      : null;
 
   return (
-    <Stack spacing={1} sx={{ width: '100%', py: 0.5 }}>
-      <TextField
-        type="text"
-        inputMode="decimal"
-        inputRef={inputRef}
-        value={inputValue}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        size="small"
-        error={areaExceeded || showAvailableAreaError}
-        helperText={undefined}
-        slotProps={{
-          htmlInput: {
-            min: 0,
-            step: 0.01,
-          },
-        }}
-        sx={{ minWidth: 96, flex: 1 }}
-      />
-      {showAvailableAreaError && availableArea !== null ? (
-        <Box
-          sx={{
-            borderRadius: 1,
-            px: 1.25,
-            py: 1,
-            backgroundColor: 'error.lighter',
-            border: (theme) => `1px solid ${theme.palette.error.light}`,
-          }}
-        >
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            spacing={1.5}
-            alignItems={{ xs: 'flex-start', md: 'center' }}
-            justifyContent="space-between"
-          >
-            <Stack spacing={0.5} sx={{ minWidth: 0 }}>
-              <Stack direction="row" spacing={0.75} alignItems="flex-start">
-                <WarningAmberRoundedIcon color="error" fontSize="small" sx={{ mt: 0.2 }} />
-                <Typography variant="caption" color="error.main" sx={{ whiteSpace: 'normal' }}>
-                  {areaExceededMessage}
-                </Typography>
-              </Stack>
-              <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'normal' }}>
-                {bedAreaDetailsLabel}: {formatArea(bedAreaSqm ?? 0)} · {alreadyAllocatedDetailsLabel}:{' '}
-                {formatArea(alreadyAllocatedArea ?? 0)} · {requestedAreaDetailsLabel}:{' '}
-                {requestedArea !== null ? formatArea(requestedArea) : '—'}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'normal' }}>
-                {availableAreaLabel}: {formatArea(availableArea)}
-              </Typography>
-            </Stack>
-            <Button
-              size="small"
-              variant="outlined"
-              color="error"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                void handleApplyAvailableArea();
-              }}
-              sx={{ alignSelf: { xs: 'stretch', md: 'flex-start' } }}
-            >
-              {applyAvailableAreaLabel}
-            </Button>
-          </Stack>
-        </Box>
-      ) : null}
-    </Stack>
+    <TextField
+      type="text"
+      inputMode="decimal"
+      inputRef={inputRef}
+      value={inputValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      size="small"
+      error={areaExceeded || showAvailableAreaError}
+      helperText={
+        showAvailableAreaError && availableArea !== null
+          ? `${availableAreaLabel}: ${formatArea(availableArea)}`
+          : undefined
+      }
+      slotProps={{
+        htmlInput: {
+          min: 0,
+          step: 0.01,
+        },
+      }}
+      sx={{ minWidth: 96, flex: 1 }}
+    />
   );
 }
