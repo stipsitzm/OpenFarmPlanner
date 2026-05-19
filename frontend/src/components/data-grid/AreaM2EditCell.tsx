@@ -13,17 +13,7 @@ import { formatLocalizedNumber, parseLocalizedNumber } from '../../utils/numberL
 export interface AreaM2EditCellProps extends GridRenderEditCellParams {
   bedAreaSqm?: number;
   onLastEditedFieldChange: (field: 'area_m2') => void;
-  getAvailableAreaOnBlur?: (value: number | null) => Promise<number | null>;
   fallbackValue?: number | null;
-  formatArea: (value: number) => string;
-  availableAreaLabel: string;
-  onAreaExceeded?: (details: {
-    rowId: string;
-    bedArea: number;
-    availableArea: number;
-    requestedArea: number;
-  }) => void;
-  onAreaExceededResolved?: (rowId: string) => void;
   locale: string;
 }
 
@@ -35,12 +25,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     hasFocus,
     bedAreaSqm,
     onLastEditedFieldChange,
-    getAvailableAreaOnBlur,
     fallbackValue,
-    formatArea,
-    availableAreaLabel,
-    onAreaExceeded,
-    onAreaExceededResolved,
     locale,
   } = props;
   const apiRef = useGridApiContext();
@@ -64,9 +49,6 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
           })
         : ''
   );
-  const [availableArea, setAvailableArea] = useState<number | null>(null);
-  const [showAvailableAreaError, setShowAvailableAreaError] = useState(false);
-
   const maxDisabled = bedAreaSqm === undefined || bedAreaSqm === null;
 
   const areaExceeded = useMemo(() => {
@@ -118,40 +100,8 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const val = e.target.value;
     setInputValue(val);
-    setAvailableArea(null);
-    setShowAvailableAreaError(false);
-    onAreaExceededResolved?.(String(id));
     const parsedValue = parseLocalizedNumber(val, locale);
     await applyValue(parsedValue);
-  };
-
-  const handleBlur = async (): Promise<void> => {
-    if (!getAvailableAreaOnBlur) {
-      return;
-    }
-    const parsedValue = parseLocalizedNumber(inputValue, locale);
-    if (inputValue.trim() !== '' && parsedValue === null) {
-      return;
-    }
-    const nextAvailableArea = await getAvailableAreaOnBlur(parsedValue);
-    if (
-      parsedValue !== null &&
-      nextAvailableArea !== null &&
-      parsedValue > nextAvailableArea
-    ) {
-      setAvailableArea(nextAvailableArea);
-      setShowAvailableAreaError(true);
-      onAreaExceeded?.({
-        rowId: String(id),
-        bedArea: bedAreaSqm ?? nextAvailableArea,
-        availableArea: nextAvailableArea,
-        requestedArea: parsedValue,
-      });
-      return;
-    }
-    setAvailableArea(null);
-    setShowAvailableAreaError(false);
-    onAreaExceededResolved?.(String(id));
   };
 
   return (
@@ -161,14 +111,8 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
       inputRef={inputRef}
       value={inputValue}
       onChange={handleChange}
-      onBlur={handleBlur}
       size="small"
-      error={areaExceeded || showAvailableAreaError}
-      helperText={
-        showAvailableAreaError && availableArea !== null
-          ? `${availableAreaLabel}: ${formatArea(availableArea)}`
-          : undefined
-      }
+      error={areaExceeded}
       slotProps={{
         htmlInput: {
           min: 0,
