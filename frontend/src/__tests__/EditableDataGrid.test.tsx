@@ -101,7 +101,7 @@ vi.mock('@mui/x-data-grid', async () => {
     );
   };
 
-  return { DataGrid, GridRowModes, GridRowEditStopReasons };
+  return { DataGrid, GridRowModes, GridRowEditStopReasons, useGridApiRef };
 });
 
 describe('EditableDataGrid', () => {
@@ -296,3 +296,8 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(updateSpy).toHaveBeenCalled());
   });
 });
+  const useGridApiRef = () => ({
+    current: {
+      setEditCellValue: vi.fn().mockResolvedValue(undefined),
+    },
+  });
