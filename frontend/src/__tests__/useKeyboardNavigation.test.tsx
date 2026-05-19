@@ -203,7 +203,7 @@ describe('useKeyboardNavigation', () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it('navigates from Übersicht to Standorte on Ctrl+Shift+ArrowDown', () => {
+  it('navigates from Übersicht to Anbauflächen on Ctrl+Shift+ArrowDown', () => {
     window.history.pushState({}, '', '/app/dashboard');
     render(<TestComponent />);
 
@@ -216,7 +216,23 @@ describe('useKeyboardNavigation', () => {
       })
     );
 
-    expect(navigateMock).toHaveBeenCalledWith('/app/locations');
+    expect(navigateMock).toHaveBeenCalledWith('/app/fields-beds');
+  });
+
+  it('skips Standorte in shortcut rotation from the direct locations page', () => {
+    window.history.pushState({}, '', '/app/locations');
+    render(<TestComponent />);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+      })
+    );
+
+    expect(navigateMock).toHaveBeenCalledWith('/app/fields-beds');
   });
 
   it('wraps to Lieferanten on Ctrl+Shift+ArrowUp from Übersicht', () => {

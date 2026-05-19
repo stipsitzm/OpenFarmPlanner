@@ -12,7 +12,6 @@ export const VIEWPORTS = [
 
 export const MAIN_ROUTES = [
   { key: 'dashboard', path: '/app/dashboard', ready: /Übersicht|Dashboard/i },
-  { key: 'standorte', path: '/app/locations', ready: /Standorte/i },
   { key: 'anbauflaechen', path: '/app/fields-beds', ready: /Anbauflächen|Parzellen|Beete/i },
   { key: 'kulturen', path: '/app/cultures', ready: /Kulturen/i },
   { key: 'anbauplaene', path: '/app/anbauplaene', ready: /Anbaupläne|Anbauplan/i },

@@ -84,7 +84,7 @@ import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
-import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, getActiveMainRouteFromPathname, normalizeMainRoutePath } from './navigation/mainNavigation';
+import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, getKeyboardNavigationRouteFromPathname, normalizeMainRoutePath } from './navigation/mainNavigation';
 import {
   getMobileNavigationIconSx,
   getMobileNavigationItemSx,
@@ -631,7 +631,7 @@ function RootLayout(): React.ReactElement {
 
   const getCurrentRouteFromLocation = useCallback((): string => {
     const pathname = currentPathnameRef.current;
-    return getActiveMainRouteFromPathname(pathname) ?? normalizeMainRoutePath(pathname);
+    return getKeyboardNavigationRouteFromPathname(pathname) ?? normalizeMainRoutePath(pathname);
   }, []);
 
   const navigateRelativePage = useCallback((direction: 1 | -1): void => {
@@ -746,8 +746,11 @@ function RootLayout(): React.ReactElement {
   const sidebarWidth = sidebarCollapsed ? 64 : 240;
   const currentPageTitle = useMemo(() => {
     const activeItem = navItems.find((item) => location.pathname === item.to || item.activeAliases.includes(location.pathname));
+    if (!activeItem && location.pathname.startsWith('/app/locations')) {
+      return t('locations');
+    }
     return activeItem?.label ?? '';
-  }, [location.pathname, navItems]);
+  }, [location.pathname, navItems, t]);
   const topbarHelpConfig = useMemo(() => {
     if (location.pathname.startsWith('/app/dashboard')) return { pageKey: 'dashboard' as const, label: 'Hilfe zu Übersicht' };
     if (location.pathname.startsWith('/app/locations')) return { pageKey: 'locations' as const, label: 'Hilfe zu Standorte' };

@@ -86,7 +86,14 @@ describe('SeedDemandPage', () => {
     });
     expect(screen.queryByText('seedDemand.columns.culture')).not.toBeInTheDocument();
     expect(screen.queryByText('Keine Einträge vorhanden')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'common:setupActions.createLocation' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'common:setupActions.createField' })).toHaveAttribute(
+      'href',
+      '/app/fields-beds?create=true',
+    );
+    expect(screen.getByRole('link', { name: 'common:setupActions.createLocation' })).toHaveAttribute(
+      'href',
+      '/app/locations?create=true',
+    );
     expect(screen.queryByRole('link', { name: 'common:setupActions.createBed' })).not.toBeInTheDocument();
   });
 

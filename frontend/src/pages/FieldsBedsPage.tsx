@@ -198,10 +198,7 @@ export default function FieldsBedsPage(): React.ReactElement {
       return;
     }
 
-    if (!openAddFieldDialog()) {
-      navigate('/app/locations?create=true', { replace: true });
-      return;
-    }
+    openAddFieldDialog();
 
     searchParams.delete('create');
     const nextSearch = searchParams.toString();
@@ -353,7 +350,7 @@ export default function FieldsBedsPage(): React.ReactElement {
             }] : []}
             actions={[
               { label: t('hierarchy:actions.addField'), onClick: handleGlobalAddField },
-              { label: t('hierarchy:actions.addAdditionalLocation'), onClick: () => setAddLocationDialogOpen(true), variant: 'text' },
+              { label: t('hierarchy:actions.addAdditionalLocation'), onClick: () => setAddLocationDialogOpen(true) },
             ]}
           />
         ) : null}
