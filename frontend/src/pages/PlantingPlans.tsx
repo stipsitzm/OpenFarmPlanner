@@ -1787,7 +1787,19 @@ function PlantingPlans(): React.ReactElement {
                 {t("plantingPlans:validation.areaExceedsRemaining")}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {t("plantingPlans:validation.bedArea")}: {formatAreaM2(areaValidationNotice.bedArea, numberLocale)} · {t("plantingPlans:validation.alreadyAllocated")}: {formatAreaM2(Math.max(areaValidationNotice.bedArea - areaValidationNotice.availableArea, 0), numberLocale)} · {t("plantingPlans:validation.requestedArea")}: {formatAreaM2(areaValidationNotice.requestedArea, numberLocale)}
+                {t("plantingPlans:validation.bedArea")}:{" "}
+                {formatAreaM2(areaValidationNotice.bedArea, numberLocale)} ·{" "}
+                {t("plantingPlans:validation.alreadyAllocated")}:{" "}
+                {formatAreaM2(
+                  Math.max(
+                    areaValidationNotice.bedArea -
+                      areaValidationNotice.availableArea,
+                    0,
+                  ),
+                  numberLocale,
+                )}{" "}
+                · {t("plantingPlans:validation.requestedArea")}:{" "}
+                {formatAreaM2(areaValidationNotice.requestedArea, numberLocale)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {t("plantingPlans:validation.availableArea")}: {formatAreaM2(areaValidationNotice.availableArea, numberLocale)}
