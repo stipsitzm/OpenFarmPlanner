@@ -1196,6 +1196,9 @@ function PlantingPlans(): React.ReactElement {
               areaExceededMessage={t("plantingPlans:validation.areaExceedsRemaining")}
               availableAreaLabel={t("plantingPlans:validation.availableArea")}
               applyAvailableAreaLabel={t("plantingPlans:actions.useAvailableArea")}
+              bedAreaDetailsLabel={t("plantingPlans:validation.bedArea")}
+              alreadyAllocatedDetailsLabel={t("plantingPlans:validation.alreadyAllocated")}
+              requestedAreaDetailsLabel={t("plantingPlans:validation.requestedArea")}
               onLastEditedFieldChange={() => {
                 lastEditedFieldRef.current = "area_m2";
                 setAreaNotice(null);
