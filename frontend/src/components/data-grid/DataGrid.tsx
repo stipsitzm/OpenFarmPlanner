@@ -392,11 +392,13 @@ export function EditableDataGrid<T extends EditableRow>({
             if (fieldKey === 'id' || fieldKey === 'isNew') {
               return;
             }
-            void gridApiRef.current.setEditCellValue({
-              id: rowId,
-              field: fieldKey,
-              value: fieldValue,
-            });
+            void gridApiRef.current
+              .setEditCellValue({
+                id: rowId,
+                field: fieldKey,
+                value: fieldValue,
+              })
+              .catch(() => undefined);
           });
         }
 
