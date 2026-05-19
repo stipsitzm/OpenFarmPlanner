@@ -18,7 +18,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo, type MutableRefObject } from 'react';
-import { DataGrid, GridRowModes } from '@mui/x-data-grid';
+import { DataGrid, GridRowModes, useGridApiRef } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridCellParams, GridRowParams } from '@mui/x-data-grid';
@@ -133,6 +133,7 @@ export function EditableDataGrid<T extends EditableRow>({
   onLoadStateChange,
   surfaceSizing,
 }: EditableDataGridProps<T>): React.ReactElement {
+  const gridApiRef = useGridApiRef();
   const resolvedSurfaceSizing = surfaceSizing ?? 'contentFit';
   const isContentSizedSurface = resolvedSurfaceSizing === 'contentFit' || resolvedSurfaceSizing === 'compact';
   const shouldUseCompactContainer = resolvedSurfaceSizing === 'compact';
@@ -384,6 +385,21 @@ export function EditableDataGrid<T extends EditableRow>({
       getSelectedRowId: () => selectedRowIds[0] ?? null,
       setDraftValues: (rowId, values) => {
         const rowKey = String(rowId);
+        const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
+
+        if (isEditing) {
+          Object.entries(values).forEach(([fieldKey, fieldValue]) => {
+            if (fieldKey === 'id' || fieldKey === 'isNew') {
+              return;
+            }
+            void gridApiRef.current.setEditCellValue({
+              id: rowId,
+              field: fieldKey,
+              value: fieldValue,
+            });
+          });
+        }
+
         setRows((previousRows) =>
           previousRows.map((row) =>
             String(row.id) === rowKey ? ({ ...row, ...values } as T) : row,
@@ -401,7 +417,7 @@ export function EditableDataGrid<T extends EditableRow>({
     return () => {
       commandApiRef.current = null;
     };
-  }, [commandApiRef, fetchData, selectedRowIds]);
+  }, [commandApiRef, fetchData, rowModesModel, selectedRowIds]);
 
 
   /**
@@ -832,6 +848,7 @@ export function EditableDataGrid<T extends EditableRow>({
             }
           }}
           localeText={germanDataGridLocaleText}
+          apiRef={gridApiRef}
           />
         </Box>
       </Box>
