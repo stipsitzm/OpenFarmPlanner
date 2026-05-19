@@ -56,6 +56,7 @@ export interface EditableDataGridCommandApi {
   editSelectedRow: () => void;
   deleteSelectedRow: () => void;
   getSelectedRowId: () => GridRowId | null;
+  setDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => void;
   reload: () => Promise<void>;
 }
 export interface NotesFieldConfig {
@@ -381,6 +382,19 @@ export function EditableDataGrid<T extends EditableRow>({
       editSelectedRow: handleEditSelectedRow,
       deleteSelectedRow: handleDeleteSelectedRow,
       getSelectedRowId: () => selectedRowIds[0] ?? null,
+      setDraftValues: (rowId, values) => {
+        const rowKey = String(rowId);
+        setRows((previousRows) =>
+          previousRows.map((row) =>
+            String(row.id) === rowKey ? ({ ...row, ...values } as T) : row,
+          ),
+        );
+        setDirtyRowIds((previous) => {
+          const next = new Set(previous);
+          next.add(rowKey);
+          return next;
+        });
+      },
       reload: fetchData,
     };
 

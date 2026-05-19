@@ -1758,21 +1758,20 @@ function PlantingPlans(): React.ReactElement {
             variant="outlined"
             icon={<WarningAmberRoundedIcon fontSize="small" />}
             sx={{
-              mb: 2,
-              bgcolor: "error.lighter",
-              borderColor: "error.light",
+              mb: 1.5,
               "& .MuiAlert-message": { width: "100%" },
             }}
             action={
               <Button
                 size="small"
-                variant="outlined"
-                color="error"
+                variant="text"
+                color="inherit"
                 onClick={() => {
                   const commandApi = gridCommandApiRef.current;
                   if (!commandApi) {
                     return;
                   }
+                  lastEditedFieldRef.current = "area_m2";
                   commandApi.setDraftValues(areaValidationNotice.rowId, {
                     area_m2: areaValidationNotice.availableArea,
                   });
