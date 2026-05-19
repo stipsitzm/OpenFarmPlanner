@@ -469,6 +469,7 @@ function PlantingPlans(): React.ReactElement {
     rowId: string;
     availableArea: number;
     requestedArea: number;
+    bedArea: number;
   } | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
@@ -1988,12 +1989,19 @@ function PlantingPlans(): React.ReactElement {
               selectedBed
             ) {
               const remainingArea = await fetchRemainingAreaForRow(row);
-              const availableArea = remainingArea?.remaining_area_sqm ?? null;
-              if (availableArea !== null && row.area_m2 > availableArea) {
+              const bedArea =
+                typeof selectedBed.area_sqm === "number"
+                  ? selectedBed.area_sqm
+                  : 0;
+              const availableAreaRaw = remainingArea?.remaining_area_sqm ?? null;
+              const availableArea =
+                availableAreaRaw !== null ? availableAreaRaw : bedArea;
+              if (row.area_m2 > availableArea) {
                 setAreaOverrideDialog({
                   rowId: String(row.id),
                   availableArea,
                   requestedArea: row.area_m2,
+                  bedArea,
                 });
                 throw new Error(t("plantingPlans:validation.areaExceedsRemaining"));
               }
@@ -2024,16 +2032,6 @@ function PlantingPlans(): React.ReactElement {
               return t("plantingPlans:validation.requiredFields", {
                 fields: missingFields.join(", "),
               });
-            }
-
-            const selectedBed = beds.find((bed) => bed.id === row.bed);
-            if (
-              selectedBed?.area_sqm !== undefined &&
-              selectedBed.area_sqm !== null &&
-              typeof row.area_m2 === "number" &&
-              row.area_m2 > selectedBed.area_sqm
-            ) {
-              return t("plantingPlans:validation.areaExceedsRemaining");
             }
 
             return null;
@@ -2086,36 +2084,56 @@ function PlantingPlans(): React.ReactElement {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>{t("plantingPlans:validation.areaExceedsRemaining")}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={1}>
-            <Typography variant="body2" color="text.secondary">
+        <DialogTitle sx={{ pb: 0.5 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            {t("plantingPlans:validation.areaExceedsRemaining")}
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1.5 }}>
+          <Stack spacing={1.25}>
+            <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.5 }}>
               {t("plantingPlans:validation.availableArea")}:{" "}
               {areaOverrideDialog
                 ? formatAreaM2(areaOverrideDialog.availableArea, numberLocale)
                 : "—"}
             </Typography>
+            {areaOverrideDialog ? (
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+                {t("plantingPlans:validation.bedArea")}:{" "}
+                {formatAreaM2(areaOverrideDialog.bedArea, numberLocale)} ·{" "}
+                {t("plantingPlans:validation.alreadyAllocated")}:{" "}
+                {formatAreaM2(
+                  Math.max(areaOverrideDialog.bedArea - areaOverrideDialog.availableArea, 0),
+                  numberLocale,
+                )}{" "}
+                · {t("plantingPlans:validation.requestedArea")}:{" "}
+                {formatAreaM2(areaOverrideDialog.requestedArea, numberLocale)}
+              </Typography>
+            ) : null}
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAreaOverrideDialog(null)}>
             {t("common:actions.cancel")}
           </Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              if (!areaOverrideDialog) {
-                return;
-              }
-              lastEditedFieldRef.current = "area_m2";
-              gridCommandApiRef.current?.setDraftValues(areaOverrideDialog.rowId, {
-                area_m2: areaOverrideDialog.availableArea,
-              });
-              setAreaOverrideDialog(null);
-            }}
-          >
-            {t("plantingPlans:actions.useAvailableArea")}
-          </Button>
+          {areaOverrideDialog && areaOverrideDialog.availableArea > 0 ? (
+            <Button
+              variant="contained"
+              color="success"
+              onClick={() => {
+                if (!areaOverrideDialog) {
+                  return;
+                }
+                lastEditedFieldRef.current = "area_m2";
+                gridCommandApiRef.current?.setDraftValues(areaOverrideDialog.rowId, {
+                  area_m2: areaOverrideDialog.availableArea,
+                });
+                setAreaOverrideDialog(null);
+              }}
+            >
+              {t("plantingPlans:actions.useAvailableArea")}
+            </Button>
+          ) : null}
         </DialogActions>
       </Dialog>
 
