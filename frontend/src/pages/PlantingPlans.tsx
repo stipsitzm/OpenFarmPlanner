@@ -1191,7 +1191,6 @@ function PlantingPlans(): React.ReactElement {
         width: dynamicWidths.area,
         maxWidth: dynamicWidths.area,
         editable: true,
-        type: "number",
         renderHeader: () => (
           <Tooltip title={t("plantingPlans:tooltips.areaInput")}>
             <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>
@@ -2007,7 +2006,13 @@ function PlantingPlans(): React.ReactElement {
             // Determine which field to send based on last edit
             const source = lastEditedFieldRef.current || "area_m2";
 
-            if (source === "area_m2" && typeof row.area_m2 === "number") {
+            if (source === "area_m2" && isAutoAreaRequest(row.area_m2, t("plantingPlans:placeholders.maxKeyword"))) {
+              const capacity = getCapacityForRow(row);
+              if (capacity && capacity.availableArea > 0) {
+                apiData.area_input_value = Number(capacity.availableArea.toFixed(2));
+                apiData.area_input_unit = "M2";
+              }
+            } else if (source === "area_m2" && typeof row.area_m2 === "number") {
               // User edited area directly - send as M2
               apiData.area_input_value = row.area_m2;
               apiData.area_input_unit = "M2";

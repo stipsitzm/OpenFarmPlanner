@@ -20,6 +20,7 @@ const apiMocks = vi.hoisted(() => ({
 const commandApiSpies = vi.hoisted(() => ({
   setDraftValues: vi.fn(),
   saveAttemptResult: vi.fn(),
+  apiPayload: vi.fn(),
 }));
 
 vi.mock("../hooks/useProjectRequirement", () => ({
@@ -52,6 +53,7 @@ vi.mock("../components/data-grid", async () => {
       list?: () => Promise<{ data: { results: Record<string, unknown>[] } }>;
     };
     mapToRow?: (row: Record<string, unknown>) => Record<string, unknown>;
+    mapToApiData?: (row: Record<string, unknown>) => Partial<Record<string, unknown>> | Promise<Partial<Record<string, unknown>>>;
     onRowsStateChange?: (rows: Record<string, unknown>[]) => void;
     onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean }) => void;
     onBeforeSaveRow?: (row: Record<string, unknown>) => boolean | Record<string, unknown>;
@@ -59,7 +61,7 @@ vi.mock("../components/data-grid", async () => {
   };
   return {
     ...actual,
-    EditableDataGrid: ({ api, mapToRow, onRowsStateChange, onLoadStateChange, onBeforeSaveRow, commandApiRef }: MockGridProps) => {
+    EditableDataGrid: ({ api, mapToRow, mapToApiData, onRowsStateChange, onLoadStateChange, onBeforeSaveRow, commandApiRef }: MockGridProps) => {
       if (commandApiRef) {
         commandApiRef.current = {
           addRow: vi.fn(),
@@ -93,9 +95,17 @@ vi.mock("../components/data-grid", async () => {
         if (result !== true && result !== false) {
           commandApiSpies.setDraftValues(mockGridRowState.row.id, result);
           commandApiSpies.saveAttemptResult(true);
+          void Promise.resolve(mapToApiData?.({ ...mockGridRowState.row, ...result })).then((payload) => {
+            commandApiSpies.apiPayload(payload);
+          });
           return;
         }
         commandApiSpies.saveAttemptResult(result);
+        if (result) {
+          void Promise.resolve(mapToApiData?.(mockGridRowState.row)).then((payload) => {
+            commandApiSpies.apiPayload(payload);
+          });
+        }
       };
       return (
         <>
@@ -140,6 +150,9 @@ const mockRemainingAreaScenario = (): void => {
 const expectMaxAreaApplied = async (): Promise<void> => {
   expect(commandApiSpies.saveAttemptResult).toHaveBeenLastCalledWith(true);
   expect(commandApiSpies.setDraftValues).toHaveBeenCalledWith(1, expect.objectContaining({ area_m2: 4, plants_count: 40 }));
+  await waitFor(() => {
+    expect(commandApiSpies.apiPayload).toHaveBeenCalledWith(expect.objectContaining({ area_input_value: 4, area_input_unit: "M2" }));
+  });
   expect(screen.queryByText("Der Wert muss größer als 0 sein.")).not.toBeInTheDocument();
   expect(await screen.findByText(areaText("Maximal verfügbare Fläche übernommen", "4,00"))).toBeInTheDocument();
 };
