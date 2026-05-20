@@ -45,6 +45,9 @@ const backendMessageMap: Record<string, string> = {
   'uploaded file is not a valid image.': 'errors.invalidImage',
   'please enter a valid numeric value, e.g. 3.9.': 'validation.invalidNumberExample',
   'area input value must be greater than 0.': 'validation.areaInputPositive',
+  'entered area exceeds the maximum available bed area.': 'validation.bedAreaExceeded',
+  'the entered area exceeds the maximum available bed area.': 'validation.bedAreaExceeded',
+  'entered area exceeds available bed area.': 'validation.bedAreaExceeded',
 };
 
 function formatAreaValue(value: unknown): string {

@@ -1488,36 +1488,6 @@ function PlantingPlans(): React.ReactElement {
     return Number((row.plants_count / plantsPerSqm).toFixed(2));
   };
 
-  const handleBeforeSaveRow = useCallback((row: PlantingPlanRow): boolean => {
-    const requestedArea = toNumericValue(row.area_m2);
-    const selectedBed = beds.find((bed) => bed.id === row.bed);
-    const bedArea = toNumericValue(selectedBed?.area_sqm);
-
-    if (requestedArea === null || bedArea === null || requestedArea <= bedArea) {
-      return true;
-    }
-
-    setAreaNotice(null);
-    setAreaOverrideDialog({
-      kind: "bedArea",
-      rowId: String(row.id),
-      requestedArea,
-      bedArea,
-      cultureId: row.culture,
-    });
-    return false;
-  }, [beds]);
-
-  const isAreaOverrideSaveErrorHandled = useCallback((error: unknown): boolean => {
-    if (!(error instanceof Error)) {
-      return false;
-    }
-    return (
-      error.message === t("plantingPlans:validation.areaExceedsRemaining") ||
-      error.message === t("plantingPlans:validation.areaExceedsBedArea")
-    );
-  }, [t]);
-
   const validateMobileForm = (): boolean => {
     if (!mobileCreateForm.culture || !mobileCreateForm.bed || !mobileCreateForm.planting_date) {
       setMobileCreateError(t("plantingPlans:validation.requiredFields", {
@@ -1904,8 +1874,6 @@ function PlantingPlans(): React.ReactElement {
             onLoadStateChange={({ loading, dataFetched }) => {
               setIsPlansLoading(loading || !dataFetched);
             }}
-            onBeforeSaveRow={handleBeforeSaveRow}
-            isSaveErrorHandled={isAreaOverrideSaveErrorHandled}
             createNewRow={() => ({
             id: -Date.now(),
             culture: 0,
@@ -2038,44 +2006,6 @@ function PlantingPlans(): React.ReactElement {
                 });
               }
             }
-            if (
-              source === "area_m2" &&
-              typeof row.area_m2 === "number" &&
-              selectedBed
-            ) {
-              const remainingArea = await fetchRemainingAreaForRow(row);
-              const bedArea =
-                typeof selectedBed.area_sqm === "number"
-                  ? selectedBed.area_sqm
-                  : 0;
-              const availableAreaRaw = remainingArea?.remaining_area_sqm ?? null;
-              const availableArea =
-                availableAreaRaw !== null ? availableAreaRaw : bedArea;
-              if (row.area_m2 > bedArea) {
-                setAreaNotice(null);
-                setAreaOverrideDialog({
-                  kind: "bedArea",
-                  rowId: String(row.id),
-                  requestedArea: row.area_m2,
-                  bedArea,
-                  cultureId: row.culture,
-                });
-                throw new Error(t("plantingPlans:validation.areaExceedsBedArea"));
-              }
-              if (row.area_m2 > availableArea) {
-                setAreaNotice(null);
-                setAreaOverrideDialog({
-                  kind: "remaining",
-                  rowId: String(row.id),
-                  availableArea,
-                  requestedArea: row.area_m2,
-                  bedArea,
-                  cultureId: row.culture,
-                });
-                throw new Error(t("plantingPlans:validation.areaExceedsRemaining"));
-              }
-            }
-
             // Clear last edited field after use
             lastEditedFieldRef.current = null;
 

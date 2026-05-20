@@ -90,7 +90,7 @@
     "minLength": "Mindestens {{count}} Zeichen erforderlich.",
     "invalidNumberExample": "Bitte gib einen gültigen Zahlenwert ein, z. B. 3,9",
     "areaInputPositive": "Der Wert muss größer als 0 sein.",
-    "bedAreaExceeded": "Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.",
+    "bedAreaExceeded": "Die eingetragene Fläche überschreitet die maximal verfügbare Fläche dieses Beets.",
     "availableArea": "Verfügbare Restfläche"
   },
   "projectRequired": {
