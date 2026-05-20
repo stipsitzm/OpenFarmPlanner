@@ -1734,6 +1734,66 @@ function PlantingPlans(): React.ReactElement {
       : areaOverrideDialog.bedArea
     : null;
 
+  const handleAreaOverflowSaveError = useCallback((error: unknown): boolean => {
+    if (!axios.isAxiosError(error)) {
+      return false;
+    }
+
+    const responseData = error.response?.data;
+    if (!responseData || typeof responseData !== "object") {
+      return false;
+    }
+
+    const rowIdFromConfig = (() => {
+      const url = error.config?.url ?? "";
+      const match = url.match(/\/(\d+)\/?$/);
+      return match ? match[1] : null;
+    })();
+
+    const parseNumeric = (value: unknown): number | null => {
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+      if (typeof value === "string") {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+      return null;
+    };
+
+    const entries = Object.entries(responseData as Record<string, unknown>);
+    for (const [, rawValue] of entries) {
+      const messages = Array.isArray(rawValue) ? rawValue : [rawValue];
+      for (const message of messages) {
+        if (!message || typeof message !== "object") {
+          continue;
+        }
+        const payload = message as Record<string, unknown>;
+        if (payload.errorCode !== "bed_area_exceeded") {
+          continue;
+        }
+
+        const availableArea = parseNumeric(payload.availableArea);
+        const requestedArea = parseNumeric(payload.requestedArea);
+        const bedArea = parseNumeric(payload.bedArea);
+        const cultureId = payload.cultureId ?? 0;
+        const rowId = String(payload.rowId ?? rowIdFromConfig ?? "");
+
+        if (availableArea !== null && requestedArea !== null && bedArea !== null && rowId) {
+          setAreaOverrideDialog({
+            kind: "remaining",
+            rowId,
+            availableArea,
+            requestedArea,
+            bedArea,
+            cultureId: typeof cultureId === "number" || typeof cultureId === "string" ? cultureId : 0,
+          });
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }, []);
+
   return (
     <PageContainer variant="workspacePage">
 
@@ -2049,6 +2109,7 @@ function PlantingPlans(): React.ReactElement {
           }}
           loadErrorMessage={t("plantingPlans:errors.load")}
           saveErrorMessage={t("plantingPlans:errors.save")}
+          isSaveErrorHandled={handleAreaOverflowSaveError}
           deleteErrorMessage={t("plantingPlans:errors.delete")}
           deleteConfirmMessage={t("plantingPlans:confirmDelete")}
           addButtonLabel={`${t("plantingPlans:addButton")} (Alt+Shift+N)`}
@@ -2209,11 +2270,7 @@ function PlantingPlans(): React.ReactElement {
                 setAreaOverrideDialog(null);
               }}
             >
-              {t(
-                areaOverrideDialog.kind === "bedArea"
-                  ? "plantingPlans:actions.useBedArea"
-                  : "plantingPlans:actions.useAvailableArea",
-              )}
+              {t("plantingPlans:actions.useAvailableArea")}
             </Button>
           ) : null}
         </DialogActions>
