@@ -187,6 +187,24 @@ const toNumericValue = (value: unknown): number | null => {
   }
   return null;
 };
+const toAreaNumericValue = (value: unknown, locale: string): number | null => {
+  const directNumeric = toNumericValue(value);
+  if (directNumeric !== null) {
+    return directNumeric;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value
+    .replace("m²", "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (normalized.length === 0) {
+    return null;
+  }
+  const localized = parseLocalizedNumber(normalized, locale);
+  return localized === null ? null : localized;
+};
 
 const toOptionalString = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
@@ -1441,7 +1459,7 @@ function PlantingPlans(): React.ReactElement {
     }
     const occupiedArea = mobileRows
       .filter((item) => item.id !== row.id && item.bed === row.bed && datesOverlap(item, row))
-      .reduce((total, item) => total + Math.max(0, toNumericValue(item.area_m2) ?? 0), 0);
+      .reduce((total, item) => total + Math.max(0, toAreaNumericValue(item.area_m2, numberLocale) ?? 0), 0);
     return {
       bedArea,
       occupiedArea,
@@ -1948,7 +1966,7 @@ function PlantingPlans(): React.ReactElement {
             if (!capacity) {
               return true;
             }
-            const requestedArea = toNumericValue(row.area_m2);
+            const requestedArea = toAreaNumericValue(row.area_m2, numberLocale);
             if (requestedArea === null) {
               if (capacity.availableArea > 0) {
                 applyAreaAndPlants(row.id, capacity.availableArea);
