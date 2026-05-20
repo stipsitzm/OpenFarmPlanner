@@ -128,6 +128,8 @@ interface AreaValidationDialogState {
   availableArea: number;
   bedArea: number;
   occupiedArea: number;
+  cultureId?: number;
+  plantsCount?: number | null;
   mode: "bedLimit" | "remainingLimit" | "noRemainingArea";
 }
 
@@ -177,6 +179,42 @@ const toIsoDateString = (value: unknown): string | null => {
   return null;
 };
 
+const toDateKey = (value: unknown): number | null => {
+  const buildDateKey = (year: number, month: number, day: number): number | null => {
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (
+      date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day
+    ) {
+      return null;
+    }
+    return date.getTime();
+  };
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return Date.UTC(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  const isoMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(trimmed);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return buildDateKey(Number(year), Number(month), Number(day));
+  }
+  const germanMatch = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(trimmed);
+  if (germanMatch) {
+    const [, day, month, year] = germanMatch;
+    return buildDateKey(Number(year), Number(month), Number(day));
+  }
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+};
+
 const toNumericValue = (value: unknown): number | null => {
   if (typeof value === "number") {
     return Number.isNaN(value) ? null : value;
@@ -208,6 +246,16 @@ const toAreaNumericValue = (value: unknown, locale: string): number | null => {
 
 const toOptionalString = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
+
+const toOptionalNumber = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    return Number(value.trim());
+  }
+  return undefined;
+};
 
 interface HierarchySelectionRow {
   location_id?: number;
@@ -1433,14 +1481,41 @@ function PlantingPlans(): React.ReactElement {
     }
     return Number((row.plants_count / plantsPerSqm).toFixed(2));
   };
+
+  const getPlanBedId = (row: PlantingPlanRow): number | null => {
+    const rowRecord = row as PlantingPlanRow & {
+      bed_id?: unknown;
+      bed?: unknown;
+    };
+    const directBedId = toOptionalNumber(rowRecord.bed);
+    if (directBedId !== undefined) {
+      return directBedId;
+    }
+    const apiBedId = toOptionalNumber(rowRecord.bed_id);
+    if (apiBedId !== undefined) {
+      return apiBedId;
+    }
+    if (
+      rowRecord.bed &&
+      typeof rowRecord.bed === "object" &&
+      "id" in rowRecord.bed
+    ) {
+      return toOptionalNumber(rowRecord.bed.id) ?? null;
+    }
+    return null;
+  };
+
+  const isSamePlanRow = (rowA: PlantingPlanRow, rowB: PlantingPlanRow): boolean =>
+    rowA === rowB || (typeof rowA.id === "number" && typeof rowB.id === "number" && rowA.id === rowB.id);
+
   const datesOverlap = (rowA: PlantingPlanRow, rowB: PlantingPlanRow): boolean => {
-    const startA = toIsoDateString(rowA.planting_date);
-    const startB = toIsoDateString(rowB.planting_date);
-    if (!startA || !startB) {
+    const startA = toDateKey(rowA.planting_date);
+    const startB = toDateKey(rowB.planting_date);
+    if (startA === null || startB === null) {
       return false;
     }
-    const endA = toIsoDateString(rowA.harvest_end_date) ?? toIsoDateString(rowA.harvest_date) ?? "9999-12-31";
-    const endB = toIsoDateString(rowB.harvest_end_date) ?? toIsoDateString(rowB.harvest_date) ?? "9999-12-31";
+    const endA = toDateKey(rowA.harvest_end_date) ?? toDateKey(rowA.harvest_date) ?? Number.MAX_SAFE_INTEGER;
+    const endB = toDateKey(rowB.harvest_end_date) ?? toDateKey(rowB.harvest_date) ?? Number.MAX_SAFE_INTEGER;
     return startA <= endB && startB <= endA;
   };
 
@@ -1449,17 +1524,18 @@ function PlantingPlans(): React.ReactElement {
     occupiedArea: number;
     availableArea: number;
   } | null => {
-    if (typeof row.bed !== "number") {
+    const rowBedId = getPlanBedId(row);
+    if (rowBedId === null) {
       return null;
     }
-    const selectedBed = bedById.get(row.bed);
+    const selectedBed = bedById.get(rowBedId);
     const bedArea = toNumericValue(selectedBed?.area_sqm);
     if (bedArea === null) {
       return null;
     }
     const occupiedArea = mobileRows
-      .filter((item) => item.id !== row.id && item.bed === row.bed && datesOverlap(item, row))
-      .reduce((total, item) => total + Math.max(0, toAreaNumericValue(item.area_m2, numberLocale) ?? 0), 0);
+      .filter((item) => getPlanBedId(item) === rowBedId && !isSamePlanRow(item, row) && datesOverlap(item, row))
+      .reduce((total, item) => total + Math.max(0, toAreaNumericValue(item.area_m2 ?? item.area_usage_sqm, numberLocale) ?? 0), 0);
     return {
       bedArea,
       occupiedArea,
@@ -1467,14 +1543,20 @@ function PlantingPlans(): React.ReactElement {
     };
   };
 
-  const applyAreaAndPlants = (rowId: number, nextArea: number): void => {
+  const applyAreaAndPlants = (
+    rowId: number,
+    nextArea: number,
+    fallbackCultureId?: number,
+    fallbackPlantsCount?: number | null,
+  ): void => {
     const normalizedArea = Number(nextArea.toFixed(2));
     const row = mobileRows.find((item) => item.id === rowId);
-    const culture = cultures.find((item) => item.id === row?.culture);
+    const cultureId = row?.culture ?? fallbackCultureId;
+    const culture = cultures.find((item) => item.id === cultureId);
     const plantsPerSqm = culture?.plants_per_m2;
     gridCommandApiRef.current?.setDraftValues(rowId, {
       area_m2: normalizedArea,
-      plants_count: plantsPerSqm && plantsPerSqm > 0 ? Math.round(normalizedArea * plantsPerSqm) : row?.plants_count,
+      plants_count: plantsPerSqm && plantsPerSqm > 0 ? Math.round(normalizedArea * plantsPerSqm) : row?.plants_count ?? fallbackPlantsCount,
     });
     lastEditedFieldRef.current = "area_m2";
   };
@@ -1969,7 +2051,7 @@ function PlantingPlans(): React.ReactElement {
             const requestedArea = toAreaNumericValue(row.area_m2, numberLocale);
             if (requestedArea === null) {
               if (capacity.availableArea > 0) {
-                applyAreaAndPlants(row.id, capacity.availableArea);
+                applyAreaAndPlants(row.id, capacity.availableArea, row.culture, row.plants_count);
                 setAreaNotice({
                   severity: "info",
                   message: t("plantingPlans:areaValidation.maxAreaApplied", { area: formatAreaM2(capacity.availableArea, numberLocale) }),
@@ -1984,6 +2066,8 @@ function PlantingPlans(): React.ReactElement {
                 availableArea: capacity.availableArea,
                 bedArea: capacity.bedArea,
                 occupiedArea: capacity.occupiedArea,
+                cultureId: row.culture,
+                plantsCount: row.plants_count,
                 mode: "bedLimit",
               });
               return false;
@@ -1995,6 +2079,8 @@ function PlantingPlans(): React.ReactElement {
                 availableArea: capacity.availableArea,
                 bedArea: capacity.bedArea,
                 occupiedArea: capacity.occupiedArea,
+                cultureId: row.culture,
+                plantsCount: row.plants_count,
                 mode: "noRemainingArea",
               });
               return false;
@@ -2006,6 +2092,8 @@ function PlantingPlans(): React.ReactElement {
                 availableArea: capacity.availableArea,
                 bedArea: capacity.bedArea,
                 occupiedArea: capacity.occupiedArea,
+                cultureId: row.culture,
+                plantsCount: row.plants_count,
                 mode: "remainingLimit",
               });
               return false;
@@ -2219,6 +2307,8 @@ function PlantingPlans(): React.ReactElement {
                   areaValidationDialog.mode === "bedLimit"
                     ? areaValidationDialog.bedArea
                     : areaValidationDialog.availableArea,
+                  areaValidationDialog.cultureId,
+                  areaValidationDialog.plantsCount,
                 );
                 setAreaValidationDialog(null);
               }}
