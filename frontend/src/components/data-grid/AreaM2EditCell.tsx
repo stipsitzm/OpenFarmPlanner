@@ -118,6 +118,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
       value={inputValue}
       onChange={handleChange}
       size="small"
+      fullWidth
       placeholder={maxPlaceholder}
       slotProps={{
         htmlInput: {
@@ -125,7 +126,24 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
           step: 0.01,
         },
       }}
-      sx={{ minWidth: 96, flex: 1 }}
+      sx={{
+        minWidth: 96,
+        flex: 1,
+        '& .MuiInputBase-root': {
+          height: '100%',
+          outline: 'none',
+          boxShadow: 'none',
+        },
+        '& .MuiOutlinedInput-notchedOutline': {
+          border: 0,
+        },
+        '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+          border: 0,
+        },
+        '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+          border: 0,
+        },
+      }}
     />
   );
 }
