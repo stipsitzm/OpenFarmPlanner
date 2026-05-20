@@ -156,7 +156,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const isMobile = useMediaQuery('(max-width:900px)');
   
   const { t } = useTranslation('common');
-  const { sortModel, setSortModel } = usePersistentSortModel({
+  const { sortModel, setSortModel, filterModel, setFilterModel } = usePersistentSortModel({
     tableKey: tableKey ?? 'editableDataGrid',
     defaultSortModel,
     allowedFields: columns.map((column) => column.field),
@@ -843,6 +843,8 @@ export function EditableDataGrid<T extends EditableRow>({
           hideFooter={false}
           sortModel={sortModel}
           onSortModelChange={setSortModel}
+          filterModel={filterModel}
+          onFilterModelChange={setFilterModel}
           rowSelectionModel={{ type: "include", ids: new Set(selectedRowIds) }}
           onRowSelectionModelChange={(nextModel) => setSelectedRowIds(Array.from(nextModel.ids))}
           slots={{

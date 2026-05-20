@@ -42,7 +42,7 @@ describe("PlantingPlans hierarchy normalization", () => {
         true,
         "de-DE",
       ),
-    ).toBe("Sonnengarten | Parzelle Nord | Beet 1 (7,00 m²)");
+    ).toBe("Sonnengarten | Parzelle Nord | Beet 1 (7,00\u00a0m²)");
   });
 
   it("keeps the numeric bed ID when the grid cell value is a composed label", () => {
