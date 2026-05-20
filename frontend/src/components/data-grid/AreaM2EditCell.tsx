@@ -4,7 +4,7 @@
  * Provides a numeric input for area editing with optional normalization on blur.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TextField } from '@mui/material';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
@@ -65,15 +65,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
           })
         : ''
   );
-  const maxDisabled = bedAreaSqm === undefined || bedAreaSqm === null;
 
-  const areaExceeded = useMemo(() => {
-    const parsed = parseAreaInput(inputValue, locale, maxKeyword);
-    if (parsed === null || maxDisabled) {
-      return false;
-    }
-    return parsed > (bedAreaSqm ?? 0);
-  }, [inputValue, locale, maxDisabled, bedAreaSqm, maxKeyword]);
 
   useEffect(() => {
     if (hasFocus) {
@@ -128,7 +120,6 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
       value={inputValue}
       onChange={handleChange}
       size="small"
-      error={areaExceeded}
       placeholder={maxPlaceholder}
       slotProps={{
         htmlInput: {

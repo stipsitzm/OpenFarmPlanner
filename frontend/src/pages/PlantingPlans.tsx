@@ -547,6 +547,7 @@ function PlantingPlans(): React.ReactElement {
 
   // Track which field was last edited (for determining API payload)
   const lastEditedFieldRef = useRef<"area_m2" | "plants_count" | null>(null);
+  const lastSaveRowIdRef = useRef<string | null>(null);
 
   const cultureOptions: SearchableSelectOption[] = useMemo(
     () =>
@@ -1775,9 +1776,9 @@ function PlantingPlans(): React.ReactElement {
         const requestedArea = parseNumeric(payload.requestedArea);
         const bedArea = parseNumeric(payload.bedArea);
         const cultureId = payload.cultureId ?? 0;
-        const rowId = String(payload.rowId ?? rowIdFromConfig ?? "");
+        const rowId = String(payload.rowId ?? rowIdFromConfig ?? lastSaveRowIdRef.current ?? "");
 
-        if (availableArea !== null && requestedArea !== null && bedArea !== null && rowId) {
+        if (availableArea !== null && requestedArea !== null && bedArea !== null) {
           setAreaOverrideDialog({
             kind: "remaining",
             rowId,
@@ -1989,6 +1990,7 @@ function PlantingPlans(): React.ReactElement {
             };
           }}
           mapToApiData={async (row) => {
+            lastSaveRowIdRef.current = String(row.id);
             const plantingDate = toIsoDateString(row.planting_date) ?? "";
 
             // Ensure culture and bed are numeric IDs, not label strings
