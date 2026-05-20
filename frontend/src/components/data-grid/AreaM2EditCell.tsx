@@ -10,11 +10,25 @@ import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
 import { formatLocalizedNumber, parseLocalizedNumber } from '../../utils/numberLocalization';
 
+function parseAreaInput(value: string, locale: string, maxKeyword: string): number | null {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === '') {
+    return null;
+  }
+  if (normalized === maxKeyword.trim().toLowerCase()) {
+    return null;
+  }
+  return parseLocalizedNumber(value, locale);
+}
+
+
 export interface AreaM2EditCellProps extends GridRenderEditCellParams {
   bedAreaSqm?: number;
   onLastEditedFieldChange: (field: 'area_m2') => void;
   fallbackValue?: number | null;
   locale: string;
+  maxKeyword: string;
+  maxPlaceholder: string;
 }
 
 export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
@@ -27,6 +41,8 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     onLastEditedFieldChange,
     fallbackValue,
     locale,
+    maxKeyword,
+    maxPlaceholder,
   } = props;
   const apiRef = useGridApiContext();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -52,12 +68,12 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
   const maxDisabled = bedAreaSqm === undefined || bedAreaSqm === null;
 
   const areaExceeded = useMemo(() => {
-    const parsed = parseLocalizedNumber(inputValue, locale);
+    const parsed = parseAreaInput(inputValue, locale, maxKeyword);
     if (parsed === null || maxDisabled) {
       return false;
     }
     return parsed > (bedAreaSqm ?? 0);
-  }, [inputValue, locale, maxDisabled, bedAreaSqm]);
+  }, [inputValue, locale, maxDisabled, bedAreaSqm, maxKeyword]);
 
   useEffect(() => {
     if (hasFocus) {
@@ -100,7 +116,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const val = e.target.value;
     setInputValue(val);
-    const parsedValue = parseLocalizedNumber(val, locale);
+    const parsedValue = parseAreaInput(val, locale, maxKeyword);
     await applyValue(parsedValue);
   };
 
@@ -113,6 +129,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
       onChange={handleChange}
       size="small"
       error={areaExceeded}
+      placeholder={maxPlaceholder}
       slotProps={{
         htmlInput: {
           min: 0,

@@ -1177,7 +1177,7 @@ function PlantingPlans(): React.ReactElement {
         editable: true,
         type: "number",
         renderHeader: () => (
-          <Tooltip title={t("plantingPlans:tooltips.coupledFields")}>
+          <Tooltip title={t("plantingPlans:tooltips.areaInput")}>
             <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>
               {t("plantingPlans:columns.areaM2")}
             </Box>
@@ -1210,6 +1210,8 @@ function PlantingPlans(): React.ReactElement {
               bedAreaSqm={selectedBed?.area_sqm}
               fallbackValue={derivedArea}
               locale={numberLocale}
+              maxKeyword={t("plantingPlans:placeholders.maxKeyword")}
+              maxPlaceholder={t("plantingPlans:placeholders.maxKeyword")}
               onLastEditedFieldChange={() => {
                 lastEditedFieldRef.current = "area_m2";
                 setAreaNotice(null);
@@ -1501,6 +1503,7 @@ function PlantingPlans(): React.ReactElement {
     }
     if (
       mobileCreateForm.area_m2.trim() !== "" &&
+      mobileCreateForm.area_m2.trim().toLowerCase() !== t("plantingPlans:placeholders.maxKeyword").toLowerCase() &&
       parseLocalizedNumber(mobileCreateForm.area_m2, numberLocale) === null
     ) {
       setMobileCreateError(t("plantingPlans:errors.save"));
@@ -1521,9 +1524,12 @@ function PlantingPlans(): React.ReactElement {
       return;
     }
     const selectedBed = beds.find((bed) => bed.id === Number(mobileCreateForm.bed));
-    const hasAreaInput = mobileCreateForm.area_m2.trim() !== "";
+    const normalizedMobileArea = mobileCreateForm.area_m2.trim().toLowerCase();
+    const maxKeyword = t("plantingPlans:placeholders.maxKeyword").toLowerCase();
+    const isMaxAreaKeyword = normalizedMobileArea === maxKeyword;
+    const hasAreaInput = mobileCreateForm.area_m2.trim() !== "" && !isMaxAreaKeyword;
     const hasPlantsInput = mobileCreateForm.plants_count.trim() !== "";
-    const parsedArea = parseLocalizedNumber(mobileCreateForm.area_m2, numberLocale);
+    const parsedArea = isMaxAreaKeyword ? null : parseLocalizedNumber(mobileCreateForm.area_m2, numberLocale);
     const parsedPlants = parseLocalizedNumber(mobileCreateForm.plants_count, numberLocale);
     const usePlantsInput =
       mobileLastEditedField === "plants_count" ||
@@ -2289,7 +2295,9 @@ function PlantingPlans(): React.ReactElement {
               onChange={(event) => {
                 const nextArea = event.target.value;
                 const plantsPerSqm = getPlantsPerSqmForCulture(mobileCreateForm.culture);
-                const parsedArea = parseLocalizedNumber(nextArea, numberLocale);
+                const normalizedArea = nextArea.trim().toLowerCase();
+                const maxKeyword = t("plantingPlans:placeholders.maxKeyword").toLowerCase();
+                const parsedArea = normalizedArea === maxKeyword ? null : parseLocalizedNumber(nextArea, numberLocale);
                 setMobileCreateForm((previous) => ({
                   ...previous,
                   area_m2: nextArea,
@@ -2304,6 +2312,8 @@ function PlantingPlans(): React.ReactElement {
                 setMobileLastEditedField("area_m2");
                 setAreaNotice(null);
               }}
+              placeholder={t("plantingPlans:placeholders.maxKeyword")}
+              helperText={t("plantingPlans:tooltips.areaAutoMax")}
               slotProps={{ htmlInput: { inputMode: "decimal" } }}
             />
             <TextField
