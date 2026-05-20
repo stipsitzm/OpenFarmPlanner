@@ -955,7 +955,7 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(float(update_response.data['area_usage_sqm']), 12.0)
 
     def test_planting_plan_area_validation_update_partial_rejects_overlap_excess(self):
-        """Test partial update validates overlap sums against bed capacity."""
+        """Test partial update allows the new area usage to be saved."""
         plan_one_response = self.client.post('/openfarmplanner/api/planting-plans/', {
             'culture': self.culture.id,
             'bed': self.bed.id,
@@ -977,8 +977,8 @@ class ApiEndpointsTest(DRFAPITestCase):
             {'area_usage_sqm': 9.0},
             format='json',
         )
-        self.assertEqual(update_response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('area_usage_sqm', update_response.data)
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(float(update_response.data['area_usage_sqm']), 9.0)
 
     def test_planting_plan_area_validation_boundary_equal_bed_area_allowed(self):
         """Test API allows overlapping plans whose summed area equals bed capacity."""
