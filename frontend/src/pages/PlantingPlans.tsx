@@ -122,6 +122,14 @@ interface MobileCreateFormState {
   plants_count: string;
   notes: string;
 }
+interface AreaValidationDialogState {
+  rowId: number;
+  requestedArea: number;
+  availableArea: number;
+  bedArea: number;
+  occupiedArea: number;
+  mode: "bedLimit" | "remainingLimit" | "noRemainingArea";
+}
 
 const CULTIVATION_TYPE_OPTIONS = [
   {
@@ -456,6 +464,7 @@ function PlantingPlans(): React.ReactElement {
     message: string;
     severity: "info" | "warning";
   } | null>(null);
+  const [areaValidationDialog, setAreaValidationDialog] = useState<AreaValidationDialogState | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<PlantingPlanRow | null>(
@@ -1406,6 +1415,51 @@ function PlantingPlans(): React.ReactElement {
     }
     return Number((row.plants_count / plantsPerSqm).toFixed(2));
   };
+  const datesOverlap = (rowA: PlantingPlanRow, rowB: PlantingPlanRow): boolean => {
+    const startA = toIsoDateString(rowA.planting_date);
+    const startB = toIsoDateString(rowB.planting_date);
+    if (!startA || !startB) {
+      return false;
+    }
+    const endA = toIsoDateString(rowA.harvest_end_date) ?? toIsoDateString(rowA.harvest_date) ?? "9999-12-31";
+    const endB = toIsoDateString(rowB.harvest_end_date) ?? toIsoDateString(rowB.harvest_date) ?? "9999-12-31";
+    return startA <= endB && startB <= endA;
+  };
+
+  const getCapacityForRow = (row: PlantingPlanRow): {
+    bedArea: number;
+    occupiedArea: number;
+    availableArea: number;
+  } | null => {
+    if (typeof row.bed !== "number") {
+      return null;
+    }
+    const selectedBed = bedById.get(row.bed);
+    const bedArea = toNumericValue(selectedBed?.area_sqm);
+    if (bedArea === null) {
+      return null;
+    }
+    const occupiedArea = mobileRows
+      .filter((item) => item.id !== row.id && item.bed === row.bed && datesOverlap(item, row))
+      .reduce((total, item) => total + Math.max(0, toNumericValue(item.area_m2) ?? 0), 0);
+    return {
+      bedArea,
+      occupiedArea,
+      availableArea: Math.max(0, bedArea - occupiedArea),
+    };
+  };
+
+  const applyAreaAndPlants = (rowId: number, nextArea: number): void => {
+    const normalizedArea = Number(nextArea.toFixed(2));
+    const row = mobileRows.find((item) => item.id === rowId);
+    const culture = cultures.find((item) => item.id === row?.culture);
+    const plantsPerSqm = culture?.plants_per_m2;
+    gridCommandApiRef.current?.setDraftValues(rowId, {
+      area_m2: normalizedArea,
+      plants_count: plantsPerSqm && plantsPerSqm > 0 ? Math.round(normalizedArea * plantsPerSqm) : row?.plants_count,
+    });
+    lastEditedFieldRef.current = "area_m2";
+  };
 
   const validateMobileForm = (): boolean => {
     if (!mobileCreateForm.culture || !mobileCreateForm.bed || !mobileCreateForm.planting_date) {
@@ -1889,6 +1943,57 @@ function PlantingPlans(): React.ReactElement {
             }
             return errors;
           }}
+          onBeforeSaveRow={(row) => {
+            const capacity = getCapacityForRow(row);
+            if (!capacity) {
+              return true;
+            }
+            const requestedArea = toNumericValue(row.area_m2);
+            if (requestedArea === null) {
+              if (capacity.availableArea > 0) {
+                applyAreaAndPlants(row.id, capacity.availableArea);
+                setAreaNotice({
+                  severity: "info",
+                  message: t("plantingPlans:areaValidation.maxAreaApplied", { area: formatAreaM2(capacity.availableArea, numberLocale) }),
+                });
+              }
+              return false;
+            }
+            if (requestedArea > capacity.bedArea) {
+              setAreaValidationDialog({
+                rowId: row.id,
+                requestedArea,
+                availableArea: capacity.availableArea,
+                bedArea: capacity.bedArea,
+                occupiedArea: capacity.occupiedArea,
+                mode: "bedLimit",
+              });
+              return false;
+            }
+            if (capacity.availableArea <= 0) {
+              setAreaValidationDialog({
+                rowId: row.id,
+                requestedArea,
+                availableArea: capacity.availableArea,
+                bedArea: capacity.bedArea,
+                occupiedArea: capacity.occupiedArea,
+                mode: "noRemainingArea",
+              });
+              return false;
+            }
+            if (requestedArea > capacity.availableArea) {
+              setAreaValidationDialog({
+                rowId: row.id,
+                requestedArea,
+                availableArea: capacity.availableArea,
+                bedArea: capacity.bedArea,
+                occupiedArea: capacity.occupiedArea,
+                mode: "remainingLimit",
+              });
+              return false;
+            }
+            return true;
+          }}
           loadErrorMessage={t("plantingPlans:errors.load")}
           saveErrorMessage={t("plantingPlans:errors.save")}
           deleteErrorMessage={t("plantingPlans:errors.delete")}
@@ -2043,6 +2148,56 @@ function PlantingPlans(): React.ReactElement {
           <Button onClick={() => void (mobileEditId ? handleMobileUpdate() : handleMobileCreate())} variant="contained">
             {mobileEditId ? t("common:actions.save") : t("common:actions.add")}
           </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={areaValidationDialog !== null} onClose={() => setAreaValidationDialog(null)} fullWidth maxWidth="xs">
+        <DialogTitle>
+          {areaValidationDialog?.mode === "bedLimit"
+            ? t("plantingPlans:areaValidation.bedLimitTitle")
+            : areaValidationDialog?.mode === "noRemainingArea"
+              ? t("plantingPlans:areaValidation.noRemainingTitle")
+              : t("plantingPlans:areaValidation.remainingLimitTitle")}
+        </DialogTitle>
+        <DialogContent>
+          {areaValidationDialog && (
+            <Stack spacing={1}>
+              {areaValidationDialog.mode !== "bedLimit" && (
+                <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.availableArea", { area: formatAreaM2(areaValidationDialog.availableArea, numberLocale) })}</Typography>
+              )}
+              <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.bedArea", { area: formatAreaM2(areaValidationDialog.bedArea, numberLocale) })}</Typography>
+              {areaValidationDialog.mode !== "bedLimit" && (
+                <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.occupiedArea", { area: formatAreaM2(areaValidationDialog.occupiedArea, numberLocale) })}</Typography>
+              )}
+              {areaValidationDialog.mode !== "noRemainingArea" && (
+                <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.requestedArea", { area: formatAreaM2(areaValidationDialog.requestedArea, numberLocale) })}</Typography>
+              )}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAreaValidationDialog(null)}>{t("common:actions.cancel")}</Button>
+          {areaValidationDialog?.mode !== "noRemainingArea" && (
+            <Button
+              variant="contained"
+              color="success"
+              onClick={() => {
+                if (!areaValidationDialog) {
+                  return;
+                }
+                applyAreaAndPlants(
+                  areaValidationDialog.rowId,
+                  areaValidationDialog.mode === "bedLimit"
+                    ? areaValidationDialog.bedArea
+                    : areaValidationDialog.availableArea,
+                );
+                setAreaValidationDialog(null);
+              }}
+            >
+              {areaValidationDialog?.mode === "bedLimit"
+                ? t("plantingPlans:areaValidation.applyBedArea")
+                : t("plantingPlans:areaValidation.applyRemainingArea")}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
