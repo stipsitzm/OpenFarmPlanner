@@ -1187,17 +1187,7 @@ function PlantingPlans(): React.ReactElement {
           if (params.hasChanged) {
             lastEditedFieldRef.current = "area_m2";
           }
-          const bed = beds.find(
-            (item) => item.id === (params.row as PlantingPlanRow).bed,
-          );
-          const bedArea = bed?.area_sqm;
-          const numericValue = Number(params.props.value);
-          const hasAreaError =
-            bedArea !== undefined &&
-            bedArea !== null &&
-            Number.isFinite(numericValue) &&
-            numericValue > bedArea;
-          return { ...params.props, error: hasAreaError };
+          return params.props;
         },
         renderEditCell: (params) => {
           const row = params.row as PlantingPlanRow;
