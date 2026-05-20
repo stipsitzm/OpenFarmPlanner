@@ -55,7 +55,7 @@ import {
   type Culture,
   type Bed,
 } from "../api/api";
-import type { CultivationType, Field, Location, RemainingAreaResponse } from "../api/types";
+import type { CultivationType, Field, Location } from "../api/types";
 import { extractApiErrorMessage } from "../api/errors";
 import {
   formatLocalizedNumber,
@@ -123,23 +123,6 @@ interface MobileCreateFormState {
   notes: string;
 }
 
-type AreaOverrideDialogState =
-  | {
-      kind: "remaining";
-      rowId: string;
-      availableArea: number;
-      requestedArea: number;
-      bedArea: number;
-      cultureId: number | string;
-    }
-  | {
-      kind: "bedArea";
-      rowId: string;
-      requestedArea: number;
-      bedArea: number;
-      cultureId: number | string;
-    };
-
 const CULTIVATION_TYPE_OPTIONS = [
   {
     value: "direct_sowing",
@@ -199,15 +182,6 @@ const toNumericValue = (value: unknown): number | null => {
 
 const toOptionalString = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
-
-const addDaysToIsoDate = (value: string, days: number): string | null => {
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-  date.setDate(date.getDate() + days);
-  return toIsoDateString(date);
-};
 
 interface HierarchySelectionRow {
   location_id?: number;
@@ -482,7 +456,6 @@ function PlantingPlans(): React.ReactElement {
     message: string;
     severity: "info" | "warning";
   } | null>(null);
-  const [areaOverrideDialog, setAreaOverrideDialog] = useState<AreaOverrideDialogState | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<PlantingPlanRow | null>(
@@ -782,50 +755,6 @@ function PlantingPlans(): React.ReactElement {
     ],
   );
 
-  const getAreaIntervalForRow = useCallback(
-    (row: PlantingPlanRow): { startDate: string; endDate: string } | null => {
-      const startDate = toIsoDateString(row.planting_date);
-      if (!startDate) {
-        return null;
-      }
-
-      const explicitEndDate =
-        toIsoDateString(row.harvest_end_date) ??
-        toIsoDateString(row.harvest_date);
-      if (explicitEndDate) {
-        return { startDate, endDate: explicitEndDate };
-      }
-
-      const culture = cultures.find((item) => item.id === row.culture);
-      const growthDays = culture?.growth_duration_days ?? 0;
-      const harvestDays = culture?.harvest_duration_days ?? 0;
-      const totalDays = growthDays + (growthDays && harvestDays ? harvestDays : 0);
-      const derivedEndDate = totalDays > 0 ? addDaysToIsoDate(startDate, totalDays) : startDate;
-
-      return { startDate, endDate: derivedEndDate ?? startDate };
-    },
-    [cultures],
-  );
-
-  const fetchRemainingAreaForRow = useCallback(
-    async (row: PlantingPlanRow): Promise<RemainingAreaResponse | null> => {
-      const bedId = resolveBedCellValue(row.bed, row);
-      const interval = getAreaIntervalForRow(row);
-      if (!bedId || !interval) {
-        return null;
-      }
-
-      const response = await plantingPlanAPI.remainingArea({
-        bed_id: bedId,
-        start_date: interval.startDate,
-        end_date: interval.endDate,
-        ...(row.id > 0 ? { exclude_plan_id: row.id } : {}),
-      });
-
-      return response.data;
-    },
-    [getAreaIntervalForRow],
-  );
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
@@ -928,7 +857,8 @@ function PlantingPlans(): React.ReactElement {
         label: "Anbauplan bearbeiten (Alt+E)",
         group: 'navigation',
         keywords: ["anbauplan", "bearbeiten", "edit"],
-                keys: { key: "Enter" },
+        shortcutHint: "Alt+E",
+        keys: { alt: true, key: "e" },
         contextTags: ["plans"],
         isEnabled: () => selectedPlan !== null,
         action: () => gridCommandApiRef.current?.editSelectedRow(),
@@ -1177,7 +1107,7 @@ function PlantingPlans(): React.ReactElement {
         editable: true,
         type: "number",
         renderHeader: () => (
-          <Tooltip title={t("plantingPlans:tooltips.coupledFields")}>
+          <Tooltip title={t("plantingPlans:tooltips.areaInput")}>
             <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>
               {t("plantingPlans:columns.areaM2")}
             </Box>
@@ -1187,29 +1117,19 @@ function PlantingPlans(): React.ReactElement {
           if (params.hasChanged) {
             lastEditedFieldRef.current = "area_m2";
           }
-          const bed = beds.find(
-            (item) => item.id === (params.row as PlantingPlanRow).bed,
-          );
-          const bedArea = bed?.area_sqm;
-          const numericValue = Number(params.props.value);
-          const hasAreaError =
-            bedArea !== undefined &&
-            bedArea !== null &&
-            Number.isFinite(numericValue) &&
-            numericValue > bedArea;
-          return { ...params.props, error: hasAreaError };
+          return params.props;
         },
         renderEditCell: (params) => {
           const row = params.row as PlantingPlanRow;
-          const selectedBed = beds.find((item) => item.id === row.bed);
           const derivedArea = getDerivedAreaFromRow(row);
 
           return (
             <AreaM2EditCell
               {...params}
-              bedAreaSqm={selectedBed?.area_sqm}
               fallbackValue={derivedArea}
               locale={numberLocale}
+              maxKeyword={t("plantingPlans:placeholders.maxKeyword")}
+              maxPlaceholder={t("plantingPlans:placeholders.maxKeyword")}
               onLastEditedFieldChange={() => {
                 lastEditedFieldRef.current = "area_m2";
                 setAreaNotice(null);
@@ -1288,7 +1208,6 @@ function PlantingPlans(): React.ReactElement {
       cultureOptions,
       cultures,
       dynamicWidths,
-      fetchRemainingAreaForRow,
       getBedLabelForRow,
       areaColumnLabel,
       fieldBedColumnLabel,
@@ -1488,36 +1407,6 @@ function PlantingPlans(): React.ReactElement {
     return Number((row.plants_count / plantsPerSqm).toFixed(2));
   };
 
-  const handleBeforeSaveRow = useCallback((row: PlantingPlanRow): boolean => {
-    const requestedArea = toNumericValue(row.area_m2);
-    const selectedBed = beds.find((bed) => bed.id === row.bed);
-    const bedArea = toNumericValue(selectedBed?.area_sqm);
-
-    if (requestedArea === null || bedArea === null || requestedArea <= bedArea) {
-      return true;
-    }
-
-    setAreaNotice(null);
-    setAreaOverrideDialog({
-      kind: "bedArea",
-      rowId: String(row.id),
-      requestedArea,
-      bedArea,
-      cultureId: row.culture,
-    });
-    return false;
-  }, [beds]);
-
-  const isAreaOverrideSaveErrorHandled = useCallback((error: unknown): boolean => {
-    if (!(error instanceof Error)) {
-      return false;
-    }
-    return (
-      error.message === t("plantingPlans:validation.areaExceedsRemaining") ||
-      error.message === t("plantingPlans:validation.areaExceedsBedArea")
-    );
-  }, [t]);
-
   const validateMobileForm = (): boolean => {
     if (!mobileCreateForm.culture || !mobileCreateForm.bed || !mobileCreateForm.planting_date) {
       setMobileCreateError(t("plantingPlans:validation.requiredFields", {
@@ -1531,6 +1420,7 @@ function PlantingPlans(): React.ReactElement {
     }
     if (
       mobileCreateForm.area_m2.trim() !== "" &&
+      mobileCreateForm.area_m2.trim().toLowerCase() !== t("plantingPlans:placeholders.maxKeyword").toLowerCase() &&
       parseLocalizedNumber(mobileCreateForm.area_m2, numberLocale) === null
     ) {
       setMobileCreateError(t("plantingPlans:errors.save"));
@@ -1550,10 +1440,12 @@ function PlantingPlans(): React.ReactElement {
     if (!validateMobileForm()) {
       return;
     }
-    const selectedBed = beds.find((bed) => bed.id === Number(mobileCreateForm.bed));
-    const hasAreaInput = mobileCreateForm.area_m2.trim() !== "";
+    const normalizedMobileArea = mobileCreateForm.area_m2.trim().toLowerCase();
+    const maxKeyword = t("plantingPlans:placeholders.maxKeyword").toLowerCase();
+    const isMaxAreaKeyword = normalizedMobileArea === maxKeyword;
+    const hasAreaInput = mobileCreateForm.area_m2.trim() !== "" && !isMaxAreaKeyword;
     const hasPlantsInput = mobileCreateForm.plants_count.trim() !== "";
-    const parsedArea = parseLocalizedNumber(mobileCreateForm.area_m2, numberLocale);
+    const parsedArea = isMaxAreaKeyword ? null : parseLocalizedNumber(mobileCreateForm.area_m2, numberLocale);
     const parsedPlants = parseLocalizedNumber(mobileCreateForm.plants_count, numberLocale);
     const usePlantsInput =
       mobileLastEditedField === "plants_count" ||
@@ -1566,32 +1458,6 @@ function PlantingPlans(): React.ReactElement {
           : parsedArea ?? undefined,
         area_input_unit: usePlantsInput ? "PLANTS" : "M2",
       };
-    } else if (selectedBed) {
-      const remainingArea = await fetchRemainingAreaForRow({
-        id: mobileEditId ?? -Date.now(),
-        culture: Number(mobileCreateForm.culture),
-        bed: Number(mobileCreateForm.bed),
-        planting_date: mobileCreateForm.planting_date,
-        cultivation_type: mobileCreateForm.cultivation_type,
-      } as PlantingPlanRow);
-      const availableArea = remainingArea?.remaining_area_sqm ?? null;
-      if (availableArea !== null && availableArea > 0) {
-        areaPayload = {
-          area_input_value: availableArea,
-          area_input_unit: "M2" as const,
-        };
-        setAreaNotice({
-          message: t("plantingPlans:feedback.areaAutoFilled", {
-            area: formatAreaM2(availableArea, numberLocale),
-          }),
-          severity: "info",
-        });
-      } else if (availableArea !== null) {
-        setAreaNotice({
-          message: t("plantingPlans:validation.noAvailableArea"),
-          severity: "warning",
-        });
-      }
     }
 
     try {
@@ -1641,7 +1507,6 @@ function PlantingPlans(): React.ReactElement {
     if (!mobileEditId || !validateMobileForm()) {
       return;
     }
-    const selectedBed = beds.find((bed) => bed.id === Number(mobileCreateForm.bed));
     const hasAreaInput = mobileCreateForm.area_m2.trim() !== "";
     const hasPlantsInput = mobileCreateForm.plants_count.trim() !== "";
     const parsedArea = parseLocalizedNumber(mobileCreateForm.area_m2, numberLocale);
@@ -1657,32 +1522,6 @@ function PlantingPlans(): React.ReactElement {
           : parsedArea ?? undefined,
         area_input_unit: usePlantsInput ? "PLANTS" : "M2",
       };
-    } else if (selectedBed) {
-      const remainingArea = await fetchRemainingAreaForRow({
-        id: mobileEditId,
-        culture: Number(mobileCreateForm.culture),
-        bed: Number(mobileCreateForm.bed),
-        planting_date: mobileCreateForm.planting_date,
-        cultivation_type: mobileCreateForm.cultivation_type,
-      } as PlantingPlanRow);
-      const availableArea = remainingArea?.remaining_area_sqm ?? null;
-      if (availableArea !== null && availableArea > 0) {
-        areaPayload = {
-          area_input_value: availableArea,
-          area_input_unit: "M2" as const,
-        };
-        setAreaNotice({
-          message: t("plantingPlans:feedback.areaAutoFilled", {
-            area: formatAreaM2(availableArea, numberLocale),
-          }),
-          severity: "info",
-        });
-      } else if (availableArea !== null) {
-        setAreaNotice({
-          message: t("plantingPlans:validation.noAvailableArea"),
-          severity: "warning",
-        });
-      }
     }
 
     try {
@@ -1757,16 +1596,6 @@ function PlantingPlans(): React.ReactElement {
     createIntentHandledRef.current = true;
   }, [canCreatePlan, handleCreatePlan, replacePlantingPlanSearchParams, searchParams]);
 
-  const areaOverrideAllocated = areaOverrideDialog
-    ? areaOverrideDialog.kind === "remaining"
-      ? Math.max(areaOverrideDialog.bedArea - areaOverrideDialog.availableArea, 0)
-      : null
-    : null;
-  const areaOverrideTargetArea = areaOverrideDialog
-    ? areaOverrideDialog.kind === "remaining"
-      ? areaOverrideDialog.availableArea
-      : areaOverrideDialog.bedArea
-    : null;
 
   return (
     <PageContainer variant="workspacePage">
@@ -1904,8 +1733,6 @@ function PlantingPlans(): React.ReactElement {
             onLoadStateChange={({ loading, dataFetched }) => {
               setIsPlansLoading(loading || !dataFetched);
             }}
-            onBeforeSaveRow={handleBeforeSaveRow}
-            isSaveErrorHandled={isAreaOverrideSaveErrorHandled}
             createNewRow={() => ({
             id: -Date.now(),
             culture: 0,
@@ -2003,7 +1830,6 @@ function PlantingPlans(): React.ReactElement {
 
             // Determine which field to send based on last edit
             const source = lastEditedFieldRef.current || "area_m2";
-            const selectedBed = beds.find((bed) => bed.id === bedId);
 
             if (source === "area_m2" && typeof row.area_m2 === "number") {
               // User edited area directly - send as M2
@@ -2016,64 +1842,6 @@ function PlantingPlans(): React.ReactElement {
               // User edited plants count - send as PLANTS
               apiData.area_input_value = row.plants_count;
               apiData.area_input_unit = "PLANTS";
-            }
-
-            if (apiData.area_input_value === undefined && selectedBed) {
-              const remainingArea = await fetchRemainingAreaForRow(row);
-              const availableArea = remainingArea?.remaining_area_sqm ?? null;
-
-              if (availableArea !== null && availableArea > 0) {
-                apiData.area_input_value = availableArea;
-                apiData.area_input_unit = "M2";
-                setAreaNotice({
-                  message: t("plantingPlans:feedback.areaAutoFilled", {
-                    area: formatAreaM2(availableArea, numberLocale),
-                  }),
-                  severity: "info",
-                });
-              } else if (availableArea !== null) {
-                setAreaNotice({
-                  message: t("plantingPlans:validation.noAvailableArea"),
-                  severity: "warning",
-                });
-              }
-            }
-            if (
-              source === "area_m2" &&
-              typeof row.area_m2 === "number" &&
-              selectedBed
-            ) {
-              const remainingArea = await fetchRemainingAreaForRow(row);
-              const bedArea =
-                typeof selectedBed.area_sqm === "number"
-                  ? selectedBed.area_sqm
-                  : 0;
-              const availableAreaRaw = remainingArea?.remaining_area_sqm ?? null;
-              const availableArea =
-                availableAreaRaw !== null ? availableAreaRaw : bedArea;
-              if (row.area_m2 > bedArea) {
-                setAreaNotice(null);
-                setAreaOverrideDialog({
-                  kind: "bedArea",
-                  rowId: String(row.id),
-                  requestedArea: row.area_m2,
-                  bedArea,
-                  cultureId: row.culture,
-                });
-                throw new Error(t("plantingPlans:validation.areaExceedsBedArea"));
-              }
-              if (row.area_m2 > availableArea) {
-                setAreaNotice(null);
-                setAreaOverrideDialog({
-                  kind: "remaining",
-                  rowId: String(row.id),
-                  availableArea,
-                  requestedArea: row.area_m2,
-                  bedArea,
-                  cultureId: row.culture,
-                });
-                throw new Error(t("plantingPlans:validation.areaExceedsRemaining"));
-              }
             }
 
             // Clear last edited field after use
@@ -2147,151 +1915,6 @@ function PlantingPlans(): React.ReactElement {
         </PageSurface>
 
       </Box>
-      <Dialog
-        open={areaOverrideDialog !== null}
-        onClose={() => setAreaOverrideDialog(null)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle sx={{ pb: 0.5 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            {t(
-              areaOverrideDialog?.kind === "bedArea"
-                ? "plantingPlans:validation.areaExceedsBedArea"
-                : "plantingPlans:validation.areaExceedsRemaining",
-            )}
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 1.5 }}>
-          <Stack spacing={1.25}>
-            {areaOverrideDialog?.kind === "remaining" ? (
-              <Box>
-                <Typography
-                  variant="h6"
-                  color="text.primary"
-                  sx={{ fontWeight: 600, lineHeight: 1.3 }}
-                >
-                  {t("plantingPlans:validation.availableArea")}:{" "}
-                  <Box component="span" sx={{ whiteSpace: "nowrap" }}>
-                    {formatAreaM2(areaOverrideDialog.availableArea, numberLocale)}
-                  </Box>
-                </Typography>
-              </Box>
-            ) : null}
-            {areaOverrideDialog?.kind === "bedArea" ? (
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "max-content max-content",
-                  columnGap: 1.5,
-                  rowGap: 0.5,
-                  alignItems: "baseline",
-                  color: "text.secondary",
-                }}
-              >
-                <Typography variant="body2">
-                  {t("plantingPlans:validation.bedArea")}:
-                </Typography>
-                <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
-                  {formatAreaM2(areaOverrideDialog.bedArea, numberLocale)}
-                </Typography>
-                <Typography variant="body2">
-                  {t("plantingPlans:validation.requestedArea")}:
-                </Typography>
-                <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
-                  {formatAreaM2(areaOverrideDialog.requestedArea, numberLocale)}
-                </Typography>
-              </Box>
-            ) : null}
-            {areaOverrideDialog?.kind === "remaining" ? (
-              <Stack spacing={0.75}>
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "max-content max-content",
-                    columnGap: 1.5,
-                    rowGap: 0.5,
-                    alignItems: "baseline",
-                    color: "text.secondary",
-                  }}
-                >
-                  <Typography variant="body2">
-                    {t("plantingPlans:validation.bedArea")}:
-                  </Typography>
-                  <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
-                    {formatAreaM2(areaOverrideDialog.bedArea, numberLocale)}
-                  </Typography>
-                  <Typography variant="body2">
-                    {t("plantingPlans:validation.alreadyAllocated")}:
-                  </Typography>
-                  <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
-                    {formatAreaM2(areaOverrideAllocated ?? 0, numberLocale)}
-                  </Typography>
-                  <Typography variant="body2">
-                    {t("plantingPlans:validation.requestedArea")}:
-                  </Typography>
-                  <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
-                    {formatAreaM2(areaOverrideDialog.requestedArea, numberLocale)}
-                  </Typography>
-                </Box>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: "block", whiteSpace: "nowrap" }}
-                >
-                  {formatAreaM2(areaOverrideDialog.requestedArea, numberLocale)} {"→"}{" "}
-                  {formatAreaM2(areaOverrideDialog.availableArea, numberLocale)}
-                </Typography>
-              </Stack>
-            ) : null}
-            {areaOverrideDialog?.kind === "bedArea" ? (
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: "block", whiteSpace: "nowrap" }}
-              >
-                {formatAreaM2(areaOverrideDialog.requestedArea, numberLocale)} {"→"}{" "}
-                {formatAreaM2(areaOverrideDialog.bedArea, numberLocale)}
-              </Typography>
-            ) : null}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAreaOverrideDialog(null)}>
-            {t("common:actions.cancel")}
-          </Button>
-          {areaOverrideDialog && areaOverrideTargetArea !== null && areaOverrideTargetArea > 0 ? (
-            <Button
-              variant="contained"
-              color="success"
-              onClick={() => {
-                if (!areaOverrideDialog || areaOverrideTargetArea === null) {
-                  return;
-                }
-                lastEditedFieldRef.current = "area_m2";
-                const plantsPerSqm = getPlantsPerSqmForCulture(String(areaOverrideDialog.cultureId));
-                const nextDraftValues: Partial<EditableRow> = {
-                  area_m2: areaOverrideTargetArea,
-                };
-                if (plantsPerSqm) {
-                  nextDraftValues.plants_count = Math.round(areaOverrideTargetArea * plantsPerSqm);
-                }
-                gridCommandApiRef.current?.setDraftValues(
-                  areaOverrideDialog.rowId,
-                  nextDraftValues,
-                );
-                setAreaOverrideDialog(null);
-              }}
-            >
-              {t(
-                areaOverrideDialog.kind === "bedArea"
-                  ? "plantingPlans:actions.useBedArea"
-                  : "plantingPlans:actions.useAvailableArea",
-              )}
-            </Button>
-          ) : null}
-        </DialogActions>
-      </Dialog>
 
       <Dialog open={isMobileCreateOpen} onClose={closeMobileCreateDialog} fullWidth maxWidth="sm">
         <DialogTitle>
@@ -2359,7 +1982,9 @@ function PlantingPlans(): React.ReactElement {
               onChange={(event) => {
                 const nextArea = event.target.value;
                 const plantsPerSqm = getPlantsPerSqmForCulture(mobileCreateForm.culture);
-                const parsedArea = parseLocalizedNumber(nextArea, numberLocale);
+                const normalizedArea = nextArea.trim().toLowerCase();
+                const maxKeyword = t("plantingPlans:placeholders.maxKeyword").toLowerCase();
+                const parsedArea = normalizedArea === maxKeyword ? null : parseLocalizedNumber(nextArea, numberLocale);
                 setMobileCreateForm((previous) => ({
                   ...previous,
                   area_m2: nextArea,
@@ -2374,6 +1999,8 @@ function PlantingPlans(): React.ReactElement {
                 setMobileLastEditedField("area_m2");
                 setAreaNotice(null);
               }}
+              placeholder={t("plantingPlans:placeholders.maxKeyword")}
+              helperText={t("plantingPlans:tooltips.areaAutoMax")}
               slotProps={{ htmlInput: { inputMode: "decimal" } }}
             />
             <TextField

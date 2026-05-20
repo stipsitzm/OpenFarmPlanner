@@ -205,26 +205,5 @@ describe('extractApiErrorMessage', () => {
     expect(result).toBe('Fläche: Der Wert muss größer als 0 sein.');
   });
 
-  it('localizes structured bed area exceeded errors', () => {
-    const t = createT({
-      'validation.bedAreaExceeded': 'Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.',
-      'validation.availableArea': 'Verfügbare Restfläche',
-    });
-    const error = createAxiosError(400, {
-      area_usage_sqm: {
-        errorCode: 'bed_area_exceeded',
-        bedArea: 20,
-        alreadyUsedArea: 14,
-        requestedArea: 8,
-        availableArea: 6,
-      },
-    });
 
-    const result = extractApiErrorMessage(error, t, fallbackMessage);
-
-    expect(result).toBe([
-      'Fläche (m²): Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.',
-      'Verfügbare Restfläche: 6,00 m²',
-    ].join('\n'));
-  });
 });

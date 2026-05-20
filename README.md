@@ -61,6 +61,53 @@ It combines a Django REST backend and a React frontend in one repository, with p
 - Node.js 20+
 - npm 10+
 
+## AI Agent Setup
+
+Copilot and Codex agents work best when the local development environment includes the same tooling they use for repo inspection, pull request management, and CI log review.
+
+### Required tooling
+
+- `git`
+- GitHub CLI (`gh`)
+- Python 3.12+ with PDM
+- Node.js 20+ with npm 10+
+
+### GitHub CLI setup
+
+This repository is not currently set up with a committed Dockerfile or DevContainer configuration, so `gh` must be installed on the host machine.
+
+On Ubuntu or Debian:
+
+```bash
+sudo apt update
+sudo apt install gh
+```
+
+If your distribution packages an older version, install `gh` using the method recommended by GitHub for your platform.
+
+Verify the installation:
+
+```bash
+which gh
+gh --version
+```
+
+### Authentication
+
+Authenticate GitHub CLI before using agent workflows that inspect pull requests, workflow runs, or logs:
+
+```bash
+gh auth login
+gh auth status
+```
+
+### What agents use `gh` for
+
+- Inspecting pull requests and reviews
+- Checking GitHub Actions workflow runs and logs
+- Creating or updating PRs from automation
+- Reproducing CI failures locally with the same GitHub identity
+
 ### 1) Backend setup
 
 ```bash

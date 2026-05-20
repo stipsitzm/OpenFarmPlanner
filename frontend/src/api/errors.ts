@@ -47,42 +47,6 @@ const backendMessageMap: Record<string, string> = {
   'area input value must be greater than 0.': 'validation.areaInputPositive',
 };
 
-function formatAreaValue(value: unknown): string {
-  const numericValue = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(numericValue)) {
-    return String(value ?? '');
-  }
-  return `${numericValue.toLocaleString('de-DE', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} m²`;
-}
-
-function localizeStructuredBackendError(
-  value: Record<string, unknown>,
-  t: TFunction,
-): string | null {
-  if (value.errorCode === 'bed_area_exceeded') {
-    const message = translatedOrFallback(
-      t,
-      'validation.bedAreaExceeded',
-      'Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.',
-    );
-    const availableAreaLabel = translatedOrFallback(
-      t,
-      'validation.availableArea',
-      'Verfügbare Restfläche',
-    );
-    return `${message}\n${availableAreaLabel}: ${formatAreaValue(value.availableArea)}`;
-  }
-
-  if (typeof value.message === 'string') {
-    return localizeBackendMessage(value.message, t);
-  }
-
-  return null;
-}
-
 function localizeBackendMessage(message: string, t: TFunction): string {
   const normalized = message.trim().toLowerCase();
   const key = backendMessageMap[normalized];
@@ -196,27 +160,10 @@ export function extractApiErrorMessage(
                 errors.push(errorMsg);
                 return;
               }
-              if (msg && typeof msg === 'object') {
-                const structuredMessage = localizeStructuredBackendError(
-                  msg as Record<string, unknown>,
-                  t,
-                );
-                if (structuredMessage) {
-                  errors.push(`${fieldName}: ${structuredMessage}`);
-                }
-              }
             });
           } else if (typeof value === 'string') {
             const errorMsg = `${fieldName}: ${localizeBackendMessage(value, t)}`;
             errors.push(errorMsg);
-          } else if (value && typeof value === 'object') {
-            const structuredMessage = localizeStructuredBackendError(
-              value as Record<string, unknown>,
-              t,
-            );
-            if (structuredMessage) {
-              errors.push(`${fieldName}: ${structuredMessage}`);
-            }
           }
         });
 

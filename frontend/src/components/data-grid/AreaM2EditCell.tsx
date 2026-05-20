@@ -4,17 +4,30 @@
  * Provides a numeric input for area editing with optional normalization on blur.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TextField } from '@mui/material';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
 import { formatLocalizedNumber, parseLocalizedNumber } from '../../utils/numberLocalization';
 
+function parseAreaInput(value: string, locale: string, maxKeyword: string): number | null {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === '') {
+    return null;
+  }
+  if (normalized === maxKeyword.trim().toLowerCase()) {
+    return null;
+  }
+  return parseLocalizedNumber(value, locale);
+}
+
+
 export interface AreaM2EditCellProps extends GridRenderEditCellParams {
-  bedAreaSqm?: number;
   onLastEditedFieldChange: (field: 'area_m2') => void;
   fallbackValue?: number | null;
   locale: string;
+  maxKeyword: string;
+  maxPlaceholder: string;
 }
 
 export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
@@ -23,10 +36,11 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     value,
     field,
     hasFocus,
-    bedAreaSqm,
     onLastEditedFieldChange,
     fallbackValue,
     locale,
+    maxKeyword,
+    maxPlaceholder,
   } = props;
   const apiRef = useGridApiContext();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -49,15 +63,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
           })
         : ''
   );
-  const maxDisabled = bedAreaSqm === undefined || bedAreaSqm === null;
 
-  const areaExceeded = useMemo(() => {
-    const parsed = parseLocalizedNumber(inputValue, locale);
-    if (parsed === null || maxDisabled) {
-      return false;
-    }
-    return parsed > (bedAreaSqm ?? 0);
-  }, [inputValue, locale, maxDisabled, bedAreaSqm]);
 
   useEffect(() => {
     if (hasFocus) {
@@ -100,7 +106,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const val = e.target.value;
     setInputValue(val);
-    const parsedValue = parseLocalizedNumber(val, locale);
+    const parsedValue = parseAreaInput(val, locale, maxKeyword);
     await applyValue(parsedValue);
   };
 
@@ -112,14 +118,32 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
       value={inputValue}
       onChange={handleChange}
       size="small"
-      error={areaExceeded}
+      fullWidth
+      placeholder={maxPlaceholder}
       slotProps={{
         htmlInput: {
           min: 0,
           step: 0.01,
         },
       }}
-      sx={{ minWidth: 96, flex: 1 }}
+      sx={{
+        minWidth: 96,
+        flex: 1,
+        '& .MuiInputBase-root': {
+          height: '100%',
+          outline: 'none',
+          boxShadow: 'none',
+        },
+        '& .MuiOutlinedInput-notchedOutline': {
+          border: 0,
+        },
+        '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+          border: 0,
+        },
+        '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+          border: 0,
+        },
+      }}
     />
   );
 }
