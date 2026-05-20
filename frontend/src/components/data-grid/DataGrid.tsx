@@ -403,6 +403,31 @@ export function EditableDataGrid<T extends EditableRow>({
     handleDeleteClick(selectedRowId)();
   };
 
+  const handleStartCellEditFromKeyboard = useCallback((params: GridCellParams<T>): void => {
+    if (!params.isEditable || rowModesModel[params.id]?.mode === GridRowModes.Edit) {
+      return;
+    }
+
+    const rowKey = String(params.id);
+    if (!rowSnapshotRef.current.has(rowKey)) {
+      const row = rowsById.get(rowKey);
+      if (row) {
+        rowSnapshotRef.current.set(rowKey, row as T);
+      }
+    }
+
+    const api = gridApiRef.current;
+    if (!api) {
+      return;
+    }
+
+    api.setCellFocus(params.id, params.field);
+    setRowModesModel((oldModel) => ({
+      ...oldModel,
+      [params.id]: { mode: GridRowModes.Edit, fieldToFocus: params.field },
+    }));
+  }, [gridApiRef, rowModesModel, rowsById]);
+
   useEffect(() => {
     if (!commandApiRef) {
       return;
@@ -896,6 +921,21 @@ export function EditableDataGrid<T extends EditableRow>({
             handleEditableCellClick(params, rowModesModel, setRowModesModel);
           }}
           onCellKeyDown={(params: GridCellParams<T>, event) => {
+            const shouldStartCellEdit =
+              event.key === 'Enter' &&
+              !event.ctrlKey &&
+              !event.metaKey &&
+              !event.altKey &&
+              !event.shiftKey &&
+              params.isEditable &&
+              rowModesModel[params.id]?.mode !== GridRowModes.Edit;
+
+            if (shouldStartCellEdit) {
+              event.preventDefault();
+              event.defaultMuiPrevented = true;
+              handleStartCellEditFromKeyboard(params);
+              return;
+            }
             if (event.key === 'Escape') {
               event.preventDefault();
               handleDiscardRowChanges(params.id);
