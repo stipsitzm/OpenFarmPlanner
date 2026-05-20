@@ -294,7 +294,7 @@ describe('App', () => {
       await waitFor(() => {
         expect(window.location.pathname).toBe('/app/fields-beds');
       }, { timeout: 3000 });
-      expect(await screen.findByText('Anbauflächen')).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Anbauflächen' })).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: previousHeading })).not.toBeInTheDocument();
 
       unmount();

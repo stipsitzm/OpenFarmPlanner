@@ -123,6 +123,23 @@ interface MobileCreateFormState {
   notes: string;
 }
 
+type AreaOverrideDialogState =
+  | {
+      kind: "remaining";
+      rowId: string;
+      availableArea: number;
+      requestedArea: number;
+      bedArea: number;
+      cultureId: number | string;
+    }
+  | {
+      kind: "bedArea";
+      rowId: string;
+      requestedArea: number;
+      bedArea: number;
+      cultureId: number | string;
+    };
+
 const CULTIVATION_TYPE_OPTIONS = [
   {
     value: "direct_sowing",
@@ -154,7 +171,7 @@ const formatAreaM2 = (value: number, locale: string): string =>
   `${formatLocalizedNumber(value, locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })} m²`;
+  })}\u00a0m²`;
 
 const toIsoDateString = (value: unknown): string | null => {
   if (value instanceof Date) {
@@ -465,6 +482,7 @@ function PlantingPlans(): React.ReactElement {
     message: string;
     severity: "info" | "warning";
   } | null>(null);
+  const [areaOverrideDialog, setAreaOverrideDialog] = useState<AreaOverrideDialogState | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<PlantingPlanRow | null>(
@@ -1192,20 +1210,9 @@ function PlantingPlans(): React.ReactElement {
               bedAreaSqm={selectedBed?.area_sqm}
               fallbackValue={derivedArea}
               locale={numberLocale}
-              formatArea={(value) => formatAreaM2(value, numberLocale)}
-              areaExceededMessage={t("plantingPlans:validation.areaExceedsRemaining")}
-              availableAreaLabel={t("plantingPlans:validation.availableArea")}
-              applyAvailableAreaLabel={t("plantingPlans:actions.useAvailableArea")}
               onLastEditedFieldChange={() => {
                 lastEditedFieldRef.current = "area_m2";
                 setAreaNotice(null);
-              }}
-              getAvailableAreaOnBlur={async (value) => {
-                if (value === null) {
-                  return null;
-                }
-                const remainingArea = await fetchRemainingAreaForRow(row);
-                return remainingArea?.remaining_area_sqm ?? null;
               }}
             />
           );
@@ -1481,6 +1488,36 @@ function PlantingPlans(): React.ReactElement {
     return Number((row.plants_count / plantsPerSqm).toFixed(2));
   };
 
+  const handleBeforeSaveRow = useCallback((row: PlantingPlanRow): boolean => {
+    const requestedArea = toNumericValue(row.area_m2);
+    const selectedBed = beds.find((bed) => bed.id === row.bed);
+    const bedArea = toNumericValue(selectedBed?.area_sqm);
+
+    if (requestedArea === null || bedArea === null || requestedArea <= bedArea) {
+      return true;
+    }
+
+    setAreaNotice(null);
+    setAreaOverrideDialog({
+      kind: "bedArea",
+      rowId: String(row.id),
+      requestedArea,
+      bedArea,
+      cultureId: row.culture,
+    });
+    return false;
+  }, [beds]);
+
+  const isAreaOverrideSaveErrorHandled = useCallback((error: unknown): boolean => {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+    return (
+      error.message === t("plantingPlans:validation.areaExceedsRemaining") ||
+      error.message === t("plantingPlans:validation.areaExceedsBedArea")
+    );
+  }, [t]);
+
   const validateMobileForm = (): boolean => {
     if (!mobileCreateForm.culture || !mobileCreateForm.bed || !mobileCreateForm.planting_date) {
       setMobileCreateError(t("plantingPlans:validation.requiredFields", {
@@ -1720,6 +1757,17 @@ function PlantingPlans(): React.ReactElement {
     createIntentHandledRef.current = true;
   }, [canCreatePlan, handleCreatePlan, replacePlantingPlanSearchParams, searchParams]);
 
+  const areaOverrideAllocated = areaOverrideDialog
+    ? areaOverrideDialog.kind === "remaining"
+      ? Math.max(areaOverrideDialog.bedArea - areaOverrideDialog.availableArea, 0)
+      : null
+    : null;
+  const areaOverrideTargetArea = areaOverrideDialog
+    ? areaOverrideDialog.kind === "remaining"
+      ? areaOverrideDialog.availableArea
+      : areaOverrideDialog.bedArea
+    : null;
+
   return (
     <PageContainer variant="workspacePage">
 
@@ -1856,6 +1904,8 @@ function PlantingPlans(): React.ReactElement {
             onLoadStateChange={({ loading, dataFetched }) => {
               setIsPlansLoading(loading || !dataFetched);
             }}
+            onBeforeSaveRow={handleBeforeSaveRow}
+            isSaveErrorHandled={isAreaOverrideSaveErrorHandled}
             createNewRow={() => ({
             id: -Date.now(),
             culture: 0,
@@ -1988,6 +2038,43 @@ function PlantingPlans(): React.ReactElement {
                 });
               }
             }
+            if (
+              source === "area_m2" &&
+              typeof row.area_m2 === "number" &&
+              selectedBed
+            ) {
+              const remainingArea = await fetchRemainingAreaForRow(row);
+              const bedArea =
+                typeof selectedBed.area_sqm === "number"
+                  ? selectedBed.area_sqm
+                  : 0;
+              const availableAreaRaw = remainingArea?.remaining_area_sqm ?? null;
+              const availableArea =
+                availableAreaRaw !== null ? availableAreaRaw : bedArea;
+              if (row.area_m2 > bedArea) {
+                setAreaNotice(null);
+                setAreaOverrideDialog({
+                  kind: "bedArea",
+                  rowId: String(row.id),
+                  requestedArea: row.area_m2,
+                  bedArea,
+                  cultureId: row.culture,
+                });
+                throw new Error(t("plantingPlans:validation.areaExceedsBedArea"));
+              }
+              if (row.area_m2 > availableArea) {
+                setAreaNotice(null);
+                setAreaOverrideDialog({
+                  kind: "remaining",
+                  rowId: String(row.id),
+                  availableArea,
+                  requestedArea: row.area_m2,
+                  bedArea,
+                  cultureId: row.culture,
+                });
+                throw new Error(t("plantingPlans:validation.areaExceedsRemaining"));
+              }
+            }
 
             // Clear last edited field after use
             lastEditedFieldRef.current = null;
@@ -2014,16 +2101,6 @@ function PlantingPlans(): React.ReactElement {
               return t("plantingPlans:validation.requiredFields", {
                 fields: missingFields.join(", "),
               });
-            }
-
-            const selectedBed = beds.find((bed) => bed.id === row.bed);
-            if (
-              selectedBed?.area_sqm !== undefined &&
-              selectedBed.area_sqm !== null &&
-              typeof row.area_m2 === "number" &&
-              row.area_m2 > selectedBed.area_sqm
-            ) {
-              return t("plantingPlans:validation.areaExceedsRemaining");
             }
 
             return null;
@@ -2070,6 +2147,151 @@ function PlantingPlans(): React.ReactElement {
         </PageSurface>
 
       </Box>
+      <Dialog
+        open={areaOverrideDialog !== null}
+        onClose={() => setAreaOverrideDialog(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 0.5 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            {t(
+              areaOverrideDialog?.kind === "bedArea"
+                ? "plantingPlans:validation.areaExceedsBedArea"
+                : "plantingPlans:validation.areaExceedsRemaining",
+            )}
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1.5 }}>
+          <Stack spacing={1.25}>
+            {areaOverrideDialog?.kind === "remaining" ? (
+              <Box>
+                <Typography
+                  variant="h6"
+                  color="text.primary"
+                  sx={{ fontWeight: 600, lineHeight: 1.3 }}
+                >
+                  {t("plantingPlans:validation.availableArea")}:{" "}
+                  <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+                    {formatAreaM2(areaOverrideDialog.availableArea, numberLocale)}
+                  </Box>
+                </Typography>
+              </Box>
+            ) : null}
+            {areaOverrideDialog?.kind === "bedArea" ? (
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "max-content max-content",
+                  columnGap: 1.5,
+                  rowGap: 0.5,
+                  alignItems: "baseline",
+                  color: "text.secondary",
+                }}
+              >
+                <Typography variant="body2">
+                  {t("plantingPlans:validation.bedArea")}:
+                </Typography>
+                <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
+                  {formatAreaM2(areaOverrideDialog.bedArea, numberLocale)}
+                </Typography>
+                <Typography variant="body2">
+                  {t("plantingPlans:validation.requestedArea")}:
+                </Typography>
+                <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
+                  {formatAreaM2(areaOverrideDialog.requestedArea, numberLocale)}
+                </Typography>
+              </Box>
+            ) : null}
+            {areaOverrideDialog?.kind === "remaining" ? (
+              <Stack spacing={0.75}>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "max-content max-content",
+                    columnGap: 1.5,
+                    rowGap: 0.5,
+                    alignItems: "baseline",
+                    color: "text.secondary",
+                  }}
+                >
+                  <Typography variant="body2">
+                    {t("plantingPlans:validation.bedArea")}:
+                  </Typography>
+                  <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
+                    {formatAreaM2(areaOverrideDialog.bedArea, numberLocale)}
+                  </Typography>
+                  <Typography variant="body2">
+                    {t("plantingPlans:validation.alreadyAllocated")}:
+                  </Typography>
+                  <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
+                    {formatAreaM2(areaOverrideAllocated ?? 0, numberLocale)}
+                  </Typography>
+                  <Typography variant="body2">
+                    {t("plantingPlans:validation.requestedArea")}:
+                  </Typography>
+                  <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
+                    {formatAreaM2(areaOverrideDialog.requestedArea, numberLocale)}
+                  </Typography>
+                </Box>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", whiteSpace: "nowrap" }}
+                >
+                  {formatAreaM2(areaOverrideDialog.requestedArea, numberLocale)} {"→"}{" "}
+                  {formatAreaM2(areaOverrideDialog.availableArea, numberLocale)}
+                </Typography>
+              </Stack>
+            ) : null}
+            {areaOverrideDialog?.kind === "bedArea" ? (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "block", whiteSpace: "nowrap" }}
+              >
+                {formatAreaM2(areaOverrideDialog.requestedArea, numberLocale)} {"→"}{" "}
+                {formatAreaM2(areaOverrideDialog.bedArea, numberLocale)}
+              </Typography>
+            ) : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAreaOverrideDialog(null)}>
+            {t("common:actions.cancel")}
+          </Button>
+          {areaOverrideDialog && areaOverrideTargetArea !== null && areaOverrideTargetArea > 0 ? (
+            <Button
+              variant="contained"
+              color="success"
+              onClick={() => {
+                if (!areaOverrideDialog || areaOverrideTargetArea === null) {
+                  return;
+                }
+                lastEditedFieldRef.current = "area_m2";
+                const plantsPerSqm = getPlantsPerSqmForCulture(String(areaOverrideDialog.cultureId));
+                const nextDraftValues: Partial<EditableRow> = {
+                  area_m2: areaOverrideTargetArea,
+                };
+                if (plantsPerSqm) {
+                  nextDraftValues.plants_count = Math.round(areaOverrideTargetArea * plantsPerSqm);
+                }
+                gridCommandApiRef.current?.setDraftValues(
+                  areaOverrideDialog.rowId,
+                  nextDraftValues,
+                );
+                setAreaOverrideDialog(null);
+              }}
+            >
+              {t(
+                areaOverrideDialog.kind === "bedArea"
+                  ? "plantingPlans:actions.useBedArea"
+                  : "plantingPlans:actions.useAvailableArea",
+              )}
+            </Button>
+          ) : null}
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={isMobileCreateOpen} onClose={closeMobileCreateDialog} fullWidth maxWidth="sm">
         <DialogTitle>

@@ -18,7 +18,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo, type MutableRefObject } from 'react';
-import { DataGrid, GridRowModes } from '@mui/x-data-grid';
+import { DataGrid, GridRowModes, useGridApiRef } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridCellParams, GridRowParams } from '@mui/x-data-grid';
@@ -56,6 +56,7 @@ export interface EditableDataGridCommandApi {
   editSelectedRow: () => void;
   deleteSelectedRow: () => void;
   getSelectedRowId: () => GridRowId | null;
+  setDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => void;
   reload: () => Promise<void>;
 }
 export interface NotesFieldConfig {
@@ -95,6 +96,8 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showRowEditActions?: boolean;
   onRowsStateChange?: (rows: T[]) => void;
   onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean; error: string }) => void;
+  onBeforeSaveRow?: (row: T) => boolean;
+  isSaveErrorHandled?: (error: unknown) => boolean;
   /**
    * Controls how the grid surface uses available page/workspace width:
    * - contentFit: fit to content and center, but never exceed container width
@@ -130,8 +133,11 @@ export function EditableDataGrid<T extends EditableRow>({
   showRowEditActions = false,
   onRowsStateChange,
   onLoadStateChange,
+  onBeforeSaveRow,
+  isSaveErrorHandled,
   surfaceSizing,
 }: EditableDataGridProps<T>): React.ReactElement {
+  const gridApiRef = useGridApiRef();
   const resolvedSurfaceSizing = surfaceSizing ?? 'contentFit';
   const isContentSizedSurface = resolvedSurfaceSizing === 'contentFit' || resolvedSurfaceSizing === 'compact';
   const shouldUseCompactContainer = resolvedSurfaceSizing === 'compact';
@@ -150,7 +156,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const isMobile = useMediaQuery('(max-width:900px)');
   
   const { t } = useTranslation('common');
-  const { sortModel, setSortModel } = usePersistentSortModel({
+  const { sortModel, setSortModel, filterModel, setFilterModel } = usePersistentSortModel({
     tableKey: tableKey ?? 'editableDataGrid',
     defaultSortModel,
     allowedFields: columns.map((column) => column.field),
@@ -327,6 +333,25 @@ export function EditableDataGrid<T extends EditableRow>({
     }));
   }, []);
 
+  const getDraftRow = useCallback((rowId: GridRowId): T | null => {
+    const api = gridApiRef.current;
+    if (!api) {
+      return null;
+    }
+    return api.getRowWithUpdatedValues(rowId, '') as T | null;
+  }, [gridApiRef]);
+
+  const shouldSaveRow = useCallback((rowId: GridRowId): boolean => {
+    if (!onBeforeSaveRow) {
+      return true;
+    }
+    const draftRow = getDraftRow(rowId);
+    if (!draftRow) {
+      return true;
+    }
+    return onBeforeSaveRow(draftRow);
+  }, [getDraftRow, onBeforeSaveRow]);
+
   const handleSaveAllDirtyRows = useCallback((): void => {
     const editingRowIds = Object.entries(rowModesModel)
       .filter(([, mode]) => mode.mode === GridRowModes.Edit)
@@ -334,21 +359,28 @@ export function EditableDataGrid<T extends EditableRow>({
     if (editingRowIds.length === 0) {
       return;
     }
+    const saveableRowIds = editingRowIds.filter((rowId) => shouldSaveRow(rowId));
+    if (saveableRowIds.length === 0) {
+      return;
+    }
     setRowModesModel((oldModel) => {
       const nextModel = { ...oldModel };
-      for (const rowId of editingRowIds) {
+      for (const rowId of saveableRowIds) {
         nextModel[rowId] = { mode: GridRowModes.View };
       }
       return nextModel;
     });
-  }, [rowModesModel]);
+  }, [rowModesModel, shouldSaveRow]);
 
   const handleSaveRow = useCallback((rowId: GridRowId): void => {
+    if (!shouldSaveRow(rowId)) {
+      return;
+    }
     setRowModesModel((oldModel) => ({
       ...oldModel,
       [rowId]: { mode: GridRowModes.View },
     }));
-  }, []);
+  }, [shouldSaveRow]);
 
   const handleEditSelectedRow = (): void => {
     const selectedRowId = selectedRowIds[0];
@@ -381,13 +413,61 @@ export function EditableDataGrid<T extends EditableRow>({
       editSelectedRow: handleEditSelectedRow,
       deleteSelectedRow: handleDeleteSelectedRow,
       getSelectedRowId: () => selectedRowIds[0] ?? null,
+      setDraftValues: (rowId, values) => {
+        const rowKey = String(rowId);
+        const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
+        const targetRow = rowsById.get(rowKey) as T | undefined;
+
+        const api = gridApiRef.current;
+        if (isEditing && api) {
+          const editUpdates = Object.entries(values).flatMap(([fieldKey, fieldValue]) => {
+            if (fieldKey === 'id' || fieldKey === 'isNew') {
+              return [];
+            }
+            return [
+              api.setEditCellValue({
+                id: rowId,
+                field: fieldKey,
+                value: fieldValue,
+              }),
+            ];
+          });
+          void Promise.allSettled(editUpdates);
+        }
+
+        setRows((previousRows) =>
+          previousRows.map((row) =>
+            String(row.id) === rowKey ? ({ ...row, ...values } as T) : row,
+          ),
+        );
+        if (targetRow) {
+          const nextRow = { ...targetRow, ...values } as T;
+          const fieldErrors = getRowValidationErrors?.(nextRow) ?? {};
+          setActiveValidationErrors((prev) => ({
+            ...prev,
+            [rowKey]: fieldErrors,
+          }));
+        }
+        setDirtyRowIds((previous) => {
+          const next = new Set(previous);
+          next.add(rowKey);
+          return next;
+        });
+        setRowModesModel((previousModel) => ({
+          ...previousModel,
+          [rowId]: {
+            ...(previousModel[rowId] ?? {}),
+            mode: GridRowModes.Edit,
+          },
+        }));
+      },
       reload: fetchData,
     };
 
     return () => {
       commandApiRef.current = null;
     };
-  }, [commandApiRef, fetchData, selectedRowIds]);
+  }, [commandApiRef, fetchData, getRowValidationErrors, gridApiRef, rowModesModel, rowsById, selectedRowIds]);
 
 
   /**
@@ -455,6 +535,10 @@ export function EditableDataGrid<T extends EditableRow>({
         return mappedRow;
       }
     } catch (err) {
+      if (isSaveErrorHandled?.(err)) {
+        console.error('Error saving data:', err);
+        throw err;
+      }
       // Extract user-friendly error message
       const errorMessage = extractApiErrorMessage(err, t, saveErrorMessage);
       setError(errorMessage);
@@ -468,6 +552,9 @@ export function EditableDataGrid<T extends EditableRow>({
    */
   const handleProcessRowUpdateError = (error: unknown): void => {
     console.error('Row update error:', error);
+    if (isSaveErrorHandled?.(error)) {
+      return;
+    }
     if (error instanceof Error && error.message) {
       setError(error.message);
       return;
@@ -756,6 +843,8 @@ export function EditableDataGrid<T extends EditableRow>({
           hideFooter={false}
           sortModel={sortModel}
           onSortModelChange={setSortModel}
+          filterModel={filterModel}
+          onFilterModelChange={setFilterModel}
           rowSelectionModel={{ type: "include", ids: new Set(selectedRowIds) }}
           onRowSelectionModelChange={(nextModel) => setSelectedRowIds(Array.from(nextModel.ids))}
           slots={{
@@ -818,6 +907,7 @@ export function EditableDataGrid<T extends EditableRow>({
             }
           }}
           localeText={germanDataGridLocaleText}
+          apiRef={gridApiRef}
           />
         </Box>
       </Box>
