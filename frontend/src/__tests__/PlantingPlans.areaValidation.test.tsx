@@ -54,7 +54,7 @@ vi.mock("../components/data-grid", async () => {
     mapToRow?: (row: Record<string, unknown>) => Record<string, unknown>;
     onRowsStateChange?: (rows: Record<string, unknown>[]) => void;
     onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean }) => void;
-    onBeforeSaveRow?: (row: Record<string, unknown>) => boolean;
+    onBeforeSaveRow?: (row: Record<string, unknown>) => boolean | Record<string, unknown>;
     commandApiRef?: { current: EditableDataGridCommandApi | null };
   };
   return {
@@ -88,21 +88,26 @@ vi.mock("../components/data-grid", async () => {
           isMounted = false;
         };
       }, []);
+      const handleSaveAttempt = (): void => {
+        const result = onBeforeSaveRow?.(mockGridRowState.row) ?? true;
+        if (result !== true && result !== false) {
+          commandApiSpies.setDraftValues(mockGridRowState.row.id, result);
+          commandApiSpies.saveAttemptResult(true);
+          return;
+        }
+        commandApiSpies.saveAttemptResult(result);
+      };
       return (
         <>
           <button
             type="button"
-            onClick={() => {
-              commandApiSpies.saveAttemptResult(onBeforeSaveRow?.(mockGridRowState.row) ?? true);
-            }}
+            onClick={handleSaveAttempt}
           >
             Zeile speichern
           </button>
           <button
             type="button"
-            onClick={() => {
-              commandApiSpies.saveAttemptResult(onBeforeSaveRow?.(mockGridRowState.row) ?? true);
-            }}
+            onClick={handleSaveAttempt}
           >
             Speichern mit Enter
           </button>
@@ -119,6 +124,24 @@ const waitForPlansToLoad = async (callCount = 1): Promise<void> => {
   await waitFor(() => {
     expect(apiMocks.planList).toHaveBeenCalledTimes(callCount);
   });
+};
+
+const mockRemainingAreaScenario = (): void => {
+  apiMocks.bedList.mockResolvedValue({ data: { results: [{ id: 101, name: "Beet A", field: 11, area_sqm: 7 }] } });
+  apiMocks.planList.mockResolvedValue({
+    data: {
+      results: [{
+        id: 9, bed: 101, culture: 2, planting_date: "2026-04-01", harvest_date: "2026-05-01", area_usage_sqm: 3,
+      }],
+    },
+  });
+};
+
+const expectMaxAreaApplied = async (): Promise<void> => {
+  expect(commandApiSpies.saveAttemptResult).toHaveBeenLastCalledWith(true);
+  expect(commandApiSpies.setDraftValues).toHaveBeenCalledWith(1, expect.objectContaining({ area_m2: 4, plants_count: 40 }));
+  expect(screen.queryByText("Der Wert muss größer als 0 sein.")).not.toBeInTheDocument();
+  expect(await screen.findByText(areaText("Maximal verfügbare Fläche übernommen", "4,00"))).toBeInTheDocument();
 };
 
 vi.mock("../api/api", async () => {
@@ -273,6 +296,42 @@ describe("PlantingPlans save-time area validation", () => {
     expect(commandApiSpies.setDraftValues).toHaveBeenCalledWith(1, expect.objectContaining({ area_m2: 3, plants_count: 30 }));
     expect(await screen.findByText("Maximal verfügbare Fläche übernommen: 3,00 m²")).toBeInTheDocument();
     expect(screen.queryByText("Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.")).not.toBeInTheDocument();
+  });
+
+  it("applies the remaining area for max input without positive-number validation", async () => {
+    mockRemainingAreaScenario();
+    mockGridRowState.row = {
+      id: 1, bed: 101, culture: 2, planting_date: "2026-04-10", harvest_date: "2026-05-10", area_m2: "max",
+    };
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+    await userEvent.click(await screen.findByRole("button", { name: "Zeile speichern" }));
+
+    await expectMaxAreaApplied();
+  });
+
+  it("applies the remaining area for trimmed uppercase max input", async () => {
+    mockRemainingAreaScenario();
+    mockGridRowState.row = {
+      id: 1, bed: 101, culture: 2, planting_date: "2026-04-10", harvest_date: "2026-05-10", area_m2: " MAX ",
+    };
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+    await userEvent.click(await screen.findByRole("button", { name: "Zeile speichern" }));
+
+    await expectMaxAreaApplied();
+  });
+
+  it("applies the remaining area for empty area input", async () => {
+    mockRemainingAreaScenario();
+    mockGridRowState.row = {
+      id: 1, bed: 101, culture: 2, planting_date: "2026-04-10", harvest_date: "2026-05-10", area_m2: "",
+    };
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+    await userEvent.click(await screen.findByRole("button", { name: "Zeile speichern" }));
+
+    await expectMaxAreaApplied();
   });
 
   it("does not count same-bed rows whose German date ranges do not overlap", async () => {

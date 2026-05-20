@@ -244,6 +244,17 @@ const toAreaNumericValue = (value: unknown, locale: string): number | null => {
   return localized === null ? null : localized;
 };
 
+const isAutoAreaRequest = (value: unknown, maxKeyword: string): boolean => {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  if (typeof value !== "string") {
+    return false;
+  }
+  const normalized = value.trim().toLowerCase();
+  return normalized === "" || normalized === maxKeyword.trim().toLowerCase() || normalized === "maximum";
+};
+
 const toOptionalString = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
 
@@ -1543,20 +1554,31 @@ function PlantingPlans(): React.ReactElement {
     };
   };
 
+  const buildAreaAndPlantsDraft = (
+    row: Pick<PlantingPlanRow, "culture" | "plants_count"> | undefined,
+    nextArea: number,
+    fallbackCultureId?: number,
+    fallbackPlantsCount?: number | null,
+  ): Pick<PlantingPlanRow, "area_m2" | "plants_count"> => {
+    const normalizedArea = Number(nextArea.toFixed(2));
+    const cultureId = row?.culture ?? fallbackCultureId;
+    const culture = cultures.find((item) => item.id === cultureId);
+    const plantsPerSqm = culture?.plants_per_m2;
+    return {
+      area_m2: normalizedArea,
+      plants_count: plantsPerSqm && plantsPerSqm > 0 ? Math.round(normalizedArea * plantsPerSqm) : row?.plants_count ?? fallbackPlantsCount,
+    };
+  };
+
   const applyAreaAndPlants = (
     rowId: number,
     nextArea: number,
     fallbackCultureId?: number,
     fallbackPlantsCount?: number | null,
   ): void => {
-    const normalizedArea = Number(nextArea.toFixed(2));
     const row = mobileRows.find((item) => item.id === rowId);
-    const cultureId = row?.culture ?? fallbackCultureId;
-    const culture = cultures.find((item) => item.id === cultureId);
-    const plantsPerSqm = culture?.plants_per_m2;
     gridCommandApiRef.current?.setDraftValues(rowId, {
-      area_m2: normalizedArea,
-      plants_count: plantsPerSqm && plantsPerSqm > 0 ? Math.round(normalizedArea * plantsPerSqm) : row?.plants_count ?? fallbackPlantsCount,
+      ...buildAreaAndPlantsDraft(row, nextArea, fallbackCultureId, fallbackPlantsCount),
     });
     lastEditedFieldRef.current = "area_m2";
   };
@@ -2048,16 +2070,21 @@ function PlantingPlans(): React.ReactElement {
             if (!capacity) {
               return true;
             }
-            const requestedArea = toAreaNumericValue(row.area_m2, numberLocale);
-            if (requestedArea === null) {
+            const maxKeyword = t("plantingPlans:placeholders.maxKeyword");
+            if (isAutoAreaRequest(row.area_m2, maxKeyword)) {
               if (capacity.availableArea > 0) {
-                applyAreaAndPlants(row.id, capacity.availableArea, row.culture, row.plants_count);
                 setAreaNotice({
                   severity: "info",
                   message: t("plantingPlans:areaValidation.maxAreaApplied", { area: formatAreaM2(capacity.availableArea, numberLocale) }),
                 });
+                lastEditedFieldRef.current = "area_m2";
+                return buildAreaAndPlantsDraft(row, capacity.availableArea);
               }
               return false;
+            }
+            const requestedArea = toAreaNumericValue(row.area_m2, numberLocale);
+            if (requestedArea === null) {
+              return true;
             }
             if (requestedArea > capacity.bedArea) {
               setAreaValidationDialog({

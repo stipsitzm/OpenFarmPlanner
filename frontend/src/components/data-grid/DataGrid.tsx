@@ -96,7 +96,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showRowEditActions?: boolean;
   onRowsStateChange?: (rows: T[]) => void;
   onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean; error: string }) => void;
-  onBeforeSaveRow?: (row: T) => boolean;
+  onBeforeSaveRow?: (row: T) => boolean | Partial<T>;
   isSaveErrorHandled?: (error: unknown) => boolean;
   /**
    * Controls how the grid surface uses available page/workspace width:
@@ -341,7 +341,47 @@ export function EditableDataGrid<T extends EditableRow>({
     return api.getRowWithUpdatedValues(rowId, '') as T | null;
   }, [gridApiRef]);
 
-  const shouldSaveRow = useCallback((rowId: GridRowId): boolean => {
+  const applyDraftValues = useCallback(async (rowId: GridRowId, values: Partial<T>): Promise<void> => {
+    const rowKey = String(rowId);
+    const targetRow = rowsById.get(rowKey);
+    const api = gridApiRef.current;
+    if (api) {
+      const editUpdates = Object.entries(values).flatMap(([fieldKey, fieldValue]) => {
+        if (fieldValue === undefined) {
+          return [];
+        }
+        return [
+          api.setEditCellValue({
+            id: rowId,
+            field: fieldKey,
+            value: fieldValue,
+          }),
+        ];
+      });
+      await Promise.allSettled(editUpdates);
+    }
+
+    setRows((previousRows) =>
+      previousRows.map((row) =>
+        String(row.id) === rowKey ? ({ ...row, ...values } as T) : row,
+      ),
+    );
+    if (targetRow) {
+      const nextRow = { ...targetRow, ...values } as T;
+      const fieldErrors = getRowValidationErrors?.(nextRow) ?? {};
+      setActiveValidationErrors((prev) => ({
+        ...prev,
+        [rowKey]: fieldErrors,
+      }));
+    }
+    setDirtyRowIds((previous) => {
+      const next = new Set(previous);
+      next.add(rowKey);
+      return next;
+    });
+  }, [getRowValidationErrors, gridApiRef, rowsById]);
+
+  const shouldSaveRow = useCallback(async (rowId: GridRowId): Promise<boolean> => {
     if (!onBeforeSaveRow) {
       return true;
     }
@@ -349,17 +389,29 @@ export function EditableDataGrid<T extends EditableRow>({
     if (!draftRow) {
       return true;
     }
-    return onBeforeSaveRow(draftRow);
-  }, [getDraftRow, onBeforeSaveRow]);
+    const saveDecision = onBeforeSaveRow(draftRow);
+    if (saveDecision === false) {
+      return false;
+    }
+    if (saveDecision !== true && saveDecision !== null && typeof saveDecision === 'object') {
+      await applyDraftValues(rowId, saveDecision);
+    }
+    return true;
+  }, [applyDraftValues, getDraftRow, onBeforeSaveRow]);
 
-  const handleSaveAllDirtyRows = useCallback((): void => {
+  const handleSaveAllDirtyRows = useCallback(async (): Promise<void> => {
     const editingRowIds = Object.entries(rowModesModel)
       .filter(([, mode]) => mode.mode === GridRowModes.Edit)
       .map(([id]) => id);
     if (editingRowIds.length === 0) {
       return;
     }
-    const saveableRowIds = editingRowIds.filter((rowId) => shouldSaveRow(rowId));
+    const saveableRowIds: GridRowId[] = [];
+    for (const rowId of editingRowIds) {
+      if (await shouldSaveRow(rowId)) {
+        saveableRowIds.push(rowId);
+      }
+    }
     if (saveableRowIds.length === 0) {
       return;
     }
@@ -372,8 +424,8 @@ export function EditableDataGrid<T extends EditableRow>({
     });
   }, [rowModesModel, shouldSaveRow]);
 
-  const handleSaveRow = useCallback((rowId: GridRowId): void => {
-    if (!shouldSaveRow(rowId)) {
+  const handleSaveRow = useCallback(async (rowId: GridRowId): Promise<void> => {
+    if (!(await shouldSaveRow(rowId))) {
       return;
     }
     setRowModesModel((oldModel) => ({
@@ -633,7 +685,7 @@ export function EditableDataGrid<T extends EditableRow>({
         )}
         {showFooterEditControls && hasUnsavedChanges && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: showAddAction ? 1 : 0 }}>
-            <Button size="small" variant="contained" onClick={handleSaveAllDirtyRows}>
+            <Button size="small" variant="contained" onClick={() => void handleSaveAllDirtyRows()}>
               {t('actions.save')}
             </Button>
             <Button
@@ -727,7 +779,7 @@ export function EditableDataGrid<T extends EditableRow>({
                   {isEditing && (
                     <>
                       <Tooltip title={t('actions.saveRow')} arrow>
-                        <IconButton size="small" color="primary" aria-label={t('actions.save')} onClick={() => handleSaveRow(rowId)}>
+                        <IconButton size="small" color="primary" aria-label={t('actions.save')} onClick={() => void handleSaveRow(rowId)}>
                           <CheckIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -946,7 +998,7 @@ export function EditableDataGrid<T extends EditableRow>({
             if (shouldSaveEditedRowWithEnter) {
               event.preventDefault();
               event.defaultMuiPrevented = true;
-              handleSaveRow(params.id);
+              void handleSaveRow(params.id);
               return;
             }
             if (event.key === 'Escape') {
@@ -956,7 +1008,7 @@ export function EditableDataGrid<T extends EditableRow>({
             }
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
               event.preventDefault();
-              handleSaveRow(params.id);
+              void handleSaveRow(params.id);
             }
           }}
           localeText={germanDataGridLocaleText}
