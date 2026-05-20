@@ -1377,47 +1377,9 @@ class PlantingPlan(TimestampedModel):
         return active_start, active_end
 
     def clean(self) -> None:
-        """Validate total area usage against the bed area when available."""
+        """Run default model validation."""
         super().clean()
-        if self.area_usage_sqm is None or not self.bed_id:
-            return
 
-        bed_area = self.bed.area_sqm
-        if bed_area is None:
-            return
-
-        active_period = self._get_active_period()
-        if active_period is None:
-            return
-        active_start, active_end = active_period
-
-        overlapping_plans = PlantingPlan.objects.filter(
-            bed_id=self.bed_id,
-            planting_date__lte=active_end,
-            harvest_end_date__gte=active_start,
-        )
-        if self.project_id:
-            overlapping_plans = overlapping_plans.filter(project_id=self.project_id)
-        if self.pk:
-            overlapping_plans = overlapping_plans.exclude(pk=self.pk)
-
-        overlapping_used_area = overlapping_plans.aggregate(
-            total=Coalesce(Sum('area_usage_sqm'), Decimal('0.00'))
-        )['total'] or Decimal('0.00')
-        current_area = self.area_usage_sqm
-        if not isinstance(current_area, Decimal):
-            current_area = Decimal(str(current_area))
-        total_area_with_current = overlapping_used_area + current_area
-
-        if total_area_with_current > bed_area:
-            raise ValidationError({
-                'area_usage_sqm': (
-                    'Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten. '
-                    f'Beetfläche: {bed_area:.2f} m², '
-                    f'bereits belegt: {overlapping_used_area:.2f} m², '
-                    f'angefragt: {current_area:.2f} m².'
-                )
-            })
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the plan and auto-calculate harvest dates if needed."""

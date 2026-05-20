@@ -498,7 +498,6 @@ export function EditableDataGrid<T extends EditableRow>({
       if (newRow.isNew) {
         // Create new item via API
         const apiData = await mapToApiData(newRow);
-        console.debug('[DataGrid] Sending create request', { rowId: newRow.id, apiData });
         const response = await api.create(apiData);
         setError('');
         if (!response.data.id) {
@@ -519,7 +518,6 @@ export function EditableDataGrid<T extends EditableRow>({
       } else {
         // Update existing item via API
         const apiData = await mapToApiData(newRow);
-        console.debug('[DataGrid] Sending update request', { rowId: newRow.id, apiData });
         const response = await api.update(newRow.id, apiData);
         setError('');
         if (!response.data.id) {

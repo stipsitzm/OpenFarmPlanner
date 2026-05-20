@@ -478,60 +478,6 @@ class PlantingPlanModelTest(TestCase):
         
         self.assertEqual(plan.harvest_end_date, plan.harvest_date + timedelta(days=3))
 
-    def test_area_usage_within_bed_capacity(self):
-        """Test that planting plan with area within bed capacity is allowed"""
-        from django.core.exceptions import ValidationError
-        
-        plan = PlantingPlan(
-            culture=self.culture,
-            bed=self.bed,
-            planting_date=date(2024, 3, 1),
-            area_usage_sqm=15.0,  # Within 20 sqm capacity
-            project=self.project,
-        )
-        # Should not raise ValidationError
-        plan.clean()
-        plan.save()
-        self.assertEqual(plan.area_usage_sqm, 15.0)
-
-    def test_area_usage_exceeds_bed_capacity(self):
-        """Test that planting plan exceeding bed capacity raises error"""
-        from django.core.exceptions import ValidationError
-        
-        plan = PlantingPlan(
-            culture=self.culture,
-            bed=self.bed,
-            planting_date=date(2024, 3, 1),
-            area_usage_sqm=25.0,  # Exceeds 20 sqm capacity
-            project=self.project,
-        )
-        with self.assertRaises(ValidationError):
-            plan.clean()
-
-    def test_area_usage_total_exceeds_with_multiple_plans(self):
-        """Test that total area of multiple plans cannot exceed bed capacity"""
-        from django.core.exceptions import ValidationError
-        
-        # Create first plan using 12 sqm
-        plan1 = PlantingPlan.objects.create(
-            culture=self.culture,
-            bed=self.bed,
-            planting_date=date(2024, 3, 1),
-            area_usage_sqm=12.0,
-            project=self.project,
-        )
-        
-        # Try to create second plan using 10 sqm (total would be 22 sqm > 20 sqm)
-        plan2 = PlantingPlan(
-            culture=self.culture,
-            bed=self.bed,
-            planting_date=date(2024, 3, 3),
-            area_usage_sqm=10.0,
-            project=self.project,
-        )
-        with self.assertRaises(ValidationError):
-            plan2.clean()
-
     def test_area_usage_no_bed_dimensions(self):
         """Test that validation is skipped when bed has no dimensions"""
         from django.core.exceptions import ValidationError
