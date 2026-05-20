@@ -34,6 +34,7 @@
     "bedArea": "Beetfläche: {{area}}",
     "occupiedArea": "Bereits belegt: {{area}}",
     "requestedArea": "Angefragt: {{area}}",
+    "acceptedArea": "Übernommen wird: {{area}}",
     "applyRemainingArea": "Restfläche übernehmen",
     "applyBedArea": "Beetfläche übernehmen"
   },

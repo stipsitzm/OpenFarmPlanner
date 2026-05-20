@@ -62,14 +62,24 @@ vi.mock("../components/data-grid", async () => {
         };
       }
       return (
-        <button
-          type="button"
-          onClick={() => {
-            onBeforeSaveRow?.(mockGridRowState.row);
-          }}
-        >
-          Zeile speichern
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              onBeforeSaveRow?.(mockGridRowState.row);
+            }}
+          >
+            Zeile speichern
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onBeforeSaveRow?.(mockGridRowState.row);
+            }}
+          >
+            Speichern mit Enter
+          </button>
+        </>
       );
     },
   };
@@ -125,6 +135,16 @@ describe("PlantingPlans save-time area validation", () => {
     expect(screen.getByRole("button", { name: "Beetfläche übernehmen" })).toBeInTheDocument();
   });
 
+  it("shows bed-limit dialog when saving via Enter flow", async () => {
+    mockGridRowState.row = {
+      id: 1, bed: 101, culture: 2, planting_date: "2026-04-01", area_m2: "99",
+    };
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole("button", { name: "Speichern mit Enter" }));
+
+    expect(await screen.findByText("Die angegebene Fläche überschreitet die Größe dieses Beets.")).toBeInTheDocument();
+  });
+
   it("applies bed area when clicking 'Beetfläche übernehmen'", async () => {
     mockGridRowState.row = {
       id: 1, bed: 101, culture: 2, planting_date: "2026-04-01", area_m2: "99,00",
@@ -157,6 +177,38 @@ describe("PlantingPlans save-time area validation", () => {
     expect(await screen.findByText("Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.")).toBeInTheDocument();
     expect(screen.getByText("Verfügbare Restfläche: 3,00 m²")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Restfläche übernehmen" })).toBeInTheDocument();
+  });
+
+  it("shows remaining-area dialog when saving via Enter flow", async () => {
+    apiMocks.bedList.mockResolvedValue({ data: { results: [{ id: 101, name: "Beet A", field: 11, area_sqm: 7 }] } });
+    apiMocks.planList.mockResolvedValue({
+      data: {
+        results: [{
+          id: 9, bed: 101, culture: 2, planting_date: "2026-04-01", harvest_date: "2026-05-01", area_usage_sqm: 4,
+        }],
+      },
+    });
+    mockGridRowState.row = {
+      id: 1, bed: 101, culture: 2, planting_date: "2026-04-10", harvest_date: "2026-05-10", area_m2: "5",
+    };
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole("button", { name: "Speichern mit Enter" }));
+
+    expect(await screen.findByText("Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.")).toBeInTheDocument();
+  });
+
+  it("shows identical dialog details for click-save and enter-save", async () => {
+    mockGridRowState.row = {
+      id: 1, bed: 101, culture: 2, planting_date: "2026-04-01", area_m2: "99,00",
+    };
+    const { unmount } = render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole("button", { name: "Zeile speichern" }));
+    expect(await screen.findByText("Übernommen wird: 1,00 m²")).toBeInTheDocument();
+    unmount();
+
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await userEvent.click(await screen.findByRole("button", { name: "Speichern mit Enter" }));
+    expect(await screen.findByText("Übernommen wird: 1,00 m²")).toBeInTheDocument();
   });
 
   it("applies available area and shows snackbar for empty or max input", async () => {

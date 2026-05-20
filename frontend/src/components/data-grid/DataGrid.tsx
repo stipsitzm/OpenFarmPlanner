@@ -936,6 +936,19 @@ export function EditableDataGrid<T extends EditableRow>({
               handleStartCellEditFromKeyboard(params);
               return;
             }
+            const shouldSaveEditedRowWithEnter =
+              event.key === 'Enter' &&
+              !event.shiftKey &&
+              !event.ctrlKey &&
+              !event.metaKey &&
+              !event.altKey &&
+              rowModesModel[params.id]?.mode === GridRowModes.Edit;
+            if (shouldSaveEditedRowWithEnter) {
+              event.preventDefault();
+              event.defaultMuiPrevented = true;
+              handleSaveRow(params.id);
+              return;
+            }
             if (event.key === 'Escape') {
               event.preventDefault();
               handleDiscardRowChanges(params.id);

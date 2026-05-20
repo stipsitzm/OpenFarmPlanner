@@ -2189,6 +2189,18 @@ function PlantingPlans(): React.ReactElement {
               {areaValidationDialog.mode !== "noRemainingArea" && (
                 <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.requestedArea", { area: formatAreaM2(areaValidationDialog.requestedArea, numberLocale) })}</Typography>
               )}
+              {areaValidationDialog.mode !== "noRemainingArea" && (
+                <Typography sx={{ whiteSpace: "nowrap", fontWeight: 700 }}>
+                  {t("plantingPlans:areaValidation.acceptedArea", {
+                    area: formatAreaM2(
+                      areaValidationDialog.mode === "bedLimit"
+                        ? areaValidationDialog.bedArea
+                        : areaValidationDialog.availableArea,
+                      numberLocale,
+                    ),
+                  })}
+                </Typography>
+              )}
             </Stack>
           )}
         </DialogContent>
