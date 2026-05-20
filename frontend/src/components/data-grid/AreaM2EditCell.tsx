@@ -23,7 +23,6 @@ function parseAreaInput(value: string, locale: string, maxKeyword: string): numb
 
 
 export interface AreaM2EditCellProps extends GridRenderEditCellParams {
-  bedAreaSqm?: number;
   onLastEditedFieldChange: (field: 'area_m2') => void;
   fallbackValue?: number | null;
   locale: string;
@@ -37,7 +36,6 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
     value,
     field,
     hasFocus,
-    bedAreaSqm,
     onLastEditedFieldChange,
     fallbackValue,
     locale,

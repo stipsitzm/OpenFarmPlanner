@@ -47,17 +47,6 @@ const backendMessageMap: Record<string, string> = {
   'area input value must be greater than 0.': 'validation.areaInputPositive',
 };
 
-function formatAreaValue(value: unknown): string {
-  const numericValue = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(numericValue)) {
-    return String(value ?? '');
-  }
-  return `${numericValue.toLocaleString('de-DE', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} m²`;
-}
-
 function localizeBackendMessage(message: string, t: TFunction): string {
   const normalized = message.trim().toLowerCase();
   const key = backendMessageMap[normalized];
@@ -175,6 +164,7 @@ export function extractApiErrorMessage(
           } else if (typeof value === 'string') {
             const errorMsg = `${fieldName}: ${localizeBackendMessage(value, t)}`;
             errors.push(errorMsg);
+          }
         });
 
         if (errors.length > 0) {

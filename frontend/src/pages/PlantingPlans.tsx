@@ -55,7 +55,7 @@ import {
   type Culture,
   type Bed,
 } from "../api/api";
-import type { CultivationType, Field, Location, RemainingAreaResponse } from "../api/types";
+import type { CultivationType, Field, Location } from "../api/types";
 import { extractApiErrorMessage } from "../api/errors";
 import {
   formatLocalizedNumber,
@@ -182,15 +182,6 @@ const toNumericValue = (value: unknown): number | null => {
 
 const toOptionalString = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
-
-const addDaysToIsoDate = (value: string, days: number): string | null => {
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-  date.setDate(date.getDate() + days);
-  return toIsoDateString(date);
-};
 
 interface HierarchySelectionRow {
   location_id?: number;
@@ -764,31 +755,6 @@ function PlantingPlans(): React.ReactElement {
     ],
   );
 
-  const getAreaIntervalForRow = useCallback(
-    (row: PlantingPlanRow): { startDate: string; endDate: string } | null => {
-      const startDate = toIsoDateString(row.planting_date);
-      if (!startDate) {
-        return null;
-      }
-
-      const explicitEndDate =
-        toIsoDateString(row.harvest_end_date) ??
-        toIsoDateString(row.harvest_date);
-      if (explicitEndDate) {
-        return { startDate, endDate: explicitEndDate };
-      }
-
-      const culture = cultures.find((item) => item.id === row.culture);
-      const growthDays = culture?.growth_duration_days ?? 0;
-      const harvestDays = culture?.harvest_duration_days ?? 0;
-      const totalDays = growthDays + (growthDays && harvestDays ? harvestDays : 0);
-      const derivedEndDate = totalDays > 0 ? addDaysToIsoDate(startDate, totalDays) : startDate;
-
-      return { startDate, endDate: derivedEndDate ?? startDate };
-    },
-    [cultures],
-  );
-
 
   /**
    * Check for cultureId or bedId parameter in URL and set as initial values
@@ -1154,13 +1120,11 @@ function PlantingPlans(): React.ReactElement {
         },
         renderEditCell: (params) => {
           const row = params.row as PlantingPlanRow;
-          const selectedBed = beds.find((item) => item.id === row.bed);
           const derivedArea = getDerivedAreaFromRow(row);
 
           return (
             <AreaM2EditCell
               {...params}
-              bedAreaSqm={selectedBed?.area_sqm}
               fallbackValue={derivedArea}
               locale={numberLocale}
               maxKeyword={t("plantingPlans:placeholders.maxKeyword")}
