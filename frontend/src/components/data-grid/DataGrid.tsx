@@ -18,10 +18,19 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo, type MutableRefObject } from 'react';
-import { DataGrid, GridRowModes, useGridApiRef } from '@mui/x-data-grid';
+import {
+  DataGrid,
+  GridRowModes,
+  getGridBooleanOperators,
+  getGridDateOperators,
+  getGridNumericOperators,
+  getGridSingleSelectOperators,
+  getGridStringOperators,
+  useGridApiRef,
+} from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
-import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridCellParams, GridRowParams } from '@mui/x-data-grid';
+import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridCellParams, GridRowParams, GridFilterOperator } from '@mui/x-data-grid';
 import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -40,6 +49,7 @@ import { germanDataGridLocaleText } from './localeText';
 export interface EditableRow {
   id: number;
   isNew?: boolean;
+  __draft?: boolean;
   [key: string]: unknown;
 }
 
@@ -106,6 +116,58 @@ export interface EditableDataGridProps<T extends EditableRow> {
    */
   surfaceSizing?: 'contentFit' | 'fullWorkspace' | 'compact';
 }
+
+const isUnsavedDraftRow = (row: EditableRow): boolean =>
+  Boolean(row.isNew || row.__draft || Number(row.id) < 0);
+
+const getDefaultFilterOperators = (column: GridColDef): GridFilterOperator[] => {
+  switch (column.type) {
+    case 'boolean':
+      return getGridBooleanOperators();
+    case 'date':
+      return getGridDateOperators();
+    case 'dateTime':
+      return getGridDateOperators(true);
+    case 'number':
+      return getGridNumericOperators();
+    case 'singleSelect':
+      return getGridSingleSelectOperators();
+    default:
+      return getGridStringOperators();
+  }
+};
+
+const keepDraftRowsVisibleForFilterOperators = (operators: GridFilterOperator[]): GridFilterOperator[] =>
+  operators.map((operator) => ({
+    ...operator,
+    getApplyFilterFn: (filterItem, column) => {
+      const applyFilter = operator.getApplyFilterFn(filterItem, column);
+      if (!applyFilter) {
+        return null;
+      }
+
+      return (value, row, filterColumn, apiRef) => {
+        if (isUnsavedDraftRow(row as EditableRow)) {
+          return true;
+        }
+
+        return applyFilter(value, row, filterColumn, apiRef);
+      };
+    },
+  }));
+
+const keepDraftRowsVisibleForColumnFilters = (column: GridColDef): GridColDef => {
+  if (column.filterable === false) {
+    return column;
+  }
+
+  return {
+    ...column,
+    filterOperators: keepDraftRowsVisibleForFilterOperators(
+      column.filterOperators ?? getDefaultFilterOperators(column),
+    ),
+  };
+};
 
 export function EditableDataGrid<T extends EditableRow>({
   columns,
@@ -713,19 +775,19 @@ export function EditableDataGrid<T extends EditableRow>({
    */
   const processedColumns: GridColDef[] = useMemo(() => {
     if (!notes || !notes.fields || notes.fields.length === 0) {
-      return columns;
+      return columns.map((col) => keepDraftRowsVisibleForColumnFilters(col));
     }
 
     const notesFieldNames = notes.fields.map((f) => f.field);
 
     return columns.map((col) => {
       if (!notesFieldNames.includes(col.field)) {
-        return col;
+        return keepDraftRowsVisibleForColumnFilters(col);
       }
 
       const fieldConfig = notes.fields.find((f) => f.field === col.field);
 
-      return {
+      return keepDraftRowsVisibleForColumnFilters({
         ...col,
         editable: false,
         renderCell: (params) => {
@@ -755,7 +817,7 @@ export function EditableDataGrid<T extends EditableRow>({
             />
           );
         },
-      };
+      });
     });
   }, [columns, notes, notesEditor]);
 

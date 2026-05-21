@@ -1455,11 +1455,6 @@ function Cultures(): React.ReactElement {
             width: '100%',
             alignItems: 'center',
             fontWeight: 500,
-            bgcolor: snackbar.severity === 'info' ? 'rgba(37, 111, 42, 0.96)' : undefined,
-            color: snackbar.severity === 'info' ? '#ffffff' : undefined,
-            '& .MuiAlert-icon': {
-              color: snackbar.severity === 'info' ? '#ffffff' : undefined,
-            },
           }}
         >
           {snackbar.message}
