@@ -345,7 +345,11 @@ export function EditableDataGrid<T extends EditableRow>({
     return api.getSortedRowIds().filter((rowId) => api.state.visibleRowsLookup[rowId] !== false);
   }, [gridApiRef]);
 
-  const focusKeyboardNavigableCell = useCallback((rowId: GridRowId, field: string): void => {
+  const focusKeyboardNavigableCell = useCallback((
+    rowId: GridRowId,
+    field: string,
+    options: { startEdit: boolean },
+  ): void => {
     const api = gridApiRef.current;
     const rowKey = String(rowId);
     const row = rowsById.get(rowKey);
@@ -358,7 +362,7 @@ export function EditableDataGrid<T extends EditableRow>({
     api.scrollToIndexes({ rowIndex, colIndex });
     api.setCellFocus(rowId, field);
 
-    if (notesFieldNames.includes(field)) {
+    if (!options.startEdit || notesFieldNames.includes(field)) {
       return;
     }
 
@@ -373,12 +377,6 @@ export function EditableDataGrid<T extends EditableRow>({
     field: string,
     direction: 1 | -1,
   ): { id: GridRowId; field: string } | null => {
-    const visibleRowIds = getVisibleSortedRowIds();
-    const rowIndex = visibleRowIds.findIndex((visibleRowId) => String(visibleRowId) === String(rowId));
-    if (rowIndex === -1) {
-      return null;
-    }
-
     const editableFields = getKeyboardNavigableFieldsForRow(rowId);
     const fieldIndex = editableFields.indexOf(field);
     if (fieldIndex === -1) {
@@ -390,18 +388,8 @@ export function EditableDataGrid<T extends EditableRow>({
       return { id: rowId, field: nextField };
     }
 
-    const nextRowId = visibleRowIds[rowIndex + direction];
-    if (nextRowId === undefined) {
-      return null;
-    }
-
-    const nextRowEditableFields = getKeyboardNavigableFieldsForRow(nextRowId);
-    const nextRowField = direction > 0
-      ? nextRowEditableFields[0]
-      : nextRowEditableFields[nextRowEditableFields.length - 1];
-
-    return nextRowField ? { id: nextRowId, field: nextRowField } : null;
-  }, [getKeyboardNavigableFieldsForRow, getVisibleSortedRowIds]);
+    return null;
+  }, [getKeyboardNavigableFieldsForRow]);
 
   const getVerticalNavigationTarget = useCallback((
     rowId: GridRowId,
@@ -657,6 +645,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const navigateFromEditedCell = useCallback(async (
     current: { id: GridRowId; field: string },
     target: { id: GridRowId; field: string },
+    options: { startTargetEdit: boolean },
   ): Promise<void> => {
     if (current.id === target.id && current.field === target.field) {
       return;
@@ -677,7 +666,7 @@ export function EditableDataGrid<T extends EditableRow>({
     }
 
     requestAnimationFrame(() => {
-      focusKeyboardNavigableCell(target.id, target.field);
+      focusKeyboardNavigableCell(target.id, target.field, { startEdit: options.startTargetEdit });
     });
   }, [
     blurActiveElementInCell,
@@ -703,6 +692,8 @@ export function EditableDataGrid<T extends EditableRow>({
       return;
     }
 
+    const isHorizontalNavigation =
+      event.key === 'Tab' || event.key === 'ArrowRight' || event.key === 'ArrowLeft';
     const target =
       event.key === 'Tab'
         ? getHorizontalNavigationTarget(focusedCell.id, focusedCell.field, event.shiftKey ? -1 : 1)
@@ -720,12 +711,15 @@ export function EditableDataGrid<T extends EditableRow>({
 
     event.preventDefault();
     event.stopPropagation();
-    void navigateFromEditedCell(focusedCell, target);
+    void navigateFromEditedCell(focusedCell, target, {
+      startTargetEdit: isHorizontalNavigation && !notesFieldNames.includes(target.field),
+    });
   }, [
     getFocusedCellFromEvent,
     getHorizontalNavigationTarget,
     getVerticalNavigationTarget,
     navigateFromEditedCell,
+    notesFieldNames,
     rowModesModel,
   ]);
 
