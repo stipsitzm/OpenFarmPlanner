@@ -307,7 +307,7 @@ describe("PlantingPlans save-time area validation", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Zeile speichern" }));
 
     expect(commandApiSpies.setDraftValues).toHaveBeenCalledWith(1, expect.objectContaining({ area_m2: 3, plants_count: 30 }));
-    expect(await screen.findByText("Maximal verfügbare Fläche übernommen: 3,00 m²")).toBeInTheDocument();
+    expect(await screen.findByText(areaText("Maximal verfügbare Fläche übernommen", "3,00"))).toBeInTheDocument();
     expect(screen.queryByText("Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.")).not.toBeInTheDocument();
   });
 
