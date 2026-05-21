@@ -31,6 +31,12 @@ vi.mock('@mui/x-data-grid', async () => {
     tabKeyDown: 'tabKeyDown',
     escapeKeyDown: 'escapeKeyDown',
   };
+  const getMockFilterOperators = () => [
+    {
+      value: 'contains',
+      getApplyFilterFn: () => () => true,
+    },
+  ];
 
   const DataGrid = ({
     rows,
@@ -106,7 +112,17 @@ vi.mock('@mui/x-data-grid', async () => {
     );
   };
 
-  return { DataGrid, GridRowModes, GridRowEditStopReasons, useGridApiRef };
+  return {
+    DataGrid,
+    GridRowModes,
+    GridRowEditStopReasons,
+    getGridBooleanOperators: getMockFilterOperators,
+    getGridDateOperators: getMockFilterOperators,
+    getGridNumericOperators: getMockFilterOperators,
+    getGridSingleSelectOperators: getMockFilterOperators,
+    getGridStringOperators: getMockFilterOperators,
+    useGridApiRef,
+  };
 });
 
 describe('EditableDataGrid', () => {
@@ -301,8 +317,3 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(updateSpy).toHaveBeenCalled());
   });
 });
-  const useGridApiRef = () => ({
-    current: {
-      setEditCellValue: vi.fn().mockResolvedValue(undefined),
-    },
-  });
