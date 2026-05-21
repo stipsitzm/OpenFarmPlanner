@@ -1042,6 +1042,7 @@ function PlantingPlans(): React.ReactElement {
               select
               fullWidth
               size="small"
+              autoFocus={params.hasFocus}
               value={selectedValue}
               onChange={async (event) => {
                 await params.api.setEditCellValue({
@@ -1104,7 +1105,7 @@ function PlantingPlans(): React.ReactElement {
         renderCell: (params) => {
           const row = params.row as PlantingPlanRow;
           const label = getBedLabelForRow(row);
-          return <CompactAreaCell label={label} />;
+          return <CompactAreaCell label={label} hasFocus={params.hasFocus} />;
         },
         renderEditCell: (params) => {
           const row = params.row as PlantingPlanRow;
@@ -1118,6 +1119,7 @@ function PlantingPlans(): React.ReactElement {
               locations={locations}
               locale={numberLocale}
               compactLabel={label}
+              hasFocus={params.hasFocus}
               onApply={async (nextBedId) => {
                 await params.api.setEditCellValue({
                   id: params.id,

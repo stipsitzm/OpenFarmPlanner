@@ -29,6 +29,7 @@ interface AreaAssignmentDialogProps {
   locale: string;
   onApply: (bedId: number) => Promise<void> | void;
   compactLabel: string;
+  hasFocus?: boolean;
 }
 
 interface AssignmentState {
@@ -75,6 +76,7 @@ export function AreaAssignmentDialog({
   locale,
   onApply,
   compactLabel,
+  hasFocus = false,
 }: AreaAssignmentDialogProps): React.ReactElement {
   const { t } = useTranslation('plantingPlans');
   const [isOpen, setIsOpen] = useState(false);
@@ -82,12 +84,23 @@ export function AreaAssignmentDialog({
   const locationSelectRef = useRef<HTMLDivElement | null>(null);
   const fieldSelectRef = useRef<HTMLDivElement | null>(null);
   const bedSelectRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLDivElement | null>(null);
 
   const stopGridEnterPropagation = (event: KeyboardEvent): void => {
     if (event.key === 'Enter' || event.key === 'Escape') {
       event.stopPropagation();
     }
   };
+
+  useEffect(() => {
+    if (!hasFocus || isOpen) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      triggerRef.current?.focus();
+    });
+  }, [hasFocus, isOpen]);
 
   const fieldsById = useMemo(() => new Map(fields.filter((item) => item.id !== undefined).map((item) => [item.id as number, item])), [fields]);
 
@@ -227,13 +240,15 @@ export function AreaAssignmentDialog({
   return (
     <>
       <Box
+        ref={triggerRef}
         role="button"
-        tabIndex={0}
+        tabIndex={hasFocus ? 0 : -1}
         aria-label={t('areaAssignment.editButton')}
         onClick={() => setIsOpen(true)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
+            event.stopPropagation();
             setIsOpen(true);
           }
         }}

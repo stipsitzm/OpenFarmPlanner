@@ -2,7 +2,7 @@
  * NotesCell component for rendering notes field in DataGrid.
  */
 
-import type { MouseEvent } from 'react';
+import { useEffect, useRef, type MouseEvent } from 'react';
 import { Badge, Box, IconButton, Tooltip, Typography } from '@mui/material';
 import NotesIcon from '@mui/icons-material/Notes';
 import NotesOutlinedIcon from '@mui/icons-material/NotesOutlined';
@@ -19,6 +19,7 @@ export interface NotesCellProps {
   attachmentCount?: number;
   compactIndicator?: boolean;
   onOpenAttachments?: (event: MouseEvent<HTMLButtonElement>) => void;
+  hasFocus?: boolean;
 }
 
 export function NotesCell({
@@ -29,8 +30,11 @@ export function NotesCell({
   attachmentCount = 0,
   compactIndicator = false,
   onOpenAttachments,
+  hasFocus = false,
 }: NotesCellProps): React.ReactElement {
   const { t } = useTranslation('common');
+  const compactTriggerRef = useRef<HTMLDivElement | null>(null);
+  const notesButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const firstLine = excerpt.split('\n')[0];
   const displayText = firstLine.length > 40 ? `${firstLine.substring(0, 37)}...` : firstLine;
@@ -71,6 +75,16 @@ export function NotesCell({
   const notesAria = hasValue ? t('notes.editWithContent') : t('notes.editEmpty');
   const attachmentTooltip = t('notes.attachmentsCount', { count: attachmentCount });
   const hasAttachments = attachmentCount > 0;
+  useEffect(() => {
+    if (!hasFocus) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      (compactIndicator ? compactTriggerRef.current : notesButtonRef.current)?.focus();
+    });
+  }, [compactIndicator, hasFocus]);
+
   const compactAriaLabel = hasValue && hasAttachments
     ? 'Notiz und Bilder vorhanden'
     : hasValue
@@ -90,13 +104,15 @@ export function NotesCell({
     return (
       <Tooltip title={hasValue || hasAttachments ? compactTooltip : '—'} arrow>
         <Box
+          ref={compactTriggerRef}
           role="button"
-          tabIndex={0}
+          tabIndex={hasFocus ? 0 : -1}
           aria-label={compactAriaLabel}
           onClick={onOpen}
           onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
+              event.stopPropagation();
               onOpen();
             }
           }}
@@ -145,12 +161,13 @@ export function NotesCell({
     >
       <Box
         role="button"
-        tabIndex={0}
+        tabIndex={-1}
         aria-label={notesAria}
         onClick={onOpen}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
+            event.stopPropagation();
             onOpen();
           }
         }}
@@ -166,12 +183,21 @@ export function NotesCell({
         }}
       >
         <IconButton
+          ref={notesButtonRef}
           size="small"
           onClick={(event) => {
             event.stopPropagation();
             onOpen();
           }}
           aria-label={notesAria}
+          tabIndex={hasFocus ? 0 : -1}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              event.stopPropagation();
+              onOpen();
+            }
+          }}
           sx={{ p: 0.5 }}
         >
           {hasValue ? (
@@ -203,6 +229,7 @@ export function NotesCell({
               size="small"
               onClick={(event) => { event.stopPropagation(); event.preventDefault(); onOpenAttachments(event); }}
               aria-label={attachmentTooltip}
+              tabIndex={-1}
               sx={{
                 position: 'absolute',
                 top: 2,

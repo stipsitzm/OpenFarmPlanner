@@ -279,6 +279,10 @@ export function EditableDataGrid<T extends EditableRow>({
     (mode) => mode.mode === GridRowModes.Edit
   );
   const hasUnsavedChanges = hasRowsInEditMode || dirtyRowIds.size > 0;
+  const notesFieldNames = useMemo(
+    () => notes?.fields.map((fieldConfig) => fieldConfig.field) ?? [],
+    [notes],
+  );
 
   // Check if there's a validation error (indicating incomplete/invalid data)
   const hasValidationError = Boolean(error);
@@ -315,10 +319,14 @@ export function EditableDataGrid<T extends EditableRow>({
     };
   }, [gridApiRef]);
 
-  const getEditableFieldsForRow = useCallback((rowId: GridRowId): string[] => {
+  const getKeyboardNavigableFieldsForRow = useCallback((rowId: GridRowId): string[] => {
     const api = gridApiRef.current;
     return api.getVisibleColumns()
       .filter((column) => {
+        if (notesFieldNames.includes(column.field)) {
+          return true;
+        }
+
         if (!column.editable) {
           return false;
         }
@@ -330,14 +338,14 @@ export function EditableDataGrid<T extends EditableRow>({
         }
       })
       .map((column) => column.field);
-  }, [gridApiRef]);
+  }, [gridApiRef, notesFieldNames]);
 
   const getVisibleSortedRowIds = useCallback((): GridRowId[] => {
     const api = gridApiRef.current;
     return api.getSortedRowIds().filter((rowId) => api.state.visibleRowsLookup[rowId] !== false);
   }, [gridApiRef]);
 
-  const focusEditableCell = useCallback((rowId: GridRowId, field: string): void => {
+  const focusKeyboardNavigableCell = useCallback((rowId: GridRowId, field: string): void => {
     const api = gridApiRef.current;
     const rowKey = String(rowId);
     const row = rowsById.get(rowKey);
@@ -349,11 +357,16 @@ export function EditableDataGrid<T extends EditableRow>({
     const colIndex = api.getColumnIndexRelativeToVisibleColumns(field);
     api.scrollToIndexes({ rowIndex, colIndex });
     api.setCellFocus(rowId, field);
+
+    if (notesFieldNames.includes(field)) {
+      return;
+    }
+
     setRowModesModel((oldModel) => ({
       ...oldModel,
       [rowId]: { mode: GridRowModes.Edit, fieldToFocus: field },
     }));
-  }, [gridApiRef, rowsById]);
+  }, [gridApiRef, notesFieldNames, rowsById]);
 
   const getHorizontalNavigationTarget = useCallback((
     rowId: GridRowId,
@@ -366,7 +379,7 @@ export function EditableDataGrid<T extends EditableRow>({
       return null;
     }
 
-    const editableFields = getEditableFieldsForRow(rowId);
+    const editableFields = getKeyboardNavigableFieldsForRow(rowId);
     const fieldIndex = editableFields.indexOf(field);
     if (fieldIndex === -1) {
       return null;
@@ -382,13 +395,13 @@ export function EditableDataGrid<T extends EditableRow>({
       return null;
     }
 
-    const nextRowEditableFields = getEditableFieldsForRow(nextRowId);
+    const nextRowEditableFields = getKeyboardNavigableFieldsForRow(nextRowId);
     const nextRowField = direction > 0
       ? nextRowEditableFields[0]
       : nextRowEditableFields[nextRowEditableFields.length - 1];
 
     return nextRowField ? { id: nextRowId, field: nextRowField } : null;
-  }, [getEditableFieldsForRow, getVisibleSortedRowIds]);
+  }, [getKeyboardNavigableFieldsForRow, getVisibleSortedRowIds]);
 
   const getVerticalNavigationTarget = useCallback((
     rowId: GridRowId,
@@ -402,16 +415,16 @@ export function EditableDataGrid<T extends EditableRow>({
       return null;
     }
 
-    const nextRowEditableFields = getEditableFieldsForRow(nextRowId);
+    const nextRowEditableFields = getKeyboardNavigableFieldsForRow(nextRowId);
     if (nextRowEditableFields.includes(field)) {
       return { id: nextRowId, field };
     }
 
-    const currentFields = getEditableFieldsForRow(rowId);
+    const currentFields = getKeyboardNavigableFieldsForRow(rowId);
     const currentFieldIndex = currentFields.indexOf(field);
     const fallbackField = nextRowEditableFields[currentFieldIndex] ?? nextRowEditableFields[0];
     return fallbackField ? { id: nextRowId, field: fallbackField } : null;
-  }, [getEditableFieldsForRow, getVisibleSortedRowIds]);
+  }, [getKeyboardNavigableFieldsForRow, getVisibleSortedRowIds]);
 
   const handleGridEditNavigation = useCallback((event: KeyboardEvent): void => {
     if (
@@ -447,9 +460,9 @@ export function EditableDataGrid<T extends EditableRow>({
 
     event.preventDefault();
     event.stopPropagation();
-    focusEditableCell(target.id, target.field);
+    focusKeyboardNavigableCell(target.id, target.field);
   }, [
-    focusEditableCell,
+    focusKeyboardNavigableCell,
     getFocusedCellFromEvent,
     getHorizontalNavigationTarget,
     getVerticalNavigationTarget,
@@ -960,8 +973,6 @@ export function EditableDataGrid<T extends EditableRow>({
       return columns.map((col) => keepDraftRowsVisibleForColumnFilters(col));
     }
 
-    const notesFieldNames = notes.fields.map((f) => f.field);
-
     return columns.map((col) => {
       if (!notesFieldNames.includes(col.field)) {
         return keepDraftRowsVisibleForColumnFilters(col);
@@ -996,12 +1007,13 @@ export function EditableDataGrid<T extends EditableRow>({
                 event.stopPropagation();
                 notesEditor.handleOpen(params.id, col.field, { focusAttachments: true });
               }}
+              hasFocus={params.hasFocus}
             />
           );
         },
       });
     });
-  }, [columns, notes, notesEditor]);
+  }, [columns, notes, notesEditor, notesFieldNames]);
 
   const columnsWithActions: GridColDef[] = [
     ...processedColumns,
@@ -1218,6 +1230,20 @@ export function EditableDataGrid<T extends EditableRow>({
             handleEditableCellClick(params, rowModesModel, setRowModesModel);
           }}
           onCellKeyDown={(params: GridCellParams<T>, event) => {
+            const shouldOpenNotes =
+              notesFieldNames.includes(params.field) &&
+              (event.key === 'Enter' || event.key === ' ') &&
+              !event.ctrlKey &&
+              !event.metaKey &&
+              !event.altKey;
+
+            if (shouldOpenNotes) {
+              event.preventDefault();
+              event.defaultMuiPrevented = true;
+              notesEditor.handleOpen(params.id, params.field);
+              return;
+            }
+
             const shouldStartCellEdit =
               event.key === 'Enter' &&
               !event.ctrlKey &&
