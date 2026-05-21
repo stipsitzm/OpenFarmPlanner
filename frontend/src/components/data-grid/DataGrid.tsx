@@ -17,7 +17,7 @@
  * Navigation is blocked if there are unsaved changes (row in edit mode).
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo, type MutableRefObject } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type MutableRefObject } from 'react';
 import {
   DataGrid,
   GridRowModes,
@@ -169,6 +169,21 @@ const keepDraftRowsVisibleForColumnFilters = (column: GridColDef): GridColDef =>
   };
 };
 
+const gridNavigationKeys = new Set(['Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
+
+const isDropdownUsingArrowKey = (event: KeyboardEvent): boolean => {
+  if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
+    return false;
+  }
+
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return Boolean(target.closest('[aria-expanded="true"]'));
+};
+
 export function EditableDataGrid<T extends EditableRow>({
   columns,
   api,
@@ -273,6 +288,173 @@ export function EditableDataGrid<T extends EditableRow>({
   const rowsById = useMemo(() => {
     return new Map(rows.map((row) => [String(row.id), row]));
   }, [rows]);
+
+  const getFocusedCellFromEvent = useCallback((event: KeyboardEvent): { id: GridRowId; field: string } | null => {
+    const focusedCell = gridApiRef.current.state.focus.cell;
+    if (focusedCell) {
+      return focusedCell;
+    }
+
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return null;
+    }
+
+    const cellElement = target.closest<HTMLElement>('[role="gridcell"][data-field]');
+    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
+    const field = cellElement?.dataset.field;
+    const id = rowElement?.dataset.id;
+    if (!field || id === undefined) {
+      return null;
+    }
+
+    const numericId = Number(id);
+    return {
+      id: Number.isNaN(numericId) ? id : numericId,
+      field,
+    };
+  }, [gridApiRef]);
+
+  const getEditableFieldsForRow = useCallback((rowId: GridRowId): string[] => {
+    const api = gridApiRef.current;
+    return api.getVisibleColumns()
+      .filter((column) => {
+        if (!column.editable) {
+          return false;
+        }
+
+        try {
+          return api.isCellEditable(api.getCellParams(rowId, column.field));
+        } catch {
+          return false;
+        }
+      })
+      .map((column) => column.field);
+  }, [gridApiRef]);
+
+  const getVisibleSortedRowIds = useCallback((): GridRowId[] => {
+    const api = gridApiRef.current;
+    return api.getSortedRowIds().filter((rowId) => api.state.visibleRowsLookup[rowId] !== false);
+  }, [gridApiRef]);
+
+  const focusEditableCell = useCallback((rowId: GridRowId, field: string): void => {
+    const api = gridApiRef.current;
+    const rowKey = String(rowId);
+    const row = rowsById.get(rowKey);
+    if (row && !rowSnapshotRef.current.has(rowKey)) {
+      rowSnapshotRef.current.set(rowKey, row as T);
+    }
+
+    const rowIndex = api.getRowIndexRelativeToVisibleRows(rowId);
+    const colIndex = api.getColumnIndexRelativeToVisibleColumns(field);
+    api.scrollToIndexes({ rowIndex, colIndex });
+    api.setCellFocus(rowId, field);
+    setRowModesModel((oldModel) => ({
+      ...oldModel,
+      [rowId]: { mode: GridRowModes.Edit, fieldToFocus: field },
+    }));
+  }, [gridApiRef, rowsById]);
+
+  const getHorizontalNavigationTarget = useCallback((
+    rowId: GridRowId,
+    field: string,
+    direction: 1 | -1,
+  ): { id: GridRowId; field: string } | null => {
+    const visibleRowIds = getVisibleSortedRowIds();
+    const rowIndex = visibleRowIds.findIndex((visibleRowId) => String(visibleRowId) === String(rowId));
+    if (rowIndex === -1) {
+      return null;
+    }
+
+    const editableFields = getEditableFieldsForRow(rowId);
+    const fieldIndex = editableFields.indexOf(field);
+    if (fieldIndex === -1) {
+      return null;
+    }
+
+    const nextField = editableFields[fieldIndex + direction];
+    if (nextField) {
+      return { id: rowId, field: nextField };
+    }
+
+    const nextRowId = visibleRowIds[rowIndex + direction];
+    if (nextRowId === undefined) {
+      return null;
+    }
+
+    const nextRowEditableFields = getEditableFieldsForRow(nextRowId);
+    const nextRowField = direction > 0
+      ? nextRowEditableFields[0]
+      : nextRowEditableFields[nextRowEditableFields.length - 1];
+
+    return nextRowField ? { id: nextRowId, field: nextRowField } : null;
+  }, [getEditableFieldsForRow, getVisibleSortedRowIds]);
+
+  const getVerticalNavigationTarget = useCallback((
+    rowId: GridRowId,
+    field: string,
+    direction: 1 | -1,
+  ): { id: GridRowId; field: string } | null => {
+    const visibleRowIds = getVisibleSortedRowIds();
+    const rowIndex = visibleRowIds.findIndex((visibleRowId) => String(visibleRowId) === String(rowId));
+    const nextRowId = rowIndex === -1 ? undefined : visibleRowIds[rowIndex + direction];
+    if (nextRowId === undefined) {
+      return null;
+    }
+
+    const nextRowEditableFields = getEditableFieldsForRow(nextRowId);
+    if (nextRowEditableFields.includes(field)) {
+      return { id: nextRowId, field };
+    }
+
+    const currentFields = getEditableFieldsForRow(rowId);
+    const currentFieldIndex = currentFields.indexOf(field);
+    const fallbackField = nextRowEditableFields[currentFieldIndex] ?? nextRowEditableFields[0];
+    return fallbackField ? { id: nextRowId, field: fallbackField } : null;
+  }, [getEditableFieldsForRow, getVisibleSortedRowIds]);
+
+  const handleGridEditNavigation = useCallback((event: KeyboardEvent): void => {
+    if (
+      !gridNavigationKeys.has(event.key)
+      || event.altKey
+      || event.ctrlKey
+      || event.metaKey
+      || event.nativeEvent.isComposing
+      || isDropdownUsingArrowKey(event)
+    ) {
+      return;
+    }
+
+    const focusedCell = getFocusedCellFromEvent(event);
+    if (!focusedCell || rowModesModel[focusedCell.id]?.mode !== GridRowModes.Edit) {
+      return;
+    }
+
+    const target =
+      event.key === 'Tab'
+        ? getHorizontalNavigationTarget(focusedCell.id, focusedCell.field, event.shiftKey ? -1 : 1)
+        : event.key === 'ArrowRight'
+          ? getHorizontalNavigationTarget(focusedCell.id, focusedCell.field, 1)
+          : event.key === 'ArrowLeft'
+            ? getHorizontalNavigationTarget(focusedCell.id, focusedCell.field, -1)
+            : event.key === 'ArrowDown'
+              ? getVerticalNavigationTarget(focusedCell.id, focusedCell.field, 1)
+              : getVerticalNavigationTarget(focusedCell.id, focusedCell.field, -1);
+
+    if (!target) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    focusEditableCell(target.id, target.field);
+  }, [
+    focusEditableCell,
+    getFocusedCellFromEvent,
+    getHorizontalNavigationTarget,
+    getVerticalNavigationTarget,
+    rowModesModel,
+  ]);
 
   const hasInvalidRowInEditMode = useMemo(() => {
     if (!hasRowsInEditMode) return false;
@@ -950,6 +1132,7 @@ export function EditableDataGrid<T extends EditableRow>({
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
       <Box
+        onKeyDownCapture={handleGridEditNavigation}
         sx={{
           width: '100%',
           maxWidth: '100%',
