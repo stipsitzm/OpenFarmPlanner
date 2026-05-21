@@ -426,49 +426,6 @@ export function EditableDataGrid<T extends EditableRow>({
     return fallbackField ? { id: nextRowId, field: fallbackField } : null;
   }, [getKeyboardNavigableFieldsForRow, getVisibleSortedRowIds]);
 
-  const handleGridEditNavigation = useCallback((event: KeyboardEvent): void => {
-    if (
-      !gridNavigationKeys.has(event.key)
-      || event.altKey
-      || event.ctrlKey
-      || event.metaKey
-      || event.nativeEvent.isComposing
-      || isDropdownUsingArrowKey(event)
-    ) {
-      return;
-    }
-
-    const focusedCell = getFocusedCellFromEvent(event);
-    if (!focusedCell || rowModesModel[focusedCell.id]?.mode !== GridRowModes.Edit) {
-      return;
-    }
-
-    const target =
-      event.key === 'Tab'
-        ? getHorizontalNavigationTarget(focusedCell.id, focusedCell.field, event.shiftKey ? -1 : 1)
-        : event.key === 'ArrowRight'
-          ? getHorizontalNavigationTarget(focusedCell.id, focusedCell.field, 1)
-          : event.key === 'ArrowLeft'
-            ? getHorizontalNavigationTarget(focusedCell.id, focusedCell.field, -1)
-            : event.key === 'ArrowDown'
-              ? getVerticalNavigationTarget(focusedCell.id, focusedCell.field, 1)
-              : getVerticalNavigationTarget(focusedCell.id, focusedCell.field, -1);
-
-    if (!target) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    focusKeyboardNavigableCell(target.id, target.field);
-  }, [
-    focusKeyboardNavigableCell,
-    getFocusedCellFromEvent,
-    getHorizontalNavigationTarget,
-    getVerticalNavigationTarget,
-    rowModesModel,
-  ]);
-
   const hasInvalidRowInEditMode = useMemo(() => {
     if (!hasRowsInEditMode) return false;
     
@@ -655,6 +612,122 @@ export function EditableDataGrid<T extends EditableRow>({
     }
     return true;
   }, [applyDraftValues, getDraftRow, onBeforeSaveRow]);
+
+  const blurActiveElementInCell = useCallback((cell: { id: GridRowId; field: string }): void => {
+    const activeElement = document.activeElement;
+    if (!(activeElement instanceof HTMLElement)) {
+      return;
+    }
+
+    const cellElement = activeElement.closest<HTMLElement>('[role="gridcell"][data-field]');
+    const rowElement = activeElement.closest<HTMLElement>('[role="row"][data-id]');
+    if (cellElement?.dataset.field !== cell.field || rowElement?.dataset.id !== String(cell.id)) {
+      return;
+    }
+
+    activeElement.blur();
+  }, []);
+
+  const canLeaveEditedRowForKeyboardNavigation = useCallback(async (rowId: GridRowId): Promise<boolean> => {
+    if (rowModesModel[rowId]?.mode !== GridRowModes.Edit) {
+      return true;
+    }
+
+    const draftRow = getDraftRow(rowId);
+    if (draftRow) {
+      const validationError = validateRow(draftRow);
+      if (validationError) {
+        setError(validationError);
+        return false;
+      }
+
+      const fieldErrors = getRowValidationErrors?.(draftRow) ?? {};
+      if (Object.keys(fieldErrors).length > 0) {
+        setActiveValidationErrors((prev) => ({
+          ...prev,
+          [String(rowId)]: fieldErrors,
+        }));
+        return false;
+      }
+    }
+
+    return shouldSaveRow(rowId);
+  }, [getDraftRow, getRowValidationErrors, rowModesModel, shouldSaveRow, validateRow]);
+
+  const navigateFromEditedCell = useCallback(async (
+    current: { id: GridRowId; field: string },
+    target: { id: GridRowId; field: string },
+  ): Promise<void> => {
+    if (current.id === target.id && current.field === target.field) {
+      return;
+    }
+
+    const canLeaveCurrentCell = await canLeaveEditedRowForKeyboardNavigation(current.id);
+    if (!canLeaveCurrentCell) {
+      return;
+    }
+
+    blurActiveElementInCell(current);
+
+    if (rowModesModel[current.id]?.mode === GridRowModes.Edit) {
+      setRowModesModel((oldModel) => ({
+        ...oldModel,
+        [current.id]: { mode: GridRowModes.View },
+      }));
+    }
+
+    requestAnimationFrame(() => {
+      focusKeyboardNavigableCell(target.id, target.field);
+    });
+  }, [
+    blurActiveElementInCell,
+    canLeaveEditedRowForKeyboardNavigation,
+    focusKeyboardNavigableCell,
+    rowModesModel,
+  ]);
+
+  const handleGridEditNavigation = useCallback((event: KeyboardEvent): void => {
+    if (
+      !gridNavigationKeys.has(event.key)
+      || event.altKey
+      || event.ctrlKey
+      || event.metaKey
+      || event.nativeEvent.isComposing
+      || isDropdownUsingArrowKey(event)
+    ) {
+      return;
+    }
+
+    const focusedCell = getFocusedCellFromEvent(event);
+    if (!focusedCell || rowModesModel[focusedCell.id]?.mode !== GridRowModes.Edit) {
+      return;
+    }
+
+    const target =
+      event.key === 'Tab'
+        ? getHorizontalNavigationTarget(focusedCell.id, focusedCell.field, event.shiftKey ? -1 : 1)
+        : event.key === 'ArrowRight'
+          ? getHorizontalNavigationTarget(focusedCell.id, focusedCell.field, 1)
+          : event.key === 'ArrowLeft'
+            ? getHorizontalNavigationTarget(focusedCell.id, focusedCell.field, -1)
+            : event.key === 'ArrowDown'
+              ? getVerticalNavigationTarget(focusedCell.id, focusedCell.field, 1)
+              : getVerticalNavigationTarget(focusedCell.id, focusedCell.field, -1);
+
+    if (!target) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    void navigateFromEditedCell(focusedCell, target);
+  }, [
+    getFocusedCellFromEvent,
+    getHorizontalNavigationTarget,
+    getVerticalNavigationTarget,
+    navigateFromEditedCell,
+    rowModesModel,
+  ]);
 
   const handleSaveAllDirtyRows = useCallback(async (): Promise<void> => {
     const editingRowIds = Object.entries(rowModesModel)
