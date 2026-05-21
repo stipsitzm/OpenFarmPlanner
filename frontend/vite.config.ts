@@ -21,6 +21,9 @@ export default defineConfig({
     },
   },
   server: {
+    watch: {
+      ignored: ['**/coverage/**'],
+    },
     proxy: {
       '/admin': {
         target: 'http://localhost:8000',
