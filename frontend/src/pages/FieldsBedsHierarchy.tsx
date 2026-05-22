@@ -21,6 +21,8 @@ import { DataGrid, GridRowModes } from "@mui/x-data-grid";
 import { germanDataGridLocaleText } from "../components/data-grid/localeText";
 import type { GridRowsProp, GridRowModesModel, GridRowHeightParams } from "@mui/x-data-grid";
 import { Box, Alert } from "@mui/material";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { dataGridSx } from "../components/data-grid/styles";
 import {
@@ -32,7 +34,7 @@ import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { usePersistentSortModel } from "../hooks/usePersistentSortModel";
 import { useFieldOperations } from "../components/hierarchy/hooks/useFieldOperations";
-import { fieldAPI, bedAPI } from "../api/api";
+import { fieldAPI, bedAPI, locationAPI } from "../api/api";
 import {
   buildHierarchyIndex,
   createHierarchyRowsProjector,
@@ -139,8 +141,14 @@ function FieldsBedsHierarchy({
     null,
   );
   const [treeActive, setTreeActive] = useState(false);
+  const [contextMenuState, setContextMenuState] = useState<{
+    row: HierarchyRow;
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
   const hasInitiallyExpandedRef = useRef(false);
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
+  const touchLongPressTimeoutRef = useRef<number | null>(null);
 
   useCommandContextTag("areas");
 
@@ -349,6 +357,18 @@ function FieldsBedsHierarchy({
     },
     [navigate],
   );
+
+  const handleDeleteLocation = useCallback(async (locationId: number): Promise<void> => {
+    if (!window.confirm(t("confirmDelete"))) {
+      return;
+    }
+    try {
+      await locationAPI.delete(locationId);
+      await fetchData();
+    } catch (err) {
+      setError(extractApiErrorMessage(err, t, t("errors.delete")));
+    }
+  }, [fetchData, setError, t]);
 
   const parseAreaExpression = useCallback((input: string): number | undefined => {
     const normalizedInput = input.trim().replace(/,/g, ".");
@@ -688,6 +708,19 @@ function FieldsBedsHierarchy({
     }));
   }, [selectedRow]);
 
+  const openContextMenuForRow = useCallback((row: HierarchyRow, mouseX: number, mouseY: number): void => {
+    setSelectedRowId(row.id);
+    setContextMenuState({ row, mouseX, mouseY });
+  }, []);
+
+  const handleNameCellContextMenu = useCallback((event: React.MouseEvent<HTMLElement>, row: HierarchyRow): void => {
+    openContextMenuForRow(row, event.clientX + 2, event.clientY - 6);
+  }, [openContextMenuForRow]);
+
+  const closeContextMenu = useCallback((): void => {
+    setContextMenuState(null);
+  }, []);
+
   const areaCommands = useMemo<CommandSpec[]>(
     () => [
       {
@@ -816,6 +849,32 @@ function FieldsBedsHierarchy({
     };
   }, [expandedRows, rows, selectedRowId, toggleExpand, treeActive]);
 
+  useEffect(() => {
+    const handleContextMenuKeyboard = (event: KeyboardEvent) => {
+      const shouldOpen =
+        event.key === "ContextMenu" || (event.shiftKey && event.key === "F10");
+      if (!shouldOpen || !treeActive || !selectedRowId || isTypingInEditableElement(document.activeElement)) {
+        return;
+      }
+
+      const selectedRow = rows.find((row) => row.id === selectedRowId);
+      if (!selectedRow) {
+        return;
+      }
+
+      event.preventDefault();
+      const targetElement = document.querySelector(`[data-id="${String(selectedRowId)}"]`) as HTMLElement | null;
+      if (!targetElement) {
+        return;
+      }
+      const rect = targetElement.getBoundingClientRect();
+      openContextMenuForRow(selectedRow, rect.left + Math.min(240, rect.width), rect.top + 12);
+    };
+
+    window.addEventListener("keydown", handleContextMenuKeyboard);
+    return () => window.removeEventListener("keydown", handleContextMenuKeyboard);
+  }, [openContextMenuForRow, rows, selectedRowId, treeActive]);
+
   const nameColumnWidth = useMemo(() => {
     const MIN_NAME_WIDTH = 220;
     const CHAR_WIDTH_PX = 8;
@@ -874,7 +933,11 @@ function FieldsBedsHierarchy({
         }
       },
       (fieldId) => deleteField(fieldId),
+      (locationId) => {
+        void handleDeleteLocation(locationId);
+      },
       handleCreatePlantingPlan,
+      handleNameCellContextMenu,
       notesEditor.handleOpen,
       t,
       {
@@ -888,7 +951,9 @@ function FieldsBedsHierarchy({
     deleteBed,
     addField,
     deleteField,
+    handleDeleteLocation,
     handleCreatePlantingPlan,
+    handleNameCellContextMenu,
     notesEditor.handleOpen,
     t,
     nameColumnWidth,
@@ -995,6 +1060,41 @@ function FieldsBedsHierarchy({
               setTreeActive(true);
               handleEditableCellClick(params, rowModesModel, setRowModesModel);
             }}
+            onCellContextMenu={(params, event) => {
+              event.preventDefault();
+              setSelectedRowId(params.id);
+              setTreeActive(true);
+              const targetRow = rows.find((row) => row.id === params.id);
+              if (targetRow) {
+                openContextMenuForRow(targetRow, event.clientX + 2, event.clientY - 6);
+              }
+            }}
+            onCellKeyDown={(params, event) => {
+              const keyboardEvent = event as React.KeyboardEvent;
+              if (keyboardEvent.key === "ContextMenu" || (keyboardEvent.shiftKey && keyboardEvent.key === "F10")) {
+                keyboardEvent.preventDefault();
+                const targetRow = rows.find((row) => row.id === params.id);
+                if (targetRow) {
+                  const targetElement = keyboardEvent.currentTarget as HTMLElement;
+                  const rect = targetElement.getBoundingClientRect();
+                  openContextMenuForRow(targetRow, rect.left + Math.min(240, rect.width), rect.top + 12);
+                }
+              }
+            }}
+            onCellTouchStart={(params, event) => {
+              const targetRow = rows.find((row) => row.id === params.id);
+              if (!targetRow) return;
+              const touch = event.touches[0];
+              touchLongPressTimeoutRef.current = window.setTimeout(() => {
+                openContextMenuForRow(targetRow, touch.clientX, touch.clientY);
+              }, 550);
+            }}
+            onCellTouchEnd={() => {
+              if (touchLongPressTimeoutRef.current !== null) {
+                window.clearTimeout(touchLongPressTimeoutRef.current);
+                touchLongPressTimeoutRef.current = null;
+              }
+            }}
             localeText={germanDataGridLocaleText}
           />
           </Box>
@@ -1011,6 +1111,47 @@ function FieldsBedsHierarchy({
         onClose={notesEditor.handleClose}
         loading={notesEditor.isSaving}
       />
+      <Menu
+        open={contextMenuState !== null}
+        onClose={closeContextMenu}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenuState !== null
+            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
+            : undefined
+        }
+      >
+        {contextMenuState?.row.type === "location" && contextMenuState.row.locationId ? (
+          <MenuItem onClick={() => { closeContextMenu(); const fieldName = window.prompt(t("dialogs.addField.nameLabel")); if (fieldName !== null) { void addField(contextMenuState.row.locationId, fieldName); } }}>
+            {t("actions.addField")}
+          </MenuItem>
+        ) : null}
+        {contextMenuState?.row.type === "location" && contextMenuState.row.locationId ? (
+          <MenuItem onClick={() => { closeContextMenu(); void handleDeleteLocation(contextMenuState.row.locationId!); }}>
+            {t("common:actions.delete")}
+          </MenuItem>
+        ) : null}
+        {contextMenuState?.row.type === "field" && contextMenuState.row.fieldId ? (
+          <MenuItem onClick={() => { closeContextMenu(); handleAddBed(contextMenuState.row.fieldId!); }}>
+            {t("addBed")}
+          </MenuItem>
+        ) : null}
+        {contextMenuState?.row.type === "bed" && contextMenuState.row.bedId ? (
+          <MenuItem onClick={() => { closeContextMenu(); handleCreatePlantingPlan(contextMenuState.row.bedId!); }}>
+            {t("createPlantingPlan")}
+          </MenuItem>
+        ) : null}
+        {contextMenuState?.row.type === "field" && contextMenuState.row.fieldId ? (
+          <MenuItem onClick={() => { closeContextMenu(); void deleteField(contextMenuState.row.fieldId!); }}>
+            {t("common:actions.delete")}
+          </MenuItem>
+        ) : null}
+        {contextMenuState?.row.type === "bed" && contextMenuState.row.bedId ? (
+          <MenuItem onClick={() => { closeContextMenu(); void deleteBed(contextMenuState.row.bedId!); }}>
+            {t("common:actions.delete")}
+          </MenuItem>
+        ) : null}
+      </Menu>
     </div>
   );
 }

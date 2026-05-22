@@ -42,7 +42,9 @@ interface NameCellCallbacks {
   onDeleteBed: (bedId: number) => void;
   onAddField: (locationId?: number) => void;
   onDeleteField: (fieldId: number) => void;
+  onDeleteLocation: (locationId: number) => void;
   onCreatePlantingPlan: (bedId: number) => void;
+  onOpenContextMenu: (event: MouseEvent<HTMLElement>, row: HierarchyRow) => void;
 }
 
 function renderActionIconButton({
@@ -87,12 +89,18 @@ function renderInlineActions(
 ): ReactElement | null {
   if (row.type === 'location') {
     return (
-      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
         {renderActionIconButton({
           label: t('hierarchy:addField'),
           color: 'primary',
           onClick: () => callbacks.onAddField(row.locationId),
           icon: <AddIcon />,
+        })}
+        {renderActionIconButton({
+          label: t('common:actions.delete'),
+          color: 'error',
+          onClick: () => callbacks.onDeleteLocation(row.locationId!),
+          icon: <DeleteIcon />,
         })}
       </Box>
     );
@@ -100,7 +108,7 @@ function renderInlineActions(
 
   if (row.type === 'field') {
     return (
-      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
         <Tooltip title={t('hierarchy:addBedToField')}>
           <span>
             <AddBedIcon
@@ -129,7 +137,7 @@ function renderInlineActions(
 
   if (row.type === 'bed') {
     return (
-      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
         {renderActionIconButton({
           label: t('hierarchy:createPlantingPlan'),
           color: 'primary',
@@ -202,7 +210,14 @@ function renderNameCell(
         )}
       </Box>
 
-      <Box sx={{ display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: 0.5 }}>
+      <Box
+        sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', minWidth: 0, width: '100%' }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          callbacks.onOpenContextMenu(event, row);
+        }}
+      >
         <Box
           component="span"
           sx={{
@@ -216,12 +231,33 @@ function renderNameCell(
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             maxWidth: '100%',
+            pr: 7,
           }}
         >
           {params.value}
         </Box>
 
-        <Box sx={{ display: 'inline-flex', alignItems: 'center' }}>
+        <Box
+          sx={{
+            position: 'absolute',
+            right: 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            opacity: 0,
+            pointerEvents: 'none',
+            transition: 'opacity 120ms ease-in-out',
+            '.MuiDataGrid-row:hover &': {
+              opacity: 1,
+              pointerEvents: 'auto',
+            },
+            '.MuiDataGrid-row.Mui-selected &': {
+              opacity: 1,
+              pointerEvents: 'auto',
+            },
+          }}
+        >
           {showInlineActions ? renderInlineActions(row, callbacks, t) : null}
         </Box>
       </Box>
@@ -353,7 +389,9 @@ export function createHierarchyColumns(
   onDeleteBed: (bedId: number) => void,
   onAddField: (locationId?: number) => void,
   onDeleteField: (fieldId: number) => void,
+  onDeleteLocation: (locationId: number) => void,
   onCreatePlantingPlan: (bedId: number) => void,
+  onOpenContextMenu: (event: MouseEvent<HTMLElement>, row: HierarchyRow) => void,
   onOpenNotes: (rowId: string | number, field: string) => void,
   t: TFunction,
   columnWidths?: Partial<HierarchyColumnWidths>
@@ -369,7 +407,9 @@ export function createHierarchyColumns(
     onDeleteBed,
     onAddField,
     onDeleteField,
+    onDeleteLocation,
     onCreatePlantingPlan,
+    onOpenContextMenu,
   };
 
   return [
