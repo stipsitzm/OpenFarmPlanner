@@ -39,6 +39,7 @@ export interface SearchableSelectProps<T = unknown> {
   size?: 'small' | 'medium';
   fullWidth?: boolean;
   autoFocus?: boolean;
+  inputTabIndex?: number;
   textFieldSx?: SxProps<Theme>;
   inputValue?: string;
   onInputChange?: (value: string) => void;
@@ -55,6 +56,7 @@ export function SearchableSelect<T = unknown>({
   size = 'medium',
   fullWidth = true,
   autoFocus = false,
+  inputTabIndex,
   textFieldSx,
   inputValue,
   onInputChange,
@@ -98,6 +100,10 @@ export function SearchableSelect<T = unknown>({
           placeholder={placeholder}
           autoFocus={autoFocus}
           sx={textFieldSx}
+          inputProps={{
+            ...params.inputProps,
+            tabIndex: inputTabIndex,
+          }}
           InputProps={{
             ...params.InputProps,
             endAdornment: (

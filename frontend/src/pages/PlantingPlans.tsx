@@ -1044,6 +1044,11 @@ function PlantingPlans(): React.ReactElement {
               size="small"
               autoFocus={params.hasFocus}
               value={selectedValue}
+              slotProps={{
+                htmlInput: {
+                  tabIndex: params.hasFocus ? 0 : -1,
+                },
+              }}
               onChange={async (event) => {
                 await params.api.setEditCellValue({
                   id: params.id,
@@ -1156,6 +1161,34 @@ function PlantingPlans(): React.ReactElement {
         type: "date",
         editable: true,
         valueGetter: (value) => (value ? new Date(value) : null),
+        renderEditCell: (params) => {
+          const inputValue = toIsoDateString(params.value) ?? "";
+
+          return (
+            <TextField
+              type="date"
+              fullWidth
+              size="small"
+              autoFocus={params.hasFocus}
+              value={inputValue}
+              slotProps={{
+                htmlInput: {
+                  tabIndex: params.hasFocus ? 0 : -1,
+                },
+              }}
+              onChange={async (event) => {
+                const nextValue = event.target.value
+                  ? new Date(`${event.target.value}T00:00:00`)
+                  : null;
+                await params.api.setEditCellValue({
+                  id: params.id,
+                  field: params.field,
+                  value: nextValue,
+                });
+              }}
+            />
+          );
+        },
         preProcessEditCellProps: (params) => {
           const hasError = !params.props.value;
           return { ...params.props, error: hasError };

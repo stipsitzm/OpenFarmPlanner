@@ -72,6 +72,7 @@ export function SearchableSelectEditCell({
       placeholder={placeholder}
       size="small"
       autoFocus={hasFocus}
+      inputTabIndex={hasFocus ? 0 : -1}
       textFieldSx={{ '& .MuiInputBase-root': { height: '100%' } }}
     />
   );

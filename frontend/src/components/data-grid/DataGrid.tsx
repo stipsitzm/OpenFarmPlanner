@@ -10,10 +10,8 @@
  * @returns A configurable editable data grid component
  * 
  * @remarks
- * Changes are automatically saved when you:
- * - Click outside the row (blur)
- * - Press Tab to move to another field
- * - Click on a different row
+ * Changes are saved through the row save action.
+ * Keyboard navigation commits edit values locally without calling the API.
  * Navigation is blocked if there are unsaved changes (row in edit mode).
  */
 
@@ -601,67 +599,68 @@ export function EditableDataGrid<T extends EditableRow>({
     return true;
   }, [applyDraftValues, getDraftRow, onBeforeSaveRow]);
 
-  const blurActiveElementInCell = useCallback((cell: { id: GridRowId; field: string }): void => {
-    const activeElement = document.activeElement;
-    if (!(activeElement instanceof HTMLElement)) {
-      return;
-    }
-
-    const cellElement = activeElement.closest<HTMLElement>('[role="gridcell"][data-field]');
-    const rowElement = activeElement.closest<HTMLElement>('[role="row"][data-id]');
-    if (cellElement?.dataset.field !== cell.field || rowElement?.dataset.id !== String(cell.id)) {
-      return;
-    }
-
-    activeElement.blur();
-  }, []);
-
-  const canLeaveEditedRowForKeyboardNavigation = useCallback(async (rowId: GridRowId): Promise<boolean> => {
-    if (rowModesModel[rowId]?.mode !== GridRowModes.Edit) {
+  const commitEditedRowDraftForKeyboardNavigation = useCallback((rowId: GridRowId): boolean => {
+    const draftRow = getDraftRow(rowId);
+    if (!draftRow) {
       return true;
     }
 
-    const draftRow = getDraftRow(rowId);
-    if (draftRow) {
-      const validationError = validateRow(draftRow);
+    const validationError = validateRow(draftRow);
+    const rowKey = String(rowId);
+    const fieldErrors = getRowValidationErrors?.(draftRow) ?? {};
+    setActiveValidationErrors((prev) => ({
+      ...prev,
+      [rowKey]: fieldErrors,
+    }));
+
+    if (validationError || Object.keys(fieldErrors).length > 0) {
       if (validationError) {
         setError(validationError);
-        return false;
       }
-
-      const fieldErrors = getRowValidationErrors?.(draftRow) ?? {};
-      if (Object.keys(fieldErrors).length > 0) {
-        setActiveValidationErrors((prev) => ({
-          ...prev,
-          [String(rowId)]: fieldErrors,
-        }));
-        return false;
-      }
+      return false;
     }
 
-    return shouldSaveRow(rowId);
-  }, [getDraftRow, getRowValidationErrors, rowModesModel, shouldSaveRow, validateRow]);
+    setError('');
+    setRows((prevRows) =>
+      prevRows.map((row) => (String(row.id) === rowKey ? draftRow : row)),
+    );
+    setDirtyRowIds((prev) => {
+      const next = new Set(prev);
+      next.add(rowKey);
+      return next;
+    });
+    return true;
+  }, [getDraftRow, getRowValidationErrors, validateRow]);
 
-  const navigateFromEditedCell = useCallback(async (
+  const navigateFromEditedCell = useCallback((
     current: { id: GridRowId; field: string },
     target: { id: GridRowId; field: string },
     options: { startTargetEdit: boolean },
-  ): Promise<void> => {
+  ): void => {
     if (current.id === target.id && current.field === target.field) {
       return;
     }
 
-    const canLeaveCurrentCell = await canLeaveEditedRowForKeyboardNavigation(current.id);
-    if (!canLeaveCurrentCell) {
+    const canCommitCurrentDraft = commitEditedRowDraftForKeyboardNavigation(current.id);
+    if (!canCommitCurrentDraft) {
       return;
     }
 
-    blurActiveElementInCell(current);
+    const isSameRow = String(current.id) === String(target.id);
+
+    if (isSameRow) {
+      requestAnimationFrame(() => {
+        focusKeyboardNavigableCell(target.id, target.field, {
+          startEdit: options.startTargetEdit,
+        });
+      });
+      return;
+    }
 
     if (rowModesModel[current.id]?.mode === GridRowModes.Edit) {
       setRowModesModel((oldModel) => ({
         ...oldModel,
-        [current.id]: { mode: GridRowModes.View },
+        [current.id]: { mode: GridRowModes.View, ignoreModifications: true },
       }));
     }
 
@@ -669,8 +668,7 @@ export function EditableDataGrid<T extends EditableRow>({
       focusKeyboardNavigableCell(target.id, target.field, { startEdit: options.startTargetEdit });
     });
   }, [
-    blurActiveElementInCell,
-    canLeaveEditedRowForKeyboardNavigation,
+    commitEditedRowDraftForKeyboardNavigation,
     focusKeyboardNavigableCell,
     rowModesModel,
   ]);
@@ -711,7 +709,7 @@ export function EditableDataGrid<T extends EditableRow>({
 
     event.preventDefault();
     event.stopPropagation();
-    void navigateFromEditedCell(focusedCell, target, {
+    navigateFromEditedCell(focusedCell, target, {
       startTargetEdit: isHorizontalNavigation && !notesFieldNames.includes(target.field),
     });
   }, [
@@ -723,40 +721,169 @@ export function EditableDataGrid<T extends EditableRow>({
     rowModesModel,
   ]);
 
+  const processRowUpdate = useCallback(async (newRow: T): Promise<T> => {
+    // Clear previous error before validating
+    // This ensures dropdown selections and other changes trigger fresh validation
+    setError('');
+
+    // Validate required fields
+    const validationError = validateRow(newRow);
+    const rowKey = String(newRow.id);
+    const fieldErrors = getRowValidationErrors?.(newRow) ?? {};
+    setActiveValidationErrors((prev) => ({
+      ...prev,
+      [rowKey]: fieldErrors,
+    }));
+    if (validationError) {
+      if (newRow.isNew) {
+        throw new Error(validationError);
+      }
+      setError(validationError);
+      throw new Error(validationError);
+    }
+
+    try {
+      if (newRow.isNew) {
+        // Create new item via API
+        const apiData = await mapToApiData(newRow);
+        const response = await api.create(apiData);
+        setError('');
+        if (!response.data.id) {
+          throw new Error('API response missing ID');
+        }
+
+        // Remove the temporary row and add the saved row
+        const savedRow = mapToRow(response.data as T);
+        rowSnapshotRef.current.set(String(savedRow.id), savedRow);
+        setRows((prevRows) => {
+          // Remove the temporary row with negative ID
+          const filteredRows = prevRows.filter(row => row.id !== newRow.id);
+          // Add the saved row at the beginning
+          return [savedRow, ...filteredRows];
+        });
+        setDirtyRowIds((prev) => {
+          const next = new Set(prev);
+          next.delete(rowKey);
+          return next;
+        });
+
+        return savedRow;
+      } else {
+        // Update existing item via API
+        const apiData = await mapToApiData(newRow);
+        const response = await api.update(newRow.id, apiData);
+        setError('');
+        if (!response.data.id) {
+          throw new Error('API response missing ID');
+        }
+        // Map the response through mapToRow to ensure all fields are properly formatted
+        // This is important for auto-calculated fields like harvest dates
+        const mappedRow = mapToRow(response.data as T);
+        rowSnapshotRef.current.set(String(mappedRow.id), mappedRow);
+        setDirtyRowIds((prev) => {
+          const next = new Set(prev);
+          next.delete(rowKey);
+          return next;
+        });
+        return mappedRow;
+      }
+    } catch (err) {
+      if (isSaveErrorHandled?.(err)) {
+        console.error('Error saving data:', err);
+        throw err;
+      }
+      // Extract user-friendly error message
+      const errorMessage = extractApiErrorMessage(err, t, saveErrorMessage);
+      setError(errorMessage);
+      console.error('Error saving data:', err);
+      throw new Error(errorMessage);
+    }
+  }, [
+    api,
+    getRowValidationErrors,
+    isSaveErrorHandled,
+    mapToApiData,
+    mapToRow,
+    saveErrorMessage,
+    t,
+    validateRow,
+  ]);
+
+  const handleProcessRowUpdateError = useCallback((error: unknown): void => {
+    console.error('Row update error:', error);
+    if (isSaveErrorHandled?.(error)) {
+      return;
+    }
+    if (error instanceof Error && error.message) {
+      setError(error.message);
+      return;
+    }
+    const errorMessage = extractApiErrorMessage(error, t, saveErrorMessage);
+    setError(errorMessage);
+  }, [isSaveErrorHandled, saveErrorMessage, t]);
+
+  const handleSaveRow = useCallback(async (rowId: GridRowId): Promise<void> => {
+    if (!(await shouldSaveRow(rowId))) {
+      return;
+    }
+
+    if (rowModesModel[rowId]?.mode === GridRowModes.Edit) {
+      setRowModesModel((oldModel) => ({
+        ...oldModel,
+        [rowId]: { mode: GridRowModes.View },
+      }));
+      return;
+    }
+
+    const row = rowsById.get(String(rowId)) as T | undefined;
+    if (!row) {
+      return;
+    }
+
+    try {
+      const savedRow = await processRowUpdate(row);
+      setRows((prevRows) =>
+        prevRows.map((currentRow) =>
+          String(currentRow.id) === String(rowId) ? savedRow : currentRow,
+        ),
+      );
+    } catch (error) {
+      handleProcessRowUpdateError(error);
+    }
+  }, [
+    handleProcessRowUpdateError,
+    processRowUpdate,
+    rowModesModel,
+    rowsById,
+    shouldSaveRow,
+  ]);
+
   const handleSaveAllDirtyRows = useCallback(async (): Promise<void> => {
     const editingRowIds = Object.entries(rowModesModel)
       .filter(([, mode]) => mode.mode === GridRowModes.Edit)
       .map(([id]) => id);
-    if (editingRowIds.length === 0) {
-      return;
-    }
     const saveableRowIds: GridRowId[] = [];
     for (const rowId of editingRowIds) {
       if (await shouldSaveRow(rowId)) {
         saveableRowIds.push(rowId);
       }
     }
-    if (saveableRowIds.length === 0) {
-      return;
+    if (saveableRowIds.length > 0) {
+      setRowModesModel((oldModel) => {
+        const nextModel = { ...oldModel };
+        for (const rowId of saveableRowIds) {
+          nextModel[rowId] = { mode: GridRowModes.View };
+        }
+        return nextModel;
+      });
     }
-    setRowModesModel((oldModel) => {
-      const nextModel = { ...oldModel };
-      for (const rowId of saveableRowIds) {
-        nextModel[rowId] = { mode: GridRowModes.View };
+    const editingRowIdKeys = new Set(editingRowIds.map(String));
+    for (const rowKey of dirtyRowIds) {
+      if (!editingRowIdKeys.has(rowKey)) {
+        await handleSaveRow(rowKey);
       }
-      return nextModel;
-    });
-  }, [rowModesModel, shouldSaveRow]);
-
-  const handleSaveRow = useCallback(async (rowId: GridRowId): Promise<void> => {
-    if (!(await shouldSaveRow(rowId))) {
-      return;
     }
-    setRowModesModel((oldModel) => ({
-      ...oldModel,
-      [rowId]: { mode: GridRowModes.View },
-    }));
-  }, [shouldSaveRow]);
+  }, [dirtyRowIds, handleSaveRow, rowModesModel, shouldSaveRow]);
 
   const handleEditSelectedRow = (): void => {
     const selectedRowId = selectedRowIds[0];
@@ -869,100 +996,6 @@ export function EditableDataGrid<T extends EditableRow>({
       commandApiRef.current = null;
     };
   }, [commandApiRef, fetchData, getRowValidationErrors, gridApiRef, rowModesModel, rowsById, selectedRowIds]);
-
-
-  /**
-   * Process row update - save to API
-   */
-  const processRowUpdate = async (newRow: T): Promise<T> => {
-    // Clear previous error before validating
-    // This ensures dropdown selections and other changes trigger fresh validation
-    setError('');
-    
-    // Validate required fields
-    const validationError = validateRow(newRow);
-    const rowKey = String(newRow.id);
-    const fieldErrors = getRowValidationErrors?.(newRow) ?? {};
-    setActiveValidationErrors((prev) => ({
-      ...prev,
-      [rowKey]: fieldErrors,
-    }));
-    if (validationError) {
-      if (newRow.isNew) {
-        throw new Error(validationError);
-      }
-      setError(validationError);
-      throw new Error(validationError);
-    }
-
-    try {
-      if (newRow.isNew) {
-        // Create new item via API
-        const apiData = await mapToApiData(newRow);
-        const response = await api.create(apiData);
-        setError('');
-        if (!response.data.id) {
-          throw new Error('API response missing ID');
-        }
-        
-        // Remove the temporary row and add the saved row
-        const savedRow = mapToRow(response.data as T);
-        rowSnapshotRef.current.set(String(savedRow.id), savedRow);
-        setRows((prevRows) => {
-          // Remove the temporary row with negative ID
-          const filteredRows = prevRows.filter(row => row.id !== newRow.id);
-          // Add the saved row at the beginning
-          return [savedRow, ...filteredRows];
-        });
-        
-        return savedRow;
-      } else {
-        // Update existing item via API
-        const apiData = await mapToApiData(newRow);
-        const response = await api.update(newRow.id, apiData);
-        setError('');
-        if (!response.data.id) {
-          throw new Error('API response missing ID');
-        }
-        // Map the response through mapToRow to ensure all fields are properly formatted
-        // This is important for auto-calculated fields like harvest dates
-        const mappedRow = mapToRow(response.data as T);
-        rowSnapshotRef.current.set(String(mappedRow.id), mappedRow);
-        setDirtyRowIds((prev) => {
-          const next = new Set(prev);
-          next.delete(rowKey);
-          return next;
-        });
-        return mappedRow;
-      }
-    } catch (err) {
-      if (isSaveErrorHandled?.(err)) {
-        console.error('Error saving data:', err);
-        throw err;
-      }
-      // Extract user-friendly error message
-      const errorMessage = extractApiErrorMessage(err, t, saveErrorMessage);
-      setError(errorMessage);
-      console.error('Error saving data:', err);
-      throw new Error(errorMessage);
-    }
-  };
-
-  /**
-   * Handle row update errors
-   */
-  const handleProcessRowUpdateError = (error: unknown): void => {
-    console.error('Row update error:', error);
-    if (isSaveErrorHandled?.(error)) {
-      return;
-    }
-    if (error instanceof Error && error.message) {
-      setError(error.message);
-      return;
-    }
-    const errorMessage = extractApiErrorMessage(error, t, saveErrorMessage);
-    setError(errorMessage);
-  };
 
   /**
    * Handle row deletion
@@ -1095,11 +1128,13 @@ export function EditableDataGrid<T extends EditableRow>({
             align: 'right' as const,
             renderCell: (params: GridCellParams<T>) => {
               const rowId = params.id;
+              const rowKey = String(rowId);
               const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
+              const hasLocalDraft = dirtyRowIds.has(rowKey);
 
               return (
                 <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, width: '100%', justifyContent: 'flex-end' }}>
-                  {isEditing && (
+                  {(isEditing || hasLocalDraft) && (
                     <>
                       <Tooltip title={t('actions.saveRow')} arrow>
                         <IconButton size="small" color="primary" aria-label={t('actions.save')} onClick={() => void handleSaveRow(rowId)}>
@@ -1326,17 +1361,15 @@ export function EditableDataGrid<T extends EditableRow>({
               handleStartCellEditFromKeyboard(params);
               return;
             }
-            const shouldSaveEditedRowWithEnter =
+            const shouldKeepEnterFromSavingEditedRow =
               event.key === 'Enter' &&
               !event.shiftKey &&
               !event.ctrlKey &&
               !event.metaKey &&
               !event.altKey &&
               rowModesModel[params.id]?.mode === GridRowModes.Edit;
-            if (shouldSaveEditedRowWithEnter) {
-              event.preventDefault();
+            if (shouldKeepEnterFromSavingEditedRow) {
               event.defaultMuiPrevented = true;
-              void handleSaveRow(params.id);
               return;
             }
             if (event.key === 'Escape') {
