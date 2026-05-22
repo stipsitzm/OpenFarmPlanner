@@ -28,7 +28,7 @@ import {
 } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
-import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridCellParams, GridRowParams, GridFilterOperator } from '@mui/x-data-grid';
+import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRowParams, GridFilterOperator } from '@mui/x-data-grid';
 import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -169,6 +169,83 @@ const keepDraftRowsVisibleForColumnFilters = (column: GridColDef): GridColDef =>
 
 const editModeEditorArrowKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
 
+const isComboboxInteractionTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return Boolean(
+    target.closest('[role="combobox"], [aria-haspopup="listbox"], [aria-haspopup="menu"]'),
+  );
+};
+
+const isEnterSaveInputTarget = (target: EventTarget | null): boolean =>
+  target instanceof HTMLInputElement && !isComboboxInteractionTarget(target);
+
+const getSortableValue = (row: EditableRow, field: string): unknown => row[field];
+
+const compareSortableValues = (leftValue: unknown, rightValue: unknown): number => {
+  if (leftValue === rightValue) {
+    return 0;
+  }
+  if (leftValue === null || leftValue === undefined || leftValue === '') {
+    return 1;
+  }
+  if (rightValue === null || rightValue === undefined || rightValue === '') {
+    return -1;
+  }
+  if (leftValue instanceof Date || rightValue instanceof Date) {
+    const leftTime = leftValue instanceof Date ? leftValue.getTime() : new Date(String(leftValue)).getTime();
+    const rightTime = rightValue instanceof Date ? rightValue.getTime() : new Date(String(rightValue)).getTime();
+    if (Number.isFinite(leftTime) && Number.isFinite(rightTime)) {
+      return leftTime - rightTime;
+    }
+  }
+  if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+    return leftValue - rightValue;
+  }
+  if (typeof leftValue === 'boolean' && typeof rightValue === 'boolean') {
+    return Number(leftValue) - Number(rightValue);
+  }
+  return String(leftValue).localeCompare(String(rightValue), undefined, {
+    numeric: true,
+    sensitivity: 'base',
+  });
+};
+
+const getSortedRowIds = <T extends EditableRow>(sourceRows: readonly T[], model: GridSortModel): GridRowId[] => {
+  const [sortItem] = model;
+  if (!sortItem?.field || !sortItem.sort) {
+    return sourceRows.map((row) => row.id);
+  }
+
+  const direction = sortItem.sort === 'desc' ? -1 : 1;
+  return sourceRows
+    .map((row, index) => ({ row, index }))
+    .sort((left, right) => {
+      const comparison = compareSortableValues(
+        getSortableValue(left.row, sortItem.field),
+        getSortableValue(right.row, sortItem.field),
+      );
+      return comparison === 0 ? left.index - right.index : comparison * direction;
+    })
+    .map(({ row }) => row.id);
+};
+
+const orderRowsByStableIds = <T extends EditableRow>(sourceRows: readonly T[], orderedIds: readonly GridRowId[]): T[] => {
+  if (orderedIds.length === 0) {
+    return [...sourceRows];
+  }
+
+  const rowsById = new Map(sourceRows.map((row) => [String(row.id), row]));
+  const orderedRows = orderedIds
+    .map((rowId) => rowsById.get(String(rowId)))
+    .filter((row): row is T => row !== undefined);
+  const orderedIdKeys = new Set(orderedIds.map(String));
+  const missingRows = sourceRows.filter((row) => !orderedIdKeys.has(String(row.id)));
+  return [...orderedRows, ...missingRows];
+};
+
 export function EditableDataGrid<T extends EditableRow>({
   columns,
   api,
@@ -205,6 +282,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const shouldUseCompactContainer = resolvedSurfaceSizing === 'compact';
   const shouldDisableTrailingFiller = isContentSizedSurface;
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
+  const [stableRowOrder, setStableRowOrder] = useState<GridRowId[]>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -224,6 +302,13 @@ export function EditableDataGrid<T extends EditableRow>({
     allowedFields: columns.map((column) => column.field),
     persistInUrl: persistSortInUrl,
   });
+  const rowsForGrid = useMemo(
+    () => orderRowsByStableIds(rows as T[], stableRowOrder),
+    [rows, stableRowOrder],
+  );
+  const refreshStableRowOrder = useCallback((sourceRows: readonly T[], model: GridSortModel = sortModel): void => {
+    setStableRowOrder(getSortedRowIds(sourceRows, model));
+  }, [sortModel]);
 
   const saveUpdatedRow = useCallback(async (updatedRow: T): Promise<T> => {
     const numericId = Number(updatedRow.id);
@@ -277,6 +362,14 @@ export function EditableDataGrid<T extends EditableRow>({
   const rowsById = useMemo(() => {
     return new Map(rows.map((row) => [String(row.id), row]));
   }, [rows]);
+  const handleSortModelChange = useCallback((nextSortModel: GridSortModel): void => {
+    setSortModel(nextSortModel);
+    refreshStableRowOrder(rows as T[], nextSortModel);
+  }, [refreshStableRowOrder, rows, setSortModel]);
+  const handleFilterModelChange = useCallback((nextFilterModel: GridFilterModel): void => {
+    setFilterModel(nextFilterModel);
+    refreshStableRowOrder(rows as T[]);
+  }, [refreshStableRowOrder, rows, setFilterModel]);
 
   const getFocusedCellFromEvent = useCallback((event: KeyboardEvent): { id: GridRowId; field: string } | null => {
     const focusedCell = gridApiRef.current.state.focus.cell;
@@ -417,6 +510,7 @@ export function EditableDataGrid<T extends EditableRow>({
         .filter((item): item is T & { id: number } => item.id !== undefined)
         .map(mapToRow);
       setRows(dataRows);
+      refreshStableRowOrder(dataRows);
       setError('');
       setDataFetched(true);
     } catch (err) {
@@ -426,7 +520,7 @@ export function EditableDataGrid<T extends EditableRow>({
     } finally {
       setLoading(false);
     }
-  }, [api, mapToRow, loadErrorMessage]);
+  }, [api, mapToRow, loadErrorMessage, refreshStableRowOrder]);
 
   useEffect(() => {
     // Only fetch on initial mount
@@ -445,6 +539,7 @@ export function EditableDataGrid<T extends EditableRow>({
       initialRowProcessedRef.current = true;
       const newRow = { ...createNewRow(), ...initialRow };
       setRows((oldRows) => [newRow, ...oldRows]);
+      setStableRowOrder((previousOrder) => [newRow.id, ...previousOrder]);
       // Set row to edit mode after a small delay to ensure row is added first
       setTimeout(() => {
         setRowModesModel((oldModel) => ({
@@ -461,6 +556,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const handleAddClick = (): void => {
     const newRow = createNewRow();
     setRows((oldRows) => [newRow, ...oldRows]);
+    setStableRowOrder((previousOrder) => [newRow.id, ...previousOrder]);
     setRowModesModel((oldModel) => ({
       ...oldModel,
       [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus: columns[0]?.field },
@@ -474,6 +570,7 @@ export function EditableDataGrid<T extends EditableRow>({
       setRows((prevRows) => prevRows.map((row) => (String(row.id) === rowKey ? snapshot : row)));
     } else if (Number(rowId) < 0) {
       setRows((prevRows) => prevRows.filter((row) => String(row.id) !== rowKey));
+      setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
     }
 
     setDirtyRowIds((prev) => {
@@ -707,6 +804,9 @@ export function EditableDataGrid<T extends EditableRow>({
           // Add the saved row at the beginning
           return [savedRow, ...filteredRows];
         });
+        setStableRowOrder((previousOrder) =>
+          previousOrder.map((orderedId) => (String(orderedId) === rowKey ? savedRow.id : orderedId)),
+        );
         setDirtyRowIds((prev) => {
           const next = new Set(prev);
           next.delete(rowKey);
@@ -953,6 +1053,7 @@ export function EditableDataGrid<T extends EditableRow>({
     if (numericId < 0) {
       // If it's a new unsaved row, just remove it from the grid
       setRows((prevRows) => prevRows.filter((row) => row.id !== id));
+      setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== String(id)));
       return;
     }
 
@@ -960,6 +1061,7 @@ export function EditableDataGrid<T extends EditableRow>({
     api.delete(numericId)
       .then(() => {
         setRows((prevRows) => prevRows.filter((row) => row.id !== id));
+        setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== String(id)));
         setError('');
       })
       .catch((err) => {
@@ -1211,7 +1313,7 @@ export function EditableDataGrid<T extends EditableRow>({
           }}
         >
           <DataGrid
-          rows={rows}
+          rows={rowsForGrid}
           columns={columnsWithActions}
           rowModesModel={rowModesModel}
           onRowModesModelChange={setRowModesModel}
@@ -1224,9 +1326,10 @@ export function EditableDataGrid<T extends EditableRow>({
           autoHeight
           hideFooter={false}
           sortModel={sortModel}
-          onSortModelChange={setSortModel}
+          onSortModelChange={handleSortModelChange}
+          sortingMode="server"
           filterModel={filterModel}
-          onFilterModelChange={setFilterModel}
+          onFilterModelChange={handleFilterModelChange}
           rowSelectionModel={{ type: "include", ids: new Set(selectedRowIds) }}
           onRowSelectionModelChange={(nextModel) => setSelectedRowIds(Array.from(nextModel.ids))}
           slots={{
@@ -1317,15 +1420,19 @@ export function EditableDataGrid<T extends EditableRow>({
               event.defaultMuiPrevented = true;
               return;
             }
-            const shouldKeepEnterFromSavingEditedRow =
+            const shouldHandleEnterInEditedRow =
               event.key === 'Enter' &&
               !event.shiftKey &&
               !event.ctrlKey &&
               !event.metaKey &&
               !event.altKey &&
               rowModesModel[params.id]?.mode === GridRowModes.Edit;
-            if (shouldKeepEnterFromSavingEditedRow) {
+            if (shouldHandleEnterInEditedRow) {
               event.defaultMuiPrevented = true;
+              if (isEnterSaveInputTarget(event.target)) {
+                event.preventDefault();
+                void handleSaveRow(params.id);
+              }
               return;
             }
             if (event.key === 'Escape') {
