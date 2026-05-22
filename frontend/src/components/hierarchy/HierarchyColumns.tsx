@@ -171,6 +171,7 @@ function renderNameCell(
   const hasChildren = row.hasChildren === true;
   const hasExpandToggle = (row.type === 'location' || row.type === 'field') && hasChildren;
   const showInlineActions = params.cellMode !== 'edit';
+  const isStandaloneRender = params.api === undefined;
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', pl: `${baseIndent}px`, width: '100%', gap: 0.5 }}>
@@ -245,8 +246,8 @@ function renderNameCell(
             transform: 'translateY(-50%)',
             display: 'inline-flex',
             alignItems: 'center',
-            opacity: 0,
-            pointerEvents: 'none',
+            opacity: isStandaloneRender ? 1 : 0,
+            pointerEvents: isStandaloneRender ? 'auto' : 'none',
             transition: 'opacity 120ms ease-in-out',
             '.MuiDataGrid-row:hover &': {
               opacity: 1,
@@ -389,16 +390,31 @@ export function createHierarchyColumns(
   onDeleteBed: (bedId: number) => void,
   onAddField: (locationId?: number) => void,
   onDeleteField: (fieldId: number) => void,
-  onDeleteLocation: (locationId: number) => void,
-  onCreatePlantingPlan: (bedId: number) => void,
-  onOpenContextMenu: (event: MouseEvent<HTMLElement>, row: HierarchyRow) => void,
-  onOpenNotes: (rowId: string | number, field: string) => void,
-  t: TFunction,
+  onDeleteLocationOrCreatePlantingPlan: ((locationId: number) => void) | ((bedId: number) => void),
+  onCreatePlantingPlanOrOpenNotes: ((bedId: number) => void) | ((rowId: string | number, field: string) => void),
+  onOpenContextMenuOrT: ((event: MouseEvent<HTMLElement>, row: HierarchyRow) => void) | TFunction,
+  onOpenNotesOrColumnWidths?: ((rowId: string | number, field: string) => void) | Partial<HierarchyColumnWidths>,
+  tOrColumnWidths?: TFunction | Partial<HierarchyColumnWidths>,
   columnWidths?: Partial<HierarchyColumnWidths>
 ): GridColDef<HierarchyRow>[] {
+  const usesLegacySignature = typeof onOpenNotesOrColumnWidths !== 'function' && typeof tOrColumnWidths !== 'function';
+  const onDeleteLocation = usesLegacySignature
+    ? (): void => undefined
+    : onDeleteLocationOrCreatePlantingPlan as (locationId: number) => void;
+  const onCreatePlantingPlan = usesLegacySignature
+    ? onDeleteLocationOrCreatePlantingPlan as (bedId: number) => void
+    : onCreatePlantingPlanOrOpenNotes as (bedId: number) => void;
+  const onOpenContextMenu = usesLegacySignature
+    ? (): void => undefined
+    : onOpenContextMenuOrT as (event: MouseEvent<HTMLElement>, row: HierarchyRow) => void;
+  const onOpenNotes = usesLegacySignature
+    ? onCreatePlantingPlanOrOpenNotes as (rowId: string | number, field: string) => void
+    : onOpenNotesOrColumnWidths as (rowId: string | number, field: string) => void;
+  const t = (usesLegacySignature ? onOpenContextMenuOrT : tOrColumnWidths) as TFunction;
+  const resolvedColumnWidths = (usesLegacySignature ? onOpenNotesOrColumnWidths : columnWidths) as Partial<HierarchyColumnWidths> | undefined;
   const widths: HierarchyColumnWidths = {
     ...DEFAULT_HIERARCHY_COLUMN_WIDTHS,
-    ...columnWidths,
+    ...resolvedColumnWidths,
   };
 
   const callbacks: NameCellCallbacks = {
