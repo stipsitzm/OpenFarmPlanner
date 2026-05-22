@@ -135,7 +135,7 @@ const getDefaultFilterOperators = (column: GridColDef): GridFilterOperator[] => 
   }
 };
 
-const keepDraftRowsVisibleForFilterOperators = (operators: GridFilterOperator[]): GridFilterOperator[] =>
+const keepDraftRowsVisibleForFilterOperators = (operators: readonly GridFilterOperator[]): GridFilterOperator[] =>
   operators.map((operator) => ({
     ...operator,
     getApplyFilterFn: (filterItem, column) => {
@@ -372,7 +372,8 @@ export function EditableDataGrid<T extends EditableRow>({
   }, [refreshStableRowOrder, rows, setFilterModel]);
 
   const getFocusedCellFromEvent = useCallback((event: KeyboardEvent): { id: GridRowId; field: string } | null => {
-    const focusedCell = gridApiRef.current.state.focus.cell;
+    const api = gridApiRef.current;
+    const focusedCell = api?.state.focus.cell;
     if (focusedCell) {
       return focusedCell;
     }
@@ -399,6 +400,9 @@ export function EditableDataGrid<T extends EditableRow>({
 
   const getKeyboardNavigableFieldsForRow = useCallback((rowId: GridRowId): string[] => {
     const api = gridApiRef.current;
+    if (!api) {
+      return [];
+    }
     return api.getVisibleColumns()
       .filter((column) => {
         if (notesFieldNames.includes(column.field)) {
@@ -424,6 +428,9 @@ export function EditableDataGrid<T extends EditableRow>({
     options: { startEdit: boolean },
   ): void => {
     const api = gridApiRef.current;
+    if (!api) {
+      return;
+    }
     const rowKey = String(rowId);
     const row = rowsById.get(rowKey);
     if (row && !rowSnapshotRef.current.has(rowKey)) {

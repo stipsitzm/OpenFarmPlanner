@@ -19,7 +19,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "../i18n";
 import { DataGrid, GridRowModes } from "@mui/x-data-grid";
 import { germanDataGridLocaleText } from "../components/data-grid/localeText";
-import type { GridRowsProp, GridRowModesModel, GridRowHeightParams } from "@mui/x-data-grid";
+import type { GridCellParams, GridRowsProp, GridRowModesModel, GridRowHeightParams } from "@mui/x-data-grid";
 import { Box, Alert } from "@mui/material";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -717,6 +717,55 @@ function FieldsBedsHierarchy({
     openContextMenuForRow(row, event.clientX + 2, event.clientY - 6);
   }, [openContextMenuForRow]);
 
+  const handleGridContextMenu = useCallback((event: React.MouseEvent<HTMLElement>): void => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
+    const rowId = rowElement?.dataset.id;
+    if (!rowId) {
+      return;
+    }
+    const targetRow = rows.find((row) => String(row.id) === rowId);
+    if (!targetRow) {
+      return;
+    }
+
+    event.preventDefault();
+    setSelectedRowId(targetRow.id);
+    setTreeActive(true);
+    openContextMenuForRow(targetRow, event.clientX + 2, event.clientY - 6);
+  }, [openContextMenuForRow, rows]);
+
+  const handleGridTouchStart = useCallback((event: React.TouchEvent<HTMLElement>): void => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
+    const rowId = rowElement?.dataset.id;
+    if (!rowId) {
+      return;
+    }
+    const targetRow = rows.find((row) => String(row.id) === rowId);
+    const touch = event.touches[0];
+    if (!targetRow || !touch) {
+      return;
+    }
+
+    touchLongPressTimeoutRef.current = window.setTimeout(() => {
+      openContextMenuForRow(targetRow, touch.clientX, touch.clientY);
+    }, 550);
+  }, [openContextMenuForRow, rows]);
+
+  const handleGridTouchEnd = useCallback((): void => {
+    if (touchLongPressTimeoutRef.current !== null) {
+      window.clearTimeout(touchLongPressTimeoutRef.current);
+      touchLongPressTimeoutRef.current = null;
+    }
+  }, []);
+
   const closeContextMenu = useCallback((): void => {
     setContextMenuState(null);
   }, []);
@@ -1028,6 +1077,9 @@ function FieldsBedsHierarchy({
           ref={tableWrapperRef}
           sx={{ width: "100%", maxWidth: "100%", minWidth: 1, overflowX: "auto", overflowY: "visible", display: "block" }}
           onClick={() => setTreeActive(true)}
+          onContextMenu={handleGridContextMenu}
+          onTouchStart={handleGridTouchStart}
+          onTouchEnd={handleGridTouchEnd}
         >
           <Box sx={{ display: "inline-block", width: "fit-content", minWidth: 320, maxWidth: "100%" }}>
           <DataGrid
@@ -1060,16 +1112,7 @@ function FieldsBedsHierarchy({
               setTreeActive(true);
               handleEditableCellClick(params, rowModesModel, setRowModesModel);
             }}
-            onCellContextMenu={(params, event) => {
-              event.preventDefault();
-              setSelectedRowId(params.id);
-              setTreeActive(true);
-              const targetRow = rows.find((row) => row.id === params.id);
-              if (targetRow) {
-                openContextMenuForRow(targetRow, event.clientX + 2, event.clientY - 6);
-              }
-            }}
-            onCellKeyDown={(params, event) => {
+            onCellKeyDown={(params: GridCellParams<HierarchyRow>, event: React.KeyboardEvent) => {
               const keyboardEvent = event as React.KeyboardEvent;
               if (keyboardEvent.key === "ContextMenu" || (keyboardEvent.shiftKey && keyboardEvent.key === "F10")) {
                 keyboardEvent.preventDefault();
@@ -1079,20 +1122,6 @@ function FieldsBedsHierarchy({
                   const rect = targetElement.getBoundingClientRect();
                   openContextMenuForRow(targetRow, rect.left + Math.min(240, rect.width), rect.top + 12);
                 }
-              }
-            }}
-            onCellTouchStart={(params, event) => {
-              const targetRow = rows.find((row) => row.id === params.id);
-              if (!targetRow) return;
-              const touch = event.touches[0];
-              touchLongPressTimeoutRef.current = window.setTimeout(() => {
-                openContextMenuForRow(targetRow, touch.clientX, touch.clientY);
-              }, 550);
-            }}
-            onCellTouchEnd={() => {
-              if (touchLongPressTimeoutRef.current !== null) {
-                window.clearTimeout(touchLongPressTimeoutRef.current);
-                touchLongPressTimeoutRef.current = null;
               }
             }}
             localeText={germanDataGridLocaleText}

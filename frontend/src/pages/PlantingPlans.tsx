@@ -1544,9 +1544,9 @@ function PlantingPlans(): React.ReactElement {
   const getPlanBedId = (row: PlantingPlanRow): number | null => {
     const rowRecord = row as PlantingPlanRow & {
       bed_id?: unknown;
-      bed?: unknown;
     };
-    const directBedId = toOptionalNumber(rowRecord.bed);
+    const bedValue: unknown = (row as { bed?: unknown }).bed;
+    const directBedId = toOptionalNumber(bedValue);
     if (directBedId !== undefined) {
       return directBedId;
     }
@@ -1555,11 +1555,11 @@ function PlantingPlans(): React.ReactElement {
       return apiBedId;
     }
     if (
-      rowRecord.bed &&
-      typeof rowRecord.bed === "object" &&
-      "id" in rowRecord.bed
+      bedValue &&
+      typeof bedValue === "object" &&
+      "id" in bedValue
     ) {
-      return toOptionalNumber(rowRecord.bed.id) ?? null;
+      return toOptionalNumber((bedValue as { id?: unknown }).id) ?? null;
     }
     return null;
   };
