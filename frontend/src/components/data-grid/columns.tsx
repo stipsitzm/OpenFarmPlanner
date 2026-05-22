@@ -3,7 +3,7 @@
  */
 
 import type { GridColDef } from '@mui/x-data-grid';
-import { Box, Tooltip } from '@mui/material';
+import { Box, MenuItem, TextField, Tooltip } from '@mui/material';
 import { SearchableSelectEditCell } from './SearchableSelectEditCell';
 import type { SearchableSelectOption } from './SearchableSelectEditCell';
 
@@ -148,6 +148,33 @@ export const createSingleSelectColumn = <Row extends { [key: string]: unknown }>
         </Tooltip>
       );
     },
+    renderEditCell: (params) => (
+      <TextField
+        select
+        fullWidth
+        size="small"
+        autoFocus={params.hasFocus}
+        value={params.value ?? ''}
+        slotProps={{
+          htmlInput: {
+            tabIndex: params.hasFocus ? 0 : -1,
+          },
+        }}
+        onChange={async (event) => {
+          await params.api.setEditCellValue({
+            id: params.id,
+            field: params.field,
+            value: event.target.value,
+          });
+        }}
+      >
+        {options.map((option) => (
+          <MenuItem key={option.value} value={option.value}>
+            {option.label}
+          </MenuItem>
+        ))}
+      </TextField>
+    ),
     valueSetter: (value, row) => {
       const numericValue = typeof value === 'number' ? value : Number(value);
       return { ...row, [field]: numericValue } as Row;

@@ -10,18 +10,25 @@
  * @returns A configurable editable data grid component
  * 
  * @remarks
- * Changes are automatically saved when you:
- * - Click outside the row (blur)
- * - Press Tab to move to another field
- * - Click on a different row
+ * Changes are saved through the row save action.
+ * Keyboard navigation commits edit values locally without calling the API.
  * Navigation is blocked if there are unsaved changes (row in edit mode).
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo, type MutableRefObject } from 'react';
-import { DataGrid, GridRowModes, useGridApiRef } from '@mui/x-data-grid';
+import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type MutableRefObject } from 'react';
+import {
+  DataGrid,
+  GridRowModes,
+  getGridBooleanOperators,
+  getGridDateOperators,
+  getGridNumericOperators,
+  getGridSingleSelectOperators,
+  getGridStringOperators,
+  useGridApiRef,
+} from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
-import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridCellParams, GridRowParams } from '@mui/x-data-grid';
+import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRowParams, GridFilterOperator } from '@mui/x-data-grid';
 import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -40,6 +47,7 @@ import { germanDataGridLocaleText } from './localeText';
 export interface EditableRow {
   id: number;
   isNew?: boolean;
+  __draft?: boolean;
   [key: string]: unknown;
 }
 
@@ -96,7 +104,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showRowEditActions?: boolean;
   onRowsStateChange?: (rows: T[]) => void;
   onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean; error: string }) => void;
-  onBeforeSaveRow?: (row: T) => boolean;
+  onBeforeSaveRow?: (row: T) => boolean | Partial<T>;
   isSaveErrorHandled?: (error: unknown) => boolean;
   /**
    * Controls how the grid surface uses available page/workspace width:
@@ -106,6 +114,137 @@ export interface EditableDataGridProps<T extends EditableRow> {
    */
   surfaceSizing?: 'contentFit' | 'fullWorkspace' | 'compact';
 }
+
+const isUnsavedDraftRow = (row: EditableRow): boolean =>
+  Boolean(row.isNew || row.__draft || Number(row.id) < 0);
+
+const getDefaultFilterOperators = (column: GridColDef): GridFilterOperator[] => {
+  switch (column.type) {
+    case 'boolean':
+      return getGridBooleanOperators();
+    case 'date':
+      return getGridDateOperators();
+    case 'dateTime':
+      return getGridDateOperators(true);
+    case 'number':
+      return getGridNumericOperators();
+    case 'singleSelect':
+      return getGridSingleSelectOperators();
+    default:
+      return getGridStringOperators();
+  }
+};
+
+const keepDraftRowsVisibleForFilterOperators = (operators: GridFilterOperator[]): GridFilterOperator[] =>
+  operators.map((operator) => ({
+    ...operator,
+    getApplyFilterFn: (filterItem, column) => {
+      const applyFilter = operator.getApplyFilterFn(filterItem, column);
+      if (!applyFilter) {
+        return null;
+      }
+
+      return (value, row, filterColumn, apiRef) => {
+        if (isUnsavedDraftRow(row as EditableRow)) {
+          return true;
+        }
+
+        return applyFilter(value, row, filterColumn, apiRef);
+      };
+    },
+  }));
+
+const keepDraftRowsVisibleForColumnFilters = (column: GridColDef): GridColDef => {
+  if (column.filterable === false) {
+    return column;
+  }
+
+  return {
+    ...column,
+    filterOperators: keepDraftRowsVisibleForFilterOperators(
+      column.filterOperators ?? getDefaultFilterOperators(column),
+    ),
+  };
+};
+
+const editModeEditorArrowKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
+
+const isComboboxInteractionTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return Boolean(
+    target.closest('[role="combobox"], [aria-haspopup="listbox"], [aria-haspopup="menu"]'),
+  );
+};
+
+const isEnterSaveInputTarget = (target: EventTarget | null): boolean =>
+  target instanceof HTMLInputElement && !isComboboxInteractionTarget(target);
+
+const getSortableValue = (row: EditableRow, field: string): unknown => row[field];
+
+const compareSortableValues = (leftValue: unknown, rightValue: unknown): number => {
+  if (leftValue === rightValue) {
+    return 0;
+  }
+  if (leftValue === null || leftValue === undefined || leftValue === '') {
+    return 1;
+  }
+  if (rightValue === null || rightValue === undefined || rightValue === '') {
+    return -1;
+  }
+  if (leftValue instanceof Date || rightValue instanceof Date) {
+    const leftTime = leftValue instanceof Date ? leftValue.getTime() : new Date(String(leftValue)).getTime();
+    const rightTime = rightValue instanceof Date ? rightValue.getTime() : new Date(String(rightValue)).getTime();
+    if (Number.isFinite(leftTime) && Number.isFinite(rightTime)) {
+      return leftTime - rightTime;
+    }
+  }
+  if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+    return leftValue - rightValue;
+  }
+  if (typeof leftValue === 'boolean' && typeof rightValue === 'boolean') {
+    return Number(leftValue) - Number(rightValue);
+  }
+  return String(leftValue).localeCompare(String(rightValue), undefined, {
+    numeric: true,
+    sensitivity: 'base',
+  });
+};
+
+const getSortedRowIds = <T extends EditableRow>(sourceRows: readonly T[], model: GridSortModel): GridRowId[] => {
+  const [sortItem] = model;
+  if (!sortItem?.field || !sortItem.sort) {
+    return sourceRows.map((row) => row.id);
+  }
+
+  const direction = sortItem.sort === 'desc' ? -1 : 1;
+  return sourceRows
+    .map((row, index) => ({ row, index }))
+    .sort((left, right) => {
+      const comparison = compareSortableValues(
+        getSortableValue(left.row, sortItem.field),
+        getSortableValue(right.row, sortItem.field),
+      );
+      return comparison === 0 ? left.index - right.index : comparison * direction;
+    })
+    .map(({ row }) => row.id);
+};
+
+const orderRowsByStableIds = <T extends EditableRow>(sourceRows: readonly T[], orderedIds: readonly GridRowId[]): T[] => {
+  if (orderedIds.length === 0) {
+    return [...sourceRows];
+  }
+
+  const rowsById = new Map(sourceRows.map((row) => [String(row.id), row]));
+  const orderedRows = orderedIds
+    .map((rowId) => rowsById.get(String(rowId)))
+    .filter((row): row is T => row !== undefined);
+  const orderedIdKeys = new Set(orderedIds.map(String));
+  const missingRows = sourceRows.filter((row) => !orderedIdKeys.has(String(row.id)));
+  return [...orderedRows, ...missingRows];
+};
 
 export function EditableDataGrid<T extends EditableRow>({
   columns,
@@ -143,6 +282,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const shouldUseCompactContainer = resolvedSurfaceSizing === 'compact';
   const shouldDisableTrailingFiller = isContentSizedSurface;
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
+  const [stableRowOrder, setStableRowOrder] = useState<GridRowId[]>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -162,6 +302,13 @@ export function EditableDataGrid<T extends EditableRow>({
     allowedFields: columns.map((column) => column.field),
     persistInUrl: persistSortInUrl,
   });
+  const rowsForGrid = useMemo(
+    () => orderRowsByStableIds(rows as T[], stableRowOrder),
+    [rows, stableRowOrder],
+  );
+  const refreshStableRowOrder = useCallback((sourceRows: readonly T[], model: GridSortModel = sortModel): void => {
+    setStableRowOrder(getSortedRowIds(sourceRows, model));
+  }, [sortModel]);
 
   const saveUpdatedRow = useCallback(async (updatedRow: T): Promise<T> => {
     const numericId = Number(updatedRow.id);
@@ -202,6 +349,10 @@ export function EditableDataGrid<T extends EditableRow>({
     (mode) => mode.mode === GridRowModes.Edit
   );
   const hasUnsavedChanges = hasRowsInEditMode || dirtyRowIds.size > 0;
+  const notesFieldNames = useMemo(
+    () => notes?.fields.map((fieldConfig) => fieldConfig.field) ?? [],
+    [notes],
+  );
 
   // Check if there's a validation error (indicating incomplete/invalid data)
   const hasValidationError = Boolean(error);
@@ -211,6 +362,107 @@ export function EditableDataGrid<T extends EditableRow>({
   const rowsById = useMemo(() => {
     return new Map(rows.map((row) => [String(row.id), row]));
   }, [rows]);
+  const handleSortModelChange = useCallback((nextSortModel: GridSortModel): void => {
+    setSortModel(nextSortModel);
+    refreshStableRowOrder(rows as T[], nextSortModel);
+  }, [refreshStableRowOrder, rows, setSortModel]);
+  const handleFilterModelChange = useCallback((nextFilterModel: GridFilterModel): void => {
+    setFilterModel(nextFilterModel);
+    refreshStableRowOrder(rows as T[]);
+  }, [refreshStableRowOrder, rows, setFilterModel]);
+
+  const getFocusedCellFromEvent = useCallback((event: KeyboardEvent): { id: GridRowId; field: string } | null => {
+    const focusedCell = gridApiRef.current.state.focus.cell;
+    if (focusedCell) {
+      return focusedCell;
+    }
+
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return null;
+    }
+
+    const cellElement = target.closest<HTMLElement>('[role="gridcell"][data-field]');
+    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
+    const field = cellElement?.dataset.field;
+    const id = rowElement?.dataset.id;
+    if (!field || id === undefined) {
+      return null;
+    }
+
+    const numericId = Number(id);
+    return {
+      id: Number.isNaN(numericId) ? id : numericId,
+      field,
+    };
+  }, [gridApiRef]);
+
+  const getKeyboardNavigableFieldsForRow = useCallback((rowId: GridRowId): string[] => {
+    const api = gridApiRef.current;
+    return api.getVisibleColumns()
+      .filter((column) => {
+        if (notesFieldNames.includes(column.field)) {
+          return true;
+        }
+
+        if (!column.editable) {
+          return false;
+        }
+
+        try {
+          return api.isCellEditable(api.getCellParams(rowId, column.field));
+        } catch {
+          return false;
+        }
+      })
+      .map((column) => column.field);
+  }, [gridApiRef, notesFieldNames]);
+
+  const focusKeyboardNavigableCell = useCallback((
+    rowId: GridRowId,
+    field: string,
+    options: { startEdit: boolean },
+  ): void => {
+    const api = gridApiRef.current;
+    const rowKey = String(rowId);
+    const row = rowsById.get(rowKey);
+    if (row && !rowSnapshotRef.current.has(rowKey)) {
+      rowSnapshotRef.current.set(rowKey, row as T);
+    }
+
+    const rowIndex = api.getRowIndexRelativeToVisibleRows(rowId);
+    const colIndex = api.getColumnIndexRelativeToVisibleColumns(field);
+    api.scrollToIndexes({ rowIndex, colIndex });
+    api.setCellFocus(rowId, field);
+
+    if (!options.startEdit || notesFieldNames.includes(field)) {
+      return;
+    }
+
+    setRowModesModel((oldModel) => ({
+      ...oldModel,
+      [rowId]: { mode: GridRowModes.Edit, fieldToFocus: field },
+    }));
+  }, [gridApiRef, notesFieldNames, rowsById]);
+
+  const getHorizontalNavigationTarget = useCallback((
+    rowId: GridRowId,
+    field: string,
+    direction: 1 | -1,
+  ): { id: GridRowId; field: string } | null => {
+    const editableFields = getKeyboardNavigableFieldsForRow(rowId);
+    const fieldIndex = editableFields.indexOf(field);
+    if (fieldIndex === -1) {
+      return null;
+    }
+
+    const nextField = editableFields[fieldIndex + direction];
+    if (nextField) {
+      return { id: rowId, field: nextField };
+    }
+
+    return null;
+  }, [getKeyboardNavigableFieldsForRow]);
 
   const hasInvalidRowInEditMode = useMemo(() => {
     if (!hasRowsInEditMode) return false;
@@ -258,6 +510,7 @@ export function EditableDataGrid<T extends EditableRow>({
         .filter((item): item is T & { id: number } => item.id !== undefined)
         .map(mapToRow);
       setRows(dataRows);
+      refreshStableRowOrder(dataRows);
       setError('');
       setDataFetched(true);
     } catch (err) {
@@ -267,7 +520,7 @@ export function EditableDataGrid<T extends EditableRow>({
     } finally {
       setLoading(false);
     }
-  }, [api, mapToRow, loadErrorMessage]);
+  }, [api, mapToRow, loadErrorMessage, refreshStableRowOrder]);
 
   useEffect(() => {
     // Only fetch on initial mount
@@ -286,6 +539,7 @@ export function EditableDataGrid<T extends EditableRow>({
       initialRowProcessedRef.current = true;
       const newRow = { ...createNewRow(), ...initialRow };
       setRows((oldRows) => [newRow, ...oldRows]);
+      setStableRowOrder((previousOrder) => [newRow.id, ...previousOrder]);
       // Set row to edit mode after a small delay to ensure row is added first
       setTimeout(() => {
         setRowModesModel((oldModel) => ({
@@ -302,6 +556,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const handleAddClick = (): void => {
     const newRow = createNewRow();
     setRows((oldRows) => [newRow, ...oldRows]);
+    setStableRowOrder((previousOrder) => [newRow.id, ...previousOrder]);
     setRowModesModel((oldModel) => ({
       ...oldModel,
       [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus: columns[0]?.field },
@@ -315,6 +570,7 @@ export function EditableDataGrid<T extends EditableRow>({
       setRows((prevRows) => prevRows.map((row) => (String(row.id) === rowKey ? snapshot : row)));
     } else if (Number(rowId) < 0) {
       setRows((prevRows) => prevRows.filter((row) => String(row.id) !== rowKey));
+      setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
     }
 
     setDirtyRowIds((prev) => {
@@ -341,7 +597,47 @@ export function EditableDataGrid<T extends EditableRow>({
     return api.getRowWithUpdatedValues(rowId, '') as T | null;
   }, [gridApiRef]);
 
-  const shouldSaveRow = useCallback((rowId: GridRowId): boolean => {
+  const applyDraftValues = useCallback(async (rowId: GridRowId, values: Partial<T>): Promise<void> => {
+    const rowKey = String(rowId);
+    const targetRow = rowsById.get(rowKey);
+    const api = gridApiRef.current;
+    if (api) {
+      const editUpdates = Object.entries(values).flatMap(([fieldKey, fieldValue]) => {
+        if (fieldValue === undefined) {
+          return [];
+        }
+        return [
+          api.setEditCellValue({
+            id: rowId,
+            field: fieldKey,
+            value: fieldValue,
+          }),
+        ];
+      });
+      await Promise.allSettled(editUpdates);
+    }
+
+    setRows((previousRows) =>
+      previousRows.map((row) =>
+        String(row.id) === rowKey ? ({ ...row, ...values } as T) : row,
+      ),
+    );
+    if (targetRow) {
+      const nextRow = { ...targetRow, ...values } as T;
+      const fieldErrors = getRowValidationErrors?.(nextRow) ?? {};
+      setActiveValidationErrors((prev) => ({
+        ...prev,
+        [rowKey]: fieldErrors,
+      }));
+    }
+    setDirtyRowIds((previous) => {
+      const next = new Set(previous);
+      next.add(rowKey);
+      return next;
+    });
+  }, [getRowValidationErrors, gridApiRef, rowsById]);
+
+  const shouldSaveRow = useCallback(async (rowId: GridRowId): Promise<boolean> => {
     if (!onBeforeSaveRow) {
       return true;
     }
@@ -349,38 +645,291 @@ export function EditableDataGrid<T extends EditableRow>({
     if (!draftRow) {
       return true;
     }
-    return onBeforeSaveRow(draftRow);
-  }, [getDraftRow, onBeforeSaveRow]);
+    const saveDecision = onBeforeSaveRow(draftRow);
+    if (saveDecision === false) {
+      return false;
+    }
+    if (saveDecision !== true && saveDecision !== null && typeof saveDecision === 'object') {
+      await applyDraftValues(rowId, saveDecision);
+    }
+    return true;
+  }, [applyDraftValues, getDraftRow, onBeforeSaveRow]);
 
-  const handleSaveAllDirtyRows = useCallback((): void => {
+  const commitEditedRowDraftForKeyboardNavigation = useCallback((rowId: GridRowId): boolean => {
+    const draftRow = getDraftRow(rowId);
+    if (!draftRow) {
+      return true;
+    }
+
+    const validationError = validateRow(draftRow);
+    const rowKey = String(rowId);
+    const fieldErrors = getRowValidationErrors?.(draftRow) ?? {};
+    setActiveValidationErrors((prev) => ({
+      ...prev,
+      [rowKey]: fieldErrors,
+    }));
+
+    if (validationError || Object.keys(fieldErrors).length > 0) {
+      if (validationError) {
+        setError(validationError);
+      }
+      return false;
+    }
+
+    setError('');
+    setRows((prevRows) =>
+      prevRows.map((row) => (String(row.id) === rowKey ? draftRow : row)),
+    );
+    setDirtyRowIds((prev) => {
+      const next = new Set(prev);
+      next.add(rowKey);
+      return next;
+    });
+    return true;
+  }, [getDraftRow, getRowValidationErrors, validateRow]);
+
+  const navigateFromEditedCell = useCallback((
+    current: { id: GridRowId; field: string },
+    target: { id: GridRowId; field: string },
+    options: { startTargetEdit: boolean },
+  ): void => {
+    if (current.id === target.id && current.field === target.field) {
+      return;
+    }
+
+    const canCommitCurrentDraft = commitEditedRowDraftForKeyboardNavigation(current.id);
+    if (!canCommitCurrentDraft) {
+      return;
+    }
+
+    const isSameRow = String(current.id) === String(target.id);
+
+    if (isSameRow) {
+      requestAnimationFrame(() => {
+        focusKeyboardNavigableCell(target.id, target.field, {
+          startEdit: options.startTargetEdit,
+        });
+      });
+      return;
+    }
+
+    if (rowModesModel[current.id]?.mode === GridRowModes.Edit) {
+      setRowModesModel((oldModel) => ({
+        ...oldModel,
+        [current.id]: { mode: GridRowModes.View, ignoreModifications: true },
+      }));
+    }
+
+    requestAnimationFrame(() => {
+      focusKeyboardNavigableCell(target.id, target.field, { startEdit: options.startTargetEdit });
+    });
+  }, [
+    commitEditedRowDraftForKeyboardNavigation,
+    focusKeyboardNavigableCell,
+    rowModesModel,
+  ]);
+
+  const handleGridEditNavigation = useCallback((event: KeyboardEvent): void => {
+    if (
+      event.key !== 'Tab'
+      || event.altKey
+      || event.ctrlKey
+      || event.metaKey
+      || event.nativeEvent.isComposing
+    ) {
+      return;
+    }
+
+    const focusedCell = getFocusedCellFromEvent(event);
+    if (!focusedCell || rowModesModel[focusedCell.id]?.mode !== GridRowModes.Edit) {
+      return;
+    }
+
+    const target = getHorizontalNavigationTarget(focusedCell.id, focusedCell.field, event.shiftKey ? -1 : 1);
+
+    if (!target) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    navigateFromEditedCell(focusedCell, target, {
+      startTargetEdit: !notesFieldNames.includes(target.field),
+    });
+  }, [
+    getFocusedCellFromEvent,
+    getHorizontalNavigationTarget,
+    navigateFromEditedCell,
+    notesFieldNames,
+    rowModesModel,
+  ]);
+
+  const processRowUpdate = useCallback(async (newRow: T): Promise<T> => {
+    // Clear previous error before validating
+    // This ensures dropdown selections and other changes trigger fresh validation
+    setError('');
+
+    // Validate required fields
+    const validationError = validateRow(newRow);
+    const rowKey = String(newRow.id);
+    const fieldErrors = getRowValidationErrors?.(newRow) ?? {};
+    setActiveValidationErrors((prev) => ({
+      ...prev,
+      [rowKey]: fieldErrors,
+    }));
+    if (validationError) {
+      if (newRow.isNew) {
+        throw new Error(validationError);
+      }
+      setError(validationError);
+      throw new Error(validationError);
+    }
+
+    try {
+      if (newRow.isNew) {
+        // Create new item via API
+        const apiData = await mapToApiData(newRow);
+        const response = await api.create(apiData);
+        setError('');
+        if (!response.data.id) {
+          throw new Error('API response missing ID');
+        }
+
+        // Remove the temporary row and add the saved row
+        const savedRow = mapToRow(response.data as T);
+        rowSnapshotRef.current.set(String(savedRow.id), savedRow);
+        setRows((prevRows) => {
+          // Remove the temporary row with negative ID
+          const filteredRows = prevRows.filter(row => row.id !== newRow.id);
+          // Add the saved row at the beginning
+          return [savedRow, ...filteredRows];
+        });
+        setStableRowOrder((previousOrder) =>
+          previousOrder.map((orderedId) => (String(orderedId) === rowKey ? savedRow.id : orderedId)),
+        );
+        setDirtyRowIds((prev) => {
+          const next = new Set(prev);
+          next.delete(rowKey);
+          return next;
+        });
+
+        return savedRow;
+      } else {
+        // Update existing item via API
+        const apiData = await mapToApiData(newRow);
+        const response = await api.update(newRow.id, apiData);
+        setError('');
+        if (!response.data.id) {
+          throw new Error('API response missing ID');
+        }
+        // Map the response through mapToRow to ensure all fields are properly formatted
+        // This is important for auto-calculated fields like harvest dates
+        const mappedRow = mapToRow(response.data as T);
+        rowSnapshotRef.current.set(String(mappedRow.id), mappedRow);
+        setDirtyRowIds((prev) => {
+          const next = new Set(prev);
+          next.delete(rowKey);
+          return next;
+        });
+        return mappedRow;
+      }
+    } catch (err) {
+      if (isSaveErrorHandled?.(err)) {
+        console.error('Error saving data:', err);
+        throw err;
+      }
+      // Extract user-friendly error message
+      const errorMessage = extractApiErrorMessage(err, t, saveErrorMessage);
+      setError(errorMessage);
+      console.error('Error saving data:', err);
+      throw new Error(errorMessage);
+    }
+  }, [
+    api,
+    getRowValidationErrors,
+    isSaveErrorHandled,
+    mapToApiData,
+    mapToRow,
+    saveErrorMessage,
+    t,
+    validateRow,
+  ]);
+
+  const handleProcessRowUpdateError = useCallback((error: unknown): void => {
+    console.error('Row update error:', error);
+    if (isSaveErrorHandled?.(error)) {
+      return;
+    }
+    if (error instanceof Error && error.message) {
+      setError(error.message);
+      return;
+    }
+    const errorMessage = extractApiErrorMessage(error, t, saveErrorMessage);
+    setError(errorMessage);
+  }, [isSaveErrorHandled, saveErrorMessage, t]);
+
+  const handleSaveRow = useCallback(async (rowId: GridRowId): Promise<void> => {
+    if (!(await shouldSaveRow(rowId))) {
+      return;
+    }
+
+    if (rowModesModel[rowId]?.mode === GridRowModes.Edit) {
+      setRowModesModel((oldModel) => ({
+        ...oldModel,
+        [rowId]: { mode: GridRowModes.View },
+      }));
+      return;
+    }
+
+    const row = rowsById.get(String(rowId)) as T | undefined;
+    if (!row) {
+      return;
+    }
+
+    try {
+      const savedRow = await processRowUpdate(row);
+      setRows((prevRows) =>
+        prevRows.map((currentRow) =>
+          String(currentRow.id) === String(rowId) ? savedRow : currentRow,
+        ),
+      );
+    } catch (error) {
+      handleProcessRowUpdateError(error);
+    }
+  }, [
+    handleProcessRowUpdateError,
+    processRowUpdate,
+    rowModesModel,
+    rowsById,
+    shouldSaveRow,
+  ]);
+
+  const handleSaveAllDirtyRows = useCallback(async (): Promise<void> => {
     const editingRowIds = Object.entries(rowModesModel)
       .filter(([, mode]) => mode.mode === GridRowModes.Edit)
       .map(([id]) => id);
-    if (editingRowIds.length === 0) {
-      return;
-    }
-    const saveableRowIds = editingRowIds.filter((rowId) => shouldSaveRow(rowId));
-    if (saveableRowIds.length === 0) {
-      return;
-    }
-    setRowModesModel((oldModel) => {
-      const nextModel = { ...oldModel };
-      for (const rowId of saveableRowIds) {
-        nextModel[rowId] = { mode: GridRowModes.View };
+    const saveableRowIds: GridRowId[] = [];
+    for (const rowId of editingRowIds) {
+      if (await shouldSaveRow(rowId)) {
+        saveableRowIds.push(rowId);
       }
-      return nextModel;
-    });
-  }, [rowModesModel, shouldSaveRow]);
-
-  const handleSaveRow = useCallback((rowId: GridRowId): void => {
-    if (!shouldSaveRow(rowId)) {
-      return;
     }
-    setRowModesModel((oldModel) => ({
-      ...oldModel,
-      [rowId]: { mode: GridRowModes.View },
-    }));
-  }, [shouldSaveRow]);
+    if (saveableRowIds.length > 0) {
+      setRowModesModel((oldModel) => {
+        const nextModel = { ...oldModel };
+        for (const rowId of saveableRowIds) {
+          nextModel[rowId] = { mode: GridRowModes.View };
+        }
+        return nextModel;
+      });
+    }
+    const editingRowIdKeys = new Set(editingRowIds.map(String));
+    for (const rowKey of dirtyRowIds) {
+      if (!editingRowIdKeys.has(rowKey)) {
+        await handleSaveRow(rowKey);
+      }
+    }
+  }, [dirtyRowIds, handleSaveRow, rowModesModel, shouldSaveRow]);
 
   const handleEditSelectedRow = (): void => {
     const selectedRowId = selectedRowIds[0];
@@ -494,100 +1043,6 @@ export function EditableDataGrid<T extends EditableRow>({
     };
   }, [commandApiRef, fetchData, getRowValidationErrors, gridApiRef, rowModesModel, rowsById, selectedRowIds]);
 
-
-  /**
-   * Process row update - save to API
-   */
-  const processRowUpdate = async (newRow: T): Promise<T> => {
-    // Clear previous error before validating
-    // This ensures dropdown selections and other changes trigger fresh validation
-    setError('');
-    
-    // Validate required fields
-    const validationError = validateRow(newRow);
-    const rowKey = String(newRow.id);
-    const fieldErrors = getRowValidationErrors?.(newRow) ?? {};
-    setActiveValidationErrors((prev) => ({
-      ...prev,
-      [rowKey]: fieldErrors,
-    }));
-    if (validationError) {
-      if (newRow.isNew) {
-        throw new Error(validationError);
-      }
-      setError(validationError);
-      throw new Error(validationError);
-    }
-
-    try {
-      if (newRow.isNew) {
-        // Create new item via API
-        const apiData = await mapToApiData(newRow);
-        const response = await api.create(apiData);
-        setError('');
-        if (!response.data.id) {
-          throw new Error('API response missing ID');
-        }
-        
-        // Remove the temporary row and add the saved row
-        const savedRow = mapToRow(response.data as T);
-        rowSnapshotRef.current.set(String(savedRow.id), savedRow);
-        setRows((prevRows) => {
-          // Remove the temporary row with negative ID
-          const filteredRows = prevRows.filter(row => row.id !== newRow.id);
-          // Add the saved row at the beginning
-          return [savedRow, ...filteredRows];
-        });
-        
-        return savedRow;
-      } else {
-        // Update existing item via API
-        const apiData = await mapToApiData(newRow);
-        const response = await api.update(newRow.id, apiData);
-        setError('');
-        if (!response.data.id) {
-          throw new Error('API response missing ID');
-        }
-        // Map the response through mapToRow to ensure all fields are properly formatted
-        // This is important for auto-calculated fields like harvest dates
-        const mappedRow = mapToRow(response.data as T);
-        rowSnapshotRef.current.set(String(mappedRow.id), mappedRow);
-        setDirtyRowIds((prev) => {
-          const next = new Set(prev);
-          next.delete(rowKey);
-          return next;
-        });
-        return mappedRow;
-      }
-    } catch (err) {
-      if (isSaveErrorHandled?.(err)) {
-        console.error('Error saving data:', err);
-        throw err;
-      }
-      // Extract user-friendly error message
-      const errorMessage = extractApiErrorMessage(err, t, saveErrorMessage);
-      setError(errorMessage);
-      console.error('Error saving data:', err);
-      throw new Error(errorMessage);
-    }
-  };
-
-  /**
-   * Handle row update errors
-   */
-  const handleProcessRowUpdateError = (error: unknown): void => {
-    console.error('Row update error:', error);
-    if (isSaveErrorHandled?.(error)) {
-      return;
-    }
-    if (error instanceof Error && error.message) {
-      setError(error.message);
-      return;
-    }
-    const errorMessage = extractApiErrorMessage(error, t, saveErrorMessage);
-    setError(errorMessage);
-  };
-
   /**
    * Handle row deletion
    */
@@ -598,6 +1053,7 @@ export function EditableDataGrid<T extends EditableRow>({
     if (numericId < 0) {
       // If it's a new unsaved row, just remove it from the grid
       setRows((prevRows) => prevRows.filter((row) => row.id !== id));
+      setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== String(id)));
       return;
     }
 
@@ -605,6 +1061,7 @@ export function EditableDataGrid<T extends EditableRow>({
     api.delete(numericId)
       .then(() => {
         setRows((prevRows) => prevRows.filter((row) => row.id !== id));
+        setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== String(id)));
         setError('');
       })
       .catch((err) => {
@@ -633,7 +1090,7 @@ export function EditableDataGrid<T extends EditableRow>({
         )}
         {showFooterEditControls && hasUnsavedChanges && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: showAddAction ? 1 : 0 }}>
-            <Button size="small" variant="contained" onClick={handleSaveAllDirtyRows}>
+            <Button size="small" variant="contained" onClick={() => void handleSaveAllDirtyRows()}>
               {t('actions.save')}
             </Button>
             <Button
@@ -661,19 +1118,17 @@ export function EditableDataGrid<T extends EditableRow>({
    */
   const processedColumns: GridColDef[] = useMemo(() => {
     if (!notes || !notes.fields || notes.fields.length === 0) {
-      return columns;
+      return columns.map((col) => keepDraftRowsVisibleForColumnFilters(col));
     }
-
-    const notesFieldNames = notes.fields.map((f) => f.field);
 
     return columns.map((col) => {
       if (!notesFieldNames.includes(col.field)) {
-        return col;
+        return keepDraftRowsVisibleForColumnFilters(col);
       }
 
       const fieldConfig = notes.fields.find((f) => f.field === col.field);
 
-      return {
+      return keepDraftRowsVisibleForColumnFilters({
         ...col,
         editable: false,
         renderCell: (params) => {
@@ -700,12 +1155,13 @@ export function EditableDataGrid<T extends EditableRow>({
                 event.stopPropagation();
                 notesEditor.handleOpen(params.id, col.field, { focusAttachments: true });
               }}
+              hasFocus={params.hasFocus}
             />
           );
         },
-      };
+      });
     });
-  }, [columns, notes, notesEditor]);
+  }, [columns, notes, notesEditor, notesFieldNames]);
 
   const columnsWithActions: GridColDef[] = [
     ...processedColumns,
@@ -720,14 +1176,16 @@ export function EditableDataGrid<T extends EditableRow>({
             align: 'right' as const,
             renderCell: (params: GridCellParams<T>) => {
               const rowId = params.id;
+              const rowKey = String(rowId);
               const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
+              const hasLocalDraft = dirtyRowIds.has(rowKey);
 
               return (
                 <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, width: '100%', justifyContent: 'flex-end' }}>
-                  {isEditing && (
+                  {(isEditing || hasLocalDraft) && (
                     <>
                       <Tooltip title={t('actions.saveRow')} arrow>
-                        <IconButton size="small" color="primary" aria-label={t('actions.save')} onClick={() => handleSaveRow(rowId)}>
+                        <IconButton size="small" color="primary" aria-label={t('actions.save')} onClick={() => void handleSaveRow(rowId)}>
                           <CheckIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -836,6 +1294,7 @@ export function EditableDataGrid<T extends EditableRow>({
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
       <Box
+        onKeyDownCapture={handleGridEditNavigation}
         sx={{
           width: '100%',
           maxWidth: '100%',
@@ -854,7 +1313,7 @@ export function EditableDataGrid<T extends EditableRow>({
           }}
         >
           <DataGrid
-          rows={rows}
+          rows={rowsForGrid}
           columns={columnsWithActions}
           rowModesModel={rowModesModel}
           onRowModesModelChange={setRowModesModel}
@@ -867,9 +1326,10 @@ export function EditableDataGrid<T extends EditableRow>({
           autoHeight
           hideFooter={false}
           sortModel={sortModel}
-          onSortModelChange={setSortModel}
+          onSortModelChange={handleSortModelChange}
+          sortingMode="server"
           filterModel={filterModel}
-          onFilterModelChange={setFilterModel}
+          onFilterModelChange={handleFilterModelChange}
           rowSelectionModel={{ type: "include", ids: new Set(selectedRowIds) }}
           onRowSelectionModelChange={(nextModel) => setSelectedRowIds(Array.from(nextModel.ids))}
           slots={{
@@ -921,6 +1381,20 @@ export function EditableDataGrid<T extends EditableRow>({
             handleEditableCellClick(params, rowModesModel, setRowModesModel);
           }}
           onCellKeyDown={(params: GridCellParams<T>, event) => {
+            const shouldOpenNotes =
+              notesFieldNames.includes(params.field) &&
+              (event.key === 'Enter' || event.key === ' ') &&
+              !event.ctrlKey &&
+              !event.metaKey &&
+              !event.altKey;
+
+            if (shouldOpenNotes) {
+              event.preventDefault();
+              event.defaultMuiPrevented = true;
+              notesEditor.handleOpen(params.id, params.field);
+              return;
+            }
+
             const shouldStartCellEdit =
               event.key === 'Enter' &&
               !event.ctrlKey &&
@@ -936,6 +1410,31 @@ export function EditableDataGrid<T extends EditableRow>({
               handleStartCellEditFromKeyboard(params);
               return;
             }
+            if (
+              rowModesModel[params.id]?.mode === GridRowModes.Edit &&
+              editModeEditorArrowKeys.has(event.key) &&
+              !event.ctrlKey &&
+              !event.metaKey &&
+              !event.altKey
+            ) {
+              event.defaultMuiPrevented = true;
+              return;
+            }
+            const shouldHandleEnterInEditedRow =
+              event.key === 'Enter' &&
+              !event.shiftKey &&
+              !event.ctrlKey &&
+              !event.metaKey &&
+              !event.altKey &&
+              rowModesModel[params.id]?.mode === GridRowModes.Edit;
+            if (shouldHandleEnterInEditedRow) {
+              event.defaultMuiPrevented = true;
+              if (isEnterSaveInputTarget(event.target)) {
+                event.preventDefault();
+                void handleSaveRow(params.id);
+              }
+              return;
+            }
             if (event.key === 'Escape') {
               event.preventDefault();
               handleDiscardRowChanges(params.id);
@@ -943,7 +1442,7 @@ export function EditableDataGrid<T extends EditableRow>({
             }
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
               event.preventDefault();
-              handleSaveRow(params.id);
+              void handleSaveRow(params.id);
             }
           }}
           localeText={germanDataGridLocaleText}

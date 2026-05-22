@@ -3,6 +3,7 @@ import { Box, Tooltip, Typography } from '@mui/material';
 
 interface CompactAreaCellProps {
   label: string;
+  hasFocus?: boolean;
 }
 
 const TOOLTIP_TEXT_LENGTH_THRESHOLD = 40;
@@ -11,8 +12,9 @@ export function shouldShowAreaTooltip(label: string, isOverflowing: boolean): bo
   return isOverflowing || label.length > TOOLTIP_TEXT_LENGTH_THRESHOLD;
 }
 
-export function CompactAreaCell({ label }: CompactAreaCellProps): React.ReactElement {
+export function CompactAreaCell({ label, hasFocus = false }: CompactAreaCellProps): React.ReactElement {
   const textRef = useRef<HTMLParagraphElement | null>(null);
+  const triggerRef = useRef<HTMLDivElement | null>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
 
   useEffect(() => {
@@ -37,6 +39,16 @@ export function CompactAreaCell({ label }: CompactAreaCellProps): React.ReactEle
     [isOverflowing, label],
   );
 
+  useEffect(() => {
+    if (!hasFocus || !showTooltip) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      triggerRef.current?.focus();
+    });
+  }, [hasFocus, showTooltip]);
+
   return (
     <Tooltip
       title={showTooltip ? label : ''}
@@ -46,8 +58,9 @@ export function CompactAreaCell({ label }: CompactAreaCellProps): React.ReactEle
       enterTouchDelay={450}
     >
       <Box
+        ref={triggerRef}
         sx={{ width: '100%', minWidth: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', height: '100%' }}
-        tabIndex={showTooltip ? 0 : -1}
+        tabIndex={hasFocus && showTooltip ? 0 : -1}
         aria-label={showTooltip ? label : undefined}
       >
         <Typography

@@ -1,6 +1,7 @@
 // Central MUI theme configuration
 // Controls colors, shapes, and component style overrides.
 import { alpha, createTheme } from '@mui/material/styles';
+import type { Theme } from '@mui/material/styles';
 import type {} from '@mui/x-data-grid/themeAugmentation';
 
 const surfaceColors = {
@@ -14,6 +15,23 @@ const surfaceColors = {
   surfaceBorder: '#e7e1d6',
   surfaceSoftBorder: '#ece8df',
 } as const;
+
+const createPositiveFilledAlertStyles = (theme: Theme) => ({
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  '& .MuiAlert-icon': {
+    color: theme.palette.primary.contrastText,
+  },
+  '& .MuiAlert-action': {
+    color: theme.palette.primary.contrastText,
+  },
+  '& .MuiIconButton-root': {
+    color: theme.palette.primary.contrastText,
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.primary.contrastText, 0.12),
+    },
+  },
+});
 
 declare module '@mui/material/styles' {
   interface SurfacePalette {
@@ -289,6 +307,8 @@ const theme = createTheme({
     },
     MuiAlert: {
       styleOverrides: {
+        filledInfo: ({ theme }) => createPositiveFilledAlertStyles(theme),
+        filledSuccess: ({ theme }) => createPositiveFilledAlertStyles(theme),
         standardInfo: {
           backgroundColor: 'rgba(33, 150, 243, 0.08)',
           color: '#24435f',

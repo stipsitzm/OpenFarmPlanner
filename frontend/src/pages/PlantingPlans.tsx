@@ -12,6 +12,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type {
   GridCellParams,
   GridColDef,
+  GridRenderEditCellParams,
   GridValueOptionsParams,
 } from "@mui/x-data-grid";
 import {
@@ -122,6 +123,16 @@ interface MobileCreateFormState {
   plants_count: string;
   notes: string;
 }
+interface AreaValidationDialogState {
+  rowId: number;
+  requestedArea: number;
+  availableArea: number;
+  bedArea: number;
+  occupiedArea: number;
+  cultureId?: number;
+  plantsCount?: number | null;
+  mode: "bedLimit" | "remainingLimit" | "noRemainingArea";
+}
 
 const CULTIVATION_TYPE_OPTIONS = [
   {
@@ -169,6 +180,82 @@ const toIsoDateString = (value: unknown): string | null => {
   return null;
 };
 
+function PlantingDateEditCell(params: GridRenderEditCellParams): React.ReactElement {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputValue = toIsoDateString(params.value) ?? "";
+
+  useEffect(() => {
+    if (!params.hasFocus) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+  }, [params.hasFocus]);
+
+  return (
+    <TextField
+      type="date"
+      fullWidth
+      size="small"
+      inputRef={inputRef}
+      value={inputValue}
+      slotProps={{
+        htmlInput: {
+          tabIndex: params.hasFocus ? 0 : -1,
+        },
+      }}
+      onChange={async (event) => {
+        const nextValue = event.target.value
+          ? new Date(`${event.target.value}T00:00:00`)
+          : null;
+        await params.api.setEditCellValue({
+          id: params.id,
+          field: params.field,
+          value: nextValue,
+        });
+      }}
+    />
+  );
+}
+
+const toDateKey = (value: unknown): number | null => {
+  const buildDateKey = (year: number, month: number, day: number): number | null => {
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (
+      date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day
+    ) {
+      return null;
+    }
+    return date.getTime();
+  };
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return Date.UTC(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  const isoMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(trimmed);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return buildDateKey(Number(year), Number(month), Number(day));
+  }
+  const germanMatch = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(trimmed);
+  if (germanMatch) {
+    const [, day, month, year] = germanMatch;
+    return buildDateKey(Number(year), Number(month), Number(day));
+  }
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+};
+
 const toNumericValue = (value: unknown): number | null => {
   if (typeof value === "number") {
     return Number.isNaN(value) ? null : value;
@@ -179,9 +266,48 @@ const toNumericValue = (value: unknown): number | null => {
   }
   return null;
 };
+const toAreaNumericValue = (value: unknown, locale: string): number | null => {
+  const directNumeric = toNumericValue(value);
+  if (directNumeric !== null) {
+    return directNumeric;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value
+    .replace("m²", "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (normalized.length === 0) {
+    return null;
+  }
+  const localized = parseLocalizedNumber(normalized, locale);
+  return localized === null ? null : localized;
+};
+
+const isAutoAreaRequest = (value: unknown, maxKeyword: string): boolean => {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  if (typeof value !== "string") {
+    return false;
+  }
+  const normalized = value.trim().toLowerCase();
+  return normalized === "" || normalized === maxKeyword.trim().toLowerCase() || normalized === "maximum";
+};
 
 const toOptionalString = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
+
+const toOptionalNumber = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    return Number(value.trim());
+  }
+  return undefined;
+};
 
 interface HierarchySelectionRow {
   location_id?: number;
@@ -456,6 +582,7 @@ function PlantingPlans(): React.ReactElement {
     message: string;
     severity: "info" | "warning";
   } | null>(null);
+  const [areaValidationDialog, setAreaValidationDialog] = useState<AreaValidationDialogState | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<PlantingPlanRow | null>(
@@ -956,7 +1083,13 @@ function PlantingPlans(): React.ReactElement {
               select
               fullWidth
               size="small"
+              autoFocus={params.hasFocus}
               value={selectedValue}
+              slotProps={{
+                htmlInput: {
+                  tabIndex: params.hasFocus ? 0 : -1,
+                },
+              }}
               onChange={async (event) => {
                 await params.api.setEditCellValue({
                   id: params.id,
@@ -1018,7 +1151,7 @@ function PlantingPlans(): React.ReactElement {
         renderCell: (params) => {
           const row = params.row as PlantingPlanRow;
           const label = getBedLabelForRow(row);
-          return <CompactAreaCell label={label} />;
+          return <CompactAreaCell label={label} hasFocus={params.hasFocus} />;
         },
         renderEditCell: (params) => {
           const row = params.row as PlantingPlanRow;
@@ -1032,6 +1165,7 @@ function PlantingPlans(): React.ReactElement {
               locations={locations}
               locale={numberLocale}
               compactLabel={label}
+              hasFocus={params.hasFocus}
               onApply={async (nextBedId) => {
                 await params.api.setEditCellValue({
                   id: params.id,
@@ -1068,6 +1202,7 @@ function PlantingPlans(): React.ReactElement {
         type: "date",
         editable: true,
         valueGetter: (value) => (value ? new Date(value) : null),
+        renderEditCell: (params) => <PlantingDateEditCell {...params} />,
         preProcessEditCellProps: (params) => {
           const hasError = !params.props.value;
           return { ...params.props, error: hasError };
@@ -1105,7 +1240,6 @@ function PlantingPlans(): React.ReactElement {
         width: dynamicWidths.area,
         maxWidth: dynamicWidths.area,
         editable: true,
-        type: "number",
         renderHeader: () => (
           <Tooltip title={t("plantingPlans:tooltips.areaInput")}>
             <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>
@@ -1405,6 +1539,96 @@ function PlantingPlans(): React.ReactElement {
       return null;
     }
     return Number((row.plants_count / plantsPerSqm).toFixed(2));
+  };
+
+  const getPlanBedId = (row: PlantingPlanRow): number | null => {
+    const rowRecord = row as PlantingPlanRow & {
+      bed_id?: unknown;
+      bed?: unknown;
+    };
+    const directBedId = toOptionalNumber(rowRecord.bed);
+    if (directBedId !== undefined) {
+      return directBedId;
+    }
+    const apiBedId = toOptionalNumber(rowRecord.bed_id);
+    if (apiBedId !== undefined) {
+      return apiBedId;
+    }
+    if (
+      rowRecord.bed &&
+      typeof rowRecord.bed === "object" &&
+      "id" in rowRecord.bed
+    ) {
+      return toOptionalNumber(rowRecord.bed.id) ?? null;
+    }
+    return null;
+  };
+
+  const isSamePlanRow = (rowA: PlantingPlanRow, rowB: PlantingPlanRow): boolean =>
+    rowA === rowB || (typeof rowA.id === "number" && typeof rowB.id === "number" && rowA.id === rowB.id);
+
+  const datesOverlap = (rowA: PlantingPlanRow, rowB: PlantingPlanRow): boolean => {
+    const startA = toDateKey(rowA.planting_date);
+    const startB = toDateKey(rowB.planting_date);
+    if (startA === null || startB === null) {
+      return false;
+    }
+    const endA = toDateKey(rowA.harvest_end_date) ?? toDateKey(rowA.harvest_date) ?? Number.MAX_SAFE_INTEGER;
+    const endB = toDateKey(rowB.harvest_end_date) ?? toDateKey(rowB.harvest_date) ?? Number.MAX_SAFE_INTEGER;
+    return startA <= endB && startB <= endA;
+  };
+
+  const getCapacityForRow = (row: PlantingPlanRow): {
+    bedArea: number;
+    occupiedArea: number;
+    availableArea: number;
+  } | null => {
+    const rowBedId = getPlanBedId(row);
+    if (rowBedId === null) {
+      return null;
+    }
+    const selectedBed = bedById.get(rowBedId);
+    const bedArea = toNumericValue(selectedBed?.area_sqm);
+    if (bedArea === null) {
+      return null;
+    }
+    const occupiedArea = mobileRows
+      .filter((item) => getPlanBedId(item) === rowBedId && !isSamePlanRow(item, row) && datesOverlap(item, row))
+      .reduce((total, item) => total + Math.max(0, toAreaNumericValue(item.area_m2 ?? item.area_usage_sqm, numberLocale) ?? 0), 0);
+    return {
+      bedArea,
+      occupiedArea,
+      availableArea: Math.max(0, bedArea - occupiedArea),
+    };
+  };
+
+  const buildAreaAndPlantsDraft = (
+    row: Pick<PlantingPlanRow, "culture" | "plants_count"> | undefined,
+    nextArea: number,
+    fallbackCultureId?: number,
+    fallbackPlantsCount?: number | null,
+  ): Pick<PlantingPlanRow, "area_m2" | "plants_count"> => {
+    const normalizedArea = Number(nextArea.toFixed(2));
+    const cultureId = row?.culture ?? fallbackCultureId;
+    const culture = cultures.find((item) => item.id === cultureId);
+    const plantsPerSqm = culture?.plants_per_m2;
+    return {
+      area_m2: normalizedArea,
+      plants_count: plantsPerSqm && plantsPerSqm > 0 ? Math.round(normalizedArea * plantsPerSqm) : row?.plants_count ?? fallbackPlantsCount,
+    };
+  };
+
+  const applyAreaAndPlants = (
+    rowId: number,
+    nextArea: number,
+    fallbackCultureId?: number,
+    fallbackPlantsCount?: number | null,
+  ): void => {
+    const row = mobileRows.find((item) => item.id === rowId);
+    gridCommandApiRef.current?.setDraftValues(rowId, {
+      ...buildAreaAndPlantsDraft(row, nextArea, fallbackCultureId, fallbackPlantsCount),
+    });
+    lastEditedFieldRef.current = "area_m2";
   };
 
   const validateMobileForm = (): boolean => {
@@ -1831,7 +2055,13 @@ function PlantingPlans(): React.ReactElement {
             // Determine which field to send based on last edit
             const source = lastEditedFieldRef.current || "area_m2";
 
-            if (source === "area_m2" && typeof row.area_m2 === "number") {
+            if (source === "area_m2" && isAutoAreaRequest(row.area_m2, t("plantingPlans:placeholders.maxKeyword"))) {
+              const capacity = getCapacityForRow(row);
+              if (capacity && capacity.availableArea > 0) {
+                apiData.area_input_value = Number(capacity.availableArea.toFixed(2));
+                apiData.area_input_unit = "M2";
+              }
+            } else if (source === "area_m2" && typeof row.area_m2 === "number") {
               // User edited area directly - send as M2
               apiData.area_input_value = row.area_m2;
               apiData.area_input_unit = "M2";
@@ -1888,6 +2118,68 @@ function PlantingPlans(): React.ReactElement {
               errors.cultivation_type = t("plantingPlans:validation.cultivationTypeRequired");
             }
             return errors;
+          }}
+          onBeforeSaveRow={(row) => {
+            const capacity = getCapacityForRow(row);
+            if (!capacity) {
+              return true;
+            }
+            const maxKeyword = t("plantingPlans:placeholders.maxKeyword");
+            if (isAutoAreaRequest(row.area_m2, maxKeyword)) {
+              if (capacity.availableArea > 0) {
+                setAreaNotice({
+                  severity: "info",
+                  message: t("plantingPlans:areaValidation.maxAreaApplied", { area: formatAreaM2(capacity.availableArea, numberLocale) }),
+                });
+                lastEditedFieldRef.current = "area_m2";
+                return buildAreaAndPlantsDraft(row, capacity.availableArea);
+              }
+              return false;
+            }
+            const requestedArea = toAreaNumericValue(row.area_m2, numberLocale);
+            if (requestedArea === null) {
+              return true;
+            }
+            if (requestedArea > capacity.bedArea) {
+              setAreaValidationDialog({
+                rowId: row.id,
+                requestedArea,
+                availableArea: capacity.availableArea,
+                bedArea: capacity.bedArea,
+                occupiedArea: capacity.occupiedArea,
+                cultureId: row.culture,
+                plantsCount: row.plants_count,
+                mode: "bedLimit",
+              });
+              return false;
+            }
+            if (capacity.availableArea <= 0) {
+              setAreaValidationDialog({
+                rowId: row.id,
+                requestedArea,
+                availableArea: capacity.availableArea,
+                bedArea: capacity.bedArea,
+                occupiedArea: capacity.occupiedArea,
+                cultureId: row.culture,
+                plantsCount: row.plants_count,
+                mode: "noRemainingArea",
+              });
+              return false;
+            }
+            if (requestedArea > capacity.availableArea) {
+              setAreaValidationDialog({
+                rowId: row.id,
+                requestedArea,
+                availableArea: capacity.availableArea,
+                bedArea: capacity.bedArea,
+                occupiedArea: capacity.occupiedArea,
+                cultureId: row.culture,
+                plantsCount: row.plants_count,
+                mode: "remainingLimit",
+              });
+              return false;
+            }
+            return true;
           }}
           loadErrorMessage={t("plantingPlans:errors.load")}
           saveErrorMessage={t("plantingPlans:errors.save")}
@@ -2043,6 +2335,70 @@ function PlantingPlans(): React.ReactElement {
           <Button onClick={() => void (mobileEditId ? handleMobileUpdate() : handleMobileCreate())} variant="contained">
             {mobileEditId ? t("common:actions.save") : t("common:actions.add")}
           </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={areaValidationDialog !== null} onClose={() => setAreaValidationDialog(null)} fullWidth maxWidth="xs">
+        <DialogTitle>
+          {areaValidationDialog?.mode === "bedLimit"
+            ? t("plantingPlans:areaValidation.bedLimitTitle")
+            : areaValidationDialog?.mode === "noRemainingArea"
+              ? t("plantingPlans:areaValidation.noRemainingTitle")
+              : t("plantingPlans:areaValidation.remainingLimitTitle")}
+        </DialogTitle>
+        <DialogContent>
+          {areaValidationDialog && (
+            <Stack spacing={1}>
+              {areaValidationDialog.mode !== "bedLimit" && (
+                <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.availableArea", { area: formatAreaM2(areaValidationDialog.availableArea, numberLocale) })}</Typography>
+              )}
+              <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.bedArea", { area: formatAreaM2(areaValidationDialog.bedArea, numberLocale) })}</Typography>
+              {areaValidationDialog.mode !== "bedLimit" && (
+                <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.occupiedArea", { area: formatAreaM2(areaValidationDialog.occupiedArea, numberLocale) })}</Typography>
+              )}
+              {areaValidationDialog.mode !== "noRemainingArea" && (
+                <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.requestedArea", { area: formatAreaM2(areaValidationDialog.requestedArea, numberLocale) })}</Typography>
+              )}
+              {areaValidationDialog.mode !== "noRemainingArea" && (
+                <Typography sx={{ whiteSpace: "nowrap", fontWeight: 700 }}>
+                  {t("plantingPlans:areaValidation.acceptedArea", {
+                    area: formatAreaM2(
+                      areaValidationDialog.mode === "bedLimit"
+                        ? areaValidationDialog.bedArea
+                        : areaValidationDialog.availableArea,
+                      numberLocale,
+                    ),
+                  })}
+                </Typography>
+              )}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAreaValidationDialog(null)}>{t("common:actions.cancel")}</Button>
+          {areaValidationDialog?.mode !== "noRemainingArea" && (
+            <Button
+              variant="contained"
+              color="success"
+              onClick={() => {
+                if (!areaValidationDialog) {
+                  return;
+                }
+                applyAreaAndPlants(
+                  areaValidationDialog.rowId,
+                  areaValidationDialog.mode === "bedLimit"
+                    ? areaValidationDialog.bedArea
+                    : areaValidationDialog.availableArea,
+                  areaValidationDialog.cultureId,
+                  areaValidationDialog.plantsCount,
+                );
+                setAreaValidationDialog(null);
+              }}
+            >
+              {areaValidationDialog?.mode === "bedLimit"
+                ? t("plantingPlans:areaValidation.applyBedArea")
+                : t("plantingPlans:areaValidation.applyRemainingArea")}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 

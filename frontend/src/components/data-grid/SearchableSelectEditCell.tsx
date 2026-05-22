@@ -28,6 +28,7 @@ export function SearchableSelectEditCell({
   options,
   onValueChange,
   placeholder,
+  hasFocus,
 }: SearchableSelectEditCellProps): React.ReactElement {
   const apiRef = useGridApiContext();
   const [inputValue, setInputValue] = useState('');
@@ -70,6 +71,8 @@ export function SearchableSelectEditCell({
       }}
       placeholder={placeholder}
       size="small"
+      autoFocus={hasFocus}
+      inputTabIndex={hasFocus ? 0 : -1}
       textFieldSx={{ '& .MuiInputBase-root': { height: '100%' } }}
     />
   );

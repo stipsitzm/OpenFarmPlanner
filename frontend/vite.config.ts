@@ -21,6 +21,14 @@ export default defineConfig({
     },
   },
   server: {
+    watch: {
+      ignored: [
+        '**/coverage/**',
+        '**/dist/**',
+        '**/.git/**',
+        '**/node_modules/.cache/**',
+      ],
+    },
     proxy: {
       '/admin': {
         target: 'http://localhost:8000',

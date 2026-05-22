@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CompactAreaCell, shouldShowAreaTooltip } from '../components/planting-plans/CompactAreaCell';
 
@@ -15,16 +15,22 @@ describe('CompactAreaCell', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent(label);
   });
 
-  it('is keyboard focusable with full accessible text for long values', async () => {
-    const user = userEvent.setup();
+  it('is keyboard focusable with full accessible text when the grid cell has focus', async () => {
+    const label = 'Regenbogenland · 8 Karotte + Zwiebel · Beet 5 (10,00 m²)';
+
+    render(<CompactAreaCell label={label} hasFocus />);
+
+    const focusTarget = screen.getByLabelText(label);
+    expect(focusTarget).toHaveAttribute('tabindex', '0');
+    await waitFor(() => expect(focusTarget).toHaveFocus());
+  });
+
+  it('stays out of the tab order when the grid cell does not have focus', () => {
     const label = 'Regenbogenland · 8 Karotte + Zwiebel · Beet 5 (10,00 m²)';
 
     render(<CompactAreaCell label={label} />);
 
-    await user.tab();
-
-    const focusTarget = screen.getByLabelText(label);
-    expect(focusTarget).toHaveFocus();
+    expect(screen.getByLabelText(label)).toHaveAttribute('tabindex', '-1');
   });
 
   it('keeps short values compact without tooltip interaction', async () => {
