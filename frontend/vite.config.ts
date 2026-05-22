@@ -22,7 +22,12 @@ export default defineConfig({
   },
   server: {
     watch: {
-      ignored: ['**/coverage/**'],
+      ignored: [
+        '**/coverage/**',
+        '**/dist/**',
+        '**/.git/**',
+        '**/node_modules/.cache/**',
+      ],
     },
     proxy: {
       '/admin': {
