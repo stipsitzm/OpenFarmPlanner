@@ -300,6 +300,10 @@ function RootLayout(): React.ReactElement {
     () => i18n.getFixedT(i18n.resolvedLanguage ?? i18n.language ?? 'de', 'cultures'),
     [i18n],
   );
+  const tCommon = useMemo(
+    () => i18n.getFixedT(i18n.resolvedLanguage ?? i18n.language ?? 'de', 'common'),
+    [i18n],
+  );
   const navigate = useNavigate();
   const location = useLocation();
   const currentPathnameRef = React.useRef(location.pathname);
@@ -751,6 +755,13 @@ function RootLayout(): React.ReactElement {
     }
     return activeItem?.label ?? '';
   }, [location.pathname, navItems, t]);
+  useEffect(() => {
+    const appName = tCommon('appName');
+    document.title = currentPageTitle ? `${currentPageTitle} – ${appName}` : appName;
+    return () => {
+      document.title = appName;
+    };
+  }, [currentPageTitle, tCommon]);
   const topbarHelpConfig = useMemo(() => {
     if (location.pathname.startsWith('/app/dashboard')) return { pageKey: 'dashboard' as const, label: 'Hilfe zu Übersicht' };
     if (location.pathname.startsWith('/app/locations')) return { pageKey: 'locations' as const, label: 'Hilfe zu Standorte' };

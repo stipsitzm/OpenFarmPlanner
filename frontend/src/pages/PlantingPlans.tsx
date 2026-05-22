@@ -12,6 +12,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type {
   GridCellParams,
   GridColDef,
+  GridRenderEditCellParams,
   GridValueOptionsParams,
 } from "@mui/x-data-grid";
 import {
@@ -178,6 +179,46 @@ const toIsoDateString = (value: unknown): string | null => {
   }
   return null;
 };
+
+function PlantingDateEditCell(params: GridRenderEditCellParams): React.ReactElement {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputValue = toIsoDateString(params.value) ?? "";
+
+  useEffect(() => {
+    if (!params.hasFocus) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+  }, [params.hasFocus]);
+
+  return (
+    <TextField
+      type="date"
+      fullWidth
+      size="small"
+      inputRef={inputRef}
+      value={inputValue}
+      slotProps={{
+        htmlInput: {
+          tabIndex: params.hasFocus ? 0 : -1,
+        },
+      }}
+      onChange={async (event) => {
+        const nextValue = event.target.value
+          ? new Date(`${event.target.value}T00:00:00`)
+          : null;
+        await params.api.setEditCellValue({
+          id: params.id,
+          field: params.field,
+          value: nextValue,
+        });
+      }}
+    />
+  );
+}
 
 const toDateKey = (value: unknown): number | null => {
   const buildDateKey = (year: number, month: number, day: number): number | null => {
@@ -1161,34 +1202,7 @@ function PlantingPlans(): React.ReactElement {
         type: "date",
         editable: true,
         valueGetter: (value) => (value ? new Date(value) : null),
-        renderEditCell: (params) => {
-          const inputValue = toIsoDateString(params.value) ?? "";
-
-          return (
-            <TextField
-              type="date"
-              fullWidth
-              size="small"
-              autoFocus={params.hasFocus}
-              value={inputValue}
-              slotProps={{
-                htmlInput: {
-                  tabIndex: params.hasFocus ? 0 : -1,
-                },
-              }}
-              onChange={async (event) => {
-                const nextValue = event.target.value
-                  ? new Date(`${event.target.value}T00:00:00`)
-                  : null;
-                await params.api.setEditCellValue({
-                  id: params.id,
-                  field: params.field,
-                  value: nextValue,
-                });
-              }}
-            />
-          );
-        },
+        renderEditCell: (params) => <PlantingDateEditCell {...params} />,
         preProcessEditCellProps: (params) => {
           const hasError = !params.props.value;
           return { ...params.props, error: hasError };
