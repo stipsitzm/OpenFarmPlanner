@@ -108,7 +108,10 @@ describe('hierarchy components and behaviors', () => {
         } as never)}
       </>
     );
-    await user.click(screen.getByLabelText('Parzelle hinzufügen'));
+    const addFieldButton = screen.getAllByLabelText('Parzelle hinzufügen')
+      .find((button) => !button.hasAttribute('data-mui-internal-clone-element'));
+    expect(addFieldButton).toBeDefined();
+    await user.click(addFieldButton!);
     expect(addField).toHaveBeenCalledWith(2);
 
     rerender(
