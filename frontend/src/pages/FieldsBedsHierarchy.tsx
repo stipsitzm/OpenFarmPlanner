@@ -58,6 +58,81 @@ interface FieldsBedsHierarchyProps {
   showTitle?: boolean;
 }
 
+type HierarchyNameMeasureEntry = {
+  name: string;
+  level: number;
+  type: HierarchyRow["type"];
+};
+
+const NAME_COLUMN_MIN_WIDTH = 220;
+const NAME_COLUMN_MAX_WIDTH = 520;
+const NAME_COLUMN_CHAR_WIDTH_FALLBACK_PX = 8;
+const NAME_COLUMN_INDENT_PER_LEVEL_PX = 24;
+const NAME_COLUMN_EXPAND_CHROME_PX = 44;
+const NAME_COLUMN_CELL_HORIZONTAL_PADDING_PX = 20;
+const NAME_COLUMN_BED_TEXT_PADDING_PX = 8;
+const NAME_COLUMN_WIDTH_BUFFER_PX = 2;
+
+const getHierarchyNameFont = (
+  entry: HierarchyNameMeasureEntry,
+  baseFontSizePx: number,
+  fontFamily: string,
+): string => {
+  const fontWeight = entry.type === "location" ? 600 : 400;
+  const fontSizePx =
+    entry.type === "location"
+      ? baseFontSizePx * 1.02
+      : entry.type === "bed"
+        ? baseFontSizePx * 0.95
+        : baseFontSizePx;
+
+  return `${fontWeight} ${fontSizePx}px ${fontFamily}`;
+};
+
+const getHierarchyNameMeasureKey = (entry: HierarchyNameMeasureEntry): string =>
+  `${entry.type}\u0000${entry.name}`;
+
+const measureHierarchyNameTextWidths = (
+  entries: HierarchyNameMeasureEntry[],
+): Map<string, number> => {
+  const widths = new Map<string, number>();
+
+  const setFallbackWidths = (): Map<string, number> => {
+    entries.forEach((entry) => {
+      widths.set(
+        getHierarchyNameMeasureKey(entry),
+        entry.name.length * NAME_COLUMN_CHAR_WIDTH_FALLBACK_PX,
+      );
+    });
+    return widths;
+  };
+
+  if (typeof document === "undefined") {
+    return setFallbackWidths();
+  }
+
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return setFallbackWidths();
+  }
+
+  const bodyStyle = window.getComputedStyle(document.body);
+  const baseFontSizePx =
+    Number.parseFloat(bodyStyle.fontSize) || 16;
+  const fontFamily = bodyStyle.fontFamily || "Roboto, Arial, sans-serif";
+
+  entries.forEach((entry) => {
+    context.font = getHierarchyNameFont(entry, baseFontSizePx, fontFamily);
+    widths.set(
+      getHierarchyNameMeasureKey(entry),
+      Math.ceil(context.measureText(entry.name).width),
+    );
+  });
+
+  return widths;
+};
+
 const HIERARCHY_DATA_GRID_SX = {
   ...dataGridSx,
   width: "fit-content",
@@ -925,14 +1000,7 @@ function FieldsBedsHierarchy({
   }, [openContextMenuForRow, rows, selectedRowId, treeActive]);
 
   const nameColumnWidth = useMemo(() => {
-    const MIN_NAME_WIDTH = 220;
-    const CHAR_WIDTH_PX = 8;
-    const ICON_GROUP_PX = 120;
-    const INDENT_PER_LEVEL_PX = 24;
-    const EXTRA_BED_INDENT_PX = 34;
-
-    const hierarchyEntries: Array<{ name: string; level: number; type: string }> =
-      [];
+    const hierarchyEntries: HierarchyNameMeasureEntry[] = [];
     if (hierarchyIndex.hasMultipleLocations) {
       hierarchyIndex.sortedLocations.forEach((location) => {
         hierarchyEntries.push({ name: location.name, level: 0, type: "location" });
@@ -956,15 +1024,21 @@ function FieldsBedsHierarchy({
       });
     }
 
+    const measuredTextWidths = measureHierarchyNameTextWidths(hierarchyEntries);
     const measuredWidth = hierarchyEntries.reduce((maxWidth, row) => {
-      const nameLength = typeof row.name === "string" ? row.name.length : 0;
-      const indent =
-        row.level * INDENT_PER_LEVEL_PX +
-        (row.type === "bed" ? EXTRA_BED_INDENT_PX : 0);
-      return Math.max(maxWidth, indent + ICON_GROUP_PX + nameLength * CHAR_WIDTH_PX);
-    }, MIN_NAME_WIDTH);
+      const textWidth =
+        measuredTextWidths.get(getHierarchyNameMeasureKey(row)) ?? 0;
+      const hierarchyChromeWidth =
+        row.level * NAME_COLUMN_INDENT_PER_LEVEL_PX +
+        NAME_COLUMN_EXPAND_CHROME_PX +
+        NAME_COLUMN_CELL_HORIZONTAL_PADDING_PX +
+        (row.type === "bed" ? NAME_COLUMN_BED_TEXT_PADDING_PX : 0) +
+        NAME_COLUMN_WIDTH_BUFFER_PX;
 
-    return Math.min(520, Math.max(MIN_NAME_WIDTH, measuredWidth));
+      return Math.max(maxWidth, hierarchyChromeWidth + textWidth);
+    }, NAME_COLUMN_MIN_WIDTH);
+
+    return Math.min(NAME_COLUMN_MAX_WIDTH, Math.max(NAME_COLUMN_MIN_WIDTH, measuredWidth));
   }, [hierarchyIndex]);
 
   /**
