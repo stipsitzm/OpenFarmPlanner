@@ -6,16 +6,16 @@ import type { ReactElement, MouseEvent } from 'react';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import type { TFunction } from 'i18next';
 import { Box, IconButton, Tooltip } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
-import { AddBedIcon } from './AddBedIcon';
+import { HierarchyAddIcon } from './HierarchyAddIcon';
 import { getPlainExcerpt } from '../data-grid/markdown';
 import { getCalculatedColumnProps } from '../data-grid/calculatedColumns';
 
@@ -82,6 +82,29 @@ function renderActionIconButton({
   );
 }
 
+function renderHierarchyAddIconButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+}): ReactElement {
+  return (
+    <Tooltip title={label}>
+      <span>
+        <HierarchyAddIcon
+          ariaLabel={label}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClick(event);
+          }}
+          sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
+        />
+      </span>
+    </Tooltip>
+  );
+}
+
 function renderInlineActions(
   row: HierarchyRow,
   callbacks: NameCellCallbacks,
@@ -90,11 +113,9 @@ function renderInlineActions(
   if (row.type === 'location') {
     return (
       <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-        {renderActionIconButton({
+        {renderHierarchyAddIconButton({
           label: t('hierarchy:addField'),
-          color: 'primary',
           onClick: () => callbacks.onAddField(row.locationId),
-          icon: <AddIcon />,
         })}
         {renderActionIconButton({
           label: t('common:actions.delete'),
@@ -109,18 +130,10 @@ function renderInlineActions(
   if (row.type === 'field') {
     return (
       <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-        <Tooltip title={t('hierarchy:addBedToField')}>
-          <span>
-            <AddBedIcon
-              ariaLabel={t('hierarchy:addBedToField')}
-              onClick={(event) => {
-                event.stopPropagation();
-                callbacks.onAddBed(row.fieldId!);
-              }}
-              sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
-            />
-          </span>
-        </Tooltip>
+        {renderHierarchyAddIconButton({
+          label: t('hierarchy:addBedToField'),
+          onClick: () => callbacks.onAddBed(row.fieldId!),
+        })}
         {renderActionIconButton({
           label: t('common:actions.delete'),
           color: 'error',
@@ -212,7 +225,14 @@ function renderNameCell(
       </Box>
 
       <Box
-        sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', minWidth: 0, width: '100%' }}
+        sx={{
+          position: 'relative',
+          display: 'inline-flex',
+          alignItems: 'center',
+          minWidth: 0,
+          width: '100%',
+          overflow: 'hidden',
+        }}
         onContextMenu={(event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -232,7 +252,6 @@ function renderNameCell(
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             maxWidth: '100%',
-            pr: 7,
           }}
         >
           {params.value}
@@ -246,6 +265,12 @@ function renderNameCell(
             transform: 'translateY(-50%)',
             display: 'inline-flex',
             alignItems: 'center',
+            py: 0.25,
+            pl: 2.5,
+            pr: 0.25,
+            borderRadius: 1,
+            background: (theme) =>
+              `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 48%)`,
             opacity: isStandaloneRender ? 1 : 0,
             pointerEvents: isStandaloneRender ? 'auto' : 'none',
             transition: 'opacity 120ms ease-in-out',
