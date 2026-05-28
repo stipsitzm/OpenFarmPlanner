@@ -120,6 +120,12 @@ function renderCultures(initialPath = '/cultures'): ReturnType<typeof render> {
   );
 }
 
+const waitForDeleteDialogToClose = async (): Promise<void> => {
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog', { name: 'Kultur löschen?' })).not.toBeInTheDocument();
+  });
+};
+
 describe('Cultures action area', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -277,6 +283,7 @@ describe('Cultures action area', () => {
 
     expect(screen.queryByTestId('culture-row-1')).not.toBeInTheDocument();
     expect(screen.getByText('Kultur gelöscht')).toBeInTheDocument();
+    await waitForDeleteDialogToClose();
     expect(screen.getByRole('button', { name: 'Rückgängig: Kultur gelöscht' })).toBeInTheDocument();
     expect(deleteMock).not.toHaveBeenCalled();
   });
@@ -287,6 +294,7 @@ describe('Cultures action area', () => {
     await waitFor(() => expect(screen.getByTestId('culture-row-1')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Kultur löschen' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Löschen' }));
+    await waitForDeleteDialogToClose();
     fireEvent.click(screen.getByRole('button', { name: 'Rückgängig: Kultur gelöscht' }));
 
     expect(screen.getByTestId('culture-row-1')).toBeInTheDocument();
@@ -330,6 +338,7 @@ describe('Cultures action area', () => {
 
     expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('2');
 
+    await waitForDeleteDialogToClose();
     fireEvent.click(screen.getByRole('button', { name: 'Rückgängig: Kultur gelöscht' }));
 
     expect(screen.getByTestId('culture-row-1')).toBeInTheDocument();
