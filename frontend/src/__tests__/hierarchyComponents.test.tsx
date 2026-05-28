@@ -82,14 +82,16 @@ describe('hierarchy components and behaviors', () => {
     expect(bedLeaf?.hasChildren).toBe(false);
   });
 
-  it('builds hierarchy inline action callbacks for field, bed and location rows', async () => {
+  it('builds hierarchy inline add callbacks and shared menu triggers for rows', async () => {
     const user = userEvent.setup();
     const toggleExpand = vi.fn();
     const addBed = vi.fn();
     const deleteBed = vi.fn();
     const addField = vi.fn();
     const deleteField = vi.fn();
+    const deleteLocation = vi.fn();
     const createPlan = vi.fn();
+    const openContextMenu = vi.fn();
     const openNotes = vi.fn();
 
     const columns = createHierarchyColumns(
@@ -98,7 +100,9 @@ describe('hierarchy components and behaviors', () => {
       deleteBed,
       addField,
       deleteField,
+      deleteLocation,
       createPlan,
+      openContextMenu,
       openNotes,
       mockT as never,
     );
@@ -157,9 +161,11 @@ describe('hierarchy components and behaviors', () => {
       .find((button) => !button.hasAttribute('data-mui-internal-clone-element'));
     expect(addBedButton).toBeDefined();
     await user.click(addBedButton!);
-    await user.click(screen.getByLabelText('Löschen'));
     expect(addBed).toHaveBeenCalledWith(10);
-    expect(deleteField).toHaveBeenCalledWith(10);
+    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Aktionen' }));
+    expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 'field-10' }));
+    expect(deleteField).not.toHaveBeenCalled();
 
     rerender(
       <>
@@ -171,10 +177,12 @@ describe('hierarchy components and behaviors', () => {
         } as never)}
       </>
     );
-    await user.click(screen.getByLabelText('Pflanzplan erstellen'));
-    await user.click(screen.getByLabelText('Löschen'));
-    expect(createPlan).toHaveBeenCalledWith(100);
-    expect(deleteBed).toHaveBeenCalledWith(100);
+    expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Aktionen' }));
+    expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 100 }));
+    expect(createPlan).not.toHaveBeenCalled();
+    expect(deleteBed).not.toHaveBeenCalled();
   }, 15000);
 
 
@@ -243,8 +251,8 @@ describe('hierarchy components and behaviors', () => {
         pointerEvents: 'auto',
       },
     });
-    expect(screen.getByLabelText('Pflanzplan erstellen')).toBeInTheDocument();
-    expect(screen.getByLabelText('Löschen')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aktionen' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
   });
 
   it('renders hover actions for empty unsaved row names even in edit mode', () => {
@@ -285,8 +293,8 @@ describe('hierarchy components and behaviors', () => {
         pointerEvents: 'auto',
       },
     });
-    expect(screen.getByLabelText('Pflanzplan erstellen')).toBeInTheDocument();
-    expect(screen.getByLabelText('Löschen')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aktionen' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
   });
 
   it('lets long hierarchy names use the full normal-state name cell width', () => {

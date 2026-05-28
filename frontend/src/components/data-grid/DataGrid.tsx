@@ -723,21 +723,7 @@ export function EditableDataGrid<T extends EditableRow>({
       return true;
     }
 
-    const validationError = validateRow(draftRow);
     const rowKey = String(rowId);
-    const fieldErrors = getRowValidationErrors?.(draftRow) ?? {};
-    setActiveValidationErrors((prev) => ({
-      ...prev,
-      [rowKey]: fieldErrors,
-    }));
-
-    if (validationError || Object.keys(fieldErrors).length > 0) {
-      if (validationError) {
-        setError(validationError);
-      }
-      return false;
-    }
-
     setError('');
     setRows((prevRows) =>
       prevRows.map((row) => (String(row.id) === rowKey ? draftRow : row)),
@@ -748,7 +734,7 @@ export function EditableDataGrid<T extends EditableRow>({
       return next;
     });
     return true;
-  }, [getDraftRow, getRowValidationErrors, validateRow]);
+  }, [getDraftRow]);
 
   const navigateFromEditedCell = useCallback((
     current: { id: GridRowId; field: string },

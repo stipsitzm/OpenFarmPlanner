@@ -221,6 +221,11 @@ const addNewBed = async (): Promise<void> => {
   await waitFor(() => expect(screen.getByTestId('mode--1700000000000')).toHaveTextContent('edit'));
 };
 
+const deleteRowViaContextMenu = (row: HTMLElement): void => {
+  fireEvent.contextMenu(row);
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Löschen' }));
+};
+
 describe('FieldsBedsHierarchy edit cancellation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -391,8 +396,27 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     await user.click(screen.getByRole('button', { name: 'Partial invalid -1700000000000' }));
     await user.click(screen.getByRole('button', { name: 'Escape -1700000000000' }));
 
-    expect(screen.getByRole('button', { name: 'Pflanzplan erstellen' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Löschen' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Aktionen' }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Löschen' })).not.toBeInTheDocument();
+  });
+
+  it('opens the same hierarchy actions from right click and the three-dots button', async () => {
+    renderHierarchy();
+
+    const fieldRow = await screen.findByTestId('row-field-10');
+    fireEvent.contextMenu(fieldRow);
+
+    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Beet' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument());
+    fireEvent.click(within(fieldRow).getByLabelText('Aktionen'));
+
+    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Beet' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
   });
 
   it('removes a deleted bed immediately and finalizes after 8000 ms', async () => {
@@ -401,7 +425,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
     const bedRow = await screen.findByTestId('row-21');
     vi.useFakeTimers();
-    fireEvent.click(within(bedRow).getByLabelText('Löschen'));
+    deleteRowViaContextMenu(bedRow);
 
     expect(screen.queryByTestId('row-21')).not.toBeInTheDocument();
     expect(screen.getByText('Beet gelöscht')).toBeInTheDocument();
@@ -424,7 +448,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     renderHierarchy();
 
     const bedRow = await screen.findByTestId('row-21');
-    fireEvent.click(within(bedRow).getByLabelText('Löschen'));
+    deleteRowViaContextMenu(bedRow);
     expect(screen.queryByTestId('row-21')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Rückgängig: Beet gelöscht/i }));
@@ -446,7 +470,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     renderHierarchy();
 
     const fieldRow = await screen.findByTestId('row-field-10');
-    fireEvent.click(within(fieldRow).getByLabelText('Löschen'));
+    deleteRowViaContextMenu(fieldRow);
 
     expect(screen.queryByTestId('row-field-10')).not.toBeInTheDocument();
     expect(screen.queryByTestId('row-21')).not.toBeInTheDocument();
@@ -483,7 +507,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     renderHierarchy();
 
     const locationRow = await screen.findByTestId('row-location-1');
-    fireEvent.click(within(locationRow).getByLabelText('Löschen'));
+    deleteRowViaContextMenu(locationRow);
 
     expect(screen.queryByTestId('row-location-1')).not.toBeInTheDocument();
     expect(screen.queryByTestId('row-field-10')).not.toBeInTheDocument();
@@ -511,10 +535,9 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     renderHierarchy();
 
     const firstBedRow = await screen.findByTestId('row-21');
-    const secondBedRow = await screen.findByTestId('row-22');
     vi.useFakeTimers();
-    fireEvent.click(within(firstBedRow).getByLabelText('Löschen'));
-    fireEvent.click(within(secondBedRow).getByLabelText('Löschen'));
+    deleteRowViaContextMenu(firstBedRow);
+    deleteRowViaContextMenu(screen.getByTestId('row-22'));
 
     expect(screen.queryByTestId('row-21')).not.toBeInTheDocument();
     expect(screen.queryByTestId('row-22')).not.toBeInTheDocument();
@@ -537,7 +560,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
     const bedRow = await screen.findByTestId('row-21');
     vi.useFakeTimers();
-    fireEvent.click(within(bedRow).getByLabelText('Löschen'));
+    deleteRowViaContextMenu(bedRow);
     unmount();
     vi.advanceTimersByTime(8000);
 

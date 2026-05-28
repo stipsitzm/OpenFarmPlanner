@@ -2,15 +2,14 @@
  * Column definitions for hierarchy grid
  */
 
-import type { ReactElement, MouseEvent } from 'react';
+import type { ReactElement, KeyboardEvent, MouseEvent } from 'react';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import type { TFunction } from 'i18next';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AgricultureIcon from '@mui/icons-material/Agriculture';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import type { HierarchyRow } from './utils/types';
@@ -44,42 +43,7 @@ interface NameCellCallbacks {
   onDeleteField: (fieldId: number) => void;
   onDeleteLocation: (locationId: number) => void;
   onCreatePlantingPlan: (bedId: number) => void;
-  onOpenContextMenu: (event: MouseEvent<HTMLElement>, row: HierarchyRow) => void;
-}
-
-function renderActionIconButton({
-  label,
-  color,
-  onClick,
-  icon,
-  sx,
-}: {
-  label: string;
-  color?: 'default' | 'primary' | 'error';
-  onClick: (event: MouseEvent) => void;
-  icon: ReactElement;
-  sx?: Record<string, unknown>;
-}): ReactElement {
-  return (
-    <Tooltip title={label}>
-      <IconButton
-        size="small"
-        color={color}
-        aria-label={label}
-        onClick={(event) => {
-          event.stopPropagation();
-          onClick(event);
-        }}
-        sx={{
-          p: 0.5,
-          '& .MuiSvgIcon-root': { fontSize: 18 },
-          ...sx,
-        }}
-      >
-        {icon}
-      </IconButton>
-    </Tooltip>
-  );
+  onOpenContextMenu: (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>, row: HierarchyRow) => void;
 }
 
 function renderHierarchyAddIconButton({
@@ -105,6 +69,48 @@ function renderHierarchyAddIconButton({
   );
 }
 
+function renderMoreActionsButton(
+  row: HierarchyRow,
+  callbacks: NameCellCallbacks,
+  t: TFunction,
+): ReactElement {
+  return (
+    <Tooltip title={t('common:actions.actions')}>
+      <IconButton
+        size="small"
+        aria-label={t('common:actions.actions')}
+        onClick={(event) => {
+          event.stopPropagation();
+          callbacks.onOpenContextMenu(event, row);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
+            event.preventDefault();
+            event.stopPropagation();
+            callbacks.onOpenContextMenu(event, row);
+          }
+        }}
+        sx={{
+          p: 0.5,
+          color: 'text.secondary',
+          '& .MuiSvgIcon-root': { fontSize: 18 },
+          '&:hover': {
+            color: 'text.primary',
+            bgcolor: 'action.hover',
+          },
+          '&.Mui-focusVisible': {
+            outline: '2px solid',
+            outlineColor: 'primary.main',
+            outlineOffset: 1,
+          },
+        }}
+      >
+        <MoreVertIcon />
+      </IconButton>
+    </Tooltip>
+  );
+}
+
 function renderInlineActions(
   row: HierarchyRow,
   callbacks: NameCellCallbacks,
@@ -117,12 +123,7 @@ function renderInlineActions(
           label: t('hierarchy:addField'),
           onClick: () => callbacks.onAddField(row.locationId),
         })}
-        {renderActionIconButton({
-          label: t('common:actions.delete'),
-          color: 'error',
-          onClick: () => callbacks.onDeleteLocation(row.locationId!),
-          icon: <DeleteIcon />,
-        })}
+        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -134,16 +135,7 @@ function renderInlineActions(
           label: t('hierarchy:addBedToField'),
           onClick: () => callbacks.onAddBed(row.fieldId!),
         })}
-        {renderActionIconButton({
-          label: t('common:actions.delete'),
-          color: 'error',
-          onClick: () => callbacks.onDeleteField(row.fieldId!),
-          icon: <DeleteIcon />,
-          sx: {
-            opacity: 0.7,
-            '&:hover': { opacity: 1 },
-          },
-        })}
+        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -151,22 +143,7 @@ function renderInlineActions(
   if (row.type === 'bed') {
     return (
       <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-        {renderActionIconButton({
-          label: t('hierarchy:createPlantingPlan'),
-          color: 'primary',
-          onClick: () => callbacks.onCreatePlantingPlan(row.bedId!),
-          icon: <AgricultureIcon />,
-        })}
-        {renderActionIconButton({
-          label: t('common:actions.delete'),
-          color: 'error',
-          onClick: () => callbacks.onDeleteBed(row.bedId!),
-          icon: <DeleteIcon />,
-          sx: {
-            opacity: 0.7,
-            '&:hover': { opacity: 1 },
-          },
-        })}
+        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -433,7 +410,7 @@ export function createHierarchyColumns(
   onDeleteField: (fieldId: number) => void,
   onDeleteLocationOrCreatePlantingPlan: ((locationId: number) => void) | ((bedId: number) => void),
   onCreatePlantingPlanOrOpenNotes: ((bedId: number) => void) | ((rowId: string | number, field: string) => void),
-  onOpenContextMenuOrT: ((event: MouseEvent<HTMLElement>, row: HierarchyRow) => void) | TFunction,
+  onOpenContextMenuOrT: ((event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>, row: HierarchyRow) => void) | TFunction,
   onOpenNotesOrColumnWidths?: ((rowId: string | number, field: string) => void) | Partial<HierarchyColumnWidths>,
   tOrColumnWidths?: TFunction | Partial<HierarchyColumnWidths>,
   columnWidths?: Partial<HierarchyColumnWidths>
@@ -447,7 +424,7 @@ export function createHierarchyColumns(
     : onCreatePlantingPlanOrOpenNotes as (bedId: number) => void;
   const onOpenContextMenu = usesLegacySignature
     ? (): void => undefined
-    : onOpenContextMenuOrT as (event: MouseEvent<HTMLElement>, row: HierarchyRow) => void;
+    : onOpenContextMenuOrT as (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>, row: HierarchyRow) => void;
   const onOpenNotes = usesLegacySignature
     ? onCreatePlantingPlanOrOpenNotes as (rowId: string | number, field: string) => void
     : onOpenNotesOrColumnWidths as (rowId: string | number, field: string) => void;

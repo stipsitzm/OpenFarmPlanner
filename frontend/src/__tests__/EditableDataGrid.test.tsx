@@ -39,6 +39,7 @@ vi.mock('@mui/x-data-grid', async () => {
   ];
 
   const DataGrid = ({
+    apiRef,
     rows,
     columns,
     processRowUpdate,
@@ -49,6 +50,30 @@ vi.mock('@mui/x-data-grid', async () => {
     rowModesModel,
     slots,
   }: unknown) => {
+    const [, forceFocusRender] = React.useState(0);
+
+    if (apiRef?.current) {
+      apiRef.current.state = apiRef.current.state ?? { focus: { cell: null } };
+      apiRef.current.getVisibleColumns = () => columns;
+      apiRef.current.getRowWithUpdatedValues = (id: string | number) =>
+        rows.find((row: TestGridRow) => String(row.id) === String(id)) ?? null;
+      apiRef.current.getRowIndexRelativeToVisibleRows = (id: string | number) =>
+        rows.findIndex((row: TestGridRow) => String(row.id) === String(id));
+      apiRef.current.getColumnIndexRelativeToVisibleColumns = (field: string) =>
+        columns.findIndex((column: GridColDef) => column.field === field);
+      apiRef.current.getCellParams = (id: string | number, field: string) => {
+        const row = rows.find((currentRow: TestGridRow) => String(currentRow.id) === String(id));
+        return { id, field, row };
+      };
+      apiRef.current.isCellEditable = (params: { field: string }) =>
+        columns.find((column: GridColDef) => column.field === params.field)?.editable !== false;
+      apiRef.current.scrollToIndexes = vi.fn();
+      apiRef.current.setCellFocus = (id: string | number, field: string) => {
+        apiRef.current.state.focus.cell = { id, field };
+        forceFocusRender((version) => version + 1);
+      };
+    }
+
     const commit = async (row: TestGridRow, reason: string) => {
       try {
         await processRowUpdate(row);
@@ -84,7 +109,12 @@ vi.mock('@mui/x-data-grid', async () => {
                 <button
                   key={`${row.id}-${col.field}`}
                   type="button"
-                  onClick={() => onCellClick?.({ id: row.id, field: col.field, isEditable: col.editable !== false })}
+                  onClick={() => {
+                    if (apiRef?.current) {
+                      apiRef.current.state.focus.cell = { id: row.id, field: col.field };
+                    }
+                    onCellClick?.({ id: row.id, field: col.field, isEditable: col.editable !== false });
+                  }}
                 >
                   Zelle {row.id}-{col.field}
                 </button>
@@ -109,6 +139,11 @@ vi.mock('@mui/x-data-grid', async () => {
             </button>
           </div>
         ))}
+        <span data-testid="focused-cell">
+          {apiRef?.current?.state?.focus?.cell
+            ? `${apiRef.current.state.focus.cell.id}-${apiRef.current.state.focus.cell.field}`
+            : 'none'}
+        </span>
         {slots?.footer ? <slots.footer /> : null}
       </div>
     );
@@ -264,6 +299,97 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('2'));
     fireEvent.click(screen.getByRole('button', { name: 'ESC -1' }));
     await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('1'));
+  });
+
+  it('moves through a new planting plan row with Tab without row validation', async () => {
+    const props = baseProps((row) => {
+      const missing = [
+        !row.planting_date ? 'Pflanzdatum' : null,
+        !row.bed ? 'Beet' : null,
+      ].filter(Boolean);
+      return missing.length > 0
+        ? `Folgende Pflichtfelder müssen ausgefüllt werden: ${missing.join(', ')}`
+        : null;
+    });
+    const createSpy = vi.spyOn(props.api, 'create');
+    const plantingPlanColumns: GridColDef[] = [
+      { field: 'culture', headerName: 'Kultur', editable: true },
+      { field: 'planting_date', headerName: 'Pflanzdatum', editable: true },
+      { field: 'bed', headerName: 'Beet', editable: true },
+    ];
+
+    render(
+      <EditableDataGrid
+        {...props}
+        columns={plantingPlanColumns}
+        createNewRow={() => ({
+          id: -1,
+          isNew: true,
+          culture: 1,
+          planting_date: '',
+          bed: '',
+        } as TestGridRow)}
+        showDeleteAction={false}
+      />,
+    );
+
+    fireEvent.click(await screen.findByLabelText('Neu'));
+    const cultureCell = await screen.findByRole('button', { name: 'Zelle -1-culture' });
+    fireEvent.click(cultureCell);
+
+    fireEvent.keyDown(cultureCell, { key: 'Tab' });
+
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('-1-planting_date'));
+    expect(screen.queryByText(/Folgende Pflichtfelder müssen ausgefüllt werden/)).not.toBeInTheDocument();
+    expect(createSpy).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(await screen.findByRole('button', { name: 'Zelle -1-planting_date' }), {
+      key: 'Tab',
+      shiftKey: true,
+    });
+
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('-1-culture'));
+    expect(screen.queryByText(/Folgende Pflichtfelder müssen ausgefüllt werden/)).not.toBeInTheDocument();
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('shows required-field validation when explicitly saving an incomplete new row', async () => {
+    const props = baseProps((row) => {
+      const missing = [
+        !row.planting_date ? 'Pflanzdatum' : null,
+        !row.bed ? 'Beet' : null,
+      ].filter(Boolean);
+      return missing.length > 0
+        ? `Folgende Pflichtfelder müssen ausgefüllt werden: ${missing.join(', ')}`
+        : null;
+    });
+    const createSpy = vi.spyOn(props.api, 'create');
+    const plantingPlanColumns: GridColDef[] = [
+      { field: 'culture', headerName: 'Kultur', editable: true },
+      { field: 'planting_date', headerName: 'Pflanzdatum', editable: true },
+      { field: 'bed', headerName: 'Beet', editable: true },
+    ];
+
+    render(
+      <EditableDataGrid
+        {...props}
+        columns={plantingPlanColumns}
+        createNewRow={() => ({
+          id: -1,
+          isNew: true,
+          culture: 1,
+          planting_date: '',
+          bed: '',
+        } as TestGridRow)}
+        showDeleteAction={false}
+      />,
+    );
+
+    fireEvent.click(await screen.findByLabelText('Neu'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Blur speichern -1' }));
+
+    expect(await screen.findByText('Folgende Pflichtfelder müssen ausgefüllt werden: Pflanzdatum, Beet')).toBeInTheDocument();
+    expect(createSpy).not.toHaveBeenCalled();
   });
 
   it('shows row-bound save/cancel actions only while row is being edited', async () => {

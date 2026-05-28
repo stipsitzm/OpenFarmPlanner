@@ -75,6 +75,13 @@ interface FieldsBedsHierarchyProps {
   showTitle?: boolean;
 }
 
+interface HierarchyRowAction {
+  id: string;
+  label: string;
+  color?: "default" | "error";
+  onClick: () => void;
+}
+
 type PendingHierarchyDeletionType = "location" | "field" | "bed";
 
 interface PendingHierarchyDeletion {
@@ -1172,13 +1179,99 @@ function FieldsBedsHierarchy({
     }));
   }, [rememberRowSnapshot, selectedRow]);
 
+  const startRowEdit = useCallback((row: HierarchyRow): void => {
+    if (row.type === "location") {
+      return;
+    }
+
+    rememberRowSnapshot(row.id);
+    setSelectedRowId(row.id);
+    setTreeActive(true);
+    setRowModesModel((previous) => ({
+      ...previous,
+      [row.id]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
+    }));
+  }, [rememberRowSnapshot]);
+
+  const getHierarchyRowActions = useCallback((row: HierarchyRow): HierarchyRowAction[] => {
+    const actions: HierarchyRowAction[] = [];
+
+    if (row.type !== "location") {
+      actions.push({
+        id: "edit",
+        label: t("common:actions.edit"),
+        onClick: () => startRowEdit(row),
+      });
+    }
+
+    if (row.type === "location" && row.locationId) {
+      actions.push({
+        id: "add-field",
+        label: t("actions.addField"),
+        onClick: () => {
+          const fieldName = window.prompt(t("dialogs.addField.nameLabel"));
+          if (fieldName !== null) {
+            void addField(row.locationId, fieldName);
+          }
+        },
+      });
+    }
+
+    if (row.type === "field" && row.fieldId) {
+      actions.push({
+        id: "add-bed",
+        label: t("addBed"),
+        onClick: () => handleAddBed(row.fieldId!),
+      });
+    }
+
+    if (row.type === "bed" && row.bedId) {
+      actions.push({
+        id: "create-planting-plan",
+        label: t("createPlantingPlan"),
+        onClick: () => handleCreatePlantingPlan(row.bedId!),
+      });
+    }
+
+    actions.push({
+      id: "delete",
+      label: t("common:actions.delete"),
+      color: "error",
+      onClick: () => deleteHierarchyRowWithUndo(row),
+    });
+
+    return actions;
+  }, [
+    addField,
+    deleteHierarchyRowWithUndo,
+    handleAddBed,
+    handleCreatePlantingPlan,
+    startRowEdit,
+    t,
+  ]);
+
   const openContextMenuForRow = useCallback((row: HierarchyRow, mouseX: number, mouseY: number): void => {
     setSelectedRowId(row.id);
+    setTreeActive(true);
     setContextMenuState({ row, mouseX, mouseY });
   }, []);
 
-  const handleNameCellContextMenu = useCallback((event: React.MouseEvent<HTMLElement>, row: HierarchyRow): void => {
-    openContextMenuForRow(row, event.clientX + 2, event.clientY - 6);
+  const handleNameCellContextMenu = useCallback((event: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>, row: HierarchyRow): void => {
+    const hasPointerCoordinates =
+      "clientX" in event &&
+      "clientY" in event &&
+      typeof event.clientX === "number" &&
+      typeof event.clientY === "number" &&
+      Number.isFinite(event.clientX) &&
+      Number.isFinite(event.clientY) &&
+      (event.clientX !== 0 || event.clientY !== 0);
+    if (hasPointerCoordinates) {
+      openContextMenuForRow(row, event.clientX + 2, event.clientY - 6);
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    openContextMenuForRow(row, rect.right - 8, rect.top + 12);
   }, [openContextMenuForRow]);
 
   const handleGridContextMenu = useCallback((event: React.MouseEvent<HTMLElement>): void => {
@@ -1545,6 +1638,10 @@ function FieldsBedsHierarchy({
     [selectedRowId],
   );
 
+  const contextMenuActions = contextMenuState
+    ? getHierarchyRowActions(contextMenuState.row)
+    : [];
+
   return (
     <div className={showTitle ? "page-container" : undefined}>
       <Box sx={{ width: "100%", minWidth: 0 }}>
@@ -1663,36 +1760,18 @@ function FieldsBedsHierarchy({
             : undefined
         }
       >
-        {contextMenuState?.row.type === "location" && contextMenuState.row.locationId ? (
-          <MenuItem onClick={() => { closeContextMenu(); const fieldName = window.prompt(t("dialogs.addField.nameLabel")); if (fieldName !== null) { void addField(contextMenuState.row.locationId, fieldName); } }}>
-            {t("actions.addField")}
+        {contextMenuActions.map((action) => (
+          <MenuItem
+            key={action.id}
+            onClick={() => {
+              closeContextMenu();
+              action.onClick();
+            }}
+            sx={{ color: action.color === "error" ? "error.main" : undefined }}
+          >
+            {action.label}
           </MenuItem>
-        ) : null}
-        {contextMenuState?.row.type === "location" && contextMenuState.row.locationId ? (
-          <MenuItem onClick={() => { const row = contextMenuState.row; closeContextMenu(); deleteHierarchyRowWithUndo(row); }}>
-            {t("common:actions.delete")}
-          </MenuItem>
-        ) : null}
-        {contextMenuState?.row.type === "field" && contextMenuState.row.fieldId ? (
-          <MenuItem onClick={() => { closeContextMenu(); handleAddBed(contextMenuState.row.fieldId!); }}>
-            {t("addBed")}
-          </MenuItem>
-        ) : null}
-        {contextMenuState?.row.type === "bed" && contextMenuState.row.bedId ? (
-          <MenuItem onClick={() => { closeContextMenu(); handleCreatePlantingPlan(contextMenuState.row.bedId!); }}>
-            {t("createPlantingPlan")}
-          </MenuItem>
-        ) : null}
-        {contextMenuState?.row.type === "field" && contextMenuState.row.fieldId ? (
-          <MenuItem onClick={() => { const row = contextMenuState.row; closeContextMenu(); deleteHierarchyRowWithUndo(row); }}>
-            {t("common:actions.delete")}
-          </MenuItem>
-        ) : null}
-        {contextMenuState?.row.type === "bed" && contextMenuState.row.bedId ? (
-          <MenuItem onClick={() => { const row = contextMenuState.row; closeContextMenu(); deleteHierarchyRowWithUndo(row); }}>
-            {t("common:actions.delete")}
-          </MenuItem>
-        ) : null}
+        ))}
       </Menu>
       {pendingDeletions.map((deletion, index) => (
         <DeleteUndoSnackbar
