@@ -183,7 +183,6 @@ function renderNameCell(
   const baseIndent = row.level * 24;
   const hasChildren = row.hasChildren === true;
   const hasExpandToggle = (row.type === 'location' || row.type === 'field') && hasChildren;
-  const showInlineActions = params.cellMode !== 'edit';
   const isStandaloneRender = params.api === undefined;
 
   return (
@@ -241,7 +240,14 @@ function renderNameCell(
       >
         <Box
           component="span"
+          data-testid="hierarchy-name-text"
           sx={{
+            display: 'block',
+            flex: '1 1 auto',
+            minWidth: 0,
+            width: '100%',
+            maxWidth: 'none',
+            boxSizing: 'border-box',
             fontWeight: row.type === 'location' ? 600 : 400,
             fontSize: row.type === 'location' ? '1.02rem' : row.type === 'bed' ? '0.95rem' : '1rem',
             color: 'text.primary',
@@ -251,13 +257,13 @@ function renderNameCell(
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            maxWidth: '100%',
           }}
         >
           {params.value}
         </Box>
 
         <Box
+          data-testid="hierarchy-name-actions-overlay"
           sx={{
             position: 'absolute',
             right: 0,
@@ -266,25 +272,35 @@ function renderNameCell(
             display: 'inline-flex',
             alignItems: 'center',
             py: 0.25,
-            pl: 2.5,
+            pl: 0.25,
             pr: 0.25,
             borderRadius: 1,
-            background: (theme) =>
-              `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 48%)`,
+            bgcolor: 'background.paper',
             opacity: isStandaloneRender ? 1 : 0,
             pointerEvents: isStandaloneRender ? 'auto' : 'none',
             transition: 'opacity 120ms ease-in-out',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              right: '100%',
+              width: 16,
+              pointerEvents: 'none',
+              background: (theme) =>
+                `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 100%)`,
+            },
             '.MuiDataGrid-row:hover &': {
               opacity: 1,
               pointerEvents: 'auto',
             },
-            '.MuiDataGrid-row.Mui-selected &': {
+            '.MuiDataGrid-row:focus-within &': {
               opacity: 1,
               pointerEvents: 'auto',
             },
           }}
         >
-          {showInlineActions ? renderInlineActions(row, callbacks, t) : null}
+          {renderInlineActions(row, callbacks, t)}
         </Box>
       </Box>
     </Box>

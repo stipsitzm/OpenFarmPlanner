@@ -1,0 +1,33 @@
+import { describe, expect, it } from 'vitest';
+import {
+  calculateHierarchyNameColumnWidth,
+  NAME_COLUMN_MEASUREMENT_RESERVE_PX,
+  type HierarchyNameMeasureEntry,
+} from '../pages/FieldsBedsHierarchy';
+
+describe('fields-beds hierarchy name column width', () => {
+  it('adds a small measurement reserve to the dynamic name width', () => {
+    const entries: HierarchyNameMeasureEntry[] = [
+      { name: 'Langer Name', level: 1, type: 'field' },
+    ];
+
+    const width = calculateHierarchyNameColumnWidth(entries, () => 240);
+
+    expect(width).toBe(24 + 44 + 20 + 2 + 240 + NAME_COLUMN_MEASUREMENT_RESERVE_PX);
+  });
+
+  it('keeps hover action icons out of the name width calculation', () => {
+    const entries: HierarchyNameMeasureEntry[] = [
+      { name: 'Langes Beet', level: 2, type: 'bed' },
+    ];
+    const textWidth = 220;
+    const assumedActionOverlayWidth = 64;
+
+    const width = calculateHierarchyNameColumnWidth(entries, () => textWidth);
+
+    expect(width).toBe(48 + 44 + 20 + 8 + 2 + textWidth + NAME_COLUMN_MEASUREMENT_RESERVE_PX);
+    expect(width).toBeLessThan(
+      48 + 44 + 20 + 8 + 2 + textWidth + NAME_COLUMN_MEASUREMENT_RESERVE_PX + assumedActionOverlayWidth,
+    );
+  });
+});
