@@ -4,6 +4,7 @@ export const i18nMap: Record<string, string> = {
   'actions.edit': 'Bearbeiten',
   'actions.duplicate': 'Duplizieren',
   'actions.actions': 'Aktionen',
+  'actions.delete': 'Löschen',
   'common:actions.delete': 'Löschen',
   'common:actions.actions': 'Aktionen',
   'common:fields.notes': 'Notizen',
