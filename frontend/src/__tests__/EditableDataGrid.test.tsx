@@ -291,6 +291,29 @@ describe('EditableDataGrid', () => {
     expect(createSpy).not.toHaveBeenCalled();
   });
 
+  it('runs before-save validation for implicit blur persistence and keeps blocked rows editable', async () => {
+    const props = baseProps(() => null);
+    const updateSpy = vi.spyOn(props.api, 'update');
+    const onBeforeSaveRow = vi.fn(() => false);
+
+    render(
+      <EditableDataGrid
+        {...props}
+        onBeforeSaveRow={onBeforeSaveRow}
+        showDeleteAction={false}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+    fireEvent.click(screen.getByRole('button', { name: 'Blur speichern 1' }));
+
+    await waitFor(() => expect(onBeforeSaveRow).toHaveBeenCalled());
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(screen.getByTestId('mode-1')).toHaveTextContent('edit');
+  });
+
   it('discards draft rows with Escape', async () => {
     render(<EditableDataGrid {...baseProps()} showDeleteAction={false} />);
     await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('1'));

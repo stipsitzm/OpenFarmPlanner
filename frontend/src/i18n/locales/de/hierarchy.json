@@ -69,6 +69,7 @@
   },
   "actions": {
     "addField": "Parzelle hinzufügen",
+    "addBed": "Beet hinzufügen",
     "createLocation": "Standort hinzufügen",
     "addAdditionalLocation": "Mehrere Orte? Weiteren Standort hinzufügen",
     "undo": "Rückgängig"

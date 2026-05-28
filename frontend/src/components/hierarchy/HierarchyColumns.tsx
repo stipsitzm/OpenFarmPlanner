@@ -9,6 +9,7 @@ import { Box, IconButton, Tooltip } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import AgricultureIcon from '@mui/icons-material/Agriculture';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
@@ -111,6 +112,44 @@ function renderMoreActionsButton(
   );
 }
 
+function renderPlantingPlanActionButton(
+  row: HierarchyRow,
+  callbacks: NameCellCallbacks,
+  t: TFunction,
+): ReactElement | null {
+  if (row.type !== 'bed' || row.bedId === undefined) {
+    return null;
+  }
+
+  return (
+    <Tooltip title={t('hierarchy:createPlantingPlan')}>
+      <IconButton
+        size="small"
+        color="primary"
+        aria-label={t('hierarchy:createPlantingPlan')}
+        onClick={(event) => {
+          event.stopPropagation();
+          callbacks.onCreatePlantingPlan(row.bedId!);
+        }}
+        sx={{
+          p: 0.5,
+          '& .MuiSvgIcon-root': { fontSize: 18 },
+          '&:hover': {
+            bgcolor: 'action.hover',
+          },
+          '&.Mui-focusVisible': {
+            outline: '2px solid',
+            outlineColor: 'primary.main',
+            outlineOffset: 1,
+          },
+        }}
+      >
+        <AgricultureIcon />
+      </IconButton>
+    </Tooltip>
+  );
+}
+
 function renderInlineActions(
   row: HierarchyRow,
   callbacks: NameCellCallbacks,
@@ -143,6 +182,7 @@ function renderInlineActions(
   if (row.type === 'bed') {
     return (
       <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+        {renderPlantingPlanActionButton(row, callbacks, t)}
         {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );

@@ -33,6 +33,7 @@ import type {
   GridRowModesModel,
 } from "@mui/x-data-grid";
 import { Box, Alert } from "@mui/material";
+import Divider from "@mui/material/Divider";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import EmptyStateCard from '../components/project/EmptyStateCard';
@@ -78,6 +79,7 @@ interface FieldsBedsHierarchyProps {
 interface HierarchyRowAction {
   id: string;
   label: string;
+  group: "create" | "edit" | "destructive";
   color?: "default" | "error";
   onClick: () => void;
 }
@@ -898,6 +900,27 @@ function FieldsBedsHierarchy({
         throw new Error(errorMessage);
       }
     }
+    if (newRow.type === "location") {
+      const existingLocation = locations.find((locationItem) => locationItem.id === newRow.locationId);
+      const updated = await locationAPI.update(newRow.locationId!, {
+        ...(existingLocation ?? {}),
+        id: newRow.locationId!,
+        name: newRow.name,
+      });
+
+      setLocations((previousLocations) =>
+        previousLocations.map((locationItem) =>
+          locationItem.id === newRow.locationId
+            ? { ...locationItem, ...updated.data, id: updated.data.id }
+            : locationItem,
+        ),
+      );
+      await fetchData();
+      return {
+        ...newRow,
+        name: updated.data.name,
+      };
+    }
     return newRow;
   };
 
@@ -1168,10 +1191,6 @@ function FieldsBedsHierarchy({
       return;
     }
 
-    if (selectedRow.type === "location") {
-      return;
-    }
-
     rememberRowSnapshot(selectedRow.id);
     setRowModesModel((previous) => ({
       ...previous,
@@ -1180,10 +1199,6 @@ function FieldsBedsHierarchy({
   }, [rememberRowSnapshot, selectedRow]);
 
   const startRowEdit = useCallback((row: HierarchyRow): void => {
-    if (row.type === "location") {
-      return;
-    }
-
     rememberRowSnapshot(row.id);
     setSelectedRowId(row.id);
     setTreeActive(true);
@@ -1194,20 +1209,14 @@ function FieldsBedsHierarchy({
   }, [rememberRowSnapshot]);
 
   const getHierarchyRowActions = useCallback((row: HierarchyRow): HierarchyRowAction[] => {
-    const actions: HierarchyRowAction[] = [];
-
-    if (row.type !== "location") {
-      actions.push({
-        id: "edit",
-        label: t("common:actions.edit"),
-        onClick: () => startRowEdit(row),
-      });
-    }
+    const createActions: HierarchyRowAction[] = [];
+    const editActions: HierarchyRowAction[] = [];
 
     if (row.type === "location" && row.locationId) {
-      actions.push({
+      createActions.push({
         id: "add-field",
         label: t("actions.addField"),
+        group: "create",
         onClick: () => {
           const fieldName = window.prompt(t("dialogs.addField.nameLabel"));
           if (fieldName !== null) {
@@ -1218,29 +1227,39 @@ function FieldsBedsHierarchy({
     }
 
     if (row.type === "field" && row.fieldId) {
-      actions.push({
+      createActions.push({
         id: "add-bed",
-        label: t("addBed"),
+        label: t("actions.addBed"),
+        group: "create",
         onClick: () => handleAddBed(row.fieldId!),
       });
     }
 
     if (row.type === "bed" && row.bedId) {
-      actions.push({
+      createActions.push({
         id: "create-planting-plan",
         label: t("createPlantingPlan"),
+        group: "create",
         onClick: () => handleCreatePlantingPlan(row.bedId!),
       });
     }
 
-    actions.push({
-      id: "delete",
-      label: t("common:actions.delete"),
-      color: "error",
-      onClick: () => deleteHierarchyRowWithUndo(row),
+    editActions.push({
+      id: "edit",
+      label: t("common:actions.edit"),
+      group: "edit",
+      onClick: () => startRowEdit(row),
     });
 
-    return actions;
+    const destructiveActions: HierarchyRowAction[] = [{
+      id: "delete",
+      label: t("common:actions.delete"),
+      group: "destructive",
+      color: "error",
+      onClick: () => deleteHierarchyRowWithUndo(row),
+    }];
+
+    return [...createActions, ...editActions, ...destructiveActions];
   }, [
     addField,
     deleteHierarchyRowWithUndo,
@@ -1578,6 +1597,9 @@ function FieldsBedsHierarchy({
   }, []);
 
   const isCellEditable = useCallback((params: { row: HierarchyRow; field: string }) => {
+    if (params.row.type === "location") {
+      return params.field === "name";
+    }
     if (params.row.type === "field" || params.row.type === "bed") {
       return (
         params.field === "name" ||
@@ -1760,18 +1782,25 @@ function FieldsBedsHierarchy({
             : undefined
         }
       >
-        {contextMenuActions.map((action) => (
-          <MenuItem
-            key={action.id}
-            onClick={() => {
-              closeContextMenu();
-              action.onClick();
-            }}
-            sx={{ color: action.color === "error" ? "error.main" : undefined }}
-          >
-            {action.label}
-          </MenuItem>
-        ))}
+        {contextMenuActions.map((action, index) => {
+          const previousAction = contextMenuActions[index - 1];
+          const shouldSeparateGroup = previousAction !== undefined && previousAction.group !== action.group;
+
+          return (
+            <React.Fragment key={action.id}>
+              {shouldSeparateGroup ? <Divider role="separator" /> : null}
+              <MenuItem
+                onClick={() => {
+                  closeContextMenu();
+                  action.onClick();
+                }}
+                sx={{ color: action.color === "error" ? "error.main" : undefined }}
+              >
+                {action.label}
+              </MenuItem>
+            </React.Fragment>
+          );
+        })}
       </Menu>
       {pendingDeletions.map((deletion, index) => (
         <DeleteUndoSnackbar

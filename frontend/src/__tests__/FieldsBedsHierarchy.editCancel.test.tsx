@@ -20,6 +20,7 @@ const {
   fieldUpdateMock,
   locationDeleteMock,
   locationListMock,
+  locationUpdateMock,
   mockUseNavigationBlocker,
   mockDrafts,
 } = vi.hoisted(() => ({
@@ -32,6 +33,7 @@ const {
   fieldUpdateMock: vi.fn(),
   locationDeleteMock: vi.fn(),
   locationListMock: vi.fn(),
+  locationUpdateMock: vi.fn(),
   mockUseNavigationBlocker: vi.fn(),
   mockDrafts: new Map<string, Record<string, unknown>>(),
 }));
@@ -67,6 +69,7 @@ vi.mock('../api/api', async () => {
     locationAPI: {
       delete: locationDeleteMock,
       list: locationListMock,
+      update: locationUpdateMock,
     },
   };
 });
@@ -158,7 +161,11 @@ vi.mock('@mui/x-data-grid', async () => {
               })}
               <button
                 type="button"
-                onClick={() => onCellClick?.({ id: row.id, field: 'name', isEditable: true, row })}
+                onClick={() => {
+                  const nameColumn = columns.find((column) => column.field === 'name');
+                  const nameEditable = Boolean(nameColumn?.editable) && (isCellEditable?.({ row, field: 'name' }) ?? true);
+                  onCellClick?.({ id: row.id, field: 'name', isEditable: nameEditable, row });
+                }}
               >
                 {`Edit ${row.id}`}
               </button>
@@ -191,6 +198,9 @@ vi.mock('@mui/x-data-grid', async () => {
               </button>
               <button type="button" onClick={() => void commitBlur(row)}>
                 {`Blur ${row.id}`}
+              </button>
+              <button type="button" onClick={() => void commitBlur(row)}>
+                {`Enter ${row.id}`}
               </button>
             </div>
           );
@@ -235,6 +245,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     fieldListMock.mockResolvedValue({ data: { results: [{ id: 10, name: 'Nordfeld', location: 1, area_sqm: 20 }] } });
     bedListMock.mockResolvedValue({ data: { results: [] } });
     fieldUpdateMock.mockResolvedValue({ data: { id: 10, name: 'Nordfeld', location: 1, area_sqm: 20 } });
+    locationUpdateMock.mockResolvedValue({ data: { id: 1, name: 'Hofstelle umbenannt' } });
   });
 
   afterEach(() => {
@@ -246,6 +257,51 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     expect(isCompletelyEmptyNewHierarchyRow({ id: -1, type: 'bed', level: 1, isNew: true, name: '', field: 10 })).toBe(true);
     expect(isCompletelyEmptyNewHierarchyRow({ id: -1, type: 'bed', level: 1, isNew: true, name: '', field: 10, length_m: 2 })).toBe(false);
     expect(isPartiallyFilledNamelessNewHierarchyRow({ id: -1, type: 'bed', level: 1, isNew: true, name: '', field: 10, length_m: 2 })).toBe(true);
+  });
+
+  it('enters inline edit mode when a Standort name is clicked', async () => {
+    const user = userEvent.setup();
+    renderHierarchy();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit location-1' }));
+
+    expect(screen.getByTestId('mode-location-1')).toHaveTextContent('edit');
+  });
+
+  it('cancels inline Standort editing with Escape without saving', async () => {
+    const user = userEvent.setup();
+    renderHierarchy();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit location-1' }));
+    await user.click(screen.getByRole('button', { name: 'Escape location-1' }));
+
+    expect(screen.getByTestId('mode-location-1')).toHaveTextContent('view');
+    expect(locationUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it('saves inline Standort name edits through the shared row update flow', async () => {
+    const user = userEvent.setup();
+    renderHierarchy();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit location-1' }));
+    await user.click(screen.getByRole('button', { name: 'Partial name location-1' }));
+    await user.click(screen.getByRole('button', { name: 'Enter location-1' }));
+
+    await waitFor(() => {
+      expect(locationUpdateMock).toHaveBeenCalledWith(1, expect.objectContaining({ name: 'Teilweise gefuellt' }));
+    });
+  });
+
+  it('keeps Standort name validation consistent with other hierarchy rows', async () => {
+    const user = userEvent.setup();
+    renderHierarchy();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit location-1' }));
+    await user.click(screen.getByRole('button', { name: 'Partial invalid location-1' }));
+    await user.click(screen.getByRole('button', { name: 'Blur location-1' }));
+
+    expect(await screen.findByText('Name ist ein Pflichtfeld')).toBeInTheDocument();
+    expect(locationUpdateMock).not.toHaveBeenCalled();
   });
 
   it('cancels editing on an existing row with Escape without deleting data', async () => {
@@ -403,20 +459,44 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
   it('opens the same hierarchy actions from right click and the three-dots button', async () => {
     renderHierarchy();
 
+    const locationRow = await screen.findByTestId('row-location-1');
+    fireEvent.contextMenu(locationRow);
+
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Parzelle hinzufügen',
+      'Bearbeiten',
+      'Löschen',
+    ]);
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Bearbeiten' }));
+    expect(screen.getByTestId('mode-location-1')).toHaveTextContent('edit');
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Escape location-1' }));
+
     const fieldRow = await screen.findByTestId('row-field-10');
     fireEvent.contextMenu(fieldRow);
 
-    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Beet' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Beet hinzufügen',
+      'Bearbeiten',
+      'Löschen',
+    ]);
+    expect(screen.getByRole('menuitem', { name: 'Beet hinzufügen' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Beet' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
 
     fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument());
     fireEvent.click(within(fieldRow).getByLabelText('Aktionen'));
 
-    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Beet' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Beet hinzufügen',
+      'Bearbeiten',
+      'Löschen',
+    ]);
+    expect(screen.getByRole('menuitem', { name: 'Beet hinzufügen' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Beet' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
   });
 
   it('removes a deleted bed immediately and finalizes after 8000 ms', async () => {

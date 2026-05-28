@@ -144,6 +144,7 @@ describe('hierarchy components and behaviors', () => {
     const addFieldButton = screen.getAllByLabelText('Parzelle hinzufügen')
       .find((button) => !button.hasAttribute('data-mui-internal-clone-element'));
     expect(addFieldButton).toBeDefined();
+    expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
     await user.click(addFieldButton!);
     expect(addField).toHaveBeenCalledWith(2);
 
@@ -160,6 +161,7 @@ describe('hierarchy components and behaviors', () => {
     const addBedButton = screen.getAllByRole('button', { name: 'Beet zu dieser Parzelle hinzufügen' })
       .find((button) => !button.hasAttribute('data-mui-internal-clone-element'));
     expect(addBedButton).toBeDefined();
+    expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
     await user.click(addBedButton!);
     expect(addBed).toHaveBeenCalledWith(10);
     expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
@@ -177,11 +179,14 @@ describe('hierarchy components and behaviors', () => {
         } as never)}
       </>
     );
-    expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
+    const createPlantingPlanButton = screen.getAllByRole('button', { name: 'Pflanzplan erstellen' })
+      .find((button) => !button.hasAttribute('data-mui-internal-clone-element'));
+    expect(createPlantingPlanButton).toBeDefined();
+    await user.click(createPlantingPlanButton!);
+    expect(createPlan).toHaveBeenCalledWith(100);
     expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Aktionen' }));
     expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 100 }));
-    expect(createPlan).not.toHaveBeenCalled();
     expect(deleteBed).not.toHaveBeenCalled();
   }, 15000);
 

@@ -145,7 +145,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
   deleteUndoOptions?: DeleteUndoOptions;
   onRowsStateChange?: (rows: T[]) => void;
   onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean; error: string }) => void;
-  onBeforeSaveRow?: (row: T) => boolean | Partial<T>;
+  onBeforeSaveRow?: (row: T) => boolean | Partial<T> | Promise<boolean | Partial<T>>;
   isSaveErrorHandled?: (error: unknown) => boolean;
   /**
    * Controls how the grid surface uses available page/workspace width:
@@ -158,6 +158,16 @@ export interface EditableDataGridProps<T extends EditableRow> {
 
 const isUnsavedDraftRow = (row: EditableRow): boolean =>
   Boolean(row.isNew || row.__draft || Number(row.id) < 0);
+
+class SaveBlockedError extends Error {
+  constructor() {
+    super('Save blocked by validation');
+    this.name = 'SaveBlockedError';
+  }
+}
+
+const isSaveBlockedError = (error: unknown): error is SaveBlockedError =>
+  error instanceof SaveBlockedError;
 
 const getDefaultFilterOperators = (column: GridColDef): GridFilterOperator[] => {
   switch (column.type) {
@@ -699,23 +709,34 @@ export function EditableDataGrid<T extends EditableRow>({
     });
   }, [getRowValidationErrors, gridApiRef, rowsById]);
 
-  const shouldSaveRow = useCallback(async (rowId: GridRowId): Promise<boolean> => {
+  const runBeforeSaveGate = useCallback(async (row: T): Promise<T | null> => {
     if (!onBeforeSaveRow) {
-      return true;
+      return row;
     }
+    const saveDecision = await onBeforeSaveRow(row);
+    if (saveDecision === false) {
+      return null;
+    }
+    if (saveDecision !== true && saveDecision !== null && typeof saveDecision === 'object') {
+      return { ...row, ...saveDecision } as T;
+    }
+    return row;
+  }, [onBeforeSaveRow]);
+
+  const shouldSaveRow = useCallback(async (rowId: GridRowId): Promise<boolean> => {
     const draftRow = getDraftRow(rowId);
     if (!draftRow) {
       return true;
     }
-    const saveDecision = onBeforeSaveRow(draftRow);
-    if (saveDecision === false) {
+    const gatedRow = await runBeforeSaveGate(draftRow);
+    if (!gatedRow) {
       return false;
     }
-    if (saveDecision !== true && saveDecision !== null && typeof saveDecision === 'object') {
-      await applyDraftValues(rowId, saveDecision);
+    if (gatedRow !== draftRow) {
+      await applyDraftValues(rowId, gatedRow);
     }
     return true;
-  }, [applyDraftValues, getDraftRow, onBeforeSaveRow]);
+  }, [applyDraftValues, getDraftRow, runBeforeSaveGate]);
 
   const commitEditedRowDraftForKeyboardNavigation = useCallback((rowId: GridRowId): boolean => {
     const draftRow = getDraftRow(rowId);
@@ -817,16 +838,25 @@ export function EditableDataGrid<T extends EditableRow>({
     // This ensures dropdown selections and other changes trigger fresh validation
     setError('');
 
+    const rowAfterSaveGate = await runBeforeSaveGate(newRow);
+    if (!rowAfterSaveGate) {
+      setRowModesModel((oldModel) => ({
+        ...oldModel,
+        [newRow.id]: { mode: GridRowModes.Edit },
+      }));
+      throw new SaveBlockedError();
+    }
+
     // Validate required fields
-    const validationError = validateRow(newRow);
-    const rowKey = String(newRow.id);
-    const fieldErrors = getRowValidationErrors?.(newRow) ?? {};
+    const validationError = validateRow(rowAfterSaveGate);
+    const rowKey = String(rowAfterSaveGate.id);
+    const fieldErrors = getRowValidationErrors?.(rowAfterSaveGate) ?? {};
     setActiveValidationErrors((prev) => ({
       ...prev,
       [rowKey]: fieldErrors,
     }));
     if (validationError) {
-      if (newRow.isNew) {
+      if (rowAfterSaveGate.isNew) {
         throw new Error(validationError);
       }
       setError(validationError);
@@ -834,9 +864,9 @@ export function EditableDataGrid<T extends EditableRow>({
     }
 
     try {
-      if (newRow.isNew) {
+      if (rowAfterSaveGate.isNew) {
         // Create new item via API
-        const apiData = await mapToApiData(newRow);
+        const apiData = await mapToApiData(rowAfterSaveGate);
         const response = await api.create(apiData);
         setError('');
         if (!response.data.id) {
@@ -848,7 +878,7 @@ export function EditableDataGrid<T extends EditableRow>({
         rowSnapshotRef.current.set(String(savedRow.id), savedRow);
         setRows((prevRows) => {
           // Remove the temporary row with negative ID
-          const filteredRows = prevRows.filter(row => row.id !== newRow.id);
+          const filteredRows = prevRows.filter(row => row.id !== rowAfterSaveGate.id);
           // Add the saved row at the beginning
           return [savedRow, ...filteredRows];
         });
@@ -864,8 +894,8 @@ export function EditableDataGrid<T extends EditableRow>({
         return savedRow;
       } else {
         // Update existing item via API
-        const apiData = await mapToApiData(newRow);
-        const response = await api.update(newRow.id, apiData);
+        const apiData = await mapToApiData(rowAfterSaveGate);
+        const response = await api.update(rowAfterSaveGate.id, apiData);
         setError('');
         if (!response.data.id) {
           throw new Error('API response missing ID');
@@ -898,12 +928,16 @@ export function EditableDataGrid<T extends EditableRow>({
     isSaveErrorHandled,
     mapToApiData,
     mapToRow,
+    runBeforeSaveGate,
     saveErrorMessage,
     t,
     validateRow,
   ]);
 
   const handleProcessRowUpdateError = useCallback((error: unknown): void => {
+    if (isSaveBlockedError(error)) {
+      return;
+    }
     console.error('Row update error:', error);
     if (isSaveErrorHandled?.(error)) {
       return;

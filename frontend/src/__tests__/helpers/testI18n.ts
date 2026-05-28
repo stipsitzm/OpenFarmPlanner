@@ -24,6 +24,7 @@ export const i18nMap: Record<string, string> = {
   'prompts.newFieldName': 'Name der neuen Parzelle:',
   'prompts.selectLocationForField': 'Bitte Standort-ID für die neue Parzelle eingeben:\n{{options}}',
   'actions.addField': 'Parzelle hinzufügen',
+  'actions.addBed': 'Beet hinzufügen',
   'actions.createLocation': 'Standort anlegen',
   'confirm.deleteFieldWithBeds': 'Parzelle löschen?',
   'confirm.deleteBed': 'Beet löschen?',
