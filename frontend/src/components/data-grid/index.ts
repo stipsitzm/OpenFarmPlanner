@@ -31,6 +31,7 @@ export { createSearchableSelectColumn, createSingleSelectColumn } from './column
 export type { SearchableSelectColumnConfig } from './columns';
 export { getCalculatedColumnProps } from './calculatedColumns';
 export type { DataGridColumnState } from './calculatedColumns';
+export { DeleteUndoSnackbar, DELETE_UNDO_DURATION_MS } from './DeleteUndoSnackbar';
 
 export { handleEditableCellClick, handleRowEditStop } from './handlers';
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { GridColDef } from '@mui/x-data-grid';
@@ -149,6 +149,10 @@ describe('EditableDataGrid', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('renders with minimal props and loads rows', async () => {
@@ -393,6 +397,155 @@ describe('EditableDataGrid', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Löschen' }));
 
     await waitFor(() => expect(deleteSpy).toHaveBeenCalledWith(1));
+  });
+
+  it('optimistically removes a row and restores it from the delete undo snackbar', async () => {
+    const user = userEvent.setup();
+    const props = baseProps();
+    vi.spyOn(props.api, 'list').mockResolvedValue({
+      data: { results: [createGridRow({ id: 1 }), createGridRow({ id: 2, name: 'Beet B' })] },
+    });
+    const deleteSpy = vi.spyOn(props.api, 'delete');
+    const confirmSpy = vi.spyOn(window, 'confirm');
+
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        showRowEditActions={false}
+        duplicateRow={(row) => ({ ...row, id: -2, isNew: true })}
+        deleteUndoOptions={{ message: 'Anbauplan gelöscht' }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.contextMenu(screen.getByTestId('row-1'));
+    await user.click(screen.getByRole('menuitem', { name: 'Löschen' }));
+
+    expect(screen.queryByTestId('row-1')).not.toBeInTheDocument();
+    expect(screen.getByText('Anbauplan gelöscht')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rückgängig: Anbauplan gelöscht' })).toBeInTheDocument();
+    expect(deleteSpy).not.toHaveBeenCalled();
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Rückgängig: Anbauplan gelöscht' }));
+
+    expect(screen.getByTestId('row-1')).toBeInTheDocument();
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  it('finalizes optimistic delete after the 8000 ms undo window', async () => {
+    const props = baseProps();
+    const deleteSpy = vi.spyOn(props.api, 'delete');
+
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        showRowEditActions={false}
+        duplicateRow={(row) => ({ ...row, id: -2, isNew: true })}
+        deleteUndoOptions={{ message: 'Anbauplan gelöscht' }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.contextMenu(screen.getByTestId('row-1'));
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Löschen' }));
+
+    vi.advanceTimersByTime(7999);
+    expect(deleteSpy).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1);
+    await Promise.resolve();
+    expect(deleteSpy).toHaveBeenCalledWith(1);
+    vi.useRealTimers();
+  });
+
+  it('handles multiple optimistic deletions independently', async () => {
+    const props = baseProps();
+    vi.spyOn(props.api, 'list').mockResolvedValue({
+      data: { results: [createGridRow({ id: 1 }), createGridRow({ id: 2, name: 'Beet B' })] },
+    });
+    const deleteSpy = vi.spyOn(props.api, 'delete');
+
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        showRowEditActions={false}
+        duplicateRow={(row) => ({ ...row, id: -3, isNew: true })}
+        deleteUndoOptions={{ message: 'Anbauplan gelöscht' }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.contextMenu(screen.getByTestId('row-1'));
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Löschen' }));
+    fireEvent.contextMenu(screen.getByTestId('row-2'));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Löschen' }));
+
+    expect(screen.queryByTestId('row-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('row-2')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Rückgängig: Anbauplan gelöscht' })[0]);
+    expect(screen.getByTestId('row-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('row-2')).not.toBeInTheDocument();
+
+    vi.advanceTimersByTime(8000);
+    await Promise.resolve();
+    expect(deleteSpy).toHaveBeenCalledWith(2);
+    expect(deleteSpy).not.toHaveBeenCalledWith(1);
+    vi.useRealTimers();
+  });
+
+  it('restores an optimistically deleted row to its previous sorted position', async () => {
+    const user = userEvent.setup();
+    const props = baseProps();
+    vi.spyOn(props.api, 'list').mockResolvedValue({
+      data: { results: [createGridRow({ id: 1 }), createGridRow({ id: 2, name: 'Beet B' })] },
+    });
+
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        showRowEditActions={false}
+        duplicateRow={(row) => ({ ...row, id: -2, isNew: true })}
+        deleteUndoOptions={{ message: 'Anbauplan gelöscht' }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.contextMenu(screen.getByTestId('row-1'));
+    await user.click(screen.getByRole('menuitem', { name: 'Löschen' }));
+    await user.click(screen.getByRole('button', { name: 'Rückgängig: Anbauplan gelöscht' }));
+
+    expect(screen.getAllByRole('row').map((row) => row.getAttribute('data-id'))).toEqual(['1', '2']);
+  });
+
+  it('cleans pending optimistic delete timers on unmount', async () => {
+    const props = baseProps();
+    const deleteSpy = vi.spyOn(props.api, 'delete');
+    const { unmount } = render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        showRowEditActions={false}
+        duplicateRow={(row) => ({ ...row, id: -2, isNew: true })}
+        deleteUndoOptions={{ message: 'Anbauplan gelöscht' }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.contextMenu(screen.getByTestId('row-1'));
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Löschen' }));
+    unmount();
+    vi.advanceTimersByTime(8000);
+
+    expect(deleteSpy).not.toHaveBeenCalled();
   });
 
   it('keeps inline editing available when contextual actions are enabled', async () => {

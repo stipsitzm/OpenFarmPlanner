@@ -54,6 +54,9 @@
     "save": "Fehler beim Speichern des Anbauplans",
     "delete": "Fehler beim Löschen des Anbauplans"
   },
+  "messages": {
+    "deleted": "Anbauplan gelöscht"
+  },
   "validation": {
     "plantingDateRequired": "Pflanzdatum ist ein Pflichtfeld",
     "cultureRequired": "Kultur ist ein Pflichtfeld",

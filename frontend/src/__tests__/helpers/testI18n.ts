@@ -43,6 +43,7 @@ export const i18nMap: Record<string, string> = {
   'messages.bedDeleted': 'Beet gelöscht',
   'messages.locationAndBedsDeleted': 'Standort und {{count}} Beete gelöscht',
   'messages.fieldAndBedsDeleted': 'Parzelle und {{count}} Beete gelöscht',
+  'plantingPlans:messages.deleted': 'Anbauplan gelöscht',
   'actions.undo': 'Rückgängig',
   'footer.singleLocation': 'Ein Standort',
   'footer.multipleLocations': 'Mehrere Standorte',

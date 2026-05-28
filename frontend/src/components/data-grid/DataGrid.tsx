@@ -42,6 +42,10 @@ import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
 import { useTranslation } from '../../i18n';
 import { NotesCell } from './NotesCell';
 import { NotesDrawer } from './NotesDrawer';
+import {
+  DeleteUndoSnackbar,
+  DELETE_UNDO_DURATION_MS,
+} from './DeleteUndoSnackbar';
 import { getPlainExcerpt } from './markdown';
 import { useNotesEditor } from './useNotesEditor';
 import { extractApiErrorMessage } from '../../api/errors';
@@ -85,6 +89,22 @@ export interface EditableDataGridRowAction<T extends EditableRow> {
   onClick: (row: T, helpers: EditableDataGridRowActionHelpers<T>) => void;
   disabled?: boolean;
 }
+
+interface DeleteUndoOptions {
+  message: string;
+  snackbarTestId?: string;
+}
+
+interface PendingDeleteWithUndo<T extends EditableRow> {
+  id: string;
+  rowId: GridRowId;
+  row: T;
+  rowsBeforeDelete: T[];
+  stableRowOrderBeforeDelete: GridRowId[];
+  rowModeBeforeDelete?: GridRowModesModel[string];
+  visible: boolean;
+}
+
 export interface NotesFieldConfig {
   field: string;
   labelKey?: string;
@@ -122,6 +142,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showRowEditActions?: boolean;
   getRowActions?: (row: T, helpers: EditableDataGridRowActionHelpers<T>) => EditableDataGridRowAction<T>[];
   duplicateRow?: (row: T) => T;
+  deleteUndoOptions?: DeleteUndoOptions;
   onRowsStateChange?: (rows: T[]) => void;
   onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean; error: string }) => void;
   onBeforeSaveRow?: (row: T) => boolean | Partial<T>;
@@ -292,6 +313,7 @@ export function EditableDataGrid<T extends EditableRow>({
   showRowEditActions = false,
   getRowActions,
   duplicateRow,
+  deleteUndoOptions,
   onRowsStateChange,
   onLoadStateChange,
   onBeforeSaveRow,
@@ -322,6 +344,8 @@ export function EditableDataGrid<T extends EditableRow>({
     mouseX?: number;
     mouseY?: number;
   } | null>(null);
+  const [pendingDeleteWithUndo, setPendingDeleteWithUndo] = useState<PendingDeleteWithUndo<T>[]>([]);
+  const pendingDeleteTimersRef = useRef<Map<string, number>>(new Map());
   const rowSnapshotRef = useRef<Map<string, T>>(new Map());
   const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery('(max-width:900px)');
@@ -1015,6 +1039,92 @@ export function EditableDataGrid<T extends EditableRow>({
     }));
   }, [gridApiRef, rowModesModel, rowsById]);
 
+  const removePendingDeleteWithUndo = useCallback((deletionId: string): void => {
+    setPendingDeleteWithUndo((currentDeletions) =>
+      currentDeletions.filter((deletion) => deletion.id !== deletionId),
+    );
+  }, []);
+
+  const restorePendingDeleteWithUndo = useCallback((deletion: PendingDeleteWithUndo<T>): void => {
+    setRows((currentRows) => {
+      if (currentRows.some((row) => String(row.id) === String(deletion.rowId))) {
+        return currentRows;
+      }
+      return orderRowsByStableIds(
+        [...currentRows, deletion.row],
+        deletion.rowsBeforeDelete.map((row) => row.id),
+      );
+    });
+    setStableRowOrder((currentOrder) => {
+      const currentOrderKeys = new Set(currentOrder.map(String));
+      currentOrderKeys.add(String(deletion.rowId));
+      const restoredOrder = deletion.stableRowOrderBeforeDelete.filter((orderedId) =>
+        currentOrderKeys.has(String(orderedId)),
+      );
+      const restoredOrderKeys = new Set(restoredOrder.map(String));
+      return [
+        ...restoredOrder,
+        ...currentOrder.filter((orderedId) => !restoredOrderKeys.has(String(orderedId))),
+      ];
+    });
+    if (deletion.rowModeBeforeDelete) {
+      setRowModesModel((currentModel) => ({
+        ...currentModel,
+        [deletion.rowId]: deletion.rowModeBeforeDelete!,
+      }));
+    }
+  }, []);
+
+  const finalizeDeleteWithUndo = useCallback(async (deletion: PendingDeleteWithUndo<T>): Promise<void> => {
+    pendingDeleteTimersRef.current.delete(deletion.id);
+    removePendingDeleteWithUndo(deletion.id);
+
+    const numericId = Number(deletion.rowId);
+    if (numericId < 0) {
+      return;
+    }
+
+    try {
+      await api.delete(numericId);
+      setError('');
+    } catch (err) {
+      restorePendingDeleteWithUndo(deletion);
+      setError(extractApiErrorMessage(err, t, deleteErrorMessage));
+      console.error('Error deleting data:', err);
+    }
+  }, [api, deleteErrorMessage, removePendingDeleteWithUndo, restorePendingDeleteWithUndo, t]);
+
+  const closeDeleteWithUndoSnackbar = useCallback((deletionId: string): void => {
+    setPendingDeleteWithUndo((currentDeletions) =>
+      currentDeletions.map((deletion) =>
+        deletion.id === deletionId ? { ...deletion, visible: false } : deletion,
+      ),
+    );
+  }, []);
+
+  const undoDeleteWithUndo = useCallback((deletionId: string): void => {
+    const deletion = pendingDeleteWithUndo.find((pendingDeletion) => pendingDeletion.id === deletionId);
+    if (!deletion) {
+      return;
+    }
+
+    const timerId = pendingDeleteTimersRef.current.get(deletionId);
+    if (timerId !== undefined) {
+      window.clearTimeout(timerId);
+      pendingDeleteTimersRef.current.delete(deletionId);
+    }
+
+    restorePendingDeleteWithUndo(deletion);
+    removePendingDeleteWithUndo(deletionId);
+  }, [pendingDeleteWithUndo, removePendingDeleteWithUndo, restorePendingDeleteWithUndo]);
+
+  useEffect(() => {
+    return () => {
+      pendingDeleteTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      pendingDeleteTimersRef.current.clear();
+    };
+  }, []);
+
   useEffect(() => {
     if (!commandApiRef) {
       return;
@@ -1085,6 +1195,55 @@ export function EditableDataGrid<T extends EditableRow>({
    * Handle row deletion
    */
   const handleDeleteClick = useCallback((id: GridRowId) => (): void => {
+    const rowKey = String(id);
+    const row = rowsById.get(rowKey) as T | undefined;
+    if (!row) {
+      return;
+    }
+
+    if (deleteUndoOptions) {
+      const deletionId = `${rowKey}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const pendingDeletion: PendingDeleteWithUndo<T> = {
+        id: deletionId,
+        rowId: id,
+        row,
+        rowsBeforeDelete: rows as T[],
+        stableRowOrderBeforeDelete: stableRowOrder,
+        rowModeBeforeDelete: rowModesModel[id],
+        visible: true,
+      };
+
+      setRows((prevRows) => prevRows.filter((currentRow) => String(currentRow.id) !== rowKey));
+      setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
+      setSelectedRowIds((currentSelectedIds) =>
+        currentSelectedIds.filter((selectedId) => String(selectedId) !== rowKey),
+      );
+      setDirtyRowIds((previous) => {
+        const next = new Set(previous);
+        next.delete(rowKey);
+        return next;
+      });
+      setActiveValidationErrors((previous) => {
+        const next = { ...previous };
+        delete next[rowKey];
+        return next;
+      });
+      setRowModesModel((previousModel) => {
+        const next = { ...previousModel };
+        delete next[id];
+        delete next[rowKey];
+        return next;
+      });
+      setError('');
+      setPendingDeleteWithUndo((currentDeletions) => [...currentDeletions, pendingDeletion]);
+
+      const timerId = window.setTimeout(() => {
+        void finalizeDeleteWithUndo(pendingDeletion);
+      }, DELETE_UNDO_DURATION_MS);
+      pendingDeleteTimersRef.current.set(deletionId, timerId);
+      return;
+    }
+
     if (!window.confirm(deleteConfirmMessage)) return;
 
     const numericId = Number(id);
@@ -1106,7 +1265,17 @@ export function EditableDataGrid<T extends EditableRow>({
         setError(deleteErrorMessage);
         console.error('Error deleting data:', err);
       });
-  }, [api, deleteConfirmMessage, deleteErrorMessage]);
+  }, [
+    api,
+    deleteConfirmMessage,
+    deleteErrorMessage,
+    deleteUndoOptions,
+    finalizeDeleteWithUndo,
+    rowModesModel,
+    rows,
+    rowsById,
+    stableRowOrder,
+  ]);
 
   const handleStartRowEdit = useCallback((rowId: GridRowId, field?: string): void => {
     const rowKey = String(rowId);
@@ -1715,6 +1884,19 @@ export function EditableDataGrid<T extends EditableRow>({
           </Menu>
         </Box>
       </Box>
+
+      {deleteUndoOptions ? pendingDeleteWithUndo.map((deletion, index) => (
+        <DeleteUndoSnackbar
+          key={deletion.id}
+          open={deletion.visible}
+          message={deleteUndoOptions.message}
+          undoLabel={t('actions.undo')}
+          offsetIndex={index}
+          testId={deleteUndoOptions.snackbarTestId ?? 'data-grid-delete-snackbar'}
+          onClose={() => closeDeleteWithUndoSnackbar(deletion.id)}
+          onUndo={() => undoDeleteWithUndo(deletion.id)}
+        />
+      )) : null}
 
       {/* Notes Editor Drawer */}
       {notes && notes.fields && notes.fields.length > 0 && (

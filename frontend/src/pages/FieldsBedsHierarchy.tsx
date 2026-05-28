@@ -32,12 +32,15 @@ import type {
   GridRowsProp,
   GridRowModesModel,
 } from "@mui/x-data-grid";
-import { Box, Alert, Button, Snackbar, Typography } from "@mui/material";
+import { Box, Alert } from "@mui/material";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { dataGridSx } from "../components/data-grid/styles";
+import {
+  DeleteUndoSnackbar,
+  DELETE_UNDO_DURATION_MS,
+} from "../components/data-grid";
 import {
   handleRowEditStop,
   handleEditableCellClick,
@@ -134,8 +137,6 @@ const NAME_COLUMN_CELL_HORIZONTAL_PADDING_PX = 20;
 const NAME_COLUMN_BED_TEXT_PADDING_PX = 8;
 const NAME_COLUMN_WIDTH_BUFFER_PX = 2;
 export const NAME_COLUMN_MEASUREMENT_RESERVE_PX = 14;
-const DELETE_UNDO_DURATION_MS = 8000;
-
 export const calculateHierarchyNameColumnWidth = (
   entries: HierarchyNameMeasureEntry[],
   getTextWidth: (entry: HierarchyNameMeasureEntry) => number,
@@ -1694,94 +1695,16 @@ function FieldsBedsHierarchy({
         ) : null}
       </Menu>
       {pendingDeletions.map((deletion, index) => (
-        <Snackbar
+        <DeleteUndoSnackbar
           key={deletion.id}
           open={deletion.visible}
-          autoHideDuration={DELETE_UNDO_DURATION_MS}
-          onClose={(_event, reason) => {
-            if (reason === "clickaway") {
-              return;
-            }
-            closePendingDeletionSnackbar(deletion.id);
-          }}
-          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-          sx={{ mb: index * 7 }}
-        >
-          <Box
-            role="status"
-            aria-live="polite"
-            data-testid="hierarchy-delete-snackbar"
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              width: "min(520px, calc(100vw - 32px))",
-              px: { xs: 1.5, sm: 2 },
-              py: 1.25,
-              borderRadius: 2,
-              border: "1px solid",
-              borderColor: "surface.surfaceSoftBorder",
-              borderLeft: "4px solid",
-              borderLeftColor: "success.main",
-              bgcolor: "surface.surfaceBackground",
-              color: "text.primary",
-              boxShadow: "0 10px 28px rgba(21, 31, 24, 0.16)",
-            }}
-          >
-            <CheckCircleOutlineIcon
-              color="success"
-              fontSize="small"
-              aria-hidden="true"
-              sx={{ flexShrink: 0 }}
-            />
-            <Typography
-              component="span"
-              sx={{
-                flex: "1 1 auto",
-                minWidth: 0,
-                fontSize: "0.92rem",
-                fontWeight: 600,
-                lineHeight: 1.35,
-              }}
-            >
-              {deletion.message}
-            </Typography>
-            <Box
-              aria-hidden="true"
-              sx={{
-                alignSelf: "stretch",
-                width: "1px",
-                bgcolor: "surface.surfaceSoftBorder",
-                display: { xs: "none", sm: "block" },
-              }}
-            />
-            <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-              <Button
-                aria-label={`${t("actions.undo")}: ${deletion.message}`}
-                size="small"
-                variant="text"
-                onClick={() => undoPendingDeletion(deletion.id)}
-                sx={{
-                  minHeight: 36,
-                  px: 1.25,
-                  fontWeight: 700,
-                  color: "primary.main",
-                  textTransform: "none",
-                  "&:hover": {
-                    bgcolor: "action.hover",
-                  },
-                  "&.Mui-focusVisible": {
-                    outline: "2px solid",
-                    outlineColor: "primary.main",
-                    outlineOffset: 2,
-                  },
-                }}
-              >
-                {t("actions.undo")}
-              </Button>
-            </Box>
-          </Box>
-        </Snackbar>
+          message={deletion.message}
+          undoLabel={t("actions.undo")}
+          offsetIndex={index}
+          testId="hierarchy-delete-snackbar"
+          onClose={() => closePendingDeletionSnackbar(deletion.id)}
+          onUndo={() => undoPendingDeletion(deletion.id)}
+        />
       ))}
     </div>
   );

@@ -62,6 +62,7 @@ vi.mock("../components/data-grid", async () => {
     showDeleteAction?: boolean;
     showRowEditActions?: boolean;
     duplicateRow?: (row: Record<string, unknown>) => Record<string, unknown>;
+    deleteUndoOptions?: { message: string; snackbarTestId?: string };
   };
   return {
     ...actual,
@@ -208,6 +209,10 @@ describe("PlantingPlans save-time area validation", () => {
     expect(latestProps).toMatchObject({
       showDeleteAction: false,
       showRowEditActions: false,
+      deleteUndoOptions: {
+        message: "Anbauplan gelöscht",
+        snackbarTestId: "planting-plan-delete-snackbar",
+      },
     });
     expect(latestProps.duplicateRow).toBeTypeOf("function");
     expect(latestProps.duplicateRow({

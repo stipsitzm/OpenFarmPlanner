@@ -2185,6 +2185,10 @@ function PlantingPlans(): React.ReactElement {
           saveErrorMessage={t("plantingPlans:errors.save")}
           deleteErrorMessage={t("plantingPlans:errors.delete")}
           deleteConfirmMessage={t("plantingPlans:confirmDelete")}
+          deleteUndoOptions={{
+            message: t("plantingPlans:messages.deleted"),
+            snackbarTestId: "planting-plan-delete-snackbar",
+          }}
           addButtonLabel={`${t("plantingPlans:addButton")} (Alt+Shift+N)`}
           showDeleteAction={false}
           showFooterEditControls={false}

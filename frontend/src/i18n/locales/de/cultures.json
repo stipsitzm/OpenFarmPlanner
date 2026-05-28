@@ -195,12 +195,20 @@
     "updateSuccess": "Kultur erfolgreich aktualisiert",
     "createError": "Fehler beim Erstellen der Kultur",
     "updateError": "Fehler beim Aktualisieren der Kultur",
+    "deleteError": "Fehler beim Löschen der Kultur",
     "fetchError": "Fehler beim Laden der Kulturen",
     "loadingCultures": "Kulturen werden geladen…",
     "saving": "Speichern...",
     "unsavedChanges": "Ungespeicherte Änderungen",
     "fixErrors": "Bitte beheben Sie die Validierungsfehler",
-    "exportSuccess": "JSON exportiert"
+    "exportSuccess": "JSON exportiert",
+    "deleted": "Kultur gelöscht"
+  },
+  "deleteDialog": {
+    "title": "Kultur löschen?",
+    "description": "Diese Kultur wird nach der Bestätigung aus der Liste entfernt. Du kannst sie anschließend 8 Sekunden lang rückgängig machen.",
+    "variety": "Sorte",
+    "cultivationType": "Anbauart"
   },
   "seedDemand": {
     "title": "Saatgutbedarf",

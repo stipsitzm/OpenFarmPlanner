@@ -103,6 +103,19 @@ import EmptyStateCard from '../components/project/EmptyStateCard';
 import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction } from './requirementFlow';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
+import {
+  DeleteUndoSnackbar,
+  DELETE_UNDO_DURATION_MS,
+} from '../components/data-grid';
+
+interface PendingCultureDeletion {
+  id: string;
+  cultureId: number;
+  culture: Culture;
+  culturesBeforeDelete: Culture[];
+  selectedCultureIdBeforeDelete?: number;
+  visible: boolean;
+}
 
 function Cultures(): React.ReactElement {
   const { t } = useTranslation(['cultures', 'common']);
@@ -135,6 +148,7 @@ function Cultures(): React.ReactElement {
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
   const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
+  const [pendingCultureDeletions, setPendingCultureDeletions] = useState<PendingCultureDeletion[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [historyScope, setHistoryScope] = useState<'culture' | 'global' | 'project'>('culture');
@@ -149,6 +163,7 @@ function Cultures(): React.ReactElement {
   const [enrichAllConfirmOpen, setEnrichAllConfirmOpen] = useState(false);
   const enrichmentLoadingRef = useRef(false);
   const enrichmentAbortControllerRef = useRef<AbortController | null>(null);
+  const pendingCultureDeleteTimersRef = useRef<Map<string, number>>(new Map());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [publicLibraryOpen, setPublicLibraryOpen] = useState(false);
   const [publicLibraryLoading, setPublicLibraryLoading] = useState(false);
@@ -289,6 +304,82 @@ function Cultures(): React.ReactElement {
     setDeleteDialogCulture(culture);
   };
 
+  const removePendingCultureDeletion = useCallback((deletionId: string): void => {
+    setPendingCultureDeletions((currentDeletions) =>
+      currentDeletions.filter((deletion) => deletion.id !== deletionId),
+    );
+  }, []);
+
+  const restorePendingCultureDeletion = useCallback((deletion: PendingCultureDeletion): void => {
+    setCultures((currentCultures) => {
+      if (currentCultures.some((culture) => culture.id === deletion.cultureId)) {
+        return currentCultures;
+      }
+      const currentById = new Map<number, Culture>();
+      currentCultures.forEach((culture) => {
+        if (typeof culture.id === 'number') {
+          currentById.set(culture.id, culture);
+        }
+      });
+      currentById.set(deletion.cultureId, deletion.culture);
+      const restoredCultures = deletion.culturesBeforeDelete
+        .map((culture) => (typeof culture.id === 'number' ? currentById.get(culture.id) : culture))
+        .filter((culture): culture is Culture => Boolean(culture));
+      const restoredIds = new Set(restoredCultures.map((culture) => culture.id));
+      return [
+        ...restoredCultures,
+        ...currentCultures.filter((culture) => !restoredIds.has(culture.id)),
+      ];
+    });
+    if (deletion.selectedCultureIdBeforeDelete === deletion.cultureId) {
+      updateSelectedCultureId(deletion.cultureId, 'internal');
+    }
+  }, [updateSelectedCultureId]);
+
+  const finalizePendingCultureDeletion = useCallback(async (deletion: PendingCultureDeletion): Promise<void> => {
+    pendingCultureDeleteTimersRef.current.delete(deletion.id);
+    removePendingCultureDeletion(deletion.id);
+
+    try {
+      await cultureAPI.delete(deletion.cultureId);
+    } catch (error) {
+      console.error('Error deleting culture:', error);
+      restorePendingCultureDeletion(deletion);
+      showSnackbar(extractApiErrorMessage(error, t, t('messages.deleteError')), 'error');
+    }
+  }, [removePendingCultureDeletion, restorePendingCultureDeletion, showSnackbar, t]);
+
+  const undoPendingCultureDeletion = useCallback((deletionId: string): void => {
+    const deletion = pendingCultureDeletions.find((pendingDeletion) => pendingDeletion.id === deletionId);
+    if (!deletion) {
+      return;
+    }
+
+    const timerId = pendingCultureDeleteTimersRef.current.get(deletionId);
+    if (timerId !== undefined) {
+      window.clearTimeout(timerId);
+      pendingCultureDeleteTimersRef.current.delete(deletionId);
+    }
+
+    restorePendingCultureDeletion(deletion);
+    removePendingCultureDeletion(deletionId);
+  }, [pendingCultureDeletions, removePendingCultureDeletion, restorePendingCultureDeletion]);
+
+  const closePendingCultureDeletionSnackbar = useCallback((deletionId: string): void => {
+    setPendingCultureDeletions((currentDeletions) =>
+      currentDeletions.map((deletion) =>
+        deletion.id === deletionId ? { ...deletion, visible: false } : deletion,
+      ),
+    );
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      pendingCultureDeleteTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      pendingCultureDeleteTimersRef.current.clear();
+    };
+  }, []);
+
   const handleOpenHistory = async () => {
     if (!selectedCulture?.id) {
       return;
@@ -325,23 +416,44 @@ function Cultures(): React.ReactElement {
   };
 
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = () => {
     if (!deleteDialogCulture?.id) {
       return;
     }
 
-    try {
-      await cultureAPI.delete(deleteDialogCulture.id);
-      await fetchCultures();
-      if (selectedCultureId === deleteDialogCulture.id) {
-        updateSelectedCultureId(undefined, 'internal');
-      }
-      showSnackbar(t('messages.updateSuccess'), 'success');
+    const cultureId = deleteDialogCulture.id;
+    if (pendingCultureDeletions.some((deletion) => deletion.cultureId === cultureId)) {
       setDeleteDialogCulture(null);
-    } catch (error) {
-      console.error('Error deleting culture:', error);
-      showSnackbar(extractApiErrorMessage(error, t, t('messages.updateError')), 'error');
+      return;
     }
+
+    const deletionId = `culture-${cultureId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const currentCultures = cultures;
+    const deletedCultureIndex = currentCultures.findIndex((culture) => culture.id === cultureId);
+    const pendingDeletion: PendingCultureDeletion = {
+      id: deletionId,
+      cultureId,
+      culture: deleteDialogCulture,
+      culturesBeforeDelete: currentCultures,
+      selectedCultureIdBeforeDelete: selectedCultureId,
+      visible: true,
+    };
+
+    setCultures((currentItems) => currentItems.filter((culture) => culture.id !== cultureId));
+    if (selectedCultureId === cultureId) {
+      const nextSelectedCulture =
+        currentCultures[deletedCultureIndex + 1] ??
+        currentCultures[deletedCultureIndex - 1] ??
+        null;
+      updateSelectedCultureId(nextSelectedCulture?.id, 'internal');
+    }
+    setDeleteDialogCulture(null);
+    setPendingCultureDeletions((currentDeletions) => [...currentDeletions, pendingDeletion]);
+
+    const timerId = window.setTimeout(() => {
+      void finalizePendingCultureDeletion(pendingDeletion);
+    }, DELETE_UNDO_DURATION_MS);
+    pendingCultureDeleteTimersRef.current.set(deletionId, timerId);
   };
 
   const handleSave = async (culture: Culture) => {
@@ -647,9 +759,20 @@ function Cultures(): React.ReactElement {
 
   useCommandContextTag('cultures');
 
-  const getCultureLabel = useCallback((culture: Culture): string => {
-    return `${culture.name}${culture.variety ? ` – ${culture.variety}` : ''}${culture.seed_supplier ? ` | ${culture.seed_supplier}` : ''}`;
-  }, []);
+  const getCultureCultivationTypeLabel = useCallback((culture: Culture): string | null => {
+    const rawTypes = Array.isArray(culture.cultivation_types) && culture.cultivation_types.length > 0
+      ? culture.cultivation_types
+      : (culture.cultivation_type ? [culture.cultivation_type] : []);
+    const labels = rawTypes
+      .map((type) => normalizeCultivationType(type))
+      .filter((type): type is CultivationType => type === 'direct_sowing' || type === 'pre_cultivation')
+      .map((type) => (
+        type === 'direct_sowing'
+          ? t('form.cultivationTypeDirectSowing')
+          : t('form.cultivationTypePreCultivation')
+      ));
+    return labels.length > 0 ? labels.join(', ') : null;
+  }, [t]);
 
   const goToRelativeCulture = useCallback((direction: 'next' | 'previous') => {
     if (!selectedCultureId || cultures.length === 0) {
@@ -1152,20 +1275,59 @@ function Cultures(): React.ReactElement {
         }}
       />
 
-      <Dialog open={Boolean(deleteDialogCulture)} onClose={() => setDeleteDialogCulture(null)}>
-        <DialogTitle>{t('buttons.delete')}</DialogTitle>
-        <DialogContent>
-          <Typography>
-            {t('buttons.deleteConfirm')}
+      <Dialog
+        open={Boolean(deleteDialogCulture)}
+        onClose={() => setDeleteDialogCulture(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          {t('deleteDialog.title')}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            {t('deleteDialog.description')}
           </Typography>
-          {deleteDialogCulture && (
-            <Typography sx={{ mt: 1, fontWeight: 600 }}>
-              {getCultureLabel(deleteDialogCulture)}
-            </Typography>
-          )}
+          {deleteDialogCulture ? (
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'surface.surfaceSoftBorder',
+                bgcolor: 'surface.surfaceSubtleBackground',
+              }}
+            >
+              <Typography sx={{ fontWeight: 700, mb: 1 }}>
+                {deleteDialogCulture.name}
+              </Typography>
+              <Stack spacing={0.75}>
+                {deleteDialogCulture.variety ? (
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'baseline' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 86 }}>
+                      {t('deleteDialog.variety')}
+                    </Typography>
+                    <Typography variant="body2">{deleteDialogCulture.variety}</Typography>
+                  </Box>
+                ) : null}
+                {getCultureCultivationTypeLabel(deleteDialogCulture) ? (
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'baseline' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 86 }}>
+                      {t('deleteDialog.cultivationType')}
+                    </Typography>
+                    <Typography variant="body2">
+                      {getCultureCultivationTypeLabel(deleteDialogCulture)}
+                    </Typography>
+                  </Box>
+                ) : null}
+              </Stack>
+            </Box>
+          ) : null}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogCulture(null)}>Abbrechen</Button>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+          <Button onClick={() => setDeleteDialogCulture(null)}>
+            {t('common:actions.cancel')}
+          </Button>
           <Button color="error" variant="contained" onClick={handleDeleteConfirm}>
             {t('buttons.delete')}
           </Button>
@@ -1460,6 +1622,18 @@ function Cultures(): React.ReactElement {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      {pendingCultureDeletions.map((deletion, index) => (
+        <DeleteUndoSnackbar
+          key={deletion.id}
+          open={deletion.visible}
+          message={t('messages.deleted')}
+          undoLabel={t('common:actions.undo')}
+          offsetIndex={index}
+          testId="culture-delete-snackbar"
+          onClose={() => closePendingCultureDeletionSnackbar(deletion.id)}
+          onUndo={() => undoPendingCultureDeletion(deletion.id)}
+        />
+      ))}
     </PageContainer>
   );
 }
