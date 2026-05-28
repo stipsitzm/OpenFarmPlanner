@@ -19,11 +19,10 @@ vi.mock('../i18n', () => ({
 
 vi.mock('@mui/x-data-grid', async () => {
   const React = await import('react');
-  const useGridApiRef = vi.fn(() => ({
-    current: {
-      setEditCellValue: vi.fn().mockResolvedValue(true),
-    },
-  }));
+  const createGridApiMockRefValue = () => ({
+    setEditCellValue: vi.fn().mockResolvedValue(true),
+  });
+  const useGridApiRef = vi.fn(() => React.useRef(createGridApiMockRefValue()));
   const GridRowModes = { Edit: 'edit', View: 'view' };
   const GridRowEditStopReasons = {
     rowFocusOut: 'rowFocusOut',
@@ -333,6 +332,7 @@ describe('EditableDataGrid', () => {
       />,
     );
 
+    await screen.findByRole('button', { name: 'Zelle 1-culture' });
     fireEvent.click(await screen.findByLabelText('Neu'));
     const cultureCell = await screen.findByRole('button', { name: 'Zelle -1-culture' });
     fireEvent.click(cultureCell);
@@ -385,8 +385,10 @@ describe('EditableDataGrid', () => {
       />,
     );
 
+    await screen.findByRole('button', { name: 'Zelle 1-culture' });
     fireEvent.click(await screen.findByLabelText('Neu'));
-    fireEvent.click(await screen.findByRole('button', { name: 'Blur speichern -1' }));
+    const saveDraftButton = await screen.findByRole('button', { name: 'Blur speichern -1' });
+    fireEvent.click(saveDraftButton);
 
     expect(await screen.findByText('Folgende Pflichtfelder müssen ausgefüllt werden: Pflanzdatum, Beet')).toBeInTheDocument();
     expect(createSpy).not.toHaveBeenCalled();
