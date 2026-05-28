@@ -1782,24 +1782,25 @@ function FieldsBedsHierarchy({
             : undefined
         }
       >
-        {contextMenuActions.map((action, index) => {
+        {contextMenuActions.flatMap((action, index) => {
           const previousAction = contextMenuActions[index - 1];
           const shouldSeparateGroup = previousAction !== undefined && previousAction.group !== action.group;
-
-          return (
-            <React.Fragment key={action.id}>
-              {shouldSeparateGroup ? <Divider role="separator" /> : null}
-              <MenuItem
-                onClick={() => {
-                  closeContextMenu();
-                  action.onClick();
-                }}
-                sx={{ color: action.color === "error" ? "error.main" : undefined }}
-              >
-                {action.label}
-              </MenuItem>
-            </React.Fragment>
+          const menuItem = (
+            <MenuItem
+              key={action.id}
+              onClick={() => {
+                closeContextMenu();
+                action.onClick();
+              }}
+              sx={{ color: action.color === "error" ? "error.main" : undefined }}
+            >
+              {action.label}
+            </MenuItem>
           );
+
+          return shouldSeparateGroup
+            ? [<Divider key={`${action.id}-divider`} role="separator" />, menuItem]
+            : [menuItem];
         })}
       </Menu>
       {pendingDeletions.map((deletion, index) => (

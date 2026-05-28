@@ -32,6 +32,7 @@ export const i18nMap: Record<string, string> = {
   'errors.deleteField': 'Fehler beim Löschen der Parzelle',
   'errors.saveBed': 'Fehler beim Speichern des Beets',
   'errors.deleteBed': 'Fehler beim Löschen des Beets',
+  'validation.nameRequired': 'Name ist ein Pflichtfeld',
   'hierarchy:columns.length': 'Länge (m)',
   'hierarchy:columns.width': 'Breite (m)',
   'columns.length': 'Länge (m)',

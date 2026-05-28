@@ -236,6 +236,17 @@ const deleteRowViaContextMenu = (row: HTMLElement): void => {
   fireEvent.click(screen.getByRole('menuitem', { name: 'Löschen' }));
 };
 
+const useMultipleLocations = (): void => {
+  locationListMock.mockResolvedValue({
+    data: {
+      results: [
+        { id: 1, name: 'Hofstelle' },
+        { id: 2, name: 'Außenfläche' },
+      ],
+    },
+  });
+};
+
 describe('FieldsBedsHierarchy edit cancellation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -261,6 +272,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
   it('enters inline edit mode when a Standort name is clicked', async () => {
     const user = userEvent.setup();
+    useMultipleLocations();
     renderHierarchy();
 
     await user.click(await screen.findByRole('button', { name: 'Edit location-1' }));
@@ -270,6 +282,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
   it('cancels inline Standort editing with Escape without saving', async () => {
     const user = userEvent.setup();
+    useMultipleLocations();
     renderHierarchy();
 
     await user.click(await screen.findByRole('button', { name: 'Edit location-1' }));
@@ -281,6 +294,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
   it('saves inline Standort name edits through the shared row update flow', async () => {
     const user = userEvent.setup();
+    useMultipleLocations();
     renderHierarchy();
 
     await user.click(await screen.findByRole('button', { name: 'Edit location-1' }));
@@ -294,6 +308,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
   it('keeps Standort name validation consistent with other hierarchy rows', async () => {
     const user = userEvent.setup();
+    useMultipleLocations();
     renderHierarchy();
 
     await user.click(await screen.findByRole('button', { name: 'Edit location-1' }));
@@ -457,6 +472,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
   });
 
   it('opens the same hierarchy actions from right click and the three-dots button', async () => {
+    useMultipleLocations();
     renderHierarchy();
 
     const locationRow = await screen.findByTestId('row-location-1');

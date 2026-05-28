@@ -179,10 +179,8 @@ describe('hierarchy components and behaviors', () => {
         } as never)}
       </>
     );
-    const createPlantingPlanButton = screen.getAllByRole('button', { name: 'Pflanzplan erstellen' })
-      .find((button) => !button.hasAttribute('data-mui-internal-clone-element'));
-    expect(createPlantingPlanButton).toBeDefined();
-    await user.click(createPlantingPlanButton!);
+    const createPlantingPlanButton = screen.getByRole('button', { name: 'Pflanzplan erstellen' });
+    await user.click(createPlantingPlanButton);
     expect(createPlan).toHaveBeenCalledWith(100);
     expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Aktionen' }));
