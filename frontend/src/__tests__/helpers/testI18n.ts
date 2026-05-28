@@ -1,6 +1,9 @@
 export const i18nMap: Record<string, string> = {
   'common:messages.unsavedChanges': 'Ungespeicherte Änderungen',
   'common:messages.validationErrors': 'Validierungsfehler vorhanden',
+  'actions.edit': 'Bearbeiten',
+  'actions.duplicate': 'Duplizieren',
+  'actions.actions': 'Aktionen',
   'common:actions.delete': 'Löschen',
   'common:actions.actions': 'Aktionen',
   'common:fields.notes': 'Notizen',

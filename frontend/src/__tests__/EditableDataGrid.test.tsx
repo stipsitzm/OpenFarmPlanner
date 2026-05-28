@@ -46,6 +46,7 @@ vi.mock('@mui/x-data-grid', async () => {
     onCellClick,
     onCellKeyDown,
     onRowEditStop,
+    rowModesModel,
     slots,
   }: unknown) => {
     const commit = async (row: TestGridRow, reason: string) => {
@@ -61,7 +62,8 @@ vi.mock('@mui/x-data-grid', async () => {
       <div>
         <div data-testid="row-count">{rows.length}</div>
         {rows.map((row: TestGridRow) => (
-          <div key={row.id}>
+          <div key={row.id} role="row" data-id={String(row.id)} data-testid={`row-${row.id}`}>
+            <span data-testid={`mode-${row.id}`}>{rowModesModel?.[row.id]?.mode ?? GridRowModes.View}</span>
             {columns.map((col: GridColDef) => {
               if (typeof col.getActions === 'function') {
                 return (
@@ -315,5 +317,98 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'actions.save' })).toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: /Tab speichern 1/i }));
     await waitFor(() => expect(updateSpy).toHaveBeenCalled());
+  });
+
+  it('opens contextual row actions without rendering a permanent action column', async () => {
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        showRowEditActions={false}
+        duplicateRow={(row) => ({ ...row, id: -2, isNew: true })}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Löschen' })).not.toBeInTheDocument();
+
+    fireEvent.contextMenu(screen.getByTestId('row-1'));
+
+    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Duplizieren' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+  });
+
+  it('shows a compact keyboard-accessible contextual action trigger on row hover', async () => {
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        showRowEditActions={false}
+        duplicateRow={(row) => ({ ...row, id: -2, isNew: true })}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.mouseMove(screen.getByTestId('row-1'));
+
+    expect(screen.getByRole('button', { name: 'Aktionen' })).toBeInTheDocument();
+  });
+
+  it('duplicates a row from the contextual menu and starts editing the copy', async () => {
+    const user = userEvent.setup();
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        showRowEditActions={false}
+        duplicateRow={(row) => ({ ...row, id: -2, isNew: true })}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('1'));
+    fireEvent.contextMenu(screen.getByTestId('row-1'));
+    await user.click(screen.getByRole('menuitem', { name: 'Duplizieren' }));
+
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('2'));
+    expect(screen.getByTestId('mode--2')).toHaveTextContent('edit');
+  });
+
+  it('runs delete from the contextual row action menu', async () => {
+    const user = userEvent.setup();
+    const props = baseProps();
+    const deleteSpy = vi.spyOn(props.api, 'delete');
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        showRowEditActions={false}
+        duplicateRow={(row) => ({ ...row, id: -2, isNew: true })}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.contextMenu(screen.getByTestId('row-1'));
+    await user.click(screen.getByRole('menuitem', { name: 'Löschen' }));
+
+    await waitFor(() => expect(deleteSpy).toHaveBeenCalledWith(1));
+  });
+
+  it('keeps inline editing available when contextual actions are enabled', async () => {
+    const user = userEvent.setup();
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        showRowEditActions={false}
+        duplicateRow={(row) => ({ ...row, id: -2, isNew: true })}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
+
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
   });
 });

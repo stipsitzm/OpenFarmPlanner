@@ -3,6 +3,7 @@
   "actions": {
     "add": "Hinzufügen",
     "edit": "Bearbeiten",
+    "duplicate": "Duplizieren",
     "delete": "Löschen",
     "save": "Speichern",
     "saveRow": "Zeile speichern",

@@ -9,6 +9,8 @@ export type {
   EditableRow, 
   DataGridAPI, 
   EditableDataGridProps,
+  EditableDataGridRowAction,
+  EditableDataGridRowActionHelpers,
   NotesFieldConfig,
   EditableDataGridCommandApi,
 } from './DataGrid';

@@ -21,6 +21,7 @@ const commandApiSpies = vi.hoisted(() => ({
   setDraftValues: vi.fn(),
   saveAttemptResult: vi.fn(),
   apiPayload: vi.fn(),
+  gridProps: vi.fn(),
 }));
 
 vi.mock("../hooks/useProjectRequirement", () => ({
@@ -58,10 +59,15 @@ vi.mock("../components/data-grid", async () => {
     onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean }) => void;
     onBeforeSaveRow?: (row: Record<string, unknown>) => boolean | Record<string, unknown>;
     commandApiRef?: { current: EditableDataGridCommandApi | null };
+    showDeleteAction?: boolean;
+    showRowEditActions?: boolean;
+    duplicateRow?: (row: Record<string, unknown>) => Record<string, unknown>;
   };
   return {
     ...actual,
-    EditableDataGrid: ({ api, mapToRow, mapToApiData, onRowsStateChange, onLoadStateChange, onBeforeSaveRow, commandApiRef }: MockGridProps) => {
+    EditableDataGrid: (props: MockGridProps) => {
+      const { api, mapToRow, mapToApiData, onRowsStateChange, onLoadStateChange, onBeforeSaveRow, commandApiRef } = props;
+      commandApiSpies.gridProps(props);
       if (commandApiRef) {
         commandApiRef.current = {
           addRow: vi.fn(),
@@ -192,6 +198,35 @@ describe("PlantingPlans save-time area validation", () => {
     apiMocks.fieldList.mockResolvedValue({ data: { results: [{ id: 11, name: "Parzelle 1", location: 1 }] } });
     apiMocks.bedList.mockResolvedValue({ data: { results: [{ id: 101, name: "Beet A", field: 11, area_sqm: 1 }] } });
     apiMocks.planList.mockResolvedValue({ data: { results: [] } });
+  });
+
+  it("uses contextual row actions instead of permanent action columns", async () => {
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+
+    const latestProps = commandApiSpies.gridProps.mock.calls.at(-1)?.[0];
+    expect(latestProps).toMatchObject({
+      showDeleteAction: false,
+      showRowEditActions: false,
+    });
+    expect(latestProps.duplicateRow).toBeTypeOf("function");
+    expect(latestProps.duplicateRow({
+      id: 9,
+      bed: 101,
+      culture: 2,
+      planting_date: "2026-04-01",
+      area_m2: 3,
+      notes: "Notiz",
+    })).toMatchObject({
+      bed: 101,
+      culture: 2,
+      planting_date: "2026-04-01",
+      area_m2: 3,
+      notes: "Notiz",
+      isNew: true,
+      __draft: true,
+      note_attachment_count: 0,
+    });
   });
 
   it("shows bed-limit dialog when requested area exceeds bed area", async () => {

@@ -29,11 +29,14 @@ import {
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRowParams, GridFilterOperator } from '@mui/x-data-grid';
-import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery } from '@mui/material';
+import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
 import { useTranslation } from '../../i18n';
@@ -66,6 +69,21 @@ export interface EditableDataGridCommandApi {
   getSelectedRowId: () => GridRowId | null;
   setDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => void;
   reload: () => Promise<void>;
+}
+
+export interface EditableDataGridRowActionHelpers<T extends EditableRow> {
+  startEdit: (rowId: GridRowId, field?: string) => void;
+  duplicate: (row: T) => void;
+  delete: (rowId: GridRowId) => void;
+}
+
+export interface EditableDataGridRowAction<T extends EditableRow> {
+  id: string;
+  label: string;
+  icon?: React.ReactElement;
+  color?: 'default' | 'error' | 'primary';
+  onClick: (row: T, helpers: EditableDataGridRowActionHelpers<T>) => void;
+  disabled?: boolean;
 }
 export interface NotesFieldConfig {
   field: string;
@@ -102,6 +120,8 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showAddAction?: boolean;
   showFooterEditControls?: boolean;
   showRowEditActions?: boolean;
+  getRowActions?: (row: T, helpers: EditableDataGridRowActionHelpers<T>) => EditableDataGridRowAction<T>[];
+  duplicateRow?: (row: T) => T;
   onRowsStateChange?: (rows: T[]) => void;
   onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean; error: string }) => void;
   onBeforeSaveRow?: (row: T) => boolean | Partial<T>;
@@ -270,6 +290,8 @@ export function EditableDataGrid<T extends EditableRow>({
   showAddAction = true,
   showFooterEditControls = true,
   showRowEditActions = false,
+  getRowActions,
+  duplicateRow,
   onRowsStateChange,
   onLoadStateChange,
   onBeforeSaveRow,
@@ -292,7 +314,16 @@ export function EditableDataGrid<T extends EditableRow>({
   const [selectedRowIds, setSelectedRowIds] = useState<GridRowId[]>([]);
   const [dirtyRowIds, setDirtyRowIds] = useState<Set<string>>(new Set());
   const [activeValidationErrors, setActiveValidationErrors] = useState<Record<string, Record<string, string>>>({});
+  const [hoveredActionRowId, setHoveredActionRowId] = useState<GridRowId | null>(null);
+  const [rowActionButtonPosition, setRowActionButtonPosition] = useState<{ top: number } | null>(null);
+  const [rowActionMenuState, setRowActionMenuState] = useState<{
+    rowId: GridRowId;
+    anchorEl?: HTMLElement;
+    mouseX?: number;
+    mouseY?: number;
+  } | null>(null);
   const rowSnapshotRef = useRef<Map<string, T>>(new Map());
+  const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery('(max-width:900px)');
   
   const { t } = useTranslation('common');
@@ -1053,7 +1084,7 @@ export function EditableDataGrid<T extends EditableRow>({
   /**
    * Handle row deletion
    */
-  const handleDeleteClick = (id: GridRowId) => (): void => {
+  const handleDeleteClick = useCallback((id: GridRowId) => (): void => {
     if (!window.confirm(deleteConfirmMessage)) return;
 
     const numericId = Number(id);
@@ -1075,7 +1106,127 @@ export function EditableDataGrid<T extends EditableRow>({
         setError(deleteErrorMessage);
         console.error('Error deleting data:', err);
       });
+  }, [api, deleteConfirmMessage, deleteErrorMessage]);
+
+  const handleStartRowEdit = useCallback((rowId: GridRowId, field?: string): void => {
+    const rowKey = String(rowId);
+    if (!rowSnapshotRef.current.has(rowKey)) {
+      const row = rowsById.get(rowKey);
+      if (row) {
+        rowSnapshotRef.current.set(rowKey, row as T);
+      }
+    }
+
+    const fieldToFocus = field ?? columns.find((column) => column.editable !== false)?.field ?? columns[0]?.field;
+    setRowModesModel((oldModel) => ({
+      ...oldModel,
+      [rowId]: { mode: GridRowModes.Edit, fieldToFocus },
+    }));
+  }, [columns, rowsById]);
+
+  const handleDuplicateRow = useCallback((row: T): void => {
+    if (!duplicateRow) {
+      return;
+    }
+
+    const duplicatedRow = duplicateRow(row);
+    setRows((previousRows) => [duplicatedRow, ...previousRows]);
+    setStableRowOrder((previousOrder) => [duplicatedRow.id, ...previousOrder]);
+    setDirtyRowIds((previous) => {
+      const next = new Set(previous);
+      next.add(String(duplicatedRow.id));
+      return next;
+    });
+    setRowModesModel((oldModel) => ({
+      ...oldModel,
+      [duplicatedRow.id]: { mode: GridRowModes.Edit, fieldToFocus: columns[0]?.field },
+    }));
+  }, [columns, duplicateRow]);
+
+  const rowActionHelpers = useMemo<EditableDataGridRowActionHelpers<T>>(() => ({
+    startEdit: handleStartRowEdit,
+    duplicate: handleDuplicateRow,
+    delete: (rowId: GridRowId) => handleDeleteClick(rowId)(),
+  }), [handleDeleteClick, handleDuplicateRow, handleStartRowEdit]);
+
+  const defaultRowActions = useCallback((row: T): EditableDataGridRowAction<T>[] => {
+    const actions: EditableDataGridRowAction<T>[] = [
+      {
+        id: 'edit',
+        label: t('actions.edit'),
+        icon: <EditIcon fontSize="small" />,
+        onClick: (_row, helpers) => helpers.startEdit(row.id),
+      },
+    ];
+
+    if (duplicateRow) {
+      actions.push({
+        id: 'duplicate',
+        label: t('actions.duplicate'),
+        icon: <ContentCopyIcon fontSize="small" />,
+        onClick: (targetRow, helpers) => helpers.duplicate(targetRow),
+      });
+    }
+
+    actions.push({
+      id: 'delete',
+      label: t('actions.delete'),
+      icon: <DeleteIcon fontSize="small" />,
+      color: 'error',
+      onClick: (_row, helpers) => helpers.delete(row.id),
+    });
+
+    return actions;
+  }, [duplicateRow, t]);
+
+  const resolveRowActions = useCallback((row: T): EditableDataGridRowAction<T>[] => {
+    return getRowActions ? getRowActions(row, rowActionHelpers) : defaultRowActions(row);
+  }, [defaultRowActions, getRowActions, rowActionHelpers]);
+
+  const getRowIdFromElement = (target: EventTarget | null): GridRowId | null => {
+    if (!(target instanceof HTMLElement)) {
+      return null;
+    }
+    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
+    return rowElement?.dataset.id ?? null;
   };
+
+  const updateRowActionButtonPosition = useCallback((rowId: GridRowId): void => {
+    const surface = gridSurfaceRef.current;
+    const rowElement = surface?.querySelector<HTMLElement>(`[role="row"][data-id="${String(rowId)}"]`);
+    if (!surface || !rowElement) {
+      setRowActionButtonPosition(null);
+      return;
+    }
+    const surfaceRect = surface.getBoundingClientRect();
+    const rowRect = rowElement.getBoundingClientRect();
+    setRowActionButtonPosition({
+      top: rowRect.top - surfaceRect.top + rowRect.height / 2,
+    });
+  }, []);
+
+  const openRowActionMenu = useCallback((rowId: GridRowId, anchor: HTMLElement): void => {
+    setHoveredActionRowId(rowId);
+    updateRowActionButtonPosition(rowId);
+    setRowActionMenuState({ rowId, anchorEl: anchor });
+  }, [updateRowActionButtonPosition]);
+
+  const openRowActionContextMenu = useCallback((rowId: GridRowId, event: React.MouseEvent): void => {
+    event.preventDefault();
+    setSelectedRowIds([rowId]);
+    setHoveredActionRowId(rowId);
+    updateRowActionButtonPosition(rowId);
+    setRowActionMenuState({ rowId, mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
+  }, [updateRowActionButtonPosition]);
+
+  const closeRowActionMenu = useCallback((): void => {
+    setRowActionMenuState(null);
+  }, []);
+
+  const activeRowForActions = hoveredActionRowId === null ? null : rowsById.get(String(hoveredActionRowId)) as T | undefined;
+  const menuRow = rowActionMenuState ? rowsById.get(String(rowActionMenuState.rowId)) as T | undefined : undefined;
+  const menuActions = menuRow ? resolveRowActions(menuRow) : [];
+  const hasContextualRowActions = Boolean(getRowActions || duplicateRow);
 
   /**
    * Custom footer component with add button
@@ -1312,7 +1463,40 @@ export function EditableDataGrid<T extends EditableRow>({
         }}
       >
         <Box
+          ref={gridSurfaceRef}
+          onMouseMove={hasContextualRowActions ? (event) => {
+            const rowId = getRowIdFromElement(event.target);
+            if (rowId === null || !rowsById.has(String(rowId))) {
+              return;
+            }
+            if (String(rowId) !== String(hoveredActionRowId)) {
+              setHoveredActionRowId(rowId);
+            }
+            updateRowActionButtonPosition(rowId);
+          } : undefined}
+          onMouseLeave={hasContextualRowActions ? () => {
+            if (!rowActionMenuState) {
+              setHoveredActionRowId(null);
+              setRowActionButtonPosition(null);
+            }
+          } : undefined}
+          onFocusCapture={hasContextualRowActions ? (event) => {
+            const rowId = getRowIdFromElement(event.target);
+            if (rowId === null || !rowsById.has(String(rowId))) {
+              return;
+            }
+            setHoveredActionRowId(rowId);
+            updateRowActionButtonPosition(rowId);
+          } : undefined}
+          onContextMenu={hasContextualRowActions ? (event) => {
+            const rowId = getRowIdFromElement(event.target);
+            if (rowId === null || !rowsById.has(String(rowId))) {
+              return;
+            }
+            openRowActionContextMenu(rowId, event);
+          } : undefined}
           sx={{
+            position: 'relative',
             display: 'block',
             width: isContentSizedSurface ? 'fit-content' : '100%',
             minWidth: isContentSizedSurface ? 0 : '100%',
@@ -1455,6 +1639,80 @@ export function EditableDataGrid<T extends EditableRow>({
           localeText={germanDataGridLocaleText}
           apiRef={gridApiRef}
           />
+          {hasContextualRowActions && activeRowForActions && rowActionButtonPosition && resolveRowActions(activeRowForActions).length > 0 ? (
+            <Tooltip title={t('actions.actions')}>
+              <IconButton
+                size="small"
+                aria-label={t('actions.actions')}
+                onClick={(event) => openRowActionMenu(activeRowForActions.id, event.currentTarget)}
+                onKeyDown={(event) => {
+                  if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openRowActionMenu(activeRowForActions.id, event.currentTarget);
+                  }
+                }}
+                sx={{
+                  position: 'absolute',
+                  top: rowActionButtonPosition.top,
+                  right: 8,
+                  transform: 'translateY(-50%)',
+                  width: 30,
+                  height: 30,
+                  bgcolor: 'surface.surfaceBackground',
+                  border: '1px solid',
+                  borderColor: 'surface.surfaceSoftBorder',
+                  boxShadow: '0 2px 8px rgba(21, 31, 24, 0.12)',
+                  '&:hover': {
+                    bgcolor: 'action.hover',
+                  },
+                  '&.Mui-focusVisible': {
+                    outline: '2px solid',
+                    outlineColor: 'primary.main',
+                    outlineOffset: 2,
+                  },
+                }}
+              >
+                <MoreVertIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : null}
+          <Menu
+            open={Boolean(rowActionMenuState)}
+            onClose={closeRowActionMenu}
+            anchorEl={rowActionMenuState?.anchorEl}
+            anchorReference={(rowActionMenuState?.anchorEl ? 'anchorEl' : 'anchorPosition') as 'anchorEl' | 'anchorPosition'}
+            anchorPosition={
+              rowActionMenuState?.mouseX !== undefined && rowActionMenuState?.mouseY !== undefined
+                ? { left: rowActionMenuState.mouseX, top: rowActionMenuState.mouseY }
+                : undefined
+            }
+          >
+            {menuActions.map((action) => (
+              <MenuItem
+                key={action.id}
+                disabled={action.disabled}
+                onClick={() => {
+                  if (!menuRow) {
+                    return;
+                  }
+                  closeRowActionMenu();
+                  action.onClick(menuRow, rowActionHelpers);
+                }}
+              >
+                {action.icon ? (
+                  <ListItemIcon sx={{ color: action.color === 'error' ? 'error.main' : undefined }}>
+                    {action.icon}
+                  </ListItemIcon>
+                ) : null}
+                <ListItemText
+                  primary={action.label}
+                  primaryTypographyProps={{
+                    color: action.color === 'error' ? 'error.main' : 'text.primary',
+                  }}
+                />
+              </MenuItem>
+            ))}
+          </Menu>
         </Box>
       </Box>
 

@@ -2186,9 +2186,16 @@ function PlantingPlans(): React.ReactElement {
           deleteErrorMessage={t("plantingPlans:errors.delete")}
           deleteConfirmMessage={t("plantingPlans:confirmDelete")}
           addButtonLabel={`${t("plantingPlans:addButton")} (Alt+Shift+N)`}
-          showDeleteAction={true}
+          showDeleteAction={false}
           showFooterEditControls={false}
-          showRowEditActions={true}
+          showRowEditActions={false}
+          duplicateRow={(row) => ({
+            ...row,
+            id: -Date.now(),
+            isNew: true,
+            __draft: true,
+            note_attachment_count: 0,
+          })}
           tableKey="plantingPlans"
           defaultSortModel={[{ field: "planting_date", sort: "asc" }]}
           persistSortInUrl={true}
