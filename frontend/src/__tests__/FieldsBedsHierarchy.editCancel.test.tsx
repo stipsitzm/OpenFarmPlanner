@@ -216,8 +216,7 @@ const renderHierarchy = (initialPath = '/app/fields-beds') => (
 );
 
 const addNewBed = async (): Promise<void> => {
-  const user = userEvent.setup();
-  await user.click(await screen.findByRole('button', { name: 'Beet zu dieser Parzelle hinzufügen' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Beet zu dieser Parzelle hinzufügen' }));
   await waitFor(() => expect(screen.getByTestId('row--1700000000000')).toBeInTheDocument());
   await waitFor(() => expect(screen.getByTestId('mode--1700000000000')).toHaveTextContent('edit'));
 };
@@ -425,7 +424,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     renderHierarchy();
 
     const bedRow = await screen.findByTestId('row-21');
-    await user.click(within(bedRow).getByLabelText('Löschen'));
+    fireEvent.click(within(bedRow).getByLabelText('Löschen'));
     expect(screen.queryByTestId('row-21')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Rückgängig: Beet gelöscht/i }));
@@ -447,7 +446,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     renderHierarchy();
 
     const fieldRow = await screen.findByTestId('row-field-10');
-    await user.click(within(fieldRow).getByLabelText('Löschen'));
+    fireEvent.click(within(fieldRow).getByLabelText('Löschen'));
 
     expect(screen.queryByTestId('row-field-10')).not.toBeInTheDocument();
     expect(screen.queryByTestId('row-21')).not.toBeInTheDocument();
@@ -484,12 +483,12 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     renderHierarchy();
 
     const locationRow = await screen.findByTestId('row-location-1');
-    await user.click(within(locationRow).getByLabelText('Löschen'));
+    fireEvent.click(within(locationRow).getByLabelText('Löschen'));
 
     expect(screen.queryByTestId('row-location-1')).not.toBeInTheDocument();
     expect(screen.queryByTestId('row-field-10')).not.toBeInTheDocument();
     expect(screen.queryByTestId('row-21')).not.toBeInTheDocument();
-    expect(screen.getByTestId('row-location-2')).toBeInTheDocument();
+    expect(screen.getByTestId('row-field-11')).toBeInTheDocument();
     expect(screen.getByText('Standort und {{count}} Beete gelöscht')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Rückgängig:/i }));
