@@ -351,6 +351,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const [dirtyRowIds, setDirtyRowIds] = useState<Set<string>>(new Set());
   const [activeValidationErrors, setActiveValidationErrors] = useState<Record<string, Record<string, string>>>({});
   const [hoveredActionRowId, setHoveredActionRowId] = useState<GridRowId | null>(null);
+  const [rowActionButtonPosition, setRowActionButtonPosition] = useState<{ top: number } | null>(null);
   const [longPressFeedbackRowId, setLongPressFeedbackRowId] = useState<GridRowId | null>(null);
   const [rowActionMenuState, setRowActionMenuState] = useState<{
     rowId: GridRowId;
@@ -363,6 +364,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const rowActionLongPressTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const rowSnapshotRef = useRef<Map<string, T>>(new Map());
   const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const rowActionRailRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery('(max-width:900px)');
   
   const { t } = useTranslation('common');
@@ -1093,6 +1095,7 @@ export function EditableDataGrid<T extends EditableRow>({
     });
     rowSnapshotRef.current.delete(rowKey);
     setHoveredActionRowId((currentRowId) => (String(currentRowId) === rowKey ? null : currentRowId));
+    setRowActionButtonPosition(null);
     setLongPressFeedbackRowId((currentRowId) => (String(currentRowId) === rowKey ? null : currentRowId));
     setRowActionMenuState((currentState) =>
       currentState && String(currentState.rowId) === rowKey ? null : currentState,
@@ -1441,17 +1444,34 @@ export function EditableDataGrid<T extends EditableRow>({
     return rowElement?.dataset.id ?? null;
   };
 
+  const updateRowActionButtonPosition = useCallback((rowId: GridRowId): void => {
+    const surface = gridSurfaceRef.current;
+    const rail = rowActionRailRef.current;
+    const rowElement = surface?.querySelector<HTMLElement>(`[role="row"][data-id="${String(rowId)}"]`);
+    if (!surface || !rail || !rowElement) {
+      setRowActionButtonPosition(null);
+      return;
+    }
+    const railRect = rail.getBoundingClientRect();
+    const rowRect = rowElement.getBoundingClientRect();
+    setRowActionButtonPosition({
+      top: rowRect.top - railRect.top + rowRect.height / 2,
+    });
+  }, []);
+
   const openRowActionMenu = useCallback((rowId: GridRowId, anchor: HTMLElement): void => {
     setHoveredActionRowId(rowId);
+    updateRowActionButtonPosition(rowId);
     setRowActionMenuState({ rowId, anchorEl: anchor });
-  }, []);
+  }, [updateRowActionButtonPosition]);
 
   const openRowActionContextMenu = useCallback((rowId: GridRowId, event: React.MouseEvent): void => {
     event.preventDefault();
     setSelectedRowIds([rowId]);
     setHoveredActionRowId(rowId);
+    updateRowActionButtonPosition(rowId);
     setRowActionMenuState({ rowId, mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
-  }, []);
+  }, [updateRowActionButtonPosition]);
 
   const closeRowActionMenu = useCallback((): void => {
     setRowActionMenuState(null);
@@ -1461,6 +1481,8 @@ export function EditableDataGrid<T extends EditableRow>({
   const menuRow = rowActionMenuState ? rowsById.get(String(rowActionMenuState.rowId)) as T | undefined : undefined;
   const menuActions = menuRow ? resolveRowActions(menuRow) : [];
   const hasContextualRowActions = Boolean(getRowActions || duplicateRow);
+  const activeRowForActions = hoveredActionRowId === null ? null : rowsById.get(String(hoveredActionRowId)) as T | undefined;
+  const activeRowActions = activeRowForActions ? resolveRowActions(activeRowForActions) : [];
 
   const clearRowActionLongPressTimer = useCallback((): void => {
     if (rowActionLongPressTimerRef.current === null) {
@@ -1483,11 +1505,12 @@ export function EditableDataGrid<T extends EditableRow>({
     rowActionLongPressTimerRef.current = window.setTimeout(() => {
       setSelectedRowIds([rowId]);
       setHoveredActionRowId(rowId);
+      updateRowActionButtonPosition(rowId);
       setLongPressFeedbackRowId(rowId);
       setRowActionMenuState({ rowId, mouseX: touch.clientX + 2, mouseY: touch.clientY - 6 });
       rowActionLongPressTimerRef.current = null;
     }, ROW_ACTION_LONG_PRESS_MS);
-  }, [clearRowActionLongPressTimer, hasContextualRowActions, rowsById]);
+  }, [clearRowActionLongPressTimer, hasContextualRowActions, rowsById, updateRowActionButtonPosition]);
 
   const handleGridTouchMove = useCallback((): void => {
     clearRowActionLongPressTimer();
@@ -1667,75 +1690,6 @@ export function EditableDataGrid<T extends EditableRow>({
           },
         ]
       : []),
-    ...(hasContextualRowActions
-      ? [
-          {
-            field: ROW_ACTIONS_COLUMN_FIELD,
-            headerName: '',
-            sortable: false,
-            filterable: false,
-            disableColumnMenu: true,
-            editable: false,
-            resizable: false,
-            width: ROW_ACTIONS_COLUMN_WIDTH,
-            minWidth: ROW_ACTIONS_COLUMN_WIDTH,
-            maxWidth: ROW_ACTIONS_COLUMN_WIDTH,
-            align: 'center' as const,
-            headerAlign: 'center' as const,
-            cellClassName: 'ofp-row-actions-column ofp-row-actions-cell',
-            headerClassName: 'ofp-row-actions-column ofp-row-actions-header',
-            renderCell: (params: GridCellParams<T>) => {
-              const row = params.row as T;
-              if (resolveRowActions(row).length === 0) {
-                return null;
-              }
-
-              return (
-                <Tooltip title={t('actions.actions')}>
-                  <IconButton
-                    className="ofp-row-actions-trigger"
-                    size="small"
-                    aria-label={t('actions.actions')}
-                    tabIndex={isMobile ? -1 : 0}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openRowActionMenu(row.id, event.currentTarget);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        openRowActionMenu(row.id, event.currentTarget);
-                      }
-                    }}
-                    sx={{
-                      width: 30,
-                      height: 30,
-                      color: 'text.secondary',
-                      transition: 'opacity 120ms ease-in-out, background-color 120ms ease-in-out, color 120ms ease-in-out',
-                      opacity: 0,
-                      pointerEvents: 'none',
-                      '&:hover': {
-                        color: 'text.primary',
-                        bgcolor: 'action.hover',
-                      },
-                      '&.Mui-focusVisible': {
-                        opacity: 1,
-                        pointerEvents: 'auto',
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: 1,
-                      },
-                    }}
-                  >
-                    <MoreVertIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              );
-            },
-          },
-        ]
-      : []),
   ];
 
   const getNotesDrawerTitle = (): string => {
@@ -1794,59 +1748,77 @@ export function EditableDataGrid<T extends EditableRow>({
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
       <Box
-        onKeyDownCapture={handleGridEditNavigation}
         sx={{
           width: '100%',
           maxWidth: '100%',
-          overflowX: 'auto',
-          overflowY: 'visible',
           display: 'flex',
-          justifyContent: shouldUseCompactContainer || isContentSizedSurface ? 'center' : 'flex-start',
+          alignItems: 'stretch',
+          justifyContent: 'center',
+          minWidth: 0,
         }}
       >
         <Box
-          ref={gridSurfaceRef}
-          onMouseMove={hasContextualRowActions ? (event) => {
-            const rowId = getRowIdFromElement(event.target);
-            if (rowId === null || !rowsById.has(String(rowId))) {
-              return;
-            }
-            if (String(rowId) !== String(hoveredActionRowId)) {
-              setHoveredActionRowId(rowId);
-            }
-          } : undefined}
-          onMouseLeave={hasContextualRowActions ? () => {
-            if (!rowActionMenuState) {
-              setHoveredActionRowId(null);
-            }
-          } : undefined}
-          onFocusCapture={hasContextualRowActions ? (event) => {
-            const rowId = getRowIdFromElement(event.target);
-            if (rowId === null || !rowsById.has(String(rowId))) {
-              return;
-            }
-            setHoveredActionRowId(rowId);
-          } : undefined}
-          onContextMenu={hasContextualRowActions ? (event) => {
-            const rowId = getRowIdFromElement(event.target);
-            if (rowId === null || !rowsById.has(String(rowId))) {
-              return;
-            }
-            openRowActionContextMenu(rowId, event);
-          } : undefined}
-          onTouchStart={hasContextualRowActions ? handleGridTouchStart : undefined}
-          onTouchMove={hasContextualRowActions ? handleGridTouchMove : undefined}
-          onTouchEnd={hasContextualRowActions ? handleGridTouchEnd : undefined}
-          onTouchCancel={hasContextualRowActions ? handleGridTouchEnd : undefined}
+          onKeyDownCapture={handleGridEditNavigation}
           sx={{
-            position: 'relative',
-            display: 'block',
-            width: isContentSizedSurface ? 'fit-content' : '100%',
-            minWidth: isContentSizedSurface ? 0 : '100%',
-            maxWidth: '100%',
+            flex: '1 1 auto',
+            minWidth: 0,
+            maxWidth: hasContextualRowActions ? `calc(100% - ${ROW_ACTIONS_COLUMN_WIDTH}px)` : '100%',
+            overflowX: 'auto',
+            overflowY: 'visible',
+            display: 'flex',
+            justifyContent: shouldUseCompactContainer || isContentSizedSurface ? 'center' : 'flex-start',
           }}
         >
-          <DataGrid
+          <Box
+            ref={gridSurfaceRef}
+            onMouseMove={hasContextualRowActions ? (event) => {
+              const rowId = getRowIdFromElement(event.target);
+              if (rowId === null || !rowsById.has(String(rowId))) {
+                return;
+              }
+              if (String(rowId) !== String(hoveredActionRowId)) {
+                setHoveredActionRowId(rowId);
+              }
+              updateRowActionButtonPosition(rowId);
+            } : undefined}
+            onMouseLeave={hasContextualRowActions ? (event) => {
+              if (!rowActionMenuState) {
+                const nextTarget = event.relatedTarget;
+                if (nextTarget instanceof Node && rowActionRailRef.current?.contains(nextTarget)) {
+                  return;
+                }
+                setHoveredActionRowId(null);
+                setRowActionButtonPosition(null);
+              }
+            } : undefined}
+            onFocusCapture={hasContextualRowActions ? (event) => {
+              const rowId = getRowIdFromElement(event.target);
+              if (rowId === null || !rowsById.has(String(rowId))) {
+                return;
+              }
+              setHoveredActionRowId(rowId);
+              updateRowActionButtonPosition(rowId);
+            } : undefined}
+            onContextMenu={hasContextualRowActions ? (event) => {
+              const rowId = getRowIdFromElement(event.target);
+              if (rowId === null || !rowsById.has(String(rowId))) {
+                return;
+              }
+              openRowActionContextMenu(rowId, event);
+            } : undefined}
+            onTouchStart={hasContextualRowActions ? handleGridTouchStart : undefined}
+            onTouchMove={hasContextualRowActions ? handleGridTouchMove : undefined}
+            onTouchEnd={hasContextualRowActions ? handleGridTouchEnd : undefined}
+            onTouchCancel={hasContextualRowActions ? handleGridTouchEnd : undefined}
+            sx={{
+              position: 'relative',
+              display: 'block',
+              width: isContentSizedSurface ? 'fit-content' : '100%',
+              minWidth: isContentSizedSurface ? 0 : '100%',
+              maxWidth: '100%',
+            }}
+          >
+            <DataGrid
           rows={rowsForGrid}
           columns={columnsWithActions}
           rowModesModel={rowModesModel}
@@ -1874,32 +1846,6 @@ export function EditableDataGrid<T extends EditableRow>({
             width: isContentSizedSurface ? 'fit-content' : '100%',
             minWidth: isContentSizedSurface ? 0 : '100%',
             display: isContentSizedSurface ? 'inline-block' : 'block',
-            '& .ofp-row-actions-column': {
-              position: 'sticky',
-              right: 0,
-              zIndex: 3,
-              bgcolor: 'background.paper',
-              borderLeft: '1px solid',
-              borderLeftColor: 'divider',
-              boxShadow: '-6px 0 10px -10px rgba(21, 31, 24, 0.45)',
-            },
-            '& .ofp-row-actions-header': {
-              zIndex: 5,
-            },
-            '& .ofp-row-actions-cell': {
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              px: 0,
-            },
-            '& .MuiDataGrid-row:hover .ofp-row-actions-trigger, & .MuiDataGrid-row:focus-within .ofp-row-actions-trigger': {
-              opacity: isMobile ? 0 : 1,
-              pointerEvents: isMobile ? 'none' : 'auto',
-            },
-            '& .ofp-row-actions-trigger.Mui-focusVisible': {
-              opacity: 1,
-              pointerEvents: 'auto',
-            },
             '& .MuiDataGrid-row.ofp-row-long-press .MuiDataGrid-cell': {
               bgcolor: 'action.selected',
             },
@@ -2018,45 +1964,117 @@ export function EditableDataGrid<T extends EditableRow>({
           localeText={germanDataGridLocaleText}
           apiRef={gridApiRef}
           />
-          <Menu
-            open={Boolean(rowActionMenuState)}
-            onClose={closeRowActionMenu}
-            anchorEl={rowActionMenuState?.anchorEl}
-            anchorReference={(rowActionMenuState?.anchorEl ? 'anchorEl' : 'anchorPosition') as 'anchorEl' | 'anchorPosition'}
-            anchorPosition={
-              rowActionMenuState?.mouseX !== undefined && rowActionMenuState?.mouseY !== undefined
-                ? { left: rowActionMenuState.mouseX, top: rowActionMenuState.mouseY }
-                : undefined
-            }
-          >
-            {menuActions.map((action) => (
-              <MenuItem
-                key={action.id}
-                disabled={action.disabled}
-                onClick={() => {
-                  if (!menuRow) {
-                    return;
-                  }
-                  closeRowActionMenu();
-                  action.onClick(menuRow, rowActionHelpers);
-                }}
-              >
-                {action.icon ? (
-                  <ListItemIcon sx={{ color: action.color === 'error' ? 'error.main' : undefined }}>
-                    {action.icon}
-                  </ListItemIcon>
-                ) : null}
-                <ListItemText
-                  primary={action.label}
-                  primaryTypographyProps={{
-                    color: action.color === 'error' ? 'error.main' : 'text.primary',
-                  }}
-                />
-              </MenuItem>
-            ))}
-          </Menu>
+          </Box>
         </Box>
+        {hasContextualRowActions ? (
+          <Box
+            ref={rowActionRailRef}
+            aria-hidden={activeRowActions.length === 0}
+            onMouseLeave={() => {
+              if (!rowActionMenuState) {
+                setHoveredActionRowId(null);
+                setRowActionButtonPosition(null);
+              }
+            }}
+            sx={{
+              position: 'relative',
+              flex: `0 0 ${ROW_ACTIONS_COLUMN_WIDTH}px`,
+              width: ROW_ACTIONS_COLUMN_WIDTH,
+              minWidth: ROW_ACTIONS_COLUMN_WIDTH,
+              alignSelf: 'stretch',
+              bgcolor: 'background.paper',
+              borderLeft: '1px solid',
+              borderLeftColor: 'divider',
+              boxShadow: '-6px 0 10px -10px rgba(21, 31, 24, 0.45)',
+              zIndex: 2,
+            }}
+          >
+            {activeRowForActions && rowActionButtonPosition && activeRowActions.length > 0 ? (
+              <Tooltip title={t('actions.actions')}>
+                <IconButton
+                  className="ofp-row-actions-trigger"
+                  size="small"
+                  aria-label={t('actions.actions')}
+                  tabIndex={isMobile ? -1 : 0}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openRowActionMenu(activeRowForActions.id, event.currentTarget);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      openRowActionMenu(activeRowForActions.id, event.currentTarget);
+                    }
+                  }}
+                  sx={{
+                    position: 'absolute',
+                    top: rowActionButtonPosition.top,
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: 30,
+                    height: 30,
+                    color: 'text.secondary',
+                    opacity: isMobile ? 0 : 1,
+                    pointerEvents: isMobile ? 'none' : 'auto',
+                    transition: 'opacity 120ms ease-in-out, background-color 120ms ease-in-out, color 120ms ease-in-out',
+                    '&:hover': {
+                      color: 'text.primary',
+                      bgcolor: 'action.hover',
+                    },
+                    '&.Mui-focusVisible': {
+                      opacity: 1,
+                      pointerEvents: 'auto',
+                      outline: '2px solid',
+                      outlineColor: 'primary.main',
+                      outlineOffset: 1,
+                    },
+                  }}
+                >
+                  <MoreVertIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            ) : null}
+          </Box>
+        ) : null}
       </Box>
+      <Menu
+        open={Boolean(rowActionMenuState)}
+        onClose={closeRowActionMenu}
+        anchorEl={rowActionMenuState?.anchorEl}
+        anchorReference={(rowActionMenuState?.anchorEl ? 'anchorEl' : 'anchorPosition') as 'anchorEl' | 'anchorPosition'}
+        anchorPosition={
+          rowActionMenuState?.mouseX !== undefined && rowActionMenuState?.mouseY !== undefined
+            ? { left: rowActionMenuState.mouseX, top: rowActionMenuState.mouseY }
+            : undefined
+        }
+      >
+        {menuActions.map((action) => (
+          <MenuItem
+            key={action.id}
+            disabled={action.disabled}
+            onClick={() => {
+              if (!menuRow) {
+                return;
+              }
+              closeRowActionMenu();
+              action.onClick(menuRow, rowActionHelpers);
+            }}
+          >
+            {action.icon ? (
+              <ListItemIcon sx={{ color: action.color === 'error' ? 'error.main' : undefined }}>
+                {action.icon}
+              </ListItemIcon>
+            ) : null}
+            <ListItemText
+              primary={action.label}
+              primaryTypographyProps={{
+                color: action.color === 'error' ? 'error.main' : 'text.primary',
+              }}
+            />
+          </MenuItem>
+        ))}
+      </Menu>
 
       {deleteUndoOptions ? pendingDeleteWithUndo.map((deletion, index) => (
         <DeleteUndoSnackbar

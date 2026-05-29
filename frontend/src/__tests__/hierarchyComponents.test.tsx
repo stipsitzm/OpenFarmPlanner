@@ -110,7 +110,6 @@ describe('hierarchy components and behaviors', () => {
     const notesColumn = columns.find((column) => column.field === 'notes');
     const nameColumn = columns.find((column) => column.field === 'name');
     const areaColumn = columns.find((column) => column.field === 'area_sqm');
-    const rowActionsColumn = columns.find((column) => column.field === '__rowActions');
 
     expect(nameColumn?.width).toBe(280);
     expect(nameColumn).not.toHaveProperty('flex');
@@ -157,11 +156,6 @@ describe('hierarchy components and behaviors', () => {
           value: 'Parzelle 10',
           row: { id: 'field-10', type: 'field', fieldId: 10, level: 1, expanded: true },
         } as never)}
-        {rowActionsColumn?.renderCell?.({
-          id: 'field-10',
-          field: '__rowActions',
-          row: { id: 'field-10', type: 'field', fieldId: 10, level: 1, expanded: true },
-        } as never)}
       </>
     );
     const addBedButton = screen.getAllByRole('button', { name: 'Beet zu dieser Parzelle hinzufügen' })
@@ -181,11 +175,6 @@ describe('hierarchy components and behaviors', () => {
           id: 100,
           field: 'name',
           value: 'Beet 100',
-          row: { id: 100, type: 'bed', bedId: 100, level: 2 },
-        } as never)}
-        {rowActionsColumn?.renderCell?.({
-          id: 100,
-          field: '__rowActions',
           row: { id: 100, type: 'bed', bedId: 100, level: 2 },
         } as never)}
       </>
@@ -239,7 +228,6 @@ describe('hierarchy components and behaviors', () => {
     );
 
     const nameColumn = columns.find((column) => column.field === 'name');
-    const rowActionsColumn = columns.find((column) => column.field === '__rowActions');
 
     const renderedCell = nameColumn?.renderCell?.({
       id: 100,
@@ -249,15 +237,10 @@ describe('hierarchy components and behaviors', () => {
       cellMode: 'view',
       row: { id: 100, type: 'bed', bedId: 100, name: '', level: 2 },
     } as never);
-    const renderedActionsCell = rowActionsColumn?.renderCell?.({
-      id: 100,
-      field: '__rowActions',
-      row: { id: 100, type: 'bed', bedId: 100, name: '', level: 2 },
-    } as never);
 
     const actionOverlay = findElementByTestId(renderedCell, 'hierarchy-name-actions-overlay');
 
-    render(<>{renderedCell}{renderedActionsCell}</>);
+    render(<>{renderedCell}</>);
 
     expect(actionOverlay?.props.sx).toMatchObject({
       position: 'absolute',
@@ -288,7 +271,6 @@ describe('hierarchy components and behaviors', () => {
     );
 
     const nameColumn = columns.find((column) => column.field === 'name');
-    const rowActionsColumn = columns.find((column) => column.field === '__rowActions');
     const renderedCell = nameColumn?.renderCell?.({
       id: -1,
       field: 'name',
@@ -297,15 +279,10 @@ describe('hierarchy components and behaviors', () => {
       cellMode: 'edit',
       row: { id: -1, type: 'bed', bedId: -1, name: '', level: 2, isNew: true },
     } as never);
-    const renderedActionsCell = rowActionsColumn?.renderCell?.({
-      id: -1,
-      field: '__rowActions',
-      row: { id: -1, type: 'bed', bedId: -1, name: '', level: 2, isNew: true },
-    } as never);
 
     const actionOverlay = findElementByTestId(renderedCell, 'hierarchy-name-actions-overlay');
 
-    render(<>{renderedCell}{renderedActionsCell}</>);
+    render(<>{renderedCell}</>);
 
     expect(actionOverlay?.props.sx).toMatchObject({
       position: 'absolute',

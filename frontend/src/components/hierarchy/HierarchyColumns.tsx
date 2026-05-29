@@ -34,7 +34,6 @@ export const DEFAULT_HIERARCHY_COLUMN_WIDTHS: HierarchyColumnWidths = {
 };
 
 const EXPAND_ICON_SLOT_SIZE = 32;
-const HIERARCHY_ROW_ACTIONS_COLUMN_WIDTH = 40;
 const DATA_GRID_HEADER_LABEL_SX = { fontWeight: 600 };
 
 interface NameCellCallbacks {
@@ -79,7 +78,6 @@ function renderMoreActionsButton(
   return (
     <Tooltip title={t('common:actions.actions')}>
       <IconButton
-        className="ofp-row-actions-trigger"
         size="small"
         aria-label={t('common:actions.actions')}
         onClick={(event) => {
@@ -164,6 +162,7 @@ function renderInlineActions(
           label: t('hierarchy:addField'),
           onClick: () => callbacks.onAddField(row.locationId),
         })}
+        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -175,6 +174,7 @@ function renderInlineActions(
           label: t('hierarchy:addBedToField'),
           onClick: () => callbacks.onAddBed(row.fieldId!),
         })}
+        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -183,6 +183,7 @@ function renderInlineActions(
     return (
       <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
         {renderPlantingPlanActionButton(row, callbacks, t)}
+        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -567,23 +568,6 @@ export function createHierarchyColumns(
           </Box>
         );
       },
-    },
-    {
-      field: '__rowActions',
-      headerName: '',
-      sortable: false,
-      filterable: false,
-      disableColumnMenu: true,
-      editable: false,
-      resizable: false,
-      width: HIERARCHY_ROW_ACTIONS_COLUMN_WIDTH,
-      minWidth: HIERARCHY_ROW_ACTIONS_COLUMN_WIDTH,
-      maxWidth: HIERARCHY_ROW_ACTIONS_COLUMN_WIDTH,
-      align: 'center',
-      headerAlign: 'center',
-      cellClassName: 'ofp-row-actions-column ofp-row-actions-cell',
-      headerClassName: 'ofp-row-actions-column ofp-row-actions-header',
-      renderCell: (params) => renderMoreActionsButton(params.row, callbacks, t),
     },
   ];
 }
