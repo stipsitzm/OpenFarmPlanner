@@ -134,6 +134,8 @@ interface AreaValidationDialogState {
   mode: "bedLimit" | "remainingLimit" | "noRemainingArea";
 }
 
+const AREA_VALIDATION_CLOSE_SUPPRESSION_MS = 250;
+
 const CULTIVATION_TYPE_OPTIONS = [
   {
     value: "direct_sowing",
@@ -647,6 +649,43 @@ function PlantingPlans(): React.ReactElement {
 
   // Track which field was last edited (for determining API payload)
   const lastEditedFieldRef = useRef<"area_m2" | "plants_count" | null>(null);
+  const areaValidationDialogRef = useRef<AreaValidationDialogState | null>(null);
+  const suppressAreaValidationSaveRef = useRef(false);
+  const areaValidationCloseTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+
+  const clearAreaValidationCloseTimer = useCallback((): void => {
+    if (areaValidationCloseTimerRef.current === null) {
+      return;
+    }
+    window.clearTimeout(areaValidationCloseTimerRef.current);
+    areaValidationCloseTimerRef.current = null;
+  }, []);
+
+  const suppressAreaValidationSaveCycle = useCallback((): void => {
+    suppressAreaValidationSaveRef.current = true;
+    clearAreaValidationCloseTimer();
+    areaValidationCloseTimerRef.current = window.setTimeout(() => {
+      suppressAreaValidationSaveRef.current = false;
+      areaValidationCloseTimerRef.current = null;
+    }, AREA_VALIDATION_CLOSE_SUPPRESSION_MS);
+  }, [clearAreaValidationCloseTimer]);
+
+  const openAreaValidationDialog = useCallback((dialog: AreaValidationDialogState): void => {
+    clearAreaValidationCloseTimer();
+    suppressAreaValidationSaveRef.current = false;
+    areaValidationDialogRef.current = dialog;
+    setAreaValidationDialog(dialog);
+  }, [clearAreaValidationCloseTimer]);
+
+  const closeAreaValidationDialog = useCallback((): void => {
+    areaValidationDialogRef.current = null;
+    suppressAreaValidationSaveCycle();
+    setAreaValidationDialog(null);
+  }, [suppressAreaValidationSaveCycle]);
+
+  useEffect(() => () => {
+    clearAreaValidationCloseTimer();
+  }, [clearAreaValidationCloseTimer]);
 
   const cultureOptions: SearchableSelectOption[] = useMemo(
     () =>
@@ -2120,6 +2159,9 @@ function PlantingPlans(): React.ReactElement {
             return errors;
           }}
           onBeforeSaveRow={(row) => {
+            if (areaValidationDialogRef.current || suppressAreaValidationSaveRef.current) {
+              return false;
+            }
             const capacity = getCapacityForRow(row);
             if (!capacity) {
               return true;
@@ -2141,7 +2183,7 @@ function PlantingPlans(): React.ReactElement {
               return true;
             }
             if (requestedArea > capacity.bedArea) {
-              setAreaValidationDialog({
+              openAreaValidationDialog({
                 rowId: row.id,
                 requestedArea,
                 availableArea: capacity.availableArea,
@@ -2154,7 +2196,7 @@ function PlantingPlans(): React.ReactElement {
               return false;
             }
             if (capacity.availableArea <= 0) {
-              setAreaValidationDialog({
+              openAreaValidationDialog({
                 rowId: row.id,
                 requestedArea,
                 availableArea: capacity.availableArea,
@@ -2167,7 +2209,7 @@ function PlantingPlans(): React.ReactElement {
               return false;
             }
             if (requestedArea > capacity.availableArea) {
-              setAreaValidationDialog({
+              openAreaValidationDialog({
                 rowId: row.id,
                 requestedArea,
                 availableArea: capacity.availableArea,
@@ -2348,7 +2390,7 @@ function PlantingPlans(): React.ReactElement {
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={areaValidationDialog !== null} onClose={() => setAreaValidationDialog(null)} fullWidth maxWidth="xs">
+      <Dialog open={areaValidationDialog !== null} onClose={closeAreaValidationDialog} fullWidth maxWidth="xs">
         <DialogTitle>
           {areaValidationDialog?.mode === "bedLimit"
             ? t("plantingPlans:areaValidation.bedLimitTitle")
@@ -2385,7 +2427,7 @@ function PlantingPlans(): React.ReactElement {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAreaValidationDialog(null)}>{t("common:actions.cancel")}</Button>
+          <Button onClick={closeAreaValidationDialog}>{t("common:actions.cancel")}</Button>
           {areaValidationDialog?.mode !== "noRemainingArea" && (
             <Button
               variant="contained"
@@ -2402,7 +2444,7 @@ function PlantingPlans(): React.ReactElement {
                   areaValidationDialog.cultureId,
                   areaValidationDialog.plantsCount,
                 );
-                setAreaValidationDialog(null);
+                closeAreaValidationDialog();
               }}
             >
               {areaValidationDialog?.mode === "bedLimit"

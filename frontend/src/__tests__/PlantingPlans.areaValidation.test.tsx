@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -295,6 +295,31 @@ describe("PlantingPlans save-time area validation", () => {
     expect(commandApiSpies.setDraftValues).not.toHaveBeenCalled();
     expect(commandApiSpies.apiPayload).not.toHaveBeenCalled();
     expect(mockGridRowState.row).toMatchObject({ area_m2: "99" });
+  });
+
+  it("does not start another area validation while closing a canceled conflict dialog", async () => {
+    apiMocks.bedList.mockResolvedValue({ data: { results: [{ id: 101, name: "Beet A", field: 11, area_sqm: 4 }] } });
+    apiMocks.planList.mockResolvedValue({
+      data: {
+        results: [{
+          id: 9, bed: 101, culture: 2, planting_date: "2026-04-01", harvest_date: "2026-05-01", area_usage_sqm: 4,
+        }],
+      },
+    });
+    mockGridRowState.row = {
+      id: 1, bed: 101, culture: 2, planting_date: "2026-04-10", harvest_date: "2026-05-10", area_m2: "2",
+    };
+
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+    await userEvent.click(await screen.findByRole("button", { name: "Zeile speichern" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Abbrechen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Speichern durch Fokusverlust" }));
+
+    expect(screen.queryByText("Für dieses Beet ist im gewählten Zeitraum keine freie Fläche verfügbar.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.")).not.toBeInTheDocument();
+    expect(commandApiSpies.saveAttemptResult).toHaveBeenLastCalledWith(false);
+    expect(commandApiSpies.apiPayload).not.toHaveBeenCalled();
   });
 
   it("applies bed area when clicking 'Beetfläche übernehmen'", async () => {
