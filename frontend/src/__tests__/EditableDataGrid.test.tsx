@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { GridColDef } from '@mui/x-data-grid';
 import { AxiosError } from 'axios';
@@ -611,6 +611,31 @@ describe('EditableDataGrid', () => {
     await Promise.resolve();
     expect(deleteSpy).toHaveBeenCalledWith(1);
     vi.useRealTimers();
+  });
+
+  it('discards an unsaved new row without backend delete or undo state', async () => {
+    const user = userEvent.setup();
+    const props = baseProps();
+    const deleteSpy = vi.spyOn(props.api, 'delete');
+    const confirmSpy = vi.spyOn(window, 'confirm');
+
+    render(
+      <EditableDataGrid
+        {...props}
+        deleteUndoOptions={{ message: 'Anbauplan gelöscht' }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    await user.click(screen.getByLabelText('Neu'));
+    await waitFor(() => expect(screen.getByTestId('row--1')).toBeInTheDocument());
+    await user.click(within(screen.getByTestId('row--1')).getByLabelText('Löschen'));
+
+    expect(screen.queryByTestId('row--1')).not.toBeInTheDocument();
+    expect(screen.queryByText('Anbauplan gelöscht')).not.toBeInTheDocument();
+    expect(screen.getByTestId('focused-cell')).not.toHaveTextContent('-1-');
+    expect(deleteSpy).not.toHaveBeenCalled();
+    expect(confirmSpy).not.toHaveBeenCalled();
   });
 
   it('handles multiple optimistic deletions independently', async () => {

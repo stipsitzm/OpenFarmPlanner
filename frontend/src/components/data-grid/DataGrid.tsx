@@ -15,7 +15,7 @@
  * Navigation is blocked if there are unsaved changes (row in edit mode).
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type MutableRefObject } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type MutableRefObject, type TouchEvent } from 'react';
 import {
   DataGrid,
   GridRowModes,
@@ -158,6 +158,10 @@ export interface EditableDataGridProps<T extends EditableRow> {
 
 const isUnsavedDraftRow = (row: EditableRow): boolean =>
   Boolean(row.isNew || row.__draft || Number(row.id) < 0);
+
+const ROW_ACTIONS_COLUMN_FIELD = '__rowActions';
+const ROW_ACTIONS_COLUMN_WIDTH = 40;
+const ROW_ACTION_LONG_PRESS_MS = 550;
 
 class SaveBlockedError extends Error {
   constructor() {
@@ -347,7 +351,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const [dirtyRowIds, setDirtyRowIds] = useState<Set<string>>(new Set());
   const [activeValidationErrors, setActiveValidationErrors] = useState<Record<string, Record<string, string>>>({});
   const [hoveredActionRowId, setHoveredActionRowId] = useState<GridRowId | null>(null);
-  const [rowActionButtonPosition, setRowActionButtonPosition] = useState<{ top: number } | null>(null);
+  const [longPressFeedbackRowId, setLongPressFeedbackRowId] = useState<GridRowId | null>(null);
   const [rowActionMenuState, setRowActionMenuState] = useState<{
     rowId: GridRowId;
     anchorEl?: HTMLElement;
@@ -356,6 +360,7 @@ export function EditableDataGrid<T extends EditableRow>({
   } | null>(null);
   const [pendingDeleteWithUndo, setPendingDeleteWithUndo] = useState<PendingDeleteWithUndo<T>[]>([]);
   const pendingDeleteTimersRef = useRef<Map<string, number>>(new Map());
+  const rowActionLongPressTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const rowSnapshotRef = useRef<Map<string, T>>(new Map());
   const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery('(max-width:900px)');
@@ -1065,6 +1070,60 @@ export function EditableDataGrid<T extends EditableRow>({
     );
   }, []);
 
+  const clearRowInteractionState = useCallback((rowId: GridRowId): void => {
+    const rowKey = String(rowId);
+    setSelectedRowIds((currentSelectedIds) =>
+      currentSelectedIds.filter((selectedId) => String(selectedId) !== rowKey),
+    );
+    setDirtyRowIds((previous) => {
+      const next = new Set(previous);
+      next.delete(rowKey);
+      return next;
+    });
+    setActiveValidationErrors((previous) => {
+      const next = { ...previous };
+      delete next[rowKey];
+      return next;
+    });
+    setRowModesModel((previousModel) => {
+      const next = { ...previousModel };
+      delete next[rowId];
+      delete next[rowKey];
+      return next;
+    });
+    rowSnapshotRef.current.delete(rowKey);
+    setHoveredActionRowId((currentRowId) => (String(currentRowId) === rowKey ? null : currentRowId));
+    setLongPressFeedbackRowId((currentRowId) => (String(currentRowId) === rowKey ? null : currentRowId));
+    setRowActionMenuState((currentState) =>
+      currentState && String(currentState.rowId) === rowKey ? null : currentState,
+    );
+  }, []);
+
+  const moveFocusAwayFromRemovedRow = useCallback((rowId: GridRowId, remainingRows: readonly T[]): void => {
+    const rowKey = String(rowId);
+    const api = gridApiRef.current as typeof gridApiRef.current & {
+      state?: { focus?: { cell?: { id?: GridRowId } | null } };
+    };
+    const focusedCell = api?.state?.focus?.cell;
+    if (focusedCell && String(focusedCell.id) !== rowKey) {
+      return;
+    }
+
+    const focusField = columns.find((column) => column.editable !== false)?.field ?? columns[0]?.field;
+    const fallbackRow = remainingRows.find((row) => String(row.id) !== rowKey);
+    if (fallbackRow && focusField) {
+      api?.setCellFocus(fallbackRow.id, focusField);
+      return;
+    }
+
+    if (api?.state?.focus) {
+      api.state.focus.cell = null;
+    }
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }, [columns, gridApiRef]);
+
   const restorePendingDeleteWithUndo = useCallback((deletion: PendingDeleteWithUndo<T>): void => {
     setRows((currentRows) => {
       if (currentRows.some((row) => String(row.id) === String(deletion.rowId))) {
@@ -1221,6 +1280,16 @@ export function EditableDataGrid<T extends EditableRow>({
       return;
     }
 
+    if (isUnsavedDraftRow(row)) {
+      const remainingRows = (rows as T[]).filter((currentRow) => String(currentRow.id) !== rowKey);
+      moveFocusAwayFromRemovedRow(id, remainingRows);
+      clearRowInteractionState(id);
+      setRows(remainingRows);
+      setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
+      setError('');
+      return;
+    }
+
     if (deleteUndoOptions) {
       const deletionId = `${rowKey}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const pendingDeletion: PendingDeleteWithUndo<T> = {
@@ -1233,27 +1302,11 @@ export function EditableDataGrid<T extends EditableRow>({
         visible: true,
       };
 
+      const remainingRows = (rows as T[]).filter((currentRow) => String(currentRow.id) !== rowKey);
+      moveFocusAwayFromRemovedRow(id, remainingRows);
       setRows((prevRows) => prevRows.filter((currentRow) => String(currentRow.id) !== rowKey));
       setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
-      setSelectedRowIds((currentSelectedIds) =>
-        currentSelectedIds.filter((selectedId) => String(selectedId) !== rowKey),
-      );
-      setDirtyRowIds((previous) => {
-        const next = new Set(previous);
-        next.delete(rowKey);
-        return next;
-      });
-      setActiveValidationErrors((previous) => {
-        const next = { ...previous };
-        delete next[rowKey];
-        return next;
-      });
-      setRowModesModel((previousModel) => {
-        const next = { ...previousModel };
-        delete next[id];
-        delete next[rowKey];
-        return next;
-      });
+      clearRowInteractionState(id);
       setError('');
       setPendingDeleteWithUndo((currentDeletions) => [...currentDeletions, pendingDeletion]);
 
@@ -1269,16 +1322,22 @@ export function EditableDataGrid<T extends EditableRow>({
     const numericId = Number(id);
     if (numericId < 0) {
       // If it's a new unsaved row, just remove it from the grid
-      setRows((prevRows) => prevRows.filter((row) => row.id !== id));
-      setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== String(id)));
+      const remainingRows = (rows as T[]).filter((currentRow) => String(currentRow.id) !== rowKey);
+      moveFocusAwayFromRemovedRow(id, remainingRows);
+      clearRowInteractionState(id);
+      setRows(remainingRows);
+      setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
       return;
     }
 
     // Delete from API
     api.delete(numericId)
       .then(() => {
-        setRows((prevRows) => prevRows.filter((row) => row.id !== id));
-        setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== String(id)));
+        const remainingRows = (rows as T[]).filter((currentRow) => String(currentRow.id) !== rowKey);
+        moveFocusAwayFromRemovedRow(id, remainingRows);
+        clearRowInteractionState(id);
+        setRows(remainingRows);
+        setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
         setError('');
       })
       .catch((err) => {
@@ -1291,6 +1350,8 @@ export function EditableDataGrid<T extends EditableRow>({
     deleteErrorMessage,
     deleteUndoOptions,
     finalizeDeleteWithUndo,
+    clearRowInteractionState,
+    moveFocusAwayFromRemovedRow,
     rowModesModel,
     rows,
     rowsById,
@@ -1380,42 +1441,65 @@ export function EditableDataGrid<T extends EditableRow>({
     return rowElement?.dataset.id ?? null;
   };
 
-  const updateRowActionButtonPosition = useCallback((rowId: GridRowId): void => {
-    const surface = gridSurfaceRef.current;
-    const rowElement = surface?.querySelector<HTMLElement>(`[role="row"][data-id="${String(rowId)}"]`);
-    if (!surface || !rowElement) {
-      setRowActionButtonPosition(null);
-      return;
-    }
-    const surfaceRect = surface.getBoundingClientRect();
-    const rowRect = rowElement.getBoundingClientRect();
-    setRowActionButtonPosition({
-      top: rowRect.top - surfaceRect.top + rowRect.height / 2,
-    });
-  }, []);
-
   const openRowActionMenu = useCallback((rowId: GridRowId, anchor: HTMLElement): void => {
     setHoveredActionRowId(rowId);
-    updateRowActionButtonPosition(rowId);
     setRowActionMenuState({ rowId, anchorEl: anchor });
-  }, [updateRowActionButtonPosition]);
+  }, []);
 
   const openRowActionContextMenu = useCallback((rowId: GridRowId, event: React.MouseEvent): void => {
     event.preventDefault();
     setSelectedRowIds([rowId]);
     setHoveredActionRowId(rowId);
-    updateRowActionButtonPosition(rowId);
     setRowActionMenuState({ rowId, mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
-  }, [updateRowActionButtonPosition]);
+  }, []);
 
   const closeRowActionMenu = useCallback((): void => {
     setRowActionMenuState(null);
+    setLongPressFeedbackRowId(null);
   }, []);
 
-  const activeRowForActions = hoveredActionRowId === null ? null : rowsById.get(String(hoveredActionRowId)) as T | undefined;
   const menuRow = rowActionMenuState ? rowsById.get(String(rowActionMenuState.rowId)) as T | undefined : undefined;
   const menuActions = menuRow ? resolveRowActions(menuRow) : [];
   const hasContextualRowActions = Boolean(getRowActions || duplicateRow);
+
+  const clearRowActionLongPressTimer = useCallback((): void => {
+    if (rowActionLongPressTimerRef.current === null) {
+      return;
+    }
+    window.clearTimeout(rowActionLongPressTimerRef.current);
+    rowActionLongPressTimerRef.current = null;
+  }, []);
+
+  const handleGridTouchStart = useCallback((event: TouchEvent<HTMLDivElement>): void => {
+    if (!hasContextualRowActions || event.touches.length !== 1) {
+      return;
+    }
+    const rowId = getRowIdFromElement(event.target);
+    if (rowId === null || !rowsById.has(String(rowId))) {
+      return;
+    }
+    const touch = event.touches[0];
+    clearRowActionLongPressTimer();
+    rowActionLongPressTimerRef.current = window.setTimeout(() => {
+      setSelectedRowIds([rowId]);
+      setHoveredActionRowId(rowId);
+      setLongPressFeedbackRowId(rowId);
+      setRowActionMenuState({ rowId, mouseX: touch.clientX + 2, mouseY: touch.clientY - 6 });
+      rowActionLongPressTimerRef.current = null;
+    }, ROW_ACTION_LONG_PRESS_MS);
+  }, [clearRowActionLongPressTimer, hasContextualRowActions, rowsById]);
+
+  const handleGridTouchMove = useCallback((): void => {
+    clearRowActionLongPressTimer();
+  }, [clearRowActionLongPressTimer]);
+
+  const handleGridTouchEnd = useCallback((): void => {
+    clearRowActionLongPressTimer();
+  }, [clearRowActionLongPressTimer]);
+
+  useEffect(() => () => {
+    clearRowActionLongPressTimer();
+  }, [clearRowActionLongPressTimer]);
 
   /**
    * Custom footer component with add button
@@ -1583,6 +1667,75 @@ export function EditableDataGrid<T extends EditableRow>({
           },
         ]
       : []),
+    ...(hasContextualRowActions
+      ? [
+          {
+            field: ROW_ACTIONS_COLUMN_FIELD,
+            headerName: '',
+            sortable: false,
+            filterable: false,
+            disableColumnMenu: true,
+            editable: false,
+            resizable: false,
+            width: ROW_ACTIONS_COLUMN_WIDTH,
+            minWidth: ROW_ACTIONS_COLUMN_WIDTH,
+            maxWidth: ROW_ACTIONS_COLUMN_WIDTH,
+            align: 'center' as const,
+            headerAlign: 'center' as const,
+            cellClassName: 'ofp-row-actions-column ofp-row-actions-cell',
+            headerClassName: 'ofp-row-actions-column ofp-row-actions-header',
+            renderCell: (params: GridCellParams<T>) => {
+              const row = params.row as T;
+              if (resolveRowActions(row).length === 0) {
+                return null;
+              }
+
+              return (
+                <Tooltip title={t('actions.actions')}>
+                  <IconButton
+                    className="ofp-row-actions-trigger"
+                    size="small"
+                    aria-label={t('actions.actions')}
+                    tabIndex={isMobile ? -1 : 0}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openRowActionMenu(row.id, event.currentTarget);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        openRowActionMenu(row.id, event.currentTarget);
+                      }
+                    }}
+                    sx={{
+                      width: 30,
+                      height: 30,
+                      color: 'text.secondary',
+                      transition: 'opacity 120ms ease-in-out, background-color 120ms ease-in-out, color 120ms ease-in-out',
+                      opacity: 0,
+                      pointerEvents: 'none',
+                      '&:hover': {
+                        color: 'text.primary',
+                        bgcolor: 'action.hover',
+                      },
+                      '&.Mui-focusVisible': {
+                        opacity: 1,
+                        pointerEvents: 'auto',
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: 1,
+                      },
+                    }}
+                  >
+                    <MoreVertIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              );
+            },
+          },
+        ]
+      : []),
   ];
 
   const getNotesDrawerTitle = (): string => {
@@ -1661,12 +1814,10 @@ export function EditableDataGrid<T extends EditableRow>({
             if (String(rowId) !== String(hoveredActionRowId)) {
               setHoveredActionRowId(rowId);
             }
-            updateRowActionButtonPosition(rowId);
           } : undefined}
           onMouseLeave={hasContextualRowActions ? () => {
             if (!rowActionMenuState) {
               setHoveredActionRowId(null);
-              setRowActionButtonPosition(null);
             }
           } : undefined}
           onFocusCapture={hasContextualRowActions ? (event) => {
@@ -1675,7 +1826,6 @@ export function EditableDataGrid<T extends EditableRow>({
               return;
             }
             setHoveredActionRowId(rowId);
-            updateRowActionButtonPosition(rowId);
           } : undefined}
           onContextMenu={hasContextualRowActions ? (event) => {
             const rowId = getRowIdFromElement(event.target);
@@ -1684,6 +1834,10 @@ export function EditableDataGrid<T extends EditableRow>({
             }
             openRowActionContextMenu(rowId, event);
           } : undefined}
+          onTouchStart={hasContextualRowActions ? handleGridTouchStart : undefined}
+          onTouchMove={hasContextualRowActions ? handleGridTouchMove : undefined}
+          onTouchEnd={hasContextualRowActions ? handleGridTouchEnd : undefined}
+          onTouchCancel={hasContextualRowActions ? handleGridTouchEnd : undefined}
           sx={{
             position: 'relative',
             display: 'block',
@@ -1720,6 +1874,35 @@ export function EditableDataGrid<T extends EditableRow>({
             width: isContentSizedSurface ? 'fit-content' : '100%',
             minWidth: isContentSizedSurface ? 0 : '100%',
             display: isContentSizedSurface ? 'inline-block' : 'block',
+            '& .ofp-row-actions-column': {
+              position: 'sticky',
+              right: 0,
+              zIndex: 3,
+              bgcolor: 'background.paper',
+              borderLeft: '1px solid',
+              borderLeftColor: 'divider',
+              boxShadow: '-6px 0 10px -10px rgba(21, 31, 24, 0.45)',
+            },
+            '& .ofp-row-actions-header': {
+              zIndex: 5,
+            },
+            '& .ofp-row-actions-cell': {
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              px: 0,
+            },
+            '& .MuiDataGrid-row:hover .ofp-row-actions-trigger, & .MuiDataGrid-row:focus-within .ofp-row-actions-trigger': {
+              opacity: isMobile ? 0 : 1,
+              pointerEvents: isMobile ? 'none' : 'auto',
+            },
+            '& .ofp-row-actions-trigger.Mui-focusVisible': {
+              opacity: 1,
+              pointerEvents: 'auto',
+            },
+            '& .MuiDataGrid-row.ofp-row-long-press .MuiDataGrid-cell': {
+              bgcolor: 'action.selected',
+            },
             ...(shouldDisableTrailingFiller ? {
               '& .MuiDataGrid-filler': { display: 'none' },
               '& .MuiDataGrid-scrollbarFiller': { display: 'none' },
@@ -1730,13 +1913,17 @@ export function EditableDataGrid<T extends EditableRow>({
           }}
           getRowClassName={(params) => {
             const rowKey = String(params.id);
+            const classNames: string[] = [];
             if (rowModesModel[params.id]?.mode === GridRowModes.Edit) {
-              return 'ofp-row-editing';
+              classNames.push('ofp-row-editing');
             }
             if (dirtyRowIds.has(rowKey)) {
-              return 'ofp-row-dirty';
+              classNames.push('ofp-row-dirty');
             }
-            return '';
+            if (longPressFeedbackRowId !== null && String(longPressFeedbackRowId) === rowKey) {
+              classNames.push('ofp-row-long-press');
+            }
+            return classNames.join(' ');
           }}
           getCellClassName={(params) => {
             const rowKey = String(params.id);
@@ -1750,6 +1937,9 @@ export function EditableDataGrid<T extends EditableRow>({
             return '';
           }}
           onCellClick={(params) => {
+            if (params.field === ROW_ACTIONS_COLUMN_FIELD) {
+              return;
+            }
             const rowKey = String(params.id);
             if (!rowSnapshotRef.current.has(rowKey)) {
               const row = rowsById.get(rowKey);
@@ -1828,43 +2018,6 @@ export function EditableDataGrid<T extends EditableRow>({
           localeText={germanDataGridLocaleText}
           apiRef={gridApiRef}
           />
-          {hasContextualRowActions && activeRowForActions && rowActionButtonPosition && resolveRowActions(activeRowForActions).length > 0 ? (
-            <Tooltip title={t('actions.actions')}>
-              <IconButton
-                size="small"
-                aria-label={t('actions.actions')}
-                onClick={(event) => openRowActionMenu(activeRowForActions.id, event.currentTarget)}
-                onKeyDown={(event) => {
-                  if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    openRowActionMenu(activeRowForActions.id, event.currentTarget);
-                  }
-                }}
-                sx={{
-                  position: 'absolute',
-                  top: rowActionButtonPosition.top,
-                  right: 8,
-                  transform: 'translateY(-50%)',
-                  width: 30,
-                  height: 30,
-                  bgcolor: 'surface.surfaceBackground',
-                  border: '1px solid',
-                  borderColor: 'surface.surfaceSoftBorder',
-                  boxShadow: '0 2px 8px rgba(21, 31, 24, 0.12)',
-                  '&:hover': {
-                    bgcolor: 'action.hover',
-                  },
-                  '&.Mui-focusVisible': {
-                    outline: '2px solid',
-                    outlineColor: 'primary.main',
-                    outlineOffset: 2,
-                  },
-                }}
-              >
-                <MoreVertIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          ) : null}
           <Menu
             open={Boolean(rowActionMenuState)}
             onClose={closeRowActionMenu}

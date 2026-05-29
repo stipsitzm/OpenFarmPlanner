@@ -253,6 +253,33 @@ const HIERARCHY_DATA_GRID_SX = {
   "& .MuiDataGrid-cell": {
     py: 0,
   },
+  "& .ofp-row-actions-column": {
+    position: "sticky",
+    right: 0,
+    zIndex: 3,
+    backgroundColor: "background.paper",
+    borderLeft: "1px solid",
+    borderLeftColor: "divider",
+    boxShadow: "-6px 0 10px -10px rgba(21, 31, 24, 0.45)",
+  },
+  "& .ofp-row-actions-header": {
+    zIndex: 5,
+  },
+  "& .ofp-row-actions-cell": {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    px: 0,
+  },
+  "& .ofp-row-actions-trigger": {
+    opacity: 0,
+    pointerEvents: "none",
+    transition: "opacity 120ms ease-in-out, background-color 120ms ease-in-out, color 120ms ease-in-out",
+  },
+  "& .MuiDataGrid-row:hover .ofp-row-actions-trigger, & .MuiDataGrid-row:focus-within .ofp-row-actions-trigger, & .ofp-row-actions-trigger.Mui-focusVisible": {
+    opacity: 1,
+    pointerEvents: "auto",
+  },
   "& .ofp-hierarchy-row-location .MuiDataGrid-cell": {
     py: 0.5,
   },
