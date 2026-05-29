@@ -12,6 +12,7 @@
   "addDomain": "Domain hinzufügen",
   "add": "Hinzufügen",
   "saveError": "Lieferant konnte nicht gespeichert werden.",
+  "loadError": "Lieferanten konnten nicht geladen werden.",
   "yes": "Ja",
   "no": "Nein",
   "editAction": "Bearbeiten",

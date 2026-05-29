@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -17,6 +18,7 @@ import {
   TableRow,
   TableContainer,
   TextField,
+  Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
@@ -43,6 +45,8 @@ interface SupplierFieldErrors {
   homepage_url?: string;
 }
 
+type SupplierLoadStatus = 'idle' | 'loading' | 'success' | 'error';
+
 const normalizeUrl = (input: string): string => {
   const trimmed = input.trim();
   if (!trimmed) return trimmed;
@@ -66,20 +70,31 @@ const isValidUrl = (url: string): boolean => {
 };
 
 export default function Suppliers(): React.ReactElement {
-  const { t } = useTranslation('suppliers');
+  const { t } = useTranslation(['suppliers', 'common']);
   const location = useLocation();
   const navigate = useNavigate();
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierLoadStatus, setSupplierLoadStatus] = useState<SupplierLoadStatus>('loading');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<SupplierFieldErrors>({});
   const [draft, setDraft] = useState<SupplierDraft>({ name: '', homepage_url: '' });
 
-  const loadSuppliers = async (): Promise<void> => {
-    const response = await supplierAPI.list();
-    setSuppliers(response.data.results || []);
-  };
+  const loadSuppliers = useCallback(async (): Promise<void> => {
+    setSupplierLoadStatus('loading');
+    setLoadError('');
+    try {
+      const response = await supplierAPI.list();
+      setSuppliers(response.data.results || []);
+      setSupplierLoadStatus('success');
+    } catch (loadSuppliersError) {
+      console.error('Error loading suppliers', loadSuppliersError);
+      setSupplierLoadStatus('error');
+      setLoadError(t('loadError'));
+    }
+  }, [t]);
 
   const openCreate = useCallback((): void => {
     setDraft({ name: '', homepage_url: '' });
@@ -103,6 +118,7 @@ export default function Suppliers(): React.ReactElement {
   useEffect(() => {
     if (shouldShowProjectRequiredState) {
       setSuppliers([]);
+      setSupplierLoadStatus('idle');
       return;
     }
     const timeoutId = window.setTimeout(() => {
@@ -110,7 +126,7 @@ export default function Suppliers(): React.ReactElement {
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, [shouldShowProjectRequiredState]);
+  }, [loadSuppliers, shouldShowProjectRequiredState]);
 
   useEffect(() => {
     if (shouldShowProjectRequiredState) {
@@ -230,7 +246,26 @@ export default function Suppliers(): React.ReactElement {
   return (
     <PageContainer variant="compactCenteredPage">
       <PageSurface variant="compact">
-        {suppliers.length === 0 ? (
+        {loadError ? <Alert severity="error" sx={{ mb: 2, width: '100%', maxWidth: 880 }}>{loadError}</Alert> : null}
+        {!dialogOpen && error ? <Alert severity="error" sx={{ mb: 2, width: '100%', maxWidth: 880 }}>{error}</Alert> : null}
+        {supplierLoadStatus === 'loading' ? (
+          <Box
+            sx={{
+              width: '100%',
+              maxWidth: 880,
+              minHeight: 180,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1.5,
+              color: 'text.secondary',
+            }}
+          >
+            <CircularProgress size={22} />
+            <Typography variant="body2">{t('common:messages.loading')}</Typography>
+          </Box>
+        ) : null}
+        {supplierLoadStatus === 'success' && suppliers.length === 0 ? (
           <Box sx={{ width: '100%', maxWidth: 880 }}>
             <EmptyStateCard
               title={t('emptyState.title')}
@@ -238,7 +273,8 @@ export default function Suppliers(): React.ReactElement {
               actions={[{ label: t('create'), to: '/app/suppliers?create=true' }]}
             />
           </Box>
-        ) : (
+        ) : null}
+        {supplierLoadStatus === 'success' && suppliers.length > 0 ? (
           <TableSurface sizingMode="compact">
           <TableContainer>
             <Table size="medium">
@@ -286,7 +322,7 @@ export default function Suppliers(): React.ReactElement {
             </Table>
           </TableContainer>
           </TableSurface>
-        )}
+        ) : null}
       </PageSurface>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
