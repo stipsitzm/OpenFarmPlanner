@@ -159,8 +159,11 @@ export interface EditableDataGridProps<T extends EditableRow> {
 const isUnsavedDraftRow = (row: EditableRow): boolean =>
   Boolean(row.isNew || row.__draft || Number(row.id) < 0);
 
-const ROW_ACTIONS_COLUMN_FIELD = '__rowActions';
-const ROW_ACTIONS_COLUMN_WIDTH = 40;
+const ROW_ACTION_BUTTON_SIZE = 30;
+const ROW_ACTION_FLOAT_OFFSET = 10;
+const ROW_ACTION_SAFE_MARGIN = 4;
+const ROW_ACTION_BRIDGE_WIDTH = ROW_ACTION_FLOAT_OFFSET + 12;
+const ROW_ACTION_CLOSE_DELAY_MS = 160;
 const ROW_ACTION_LONG_PRESS_MS = 550;
 
 class SaveBlockedError extends Error {
@@ -351,7 +354,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const [dirtyRowIds, setDirtyRowIds] = useState<Set<string>>(new Set());
   const [activeValidationErrors, setActiveValidationErrors] = useState<Record<string, Record<string, string>>>({});
   const [hoveredActionRowId, setHoveredActionRowId] = useState<GridRowId | null>(null);
-  const [rowActionButtonPosition, setRowActionButtonPosition] = useState<{ top: number } | null>(null);
+  const [rowActionButtonPosition, setRowActionButtonPosition] = useState<{ left: number; top: number } | null>(null);
   const [longPressFeedbackRowId, setLongPressFeedbackRowId] = useState<GridRowId | null>(null);
   const [rowActionMenuState, setRowActionMenuState] = useState<{
     rowId: GridRowId;
@@ -361,10 +364,12 @@ export function EditableDataGrid<T extends EditableRow>({
   } | null>(null);
   const [pendingDeleteWithUndo, setPendingDeleteWithUndo] = useState<PendingDeleteWithUndo<T>[]>([]);
   const pendingDeleteTimersRef = useRef<Map<string, number>>(new Map());
+  const rowActionCloseTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const rowActionLongPressTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const rowSnapshotRef = useRef<Map<string, T>>(new Map());
+  const gridViewportRef = useRef<HTMLDivElement | null>(null);
   const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
-  const rowActionRailRef = useRef<HTMLDivElement | null>(null);
+  const rowActionOverlayRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery('(max-width:900px)');
   
   const { t } = useTranslation('common');
@@ -1445,33 +1450,71 @@ export function EditableDataGrid<T extends EditableRow>({
   };
 
   const updateRowActionButtonPosition = useCallback((rowId: GridRowId): void => {
+    const viewport = gridViewportRef.current;
     const surface = gridSurfaceRef.current;
-    const rail = rowActionRailRef.current;
+    const overlay = rowActionOverlayRef.current;
     const rowElement = surface?.querySelector<HTMLElement>(`[role="row"][data-id="${String(rowId)}"]`);
-    if (!surface || !rail || !rowElement) {
+    if (!viewport || !surface || !overlay || !rowElement) {
       setRowActionButtonPosition(null);
       return;
     }
-    const railRect = rail.getBoundingClientRect();
+    const viewportRect = viewport.getBoundingClientRect();
+    const surfaceRect = surface.getBoundingClientRect();
+    const overlayRect = overlay.getBoundingClientRect();
     const rowRect = rowElement.getBoundingClientRect();
+    const visibleGridRight = Math.min(surfaceRect.right, viewportRect.right);
+    const outsideLeft = visibleGridRight - overlayRect.left + ROW_ACTION_FLOAT_OFFSET;
+    const maxLeft = Math.max(
+      ROW_ACTION_SAFE_MARGIN,
+      overlayRect.width - ROW_ACTION_BUTTON_SIZE - ROW_ACTION_SAFE_MARGIN,
+    );
+    const insideLeft = visibleGridRight - overlayRect.left - ROW_ACTION_BUTTON_SIZE - ROW_ACTION_SAFE_MARGIN;
+    const unclampedLeft = outsideLeft <= maxLeft ? outsideLeft : insideLeft;
     setRowActionButtonPosition({
-      top: rowRect.top - railRect.top + rowRect.height / 2,
+      left: Math.max(ROW_ACTION_SAFE_MARGIN, Math.min(unclampedLeft, maxLeft)),
+      top: rowRect.top - overlayRect.top + rowRect.height / 2,
     });
   }, []);
 
+  const clearRowActionCloseTimer = useCallback((): void => {
+    if (rowActionCloseTimerRef.current === null) {
+      return;
+    }
+    window.clearTimeout(rowActionCloseTimerRef.current);
+    rowActionCloseTimerRef.current = null;
+  }, []);
+
+  const closeFloatingRowActionTrigger = useCallback((): void => {
+    setHoveredActionRowId(null);
+    setRowActionButtonPosition(null);
+  }, []);
+
+  const scheduleRowActionClose = useCallback((): void => {
+    if (rowActionMenuState) {
+      return;
+    }
+    clearRowActionCloseTimer();
+    rowActionCloseTimerRef.current = window.setTimeout(() => {
+      closeFloatingRowActionTrigger();
+      rowActionCloseTimerRef.current = null;
+    }, ROW_ACTION_CLOSE_DELAY_MS);
+  }, [clearRowActionCloseTimer, closeFloatingRowActionTrigger, rowActionMenuState]);
+
   const openRowActionMenu = useCallback((rowId: GridRowId, anchor: HTMLElement): void => {
+    clearRowActionCloseTimer();
     setHoveredActionRowId(rowId);
     updateRowActionButtonPosition(rowId);
     setRowActionMenuState({ rowId, anchorEl: anchor });
-  }, [updateRowActionButtonPosition]);
+  }, [clearRowActionCloseTimer, updateRowActionButtonPosition]);
 
   const openRowActionContextMenu = useCallback((rowId: GridRowId, event: React.MouseEvent): void => {
     event.preventDefault();
+    clearRowActionCloseTimer();
     setSelectedRowIds([rowId]);
     setHoveredActionRowId(rowId);
     updateRowActionButtonPosition(rowId);
     setRowActionMenuState({ rowId, mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
-  }, [updateRowActionButtonPosition]);
+  }, [clearRowActionCloseTimer, updateRowActionButtonPosition]);
 
   const closeRowActionMenu = useCallback((): void => {
     setRowActionMenuState(null);
@@ -1523,6 +1566,10 @@ export function EditableDataGrid<T extends EditableRow>({
   useEffect(() => () => {
     clearRowActionLongPressTimer();
   }, [clearRowActionLongPressTimer]);
+
+  useEffect(() => () => {
+    clearRowActionCloseTimer();
+  }, [clearRowActionCloseTimer]);
 
   /**
    * Custom footer component with add button
@@ -1749,20 +1796,24 @@ export function EditableDataGrid<T extends EditableRow>({
       
       <Box
         sx={{
+          position: 'relative',
           width: '100%',
           maxWidth: '100%',
-          display: 'flex',
-          alignItems: 'stretch',
-          justifyContent: 'center',
           minWidth: 0,
+          overflow: 'visible',
         }}
       >
         <Box
+          ref={gridViewportRef}
           onKeyDownCapture={handleGridEditNavigation}
+          onScroll={() => {
+            if (hoveredActionRowId !== null) {
+              updateRowActionButtonPosition(hoveredActionRowId);
+            }
+          }}
           sx={{
-            flex: '1 1 auto',
             minWidth: 0,
-            maxWidth: hasContextualRowActions ? `calc(100% - ${ROW_ACTIONS_COLUMN_WIDTH}px)` : '100%',
+            maxWidth: '100%',
             overflowX: 'auto',
             overflowY: 'visible',
             display: 'flex',
@@ -1776,6 +1827,7 @@ export function EditableDataGrid<T extends EditableRow>({
               if (rowId === null || !rowsById.has(String(rowId))) {
                 return;
               }
+              clearRowActionCloseTimer();
               if (String(rowId) !== String(hoveredActionRowId)) {
                 setHoveredActionRowId(rowId);
               }
@@ -1784,11 +1836,10 @@ export function EditableDataGrid<T extends EditableRow>({
             onMouseLeave={hasContextualRowActions ? (event) => {
               if (!rowActionMenuState) {
                 const nextTarget = event.relatedTarget;
-                if (nextTarget instanceof Node && rowActionRailRef.current?.contains(nextTarget)) {
+                if (nextTarget instanceof Node && rowActionOverlayRef.current?.contains(nextTarget)) {
                   return;
                 }
-                setHoveredActionRowId(null);
-                setRowActionButtonPosition(null);
+                scheduleRowActionClose();
               }
             } : undefined}
             onFocusCapture={hasContextualRowActions ? (event) => {
@@ -1796,6 +1847,7 @@ export function EditableDataGrid<T extends EditableRow>({
               if (rowId === null || !rowsById.has(String(rowId))) {
                 return;
               }
+              clearRowActionCloseTimer();
               setHoveredActionRowId(rowId);
               updateRowActionButtonPosition(rowId);
             } : undefined}
@@ -1883,9 +1935,6 @@ export function EditableDataGrid<T extends EditableRow>({
             return '';
           }}
           onCellClick={(params) => {
-            if (params.field === ROW_ACTIONS_COLUMN_FIELD) {
-              return;
-            }
             const rowKey = String(params.id);
             if (!rowSnapshotRef.current.has(rowKey)) {
               const row = rowsById.get(rowKey);
@@ -1968,71 +2017,82 @@ export function EditableDataGrid<T extends EditableRow>({
         </Box>
         {hasContextualRowActions ? (
           <Box
-            ref={rowActionRailRef}
+            ref={rowActionOverlayRef}
             aria-hidden={activeRowActions.length === 0}
             onMouseLeave={() => {
-              if (!rowActionMenuState) {
-                setHoveredActionRowId(null);
-                setRowActionButtonPosition(null);
-              }
+              scheduleRowActionClose();
             }}
             sx={{
-              position: 'relative',
-              flex: `0 0 ${ROW_ACTIONS_COLUMN_WIDTH}px`,
-              width: ROW_ACTIONS_COLUMN_WIDTH,
-              minWidth: ROW_ACTIONS_COLUMN_WIDTH,
-              alignSelf: 'stretch',
-              bgcolor: 'background.paper',
-              borderLeft: '1px solid',
-              borderLeftColor: 'divider',
-              boxShadow: '-6px 0 10px -10px rgba(21, 31, 24, 0.45)',
-              zIndex: 2,
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              overflow: 'visible',
+              zIndex: 4,
             }}
           >
             {activeRowForActions && rowActionButtonPosition && activeRowActions.length > 0 ? (
               <Tooltip title={t('actions.actions')}>
-                <IconButton
-                  className="ofp-row-actions-trigger"
-                  size="small"
-                  aria-label={t('actions.actions')}
-                  tabIndex={isMobile ? -1 : 0}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    openRowActionMenu(activeRowForActions.id, event.currentTarget);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      openRowActionMenu(activeRowForActions.id, event.currentTarget);
-                    }
-                  }}
+                <Box
                   sx={{
                     position: 'absolute',
                     top: rowActionButtonPosition.top,
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: 30,
-                    height: 30,
-                    color: 'text.secondary',
-                    opacity: isMobile ? 0 : 1,
+                    left: Math.max(ROW_ACTION_SAFE_MARGIN, rowActionButtonPosition.left - ROW_ACTION_BRIDGE_WIDTH),
+                    transform: 'translateY(-50%)',
+                    width: ROW_ACTION_BUTTON_SIZE + ROW_ACTION_BRIDGE_WIDTH,
+                    height: ROW_ACTION_BUTTON_SIZE,
                     pointerEvents: isMobile ? 'none' : 'auto',
-                    transition: 'opacity 120ms ease-in-out, background-color 120ms ease-in-out, color 120ms ease-in-out',
-                    '&:hover': {
-                      color: 'text.primary',
-                      bgcolor: 'action.hover',
-                    },
-                    '&.Mui-focusVisible': {
-                      opacity: 1,
-                      pointerEvents: 'auto',
-                      outline: '2px solid',
-                      outlineColor: 'primary.main',
-                      outlineOffset: 1,
-                    },
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
                   }}
+                  onMouseEnter={clearRowActionCloseTimer}
+                  onMouseLeave={scheduleRowActionClose}
+                  onFocus={clearRowActionCloseTimer}
+                  onBlur={scheduleRowActionClose}
                 >
-                  <MoreVertIcon fontSize="small" />
-                </IconButton>
+                  <IconButton
+                    className="ofp-row-actions-trigger"
+                    size="small"
+                    aria-label={t('actions.actions')}
+                    tabIndex={isMobile ? -1 : 0}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openRowActionMenu(activeRowForActions.id, event.currentTarget);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        openRowActionMenu(activeRowForActions.id, event.currentTarget);
+                      }
+                    }}
+                    sx={{
+                      width: ROW_ACTION_BUTTON_SIZE,
+                      height: ROW_ACTION_BUTTON_SIZE,
+                      bgcolor: 'background.paper',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      boxShadow: '0 2px 8px rgba(21, 31, 24, 0.12)',
+                      color: 'text.secondary',
+                      opacity: isMobile ? 0 : 1,
+                      pointerEvents: isMobile ? 'none' : 'auto',
+                      transition: 'opacity 120ms ease-in-out, background-color 120ms ease-in-out, color 120ms ease-in-out',
+                      '&:hover': {
+                        color: 'text.primary',
+                        bgcolor: 'action.hover',
+                      },
+                      '&.Mui-focusVisible': {
+                        opacity: 1,
+                        pointerEvents: 'auto',
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: 1,
+                      },
+                    }}
+                  >
+                    <MoreVertIcon fontSize="small" />
+                  </IconButton>
+                </Box>
               </Tooltip>
             ) : null}
           </Box>
