@@ -15,6 +15,7 @@ interface EmptyStateCardProps {
   description: ReactNode;
   actions?: EmptyStateAction[];
   checklist?: Array<{ label: string; done: boolean; doneLabel?: string; missingLabel?: string }>;
+  supplement?: ReactNode;
   showInfoIcon?: boolean;
   containerSx?: SxProps<Theme>;
   titleSx?: SxProps<Theme>;
@@ -25,6 +26,7 @@ export default function EmptyStateCard({
   description,
   actions = [],
   checklist = [],
+  supplement,
   showInfoIcon = true,
   containerSx,
   titleSx,
@@ -61,9 +63,14 @@ export default function EmptyStateCard({
         {showInfoIcon ? <InfoOutlinedIcon fontSize="small" color="success" /> : null}
         <Typography variant="subtitle1" sx={{ fontWeight: 600, ...titleSx }}>{title}</Typography>
       </Box>
-      <Typography variant="body2" sx={{ mb: visibleActions.length > 0 || checklist.length > 0 ? 1.5 : 0 }}>
+      <Typography variant="body2" sx={{ mb: supplement || visibleActions.length > 0 || checklist.length > 0 ? 1.5 : 0 }}>
         {description}
       </Typography>
+      {supplement ? (
+        <Box sx={{ mb: visibleActions.length > 0 || checklist.length > 0 ? 1.5 : 0 }}>
+          {supplement}
+        </Box>
+      ) : null}
       {checklist.length > 0 ? (
         <Box sx={{ mb: 1.5 }}>
           <RequirementChecklist

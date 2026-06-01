@@ -41,6 +41,7 @@ import { dataGridSx } from "../components/data-grid/styles";
 import {
   DeleteUndoSnackbar,
   DELETE_UNDO_DURATION_MS,
+  ContextMenuHint,
 } from "../components/data-grid";
 import {
   handleRowEditStop,
@@ -1697,9 +1698,13 @@ function FieldsBedsHierarchy({
         )}
 
         {showContextMenuHint && (
-          <Alert severity="info" sx={{ mb: 2 }} onClose={() => setShowContextMenuHint(false)}>
-            {t("messages.contextMenuHint")}
-          </Alert>
+          <Box sx={{ mb: 1.25 }}>
+            <ContextMenuHint
+              message={t("messages.contextMenuHint")}
+              secondary={t("messages.contextMenuHintKeyboard")}
+              onClose={() => setShowContextMenuHint(false)}
+            />
+          </Box>
         )}
 
         {shouldShowMissingDimensionsHint && (

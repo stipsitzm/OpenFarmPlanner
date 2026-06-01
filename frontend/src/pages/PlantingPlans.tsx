@@ -68,6 +68,7 @@ import {
   EditableDataGrid,
   createSingleSelectColumn,
   getCalculatedColumnProps,
+  ContextMenuHint,
   type EditableRow,
   type DataGridAPI,
   type SearchableSelectOption,
@@ -1922,14 +1923,25 @@ function PlantingPlans(): React.ReactElement {
           <EmptyStateCard
             title={t("plantingPlans:emptyStates.states.plans.title")}
             description={t("plantingPlans:emptyStates.states.plans.description")}
+            supplement={(
+              <ContextMenuHint
+                compact
+                message={t("plantingPlans:contextMenuHint")}
+                secondary={t("plantingPlans:contextMenuHintKeyboard")}
+              />
+            )}
             actions={[{ label: t(createPlanAction.labelKey), to: createPlanAction.to }]}
           />
         ) : null}
 
-        {!isInitialLoading && showContextMenuHint && !isMobile && !shouldShowPrerequisiteState ? (
-          <Alert severity="info" sx={{ mb: 2 }} onClose={() => setShowContextMenuHint(false)}>
-            {t("plantingPlans:contextMenuHint")}
-          </Alert>
+        {!isInitialLoading && showContextMenuHint && !isMobile && !shouldShowPrerequisiteState && hasPlans ? (
+          <Box sx={{ mb: 1.25 }}>
+            <ContextMenuHint
+              message={t("plantingPlans:contextMenuHint")}
+              secondary={t("plantingPlans:contextMenuHintKeyboard")}
+              onClose={() => setShowContextMenuHint(false)}
+            />
+          </Box>
         ) : null}
 
         {isMobile && hasPlans ? (

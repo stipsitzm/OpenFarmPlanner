@@ -97,7 +97,8 @@
     "notesPhotos": "Fotos",
     "notesPhotosAria": "Notizen und Fotos öffnen"
   },
-  "contextMenuHint": "Tipp: Öffne Zeilenaktionen per Rechtsklick auf eine Zeile.",
+  "contextMenuHint": "Tipp: Rechtsklick auf eine Zeile öffnet weitere Aktionen.",
+  "contextMenuHintKeyboard": "Alternativ: Kontextmenütaste oder Shift+F10.",
   "emptyStates": {
     "createBlockedTooltip": "Beete werden innerhalb von Parzellen auf der Seite Anbauflächen hinzugefügt.",
     "states": {
@@ -119,7 +120,7 @@
       },
       "plans": {
         "title": "Du hast noch keinen Anbauplan erstellt.",
-        "description": "Erstelle jetzt deinen ersten Anbauplan. Sobald Zeilen vorhanden sind, öffnest du weitere Aktionen per Rechtsklick auf eine Zeile."
+        "description": "Erstelle jetzt deinen ersten Anbauplan."
       }
     },
     "actions": {
