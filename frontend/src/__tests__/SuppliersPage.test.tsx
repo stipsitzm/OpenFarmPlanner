@@ -6,6 +6,8 @@ import Suppliers from '../pages/Suppliers';
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   create: vi.fn(),
+  update: vi.fn(),
+  delete: vi.fn(),
 }));
 
 vi.mock('../api/api', async () => {
@@ -16,6 +18,8 @@ vi.mock('../api/api', async () => {
       ...actual.supplierAPI,
       list: mocks.list,
       create: mocks.create,
+      update: mocks.update,
+      delete: mocks.delete,
     },
   };
 });
@@ -90,6 +94,56 @@ describe('Suppliers page empty and table states', () => {
     expect(screen.getByText('Name')).toBeInTheDocument();
     expect(screen.getByText('Webseite')).toBeInTheDocument();
     expect(screen.getByText('Aktionen')).toBeInTheDocument();
+  });
+
+  it('opens supplier row actions from the right-click context menu', async () => {
+    mocks.list.mockResolvedValue({
+      data: {
+        results: [{ id: 1, name: 'Reinsaat', homepage_url: 'https://example.com' }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <Suppliers />
+      </MemoryRouter>,
+    );
+
+    const supplierName = await screen.findByText('Reinsaat');
+    const supplierRow = supplierName.closest('tr');
+    expect(supplierRow).not.toBeNull();
+
+    fireEvent.contextMenu(supplierRow as HTMLTableRowElement);
+
+    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Bearbeiten' }));
+
+    expect(await screen.findByRole('heading', { name: 'Lieferant bearbeiten' })).toBeInTheDocument();
+  });
+
+  it('opens supplier row actions from the keyboard context menu command', async () => {
+    mocks.list.mockResolvedValue({
+      data: {
+        results: [{ id: 1, name: 'Reinsaat', homepage_url: 'https://example.com' }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <Suppliers />
+      </MemoryRouter>,
+    );
+
+    const supplierName = await screen.findByText('Reinsaat');
+    const supplierRow = supplierName.closest('tr');
+    expect(supplierRow).not.toBeNull();
+
+    fireEvent.keyDown(supplierRow as HTMLTableRowElement, { key: 'F10', shiftKey: true });
+
+    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
   });
 
   it('shows backend supplier name errors under the name field', async () => {

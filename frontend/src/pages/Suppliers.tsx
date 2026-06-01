@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import axios from 'axios';
 import {
   Alert,
@@ -11,6 +11,10 @@ import {
   DialogTitle,
   IconButton,
   Link,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
   Table,
   TableBody,
   TableCell,
@@ -21,6 +25,7 @@ import {
   Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
@@ -81,6 +86,11 @@ export default function Suppliers(): React.ReactElement {
   const [loadError, setLoadError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<SupplierFieldErrors>({});
   const [draft, setDraft] = useState<SupplierDraft>({ name: '', homepage_url: '' });
+  const [contextMenuState, setContextMenuState] = useState<{
+    supplier: Supplier;
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
 
   const loadSuppliers = useCallback(async (): Promise<void> => {
     setSupplierLoadStatus('loading');
@@ -150,7 +160,7 @@ export default function Suppliers(): React.ReactElement {
     );
   }, [location.pathname, location.search, navigate, openCreate, shouldShowProjectRequiredState]);
 
-  const openEdit = (supplier: Supplier): void => {
+  const openEdit = useCallback((supplier: Supplier): void => {
     setDraft({
       id: supplier.id,
       name: supplier.name,
@@ -159,7 +169,7 @@ export default function Suppliers(): React.ReactElement {
     setError('');
     setFieldErrors({});
     setDialogOpen(true);
-  };
+  }, []);
 
   const canSave = useMemo(() => draft.name.trim().length > 0, [draft]);
 
@@ -214,7 +224,7 @@ export default function Suppliers(): React.ReactElement {
     }
   };
 
-  const deleteSupplier = async (supplier: Supplier): Promise<void> => {
+  const deleteSupplier = useCallback(async (supplier: Supplier): Promise<void> => {
     if (!supplier.id) return;
     const shouldDelete = window.confirm(t('deleteConfirm', { name: supplier.name }));
     if (!shouldDelete) return;
@@ -231,7 +241,59 @@ export default function Suppliers(): React.ReactElement {
       console.error('Error deleting supplier', deleteError);
       setError(t('deleteError'));
     }
-  };
+  }, [loadSuppliers, t]);
+
+  const closeContextMenu = useCallback((): void => {
+    setContextMenuState(null);
+  }, []);
+
+  const openSupplierContextMenu = useCallback((
+    event: MouseEvent<HTMLTableRowElement>,
+    supplier: Supplier,
+  ): void => {
+    event.preventDefault();
+    setContextMenuState({
+      supplier,
+      mouseX: event.clientX + 2,
+      mouseY: event.clientY - 6,
+    });
+  }, []);
+
+  const openSupplierKeyboardContextMenu = useCallback((
+    event: KeyboardEvent<HTMLTableRowElement>,
+    supplier: Supplier,
+  ): void => {
+    const shouldOpenContextMenu = event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10');
+    if (!shouldOpenContextMenu) {
+      return;
+    }
+
+    event.preventDefault();
+    const rowRect = event.currentTarget.getBoundingClientRect();
+    setContextMenuState({
+      supplier,
+      mouseX: rowRect.left + Math.min(240, rowRect.width),
+      mouseY: rowRect.top + 12,
+    });
+  }, []);
+
+  const handleContextMenuEdit = useCallback((): void => {
+    if (!contextMenuState) {
+      return;
+    }
+    const { supplier } = contextMenuState;
+    closeContextMenu();
+    openEdit(supplier);
+  }, [closeContextMenu, contextMenuState, openEdit]);
+
+  const handleContextMenuDelete = useCallback((): void => {
+    if (!contextMenuState) {
+      return;
+    }
+    const { supplier } = contextMenuState;
+    closeContextMenu();
+    void deleteSupplier(supplier);
+  }, [closeContextMenu, contextMenuState, deleteSupplier]);
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
@@ -287,7 +349,13 @@ export default function Suppliers(): React.ReactElement {
               </TableHead>
               <TableBody>
                 {suppliers.map((supplier) => (
-                  <TableRow key={supplier.id} hover>
+                  <TableRow
+                    key={supplier.id}
+                    hover
+                    tabIndex={0}
+                    onContextMenu={(event) => openSupplierContextMenu(event, supplier)}
+                    onKeyDown={(event) => openSupplierKeyboardContextMenu(event, supplier)}
+                  >
                     <TableCell sx={{ py: 1.25 }}>{supplier.name}</TableCell>
                     <TableCell sx={{ py: 1.25 }}>
                       {supplier.homepage_url ? (
@@ -324,6 +392,33 @@ export default function Suppliers(): React.ReactElement {
           </TableSurface>
         ) : null}
       </PageSurface>
+
+      <Menu
+        open={contextMenuState !== null}
+        onClose={closeContextMenu}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenuState !== null
+            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
+            : undefined
+        }
+      >
+        <MenuItem onClick={handleContextMenuEdit}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary={t('editAction')} />
+        </MenuItem>
+        <MenuItem onClick={handleContextMenuDelete}>
+          <ListItemIcon sx={{ color: 'error.main' }}>
+            <DeleteIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary={t('deleteAction')}
+            primaryTypographyProps={{ color: 'error.main' }}
+          />
+        </MenuItem>
+      </Menu>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{draft.id ? t('edit') : t('create')}</DialogTitle>
