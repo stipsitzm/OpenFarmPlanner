@@ -300,6 +300,28 @@ function Cultures(): React.ReactElement {
     setShowForm(true);
   };
 
+  useEffect(() => {
+    if (shouldShowProjectRequiredState || showForm || !selectedCulture) {
+      return;
+    }
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('edit') !== 'true') {
+      return;
+    }
+
+    setEditingCulture(selectedCulture);
+    setShowForm(true);
+    searchParams.delete('edit');
+    const nextSearch = searchParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+      },
+      { replace: true },
+    );
+  }, [location.pathname, location.search, navigate, selectedCulture, shouldShowProjectRequiredState, showForm]);
+
   const handleDelete = (culture: Culture) => {
     setDeleteDialogCulture(culture);
   };

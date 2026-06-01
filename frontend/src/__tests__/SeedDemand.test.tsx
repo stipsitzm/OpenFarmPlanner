@@ -57,6 +57,7 @@ vi.mock('../hooks/useProjectRequirement', () => ({
 describe('SeedDemandPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     projectRequirementState.shouldShowProjectRequiredState = false;
     projectRequirementState.missingProjectReason = null;
     saveSelectionMock.mockResolvedValue({ data: { culture_id: 1, selected_supplier_id: 10 } });
@@ -274,6 +275,117 @@ describe('SeedDemandPage', () => {
     expect(screen.getByText('25 seedDemand.unitGrams × 8')).toBeInTheDocument();
     expect(screen.queryByText(/Vorschlag:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/over:/i)).not.toBeInTheDocument();
+  });
+
+  it('opens row actions from the right-click context menu and copies the visible row as TSV', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 1,
+            culture_name: 'Bohne',
+            variety: 'Canadian Wonder',
+            supplier: 'Reinsaat',
+            supplier_options: [{ supplier_id: 10, supplier_name: 'Reinsaat' }],
+            selected_supplier_id: 10,
+            required_amount_value: 184.2,
+            required_amount_unit: 'g',
+            total_grams: 184.2,
+            package_suggestion: {
+              selection: [{ size_value: 25, size_unit: 'g', count: 8 }],
+              total_amount: 200,
+              overage: 15.8,
+              pack_count: 8,
+            },
+            warning: null,
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    const cultureLink = await screen.findByRole('link', { name: 'Bohne (Canadian Wonder)' });
+    const row = cultureLink.closest('tr');
+    expect(row).not.toBeNull();
+
+    fireEvent.contextMenu(row as HTMLTableRowElement);
+    expect(screen.getByRole('menuitem', { name: 'seedDemand.contextMenu.openCulture' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'seedDemand.contextMenu.editCulture' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'common:actions.copyRow' }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(
+        'Bohne (Canadian Wonder)\tReinsaat\t184.20 seedDemand.unitGrams\t25 seedDemand.unitGrams × 8',
+      );
+    });
+  });
+
+  it('copies the visible seed demand table including headers as TSV', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 2,
+            culture_name: 'Salat',
+            supplier: 'Reinsaat',
+            supplier_options: [{ supplier_id: 10, supplier_name: 'Reinsaat' }],
+            selected_supplier_id: 10,
+            required_amount_value: 0.25,
+            required_amount_unit: 'g',
+            total_grams: 0.25,
+            package_suggestion: null,
+            warning: null,
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    const cultureLink = await screen.findByRole('link', { name: 'Salat' });
+    const row = cultureLink.closest('tr');
+    expect(row).not.toBeNull();
+
+    fireEvent.contextMenu(row as HTMLTableRowElement);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'common:actions.copyTable' }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(
+        [
+          'seedDemand.columns.culture\tseedDemand.columns.supplier\tseedDemand.columns.requiredAmount\tseedDemand.columns.packages',
+          'Salat\tReinsaat\t0.25 seedDemand.unitGrams\tseedDemand.noPackagesAvailable',
+        ].join('\n'),
+      );
+    });
   });
 
   it('shows compact fallback text when no package suggestion is available', async () => {

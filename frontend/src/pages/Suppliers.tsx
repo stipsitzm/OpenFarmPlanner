@@ -32,13 +32,13 @@ import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
 import PageSurface from '../components/layout/PageSurface';
 import TableSurface from '../components/layout/TableSurface';
-import type { Supplier, SupplierDeleteUsage } from '../api/types';
+import type { Supplier, SupplierDeleteUndoPayload, SupplierDeleteUsage } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { useRegisterCreateActions } from '../commands/useCommandContext';
-import { DELETE_UNDO_DURATION_MS, DeleteUndoSnackbar } from '../components/data-grid';
+import { DELETE_UNDO_DURATION_MS, DeleteUndoSnackbar, TableCopyMenuItems } from '../components/data-grid';
 import { extractApiErrorMessage } from '../api/errors';
 
 interface SupplierDraft {
@@ -60,6 +60,8 @@ interface PendingSupplierDeletion {
   supplier: Supplier;
   suppliersBeforeDelete: Supplier[];
   visible: boolean;
+  message: string;
+  undoPayload?: SupplierDeleteUndoPayload;
 }
 
 interface SupplierDeleteUsageDialogState {
@@ -108,6 +110,7 @@ export default function Suppliers(): React.ReactElement {
   } | null>(null);
   const [pendingSupplierDeletions, setPendingSupplierDeletions] = useState<PendingSupplierDeletion[]>([]);
   const [deleteUsageDialog, setDeleteUsageDialog] = useState<SupplierDeleteUsageDialogState | null>(null);
+  const [unlinkDeletingSupplierId, setUnlinkDeletingSupplierId] = useState<number | null>(null);
   const pendingSupplierDeleteTimersRef = useRef<Map<string, number>>(new Map());
 
   const loadSuppliers = useCallback(async (): Promise<void> => {
@@ -303,9 +306,29 @@ export default function Suppliers(): React.ReactElement {
     }
   }, [loadSuppliers, removePendingSupplierDeletion, restorePendingSupplierDeletion, showDeleteError, t]);
 
+  const restoreUnlinkedSupplierDeletion = useCallback(async (deletion: PendingSupplierDeletion): Promise<void> => {
+    if (!deletion.undoPayload) {
+      return;
+    }
+    try {
+      await supplierAPI.restoreUnlinkedDelete(deletion.undoPayload);
+      restorePendingSupplierDeletion(deletion);
+      removePendingSupplierDeletion(deletion.id);
+      await loadSuppliers();
+    } catch (restoreError) {
+      console.error('Error restoring supplier deletion', restoreError);
+      showDeleteError(extractApiErrorMessage(restoreError, t, t('restoreDeleteError')));
+    }
+  }, [loadSuppliers, removePendingSupplierDeletion, restorePendingSupplierDeletion, showDeleteError, t]);
+
   const undoSupplierDeletion = useCallback((deletionId: string): void => {
     const deletion = pendingSupplierDeletions.find((pendingDeletion) => pendingDeletion.id === deletionId);
     if (!deletion) {
+      return;
+    }
+
+    if (deletion.undoPayload) {
+      void restoreUnlinkedSupplierDeletion(deletion);
       return;
     }
 
@@ -317,13 +340,15 @@ export default function Suppliers(): React.ReactElement {
 
     restorePendingSupplierDeletion(deletion);
     removePendingSupplierDeletion(deletionId);
-  }, [pendingSupplierDeletions, removePendingSupplierDeletion, restorePendingSupplierDeletion]);
+  }, [pendingSupplierDeletions, removePendingSupplierDeletion, restorePendingSupplierDeletion, restoreUnlinkedSupplierDeletion]);
 
   const closeSupplierDeletionSnackbar = useCallback((deletionId: string): void => {
     setPendingSupplierDeletions((currentDeletions) =>
-      currentDeletions.map((deletion) =>
-        deletion.id === deletionId ? { ...deletion, visible: false } : deletion,
-      ),
+      currentDeletions
+        .filter((deletion) => !(deletion.id === deletionId && deletion.undoPayload))
+        .map((deletion) =>
+          deletion.id === deletionId ? { ...deletion, visible: false } : deletion,
+        ),
     );
   }, []);
 
@@ -359,6 +384,7 @@ export default function Suppliers(): React.ReactElement {
       supplier,
       suppliersBeforeDelete: suppliers,
       visible: true,
+      message: t('messages.deleted'),
     };
 
     setSuppliers((currentSuppliers) => currentSuppliers.filter((currentSupplier) => currentSupplier.id !== supplier.id));
@@ -369,6 +395,49 @@ export default function Suppliers(): React.ReactElement {
     }, DELETE_UNDO_DURATION_MS);
     pendingSupplierDeleteTimersRef.current.set(deletionId, timerId);
   }, [finalizeSupplierDeletion, pendingSupplierDeletions, showDeleteError, suppliers, t]);
+
+  const openAffectedCultures = useCallback((): void => {
+    if (!deleteUsageDialog) {
+      return;
+    }
+    const firstCultureId = deleteUsageDialog.usage.culture_ids[0];
+    setDeleteUsageDialog(null);
+    navigate(firstCultureId ? `/app/cultures?cultureId=${firstCultureId}` : '/app/cultures');
+  }, [deleteUsageDialog, navigate]);
+
+  const unlinkAndDeleteSupplier = useCallback(async (): Promise<void> => {
+    const supplier = deleteUsageDialog?.supplier;
+    const supplierId = supplier?.id;
+    if (!supplier || typeof supplierId !== 'number') {
+      return;
+    }
+    setUnlinkDeletingSupplierId(supplierId);
+    try {
+      setError('');
+      const response = await supplierAPI.unlinkAndDelete(supplierId);
+      const deletionId = `supplier-unlink-${supplierId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const pendingDeletion: PendingSupplierDeletion = {
+        id: deletionId,
+        supplierId,
+        supplier,
+        suppliersBeforeDelete: suppliers,
+        visible: true,
+        message: t('messages.deletedWithUnlinkedCultures', {
+          count: response.data.affected_culture_count,
+        }),
+        undoPayload: response.data.undo_payload,
+      };
+
+      setSuppliers((currentSuppliers) => currentSuppliers.filter((currentSupplier) => currentSupplier.id !== supplierId));
+      setDeleteUsageDialog(null);
+      setPendingSupplierDeletions((currentDeletions) => [...currentDeletions, pendingDeletion]);
+    } catch (unlinkError) {
+      console.error('Error unlinking and deleting supplier', unlinkError);
+      showDeleteError(extractApiErrorMessage(unlinkError, t, t('deleteError')));
+    } finally {
+      setUnlinkDeletingSupplierId(null);
+    }
+  }, [deleteUsageDialog, showDeleteError, suppliers, t]);
 
   const closeContextMenu = useCallback((): void => {
     setContextMenuState(null);
@@ -421,6 +490,16 @@ export default function Suppliers(): React.ReactElement {
     closeContextMenu();
     void deleteSupplier(supplier);
   }, [closeContextMenu, contextMenuState, deleteSupplier]);
+
+  const getSupplierRowClipboardValues = useCallback((supplier: Supplier): string[] => [
+    supplier.name,
+    supplier.homepage_url ?? '',
+  ], []);
+
+  const getSupplierTableClipboardRows = useCallback((): string[][] => [
+    [t('name'), t('homepage')],
+    ...suppliers.map(getSupplierRowClipboardValues),
+  ], [getSupplierRowClipboardValues, suppliers, t]);
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
@@ -545,6 +624,17 @@ export default function Suppliers(): React.ReactElement {
             primaryTypographyProps={{ color: 'error.main' }}
           />
         </MenuItem>
+        <TableCopyMenuItems
+          rowValues={contextMenuState ? getSupplierRowClipboardValues(contextMenuState.supplier) : null}
+          tableRows={getSupplierTableClipboardRows()}
+          copyRowLabel={t('common:actions.copyRow')}
+          copyTableLabel={t('common:actions.copyTable')}
+          rowCopiedMessage={t('common:messages.rowCopied')}
+          tableCopiedMessage={t('common:messages.tableCopied')}
+          copyErrorMessage={t('common:messages.copyError')}
+          includeDivider
+          onClose={closeContextMenu}
+        />
       </Menu>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
@@ -588,7 +678,7 @@ export default function Suppliers(): React.ReactElement {
         open={deleteUsageDialog !== null}
         onClose={() => setDeleteUsageDialog(null)}
         fullWidth
-        maxWidth="xs"
+        maxWidth="sm"
       >
         <DialogTitle sx={{ pb: 1 }}>{t('deleteUsageDialog.title')}</DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
@@ -631,14 +721,25 @@ export default function Suppliers(): React.ReactElement {
                 ) : null}
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-                {t('deleteUsageDialog.blocked')}
+                {t('deleteUsageDialog.unlinkExplanation')}
               </Typography>
             </Box>
           ) : null}
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-          <Button onClick={() => setDeleteUsageDialog(null)} variant="contained">
-            {t('common:actions.close')}
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, gap: 1, flexWrap: 'wrap' }}>
+          <Button onClick={openAffectedCultures} variant="outlined">
+            {t('deleteUsageDialog.openAffectedCultures')}
+          </Button>
+          <Button
+            onClick={() => void unlinkAndDeleteSupplier()}
+            color="error"
+            variant="contained"
+            disabled={unlinkDeletingSupplierId === deleteUsageDialog?.supplier.id}
+          >
+            {t('deleteUsageDialog.unlinkAndDelete')}
+          </Button>
+          <Button onClick={() => setDeleteUsageDialog(null)}>
+            {t('common:actions.cancel')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -647,7 +748,7 @@ export default function Suppliers(): React.ReactElement {
         <DeleteUndoSnackbar
           key={deletion.id}
           open={deletion.visible}
-          message={t('messages.deleted')}
+          message={deletion.message}
           undoLabel={t('common:actions.undo')}
           offsetIndex={index}
           testId="supplier-delete-snackbar"

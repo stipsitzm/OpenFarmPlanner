@@ -774,7 +774,7 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
     queryset = Supplier.objects.all()
     serializer_class = SupplierSerializer
 
-    def _build_delete_usage(self, supplier: Supplier) -> dict[str, int | bool]:
+    def _build_delete_usage(self, supplier: Supplier) -> dict[str, int | bool | list[int]]:
         supplier_culture_ids = set(
             Culture.objects.filter(
                 project=supplier.project,
@@ -810,6 +810,51 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
             'supplier_data_culture_count': len(supplier_data_culture_ids),
             'supplier_data_count': supplier_data_rows,
             'total_culture_count': len(total_culture_ids),
+            'culture_ids': sorted(total_culture_ids),
+        }
+
+    def _build_supplier_delete_undo_payload(self, supplier: Supplier) -> dict[str, object]:
+        supplier_cultures = list(
+            Culture.all_objects.filter(project=supplier.project, supplier=supplier).values_list('id', flat=True)
+        )
+        seed_demand_cultures = list(
+            Culture.all_objects.filter(
+                project=supplier.project,
+                selected_seed_demand_supplier=supplier,
+            ).values_list('id', flat=True)
+        )
+        supplier_data_rows = []
+        for row in CultureSupplierData.objects.filter(project=supplier.project, supplier=supplier):
+            supplier_data_rows.append({
+                'id': row.id,
+                'culture_id': row.culture_id,
+                'supplier_name': row.supplier_name,
+                'supplier_url': row.supplier_url,
+                'supplier_product_name': row.supplier_product_name,
+                'supplier_product_url': row.supplier_product_url,
+                'packaging_sizes': row.packaging_sizes,
+                'thousand_kernel_weight_g': (
+                    str(row.thousand_kernel_weight_g)
+                    if row.thousand_kernel_weight_g is not None
+                    else None
+                ),
+                'germination_rate': row.germination_rate,
+                'price': str(row.price) if row.price is not None else None,
+                'notes': row.notes,
+                'source_url': row.source_url,
+            })
+
+        return {
+            'supplier': {
+                'id': supplier.id,
+                'name': supplier.name,
+                'homepage_url': supplier.homepage_url,
+                'slug': supplier.slug,
+                'allowed_domains': supplier.allowed_domains,
+            },
+            'culture_ids': supplier_cultures,
+            'seed_demand_culture_ids': seed_demand_cultures,
+            'supplier_data': supplier_data_rows,
         }
 
     def perform_update(self, serializer):
@@ -837,6 +882,115 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
             )
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'], url_path='unlink-and-delete')
+    def unlink_and_delete(self, request: Request, pk: int | None = None) -> Response:
+        supplier = self.get_object()
+        usage = self._build_delete_usage(supplier)
+        undo_payload = self._build_supplier_delete_undo_payload(supplier)
+
+        with transaction.atomic():
+            Culture.all_objects.filter(project=supplier.project, supplier=supplier).update(supplier=None)
+            Culture.all_objects.filter(
+                project=supplier.project,
+                selected_seed_demand_supplier=supplier,
+            ).update(selected_seed_demand_supplier=None)
+            CultureSupplierData.objects.filter(project=supplier.project, supplier=supplier).delete()
+            supplier_id = supplier.pk
+            supplier.delete()
+            self.create_project_revision(f"Supplier unlinked and deleted #{supplier_id}")
+
+        return Response({
+            'affected_culture_count': usage['total_culture_count'],
+            'undo_payload': undo_payload,
+        })
+
+    @action(detail=False, methods=['post'], url_path='restore-unlinked-delete')
+    def restore_unlinked_delete(self, request: Request) -> Response:
+        active_project = request.active_project
+        payload = request.data if isinstance(request.data, dict) else {}
+        supplier_payload = payload.get('supplier')
+        if not isinstance(supplier_payload, dict):
+            raise DRFValidationError({'supplier': ['Supplier restore data is required.']})
+
+        supplier_id = supplier_payload.get('id')
+        if not isinstance(supplier_id, int):
+            raise DRFValidationError({'supplier': ['Supplier id is required.']})
+        if Supplier.objects.filter(project=active_project, pk=supplier_id).exists():
+            return Response(
+                {'detail': 'Supplier cannot be restored because the id is already in use.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        culture_ids = [item for item in payload.get('culture_ids', []) if isinstance(item, int)]
+        seed_demand_culture_ids = [
+            item for item in payload.get('seed_demand_culture_ids', []) if isinstance(item, int)
+        ]
+        supplier_data_rows = payload.get('supplier_data', [])
+        if not isinstance(supplier_data_rows, list):
+            supplier_data_rows = []
+
+        try:
+            with transaction.atomic():
+                supplier = Supplier.objects.create(
+                    id=supplier_id,
+                    project=active_project,
+                    name=str(supplier_payload.get('name') or ''),
+                    homepage_url=str(supplier_payload.get('homepage_url') or ''),
+                    slug=str(supplier_payload.get('slug') or ''),
+                    allowed_domains=supplier_payload.get('allowed_domains') or [],
+                )
+                Culture.all_objects.filter(project=active_project, id__in=culture_ids).update(supplier=supplier)
+                Culture.all_objects.filter(
+                    project=active_project,
+                    id__in=seed_demand_culture_ids,
+                ).update(selected_seed_demand_supplier=supplier)
+
+                restored_supplier_data_count = 0
+                for row_payload in supplier_data_rows:
+                    if not isinstance(row_payload, dict):
+                        continue
+                    culture_id = row_payload.get('culture_id')
+                    if not isinstance(culture_id, int):
+                        continue
+                    if not Culture.all_objects.filter(project=active_project, pk=culture_id).exists():
+                        continue
+                    CultureSupplierData.objects.create(
+                        id=row_payload.get('id') if isinstance(row_payload.get('id'), int) else None,
+                        culture_id=culture_id,
+                        supplier=supplier,
+                        project=active_project,
+                        supplier_name=str(row_payload.get('supplier_name') or ''),
+                        supplier_url=str(row_payload.get('supplier_url') or ''),
+                        supplier_product_name=str(row_payload.get('supplier_product_name') or ''),
+                        supplier_product_url=str(row_payload.get('supplier_product_url') or ''),
+                        packaging_sizes=row_payload.get('packaging_sizes') or [],
+                        thousand_kernel_weight_g=(
+                            Decimal(str(row_payload['thousand_kernel_weight_g']))
+                            if row_payload.get('thousand_kernel_weight_g') is not None
+                            else None
+                        ),
+                        germination_rate=row_payload.get('germination_rate'),
+                        price=(
+                            Decimal(str(row_payload['price']))
+                            if row_payload.get('price') is not None
+                            else None
+                        ),
+                        notes=str(row_payload.get('notes') or ''),
+                        source_url=str(row_payload.get('source_url') or ''),
+                    )
+                    restored_supplier_data_count += 1
+
+                self.create_project_revision(f"Supplier restored #{supplier.pk}")
+        except (IntegrityError, ValueError) as exc:
+            raise DRFValidationError({'detail': ['Supplier could not be restored.']}) from exc
+
+        serializer = self.get_serializer(supplier)
+        return Response({
+            'supplier': serializer.data,
+            'restored_culture_count': len(set(culture_ids) | set(seed_demand_culture_ids)),
+            'restored_supplier_data_count': restored_supplier_data_count,
+        })
 
     def perform_destroy(self, instance: Supplier) -> None:
         instance_id = instance.pk

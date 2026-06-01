@@ -283,6 +283,17 @@
       "supplier": "Lieferant",
       "requiredAmount": "Gesamtbedarf",
       "packages": "Packungsgrößen"
+    },
+    "contextMenu": {
+      "hint": "Tipp: Rechtsklick auf eine Zeile öffnet weitere Aktionen.",
+      "hintKeyboard": "Alternativ: Kontextmenütaste oder Shift+F10.",
+      "openCulture": "Kultur öffnen",
+      "editCulture": "Kultur bearbeiten",
+      "copyRow": "Zeile kopieren",
+      "copyTable": "Gesamte Tabelle kopieren",
+      "rowCopied": "Zeile wurde kopiert.",
+      "tableCopied": "Tabelle wurde kopiert.",
+      "copyError": "Daten konnten nicht kopiert werden."
     }
   },
   "history": {

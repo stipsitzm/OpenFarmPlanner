@@ -73,6 +73,7 @@ import {
   type DataGridAPI,
   type SearchableSelectOption,
   type EditableDataGridCommandApi,
+  getPlainExcerpt,
 } from "../components/data-grid";
 import { MobileCardList } from "../components/mobile/MobileCardList";
 import { NotesDrawer } from "../components/data-grid/NotesDrawer";
@@ -1476,6 +1477,73 @@ function PlantingPlans(): React.ReactElement {
     return "—";
   };
 
+  const getCultivationTypeLabel = (row: PlantingPlanRow): string => {
+    const option = cultivationTypeOptions.find((item) => item.value === row.cultivation_type);
+    return option?.label ?? "";
+  };
+
+  const getPlantsCountLabel = (row: PlantingPlanRow): string => (
+    typeof row.plants_count === "number" && !Number.isNaN(row.plants_count)
+      ? `≈ ${Math.round(row.plants_count)}`
+      : "—"
+  );
+
+  const clipboardColumns = useMemo(() => [
+    {
+      field: "culture",
+      headerName: t("plantingPlans:columns.culture"),
+      getValue: getCultureLabel,
+    },
+    {
+      field: "cultivation_type",
+      headerName: t("plantingPlans:columns.cultivationType"),
+      getValue: getCultivationTypeLabel,
+    },
+    {
+      field: "bed",
+      headerName: areaColumnLabel,
+      getValue: getBedLabel,
+    },
+    {
+      field: "planting_date",
+      headerName: t("plantingPlans:columns.plantingDate"),
+      getValue: (row: PlantingPlanRow) => formatDateForDisplay(row.planting_date),
+    },
+    {
+      field: "harvest_date",
+      headerName: t("plantingPlans:columns.harvestStartDate"),
+      getValue: (row: PlantingPlanRow) => formatDateForDisplay(row.harvest_date),
+    },
+    {
+      field: "harvest_end_date",
+      headerName: t("plantingPlans:columns.harvestEndDate"),
+      getValue: (row: PlantingPlanRow) => formatDateForDisplay(row.harvest_end_date),
+    },
+    {
+      field: "area_m2",
+      headerName: t("plantingPlans:columns.areaM2"),
+      getValue: getDisplayArea,
+    },
+    {
+      field: "plants_count",
+      headerName: t("plantingPlans:columns.plantsCount"),
+      getValue: getPlantsCountLabel,
+    },
+    {
+      field: "notes",
+      headerName: t("common:fields.notes"),
+      getValue: (row: PlantingPlanRow) => getPlainExcerpt(row.notes ?? "", 120),
+    },
+  ], [
+    areaColumnLabel,
+    getBedLabel,
+    getCultureLabel,
+    getCultivationTypeLabel,
+    getDisplayArea,
+    getPlantsCountLabel,
+    t,
+  ]);
+
   const formatNumberForInput = (
     value: number,
     options?: Intl.NumberFormatOptions,
@@ -2262,6 +2330,7 @@ function PlantingPlans(): React.ReactElement {
             message: t("plantingPlans:messages.deleted"),
             snackbarTestId: "planting-plan-delete-snackbar",
           }}
+          clipboardColumns={clipboardColumns}
           addButtonLabel={`${t("plantingPlans:addButton")} (Alt+Shift+N)`}
           showDeleteAction={false}
           showFooterEditControls={false}

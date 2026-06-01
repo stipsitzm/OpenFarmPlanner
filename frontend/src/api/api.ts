@@ -25,6 +25,9 @@ import type {
   LocationLayoutsResponse,
   CultureSupplierData,
   SupplierDeleteUsage,
+  SupplierDeleteUndoPayload,
+  SupplierRestoreUnlinkedDeleteResponse,
+  SupplierUnlinkDeleteResponse,
 } from './types';
 
 const getActiveProjectId = (): number | null => {
@@ -114,6 +117,9 @@ export const supplierAPI = {
   create: (name: string, homepage_url: string, allowed_domains: string[] = []) => http.post<Supplier>('/suppliers/', { name, homepage_url, allowed_domains }),
   update: (id: number, data: Partial<Supplier>) => http.put<Supplier>(`/suppliers/${id}/`, data),
   deleteUsage: (id: number) => http.get<SupplierDeleteUsage>(`/suppliers/${id}/delete-usage/`),
+  unlinkAndDelete: (id: number) => http.post<SupplierUnlinkDeleteResponse>(`/suppliers/${id}/unlink-and-delete/`, {}),
+  restoreUnlinkedDelete: (undoPayload: SupplierDeleteUndoPayload) =>
+    http.post<SupplierRestoreUnlinkedDeleteResponse>('/suppliers/restore-unlinked-delete/', undoPayload),
   delete: (id: number) => http.delete(`/suppliers/${id}/`),
 };
 

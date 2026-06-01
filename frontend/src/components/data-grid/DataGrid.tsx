@@ -49,6 +49,8 @@ import { getPlainExcerpt } from './markdown';
 import { useNotesEditor } from './useNotesEditor';
 import { extractApiErrorMessage } from '../../api/errors';
 import { germanDataGridLocaleText } from './localeText';
+import { TableCopyMenuItems } from './TableCopyMenuItems';
+import { formatClipboardValue, type TableClipboardRow } from './tableClipboard';
 
 export interface EditableRow {
   id: number;
@@ -92,6 +94,12 @@ export interface EditableDataGridRowAction<T extends EditableRow> {
 interface DeleteUndoOptions {
   message: string;
   snackbarTestId?: string;
+}
+
+export interface EditableDataGridClipboardColumn<T extends EditableRow> {
+  field: string;
+  headerName: string;
+  getValue?: (row: T) => string;
 }
 
 interface PendingDeleteWithUndo<T extends EditableRow> {
@@ -142,6 +150,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
   getRowActions?: (row: T, helpers: EditableDataGridRowActionHelpers<T>) => EditableDataGridRowAction<T>[];
   duplicateRow?: (row: T) => T;
   deleteUndoOptions?: DeleteUndoOptions;
+  clipboardColumns?: EditableDataGridClipboardColumn<T>[];
   onRowsStateChange?: (rows: T[]) => void;
   onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean; error: string }) => void;
   onBeforeSaveRow?: (row: T) => boolean | Partial<T> | Promise<boolean | Partial<T>>;
@@ -325,6 +334,7 @@ export function EditableDataGrid<T extends EditableRow>({
   getRowActions,
   duplicateRow,
   deleteUndoOptions,
+  clipboardColumns,
   onRowsStateChange,
   onLoadStateChange,
   onBeforeSaveRow,
@@ -1448,8 +1458,31 @@ export function EditableDataGrid<T extends EditableRow>({
   }, []);
 
   const menuRow = rowActionMenuState ? rowsById.get(String(rowActionMenuState.rowId)) as T | undefined : undefined;
-  const menuActions = menuRow ? resolveRowActions(menuRow) : [];
-  const hasContextualRowActions = Boolean(getRowActions || duplicateRow);
+  const shouldUseRowActions = Boolean(getRowActions || duplicateRow);
+  const menuActions = menuRow && shouldUseRowActions ? resolveRowActions(menuRow) : [];
+  const hasContextualRowActions = true;
+  const resolvedClipboardColumns = useMemo<EditableDataGridClipboardColumn<T>[]>(() => {
+    if (clipboardColumns) {
+      return clipboardColumns;
+    }
+    return columns
+      .filter((column) => column.field !== 'id' && column.field !== 'actions' && column.type !== 'actions')
+      .map((column) => ({
+        field: column.field,
+        headerName: column.headerName ?? column.field,
+      }));
+  }, [clipboardColumns, columns]);
+  const getClipboardRowValues = useCallback((row: T): TableClipboardRow => (
+    resolvedClipboardColumns.map((column) => (
+      column.getValue
+        ? column.getValue(row)
+        : formatClipboardValue(row[column.field])
+    ))
+  ), [resolvedClipboardColumns]);
+  const getClipboardTableRows = useCallback((): TableClipboardRow[] => [
+    resolvedClipboardColumns.map((column) => column.headerName),
+    ...(rowsForGrid as T[]).map(getClipboardRowValues),
+  ], [getClipboardRowValues, resolvedClipboardColumns, rowsForGrid]);
 
   const clearRowActionLongPressTimer = useCallback((): void => {
     if (rowActionLongPressTimerRef.current === null) {
@@ -1935,6 +1968,17 @@ export function EditableDataGrid<T extends EditableRow>({
             />
           </MenuItem>
         ))}
+        <TableCopyMenuItems
+          rowValues={menuRow ? getClipboardRowValues(menuRow) : null}
+          tableRows={getClipboardTableRows()}
+          copyRowLabel={t('actions.copyRow')}
+          copyTableLabel={t('actions.copyTable')}
+          rowCopiedMessage={t('messages.rowCopied')}
+          tableCopiedMessage={t('messages.tableCopied')}
+          copyErrorMessage={t('messages.copyError')}
+          includeDivider={menuActions.length > 0}
+          onClose={closeRowActionMenu}
+        />
       </Menu>
 
       {deleteUndoOptions ? pendingDeleteWithUndo.map((deletion, index) => (

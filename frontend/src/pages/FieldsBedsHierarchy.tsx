@@ -42,6 +42,10 @@ import {
   DeleteUndoSnackbar,
   DELETE_UNDO_DURATION_MS,
   ContextMenuHint,
+  TableCopyMenuItems,
+  useNotesEditor,
+  NotesDrawer,
+  getPlainExcerpt,
 } from "../components/data-grid";
 import {
   handleRowEditStop,
@@ -63,7 +67,6 @@ import {
   createHierarchyColumns,
   DEFAULT_HIERARCHY_COLUMN_WIDTHS,
 } from "../components/hierarchy/HierarchyColumns";
-import { useNotesEditor, NotesDrawer } from "../components/data-grid";
 import { extractApiErrorMessage } from "../api/errors";
 import type { HierarchyRow } from "../components/hierarchy/utils/types";
 import {
@@ -1680,6 +1683,42 @@ function FieldsBedsHierarchy({
     ? getHierarchyRowActions(contextMenuState.row)
     : [];
 
+  const formatHierarchyValue = useCallback((value: unknown): string => {
+    if (value === null || value === undefined || value === "") {
+      return "—";
+    }
+    return String(value);
+  }, []);
+
+  const getHierarchyAreaValue = useCallback((row: HierarchyRow): string => {
+    if (row.type === "location") {
+      return "—";
+    }
+    if (typeof row.length_m === "number" && typeof row.width_m === "number") {
+      return String(Math.round(row.length_m * row.width_m * 10) / 10);
+    }
+    return formatHierarchyValue(row.area_sqm);
+  }, [formatHierarchyValue]);
+
+  const getHierarchyRowClipboardValues = useCallback((row: HierarchyRow): string[] => [
+    row.name ?? "",
+    row.type === "location" ? "—" : formatHierarchyValue(row.length_m),
+    row.type === "location" ? "—" : formatHierarchyValue(row.width_m),
+    getHierarchyAreaValue(row),
+    getPlainExcerpt(row.notes ?? "", 120),
+  ], [formatHierarchyValue, getHierarchyAreaValue]);
+
+  const getHierarchyTableClipboardRows = useCallback((): string[][] => [
+    [
+      t("hierarchy:columns.name"),
+      t("columns.length"),
+      t("columns.width"),
+      t("hierarchy:columns.area"),
+      t("common:fields.notes"),
+    ],
+    ...rows.map(getHierarchyRowClipboardValues),
+  ], [getHierarchyRowClipboardValues, rows, t]);
+
   return (
     <div className={showTitle ? "page-container" : undefined}>
       <Box sx={{ width: "100%", minWidth: 0 }}>
@@ -1828,6 +1867,17 @@ function FieldsBedsHierarchy({
             ? [<Divider key={`${action.id}-divider`} role="separator" />, menuItem]
             : [menuItem];
         })}
+        <TableCopyMenuItems
+          rowValues={contextMenuState ? getHierarchyRowClipboardValues(contextMenuState.row) : null}
+          tableRows={getHierarchyTableClipboardRows()}
+          copyRowLabel={t("common:actions.copyRow")}
+          copyTableLabel={t("common:actions.copyTable")}
+          rowCopiedMessage={t("common:messages.rowCopied")}
+          tableCopiedMessage={t("common:messages.tableCopied")}
+          copyErrorMessage={t("common:messages.copyError")}
+          includeDivider={contextMenuActions.length > 0}
+          onClose={closeContextMenu}
+        />
       </Menu>
       {pendingDeletions.map((deletion, index) => (
         <DeleteUndoSnackbar
