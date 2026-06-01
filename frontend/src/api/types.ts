@@ -18,6 +18,15 @@ export interface Supplier {
   created?: boolean;
 }
 
+export interface SupplierDeleteUsage {
+  can_delete: boolean;
+  culture_count: number;
+  seed_demand_culture_count: number;
+  supplier_data_culture_count: number;
+  supplier_data_count: number;
+  total_culture_count: number;
+}
+
 export type SeedRateUnit = 'g_per_m2' | 'g_per_lfm' | 'seeds_per_m2' | 'seeds_per_lfm' | 'seeds_per_plant';
 export type CultivationType = 'pre_cultivation' | 'direct_sowing';
 

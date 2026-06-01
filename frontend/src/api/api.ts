@@ -24,6 +24,7 @@ import type {
   FieldLayoutEntry,
   LocationLayoutsResponse,
   CultureSupplierData,
+  SupplierDeleteUsage,
 } from './types';
 
 const getActiveProjectId = (): number | null => {
@@ -112,6 +113,7 @@ export const supplierAPI = {
   get: (id: number) => http.get<Supplier>(`/suppliers/${id}/`),
   create: (name: string, homepage_url: string, allowed_domains: string[] = []) => http.post<Supplier>('/suppliers/', { name, homepage_url, allowed_domains }),
   update: (id: number, data: Partial<Supplier>) => http.put<Supplier>(`/suppliers/${id}/`, data),
+  deleteUsage: (id: number) => http.get<SupplierDeleteUsage>(`/suppliers/${id}/delete-usage/`),
   delete: (id: number) => http.delete(`/suppliers/${id}/`),
 };
 

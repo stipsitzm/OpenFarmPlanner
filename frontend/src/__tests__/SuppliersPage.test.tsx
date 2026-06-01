@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   update: vi.fn(),
   delete: vi.fn(),
+  deleteUsage: vi.fn(),
 }));
 
 vi.mock('../api/api', async () => {
@@ -20,6 +21,7 @@ vi.mock('../api/api', async () => {
       create: mocks.create,
       update: mocks.update,
       delete: mocks.delete,
+      deleteUsage: mocks.deleteUsage,
     },
   };
 });
@@ -34,7 +36,11 @@ vi.mock('../commands/useCommandContext', () => ({
 
 describe('Suppliers page empty and table states', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    mocks.list.mockReset();
+    mocks.create.mockReset();
+    mocks.update.mockReset();
+    mocks.delete.mockReset();
+    mocks.deleteUsage.mockReset();
   });
 
   it('does not show the empty state while suppliers are still loading', async () => {
@@ -144,6 +150,75 @@ describe('Suppliers page empty and table states', () => {
 
     expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+  });
+
+  it('deletes an unused supplier with undo feedback without a native browser confirm', async () => {
+    mocks.list.mockResolvedValue({
+      data: {
+        results: [{ id: 1, name: 'Reinsaat', homepage_url: 'https://example.com' }],
+      },
+    });
+    mocks.deleteUsage.mockResolvedValue({
+      data: {
+        can_delete: true,
+        culture_count: 0,
+        seed_demand_culture_count: 0,
+        supplier_data_culture_count: 0,
+        supplier_data_count: 0,
+        total_culture_count: 0,
+      },
+    });
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    render(
+      <MemoryRouter>
+        <Suppliers />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Reinsaat');
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+
+    await waitFor(() => expect(mocks.deleteUsage).toHaveBeenCalledWith(1));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.queryByText('Reinsaat')).not.toBeInTheDocument();
+    expect(screen.getByText('Lieferant gelöscht.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rückgängig: Lieferant gelöscht.' })).toBeInTheDocument();
+
+    confirmSpy.mockRestore();
+  });
+
+  it('blocks supplier deletion when existing cultures still use it', async () => {
+    mocks.list.mockResolvedValue({
+      data: {
+        results: [{ id: 1, name: 'Reinsaat', homepage_url: 'https://example.com' }],
+      },
+    });
+    mocks.deleteUsage.mockResolvedValue({
+      data: {
+        can_delete: false,
+        culture_count: 12,
+        seed_demand_culture_count: 2,
+        supplier_data_culture_count: 5,
+        supplier_data_count: 7,
+        total_culture_count: 12,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <Suppliers />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Reinsaat');
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+
+    expect(await screen.findByRole('heading', { name: 'Lieferant wird noch verwendet' })).toBeInTheDocument();
+    expect(screen.getByText('Dieser Lieferant wird noch von 12 Kulturen verwendet.')).toBeInTheDocument();
+    expect(screen.getByText('12 Kulturen nutzen diesen Lieferanten direkt.')).toBeInTheDocument();
+    expect(mocks.delete).not.toHaveBeenCalled();
+    expect(screen.getAllByText('Reinsaat').length).toBeGreaterThan(0);
   });
 
   it('shows backend supplier name errors under the name field', async () => {

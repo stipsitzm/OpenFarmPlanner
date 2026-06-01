@@ -774,6 +774,44 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
     queryset = Supplier.objects.all()
     serializer_class = SupplierSerializer
 
+    def _build_delete_usage(self, supplier: Supplier) -> dict[str, int | bool]:
+        supplier_culture_ids = set(
+            Culture.objects.filter(
+                project=supplier.project,
+                deleted_at__isnull=True,
+                supplier=supplier,
+            ).values_list('id', flat=True)
+        )
+        seed_demand_culture_ids = set(
+            Culture.objects.filter(
+                project=supplier.project,
+                deleted_at__isnull=True,
+                selected_seed_demand_supplier=supplier,
+            ).values_list('id', flat=True)
+        )
+        supplier_data_culture_ids = set(
+            CultureSupplierData.objects.filter(
+                project=supplier.project,
+                supplier=supplier,
+                culture__deleted_at__isnull=True,
+            ).values_list('culture_id', flat=True)
+        )
+        supplier_data_rows = CultureSupplierData.objects.filter(
+            project=supplier.project,
+            supplier=supplier,
+            culture__deleted_at__isnull=True,
+        ).count()
+        total_culture_ids = supplier_culture_ids | seed_demand_culture_ids | supplier_data_culture_ids
+
+        return {
+            'can_delete': len(total_culture_ids) == 0 and supplier_data_rows == 0,
+            'culture_count': len(supplier_culture_ids),
+            'seed_demand_culture_count': len(seed_demand_culture_ids),
+            'supplier_data_culture_count': len(supplier_data_culture_ids),
+            'supplier_data_count': supplier_data_rows,
+            'total_culture_count': len(total_culture_ids),
+        }
+
     def perform_update(self, serializer):
         try:
             instance = serializer.save()
@@ -781,7 +819,26 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
             raise DRFValidationError({'name': ['Ein Lieferant mit diesem Namen existiert bereits.']}) from exc
         self.create_project_revision(f"Supplier updated #{instance.pk}")
 
-    def perform_destroy(self, instance):
+    @action(detail=True, methods=['get'], url_path='delete-usage')
+    def delete_usage(self, request: Request, pk: int | None = None) -> Response:
+        supplier = self.get_object()
+        return Response(self._build_delete_usage(supplier))
+
+    def destroy(self, request: Request, *args: object, **kwargs: object) -> Response:
+        instance = self.get_object()
+        usage = self._build_delete_usage(instance)
+        if not usage['can_delete']:
+            return Response(
+                {
+                    'detail': 'Supplier is still used and cannot be deleted.',
+                    'usage': usage,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def perform_destroy(self, instance: Supplier) -> None:
         instance_id = instance.pk
         instance.delete()
         self.create_project_revision(f"Supplier deleted #{instance_id}")
