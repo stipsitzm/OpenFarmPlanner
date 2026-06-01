@@ -12,6 +12,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useMediaQuery, useTheme } from '@mui/material';
+import { useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
@@ -86,6 +87,7 @@ interface PersistedCultureFilters {
   selectedFamilyFilter: string;
   selectedCultivationFilter: string;
   selectedNutrientFilter: string;
+  selectedSupplierFilter: string;
   growthDaysMin: string;
   growthDaysMax: string;
   yieldMin: string;
@@ -169,6 +171,7 @@ export function CultureDetail({
   publishActionLabel,
 }: CultureDetailProps): React.ReactElement {
   const { t } = useTranslation('cultures');
+  const [searchParams, setSearchParams] = useSearchParams();
   const theme = useTheme();
   const isTabletLayout = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const isMobileLayout = useMediaQuery(theme.breakpoints.down('sm'));
@@ -176,6 +179,7 @@ export function CultureDetail({
     `${theme.breakpoints.between('sm', 'md')} and (orientation: landscape) and (max-height: 560px)`,
   );
   const useUnifiedMobileLayout = isMobileLayout || isMobileLandscapeLayout;
+  const supplierIdFromQuery = searchParams.get('supplierId') ?? '';
   
   // Initialize filters from sessionStorage
   const initializeFilters = (): PersistedCultureFilters => {
@@ -186,6 +190,7 @@ export function CultureDetail({
         selectedFamilyFilter: '',
         selectedCultivationFilter: '',
         selectedNutrientFilter: '',
+        selectedSupplierFilter: supplierIdFromQuery,
         growthDaysMin: '',
         growthDaysMax: '',
         yieldMin: '',
@@ -200,6 +205,7 @@ export function CultureDetail({
         selectedFamilyFilter: parsed.selectedFamilyFilter ?? '',
         selectedCultivationFilter: parsed.selectedCultivationFilter ?? '',
         selectedNutrientFilter: parsed.selectedNutrientFilter ?? '',
+        selectedSupplierFilter: supplierIdFromQuery || parsed.selectedSupplierFilter || '',
         growthDaysMin: parsed.growthDaysMin ?? '',
         growthDaysMax: parsed.growthDaysMax ?? '',
         yieldMin: parsed.yieldMin ?? '',
@@ -213,6 +219,7 @@ export function CultureDetail({
         selectedFamilyFilter: '',
         selectedCultivationFilter: '',
         selectedNutrientFilter: '',
+        selectedSupplierFilter: supplierIdFromQuery,
         growthDaysMin: '',
         growthDaysMax: '',
         yieldMin: '',
@@ -262,6 +269,7 @@ export function CultureDetail({
         filters.selectedFamilyFilter,
         filters.selectedCultivationFilter,
         filters.selectedNutrientFilter,
+        filters.selectedSupplierFilter,
         filters.growthDaysMin,
         filters.growthDaysMax,
         filters.yieldMin,
@@ -280,6 +288,46 @@ export function CultureDetail({
         .filter((entry): entry is string => Boolean(entry))
     )).sort((left, right) => left.localeCompare(right, 'de')),
     [cultures]
+  );
+
+  const supplierOptions = useMemo(
+    () => {
+      const suppliersById = new Map<string, string>();
+
+      cultures.forEach((culture) => {
+        if (culture.supplier?.id !== undefined) {
+          suppliersById.set(String(culture.supplier.id), culture.supplier.name);
+        }
+
+        culture.supplier_data?.forEach((supplierRow) => {
+          const supplierId = supplierRow.supplier_id ?? supplierRow.supplier?.id;
+          const supplierName = supplierRow.supplier?.name ?? supplierRow.supplier_name;
+          if (typeof supplierId === 'number' && supplierName) {
+            suppliersById.set(String(supplierId), supplierName);
+          }
+        });
+      });
+
+      const options = Array.from(suppliersById.entries())
+        .map(([id, name]) => ({ id, name }))
+        .sort((left, right) => left.name.localeCompare(right.name, 'de'));
+
+      if (
+        filters.selectedSupplierFilter
+        && !options.some((option) => option.id === filters.selectedSupplierFilter)
+      ) {
+        return [
+          ...options,
+          {
+            id: filters.selectedSupplierFilter,
+            name: t('filters.unknownSupplier', { id: filters.selectedSupplierFilter }),
+          },
+        ];
+      }
+
+      return options;
+    },
+    [cultures, filters.selectedSupplierFilter, t],
   );
 
   // Helper functions to update individual filter fields
@@ -307,6 +355,30 @@ export function CultureDetail({
   useEffect(() => {
     window.sessionStorage.setItem(CULTURE_FILTERS_STORAGE_KEY, JSON.stringify(filters));
   }, [filters]);
+
+  useEffect(() => {
+    const supplierIdFromQuery = searchParams.get('supplierId');
+    if (!supplierIdFromQuery) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setFilters((prev) => (
+        prev.selectedSupplierFilter === supplierIdFromQuery
+          ? prev
+          : {
+            ...prev,
+            selectedSupplierFilter: supplierIdFromQuery,
+          }
+      ));
+
+      const nextSearchParams = new URLSearchParams(searchParams);
+      nextSearchParams.delete('supplierId');
+      setSearchParams(nextSearchParams, { replace: true });
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchParams, setSearchParams]);
 
   const filteredCultures = useMemo(() => {
     const parsedGrowthDaysMin = filters.growthDaysMin ? Number(filters.growthDaysMin) : null;
@@ -336,6 +408,7 @@ export function CultureDetail({
     };
 
     const normalizedQuery = filters.searchQuery.trim().toLowerCase();
+    const selectedSupplierId = filters.selectedSupplierFilter ? Number(filters.selectedSupplierFilter) : null;
     return cultures.filter((culture) => {
       const cultureName = culture.name?.toLowerCase() ?? '';
       const nameMatches = normalizedQuery.length === 0 || cultureName.includes(normalizedQuery);
@@ -363,6 +436,13 @@ export function CultureDetail({
       const sowingMonths = getSowingMonths(culture);
       const sowingMatches = filters.selectedSowingMonths.length === 0
         || filters.selectedSowingMonths.some((month) => sowingMonths.includes(month));
+      const supplierIds = [
+        culture.supplier?.id,
+        culture.selected_seed_demand_supplier,
+        ...(culture.supplier_data ?? []).map((supplierRow) => supplierRow.supplier_id ?? supplierRow.supplier?.id),
+      ];
+      const supplierMatches = selectedSupplierId === null
+        || supplierIds.some((supplierId) => supplierId === selectedSupplierId);
 
       return nameMatches
         && familyMatches
@@ -370,25 +450,32 @@ export function CultureDetail({
         && growthMatches
         && nutrientMatches
         && yieldMatches
-        && sowingMatches;
+        && sowingMatches
+        && supplierMatches;
     });
   }, [
     cultures,
     filters,
   ]);
 
+  useEffect(() => {
+    if (isLoading || cultures.length === 0) {
+      return;
+    }
+
+    const selectedCultureIsVisible = selectedCultureId !== undefined
+      && filteredCultures.some((culture) => culture.id === selectedCultureId);
+    if (selectedCultureIsVisible) {
+      return;
+    }
+
+    const [firstFilteredCulture] = filteredCultures;
+    onCultureSelect(firstFilteredCulture ?? null);
+  }, [cultures.length, filteredCultures, isLoading, onCultureSelect, selectedCultureId]);
+
   const cultureOptions: SearchableSelectOption<Culture>[] = useMemo(
     () => {
-      const selectedCultureFromAll = selectedCultureId !== undefined
-        ? cultures.find((culture) => culture.id === selectedCultureId)
-        : undefined;
       const optionCultures = [...filteredCultures];
-      if (
-        selectedCultureFromAll
-        && !optionCultures.some((culture) => culture.id === selectedCultureFromAll.id)
-      ) {
-        optionCultures.unshift(selectedCultureFromAll);
-      }
 
       return optionCultures
         .filter((culture) => culture.id !== undefined)
@@ -398,7 +485,7 @@ export function CultureDetail({
         data: culture,
       }));
     },
-    [cultures, filteredCultures, selectedCultureId]
+    [filteredCultures]
   );
 
   const selectedOption = useMemo(
@@ -611,6 +698,20 @@ export function CultureDetail({
                 <MenuItem value="high">{t('filters.nutrientHigh')}</MenuItem>
               </Select>
             </FormControl>
+            <FormControl size="small" sx={{ minWidth: '100%' }}>
+              <InputLabel id="culture-supplier-filter-label">{t('filters.supplier')}</InputLabel>
+              <Select
+                labelId="culture-supplier-filter-label"
+                value={filters.selectedSupplierFilter}
+                label={t('filters.supplier')}
+                onChange={(event) => updateFilter('selectedSupplierFilter', event.target.value)}
+              >
+                <MenuItem value="">{t('filters.all')}</MenuItem>
+                {supplierOptions.map((supplier) => (
+                  <MenuItem key={supplier.id} value={supplier.id}>{supplier.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <TextField
               size="small"
               type="number"
@@ -671,6 +772,7 @@ export function CultureDetail({
                   selectedFamilyFilter: '',
                   selectedCultivationFilter: '',
                   selectedNutrientFilter: '',
+                  selectedSupplierFilter: '',
                   growthDaysMin: '',
                   growthDaysMax: '',
                   yieldMin: '',
@@ -1391,6 +1493,7 @@ export function CultureDetail({
                     selectedFamilyFilter: '',
                     selectedCultivationFilter: '',
                     selectedNutrientFilter: '',
+                    selectedSupplierFilter: '',
                     growthDaysMin: '',
                     growthDaysMax: '',
                     yieldMin: '',

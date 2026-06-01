@@ -13,6 +13,7 @@
     "cropFamily": "Familie",
     "cultivationType": "Anbauart",
     "supplier": "Lieferant",
+    "unknownSupplier": "Lieferant #{{id}}",
     "directSowing": "Direktsaat",
     "preCultivation": "Pflanzung",
     "both": "Beides",

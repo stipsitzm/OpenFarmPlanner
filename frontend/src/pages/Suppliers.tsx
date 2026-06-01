@@ -400,9 +400,9 @@ export default function Suppliers(): React.ReactElement {
     if (!deleteUsageDialog) {
       return;
     }
-    const firstCultureId = deleteUsageDialog.usage.culture_ids[0];
+    const supplierId = deleteUsageDialog.supplier.id;
     setDeleteUsageDialog(null);
-    navigate(firstCultureId ? `/app/cultures?cultureId=${firstCultureId}` : '/app/cultures');
+    navigate(typeof supplierId === 'number' ? `/app/cultures?supplierId=${supplierId}` : '/app/cultures');
   }, [deleteUsageDialog, navigate]);
 
   const unlinkAndDeleteSupplier = useCallback(async (): Promise<void> => {
