@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { ReactElement } from 'react';
@@ -13,6 +13,7 @@ const {
   bedListMock,
   publicCultureListMock,
   publishPublicMock,
+  deleteMock,
 } = vi.hoisted(() => ({
   listMock: vi.fn(),
   locationListMock: vi.fn(),
@@ -20,6 +21,7 @@ const {
   bedListMock: vi.fn(),
   publicCultureListMock: vi.fn(),
   publishPublicMock: vi.fn(),
+  deleteMock: vi.fn(),
 }));
 
 vi.mock('../api/api', async () => {
@@ -30,6 +32,7 @@ vi.mock('../api/api', async () => {
       ...actual.cultureAPI,
       list: listMock,
       publishPublic: publishPublicMock,
+      delete: deleteMock,
     },
     locationAPI: {
       ...actual.locationAPI,
@@ -58,23 +61,32 @@ vi.mock('../cultures/CultureDetail', () => ({
     onCreatePlan,
     onPublishCulture,
     onEditCulture,
+    onDeleteCulture,
     canCreatePlan,
     publishActionLabel,
+    selectedCultureId,
   }: {
-    cultures: Array<{ id?: number; name: string }>;
+    cultures: Array<{ id?: number; name: string; variety?: string; cultivation_type?: string }>;
     onCultureSelect: (culture: { id?: number; name: string } | null) => void;
     onCreateCulture?: () => void;
     onCreatePlan?: () => void;
     onPublishCulture?: () => void;
     onEditCulture?: (culture: { id?: number; name: string }) => void;
+    onDeleteCulture?: (culture: { id?: number; name: string; variety?: string; cultivation_type?: string }) => void;
     canCreatePlan?: boolean;
     publishActionLabel?: string;
+    selectedCultureId?: number;
   }): ReactElement => (
     <div data-testid="culture-detail-mock">
+      <span data-testid="selected-culture-id">{selectedCultureId ?? 'none'}</span>
+      {cultures.map((culture) => (
+        <span key={culture.id} data-testid={`culture-row-${culture.id}`}>{culture.name}</span>
+      ))}
       <button type="button" onClick={() => onCreateCulture?.()}>Kultur hinzufügen</button>
       <button type="button" onClick={() => onPublishCulture?.()}>{publishActionLabel ?? 'Veröffentlichen'}</button>
       <button type="button" onClick={() => onCreatePlan?.()} disabled={!canCreatePlan}>Anbauplan erstellen</button>
       <button type="button" onClick={() => onEditCulture?.(cultures[0])}>Kultur bearbeiten</button>
+      <button type="button" onClick={() => onDeleteCulture?.(cultures[0])}>Kultur löschen</button>
       <button type="button" onClick={() => onCultureSelect(cultures[0] ?? null)}>select-culture</button>
     </div>
   ),
@@ -93,8 +105,8 @@ vi.mock('../hooks/useProjectRequirement', () => ({
   }),
 }));
 
-function renderCultures(initialPath = '/cultures'): void {
-  render(
+function renderCultures(initialPath = '/cultures'): ReturnType<typeof render> {
+  return render(
     <MemoryRouter initialEntries={[initialPath]}>
       <Routes>
         <Route
@@ -108,6 +120,12 @@ function renderCultures(initialPath = '/cultures'): void {
   );
 }
 
+const waitForDeleteDialogToClose = async (): Promise<void> => {
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog', { name: 'Kultur löschen?' })).not.toBeInTheDocument();
+  });
+};
+
 describe('Cultures action area', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -118,10 +136,11 @@ describe('Cultures action area', () => {
         next: null,
         previous: null,
         results: [
-          { id: 1, name: 'Tomate', growth_duration_days: 1, harvest_duration_days: 1 },
+          { id: 1, name: 'Tomate', variety: 'Roma', cultivation_type: 'pre_cultivation', growth_duration_days: 1, harvest_duration_days: 1 },
         ],
       },
     });
+    deleteMock.mockResolvedValue(undefined);
 
     publicCultureListMock.mockResolvedValue({
       data: {
@@ -141,6 +160,10 @@ describe('Cultures action area', () => {
         duplicates: [],
       },
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('does not render a public library shortcut in the cultures action area', async () => {
@@ -233,6 +256,106 @@ describe('Cultures action area', () => {
       expect(screen.getByRole('button', { name: 'Öffentliche Kulturbibliothek aktualisieren' })).toBeInTheDocument();
     });
     expect(screen.queryByRole('button', { name: 'Veröffentlichen' })).not.toBeInTheDocument();
+  });
+
+  it('renders a styled culture delete confirmation dialog with culture details', async () => {
+    renderCultures('/cultures?cultureId=1');
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Kultur löschen' })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Kultur löschen' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Kultur löschen?');
+    expect(dialog).toHaveTextContent('Tomate');
+    expect(dialog).toHaveTextContent('Roma');
+    expect(dialog).toHaveTextContent('Pflanzung');
+    expect(deleteMock).not.toHaveBeenCalled();
+  });
+
+  it('optimistically removes a confirmed culture deletion and shows undo feedback', async () => {
+    renderCultures('/cultures?cultureId=1');
+
+    await waitFor(() => expect(screen.getByTestId('culture-row-1')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Kultur löschen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Löschen' }));
+
+    expect(screen.queryByTestId('culture-row-1')).not.toBeInTheDocument();
+    expect(screen.getByText('Kultur gelöscht')).toBeInTheDocument();
+    await waitForDeleteDialogToClose();
+    expect(screen.getByRole('button', { name: 'Rückgängig: Kultur gelöscht' })).toBeInTheDocument();
+    expect(deleteMock).not.toHaveBeenCalled();
+  });
+
+  it('restores a confirmed culture deletion when undo is clicked', async () => {
+    renderCultures('/cultures?cultureId=1');
+
+    await waitFor(() => expect(screen.getByTestId('culture-row-1')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Kultur löschen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Löschen' }));
+    await waitForDeleteDialogToClose();
+    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig: Kultur gelöscht' }));
+
+    expect(screen.getByTestId('culture-row-1')).toBeInTheDocument();
+    expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('1');
+    expect(deleteMock).not.toHaveBeenCalled();
+  });
+
+  it('finalizes a confirmed culture deletion after the 8000 ms undo window', async () => {
+    renderCultures('/cultures?cultureId=1');
+
+    await waitFor(() => expect(screen.getByTestId('culture-row-1')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Kultur löschen' }));
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+
+    vi.advanceTimersByTime(7999);
+    expect(deleteMock).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1);
+    await Promise.resolve();
+    expect(deleteMock).toHaveBeenCalledWith(1);
+  });
+
+  it('keeps selection stable after confirmed delete and restores previous selection on undo', async () => {
+    listMock.mockResolvedValue({
+      data: {
+        count: 2,
+        next: null,
+        previous: null,
+        results: [
+          { id: 1, name: 'Tomate', variety: 'Roma', cultivation_type: 'pre_cultivation', growth_duration_days: 1, harvest_duration_days: 1 },
+          { id: 2, name: 'Salat', variety: 'Bijella', cultivation_type: 'direct_sowing', growth_duration_days: 1, harvest_duration_days: 1 },
+        ],
+      },
+    });
+    renderCultures('/cultures?cultureId=1');
+
+    await waitFor(() => expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('1'));
+    fireEvent.click(screen.getByRole('button', { name: 'Kultur löschen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Löschen' }));
+
+    expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('2');
+
+    await waitForDeleteDialogToClose();
+    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig: Kultur gelöscht' }));
+
+    expect(screen.getByTestId('culture-row-1')).toBeInTheDocument();
+    expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('1');
+  });
+
+  it('cleans pending culture deletion timers on unmount', async () => {
+    const { unmount } = renderCultures('/cultures?cultureId=1');
+
+    await waitFor(() => expect(screen.getByTestId('culture-row-1')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Kultur löschen' }));
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    unmount();
+    vi.advanceTimersByTime(8000);
+
+    expect(deleteMock).not.toHaveBeenCalled();
   });
 
   it('disables create planting plan button with bed-specific guidance when no beds exist', async () => {

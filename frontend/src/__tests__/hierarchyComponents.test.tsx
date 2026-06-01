@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { isValidElement, type ReactElement, type ReactNode } from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createHierarchyColumns } from '../components/hierarchy/HierarchyColumns';
 import { HierarchyFooter } from '../components/hierarchy/HierarchyFooter';
@@ -10,6 +11,34 @@ import { mockT } from './helpers/testI18n';
 vi.mock('../i18n', () => ({
   useTranslation: () => ({ t: mockT }),
 }));
+
+type ElementWithSx = ReactElement<{
+  children?: ReactNode;
+  'data-testid'?: string;
+  sx?: Record<string, unknown>;
+}>;
+
+const findElementByTestId = (node: ReactNode, testId: string): ElementWithSx | null => {
+  if (!isValidElement(node)) {
+    return null;
+  }
+
+  const element = node as ElementWithSx;
+  if (element.props['data-testid'] === testId) {
+    return element;
+  }
+
+  const children = element.props.children;
+  const childNodes = Array.isArray(children) ? children : [children];
+  for (const childNode of childNodes) {
+    const match = findElementByTestId(childNode, testId);
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
+};
 
 describe('hierarchy components and behaviors', () => {
   it('renders nested rows, handles duplicate labels and deep nesting expansion states', () => {
@@ -53,14 +82,16 @@ describe('hierarchy components and behaviors', () => {
     expect(bedLeaf?.hasChildren).toBe(false);
   });
 
-  it('builds hierarchy inline action callbacks for field, bed and location rows', async () => {
+  it('builds hierarchy inline add callbacks and shared menu triggers for rows', async () => {
     const user = userEvent.setup();
     const toggleExpand = vi.fn();
     const addBed = vi.fn();
     const deleteBed = vi.fn();
     const addField = vi.fn();
     const deleteField = vi.fn();
+    const deleteLocation = vi.fn();
     const createPlan = vi.fn();
+    const openContextMenu = vi.fn();
     const openNotes = vi.fn();
 
     const columns = createHierarchyColumns(
@@ -69,7 +100,9 @@ describe('hierarchy components and behaviors', () => {
       deleteBed,
       addField,
       deleteField,
+      deleteLocation,
       createPlan,
+      openContextMenu,
       openNotes,
       mockT as never,
     );
@@ -108,7 +141,11 @@ describe('hierarchy components and behaviors', () => {
         } as never)}
       </>
     );
-    await user.click(screen.getByLabelText('Parzelle hinzufügen'));
+    const addFieldButton = screen.getAllByLabelText('Parzelle hinzufügen')
+      .find((button) => !button.hasAttribute('data-mui-internal-clone-element'));
+    expect(addFieldButton).toBeDefined();
+    expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
+    await user.click(addFieldButton!);
     expect(addField).toHaveBeenCalledWith(2);
 
     rerender(
@@ -124,10 +161,14 @@ describe('hierarchy components and behaviors', () => {
     const addBedButton = screen.getAllByRole('button', { name: 'Beet zu dieser Parzelle hinzufügen' })
       .find((button) => !button.hasAttribute('data-mui-internal-clone-element'));
     expect(addBedButton).toBeDefined();
+    expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
     await user.click(addBedButton!);
-    await user.click(screen.getByLabelText('Löschen'));
     expect(addBed).toHaveBeenCalledWith(10);
-    expect(deleteField).toHaveBeenCalledWith(10);
+    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
+    fireEvent.contextMenu(screen.getByTestId('hierarchy-name-text'));
+    expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 'field-10' }));
+    expect(deleteField).not.toHaveBeenCalled();
 
     rerender(
       <>
@@ -139,10 +180,14 @@ describe('hierarchy components and behaviors', () => {
         } as never)}
       </>
     );
-    await user.click(screen.getByLabelText('Pflanzplan erstellen'));
-    await user.click(screen.getByLabelText('Löschen'));
+    const createPlantingPlanButton = screen.getByRole('button', { name: 'Pflanzplan erstellen' });
+    await user.click(createPlantingPlanButton);
     expect(createPlan).toHaveBeenCalledWith(100);
-    expect(deleteBed).toHaveBeenCalledWith(100);
+    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
+    fireEvent.contextMenu(screen.getByTestId('hierarchy-name-text'));
+    expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 100 }));
+    expect(deleteBed).not.toHaveBeenCalled();
   }, 15000);
 
 
@@ -172,7 +217,7 @@ describe('hierarchy components and behaviors', () => {
     expect(notesColumn?.width).toBe(280);
   });
 
-  it('hides inline action icons while the name cell is in edit mode', () => {
+  it('renders hover actions for empty existing row names', () => {
     const columns = createHierarchyColumns(
       vi.fn(),
       vi.fn(),
@@ -186,20 +231,134 @@ describe('hierarchy components and behaviors', () => {
 
     const nameColumn = columns.find((column) => column.field === 'name');
 
-    render(
-      <>
-        {nameColumn?.renderCell?.({
-          id: 100,
-          field: 'name',
-          value: 'Beet 100',
-          cellMode: 'edit',
-          row: { id: 100, type: 'bed', bedId: 100, level: 2 },
-        } as never)}
-      </>
+    const renderedCell = nameColumn?.renderCell?.({
+      id: 100,
+      field: 'name',
+      value: '',
+      api: {},
+      cellMode: 'view',
+      row: { id: 100, type: 'bed', bedId: 100, name: '', level: 2 },
+    } as never);
+
+    const actionOverlay = findElementByTestId(renderedCell, 'hierarchy-name-actions-overlay');
+
+    render(<>{renderedCell}</>);
+
+    expect(actionOverlay?.props.sx).toMatchObject({
+      position: 'absolute',
+      right: 0,
+      '.MuiDataGrid-row:hover &': {
+        opacity: 1,
+        pointerEvents: 'auto',
+      },
+      '.MuiDataGrid-row:focus-within &': {
+        opacity: 1,
+        pointerEvents: 'auto',
+      },
+    });
+    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
+  });
+
+  it('renders hover actions for empty unsaved row names even in edit mode', () => {
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
     );
 
-    expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
+    const nameColumn = columns.find((column) => column.field === 'name');
+    const renderedCell = nameColumn?.renderCell?.({
+      id: -1,
+      field: 'name',
+      value: '',
+      api: {},
+      cellMode: 'edit',
+      row: { id: -1, type: 'bed', bedId: -1, name: '', level: 2, isNew: true },
+    } as never);
+
+    const actionOverlay = findElementByTestId(renderedCell, 'hierarchy-name-actions-overlay');
+
+    render(<>{renderedCell}</>);
+
+    expect(actionOverlay?.props.sx).toMatchObject({
+      position: 'absolute',
+      right: 0,
+      '.MuiDataGrid-row:hover &': {
+        opacity: 1,
+        pointerEvents: 'auto',
+      },
+      '.MuiDataGrid-row:focus-within &': {
+        opacity: 1,
+        pointerEvents: 'auto',
+      },
+    });
+    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
+  });
+
+  it('lets long hierarchy names use the full normal-state name cell width', () => {
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+      { name: 520 },
+    );
+
+    const nameColumn = columns.find((column) => column.field === 'name');
+    const renderedCell = nameColumn?.renderCell?.({
+      id: 'field-10',
+      field: 'name',
+      value: 'Sehr langer Parzellenname der bei ausreichender Spaltenbreite vollständig sichtbar bleibt',
+      api: {},
+      cellMode: 'view',
+      row: { id: 'field-10', type: 'field', fieldId: 10, level: 1, expanded: true },
+    } as never);
+
+    const textElement = findElementByTestId(renderedCell, 'hierarchy-name-text');
+    const actionOverlay = findElementByTestId(renderedCell, 'hierarchy-name-actions-overlay');
+
+    expect(textElement?.props.sx).toMatchObject({
+      display: 'block',
+      flex: '1 1 auto',
+      minWidth: 0,
+      width: '100%',
+      maxWidth: 'none',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+    });
+    expect(actionOverlay?.props.sx).toMatchObject({
+      position: 'absolute',
+      right: 0,
+      pl: 0.25,
+      bgcolor: 'background.paper',
+      opacity: 0,
+      pointerEvents: 'none',
+      '&::before': {
+        right: '100%',
+        width: 16,
+        pointerEvents: 'none',
+      },
+      '.MuiDataGrid-row:hover &': {
+        opacity: 1,
+        pointerEvents: 'auto',
+      },
+      '.MuiDataGrid-row:focus-within &': {
+        opacity: 1,
+        pointerEvents: 'auto',
+      },
+    });
   });
 
   it('renders chevron only for rows that actually have children', () => {

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Suppliers from '../pages/Suppliers';
@@ -31,6 +31,30 @@ vi.mock('../commands/useCommandContext', () => ({
 describe('Suppliers page empty and table states', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('does not show the empty state while suppliers are still loading', async () => {
+    let resolveList: (value: { data: { results: Array<{ id: number; name: string; homepage_url: string }> } }) => void = () => {};
+    mocks.list.mockReturnValue(new Promise<{ data: { results: Array<{ id: number; name: string; homepage_url: string }> } }>((resolve) => {
+      resolveList = resolve;
+    }));
+
+    render(
+      <MemoryRouter>
+        <Suppliers />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText('Noch keine Lieferanten vorhanden')).not.toBeInTheDocument();
+    expect(screen.queryByText('Name')).not.toBeInTheDocument();
+    await waitFor(() => expect(mocks.list).toHaveBeenCalled());
+
+    await act(async () => {
+      resolveList({ data: { results: [{ id: 1, name: 'Reinsaat', homepage_url: 'https://example.com' }] } });
+    });
+
+    await waitFor(() => expect(screen.getByText('Reinsaat')).toBeInTheDocument());
+    expect(screen.queryByText('Noch keine Lieferanten vorhanden')).not.toBeInTheDocument();
   });
 
   it('shows only empty-state and no table headers when no suppliers exist', async () => {

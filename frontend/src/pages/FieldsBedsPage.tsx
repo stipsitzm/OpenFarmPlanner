@@ -18,8 +18,10 @@ import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { getSegmentedActionButtonSx, segmentedButtonGroupSx } from '../components/buttons/segmentedControlStyles';
 import { useTheme } from '@mui/material/styles';
 import ContentViewControls from '../components/layout/ContentViewControls';
+import { ContextMenuHint } from '../components/data-grid';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
+const FIELDS_BEDS_CONTEXT_MENU_HINT_STORAGE_KEY = 'ofp.fieldsBedsContextMenuHintSeen';
 const NOOP_SET_TOPBAR_ACTIONS = (): void => undefined;
 
 type ViewMode = 'table' | 'graphical';
@@ -47,6 +49,7 @@ export default function FieldsBedsPage(): React.ReactElement {
   const [targetLocationId, setTargetLocationId] = useState<number | ''>('');
   const [isAreaDataLoading, setIsAreaDataLoading] = useState(false);
   const [hasAreaDataLoaded, setHasAreaDataLoaded] = useState(false);
+  const [showContextMenuHint, setShowContextMenuHint] = useState(false);
   const [addLocationDialogOpen, setAddLocationDialogOpen] = useState(false);
   const [newLocationName, setNewLocationName] = useState('');
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
@@ -224,6 +227,24 @@ export default function FieldsBedsPage(): React.ReactElement {
     window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
   }, [viewMode]);
 
+  useEffect(() => {
+    if (
+      shouldShowProjectRequiredState ||
+      isAreaDataLoading ||
+      !hasAreaDataLoaded ||
+      viewMode !== 'table'
+    ) {
+      return;
+    }
+
+    if (window.localStorage.getItem(FIELDS_BEDS_CONTEXT_MENU_HINT_STORAGE_KEY) === '1') {
+      return;
+    }
+
+    window.localStorage.setItem(FIELDS_BEDS_CONTEXT_MENU_HINT_STORAGE_KEY, '1');
+    setShowContextMenuHint(true);
+  }, [hasAreaDataLoaded, isAreaDataLoading, shouldShowProjectRequiredState, viewMode]);
+
   const hasLocations = locations.length > 0;
   const hasFields = fieldsCount > 0;
   const hasBeds = bedsCount > 0;
@@ -343,6 +364,13 @@ export default function FieldsBedsPage(): React.ReactElement {
           <EmptyStateCard
             title={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldTitle') : t('hierarchy:emptyAreas.title')}
             description={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldDescription') : t('hierarchy:emptyAreas.description')}
+            supplement={(
+              <ContextMenuHint
+                compact
+                message={t('hierarchy:messages.contextMenuHint')}
+                secondary={t('hierarchy:messages.contextMenuHintKeyboard')}
+              />
+            )}
             checklist={!hasLocations ? [{
               label: t('hierarchy:columns.location'),
               done: false,
@@ -430,7 +458,18 @@ export default function FieldsBedsPage(): React.ReactElement {
           />
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState && viewMode !== 'graphical' ? (
-          <FieldsBedsHierarchy key={hierarchyRenderKey} showTitle={false} />
+          <>
+            {showContextMenuHint ? (
+              <Box sx={{ mb: 1.25 }}>
+                <ContextMenuHint
+                  message={t('hierarchy:messages.contextMenuHint')}
+                  secondary={t('hierarchy:messages.contextMenuHintKeyboard')}
+                  onClose={() => setShowContextMenuHint(false)}
+                />
+              </Box>
+            ) : null}
+            <FieldsBedsHierarchy key={hierarchyRenderKey} showTitle={false} />
+          </>
         ) : null}
       </PageContainer>
       <Dialog open={addFieldDialogOpen} onClose={() => setAddFieldDialogOpen(false)} fullWidth maxWidth="xs">

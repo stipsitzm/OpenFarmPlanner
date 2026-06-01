@@ -68,6 +68,7 @@ import {
   EditableDataGrid,
   createSingleSelectColumn,
   getCalculatedColumnProps,
+  ContextMenuHint,
   type EditableRow,
   type DataGridAPI,
   type SearchableSelectOption,
@@ -134,6 +135,8 @@ interface AreaValidationDialogState {
   mode: "bedLimit" | "remainingLimit" | "noRemainingArea";
 }
 
+const AREA_VALIDATION_CLOSE_SUPPRESSION_MS = 250;
+
 const CULTIVATION_TYPE_OPTIONS = [
   {
     value: "direct_sowing",
@@ -147,6 +150,7 @@ const CULTIVATION_TYPE_OPTIONS = [
 
 const CULTURE_COLUMN_MAX_WIDTH = 280;
 const BED_COLUMN_MAX_WIDTH = 220;
+const PLANTING_PLANS_CONTEXT_MENU_HINT_STORAGE_KEY = "ofp.plantingPlansContextMenuHintSeen";
 
 const estimateColumnWidth = (
   values: string[],
@@ -607,6 +611,7 @@ function PlantingPlans(): React.ReactElement {
   const [mobileNotesTarget, setMobileNotesTarget] = useState<PlantingPlanRow | null>(null);
   const [mobileNotesDraft, setMobileNotesDraft] = useState("");
   const [isMobileNotesSaving, setIsMobileNotesSaving] = useState(false);
+  const [showContextMenuHint, setShowContextMenuHint] = useState(false);
   const mobilePrefillHandledRef = useRef(false);
   const createIntentHandledRef = useRef(false);
 
@@ -643,10 +648,58 @@ function PlantingPlans(): React.ReactElement {
     };
   }, [isMobile]);
 
+  useEffect(() => {
+    if (isMobile || shouldShowProjectRequiredState) {
+      return;
+    }
+    if (window.localStorage.getItem(PLANTING_PLANS_CONTEXT_MENU_HINT_STORAGE_KEY) === "1") {
+      return;
+    }
+    window.localStorage.setItem(PLANTING_PLANS_CONTEXT_MENU_HINT_STORAGE_KEY, "1");
+    setShowContextMenuHint(true);
+  }, [isMobile, shouldShowProjectRequiredState]);
+
   useCommandContextTag("plans");
 
   // Track which field was last edited (for determining API payload)
   const lastEditedFieldRef = useRef<"area_m2" | "plants_count" | null>(null);
+  const areaValidationDialogRef = useRef<AreaValidationDialogState | null>(null);
+  const suppressAreaValidationSaveRef = useRef(false);
+  const areaValidationCloseTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+
+  const clearAreaValidationCloseTimer = useCallback((): void => {
+    if (areaValidationCloseTimerRef.current === null) {
+      return;
+    }
+    window.clearTimeout(areaValidationCloseTimerRef.current);
+    areaValidationCloseTimerRef.current = null;
+  }, []);
+
+  const suppressAreaValidationSaveCycle = useCallback((): void => {
+    suppressAreaValidationSaveRef.current = true;
+    clearAreaValidationCloseTimer();
+    areaValidationCloseTimerRef.current = window.setTimeout(() => {
+      suppressAreaValidationSaveRef.current = false;
+      areaValidationCloseTimerRef.current = null;
+    }, AREA_VALIDATION_CLOSE_SUPPRESSION_MS);
+  }, [clearAreaValidationCloseTimer]);
+
+  const openAreaValidationDialog = useCallback((dialog: AreaValidationDialogState): void => {
+    clearAreaValidationCloseTimer();
+    suppressAreaValidationSaveRef.current = false;
+    areaValidationDialogRef.current = dialog;
+    setAreaValidationDialog(dialog);
+  }, [clearAreaValidationCloseTimer]);
+
+  const closeAreaValidationDialog = useCallback((): void => {
+    areaValidationDialogRef.current = null;
+    suppressAreaValidationSaveCycle();
+    setAreaValidationDialog(null);
+  }, [suppressAreaValidationSaveCycle]);
+
+  useEffect(() => () => {
+    clearAreaValidationCloseTimer();
+  }, [clearAreaValidationCloseTimer]);
 
   const cultureOptions: SearchableSelectOption[] = useMemo(
     () =>
@@ -1544,9 +1597,9 @@ function PlantingPlans(): React.ReactElement {
   const getPlanBedId = (row: PlantingPlanRow): number | null => {
     const rowRecord = row as PlantingPlanRow & {
       bed_id?: unknown;
-      bed?: unknown;
     };
-    const directBedId = toOptionalNumber(rowRecord.bed);
+    const bedValue: unknown = (row as { bed?: unknown }).bed;
+    const directBedId = toOptionalNumber(bedValue);
     if (directBedId !== undefined) {
       return directBedId;
     }
@@ -1555,11 +1608,11 @@ function PlantingPlans(): React.ReactElement {
       return apiBedId;
     }
     if (
-      rowRecord.bed &&
-      typeof rowRecord.bed === "object" &&
-      "id" in rowRecord.bed
+      bedValue &&
+      typeof bedValue === "object" &&
+      "id" in bedValue
     ) {
-      return toOptionalNumber(rowRecord.bed.id) ?? null;
+      return toOptionalNumber((bedValue as { id?: unknown }).id) ?? null;
     }
     return null;
   };
@@ -1870,8 +1923,25 @@ function PlantingPlans(): React.ReactElement {
           <EmptyStateCard
             title={t("plantingPlans:emptyStates.states.plans.title")}
             description={t("plantingPlans:emptyStates.states.plans.description")}
+            supplement={(
+              <ContextMenuHint
+                compact
+                message={t("plantingPlans:contextMenuHint")}
+                secondary={t("plantingPlans:contextMenuHintKeyboard")}
+              />
+            )}
             actions={[{ label: t(createPlanAction.labelKey), to: createPlanAction.to }]}
           />
+        ) : null}
+
+        {!isInitialLoading && showContextMenuHint && !isMobile && !shouldShowPrerequisiteState && hasPlans ? (
+          <Box sx={{ mb: 1.25 }}>
+            <ContextMenuHint
+              message={t("plantingPlans:contextMenuHint")}
+              secondary={t("plantingPlans:contextMenuHintKeyboard")}
+              onClose={() => setShowContextMenuHint(false)}
+            />
+          </Box>
         ) : null}
 
         {isMobile && hasPlans ? (
@@ -2120,6 +2190,9 @@ function PlantingPlans(): React.ReactElement {
             return errors;
           }}
           onBeforeSaveRow={(row) => {
+            if (areaValidationDialogRef.current || suppressAreaValidationSaveRef.current) {
+              return false;
+            }
             const capacity = getCapacityForRow(row);
             if (!capacity) {
               return true;
@@ -2141,7 +2214,7 @@ function PlantingPlans(): React.ReactElement {
               return true;
             }
             if (requestedArea > capacity.bedArea) {
-              setAreaValidationDialog({
+              openAreaValidationDialog({
                 rowId: row.id,
                 requestedArea,
                 availableArea: capacity.availableArea,
@@ -2154,7 +2227,7 @@ function PlantingPlans(): React.ReactElement {
               return false;
             }
             if (capacity.availableArea <= 0) {
-              setAreaValidationDialog({
+              openAreaValidationDialog({
                 rowId: row.id,
                 requestedArea,
                 availableArea: capacity.availableArea,
@@ -2167,7 +2240,7 @@ function PlantingPlans(): React.ReactElement {
               return false;
             }
             if (requestedArea > capacity.availableArea) {
-              setAreaValidationDialog({
+              openAreaValidationDialog({
                 rowId: row.id,
                 requestedArea,
                 availableArea: capacity.availableArea,
@@ -2185,10 +2258,21 @@ function PlantingPlans(): React.ReactElement {
           saveErrorMessage={t("plantingPlans:errors.save")}
           deleteErrorMessage={t("plantingPlans:errors.delete")}
           deleteConfirmMessage={t("plantingPlans:confirmDelete")}
+          deleteUndoOptions={{
+            message: t("plantingPlans:messages.deleted"),
+            snackbarTestId: "planting-plan-delete-snackbar",
+          }}
           addButtonLabel={`${t("plantingPlans:addButton")} (Alt+Shift+N)`}
-          showDeleteAction={true}
+          showDeleteAction={false}
           showFooterEditControls={false}
-          showRowEditActions={true}
+          showRowEditActions={false}
+          duplicateRow={(row) => ({
+            ...row,
+            id: -Date.now(),
+            isNew: true,
+            __draft: true,
+            note_attachment_count: 0,
+          })}
           tableKey="plantingPlans"
           defaultSortModel={[{ field: "planting_date", sort: "asc" }]}
           persistSortInUrl={true}
@@ -2337,7 +2421,7 @@ function PlantingPlans(): React.ReactElement {
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={areaValidationDialog !== null} onClose={() => setAreaValidationDialog(null)} fullWidth maxWidth="xs">
+      <Dialog open={areaValidationDialog !== null} onClose={closeAreaValidationDialog} fullWidth maxWidth="xs">
         <DialogTitle>
           {areaValidationDialog?.mode === "bedLimit"
             ? t("plantingPlans:areaValidation.bedLimitTitle")
@@ -2374,7 +2458,7 @@ function PlantingPlans(): React.ReactElement {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAreaValidationDialog(null)}>{t("common:actions.cancel")}</Button>
+          <Button onClick={closeAreaValidationDialog}>{t("common:actions.cancel")}</Button>
           {areaValidationDialog?.mode !== "noRemainingArea" && (
             <Button
               variant="contained"
@@ -2391,7 +2475,7 @@ function PlantingPlans(): React.ReactElement {
                   areaValidationDialog.cultureId,
                   areaValidationDialog.plantsCount,
                 );
-                setAreaValidationDialog(null);
+                closeAreaValidationDialog();
               }}
             >
               {areaValidationDialog?.mode === "bedLimit"

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,6 +21,7 @@ const commandApiSpies = vi.hoisted(() => ({
   setDraftValues: vi.fn(),
   saveAttemptResult: vi.fn(),
   apiPayload: vi.fn(),
+  gridProps: vi.fn(),
 }));
 
 vi.mock("../hooks/useProjectRequirement", () => ({
@@ -56,12 +57,18 @@ vi.mock("../components/data-grid", async () => {
     mapToApiData?: (row: Record<string, unknown>) => Partial<Record<string, unknown>> | Promise<Partial<Record<string, unknown>>>;
     onRowsStateChange?: (rows: Record<string, unknown>[]) => void;
     onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean }) => void;
-    onBeforeSaveRow?: (row: Record<string, unknown>) => boolean | Record<string, unknown>;
+    onBeforeSaveRow?: (row: Record<string, unknown>) => boolean | Record<string, unknown> | Promise<boolean | Record<string, unknown>>;
     commandApiRef?: { current: EditableDataGridCommandApi | null };
+    showDeleteAction?: boolean;
+    showRowEditActions?: boolean;
+    duplicateRow?: (row: Record<string, unknown>) => Record<string, unknown>;
+    deleteUndoOptions?: { message: string; snackbarTestId?: string };
   };
   return {
     ...actual,
-    EditableDataGrid: ({ api, mapToRow, mapToApiData, onRowsStateChange, onLoadStateChange, onBeforeSaveRow, commandApiRef }: MockGridProps) => {
+    EditableDataGrid: (props: MockGridProps) => {
+      const { api, mapToRow, mapToApiData, onRowsStateChange, onLoadStateChange, onBeforeSaveRow, commandApiRef } = props;
+      commandApiSpies.gridProps(props);
       if (commandApiRef) {
         commandApiRef.current = {
           addRow: vi.fn(),
@@ -90,8 +97,8 @@ vi.mock("../components/data-grid", async () => {
           isMounted = false;
         };
       }, []);
-      const handleSaveAttempt = (): void => {
-        const result = onBeforeSaveRow?.(mockGridRowState.row) ?? true;
+      const handleSaveAttempt = async (): Promise<void> => {
+        const result = await (onBeforeSaveRow?.(mockGridRowState.row) ?? true);
         if (result !== true && result !== false) {
           commandApiSpies.setDraftValues(mockGridRowState.row.id, result);
           commandApiSpies.saveAttemptResult(true);
@@ -111,15 +118,21 @@ vi.mock("../components/data-grid", async () => {
         <>
           <button
             type="button"
-            onClick={handleSaveAttempt}
+            onClick={() => void handleSaveAttempt()}
           >
             Zeile speichern
           </button>
           <button
             type="button"
-            onClick={handleSaveAttempt}
+            onClick={() => void handleSaveAttempt()}
           >
             Speichern mit Enter
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSaveAttempt()}
+          >
+            Speichern durch Fokusverlust
           </button>
         </>
       );
@@ -187,11 +200,45 @@ vi.mock("../api/api", async () => {
 describe("PlantingPlans save-time area validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGridRowState.row = {};
     apiMocks.cultureList.mockResolvedValue({ data: { results: [{ id: 2, name: "Möhre", plants_per_m2: 10 }] } });
     apiMocks.locationList.mockResolvedValue({ data: { results: [{ id: 1, name: "Hof" }] } });
     apiMocks.fieldList.mockResolvedValue({ data: { results: [{ id: 11, name: "Parzelle 1", location: 1 }] } });
     apiMocks.bedList.mockResolvedValue({ data: { results: [{ id: 101, name: "Beet A", field: 11, area_sqm: 1 }] } });
     apiMocks.planList.mockResolvedValue({ data: { results: [] } });
+  });
+
+  it("uses contextual row actions instead of permanent action columns", async () => {
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+
+    const latestProps = commandApiSpies.gridProps.mock.calls.at(-1)?.[0];
+    expect(latestProps).toMatchObject({
+      showDeleteAction: false,
+      showRowEditActions: false,
+      deleteUndoOptions: {
+        message: "Anbauplan gelöscht",
+        snackbarTestId: "planting-plan-delete-snackbar",
+      },
+    });
+    expect(latestProps.duplicateRow).toBeTypeOf("function");
+    expect(latestProps.duplicateRow({
+      id: 9,
+      bed: 101,
+      culture: 2,
+      planting_date: "2026-04-01",
+      area_m2: 3,
+      notes: "Notiz",
+    })).toMatchObject({
+      bed: 101,
+      culture: 2,
+      planting_date: "2026-04-01",
+      area_m2: 3,
+      notes: "Notiz",
+      isNew: true,
+      __draft: true,
+      note_attachment_count: 0,
+    });
   });
 
   it("shows bed-limit dialog when requested area exceeds bed area", async () => {
@@ -217,6 +264,62 @@ describe("PlantingPlans save-time area validation", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Speichern mit Enter" }));
 
     expect(await screen.findByText("Die angegebene Fläche überschreitet die Größe dieses Beets.")).toBeInTheDocument();
+  });
+
+  it("shows bed-limit dialog when saving through focus loss", async () => {
+    mockGridRowState.row = {
+      id: 1, bed: 101, culture: 2, planting_date: "2026-04-01", area_m2: "99",
+    };
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+    await userEvent.click(await screen.findByRole("button", { name: "Speichern durch Fokusverlust" }));
+
+    expect(await screen.findByText("Die angegebene Fläche überschreitet die Größe dieses Beets.")).toBeInTheDocument();
+    expect(commandApiSpies.saveAttemptResult).toHaveBeenLastCalledWith(false);
+    expect(commandApiSpies.apiPayload).not.toHaveBeenCalled();
+  });
+
+  it("keeps invalid drafts editable when the conflict dialog is canceled", async () => {
+    mockGridRowState.row = {
+      id: 1, bed: 101, culture: 2, planting_date: "2026-04-01", area_m2: "99",
+    };
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+    await userEvent.click(await screen.findByRole("button", { name: "Zeile speichern" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Abbrechen" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Die angegebene Fläche überschreitet die Größe dieses Beets.")).not.toBeInTheDocument();
+    });
+    expect(commandApiSpies.saveAttemptResult).toHaveBeenLastCalledWith(false);
+    expect(commandApiSpies.setDraftValues).not.toHaveBeenCalled();
+    expect(commandApiSpies.apiPayload).not.toHaveBeenCalled();
+    expect(mockGridRowState.row).toMatchObject({ area_m2: "99" });
+  });
+
+  it("does not start another area validation while closing a canceled conflict dialog", async () => {
+    apiMocks.bedList.mockResolvedValue({ data: { results: [{ id: 101, name: "Beet A", field: 11, area_sqm: 4 }] } });
+    apiMocks.planList.mockResolvedValue({
+      data: {
+        results: [{
+          id: 9, bed: 101, culture: 2, planting_date: "2026-04-01", harvest_date: "2026-05-01", area_usage_sqm: 4,
+        }],
+      },
+    });
+    mockGridRowState.row = {
+      id: 1, bed: 101, culture: 2, planting_date: "2026-04-10", harvest_date: "2026-05-10", area_m2: "2",
+    };
+
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+    await userEvent.click(await screen.findByRole("button", { name: "Zeile speichern" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Abbrechen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Speichern durch Fokusverlust" }));
+
+    expect(screen.queryByText("Für dieses Beet ist im gewählten Zeitraum keine freie Fläche verfügbar.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.")).not.toBeInTheDocument();
+    expect(commandApiSpies.saveAttemptResult).toHaveBeenLastCalledWith(false);
+    expect(commandApiSpies.apiPayload).not.toHaveBeenCalled();
   });
 
   it("applies bed area when clicking 'Beetfläche übernehmen'", async () => {

@@ -50,6 +50,7 @@ export function useHierarchyData() {
     error,
     setError,
     locations,
+    setLocations,
     fields,
     beds,
     setBeds,

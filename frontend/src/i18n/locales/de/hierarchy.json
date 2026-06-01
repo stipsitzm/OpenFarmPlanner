@@ -54,7 +54,16 @@
     "missingDimensionsHintOptional": "Du kannst die Werte später ergänzen.",
     "missingDimensionsCellTooltip": "Für Flächenberechnung erforderlich.",
     "createLocationError": "Fehler beim Erstellen des Standorts.",
-    "locationCreated": "Standort wurde angelegt."
+    "locationCreated": "Standort wurde angelegt.",
+    "contextMenuHint": "Tipp: Rechtsklick auf eine Zeile öffnet weitere Aktionen.",
+    "contextMenuHintKeyboard": "Alternativ: Kontextmenütaste oder Shift+F10.",
+    "unsavedMissingName": "Zeile wurde nicht gespeichert, da der Name fehlt.",
+    "unsavedInvalidRowsNavigationWarning": "Es gibt eine nicht gespeicherte Zeile ohne Namen. Beim Verlassen der Seite geht sie verloren.",
+    "locationDeleted": "Standort gelöscht",
+    "fieldDeleted": "Parzelle gelöscht",
+    "bedDeleted": "Beet gelöscht",
+    "locationAndBedsDeleted": "Standort und {{count}} Beete gelöscht",
+    "fieldAndBedsDeleted": "Parzelle und {{count}} Beete gelöscht"
   },
   "prompts": {
     "newFieldName": "Name der neuen Parzelle:",
@@ -62,8 +71,10 @@
   },
   "actions": {
     "addField": "Parzelle hinzufügen",
+    "addBed": "Beet hinzufügen",
     "createLocation": "Standort hinzufügen",
-    "addAdditionalLocation": "Mehrere Orte? Weiteren Standort hinzufügen"
+    "addAdditionalLocation": "Mehrere Orte? Weiteren Standort hinzufügen",
+    "undo": "Rückgängig"
   },
   "dialogs": {
     "addField": {

@@ -17,22 +17,43 @@ import React, {
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "../i18n";
-import { DataGrid, GridRowModes } from "@mui/x-data-grid";
+import {
+  DataGrid,
+  GridRowEditStopReasons,
+  GridRowModes,
+  useGridApiRef,
+} from "@mui/x-data-grid";
 import { germanDataGridLocaleText } from "../components/data-grid/localeText";
-import type { GridRowsProp, GridRowModesModel, GridRowHeightParams } from "@mui/x-data-grid";
+import type {
+  GridCellParams,
+  GridEventListener,
+  GridRowHeightParams,
+  GridRowId,
+  GridRowsProp,
+  GridRowModesModel,
+} from "@mui/x-data-grid";
 import { Box, Alert } from "@mui/material";
+import Divider from "@mui/material/Divider";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { dataGridSx } from "../components/data-grid/styles";
+import {
+  DeleteUndoSnackbar,
+  DELETE_UNDO_DURATION_MS,
+  ContextMenuHint,
+} from "../components/data-grid";
 import {
   handleRowEditStop,
   handleEditableCellClick,
 } from "../components/data-grid/handlers";
+import { useNavigationBlocker } from "../hooks/autosave";
 import { useHierarchyData } from "../components/hierarchy/hooks/useHierarchyData";
 import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { usePersistentSortModel } from "../hooks/usePersistentSortModel";
 import { useFieldOperations } from "../components/hierarchy/hooks/useFieldOperations";
-import { fieldAPI, bedAPI } from "../api/api";
+import { fieldAPI, bedAPI, locationAPI, type Bed, type Field, type Location as FarmLocation } from "../api/api";
 import {
   buildHierarchyIndex,
   createHierarchyRowsProjector,
@@ -55,6 +76,159 @@ import { isTypingInEditableElement } from "../hooks/useKeyboardShortcuts";
 interface FieldsBedsHierarchyProps {
   showTitle?: boolean;
 }
+
+interface HierarchyRowAction {
+  id: string;
+  label: string;
+  group: "create" | "edit" | "destructive";
+  color?: "default" | "error";
+  onClick: () => void;
+}
+
+type PendingHierarchyDeletionType = "location" | "field" | "bed";
+
+interface PendingHierarchyDeletion {
+  id: string;
+  type: PendingHierarchyDeletionType;
+  targetId: number;
+  message: string;
+  locations: FarmLocation[];
+  fields: Field[];
+  beds: Bed[];
+  allLocationsBeforeDelete: FarmLocation[];
+  allFieldsBeforeDelete: Field[];
+  allBedsBeforeDelete: Bed[];
+  expandedRowsBeforeDelete: Set<string | number>;
+  visible: boolean;
+}
+
+export type HierarchyNameMeasureEntry = {
+  name: string;
+  level: number;
+  type: HierarchyRow["type"];
+};
+
+const isEmptyHierarchyDraftValue = (value: unknown): boolean => {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  if (typeof value === "string") {
+    return value.trim() === "";
+  }
+  return false;
+};
+
+export const isCompletelyEmptyNewHierarchyRow = (row: HierarchyRow): boolean => {
+  if (!row.isNew) {
+    return false;
+  }
+
+  return (
+    isEmptyHierarchyDraftValue(row.name) &&
+    isEmptyHierarchyDraftValue(row.area_sqm) &&
+    isEmptyHierarchyDraftValue(row.length_m) &&
+    isEmptyHierarchyDraftValue(row.width_m) &&
+    isEmptyHierarchyDraftValue(row.notes)
+  );
+};
+
+export const isPartiallyFilledNamelessNewHierarchyRow = (row: HierarchyRow): boolean => (
+  Boolean(row.isNew) &&
+  isEmptyHierarchyDraftValue(row.name) &&
+  !isCompletelyEmptyNewHierarchyRow(row)
+);
+
+const NAME_COLUMN_MIN_WIDTH = 220;
+const NAME_COLUMN_MAX_WIDTH = 520;
+const NAME_COLUMN_CHAR_WIDTH_FALLBACK_PX = 8;
+const NAME_COLUMN_INDENT_PER_LEVEL_PX = 24;
+const NAME_COLUMN_EXPAND_CHROME_PX = 44;
+const NAME_COLUMN_CELL_HORIZONTAL_PADDING_PX = 20;
+const NAME_COLUMN_BED_TEXT_PADDING_PX = 8;
+const NAME_COLUMN_WIDTH_BUFFER_PX = 2;
+const HIERARCHY_CONTEXT_MENU_HINT_STORAGE_KEY = "ofp.hierarchyContextMenuHintSeen";
+export const NAME_COLUMN_MEASUREMENT_RESERVE_PX = 14;
+export const calculateHierarchyNameColumnWidth = (
+  entries: HierarchyNameMeasureEntry[],
+  getTextWidth: (entry: HierarchyNameMeasureEntry) => number,
+): number => {
+  const measuredWidth = entries.reduce((maxWidth, row) => {
+    const textWidth = getTextWidth(row);
+    const hierarchyChromeWidth =
+      row.level * NAME_COLUMN_INDENT_PER_LEVEL_PX +
+      NAME_COLUMN_EXPAND_CHROME_PX +
+      NAME_COLUMN_CELL_HORIZONTAL_PADDING_PX +
+      (row.type === "bed" ? NAME_COLUMN_BED_TEXT_PADDING_PX : 0) +
+      NAME_COLUMN_WIDTH_BUFFER_PX;
+
+    return Math.max(
+      maxWidth,
+      hierarchyChromeWidth + textWidth + NAME_COLUMN_MEASUREMENT_RESERVE_PX,
+    );
+  }, NAME_COLUMN_MIN_WIDTH);
+
+  return Math.min(NAME_COLUMN_MAX_WIDTH, Math.max(NAME_COLUMN_MIN_WIDTH, measuredWidth));
+};
+
+const getHierarchyNameFont = (
+  entry: HierarchyNameMeasureEntry,
+  baseFontSizePx: number,
+  fontFamily: string,
+): string => {
+  const fontWeight = entry.type === "location" ? 600 : 400;
+  const fontSizePx =
+    entry.type === "location"
+      ? baseFontSizePx * 1.02
+      : entry.type === "bed"
+        ? baseFontSizePx * 0.95
+        : baseFontSizePx;
+
+  return `${fontWeight} ${fontSizePx}px ${fontFamily}`;
+};
+
+const getHierarchyNameMeasureKey = (entry: HierarchyNameMeasureEntry): string =>
+  `${entry.type}\u0000${entry.name}`;
+
+const measureHierarchyNameTextWidths = (
+  entries: HierarchyNameMeasureEntry[],
+): Map<string, number> => {
+  const widths = new Map<string, number>();
+
+  const setFallbackWidths = (): Map<string, number> => {
+    entries.forEach((entry) => {
+      widths.set(
+        getHierarchyNameMeasureKey(entry),
+        entry.name.length * NAME_COLUMN_CHAR_WIDTH_FALLBACK_PX,
+      );
+    });
+    return widths;
+  };
+
+  if (typeof document === "undefined") {
+    return setFallbackWidths();
+  }
+
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return setFallbackWidths();
+  }
+
+  const bodyStyle = window.getComputedStyle(document.body);
+  const baseFontSizePx =
+    Number.parseFloat(bodyStyle.fontSize) || 16;
+  const fontFamily = bodyStyle.fontFamily || "Roboto, Arial, sans-serif";
+
+  entries.forEach((entry) => {
+    context.font = getHierarchyNameFont(entry, baseFontSizePx, fontFamily);
+    widths.set(
+      getHierarchyNameMeasureKey(entry),
+      Math.ceil(context.measureText(entry.name).width),
+    );
+  });
+
+  return widths;
+};
 
 const HIERARCHY_DATA_GRID_SX = {
   ...dataGridSx,
@@ -134,15 +308,40 @@ function FieldsBedsHierarchy({
   const { t } = useTranslation("hierarchy");
   const navigate = useNavigate();
   const location = useLocation();
+  const gridApiRef = useGridApiRef();
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [selectedRowId, setSelectedRowId] = useState<string | number | null>(
     null,
   );
   const [treeActive, setTreeActive] = useState(false);
+  const [contextMenuState, setContextMenuState] = useState<{
+    row: HierarchyRow;
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
+  const [draftValidationWarning, setDraftValidationWarning] = useState("");
+  const [showContextMenuHint, setShowContextMenuHint] = useState(false);
+  const [pendingDeletions, setPendingDeletions] = useState<PendingHierarchyDeletion[]>([]);
   const hasInitiallyExpandedRef = useRef(false);
+  const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
+  const pendingDeletionTimersRef = useRef<Map<string, number>>(new Map());
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
+  const touchLongPressTimeoutRef = useRef<number | null>(null);
 
   useCommandContextTag("areas");
+
+  useEffect(() => {
+    if (!showTitle) {
+      return;
+    }
+
+    if (window.localStorage.getItem(HIERARCHY_CONTEXT_MENU_HINT_STORAGE_KEY) === "1") {
+      return;
+    }
+
+    window.localStorage.setItem(HIERARCHY_CONTEXT_MENU_HINT_STORAGE_KEY, "1");
+    setShowContextMenuHint(true);
+  }, [showTitle]);
 
   // Data fetching
   const {
@@ -150,6 +349,7 @@ function FieldsBedsHierarchy({
     error,
     setError,
     locations,
+    setLocations,
     fields,
     beds,
     setBeds,
@@ -183,11 +383,11 @@ function FieldsBedsHierarchy({
   }, [sortModel]);
 
   // Bed operations
-  const { addBed, saveBed, deleteBed, pendingEditRow, setPendingEditRow } =
+  const { addBed, saveBed, pendingEditRow, setPendingEditRow } =
     useBedOperations(beds, setBeds, setError, t);
 
   // Field operations
-  const { addField, deleteField } = useFieldOperations(
+  const { addField } = useFieldOperations(
     locations,
     setError,
     fetchData,
@@ -208,6 +408,30 @@ function FieldsBedsHierarchy({
     () => projectRows(expandedRows),
     [projectRows, expandedRows],
   );
+
+  const rowsById = useMemo(() => {
+    const nextRowsById = new Map<string, HierarchyRow>();
+    rows.forEach((row) => nextRowsById.set(String(row.id), row));
+    return nextRowsById;
+  }, [rows]);
+
+  const rememberRowSnapshot = useCallback((rowId: GridRowId): void => {
+    const rowKey = String(rowId);
+    if (rowSnapshotRef.current.has(rowKey)) {
+      return;
+    }
+
+    const row = rowsById.get(rowKey);
+    if (row) {
+      rowSnapshotRef.current.set(rowKey, row);
+    }
+  }, [rowsById]);
+
+  const getDraftRow = useCallback((rowId: GridRowId): HierarchyRow | null => {
+    const api = gridApiRef.current;
+    const draftRow = api?.getRowWithUpdatedValues?.(rowId, "") as HierarchyRow | null | undefined;
+    return draftRow ?? rowsById.get(String(rowId)) ?? null;
+  }, [gridApiRef, rowsById]);
 
   // Notes editor - must be after rows definition
   const notesEditor = useNotesEditor<HierarchyRow>({
@@ -417,6 +641,72 @@ function FieldsBedsHierarchy({
     return undefined;
   }, []);
 
+  const preservePartialNewBedDraft = useCallback((draftRow: HierarchyRow): void => {
+    if (draftRow.type !== "bed" || typeof draftRow.bedId !== "number") {
+      return;
+    }
+
+    if (isPartiallyFilledNamelessNewHierarchyRow(draftRow)) {
+      setDraftValidationWarning(t("messages.unsavedMissingName"));
+      setError("");
+    } else {
+      setDraftValidationWarning("");
+    }
+
+    setBeds((previousBeds) =>
+      previousBeds.map((bed) =>
+        bed.id === draftRow.bedId
+          ? {
+              ...bed,
+              name: draftRow.name ?? "",
+              area_sqm: parseAreaValue(draftRow.area_sqm),
+              length_m: parseDimensionValue(draftRow.length_m),
+              width_m: parseDimensionValue(draftRow.width_m),
+              notes: draftRow.notes ?? "",
+            }
+          : bed,
+      ),
+    );
+  }, [parseAreaValue, parseDimensionValue, setBeds, setError, t]);
+
+  const discardRowEdit = useCallback((rowId: GridRowId): void => {
+    const draftRow = getDraftRow(rowId);
+
+    if (draftRow?.isNew) {
+      if (isCompletelyEmptyNewHierarchyRow(draftRow)) {
+        setBeds((previousBeds) => previousBeds.filter((bed) => String(bed.id) !== String(rowId)));
+        setDraftValidationWarning("");
+      } else {
+        preservePartialNewBedDraft(draftRow);
+      }
+    }
+
+    rowSnapshotRef.current.delete(String(rowId));
+    setRowModesModel((previousModel) => ({
+      ...previousModel,
+      [rowId]: { mode: GridRowModes.View, ignoreModifications: true },
+    }));
+  }, [getDraftRow, preservePartialNewBedDraft, setBeds]);
+
+  const discardActiveRowEdit = useCallback((): void => {
+    const editingRowId = Object.entries(rowModesModel).find(([, mode]) => mode.mode === GridRowModes.Edit)?.[0];
+    if (editingRowId === undefined) {
+      return;
+    }
+
+    discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
+  }, [discardRowEdit, rowModesModel, rowsById]);
+
+  const handleHierarchyRowEditStop = useCallback<GridEventListener<"rowEditStop">>((params, event): void => {
+    if (params.reason === GridRowEditStopReasons.escapeKeyDown) {
+      event.defaultMuiPrevented = true;
+      discardRowEdit(params.id);
+      return;
+    }
+
+    handleRowEditStop(params, event);
+  }, [discardRowEdit]);
+
   const getBedAreaSum = (
     fieldId: number,
     excludeBedId?: number,
@@ -440,9 +730,15 @@ function FieldsBedsHierarchy({
     newRow: HierarchyRow,
   ): Promise<HierarchyRow> => {
     if (!newRow.name || newRow.name.trim() === "") {
+      if (isPartiallyFilledNamelessNewHierarchyRow(newRow)) {
+        preservePartialNewBedDraft(newRow);
+        throw new Error(t("messages.unsavedMissingName"));
+      }
       setError(t("validation.nameRequired"));
       throw new Error(t("validation.nameRequired"));
     }
+
+    setDraftValidationWarning("");
 
     if (newRow.type === "bed") {
       const parsedLength = parseDimensionValue(newRow.length_m);
@@ -620,6 +916,27 @@ function FieldsBedsHierarchy({
         throw new Error(errorMessage);
       }
     }
+    if (newRow.type === "location") {
+      const existingLocation = locations.find((locationItem) => locationItem.id === newRow.locationId);
+      const updated = await locationAPI.update(newRow.locationId!, {
+        ...(existingLocation ?? {}),
+        id: newRow.locationId!,
+        name: newRow.name,
+      });
+
+      setLocations((previousLocations) =>
+        previousLocations.map((locationItem) =>
+          locationItem.id === newRow.locationId
+            ? { ...locationItem, ...updated.data, id: updated.data.id }
+            : locationItem,
+        ),
+      );
+      await fetchData();
+      return {
+        ...newRow,
+        name: updated.data.name,
+      };
+    }
     return newRow;
   };
 
@@ -628,8 +945,224 @@ function FieldsBedsHierarchy({
    */
   const handleProcessRowUpdateError = (error: Error): void => {
     console.error("Row update error:", error);
+    if (error.message === t("messages.unsavedMissingName")) {
+      setDraftValidationWarning(error.message);
+      setError("");
+      return;
+    }
     setError(error.message || t("errors.save"));
   };
+
+  const restoreDeletedItems = useCallback((deletion: PendingHierarchyDeletion): void => {
+    const restoreByPreviousOrder = <T extends { id?: number }>(
+      currentItems: T[],
+      deletedItems: T[],
+      previousItems: T[],
+    ): T[] => {
+      const byId = new Map<number, T>();
+      currentItems.forEach((item) => {
+        if (typeof item.id === "number") {
+          byId.set(item.id, item);
+        }
+      });
+      deletedItems.forEach((item) => {
+        if (typeof item.id === "number" && !byId.has(item.id)) {
+          byId.set(item.id, item);
+        }
+      });
+
+      const previousOrder = new Map<number, number>();
+      previousItems.forEach((item, index) => {
+        if (typeof item.id === "number") {
+          previousOrder.set(item.id, index);
+        }
+      });
+
+      return Array.from(byId.values()).sort((left, right) => {
+        const leftIndex = typeof left.id === "number" ? previousOrder.get(left.id) : undefined;
+        const rightIndex = typeof right.id === "number" ? previousOrder.get(right.id) : undefined;
+        if (leftIndex === undefined && rightIndex === undefined) return 0;
+        if (leftIndex === undefined) return 1;
+        if (rightIndex === undefined) return -1;
+        return leftIndex - rightIndex;
+      });
+    };
+
+    setLocations((currentLocations) =>
+      restoreByPreviousOrder(currentLocations, deletion.locations, deletion.allLocationsBeforeDelete),
+    );
+    setFields((currentFields) =>
+      restoreByPreviousOrder(currentFields, deletion.fields, deletion.allFieldsBeforeDelete),
+    );
+    setBeds((currentBeds) =>
+      restoreByPreviousOrder(currentBeds, deletion.beds, deletion.allBedsBeforeDelete),
+    );
+    expandAll(Array.from(deletion.expandedRowsBeforeDelete));
+  }, [expandAll, setBeds, setFields, setLocations]);
+
+  const removePendingDeletion = useCallback((deletionId: string): void => {
+    setPendingDeletions((currentDeletions) =>
+      currentDeletions.filter((deletion) => deletion.id !== deletionId),
+    );
+  }, []);
+
+  const finalizePendingDeletion = useCallback(async (deletion: PendingHierarchyDeletion): Promise<void> => {
+    pendingDeletionTimersRef.current.delete(deletion.id);
+    removePendingDeletion(deletion.id);
+
+    try {
+      if (deletion.type === "location") {
+        await locationAPI.delete(deletion.targetId);
+      } else if (deletion.type === "field") {
+        await fieldAPI.delete(deletion.targetId);
+      } else if (deletion.targetId > 0) {
+        await bedAPI.delete(deletion.targetId);
+      }
+      setError("");
+    } catch (err) {
+      restoreDeletedItems(deletion);
+      setError(extractApiErrorMessage(err, t, t("errors.delete")));
+    }
+  }, [removePendingDeletion, restoreDeletedItems, setError, t]);
+
+  const undoPendingDeletion = useCallback((deletionId: string): void => {
+    const deletion = pendingDeletions.find((pendingDeletion) => pendingDeletion.id === deletionId);
+    if (!deletion) {
+      return;
+    }
+
+    const timerId = pendingDeletionTimersRef.current.get(deletionId);
+    if (timerId !== undefined) {
+      window.clearTimeout(timerId);
+      pendingDeletionTimersRef.current.delete(deletionId);
+    }
+
+    restoreDeletedItems(deletion);
+    removePendingDeletion(deletionId);
+  }, [pendingDeletions, removePendingDeletion, restoreDeletedItems]);
+
+  const closePendingDeletionSnackbar = useCallback((deletionId: string): void => {
+    setPendingDeletions((currentDeletions) =>
+      currentDeletions.map((deletion) =>
+        deletion.id === deletionId ? { ...deletion, visible: false } : deletion,
+      ),
+    );
+  }, []);
+
+  const getDeletionMessage = useCallback((
+    rowType: PendingHierarchyDeletionType,
+    deletedBedCount: number,
+  ): string => {
+    if (rowType === "bed") {
+      return t("messages.bedDeleted");
+    }
+    if (rowType === "location") {
+      if (deletedBedCount > 0) {
+        return t("messages.locationAndBedsDeleted", { count: deletedBedCount });
+      }
+      return t("messages.locationDeleted");
+    }
+    if (deletedBedCount > 0) {
+      return t("messages.fieldAndBedsDeleted", { count: deletedBedCount });
+    }
+    return t("messages.fieldDeleted");
+  }, [t]);
+
+  const deleteHierarchyRowWithUndo = useCallback((row: HierarchyRow): void => {
+    const deletionId = `${row.type}-${String(row.id)}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    let deletionType: PendingHierarchyDeletionType;
+    let targetId: number | undefined;
+    let deletedLocations: FarmLocation[] = [];
+    let deletedFields: Field[] = [];
+    let deletedBeds: Bed[] = [];
+
+    if (row.type === "location") {
+      deletionType = "location";
+      targetId = row.locationId;
+      deletedLocations = locations.filter((locationItem) => locationItem.id === row.locationId);
+      const deletedLocationIds = new Set(deletedLocations.map((locationItem) => locationItem.id));
+      deletedFields = fields.filter((field) => deletedLocationIds.has(field.location));
+      const deletedFieldIds = new Set(deletedFields.map((field) => field.id));
+      deletedBeds = beds.filter((bed) => deletedFieldIds.has(bed.field));
+    } else if (row.type === "field") {
+      deletionType = "field";
+      targetId = row.fieldId;
+      deletedFields = fields.filter((field) => field.id === row.fieldId);
+      deletedBeds = beds.filter((bed) => bed.field === row.fieldId);
+    } else {
+      deletionType = "bed";
+      targetId = row.bedId;
+      deletedBeds = beds.filter((bed) => bed.id === row.bedId);
+    }
+
+    if (typeof targetId !== "number") {
+      return;
+    }
+
+    const deletedLocationIds = new Set(deletedLocations.map((locationItem) => locationItem.id));
+    const deletedFieldIds = new Set(deletedFields.map((field) => field.id));
+    const deletedBedIds = new Set(deletedBeds.map((bed) => bed.id));
+    const pendingDeletion: PendingHierarchyDeletion = {
+      id: deletionId,
+      type: deletionType,
+      targetId,
+      message: getDeletionMessage(deletionType, deletedBeds.length),
+      locations: deletedLocations,
+      fields: deletedFields,
+      beds: deletedBeds,
+      allLocationsBeforeDelete: locations,
+      allFieldsBeforeDelete: fields,
+      allBedsBeforeDelete: beds,
+      expandedRowsBeforeDelete: new Set(expandedRows),
+      visible: true,
+    };
+
+    setLocations((currentLocations) =>
+      currentLocations.filter((locationItem) => !deletedLocationIds.has(locationItem.id)),
+    );
+    setFields((currentFields) =>
+      currentFields.filter((field) => !deletedFieldIds.has(field.id)),
+    );
+    setBeds((currentBeds) =>
+      currentBeds.filter((bed) => !deletedBedIds.has(bed.id)),
+    );
+    setSelectedRowId((currentSelectedRowId) => {
+      if (currentSelectedRowId === null) {
+        return null;
+      }
+      const deletedRowIds = new Set<string | number>([
+        ...deletedLocations.map((locationItem) => `location-${locationItem.id}`),
+        ...deletedFields.map((field) => `field-${field.id}`),
+        ...deletedBeds.map((bed) => bed.id).filter((id): id is number => typeof id === "number"),
+      ]);
+      return deletedRowIds.has(currentSelectedRowId) ? null : currentSelectedRowId;
+    });
+    setError("");
+    setPendingDeletions((currentDeletions) => [...currentDeletions, pendingDeletion]);
+
+    const timerId = window.setTimeout(() => {
+      void finalizePendingDeletion(pendingDeletion);
+    }, DELETE_UNDO_DURATION_MS);
+    pendingDeletionTimersRef.current.set(deletionId, timerId);
+  }, [
+    beds,
+    expandedRows,
+    fields,
+    finalizePendingDeletion,
+    getDeletionMessage,
+    locations,
+    setBeds,
+    setFields,
+    setLocations,
+    setError,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      pendingDeletionTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      pendingDeletionTimersRef.current.clear();
+    };
+  }, []);
 
   const selectedRow = useMemo(
     () => rows.find((row) => row.id === selectedRowId) ?? null,
@@ -641,14 +1174,10 @@ function FieldsBedsHierarchy({
       return;
     }
 
-    if (selectedRow.type === "bed" && selectedRow.bedId) {
-      void deleteBed(selectedRow.bedId);
+    if (selectedRow.type === "location" || selectedRow.type === "field" || selectedRow.type === "bed") {
+      deleteHierarchyRowWithUndo(selectedRow);
     }
-
-    if (selectedRow.type === "field" && selectedRow.fieldId) {
-      void deleteField(selectedRow.fieldId);
-    }
-  }, [deleteBed, deleteField, selectedRow]);
+  }, [deleteHierarchyRowWithUndo, selectedRow]);
 
   const handleCreateBySelection = useCallback(() => {
     if (!selectedRow) {
@@ -678,15 +1207,160 @@ function FieldsBedsHierarchy({
       return;
     }
 
-    if (selectedRow.type === "location") {
-      return;
-    }
-
+    rememberRowSnapshot(selectedRow.id);
     setRowModesModel((previous) => ({
       ...previous,
       [selectedRow.id]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
     }));
-  }, [selectedRow]);
+  }, [rememberRowSnapshot, selectedRow]);
+
+  const startRowEdit = useCallback((row: HierarchyRow): void => {
+    rememberRowSnapshot(row.id);
+    setSelectedRowId(row.id);
+    setTreeActive(true);
+    setRowModesModel((previous) => ({
+      ...previous,
+      [row.id]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
+    }));
+  }, [rememberRowSnapshot]);
+
+  const getHierarchyRowActions = useCallback((row: HierarchyRow): HierarchyRowAction[] => {
+    const createActions: HierarchyRowAction[] = [];
+    const editActions: HierarchyRowAction[] = [];
+
+    if (row.type === "location" && row.locationId) {
+      createActions.push({
+        id: "add-field",
+        label: t("actions.addField"),
+        group: "create",
+        onClick: () => {
+          const fieldName = window.prompt(t("dialogs.addField.nameLabel"));
+          if (fieldName !== null) {
+            void addField(row.locationId, fieldName);
+          }
+        },
+      });
+    }
+
+    if (row.type === "field" && row.fieldId) {
+      createActions.push({
+        id: "add-bed",
+        label: t("actions.addBed"),
+        group: "create",
+        onClick: () => handleAddBed(row.fieldId!),
+      });
+    }
+
+    if (row.type === "bed" && row.bedId) {
+      createActions.push({
+        id: "create-planting-plan",
+        label: t("createPlantingPlan"),
+        group: "create",
+        onClick: () => handleCreatePlantingPlan(row.bedId!),
+      });
+    }
+
+    editActions.push({
+      id: "edit",
+      label: t("common:actions.edit"),
+      group: "edit",
+      onClick: () => startRowEdit(row),
+    });
+
+    const destructiveActions: HierarchyRowAction[] = [{
+      id: "delete",
+      label: t("common:actions.delete"),
+      group: "destructive",
+      color: "error",
+      onClick: () => deleteHierarchyRowWithUndo(row),
+    }];
+
+    return [...createActions, ...editActions, ...destructiveActions];
+  }, [
+    addField,
+    deleteHierarchyRowWithUndo,
+    handleAddBed,
+    handleCreatePlantingPlan,
+    startRowEdit,
+    t,
+  ]);
+
+  const openContextMenuForRow = useCallback((row: HierarchyRow, mouseX: number, mouseY: number): void => {
+    setSelectedRowId(row.id);
+    setTreeActive(true);
+    setContextMenuState({ row, mouseX, mouseY });
+  }, []);
+
+  const handleNameCellContextMenu = useCallback((event: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>, row: HierarchyRow): void => {
+    const hasPointerCoordinates =
+      "clientX" in event &&
+      "clientY" in event &&
+      typeof event.clientX === "number" &&
+      typeof event.clientY === "number" &&
+      Number.isFinite(event.clientX) &&
+      Number.isFinite(event.clientY) &&
+      (event.clientX !== 0 || event.clientY !== 0);
+    if (hasPointerCoordinates) {
+      openContextMenuForRow(row, event.clientX + 2, event.clientY - 6);
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    openContextMenuForRow(row, rect.right - 8, rect.top + 12);
+  }, [openContextMenuForRow]);
+
+  const handleGridContextMenu = useCallback((event: React.MouseEvent<HTMLElement>): void => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
+    const rowId = rowElement?.dataset.id;
+    if (!rowId) {
+      return;
+    }
+    const targetRow = rows.find((row) => String(row.id) === rowId);
+    if (!targetRow) {
+      return;
+    }
+
+    event.preventDefault();
+    setSelectedRowId(targetRow.id);
+    setTreeActive(true);
+    openContextMenuForRow(targetRow, event.clientX + 2, event.clientY - 6);
+  }, [openContextMenuForRow, rows]);
+
+  const handleGridTouchStart = useCallback((event: React.TouchEvent<HTMLElement>): void => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
+    const rowId = rowElement?.dataset.id;
+    if (!rowId) {
+      return;
+    }
+    const targetRow = rows.find((row) => String(row.id) === rowId);
+    const touch = event.touches[0];
+    if (!targetRow || !touch) {
+      return;
+    }
+
+    touchLongPressTimeoutRef.current = window.setTimeout(() => {
+      openContextMenuForRow(targetRow, touch.clientX, touch.clientY);
+    }, 550);
+  }, [openContextMenuForRow, rows]);
+
+  const handleGridTouchEnd = useCallback((): void => {
+    if (touchLongPressTimeoutRef.current !== null) {
+      window.clearTimeout(touchLongPressTimeoutRef.current);
+      touchLongPressTimeoutRef.current = null;
+    }
+  }, []);
+
+  const closeContextMenu = useCallback((): void => {
+    setContextMenuState(null);
+  }, []);
 
   const areaCommands = useMemo<CommandSpec[]>(
     () => [
@@ -717,8 +1391,7 @@ function FieldsBedsHierarchy({
       keywords: ["löschen", "delete"],
                 keys: { key: "Delete" },
         contextTags: ["areas"],
-        isEnabled: () =>
-          selectedRow !== null && selectedRow.type !== "location",
+        isEnabled: () => selectedRow !== null,
         action: handleDeleteSelected,
       },
     ],
@@ -735,6 +1408,7 @@ function FieldsBedsHierarchy({
   useEffect(() => {
     const handleDocumentPointerDown = (event: MouseEvent) => {
       if (!tableWrapperRef.current?.contains(event.target as Node)) {
+        discardActiveRowEdit();
         setTreeActive(false);
       }
     };
@@ -814,17 +1488,36 @@ function FieldsBedsHierarchy({
       document.removeEventListener("mousedown", handleDocumentPointerDown);
       window.removeEventListener("keydown", handleTreeNavigation);
     };
-  }, [expandedRows, rows, selectedRowId, toggleExpand, treeActive]);
+  }, [discardActiveRowEdit, expandedRows, rows, selectedRowId, toggleExpand, treeActive]);
+
+  useEffect(() => {
+    const handleContextMenuKeyboard = (event: KeyboardEvent) => {
+      const shouldOpen =
+        event.key === "ContextMenu" || (event.shiftKey && event.key === "F10");
+      if (!shouldOpen || !treeActive || !selectedRowId || isTypingInEditableElement(document.activeElement)) {
+        return;
+      }
+
+      const selectedRow = rows.find((row) => row.id === selectedRowId);
+      if (!selectedRow) {
+        return;
+      }
+
+      event.preventDefault();
+      const targetElement = document.querySelector(`[data-id="${String(selectedRowId)}"]`) as HTMLElement | null;
+      if (!targetElement) {
+        return;
+      }
+      const rect = targetElement.getBoundingClientRect();
+      openContextMenuForRow(selectedRow, rect.left + Math.min(240, rect.width), rect.top + 12);
+    };
+
+    window.addEventListener("keydown", handleContextMenuKeyboard);
+    return () => window.removeEventListener("keydown", handleContextMenuKeyboard);
+  }, [openContextMenuForRow, rows, selectedRowId, treeActive]);
 
   const nameColumnWidth = useMemo(() => {
-    const MIN_NAME_WIDTH = 220;
-    const CHAR_WIDTH_PX = 8;
-    const ICON_GROUP_PX = 120;
-    const INDENT_PER_LEVEL_PX = 24;
-    const EXTRA_BED_INDENT_PX = 34;
-
-    const hierarchyEntries: Array<{ name: string; level: number; type: string }> =
-      [];
+    const hierarchyEntries: HierarchyNameMeasureEntry[] = [];
     if (hierarchyIndex.hasMultipleLocations) {
       hierarchyIndex.sortedLocations.forEach((location) => {
         hierarchyEntries.push({ name: location.name, level: 0, type: "location" });
@@ -848,15 +1541,11 @@ function FieldsBedsHierarchy({
       });
     }
 
-    const measuredWidth = hierarchyEntries.reduce((maxWidth, row) => {
-      const nameLength = typeof row.name === "string" ? row.name.length : 0;
-      const indent =
-        row.level * INDENT_PER_LEVEL_PX +
-        (row.type === "bed" ? EXTRA_BED_INDENT_PX : 0);
-      return Math.max(maxWidth, indent + ICON_GROUP_PX + nameLength * CHAR_WIDTH_PX);
-    }, MIN_NAME_WIDTH);
-
-    return Math.min(520, Math.max(MIN_NAME_WIDTH, measuredWidth));
+    const measuredTextWidths = measureHierarchyNameTextWidths(hierarchyEntries);
+    return calculateHierarchyNameColumnWidth(
+      hierarchyEntries,
+      (row) => measuredTextWidths.get(getHierarchyNameMeasureKey(row)) ?? 0,
+    );
   }, [hierarchyIndex]);
 
   /**
@@ -866,15 +1555,32 @@ function FieldsBedsHierarchy({
     return createHierarchyColumns(
       toggleExpand,
       handleAddBed,
-      (bedId) => deleteBed(bedId),
+      (bedId) => {
+        const row = rowsById.get(String(bedId));
+        if (row) {
+          deleteHierarchyRowWithUndo(row);
+        }
+      },
       (locationId) => {
         const fieldName = window.prompt(t("dialogs.addField.nameLabel"));
         if (fieldName !== null) {
           void addField(locationId, fieldName);
         }
       },
-      (fieldId) => deleteField(fieldId),
+      (fieldId) => {
+        const row = rowsById.get(`field-${fieldId}`);
+        if (row) {
+          deleteHierarchyRowWithUndo(row);
+        }
+      },
+      (locationId) => {
+        const row = rowsById.get(`location-${locationId}`);
+        if (row) {
+          deleteHierarchyRowWithUndo(row);
+        }
+      },
       handleCreatePlantingPlan,
+      handleNameCellContextMenu,
       notesEditor.handleOpen,
       t,
       {
@@ -885,11 +1591,12 @@ function FieldsBedsHierarchy({
   }, [
     toggleExpand,
     handleAddBed,
-    deleteBed,
     addField,
-    deleteField,
+    deleteHierarchyRowWithUndo,
     handleCreatePlantingPlan,
+    handleNameCellContextMenu,
     notesEditor.handleOpen,
+    rowsById,
     t,
     nameColumnWidth,
   ]);
@@ -906,6 +1613,9 @@ function FieldsBedsHierarchy({
   }, []);
 
   const isCellEditable = useCallback((params: { row: HierarchyRow; field: string }) => {
+    if (params.row.type === "location") {
+      return params.field === "name";
+    }
     if (params.row.type === "field" || params.row.type === "bed") {
       return (
         params.field === "name" ||
@@ -931,6 +1641,33 @@ function FieldsBedsHierarchy({
     return hasBeds && allBedsMissingLengthAndWidth;
   }, [beds, parseDimensionValue]);
 
+  const hasUnsavedInvalidNewRows = useMemo(() => (
+    beds.some((bed) => isPartiallyFilledNamelessNewHierarchyRow({
+      id: bed.id ?? "",
+      type: "bed",
+      level: 0,
+      isNew: typeof bed.id === "number" && bed.id < 0,
+      name: bed.name,
+      field: bed.field,
+      bedId: bed.id,
+      area_sqm: bed.area_sqm,
+      length_m: bed.length_m,
+      width_m: bed.width_m,
+      notes: bed.notes,
+    }))
+  ), [beds]);
+
+  useNavigationBlocker(
+    hasUnsavedInvalidNewRows,
+    t("messages.unsavedInvalidRowsNavigationWarning"),
+  );
+
+  useEffect(() => {
+    if (!hasUnsavedInvalidNewRows) {
+      setDraftValidationWarning("");
+    }
+  }, [hasUnsavedInvalidNewRows]);
+
   const rowSelectionModel = useMemo(
     () => ({
       type: "include" as const,
@@ -938,6 +1675,10 @@ function FieldsBedsHierarchy({
     }),
     [selectedRowId],
   );
+
+  const contextMenuActions = contextMenuState
+    ? getHierarchyRowActions(contextMenuState.row)
+    : [];
 
   return (
     <div className={showTitle ? "page-container" : undefined}>
@@ -948,6 +1689,22 @@ function FieldsBedsHierarchy({
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
+        )}
+
+        {draftValidationWarning && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {draftValidationWarning}
+          </Alert>
+        )}
+
+        {showContextMenuHint && (
+          <Box sx={{ mb: 1.25 }}>
+            <ContextMenuHint
+              message={t("messages.contextMenuHint")}
+              secondary={t("messages.contextMenuHintKeyboard")}
+              onClose={() => setShowContextMenuHint(false)}
+            />
+          </Box>
         )}
 
         {shouldShowMissingDimensionsHint && (
@@ -963,6 +1720,9 @@ function FieldsBedsHierarchy({
           ref={tableWrapperRef}
           sx={{ width: "100%", maxWidth: "100%", minWidth: 1, overflowX: "auto", overflowY: "visible", display: "block" }}
           onClick={() => setTreeActive(true)}
+          onContextMenu={handleGridContextMenu}
+          onTouchStart={handleGridTouchStart}
+          onTouchEnd={handleGridTouchEnd}
         >
           <Box sx={{ display: "inline-block", width: "fit-content", minWidth: 320, maxWidth: "100%" }}>
           <DataGrid
@@ -973,7 +1733,7 @@ function FieldsBedsHierarchy({
             getRowClassName={(params) => `ofp-hierarchy-row-${params.row.type}`}
             rowModesModel={rowModesModel}
             onRowModesModelChange={setRowModesModel}
-            onRowEditStop={handleRowEditStop}
+            onRowEditStop={handleHierarchyRowEditStop}
             processRowUpdate={processRowUpdate}
             onProcessRowUpdateError={handleProcessRowUpdateError}
             loading={loading}
@@ -991,11 +1751,38 @@ function FieldsBedsHierarchy({
               setSelectedRowId(Array.from(nextModel.ids)[0] ?? null)
             }
             onCellClick={(params) => {
+              const editingRowId = Object.entries(rowModesModel).find(([, mode]) => mode.mode === GridRowModes.Edit)?.[0];
+              if (editingRowId !== undefined && String(editingRowId) !== String(params.id)) {
+                discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
+              }
+              rememberRowSnapshot(params.id);
               setSelectedRowId(params.id);
               setTreeActive(true);
               handleEditableCellClick(params, rowModesModel, setRowModesModel);
             }}
+            onCellKeyDown={(params: GridCellParams<HierarchyRow>, event: React.KeyboardEvent) => {
+              const keyboardEvent = event as React.KeyboardEvent;
+              if (
+                keyboardEvent.key === "Escape" &&
+                rowModesModel[params.id]?.mode === GridRowModes.Edit
+              ) {
+                keyboardEvent.preventDefault();
+                keyboardEvent.defaultMuiPrevented = true;
+                discardRowEdit(params.id);
+                return;
+              }
+              if (keyboardEvent.key === "ContextMenu" || (keyboardEvent.shiftKey && keyboardEvent.key === "F10")) {
+                keyboardEvent.preventDefault();
+                const targetRow = rows.find((row) => row.id === params.id);
+                if (targetRow) {
+                  const targetElement = keyboardEvent.currentTarget as HTMLElement;
+                  const rect = targetElement.getBoundingClientRect();
+                  openContextMenuForRow(targetRow, rect.left + Math.min(240, rect.width), rect.top + 12);
+                }
+              }
+            }}
             localeText={germanDataGridLocaleText}
+            apiRef={gridApiRef}
           />
           </Box>
         </Box>
@@ -1011,6 +1798,49 @@ function FieldsBedsHierarchy({
         onClose={notesEditor.handleClose}
         loading={notesEditor.isSaving}
       />
+      <Menu
+        open={contextMenuState !== null}
+        onClose={closeContextMenu}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenuState !== null
+            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
+            : undefined
+        }
+      >
+        {contextMenuActions.flatMap((action, index) => {
+          const previousAction = contextMenuActions[index - 1];
+          const shouldSeparateGroup = previousAction !== undefined && previousAction.group !== action.group;
+          const menuItem = (
+            <MenuItem
+              key={action.id}
+              onClick={() => {
+                closeContextMenu();
+                action.onClick();
+              }}
+              sx={{ color: action.color === "error" ? "error.main" : undefined }}
+            >
+              {action.label}
+            </MenuItem>
+          );
+
+          return shouldSeparateGroup
+            ? [<Divider key={`${action.id}-divider`} role="separator" />, menuItem]
+            : [menuItem];
+        })}
+      </Menu>
+      {pendingDeletions.map((deletion, index) => (
+        <DeleteUndoSnackbar
+          key={deletion.id}
+          open={deletion.visible}
+          message={deletion.message}
+          undoLabel={t("actions.undo")}
+          offsetIndex={index}
+          testId="hierarchy-delete-snackbar"
+          onClose={() => closePendingDeletionSnackbar(deletion.id)}
+          onUndo={() => undoPendingDeletion(deletion.id)}
+        />
+      ))}
     </div>
   );
 }

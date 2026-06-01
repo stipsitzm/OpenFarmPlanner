@@ -2,20 +2,19 @@
  * Column definitions for hierarchy grid
  */
 
-import type { ReactElement, MouseEvent } from 'react';
+import type { ReactElement, KeyboardEvent, MouseEvent } from 'react';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import type { TFunction } from 'i18next';
 import { Box, IconButton, Tooltip } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
-import { AddBedIcon } from './AddBedIcon';
+import { HierarchyAddIcon } from './HierarchyAddIcon';
 import { getPlainExcerpt } from '../data-grid/markdown';
 import { getCalculatedColumnProps } from '../data-grid/calculatedColumns';
 
@@ -42,39 +41,67 @@ interface NameCellCallbacks {
   onDeleteBed: (bedId: number) => void;
   onAddField: (locationId?: number) => void;
   onDeleteField: (fieldId: number) => void;
+  onDeleteLocation: (locationId: number) => void;
   onCreatePlantingPlan: (bedId: number) => void;
+  onOpenContextMenu: (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>, row: HierarchyRow) => void;
 }
 
-function renderActionIconButton({
+function renderHierarchyAddIconButton({
   label,
-  color,
   onClick,
-  icon,
-  sx,
 }: {
   label: string;
-  color?: 'default' | 'primary' | 'error';
-  onClick: (event: MouseEvent) => void;
-  icon: ReactElement;
-  sx?: Record<string, unknown>;
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
 }): ReactElement {
   return (
     <Tooltip title={label}>
+      <span>
+        <HierarchyAddIcon
+          ariaLabel={label}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClick(event);
+          }}
+          sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
+        />
+      </span>
+    </Tooltip>
+  );
+}
+
+function renderPlantingPlanActionButton(
+  row: HierarchyRow,
+  callbacks: NameCellCallbacks,
+  t: TFunction,
+): ReactElement | null {
+  if (row.type !== 'bed' || row.bedId === undefined) {
+    return null;
+  }
+
+  return (
+    <Tooltip title={t('hierarchy:createPlantingPlan')}>
       <IconButton
         size="small"
-        color={color}
-        aria-label={label}
+        color="primary"
+        aria-label={t('hierarchy:createPlantingPlan')}
         onClick={(event) => {
           event.stopPropagation();
-          onClick(event);
+          callbacks.onCreatePlantingPlan(row.bedId!);
         }}
         sx={{
           p: 0.5,
           '& .MuiSvgIcon-root': { fontSize: 18 },
-          ...sx,
+          '&:hover': {
+            bgcolor: 'action.hover',
+          },
+          '&.Mui-focusVisible': {
+            outline: '2px solid',
+            outlineColor: 'primary.main',
+            outlineOffset: 1,
+          },
         }}
       >
-        {icon}
+        <AgricultureIcon />
       </IconButton>
     </Tooltip>
   );
@@ -87,12 +114,10 @@ function renderInlineActions(
 ): ReactElement | null {
   if (row.type === 'location') {
     return (
-      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-        {renderActionIconButton({
+      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+        {renderHierarchyAddIconButton({
           label: t('hierarchy:addField'),
-          color: 'primary',
           onClick: () => callbacks.onAddField(row.locationId),
-          icon: <AddIcon />,
         })}
       </Box>
     );
@@ -100,28 +125,10 @@ function renderInlineActions(
 
   if (row.type === 'field') {
     return (
-      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-        <Tooltip title={t('hierarchy:addBedToField')}>
-          <span>
-            <AddBedIcon
-              ariaLabel={t('hierarchy:addBedToField')}
-              onClick={(event) => {
-                event.stopPropagation();
-                callbacks.onAddBed(row.fieldId!);
-              }}
-              sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
-            />
-          </span>
-        </Tooltip>
-        {renderActionIconButton({
-          label: t('common:actions.delete'),
-          color: 'error',
-          onClick: () => callbacks.onDeleteField(row.fieldId!),
-          icon: <DeleteIcon />,
-          sx: {
-            opacity: 0.7,
-            '&:hover': { opacity: 1 },
-          },
+      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+        {renderHierarchyAddIconButton({
+          label: t('hierarchy:addBedToField'),
+          onClick: () => callbacks.onAddBed(row.fieldId!),
         })}
       </Box>
     );
@@ -129,23 +136,8 @@ function renderInlineActions(
 
   if (row.type === 'bed') {
     return (
-      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-        {renderActionIconButton({
-          label: t('hierarchy:createPlantingPlan'),
-          color: 'primary',
-          onClick: () => callbacks.onCreatePlantingPlan(row.bedId!),
-          icon: <AgricultureIcon />,
-        })}
-        {renderActionIconButton({
-          label: t('common:actions.delete'),
-          color: 'error',
-          onClick: () => callbacks.onDeleteBed(row.bedId!),
-          icon: <DeleteIcon />,
-          sx: {
-            opacity: 0.7,
-            '&:hover': { opacity: 1 },
-          },
-        })}
+      <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+        {renderPlantingPlanActionButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -162,7 +154,7 @@ function renderNameCell(
   const baseIndent = row.level * 24;
   const hasChildren = row.hasChildren === true;
   const hasExpandToggle = (row.type === 'location' || row.type === 'field') && hasChildren;
-  const showInlineActions = params.cellMode !== 'edit';
+  const isStandaloneRender = params.api === undefined;
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', pl: `${baseIndent}px`, width: '100%', gap: 0.5 }}>
@@ -202,10 +194,31 @@ function renderNameCell(
         )}
       </Box>
 
-      <Box sx={{ display: 'inline-flex', alignItems: 'center', minWidth: 0, gap: 0.5 }}>
+      <Box
+        sx={{
+          position: 'relative',
+          display: 'inline-flex',
+          alignItems: 'center',
+          minWidth: 0,
+          width: '100%',
+          overflow: 'hidden',
+        }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          callbacks.onOpenContextMenu(event, row);
+        }}
+      >
         <Box
           component="span"
+          data-testid="hierarchy-name-text"
           sx={{
+            display: 'block',
+            flex: '1 1 auto',
+            minWidth: 0,
+            width: '100%',
+            maxWidth: 'none',
+            boxSizing: 'border-box',
             fontWeight: row.type === 'location' ? 600 : 400,
             fontSize: row.type === 'location' ? '1.02rem' : row.type === 'bed' ? '0.95rem' : '1rem',
             color: 'text.primary',
@@ -215,14 +228,50 @@ function renderNameCell(
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            maxWidth: '100%',
           }}
         >
           {params.value}
         </Box>
 
-        <Box sx={{ display: 'inline-flex', alignItems: 'center' }}>
-          {showInlineActions ? renderInlineActions(row, callbacks, t) : null}
+        <Box
+          data-testid="hierarchy-name-actions-overlay"
+          sx={{
+            position: 'absolute',
+            right: 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            py: 0.25,
+            pl: 0.25,
+            pr: 0.25,
+            borderRadius: 1,
+            bgcolor: 'background.paper',
+            opacity: isStandaloneRender ? 1 : 0,
+            pointerEvents: isStandaloneRender ? 'auto' : 'none',
+            transition: 'opacity 120ms ease-in-out',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              right: '100%',
+              width: 16,
+              pointerEvents: 'none',
+              background: (theme) =>
+                `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 100%)`,
+            },
+            '.MuiDataGrid-row:hover &': {
+              opacity: 1,
+              pointerEvents: 'auto',
+            },
+            '.MuiDataGrid-row:focus-within &': {
+              opacity: 1,
+              pointerEvents: 'auto',
+            },
+          }}
+        >
+          {renderInlineActions(row, callbacks, t)}
         </Box>
       </Box>
     </Box>
@@ -353,14 +402,31 @@ export function createHierarchyColumns(
   onDeleteBed: (bedId: number) => void,
   onAddField: (locationId?: number) => void,
   onDeleteField: (fieldId: number) => void,
-  onCreatePlantingPlan: (bedId: number) => void,
-  onOpenNotes: (rowId: string | number, field: string) => void,
-  t: TFunction,
+  onDeleteLocationOrCreatePlantingPlan: ((locationId: number) => void) | ((bedId: number) => void),
+  onCreatePlantingPlanOrOpenNotes: ((bedId: number) => void) | ((rowId: string | number, field: string) => void),
+  onOpenContextMenuOrT: ((event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>, row: HierarchyRow) => void) | TFunction,
+  onOpenNotesOrColumnWidths?: ((rowId: string | number, field: string) => void) | Partial<HierarchyColumnWidths>,
+  tOrColumnWidths?: TFunction | Partial<HierarchyColumnWidths>,
   columnWidths?: Partial<HierarchyColumnWidths>
 ): GridColDef<HierarchyRow>[] {
+  const usesLegacySignature = typeof onOpenNotesOrColumnWidths !== 'function' && typeof tOrColumnWidths !== 'function';
+  const onDeleteLocation = usesLegacySignature
+    ? (): void => undefined
+    : onDeleteLocationOrCreatePlantingPlan as (locationId: number) => void;
+  const onCreatePlantingPlan = usesLegacySignature
+    ? onDeleteLocationOrCreatePlantingPlan as (bedId: number) => void
+    : onCreatePlantingPlanOrOpenNotes as (bedId: number) => void;
+  const onOpenContextMenu = usesLegacySignature
+    ? (): void => undefined
+    : onOpenContextMenuOrT as (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>, row: HierarchyRow) => void;
+  const onOpenNotes = usesLegacySignature
+    ? onCreatePlantingPlanOrOpenNotes as (rowId: string | number, field: string) => void
+    : onOpenNotesOrColumnWidths as (rowId: string | number, field: string) => void;
+  const t = (usesLegacySignature ? onOpenContextMenuOrT : tOrColumnWidths) as TFunction;
+  const resolvedColumnWidths = (usesLegacySignature ? onOpenNotesOrColumnWidths : columnWidths) as Partial<HierarchyColumnWidths> | undefined;
   const widths: HierarchyColumnWidths = {
     ...DEFAULT_HIERARCHY_COLUMN_WIDTHS,
-    ...columnWidths,
+    ...resolvedColumnWidths,
   };
 
   const callbacks: NameCellCallbacks = {
@@ -369,7 +435,9 @@ export function createHierarchyColumns(
     onDeleteBed,
     onAddField,
     onDeleteField,
+    onDeleteLocation,
     onCreatePlantingPlan,
+    onOpenContextMenu,
   };
 
   return [

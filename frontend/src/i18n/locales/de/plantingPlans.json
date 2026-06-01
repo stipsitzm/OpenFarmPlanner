@@ -54,6 +54,9 @@
     "save": "Fehler beim Speichern des Anbauplans",
     "delete": "Fehler beim Löschen des Anbauplans"
   },
+  "messages": {
+    "deleted": "Anbauplan gelöscht"
+  },
   "validation": {
     "plantingDateRequired": "Pflanzdatum ist ein Pflichtfeld",
     "cultureRequired": "Kultur ist ein Pflichtfeld",
@@ -94,6 +97,8 @@
     "notesPhotos": "Fotos",
     "notesPhotosAria": "Notizen und Fotos öffnen"
   },
+  "contextMenuHint": "Tipp: Rechtsklick auf eine Zeile öffnet weitere Aktionen.",
+  "contextMenuHintKeyboard": "Alternativ: Kontextmenütaste oder Shift+F10.",
   "emptyStates": {
     "createBlockedTooltip": "Beete werden innerhalb von Parzellen auf der Seite Anbauflächen hinzugefügt.",
     "states": {
