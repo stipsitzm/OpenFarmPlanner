@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { isValidElement, type ReactElement, type ReactNode } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createHierarchyColumns } from '../components/hierarchy/HierarchyColumns';
 import { HierarchyFooter } from '../components/hierarchy/HierarchyFooter';
@@ -165,7 +165,8 @@ describe('hierarchy components and behaviors', () => {
     await user.click(addBedButton!);
     expect(addBed).toHaveBeenCalledWith(10);
     expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Aktionen' }));
+    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
+    fireEvent.contextMenu(screen.getByTestId('hierarchy-name-text'));
     expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 'field-10' }));
     expect(deleteField).not.toHaveBeenCalled();
 
@@ -183,7 +184,8 @@ describe('hierarchy components and behaviors', () => {
     await user.click(createPlantingPlanButton);
     expect(createPlan).toHaveBeenCalledWith(100);
     expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Aktionen' }));
+    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
+    fireEvent.contextMenu(screen.getByTestId('hierarchy-name-text'));
     expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 100 }));
     expect(deleteBed).not.toHaveBeenCalled();
   }, 15000);
@@ -254,7 +256,7 @@ describe('hierarchy components and behaviors', () => {
         pointerEvents: 'auto',
       },
     });
-    expect(screen.getByRole('button', { name: 'Aktionen' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
   });
 
@@ -296,7 +298,7 @@ describe('hierarchy components and behaviors', () => {
         pointerEvents: 'auto',
       },
     });
-    expect(screen.getByRole('button', { name: 'Aktionen' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
   });
 

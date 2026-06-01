@@ -10,7 +10,6 @@ import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import type { HierarchyRow } from './utils/types';
@@ -70,48 +69,6 @@ function renderHierarchyAddIconButton({
   );
 }
 
-function renderMoreActionsButton(
-  row: HierarchyRow,
-  callbacks: NameCellCallbacks,
-  t: TFunction,
-): ReactElement {
-  return (
-    <Tooltip title={t('common:actions.actions')}>
-      <IconButton
-        size="small"
-        aria-label={t('common:actions.actions')}
-        onClick={(event) => {
-          event.stopPropagation();
-          callbacks.onOpenContextMenu(event, row);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
-            event.preventDefault();
-            event.stopPropagation();
-            callbacks.onOpenContextMenu(event, row);
-          }
-        }}
-        sx={{
-          p: 0.5,
-          color: 'text.secondary',
-          '& .MuiSvgIcon-root': { fontSize: 18 },
-          '&:hover': {
-            color: 'text.primary',
-            bgcolor: 'action.hover',
-          },
-          '&.Mui-focusVisible': {
-            outline: '2px solid',
-            outlineColor: 'primary.main',
-            outlineOffset: 1,
-          },
-        }}
-      >
-        <MoreVertIcon />
-      </IconButton>
-    </Tooltip>
-  );
-}
-
 function renderPlantingPlanActionButton(
   row: HierarchyRow,
   callbacks: NameCellCallbacks,
@@ -162,7 +119,6 @@ function renderInlineActions(
           label: t('hierarchy:addField'),
           onClick: () => callbacks.onAddField(row.locationId),
         })}
-        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -174,7 +130,6 @@ function renderInlineActions(
           label: t('hierarchy:addBedToField'),
           onClick: () => callbacks.onAddBed(row.fieldId!),
         })}
-        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -183,7 +138,6 @@ function renderInlineActions(
     return (
       <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
         {renderPlantingPlanActionButton(row, callbacks, t)}
-        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }

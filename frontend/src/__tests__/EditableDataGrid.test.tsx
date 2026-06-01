@@ -494,7 +494,7 @@ describe('EditableDataGrid', () => {
     expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
   });
 
-  it('shows a compact keyboard-accessible contextual action trigger on row hover', async () => {
+  it('keeps row actions right-click only without a hover trigger', async () => {
     render(
       <EditableDataGrid
         {...baseProps()}
@@ -507,7 +507,12 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
     fireEvent.mouseMove(screen.getByTestId('row-1'));
 
-    expect(screen.getByRole('button', { name: 'Aktionen' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
+
+    fireEvent.contextMenu(screen.getByTestId('row-1'));
+
+    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Duplizieren' })).toBeInTheDocument();
   });
 
   it('duplicates a row from the contextual menu and starts editing the copy', async () => {

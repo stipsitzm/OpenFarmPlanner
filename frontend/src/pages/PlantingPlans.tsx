@@ -149,6 +149,7 @@ const CULTIVATION_TYPE_OPTIONS = [
 
 const CULTURE_COLUMN_MAX_WIDTH = 280;
 const BED_COLUMN_MAX_WIDTH = 220;
+const PLANTING_PLANS_CONTEXT_MENU_HINT_STORAGE_KEY = "ofp.plantingPlansContextMenuHintSeen";
 
 const estimateColumnWidth = (
   values: string[],
@@ -609,6 +610,7 @@ function PlantingPlans(): React.ReactElement {
   const [mobileNotesTarget, setMobileNotesTarget] = useState<PlantingPlanRow | null>(null);
   const [mobileNotesDraft, setMobileNotesDraft] = useState("");
   const [isMobileNotesSaving, setIsMobileNotesSaving] = useState(false);
+  const [showContextMenuHint, setShowContextMenuHint] = useState(false);
   const mobilePrefillHandledRef = useRef(false);
   const createIntentHandledRef = useRef(false);
 
@@ -644,6 +646,17 @@ function PlantingPlans(): React.ReactElement {
       document.body.classList.remove("hide-version-footer");
     };
   }, [isMobile]);
+
+  useEffect(() => {
+    if (isMobile || shouldShowProjectRequiredState) {
+      return;
+    }
+    if (window.localStorage.getItem(PLANTING_PLANS_CONTEXT_MENU_HINT_STORAGE_KEY) === "1") {
+      return;
+    }
+    window.localStorage.setItem(PLANTING_PLANS_CONTEXT_MENU_HINT_STORAGE_KEY, "1");
+    setShowContextMenuHint(true);
+  }, [isMobile, shouldShowProjectRequiredState]);
 
   useCommandContextTag("plans");
 
@@ -1911,6 +1924,12 @@ function PlantingPlans(): React.ReactElement {
             description={t("plantingPlans:emptyStates.states.plans.description")}
             actions={[{ label: t(createPlanAction.labelKey), to: createPlanAction.to }]}
           />
+        ) : null}
+
+        {!isInitialLoading && showContextMenuHint && !isMobile && !shouldShowPrerequisiteState ? (
+          <Alert severity="info" sx={{ mb: 2 }} onClose={() => setShowContextMenuHint(false)}>
+            {t("plantingPlans:contextMenuHint")}
+          </Alert>
         ) : null}
 
         {isMobile && hasPlans ? (

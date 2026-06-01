@@ -55,6 +55,7 @@
     "missingDimensionsCellTooltip": "Für Flächenberechnung erforderlich.",
     "createLocationError": "Fehler beim Erstellen des Standorts.",
     "locationCreated": "Standort wurde angelegt.",
+    "contextMenuHint": "Tipp: Öffne Zeilenaktionen per Rechtsklick auf eine Zeile.",
     "unsavedMissingName": "Zeile wurde nicht gespeichert, da der Name fehlt.",
     "unsavedInvalidRowsNavigationWarning": "Es gibt eine nicht gespeicherte Zeile ohne Namen. Beim Verlassen der Seite geht sie verloren.",
     "locationDeleted": "Standort gelöscht",
@@ -89,7 +90,7 @@
   },
   "emptyAreas": {
     "title": "Noch keine Anbauflächen vorhanden",
-    "description": "Du kannst mit einer Parzelle starten und darin später Beete anlegen.",
+    "description": "Du kannst mit einer Parzelle starten und darin später Beete anlegen. Weitere Zeilenaktionen öffnest du per Rechtsklick auf eine Zeile.",
     "missingLocationLabel": "Standort fehlt",
     "missingFieldTitle": "Parzelle fehlt",
     "missingFieldDescription": "Lege eine Parzelle an, um darin später Beete zu erfassen.",

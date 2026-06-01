@@ -145,6 +145,7 @@ const NAME_COLUMN_EXPAND_CHROME_PX = 44;
 const NAME_COLUMN_CELL_HORIZONTAL_PADDING_PX = 20;
 const NAME_COLUMN_BED_TEXT_PADDING_PX = 8;
 const NAME_COLUMN_WIDTH_BUFFER_PX = 2;
+const HIERARCHY_CONTEXT_MENU_HINT_STORAGE_KEY = "ofp.hierarchyContextMenuHintSeen";
 export const NAME_COLUMN_MEASUREMENT_RESERVE_PX = 14;
 export const calculateHierarchyNameColumnWidth = (
   entries: HierarchyNameMeasureEntry[],
@@ -318,6 +319,7 @@ function FieldsBedsHierarchy({
     mouseY: number;
   } | null>(null);
   const [draftValidationWarning, setDraftValidationWarning] = useState("");
+  const [showContextMenuHint, setShowContextMenuHint] = useState(false);
   const [pendingDeletions, setPendingDeletions] = useState<PendingHierarchyDeletion[]>([]);
   const hasInitiallyExpandedRef = useRef(false);
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
@@ -326,6 +328,19 @@ function FieldsBedsHierarchy({
   const touchLongPressTimeoutRef = useRef<number | null>(null);
 
   useCommandContextTag("areas");
+
+  useEffect(() => {
+    if (!showTitle) {
+      return;
+    }
+
+    if (window.localStorage.getItem(HIERARCHY_CONTEXT_MENU_HINT_STORAGE_KEY) === "1") {
+      return;
+    }
+
+    window.localStorage.setItem(HIERARCHY_CONTEXT_MENU_HINT_STORAGE_KEY, "1");
+    setShowContextMenuHint(true);
+  }, [showTitle]);
 
   // Data fetching
   const {
@@ -1678,6 +1693,12 @@ function FieldsBedsHierarchy({
         {draftValidationWarning && (
           <Alert severity="warning" sx={{ mb: 2 }}>
             {draftValidationWarning}
+          </Alert>
+        )}
+
+        {showContextMenuHint && (
+          <Alert severity="info" sx={{ mb: 2 }} onClose={() => setShowContextMenuHint(false)}>
+            {t("messages.contextMenuHint")}
           </Alert>
         )}
 
