@@ -1739,17 +1739,37 @@ function PlantingPlans(): React.ReactElement {
     };
   };
 
-  const applyAreaAndPlants = (
+  const applyAreaAndPlants = async (
     rowId: number,
     nextArea: number,
     fallbackCultureId?: number,
     fallbackPlantsCount?: number | null,
-  ): void => {
+  ): Promise<void> => {
     const row = mobileRows.find((item) => item.id === rowId);
-    gridCommandApiRef.current?.setDraftValues(rowId, {
-      ...buildAreaAndPlantsDraft(row, nextArea, fallbackCultureId, fallbackPlantsCount),
-    });
+    const draftValues = buildAreaAndPlantsDraft(row, nextArea, fallbackCultureId, fallbackPlantsCount);
     lastEditedFieldRef.current = "area_m2";
+    await gridCommandApiRef.current?.setDraftValues(rowId, {
+      ...draftValues,
+    });
+    setMobileRows((previousRows) => previousRows.map((item) =>
+      item.id === rowId
+        ? {
+          ...item,
+          ...draftValues,
+        }
+        : item,
+    ));
+  };
+
+  const applyAreaValidationDialogValue = async (dialog: AreaValidationDialogState): Promise<void> => {
+    await applyAreaAndPlants(
+      dialog.rowId,
+      dialog.mode === "bedLimit"
+        ? dialog.bedArea
+        : dialog.availableArea,
+      dialog.cultureId,
+      dialog.plantsCount,
+    );
   };
 
   const validateMobileForm = (): boolean => {
@@ -2532,18 +2552,11 @@ function PlantingPlans(): React.ReactElement {
             <Button
               variant="contained"
               color="success"
-              onClick={() => {
+              onClick={async () => {
                 if (!areaValidationDialog) {
                   return;
                 }
-                applyAreaAndPlants(
-                  areaValidationDialog.rowId,
-                  areaValidationDialog.mode === "bedLimit"
-                    ? areaValidationDialog.bedArea
-                    : areaValidationDialog.availableArea,
-                  areaValidationDialog.cultureId,
-                  areaValidationDialog.plantsCount,
-                );
+                await applyAreaValidationDialogValue(areaValidationDialog);
                 closeAreaValidationDialog();
               }}
             >

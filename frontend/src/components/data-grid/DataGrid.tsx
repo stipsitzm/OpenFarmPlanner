@@ -72,7 +72,7 @@ export interface EditableDataGridCommandApi {
   editSelectedRow: () => void;
   deleteSelectedRow: () => void;
   getSelectedRowId: () => GridRowId | null;
-  setDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => void;
+  setDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => Promise<void>;
   reload: () => Promise<void>;
 }
 
@@ -1219,7 +1219,7 @@ export function EditableDataGrid<T extends EditableRow>({
       editSelectedRow: handleEditSelectedRow,
       deleteSelectedRow: handleDeleteSelectedRow,
       getSelectedRowId: () => selectedRowIds[0] ?? null,
-      setDraftValues: (rowId, values) => {
+      setDraftValues: async (rowId, values) => {
         const rowKey = String(rowId);
         const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
         const targetRow = rowsById.get(rowKey) as T | undefined;
@@ -1238,7 +1238,7 @@ export function EditableDataGrid<T extends EditableRow>({
               }),
             ];
           });
-          void Promise.allSettled(editUpdates);
+          await Promise.allSettled(editUpdates);
         }
 
         setRows((previousRows) =>
