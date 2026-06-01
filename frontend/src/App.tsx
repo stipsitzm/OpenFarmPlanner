@@ -84,6 +84,7 @@ import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
+import { useGlobalOverlayKeyboardScroll } from './hooks/useDialogKeyboardScroll';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, getKeyboardNavigationRouteFromPathname, normalizeMainRoutePath } from './navigation/mainNavigation';
 import {
   getMobileNavigationIconSx,
@@ -296,6 +297,7 @@ export interface RootLayoutOutletContext {
  */
 function RootLayout(): React.ReactElement {
   const { t, i18n } = useTranslation('navigation');
+  useGlobalOverlayKeyboardScroll();
   const tCultures = useMemo(
     () => i18n.getFixedT(i18n.resolvedLanguage ?? i18n.language ?? 'de', 'cultures'),
     [i18n],
