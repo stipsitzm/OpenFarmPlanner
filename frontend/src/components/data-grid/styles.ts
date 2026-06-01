@@ -31,6 +31,9 @@ export const dataGridSx = {
   '& .MuiDataGrid-row:hover': {
     backgroundColor: 'surface.surfaceHoverBackground',
   },
+  '& .MuiDataGrid-row:hover .MuiDataGrid-cell': {
+    backgroundColor: 'surface.surfaceHoverBackground',
+  },
   '& .MuiDataGrid-cell': {
     borderColor: 'surface.surfaceSoftBorder',
     transition: 'background-color 0.15s ease',
@@ -43,7 +46,7 @@ export const dataGridSx = {
     cursor: 'pointer',
   },
   '& .MuiDataGrid-cell--editable:hover': {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: 'surface.surfaceHoverBackground',
   },
   '& .MuiDataGrid-cell--editing': {
     overflow: 'visible',
@@ -75,11 +78,21 @@ export const dataGridSx = {
   '& .ofp-cell-error': {
     boxShadow: 'inset 0 0 0 2px #d32f2f',
   },
+  '& .MuiDataGrid-row:hover .ofp-cell-error': {
+    boxShadow: 'inset 0 0 0 2px #d32f2f',
+  },
   '& .ofp-cell-dirty': {
     backgroundColor: 'rgba(25, 118, 210, 0.08)',
   },
+  '& .MuiDataGrid-row:hover .ofp-cell-dirty': {
+    backgroundColor: 'surface.surfaceHoverBackground',
+    boxShadow: 'inset 0 0 0 9999px rgba(25, 118, 210, 0.08)',
+  },
   '& .ofp-row-editing': {
     boxShadow: 'inset 3px 0 0 #1976d2',
+    backgroundColor: 'rgba(25, 118, 210, 0.05)',
+  },
+  '& .ofp-row-editing .MuiDataGrid-cell, & .ofp-row-editing:hover .MuiDataGrid-cell, & .MuiDataGrid-row--editing .MuiDataGrid-cell, & .MuiDataGrid-row--editing:hover .MuiDataGrid-cell': {
     backgroundColor: 'rgba(25, 118, 210, 0.05)',
   },
   '& .ofp-row-dirty': {
@@ -97,7 +110,13 @@ export const dataGridSx = {
     color: CALCULATED_COLUMN_TEXT,
   },
   [`& .MuiDataGrid-row:hover .${CALCULATED_COLUMN_CELL_CLASS}`]: {
-    backgroundColor: CALCULATED_COLUMN_BACKGROUND,
+    backgroundColor: 'surface.surfaceHoverBackground',
+  },
+  '& .MuiDataGrid-row.Mui-selected:hover .MuiDataGrid-cell': {
+    backgroundColor: 'action.selected',
+  },
+  '& .ofp-row-editing:hover .MuiDataGrid-cell, & .MuiDataGrid-row--editing:hover .MuiDataGrid-cell': {
+    backgroundColor: 'rgba(25, 118, 210, 0.05)',
   },
 };
 

@@ -238,6 +238,9 @@ export function NotesCell({
                 height: 24,
                 p: 0,
                 bgcolor: 'background.paper',
+                '.MuiDataGrid-row:hover &': {
+                  bgcolor: 'surface.surfaceHoverBackground',
+                },
               }}
             >
               <Badge

@@ -295,8 +295,9 @@ const HIERARCHY_DATA_GRID_SX = {
     backgroundColor: "#fbf2d5",
     color: "text.primary",
   },
-  "& .ofp-hierarchy-cell-missing-dimension:hover": {
-    backgroundColor: "#FAFBF7",
+  "& .MuiDataGrid-row:hover .ofp-hierarchy-cell-missing-dimension": {
+    backgroundColor: "surface.surfaceHoverBackground",
+    boxShadow: "inset 0 0 0 9999px rgba(237, 108, 2, 0.14)",
   },
 };
 

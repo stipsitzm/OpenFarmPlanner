@@ -249,7 +249,7 @@ function renderNameCell(
             bgcolor: 'background.paper',
             opacity: isStandaloneRender ? 1 : 0,
             pointerEvents: isStandaloneRender ? 'auto' : 'none',
-            transition: 'opacity 120ms ease-in-out',
+            transition: 'background-color 120ms ease-in-out, opacity 120ms ease-in-out',
             '&::before': {
               content: '""',
               position: 'absolute',
@@ -262,8 +262,15 @@ function renderNameCell(
                 `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 100%)`,
             },
             '.MuiDataGrid-row:hover &': {
+              bgcolor: 'surface.surfaceHoverBackground',
               opacity: 1,
               pointerEvents: 'auto',
+            },
+            '.MuiDataGrid-row:hover &::before': {
+              background: (theme) => {
+                const hoverBackground = theme.palette.surface?.surfaceHoverBackground ?? theme.palette.action.hover;
+                return `linear-gradient(90deg, ${alpha(hoverBackground, 0)} 0%, ${hoverBackground} 100%)`;
+              },
             },
             '.MuiDataGrid-row:focus-within &': {
               opacity: 1,
