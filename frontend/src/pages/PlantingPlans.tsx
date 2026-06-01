@@ -2301,19 +2301,6 @@ function PlantingPlans(): React.ReactElement {
             if (requestedArea === null) {
               return true;
             }
-            if (requestedArea > capacity.bedArea) {
-              openAreaValidationDialog({
-                rowId: row.id,
-                requestedArea,
-                availableArea: capacity.availableArea,
-                bedArea: capacity.bedArea,
-                occupiedArea: capacity.occupiedArea,
-                cultureId: row.culture,
-                plantsCount: row.plants_count,
-                mode: "bedLimit",
-              });
-              return false;
-            }
             if (capacity.availableArea <= 0) {
               openAreaValidationDialog({
                 rowId: row.id,
@@ -2337,6 +2324,19 @@ function PlantingPlans(): React.ReactElement {
                 cultureId: row.culture,
                 plantsCount: row.plants_count,
                 mode: "remainingLimit",
+              });
+              return false;
+            }
+            if (requestedArea > capacity.bedArea) {
+              openAreaValidationDialog({
+                rowId: row.id,
+                requestedArea,
+                availableArea: capacity.availableArea,
+                bedArea: capacity.bedArea,
+                occupiedArea: capacity.occupiedArea,
+                cultureId: row.culture,
+                plantsCount: row.plants_count,
+                mode: "bedLimit",
               });
               return false;
             }
