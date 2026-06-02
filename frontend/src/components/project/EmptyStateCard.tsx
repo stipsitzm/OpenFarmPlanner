@@ -8,6 +8,7 @@ export interface EmptyStateAction {
   label: string;
   to?: string;
   onClick?: () => void;
+  icon?: ReactNode;
 }
 
 interface EmptyStateCardProps {
@@ -93,6 +94,7 @@ export default function EmptyStateCard({
               onClick={action.onClick}
               variant={index === 0 ? 'contained' : 'outlined'}
               size="small"
+              startIcon={action.icon}
             >
               {action.label}
             </Button>

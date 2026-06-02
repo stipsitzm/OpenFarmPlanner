@@ -12,13 +12,14 @@ import { bedAPI, fieldAPI, locationAPI, type Location } from '../api/api';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
-import EmptyStateCard from '../components/project/EmptyStateCard';
+import EmptyStateCard, { type EmptyStateAction } from '../components/project/EmptyStateCard';
 import { getProjectSetupAction } from './requirementFlow';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { getSegmentedActionButtonSx, segmentedButtonGroupSx } from '../components/buttons/segmentedControlStyles';
 import { useTheme } from '@mui/material/styles';
 import ContentViewControls from '../components/layout/ContentViewControls';
 import { ContextMenuHint } from '../components/data-grid';
+import AddIcon from '@mui/icons-material/Add';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 const FIELDS_BEDS_CONTEXT_MENU_HINT_STORAGE_KEY = 'ofp.fieldsBedsContextMenuHintSeen';
@@ -257,12 +258,12 @@ export default function FieldsBedsPage(): React.ReactElement {
       ? 'hierarchy:emptyAreas.missingFieldDescriptionMultipleLocations'
       : 'hierarchy:emptyAreas.missingFieldDescription')
     : t('hierarchy:emptyAreas.description');
-  const emptyAreaActions = useMemo(() => {
-    const actions: Array<{ label: string; onClick: () => void }> = [];
+  const emptyAreaActions = useMemo<EmptyStateAction[]>(() => {
+    const actions: EmptyStateAction[] = [];
     if (canUseGlobalAddField) {
-      actions.push({ label: t('hierarchy:actions.addField'), onClick: handleGlobalAddField });
+      actions.push({ label: t('hierarchy:actions.addField'), onClick: handleGlobalAddField, icon: <AddIcon fontSize="small" /> });
     }
-    actions.push({ label: t('hierarchy:actions.createLocation'), onClick: openAddLocationDialog });
+    actions.push({ label: t('hierarchy:actions.createLocation'), onClick: openAddLocationDialog, icon: <AddIcon fontSize="small" /> });
     return actions;
   }, [canUseGlobalAddField, handleGlobalAddField, openAddLocationDialog, t]);
 
@@ -387,13 +388,6 @@ export default function FieldsBedsPage(): React.ReactElement {
           <EmptyStateCard
             title={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldTitle') : t('hierarchy:emptyAreas.title')}
             description={emptyAreasDescription}
-            supplement={(
-              <ContextMenuHint
-                compact
-                message={t('hierarchy:messages.contextMenuHint')}
-                secondary={t('hierarchy:messages.contextMenuHintKeyboard')}
-              />
-            )}
             checklist={!hasLocations ? [{
               label: t('hierarchy:columns.location'),
               done: false,

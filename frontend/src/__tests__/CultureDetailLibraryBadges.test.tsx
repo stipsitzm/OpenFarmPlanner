@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it } from 'vitest';
 import { CultureDetail } from '../cultures/CultureDetail';
 import type { Culture } from '../api/types';
@@ -21,6 +22,7 @@ describe('CultureDetail library badges', () => {
         selectedCultureId={1}
         onCultureSelect={() => {}}
       />,
+      { wrapper: MemoryRouter },
     );
 
     screen.getByText('Importiert');

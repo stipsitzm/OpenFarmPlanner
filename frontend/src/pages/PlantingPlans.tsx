@@ -2511,16 +2511,16 @@ function PlantingPlans(): React.ReactElement {
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={areaValidationDialog !== null} onClose={closeAreaValidationDialog} fullWidth maxWidth="xs">
-        <DialogTitle>
-          {areaValidationDialog?.mode === "bedLimit"
-            ? t("plantingPlans:areaValidation.bedLimitTitle")
-            : areaValidationDialog?.mode === "noRemainingArea"
-              ? t("plantingPlans:areaValidation.noRemainingTitle")
-              : t("plantingPlans:areaValidation.remainingLimitTitle")}
-        </DialogTitle>
-        <DialogContent>
-          {areaValidationDialog && (
+      {areaValidationDialog && (
+        <Dialog open onClose={closeAreaValidationDialog} fullWidth maxWidth="xs">
+          <DialogTitle>
+            {areaValidationDialog.mode === "bedLimit"
+              ? t("plantingPlans:areaValidation.bedLimitTitle")
+              : areaValidationDialog.mode === "noRemainingArea"
+                ? t("plantingPlans:areaValidation.noRemainingTitle")
+                : t("plantingPlans:areaValidation.remainingLimitTitle")}
+          </DialogTitle>
+          <DialogContent>
             <Stack spacing={1}>
               {areaValidationDialog.mode !== "bedLimit" && (
                 <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.availableArea", { area: formatAreaM2(areaValidationDialog.availableArea, numberLocale) })}</Typography>
@@ -2545,29 +2545,26 @@ function PlantingPlans(): React.ReactElement {
                 </Typography>
               )}
             </Stack>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeAreaValidationDialog}>{t("common:actions.cancel")}</Button>
-          {areaValidationDialog?.mode !== "noRemainingArea" && (
-            <Button
-              variant="contained"
-              color="success"
-              onClick={async () => {
-                if (!areaValidationDialog) {
-                  return;
-                }
-                await applyAreaValidationDialogValue(areaValidationDialog);
-                closeAreaValidationDialog();
-              }}
-            >
-              {areaValidationDialog?.mode === "bedLimit"
-                ? t("plantingPlans:areaValidation.applyBedArea")
-                : t("plantingPlans:areaValidation.applyRemainingArea")}
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeAreaValidationDialog}>{t("common:actions.cancel")}</Button>
+            {areaValidationDialog.mode !== "noRemainingArea" && (
+              <Button
+                variant="contained"
+                color="success"
+                onClick={async () => {
+                  await applyAreaValidationDialogValue(areaValidationDialog);
+                  closeAreaValidationDialog();
+                }}
+              >
+                {areaValidationDialog.mode === "bedLimit"
+                  ? t("plantingPlans:areaValidation.applyBedArea")
+                  : t("plantingPlans:areaValidation.applyRemainingArea")}
+              </Button>
+            )}
+          </DialogActions>
+        </Dialog>
+      )}
 
       <NotesDrawer
         open={isMobileNotesOpen}

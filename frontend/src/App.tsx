@@ -105,6 +105,7 @@ import { PanelLeft } from 'lucide-react';
 const CONTENT_ALIGNMENT_MODE = 'centered';
 const ACTION_MENU_ITEM_ICON_SX = { minWidth: 32, color: 'text.secondary' } as const;
 const ACTION_MENU_ICON_PROPS = { fontSize: 'small' } as const;
+const HIERARCHY_CREATE_LOCATION_ACTION_ID = 'fields-global-add-location';
 const HomePage = React.lazy(() => import('./pages/public/HomePage'));
 const ImprintPage = React.lazy(() => import('./pages/public/ImprintPage'));
 const PrivacyPolicyPage = React.lazy(() => import('./pages/public/PrivacyPolicyPage'));
@@ -1030,23 +1031,34 @@ function RootLayout(): React.ReactElement {
             return groups.map((group, index) => {
               const isSegmentedGroup = group.length > 1 && group[0]?.groupId;
               const content = group.map((action) => {
+                const isHierarchyCreateLocationAction = action.id === HIERARCHY_CREATE_LOCATION_ACTION_ID;
                 const button = (
                 <Button
                   key={action.id}
                   size="small"
-                  variant={action.active ? 'contained' : 'outlined'}
-                  color={action.active ? 'success' : 'inherit'}
+                  variant={isHierarchyCreateLocationAction || action.active ? 'contained' : 'outlined'}
+                  color={action.active ? 'success' : isHierarchyCreateLocationAction ? 'primary' : 'inherit'}
                   onClick={action.onClick}
                   aria-label={action.ariaLabel ?? action.label}
                   aria-pressed={action.active}
                   disabled={action.disabled}
-                  sx={getSegmentedActionButtonSx({
-                    active: Boolean(action.active),
-                    hidden: Boolean(action.hidden),
-                  })}
-                  style={isMobile ? { minWidth: 0, paddingLeft: 8, paddingRight: 8, fontSize: '0.74rem' } : undefined}
+                  startIcon={isHierarchyCreateLocationAction && !isPhone ? <AddIcon fontSize="small" /> : undefined}
+                  sx={isHierarchyCreateLocationAction
+                    ? {
+                      textTransform: 'none',
+                      whiteSpace: 'nowrap',
+                      minWidth: isPhone ? 36 : 'auto',
+                      px: isPhone ? 0.75 : 1.25,
+                      flexShrink: 0,
+                      ...(action.hidden ? { display: 'none' } : {}),
+                    }
+                    : getSegmentedActionButtonSx({
+                      active: Boolean(action.active),
+                      hidden: Boolean(action.hidden),
+                    })}
+                  style={!isHierarchyCreateLocationAction && isMobile ? { minWidth: 0, paddingLeft: 8, paddingRight: 8, fontSize: '0.74rem' } : undefined}
                 >
-                  {action.label}
+                  {isHierarchyCreateLocationAction && isPhone ? <AddIcon fontSize="small" /> : action.label}
                 </Button>
                 );
                 return action.tooltip ? (
@@ -1263,21 +1275,38 @@ function RootLayout(): React.ReactElement {
                 const overflowGroups = isVeryNarrowMobile ? groups.slice(2) : [];
                 const visibleNodes = visibleGroups.map((group, index) => {
                   const isSegmentedGroup = group.length > 1 && group[0]?.groupId;
-                  const content = group.map((action) => (
-                    <Button
-                      key={action.id}
-                      size="small"
-                      variant={action.active ? 'contained' : 'outlined'}
-                      color={action.active ? 'success' : 'inherit'}
-                      onClick={action.onClick}
-                      aria-label={action.ariaLabel ?? action.label}
-                      aria-pressed={action.active}
-                      disabled={action.disabled}
-                      sx={{ ...getSegmentedActionButtonSx({ active: Boolean(action.active), hidden: Boolean(action.hidden) }), minHeight: 30, px: 1 }}
-                    >
-                      {action.label}
-                    </Button>
-                  ));
+                  const content = group.map((action) => {
+                    const isHierarchyCreateLocationAction = action.id === HIERARCHY_CREATE_LOCATION_ACTION_ID;
+                    return (
+                      <Button
+                        key={action.id}
+                        size="small"
+                        variant={isHierarchyCreateLocationAction || action.active ? 'contained' : 'outlined'}
+                        color={action.active ? 'success' : isHierarchyCreateLocationAction ? 'primary' : 'inherit'}
+                        onClick={action.onClick}
+                        aria-label={action.ariaLabel ?? action.label}
+                        aria-pressed={action.active}
+                        disabled={action.disabled}
+                        startIcon={isHierarchyCreateLocationAction && !isPhone ? <AddIcon fontSize="small" /> : undefined}
+                        sx={isHierarchyCreateLocationAction
+                          ? {
+                            textTransform: 'none',
+                            whiteSpace: 'nowrap',
+                            minWidth: isPhone ? 32 : 'auto',
+                            px: isPhone ? 0.75 : 1.25,
+                            minHeight: 30,
+                            ...(action.hidden ? { display: 'none' } : {}),
+                          }
+                          : {
+                            ...getSegmentedActionButtonSx({ active: Boolean(action.active), hidden: Boolean(action.hidden) }),
+                            minHeight: 30,
+                            px: 1,
+                          }}
+                      >
+                        {isHierarchyCreateLocationAction && isPhone ? <AddIcon fontSize="small" /> : action.label}
+                      </Button>
+                    );
+                  });
                   return isSegmentedGroup ? (
                     <ButtonGroup key={`mobile-group-${group[0]?.groupId}-${index}`} size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0 }}>
                       {content}

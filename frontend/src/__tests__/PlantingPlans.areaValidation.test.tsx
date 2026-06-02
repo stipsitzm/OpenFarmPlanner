@@ -312,11 +312,14 @@ describe("PlantingPlans save-time area validation", () => {
 
     render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
     await waitForPlansToLoad();
+    const focusLossSaveButton = await screen.findByRole("button", { name: "Speichern durch Fokusverlust" });
     await userEvent.click(await screen.findByRole("button", { name: "Zeile speichern" }));
     fireEvent.click(await screen.findByRole("button", { name: "Abbrechen" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Speichern durch Fokusverlust" }));
+    fireEvent.click(focusLossSaveButton);
 
-    expect(screen.queryByText("Für dieses Beet ist im gewählten Zeitraum keine freie Fläche verfügbar.")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("Für dieses Beet ist im gewählten Zeitraum keine freie Fläche verfügbar.")).not.toBeInTheDocument();
+    });
     expect(screen.queryByText("Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.")).not.toBeInTheDocument();
     expect(commandApiSpies.saveAttemptResult).toHaveBeenLastCalledWith(false);
     expect(commandApiSpies.apiPayload).not.toHaveBeenCalled();
