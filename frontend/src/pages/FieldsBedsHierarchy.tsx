@@ -1350,9 +1350,9 @@ function FieldsBedsHierarchy({
 
     return [...createActions, ...editActions, ...destructiveActions];
   }, [
-    addField,
     deleteHierarchyRowWithUndo,
     handleAddBed,
+    handleAddField,
     handleCreatePlantingPlan,
     startRowEdit,
     t,
