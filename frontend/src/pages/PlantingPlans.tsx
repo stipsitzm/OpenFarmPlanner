@@ -2301,7 +2301,8 @@ function PlantingPlans(): React.ReactElement {
             if (requestedArea === null) {
               return true;
             }
-            if (capacity.availableArea <= 0) {
+            const isRemainingAreaLimited = capacity.availableArea < capacity.bedArea;
+            if (isRemainingAreaLimited && capacity.availableArea <= 0) {
               openAreaValidationDialog({
                 rowId: row.id,
                 requestedArea,
@@ -2314,7 +2315,7 @@ function PlantingPlans(): React.ReactElement {
               });
               return false;
             }
-            if (requestedArea > capacity.availableArea) {
+            if (isRemainingAreaLimited && requestedArea > capacity.availableArea) {
               openAreaValidationDialog({
                 rowId: row.id,
                 requestedArea,
