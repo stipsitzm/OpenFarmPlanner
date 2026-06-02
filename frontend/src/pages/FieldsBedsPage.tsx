@@ -1,4 +1,4 @@
-import { Alert, Box, Button, ButtonGroup, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField, useMediaQuery } from '@mui/material';
+import { Alert, Box, Button, ButtonGroup, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, TextField, useMediaQuery } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
@@ -9,7 +9,6 @@ import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
 import { bedAPI, fieldAPI, locationAPI, type Location } from '../api/api';
-import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard, { type EmptyStateAction } from '../components/project/EmptyStateCard';
@@ -45,9 +44,7 @@ export default function FieldsBedsPage(): React.ReactElement {
   const [globalActionError, setGlobalActionError] = useState<string>('');
   const [globalActionSuccess, setGlobalActionSuccess] = useState<string>('');
   const [hierarchyRenderKey, setHierarchyRenderKey] = useState(0);
-  const [addFieldDialogOpen, setAddFieldDialogOpen] = useState(false);
-  const [newFieldName, setNewFieldName] = useState('');
-  const [targetLocationId, setTargetLocationId] = useState<number | ''>('');
+  const [createFieldRequest, setCreateFieldRequest] = useState(0);
   const [isAreaDataLoading, setIsAreaDataLoading] = useState(false);
   const [hasAreaDataLoaded, setHasAreaDataLoaded] = useState(false);
   const [showContextMenuHint, setShowContextMenuHint] = useState(false);
@@ -131,36 +128,23 @@ export default function FieldsBedsPage(): React.ReactElement {
     await loadLocations();
   }, [loadLocations]);
 
-  const { addField } = useFieldOperations(
-    locations,
-    setGlobalActionError,
-    reloadHierarchyAndLocations,
-    t as never,
-  );
-  const globalAddFieldTargetLocation = locations.length === 1 ? locations[0] : undefined;
-  const canUseGlobalAddField = globalAddFieldTargetLocation?.id !== undefined;
+  const hasAddFieldTarget = locations.some((item) => item.id !== undefined);
+  const canUseGlobalAddField = locations.length === 1 && locations[0]?.id !== undefined;
 
-  const openAddFieldDialog = useCallback((): boolean => {
-    if (!canUseGlobalAddField || globalAddFieldTargetLocation?.id === undefined) {
-      return false;
+  const requestInlineFieldCreation = useCallback((): void => {
+    if (!hasAddFieldTarget) {
+      setGlobalActionError(t('hierarchy:messages.createLocationError'));
+      return;
     }
 
-    setTargetLocationId(globalAddFieldTargetLocation.id);
-    setNewFieldName('');
-    setAddFieldDialogOpen(true);
-    return true;
-  }, [canUseGlobalAddField, globalAddFieldTargetLocation]);
+    setViewMode('table');
+    setCreateFieldRequest((currentRequest) => currentRequest + 1);
+  }, [hasAddFieldTarget, t]);
 
   const openAddLocationDialog = useCallback((): void => {
     setNewLocationName('');
     setAddLocationDialogOpen(true);
   }, []);
-
-  const handleGlobalAddField = useCallback((): void => {
-    if (!openAddFieldDialog()) {
-      setGlobalActionError(t('hierarchy:messages.createLocationError'));
-    }
-  }, [openAddFieldDialog, t]);
 
   const handleCreateAdditionalLocation = useCallback(async (): Promise<void> => {
     const trimmedName = newLocationName.trim();
@@ -180,15 +164,6 @@ export default function FieldsBedsPage(): React.ReactElement {
     }
   }, [newLocationName, reloadHierarchyAndLocations, t]);
 
-  const handleConfirmAddField = useCallback((): void => {
-    if (typeof targetLocationId !== 'number' || !newFieldName.trim()) {
-      return;
-    }
-    void addField(targetLocationId, newFieldName.trim());
-    setAddFieldDialogOpen(false);
-    setNewFieldName('');
-  }, [addField, newFieldName, targetLocationId]);
-
   useEffect(() => {
     if (!location.pathname.startsWith('/app/fields-beds')) {
       return;
@@ -202,7 +177,7 @@ export default function FieldsBedsPage(): React.ReactElement {
       return;
     }
 
-    openAddFieldDialog();
+    requestInlineFieldCreation();
 
     searchParams.delete('create');
     const nextSearch = searchParams.toString();
@@ -219,7 +194,7 @@ export default function FieldsBedsPage(): React.ReactElement {
     location.pathname,
     location.search,
     navigate,
-    openAddFieldDialog,
+    requestInlineFieldCreation,
     shouldShowProjectRequiredState,
   ]);
 
@@ -249,7 +224,7 @@ export default function FieldsBedsPage(): React.ReactElement {
   const hasLocations = locations.length > 0;
   const hasFields = fieldsCount > 0;
   const hasBeds = bedsCount > 0;
-  const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && (!hasLocations || !hasFields);
+  const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && !hasLocations;
   const shouldShowMissingFieldsState = hasLocations && !hasFields;
   const shouldShowMissingBedsHint = hasFields && !hasBeds;
   const createBedAction = getProjectSetupAction('beds');
@@ -259,13 +234,11 @@ export default function FieldsBedsPage(): React.ReactElement {
       : 'hierarchy:emptyAreas.missingFieldDescription')
     : t('hierarchy:emptyAreas.description');
   const emptyAreaActions = useMemo<EmptyStateAction[]>(() => {
-    const actions: EmptyStateAction[] = [];
-    if (canUseGlobalAddField) {
-      actions.push({ label: t('hierarchy:actions.addField'), onClick: handleGlobalAddField, icon: <AddIcon fontSize="small" /> });
+    if (shouldShowMissingFieldsState) {
+      return [{ label: t('hierarchy:actions.addField'), onClick: requestInlineFieldCreation, icon: <AddIcon fontSize="small" /> }];
     }
-    actions.push({ label: t('hierarchy:actions.createLocation'), onClick: openAddLocationDialog, icon: <AddIcon fontSize="small" /> });
-    return actions;
-  }, [canUseGlobalAddField, handleGlobalAddField, openAddLocationDialog, t]);
+    return [{ label: t('hierarchy:actions.createLocation'), onClick: openAddLocationDialog, icon: <AddIcon fontSize="small" /> }];
+  }, [openAddLocationDialog, requestInlineFieldCreation, shouldShowMissingFieldsState, t]);
 
   useEffect(() => {
     if (viewMode === 'graphical') {
@@ -320,7 +293,7 @@ export default function FieldsBedsPage(): React.ReactElement {
         ...(canUseGlobalAddField ? [{
           id: 'fields-global-add-field',
           label: t('hierarchy:actions.addField'),
-          onClick: handleGlobalAddField,
+          onClick: requestInlineFieldCreation,
           ariaLabel: t('hierarchy:actions.addField'),
         }] : []),
         {
@@ -336,7 +309,7 @@ export default function FieldsBedsPage(): React.ReactElement {
     return [...globalActions, ...interactionModeActions, ...viewModeActions];
   }, [
     canUseGlobalAddField,
-    handleGlobalAddField,
+    requestInlineFieldCreation,
     interactionModeActions,
     isXs,
     openAddLocationDialog,
@@ -381,10 +354,17 @@ export default function FieldsBedsPage(): React.ReactElement {
                 {t('hierarchy:messages.noBedsHintAfterIcon')}
               </Box>
             )}
+            supplement={viewMode !== 'graphical' ? (
+              <ContextMenuHint
+                compact
+                message={t('hierarchy:messages.contextMenuTableHint')}
+                secondary={t('hierarchy:messages.contextMenuHintKeyboard')}
+              />
+            ) : undefined}
             actions={[{ label: t(createBedAction.labelKey), to: createBedAction.to }]}
           />
         ) : null}
-        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldShowAreasEmptyState ? (
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && (shouldShowAreasEmptyState || shouldShowMissingFieldsState) ? (
           <EmptyStateCard
             title={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldTitle') : t('hierarchy:emptyAreas.title')}
             description={emptyAreasDescription}
@@ -482,42 +462,15 @@ export default function FieldsBedsPage(): React.ReactElement {
                 />
               </Box>
             ) : null}
-            <FieldsBedsHierarchy key={hierarchyRenderKey} showTitle={false} />
+            <FieldsBedsHierarchy
+              key={hierarchyRenderKey}
+              showTitle={false}
+              createFieldRequest={createFieldRequest}
+              onCreateFieldRequestHandled={() => setCreateFieldRequest(0)}
+            />
           </>
         ) : null}
       </PageContainer>
-      <Dialog open={addFieldDialogOpen} onClose={() => setAddFieldDialogOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>{t('hierarchy:dialogs.addField.title')}</DialogTitle>
-        <DialogContent>
-          {locations.length > 1 ? (
-            <TextField
-              select
-              margin="dense"
-              fullWidth
-              label={t('hierarchy:columns.location')}
-              value={targetLocationId}
-              onChange={(event) => setTargetLocationId(Number(event.target.value))}
-            >
-              {locations.filter((location) => location.id !== undefined).map((location) => (
-                <MenuItem key={location.id} value={location.id}>{location.name}</MenuItem>
-              ))}
-            </TextField>
-          ) : null}
-          <TextField
-            margin="dense"
-            fullWidth
-            label={t('hierarchy:dialogs.addField.nameLabel')}
-            value={newFieldName}
-            onChange={(event) => setNewFieldName(event.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddFieldDialogOpen(false)}>{t('common:actions.cancel')}</Button>
-          <Button onClick={handleConfirmAddField} variant="contained" disabled={!newFieldName.trim() || typeof targetLocationId !== 'number'}>
-            {t('hierarchy:dialogs.addField.submit')}
-          </Button>
-        </DialogActions>
-      </Dialog>
       <Dialog open={addLocationDialogOpen} onClose={() => setAddLocationDialogOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle>{t('hierarchy:dialogs.addAdditionalLocation.title')}</DialogTitle>
         <DialogContent>

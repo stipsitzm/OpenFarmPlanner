@@ -54,7 +54,6 @@ import { useHierarchyData } from "../components/hierarchy/hooks/useHierarchyData
 import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { usePersistentSortModel } from "../hooks/usePersistentSortModel";
-import { useFieldOperations } from "../components/hierarchy/hooks/useFieldOperations";
 import { fieldAPI, bedAPI, locationAPI, type Bed, type Field, type Location as FarmLocation } from "../api/api";
 import {
   buildHierarchyIndex,
@@ -76,6 +75,8 @@ import { isTypingInEditableElement } from "../hooks/useKeyboardShortcuts";
 
 interface FieldsBedsHierarchyProps {
   showTitle?: boolean;
+  createFieldRequest?: number;
+  onCreateFieldRequestHandled?: () => void;
 }
 
 interface HierarchyRowAction {
@@ -298,6 +299,8 @@ const HIERARCHY_DATA_GRID_SX = {
 
 function FieldsBedsHierarchy({
   showTitle = true,
+  createFieldRequest = 0,
+  onCreateFieldRequestHandled,
 }: FieldsBedsHierarchyProps): React.ReactElement {
   const LOCATION_ROW_HEIGHT = 46;
   const FIELD_ROW_HEIGHT = 42;
@@ -383,14 +386,7 @@ function FieldsBedsHierarchy({
   // Bed operations
   const { addBed, saveBed, pendingEditRow, setPendingEditRow } =
     useBedOperations(beds, setBeds, setError, t);
-
-  // Field operations
-  const { addField } = useFieldOperations(
-    locations,
-    setError,
-    fetchData,
-    t,
-  );
+  const [pendingFieldEditRow, setPendingFieldEditRow] = useState<string | number | null>(null);
 
   const hierarchyIndex = useMemo(
     () => buildHierarchyIndex(locations, fields, beds, hierarchySortConfig),
@@ -524,6 +520,49 @@ function FieldsBedsHierarchy({
     }
   }, [rows, pendingEditRow, setPendingEditRow]);
 
+  useEffect(() => {
+    if (pendingFieldEditRow === null) {
+      return;
+    }
+
+    const rowExists = rows.some((row) => row.id === pendingFieldEditRow);
+    if (!rowExists) {
+      return;
+    }
+
+    const rowId = pendingFieldEditRow;
+    setTimeout(() => {
+      setRowModesModel((oldModel) => ({
+        ...oldModel,
+        [rowId]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
+      }));
+      setPendingFieldEditRow(null);
+    }, 0);
+  }, [pendingFieldEditRow, rows]);
+
+  const handleAddField = useCallback(
+    (locationId: number): void => {
+      const locationItem = locations.find((item) => item.id === locationId);
+      if (!locationItem) return;
+
+      const newFieldId = -Date.now();
+      const newField: Field = {
+        id: newFieldId,
+        name: "",
+        location: locationId,
+        area_sqm: undefined,
+        length_m: null,
+        width_m: null,
+        notes: "",
+      };
+
+      ensureExpanded(`location-${locationId}`);
+      setFields((previousFields) => [newField, ...previousFields]);
+      setPendingFieldEditRow(`field-${newFieldId}`);
+    },
+    [ensureExpanded, locations, setFields],
+  );
+
   const handleAddBed = useCallback(
     (fieldId: number): void => {
       const field = fields.find((f) => f.id === fieldId);
@@ -564,6 +603,18 @@ function FieldsBedsHierarchy({
       { replace: true },
     );
   }, [fields, handleAddBed, loading, location.pathname, location.search, navigate]);
+
+  useEffect(() => {
+    if (createFieldRequest <= 0 || loading) {
+      return;
+    }
+
+    const firstLocation = locations.find((locationItem) => locationItem.id !== undefined);
+    if (firstLocation?.id !== undefined) {
+      handleAddField(firstLocation.id);
+    }
+    onCreateFieldRequestHandled?.();
+  }, [createFieldRequest, handleAddField, loading, locations, onCreateFieldRequestHandled]);
 
   const handleCreatePlantingPlan = useCallback(
     (bedId: number): void => {
@@ -671,6 +722,17 @@ function FieldsBedsHierarchy({
     const draftRow = getDraftRow(rowId);
 
     if (draftRow?.isNew) {
+      if (draftRow.type === "field") {
+        setFields((previousFields) => previousFields.filter((field) => `field-${field.id}` !== String(rowId)));
+        setDraftValidationWarning("");
+        rowSnapshotRef.current.delete(String(rowId));
+        setRowModesModel((previousModel) => ({
+          ...previousModel,
+          [rowId]: { mode: GridRowModes.View, ignoreModifications: true },
+        }));
+        return;
+      }
+
       if (isCompletelyEmptyNewHierarchyRow(draftRow)) {
         setBeds((previousBeds) => previousBeds.filter((bed) => String(bed.id) !== String(rowId)));
         setDraftValidationWarning("");
@@ -684,7 +746,7 @@ function FieldsBedsHierarchy({
       ...previousModel,
       [rowId]: { mode: GridRowModes.View, ignoreModifications: true },
     }));
-  }, [getDraftRow, preservePartialNewBedDraft, setBeds]);
+  }, [getDraftRow, preservePartialNewBedDraft, setBeds, setFields]);
 
   const discardActiveRowEdit = useCallback((): void => {
     const editingRowId = Object.entries(rowModesModel).find(([, mode]) => mode.mode === GridRowModes.Edit)?.[0];
@@ -803,6 +865,7 @@ function FieldsBedsHierarchy({
     }
 
     if (newRow.type === "field") {
+      const isNewField = typeof newRow.fieldId === "number" && newRow.fieldId < 0;
       const parsedLength = parseDimensionValue(newRow.length_m);
       const parsedWidth = parseDimensionValue(newRow.width_m);
 
@@ -830,6 +893,49 @@ function FieldsBedsHierarchy({
         parsedWidth !== undefined
           ? normalizeAreaValue(parsedLength * parsedWidth)
           : normalizeAreaValue(parseAreaValue(newRow.area_sqm));
+
+      if (isNewField) {
+        if (
+          fieldArea !== undefined &&
+          (typeof fieldArea !== "number" || fieldArea <= 0 || Number.isNaN(fieldArea))
+        ) {
+          setError(t("validation.areaMustBePositive"));
+          throw new Error(t("validation.areaMustBePositive"));
+        }
+
+        try {
+          const created = await fieldAPI.create({
+            name: newRow.name,
+            location: newRow.locationId!,
+            area_sqm: fieldArea,
+            length_m: parsedLength,
+            width_m: parsedWidth,
+            notes: newRow.notes,
+          });
+
+          setFields((prevFields) => {
+            const filteredFields = prevFields.filter((field) => field.id !== newRow.fieldId);
+            return [created.data, ...filteredFields];
+          });
+          setError("");
+          await fetchData();
+          return {
+            ...newRow,
+            id: `field-${created.data.id}`,
+            fieldId: created.data.id,
+            name: created.data.name,
+            area_sqm: created.data.area_sqm,
+            length_m: created.data.length_m,
+            width_m: created.data.width_m,
+            notes: created.data.notes,
+            isNew: false,
+          };
+        } catch (err) {
+          const extractedError = extractApiErrorMessage(err, t, t("errors.createField"));
+          setError(extractedError);
+          throw new Error(extractedError);
+        }
+      }
 
       if (
         typeof fieldArea !== "number" ||
@@ -1158,10 +1264,7 @@ function FieldsBedsHierarchy({
     }
 
     if (selectedRow.type === "location" && selectedRow.locationId) {
-      const fieldName = window.prompt(t("dialogs.addField.nameLabel"));
-      if (fieldName !== null) {
-        void addField(selectedRow.locationId, fieldName);
-      }
+      handleAddField(selectedRow.locationId);
       return;
     }
 
@@ -1173,7 +1276,7 @@ function FieldsBedsHierarchy({
     if (selectedRow.type === "bed" && selectedRow.field) {
       handleAddBed(selectedRow.field);
     }
-  }, [addField, handleAddBed, selectedRow, t]);
+  }, [handleAddBed, handleAddField, selectedRow]);
 
   const handleEditSelected = useCallback(() => {
     if (!selectedRow) {
@@ -1206,12 +1309,7 @@ function FieldsBedsHierarchy({
         id: "add-field",
         label: t("actions.addField"),
         group: "create",
-        onClick: () => {
-          const fieldName = window.prompt(t("dialogs.addField.nameLabel"));
-          if (fieldName !== null) {
-            void addField(row.locationId, fieldName);
-          }
-        },
+        onClick: () => handleAddField(row.locationId!),
       });
     }
 
@@ -1537,10 +1635,7 @@ function FieldsBedsHierarchy({
         }
       },
       (locationId) => {
-        const fieldName = window.prompt(t("dialogs.addField.nameLabel"));
-        if (fieldName !== null) {
-          void addField(locationId, fieldName);
-        }
+        handleAddField(locationId);
       },
       (fieldId) => {
         const row = rowsById.get(`field-${fieldId}`);
@@ -1566,7 +1661,7 @@ function FieldsBedsHierarchy({
   }, [
     toggleExpand,
     handleAddBed,
-    addField,
+    handleAddField,
     deleteHierarchyRowWithUndo,
     handleCreatePlantingPlan,
     handleNameCellContextMenu,

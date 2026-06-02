@@ -185,6 +185,7 @@ export function buildHierarchyRowsFromIndex(
           length_m: field.length_m,
           width_m: field.width_m,
           notes: field.notes,
+          isNew: field.id! < 0,
         });
 
         if (!isFieldExpanded) return;
@@ -232,6 +233,7 @@ export function buildHierarchyRowsFromIndex(
       length_m: field.length_m,
       width_m: field.width_m,
       notes: field.notes,
+      isNew: field.id! < 0,
     });
 
     if (!isFieldExpanded) return;
