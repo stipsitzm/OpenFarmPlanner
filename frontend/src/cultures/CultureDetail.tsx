@@ -463,15 +463,15 @@ export function CultureDetail({
       return;
     }
 
-    const selectedCultureIsVisible = selectedCultureId !== undefined
-      && filteredCultures.some((culture) => culture.id === selectedCultureId);
-    if (selectedCultureIsVisible) {
+    const selectedCultureExists = selectedCultureId !== undefined
+      && cultures.some((culture) => culture.id === selectedCultureId);
+    if (selectedCultureExists) {
       return;
     }
 
     const [firstFilteredCulture] = filteredCultures;
     onCultureSelect(firstFilteredCulture ?? null);
-  }, [cultures.length, filteredCultures, isLoading, onCultureSelect, selectedCultureId]);
+  }, [cultures, filteredCultures, isLoading, onCultureSelect, selectedCultureId]);
 
   const cultureOptions: SearchableSelectOption<Culture>[] = useMemo(
     () => {
@@ -488,12 +488,23 @@ export function CultureDetail({
     [filteredCultures]
   );
 
-  const selectedOption = useMemo(
-    () => cultureOptions.find((option) => option.value === selectedCultureId) ?? null,
-    [cultureOptions, selectedCultureId]
+  const selectedCulture = useMemo(
+    () => cultures.find((culture) => culture.id === selectedCultureId) ?? null,
+    [cultures, selectedCultureId],
   );
 
-  const selectedCulture = selectedOption?.data ?? null;
+  const selectedOption = useMemo(
+    () => (
+      selectedCulture?.id === undefined
+        ? null
+        : {
+          value: selectedCulture.id,
+          label: `${selectedCulture.name}${selectedCulture.variety ? `${UI_LABEL_SEPARATOR}${selectedCulture.variety}` : ''}${selectedCulture.seed_supplier ? ` | ${selectedCulture.seed_supplier}` : ''}`,
+          data: selectedCulture,
+        }
+    ),
+    [selectedCulture],
+  );
   
   const supplierRows = useMemo(
     () => selectedCulture?.supplier_data ?? [],

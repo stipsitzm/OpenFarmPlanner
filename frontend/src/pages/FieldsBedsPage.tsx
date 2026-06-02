@@ -136,24 +136,24 @@ export default function FieldsBedsPage(): React.ReactElement {
     reloadHierarchyAndLocations,
     t as never,
   );
-  const openAddFieldDialog = useCallback((): boolean => {
-    if (locations.length === 1 && locations[0]?.id !== undefined) {
-      setTargetLocationId(locations[0].id);
-      setNewFieldName('');
-      setAddFieldDialogOpen(true);
-      return true;
-    }
+  const globalAddFieldTargetLocation = locations.length === 1 ? locations[0] : undefined;
+  const canUseGlobalAddField = globalAddFieldTargetLocation?.id !== undefined;
 
-    const firstLocation = locations.find((location) => location.id !== undefined);
-    if (firstLocation?.id === undefined) {
+  const openAddFieldDialog = useCallback((): boolean => {
+    if (!canUseGlobalAddField || globalAddFieldTargetLocation?.id === undefined) {
       return false;
     }
 
-    setTargetLocationId(firstLocation.id);
+    setTargetLocationId(globalAddFieldTargetLocation.id);
     setNewFieldName('');
     setAddFieldDialogOpen(true);
     return true;
-  }, [locations]);
+  }, [canUseGlobalAddField, globalAddFieldTargetLocation]);
+
+  const openAddLocationDialog = useCallback((): void => {
+    setNewLocationName('');
+    setAddLocationDialogOpen(true);
+  }, []);
 
   const handleGlobalAddField = useCallback((): void => {
     if (!openAddFieldDialog()) {
@@ -252,6 +252,19 @@ export default function FieldsBedsPage(): React.ReactElement {
   const shouldShowMissingFieldsState = hasLocations && !hasFields;
   const shouldShowMissingBedsHint = hasFields && !hasBeds;
   const createBedAction = getProjectSetupAction('beds');
+  const emptyAreasDescription = shouldShowMissingFieldsState
+    ? t(locations.length > 1
+      ? 'hierarchy:emptyAreas.missingFieldDescriptionMultipleLocations'
+      : 'hierarchy:emptyAreas.missingFieldDescription')
+    : t('hierarchy:emptyAreas.description');
+  const emptyAreaActions = useMemo(() => {
+    const actions: Array<{ label: string; onClick: () => void }> = [];
+    if (canUseGlobalAddField) {
+      actions.push({ label: t('hierarchy:actions.addField'), onClick: handleGlobalAddField });
+    }
+    actions.push({ label: t('hierarchy:actions.createLocation'), onClick: openAddLocationDialog });
+    return actions;
+  }, [canUseGlobalAddField, handleGlobalAddField, openAddLocationDialog, t]);
 
   useEffect(() => {
     if (viewMode === 'graphical') {
@@ -300,24 +313,34 @@ export default function FieldsBedsPage(): React.ReactElement {
   ]), [interactionMode, t, viewMode]);
 
   const contextActions = useMemo<TopbarContextAction[]>(() => {
-    const globalActions: TopbarContextAction[] = locations.length === 1 && !shouldShowProjectRequiredState
-      ? [{
-        id: 'fields-global-add-field',
-        label: 'Parzelle hinzufügen',
-        onClick: handleGlobalAddField,
-        ariaLabel: 'Parzelle hinzufügen',
-      }]
-      : [];
+    const globalActions: TopbarContextAction[] = shouldShowProjectRequiredState
+      ? []
+      : [
+        ...(canUseGlobalAddField ? [{
+          id: 'fields-global-add-field',
+          label: t('hierarchy:actions.addField'),
+          onClick: handleGlobalAddField,
+          ariaLabel: t('hierarchy:actions.addField'),
+        }] : []),
+        {
+          id: 'fields-global-add-location',
+          label: t('hierarchy:actions.createLocation'),
+          onClick: openAddLocationDialog,
+          ariaLabel: t('hierarchy:actions.createLocation'),
+        },
+      ];
     if (isXs) {
       return globalActions;
     }
     return [...globalActions, ...interactionModeActions, ...viewModeActions];
   }, [
+    canUseGlobalAddField,
     handleGlobalAddField,
     interactionModeActions,
     isXs,
-    locations.length,
+    openAddLocationDialog,
     shouldShowProjectRequiredState,
+    t,
     viewModeActions,
   ]);
 
@@ -363,7 +386,7 @@ export default function FieldsBedsPage(): React.ReactElement {
         {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldShowAreasEmptyState ? (
           <EmptyStateCard
             title={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldTitle') : t('hierarchy:emptyAreas.title')}
-            description={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldDescription') : t('hierarchy:emptyAreas.description')}
+            description={emptyAreasDescription}
             supplement={(
               <ContextMenuHint
                 compact
@@ -376,10 +399,7 @@ export default function FieldsBedsPage(): React.ReactElement {
               done: false,
               missingLabel: t('hierarchy:emptyAreas.missingLocationLabel'),
             }] : []}
-            actions={[
-              { label: t('hierarchy:actions.addField'), onClick: handleGlobalAddField },
-              { label: t('hierarchy:actions.addAdditionalLocation'), onClick: () => setAddLocationDialogOpen(true) },
-            ]}
+            actions={emptyAreaActions}
           />
         ) : null}
       </PageContainer>

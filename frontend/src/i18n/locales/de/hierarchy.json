@@ -91,10 +91,11 @@
   },
   "emptyAreas": {
     "title": "Noch keine Anbauflächen vorhanden",
-    "description": "Du kannst mit einer Parzelle starten und darin später Beete anlegen.",
+    "description": "Lege zuerst einen Standort an. Danach kannst du dort Parzellen und Beete erfassen.",
     "missingLocationLabel": "Standort fehlt",
     "missingFieldTitle": "Parzelle fehlt",
     "missingFieldDescription": "Lege eine Parzelle an, um darin später Beete zu erfassen.",
+    "missingFieldDescriptionMultipleLocations": "Füge Parzellen über die Aktion am jeweiligen Standort hinzu.",
     "actions": {
       "createLocation": "Standort hinzufügen",
       "createField": "Parzelle hinzufügen",

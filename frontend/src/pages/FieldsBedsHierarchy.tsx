@@ -40,7 +40,6 @@ import EmptyStateCard from '../components/project/EmptyStateCard';
 import { dataGridSx } from "../components/data-grid/styles";
 import {
   DeleteUndoSnackbar,
-  DELETE_UNDO_DURATION_MS,
   ContextMenuHint,
   TableCopyMenuItems,
   useNotesEditor,
@@ -48,7 +47,6 @@ import {
   getPlainExcerpt,
 } from "../components/data-grid";
 import {
-  handleRowEditStop,
   handleEditableCellClick,
 } from "../components/data-grid/handlers";
 import { useNavigationBlocker } from "../hooks/autosave";
@@ -98,9 +96,6 @@ interface PendingHierarchyDeletion {
   locations: FarmLocation[];
   fields: Field[];
   beds: Bed[];
-  allLocationsBeforeDelete: FarmLocation[];
-  allFieldsBeforeDelete: Field[];
-  allBedsBeforeDelete: Bed[];
   expandedRowsBeforeDelete: Set<string | number>;
   visible: boolean;
 }
@@ -328,7 +323,6 @@ function FieldsBedsHierarchy({
   const [pendingDeletions, setPendingDeletions] = useState<PendingHierarchyDeletion[]>([]);
   const hasInitiallyExpandedRef = useRef(false);
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
-  const pendingDeletionTimersRef = useRef<Map<string, number>>(new Map());
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
   const touchLongPressTimeoutRef = useRef<number | null>(null);
 
@@ -708,7 +702,6 @@ function FieldsBedsHierarchy({
       return;
     }
 
-    handleRowEditStop(params, event);
   }, [discardRowEdit]);
 
   const getBedAreaSum = (
@@ -957,52 +950,51 @@ function FieldsBedsHierarchy({
     setError(error.message || t("errors.save"));
   };
 
-  const restoreDeletedItems = useCallback((deletion: PendingHierarchyDeletion): void => {
-    const restoreByPreviousOrder = <T extends { id?: number }>(
-      currentItems: T[],
-      deletedItems: T[],
-      previousItems: T[],
-    ): T[] => {
-      const byId = new Map<number, T>();
-      currentItems.forEach((item) => {
-        if (typeof item.id === "number") {
-          byId.set(item.id, item);
-        }
-      });
-      deletedItems.forEach((item) => {
-        if (typeof item.id === "number" && !byId.has(item.id)) {
-          byId.set(item.id, item);
-        }
-      });
+  const restoreDeletedItems = useCallback(async (deletion: PendingHierarchyDeletion): Promise<void> => {
+    const locationIdMap = new Map<number, number>();
+    const fieldIdMap = new Map<number, number>();
 
-      const previousOrder = new Map<number, number>();
-      previousItems.forEach((item, index) => {
-        if (typeof item.id === "number") {
-          previousOrder.set(item.id, index);
-        }
-      });
+    for (const locationItem of deletion.locations) {
+      const { id, created_at, updated_at, ...locationPayload } = locationItem;
+      if (typeof id !== "number") {
+        continue;
+      }
+      const restoredLocation = await locationAPI.create(locationPayload);
+      if (typeof restoredLocation.data.id === "number") {
+        locationIdMap.set(id, restoredLocation.data.id);
+      }
+    }
 
-      return Array.from(byId.values()).sort((left, right) => {
-        const leftIndex = typeof left.id === "number" ? previousOrder.get(left.id) : undefined;
-        const rightIndex = typeof right.id === "number" ? previousOrder.get(right.id) : undefined;
-        if (leftIndex === undefined && rightIndex === undefined) return 0;
-        if (leftIndex === undefined) return 1;
-        if (rightIndex === undefined) return -1;
-        return leftIndex - rightIndex;
+    for (const field of deletion.fields) {
+      const { id, location_name, created_at, updated_at, ...fieldPayload } = field;
+      if (typeof id !== "number") {
+        continue;
+      }
+      const restoredLocationId = locationIdMap.get(field.location) ?? field.location;
+      const restoredField = await fieldAPI.create({
+        ...fieldPayload,
+        location: restoredLocationId,
       });
-    };
+      if (typeof restoredField.data.id === "number") {
+        fieldIdMap.set(id, restoredField.data.id);
+      }
+    }
 
-    setLocations((currentLocations) =>
-      restoreByPreviousOrder(currentLocations, deletion.locations, deletion.allLocationsBeforeDelete),
-    );
-    setFields((currentFields) =>
-      restoreByPreviousOrder(currentFields, deletion.fields, deletion.allFieldsBeforeDelete),
-    );
-    setBeds((currentBeds) =>
-      restoreByPreviousOrder(currentBeds, deletion.beds, deletion.allBedsBeforeDelete),
-    );
+    for (const bed of deletion.beds) {
+      const { id, field_name, created_at, updated_at, ...bedPayload } = bed;
+      if (typeof id !== "number") {
+        continue;
+      }
+      const restoredFieldId = fieldIdMap.get(bed.field) ?? bed.field;
+      await bedAPI.create({
+        ...bedPayload,
+        field: restoredFieldId,
+      });
+    }
+
+    await fetchData();
     expandAll(Array.from(deletion.expandedRowsBeforeDelete));
-  }, [expandAll, setBeds, setFields, setLocations]);
+  }, [expandAll, fetchData]);
 
   const removePendingDeletion = useCallback((deletionId: string): void => {
     setPendingDeletions((currentDeletions) =>
@@ -1010,48 +1002,25 @@ function FieldsBedsHierarchy({
     );
   }, []);
 
-  const finalizePendingDeletion = useCallback(async (deletion: PendingHierarchyDeletion): Promise<void> => {
-    pendingDeletionTimersRef.current.delete(deletion.id);
-    removePendingDeletion(deletion.id);
-
-    try {
-      if (deletion.type === "location") {
-        await locationAPI.delete(deletion.targetId);
-      } else if (deletion.type === "field") {
-        await fieldAPI.delete(deletion.targetId);
-      } else if (deletion.targetId > 0) {
-        await bedAPI.delete(deletion.targetId);
-      }
-      setError("");
-    } catch (err) {
-      restoreDeletedItems(deletion);
-      setError(extractApiErrorMessage(err, t, t("errors.delete")));
-    }
-  }, [removePendingDeletion, restoreDeletedItems, setError, t]);
-
-  const undoPendingDeletion = useCallback((deletionId: string): void => {
+  const undoPendingDeletion = useCallback(async (deletionId: string): Promise<void> => {
     const deletion = pendingDeletions.find((pendingDeletion) => pendingDeletion.id === deletionId);
     if (!deletion) {
       return;
     }
 
-    const timerId = pendingDeletionTimersRef.current.get(deletionId);
-    if (timerId !== undefined) {
-      window.clearTimeout(timerId);
-      pendingDeletionTimersRef.current.delete(deletionId);
-    }
-
-    restoreDeletedItems(deletion);
     removePendingDeletion(deletionId);
-  }, [pendingDeletions, removePendingDeletion, restoreDeletedItems]);
+    try {
+      await restoreDeletedItems(deletion);
+      setError("");
+    } catch (err) {
+      await fetchData();
+      setError(extractApiErrorMessage(err, t, t("errors.save")));
+    }
+  }, [fetchData, pendingDeletions, removePendingDeletion, restoreDeletedItems, setError, t]);
 
   const closePendingDeletionSnackbar = useCallback((deletionId: string): void => {
-    setPendingDeletions((currentDeletions) =>
-      currentDeletions.map((deletion) =>
-        deletion.id === deletionId ? { ...deletion, visible: false } : deletion,
-      ),
-    );
-  }, []);
+    removePendingDeletion(deletionId);
+  }, [removePendingDeletion]);
 
   const getDeletionMessage = useCallback((
     rowType: PendingHierarchyDeletionType,
@@ -1072,7 +1041,7 @@ function FieldsBedsHierarchy({
     return t("messages.fieldDeleted");
   }, [t]);
 
-  const deleteHierarchyRowWithUndo = useCallback((row: HierarchyRow): void => {
+  const deleteHierarchyRowWithUndo = useCallback(async (row: HierarchyRow): Promise<void> => {
     const deletionId = `${row.type}-${String(row.id)}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     let deletionType: PendingHierarchyDeletionType;
     let targetId: number | undefined;
@@ -1114,12 +1083,23 @@ function FieldsBedsHierarchy({
       locations: deletedLocations,
       fields: deletedFields,
       beds: deletedBeds,
-      allLocationsBeforeDelete: locations,
-      allFieldsBeforeDelete: fields,
-      allBedsBeforeDelete: beds,
       expandedRowsBeforeDelete: new Set(expandedRows),
       visible: true,
     };
+
+    try {
+      if (deletionType === "location") {
+        await locationAPI.delete(targetId);
+      } else if (deletionType === "field") {
+        await fieldAPI.delete(targetId);
+      } else {
+        await bedAPI.delete(targetId);
+      }
+    } catch (err) {
+      await fetchData();
+      setError(extractApiErrorMessage(err, t, t("errors.delete")));
+      return;
+    }
 
     setLocations((currentLocations) =>
       currentLocations.filter((locationItem) => !deletedLocationIds.has(locationItem.id)),
@@ -1143,30 +1123,19 @@ function FieldsBedsHierarchy({
     });
     setError("");
     setPendingDeletions((currentDeletions) => [...currentDeletions, pendingDeletion]);
-
-    const timerId = window.setTimeout(() => {
-      void finalizePendingDeletion(pendingDeletion);
-    }, DELETE_UNDO_DURATION_MS);
-    pendingDeletionTimersRef.current.set(deletionId, timerId);
   }, [
     beds,
     expandedRows,
+    fetchData,
     fields,
-    finalizePendingDeletion,
     getDeletionMessage,
     locations,
     setBeds,
     setFields,
     setLocations,
     setError,
+    t,
   ]);
-
-  useEffect(() => {
-    return () => {
-      pendingDeletionTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
-      pendingDeletionTimersRef.current.clear();
-    };
-  }, []);
 
   const selectedRow = useMemo(
     () => rows.find((row) => row.id === selectedRowId) ?? null,
@@ -1179,7 +1148,7 @@ function FieldsBedsHierarchy({
     }
 
     if (selectedRow.type === "location" || selectedRow.type === "field" || selectedRow.type === "bed") {
-      deleteHierarchyRowWithUndo(selectedRow);
+      void deleteHierarchyRowWithUndo(selectedRow);
     }
   }, [deleteHierarchyRowWithUndo, selectedRow]);
 
@@ -1276,7 +1245,9 @@ function FieldsBedsHierarchy({
       label: t("common:actions.delete"),
       group: "destructive",
       color: "error",
-      onClick: () => deleteHierarchyRowWithUndo(row),
+      onClick: () => {
+        void deleteHierarchyRowWithUndo(row);
+      },
     }];
 
     return [...createActions, ...editActions, ...destructiveActions];
@@ -1562,7 +1533,7 @@ function FieldsBedsHierarchy({
       (bedId) => {
         const row = rowsById.get(String(bedId));
         if (row) {
-          deleteHierarchyRowWithUndo(row);
+          void deleteHierarchyRowWithUndo(row);
         }
       },
       (locationId) => {
@@ -1574,13 +1545,13 @@ function FieldsBedsHierarchy({
       (fieldId) => {
         const row = rowsById.get(`field-${fieldId}`);
         if (row) {
-          deleteHierarchyRowWithUndo(row);
+          void deleteHierarchyRowWithUndo(row);
         }
       },
       (locationId) => {
         const row = rowsById.get(`location-${locationId}`);
         if (row) {
-          deleteHierarchyRowWithUndo(row);
+          void deleteHierarchyRowWithUndo(row);
         }
       },
       handleCreatePlantingPlan,
@@ -1801,7 +1772,7 @@ function FieldsBedsHierarchy({
               handleEditableCellClick(params, rowModesModel, setRowModesModel);
             }}
             onCellKeyDown={(params: GridCellParams<HierarchyRow>, event: React.KeyboardEvent) => {
-              const keyboardEvent = event as React.KeyboardEvent;
+              const keyboardEvent = event as React.KeyboardEvent & { defaultMuiPrevented?: boolean };
               if (
                 keyboardEvent.key === "Escape" &&
                 rowModesModel[params.id]?.mode === GridRowModes.Edit
@@ -1889,7 +1860,9 @@ function FieldsBedsHierarchy({
           offsetIndex={index}
           testId="hierarchy-delete-snackbar"
           onClose={() => closePendingDeletionSnackbar(deletion.id)}
-          onUndo={() => undoPendingDeletion(deletion.id)}
+          onUndo={() => {
+            void undoPendingDeletion(deletion.id);
+          }}
         />
       ))}
     </div>
