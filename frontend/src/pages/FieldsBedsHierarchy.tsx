@@ -1647,6 +1647,9 @@ function FieldsBedsHierarchy({
         }
       },
       (locationId) => {
+        if (locationId === undefined) {
+          return;
+        }
         handleAddField(locationId);
       },
       (fieldId) => {

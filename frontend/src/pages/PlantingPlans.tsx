@@ -88,15 +88,10 @@ import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction, getProjectSetupActions } from "./requirementFlow";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
-import {
-  collectHierarchyAvailability,
-  filterBedOptionsBySelection,
-  filterFieldOptionsByLocation,
-} from "../components/planting-plans/areaHierarchySelection";
+import { collectHierarchyAvailability } from "../components/planting-plans/areaHierarchySelection";
 import EmptyStateCard from "../components/project/EmptyStateCard";
 
 export {
-  collectHierarchyAvailability,
   filterBedOptionsBySelection,
   filterFieldOptionsByLocation,
 } from "../components/planting-plans/areaHierarchySelection";

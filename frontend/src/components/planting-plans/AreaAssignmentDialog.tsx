@@ -23,8 +23,6 @@ import {
   filterFieldOptionsByLocation,
 } from './areaHierarchySelection';
 
-const AREA_LABEL_SEPARATOR = ' | ';
-
 interface AreaAssignmentDialogProps {
   bedId: number | null;
   beds: Bed[];
@@ -288,11 +286,6 @@ export function AreaAssignmentDialog({
     return label;
   };
 
-  const renderBedOptionLabel = (item: BedWithHierarchy): string => {
-    const prefix = item.field_name ? `${item.field_name}${AREA_LABEL_SEPARATOR}` : '';
-    return `${prefix}${renderBedLabel(item)}`;
-  };
-
   const isFieldSelectDisabled = !draft.locationId || selectableFields.length === 0;
   const isBedSelectDisabled = !draft.fieldId || selectableBeds.length === 0;
   const isApplyDisabled = !draft.bedId || bedsWithLocation.length === 0;
@@ -523,7 +516,7 @@ export function AreaAssignmentDialog({
                     }}
                   >
                     {selectableBeds.map((item) => (
-                      <MenuItem key={item.id} value={item.id}>{renderBedOptionLabel(item)}</MenuItem>
+                      <MenuItem key={item.id} value={item.id}>{renderBedLabel(item)}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
