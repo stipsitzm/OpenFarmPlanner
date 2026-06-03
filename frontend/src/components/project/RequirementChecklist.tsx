@@ -13,7 +13,7 @@ interface RequirementChecklistProps {
   items: RequirementChecklistItem[];
 }
 
-export default function RequirementChecklist({ items }: RequirementChecklistProps): React.ReactElement {
+export default function RequirementChecklist({ items }: RequirementChecklistProps) {
   return (
     <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap" sx={{ alignItems: 'flex-start' }}>
       {items.map((item) => (

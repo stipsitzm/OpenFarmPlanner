@@ -9,7 +9,7 @@ interface ProjectRequiredStateProps {
 
 export default function ProjectRequiredState({
   reason,
-}: ProjectRequiredStateProps): React.ReactElement {
+}: ProjectRequiredStateProps) {
   const { t } = useTranslation("common");
 
   const isCreateFlow = reason === "no_projects";

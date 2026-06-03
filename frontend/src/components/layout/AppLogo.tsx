@@ -9,7 +9,7 @@ interface AppLogoProps {
   showText?: boolean;
 }
 
-export default function AppLogo({ to = '/app/dashboard', size = 28, showText = true }: AppLogoProps): React.ReactElement {
+export default function AppLogo({ to = '/app/dashboard', size = 28, showText = true }: AppLogoProps) {
   const { t } = useTranslation('navigation');
   const location = useLocation();
   const isActive = normalizeMainRoutePath(location.pathname) === '/app/dashboard';
