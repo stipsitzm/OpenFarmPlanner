@@ -164,6 +164,7 @@ function GanttChartPage(): React.ReactElement {
       icon: '👁️',
       active: calendarMode === 'occupancy' && !editMode,
       hidden: calendarMode !== 'occupancy',
+      groupId: 'calendar-mode',
       tooltip: 'Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.',
       onClick: () => {
         setCalendarMode('occupancy');
@@ -176,6 +177,7 @@ function GanttChartPage(): React.ReactElement {
       icon: '✏️',
       active: calendarMode === 'occupancy' && editMode,
       hidden: calendarMode !== 'occupancy',
+      groupId: 'calendar-mode',
       tooltip: 'Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.',
       onClick: () => {
         setCalendarMode('occupancy');

@@ -84,6 +84,10 @@ export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
 
 
   useEffect(() => {
+    setInputValue(getInitialInputValue(value, fallbackValue, locale));
+  }, [fallbackValue, locale, value]);
+
+  useEffect(() => {
     if (hasFocus) {
       inputRef.current?.focus();
       inputRef.current?.select();

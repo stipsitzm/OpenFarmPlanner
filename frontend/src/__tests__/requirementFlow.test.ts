@@ -37,23 +37,19 @@ describe('project setup actions', () => {
     })).toBe('fields');
   });
 
-  it('uses the shared add-field route that opens the fields-beds create flow', () => {
+  it('uses the shared add-field route that opens the fields-beds page', () => {
     expect(getProjectSetupAction('fields')).toEqual({
       labelKey: 'common:setupActions.createField',
-      to: '/app/fields-beds?create=true',
+      to: '/app/fields-beds',
     });
   });
 
-  it('uses the fields-beds create flow as the primary location setup action', () => {
+  it('uses the location create flow as the location setup action', () => {
     expect(getProjectSetupAction('locations')).toEqual({
-      labelKey: 'common:setupActions.createField',
-      to: '/app/fields-beds?create=true',
+      labelKey: 'common:setupActions.createLocation',
+      to: '/app/locations?create=true',
     });
     expect(getProjectSetupActions('locations')).toEqual([
-      {
-        labelKey: 'common:setupActions.createField',
-        to: '/app/fields-beds?create=true',
-      },
       {
         labelKey: 'common:setupActions.createLocation',
         to: '/app/locations?create=true',

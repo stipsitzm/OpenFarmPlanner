@@ -30,7 +30,7 @@ import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import { Group, Layer, Rect, Stage, Text } from "react-konva";
 import type Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
-import { useHierarchyData } from "../components/hierarchy/hooks/useHierarchyData";
+import { useHierarchyData, type HierarchyDataState } from "../components/hierarchy/hooks/useHierarchyData";
 import {
   layoutAPI,
   type BedLayoutEntry,
@@ -113,6 +113,7 @@ interface GraphicalFieldsProps {
   interactionMode?: InteractionMode;
   onInteractionModeChange?: (mode: InteractionMode) => void;
   showModeToggle?: boolean;
+  hierarchyData?: HierarchyDataState;
 }
 
 type InteractionMode = "view" | "edit";
@@ -256,9 +257,11 @@ export default function GraphicalFields({
   interactionMode: controlledInteractionMode,
   onInteractionModeChange,
   showModeToggle = true,
+  hierarchyData,
 }: GraphicalFieldsProps): React.ReactElement {
   const { t } = useTranslation(["fields", "common"]);
-  const { loading, error, locations, fields, beds } = useHierarchyData();
+  const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
+  const { loading, error, locations, fields, beds } = hierarchyData ?? internalHierarchyData;
   const [expanded, setExpanded] = useState<Record<number, boolean>>(() => {
     try {
       const raw = window.localStorage.getItem(EXPANDED_STORAGE_KEY);

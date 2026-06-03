@@ -15,9 +15,11 @@ const {
   bedDeleteMock,
   bedListMock,
   bedUpdateMock,
+  fieldCreateMock,
   fieldDeleteMock,
   fieldListMock,
   fieldUpdateMock,
+  locationCreateMock,
   locationDeleteMock,
   locationListMock,
   locationUpdateMock,
@@ -28,9 +30,11 @@ const {
   bedDeleteMock: vi.fn(),
   bedListMock: vi.fn(),
   bedUpdateMock: vi.fn(),
+  fieldCreateMock: vi.fn(),
   fieldDeleteMock: vi.fn(),
   fieldListMock: vi.fn(),
   fieldUpdateMock: vi.fn(),
+  locationCreateMock: vi.fn(),
   locationDeleteMock: vi.fn(),
   locationListMock: vi.fn(),
   locationUpdateMock: vi.fn(),
@@ -62,11 +66,13 @@ vi.mock('../api/api', async () => {
       update: bedUpdateMock,
     },
     fieldAPI: {
+      create: fieldCreateMock,
       delete: fieldDeleteMock,
       list: fieldListMock,
       update: fieldUpdateMock,
     },
     locationAPI: {
+      create: locationCreateMock,
       delete: locationDeleteMock,
       list: locationListMock,
       update: locationUpdateMock,
@@ -255,6 +261,18 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hofstelle' }] } });
     fieldListMock.mockResolvedValue({ data: { results: [{ id: 10, name: 'Nordfeld', location: 1, area_sqm: 20 }] } });
     bedListMock.mockResolvedValue({ data: { results: [] } });
+    bedDeleteMock.mockResolvedValue({ data: {} });
+    bedCreateMock.mockImplementation((data: { name: string; field: number }) => Promise.resolve({
+      data: { id: 100 + Number(bedCreateMock.mock.calls.length), ...data },
+    }));
+    fieldDeleteMock.mockResolvedValue({ data: {} });
+    fieldCreateMock.mockImplementation((data: { name: string; location: number }) => Promise.resolve({
+      data: { id: 200 + Number(fieldCreateMock.mock.calls.length), ...data },
+    }));
+    locationDeleteMock.mockResolvedValue({ data: {} });
+    locationCreateMock.mockImplementation((data: { name: string }) => Promise.resolve({
+      data: { id: 300 + Number(locationCreateMock.mock.calls.length), ...data },
+    }));
     fieldUpdateMock.mockResolvedValue({ data: { id: 10, name: 'Nordfeld', location: 1, area_sqm: 20 } });
     locationUpdateMock.mockResolvedValue({ data: { id: 1, name: 'Hofstelle umbenannt' } });
   });
@@ -482,8 +500,10 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
       'Parzelle hinzufügen',
       'Bearbeiten',
       'Löschen',
+      'common:actions.copyRow',
+      'common:actions.copyTable',
     ]);
-    expect(screen.getAllByRole('separator')).toHaveLength(2);
+    expect(screen.getAllByRole('separator')).toHaveLength(3);
     fireEvent.click(screen.getByRole('menuitem', { name: 'Bearbeiten' }));
     expect(screen.getByTestId('mode-location-1')).toHaveTextContent('edit');
 
@@ -496,10 +516,12 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
       'Beet hinzufügen',
       'Bearbeiten',
       'Löschen',
+      'common:actions.copyRow',
+      'common:actions.copyTable',
     ]);
     expect(screen.getByRole('menuitem', { name: 'Beet hinzufügen' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Beet' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('separator')).toHaveLength(2);
+    expect(screen.getAllByRole('separator')).toHaveLength(3);
 
     fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument());
@@ -510,33 +532,26 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
       'Beet hinzufügen',
       'Bearbeiten',
       'Löschen',
+      'common:actions.copyRow',
+      'common:actions.copyTable',
     ]);
     expect(screen.getByRole('menuitem', { name: 'Beet hinzufügen' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Beet' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('separator')).toHaveLength(2);
+    expect(screen.getAllByRole('separator')).toHaveLength(3);
   });
 
-  it('removes a deleted bed immediately and finalizes after 8000 ms', async () => {
+  it('persists a deleted bed immediately and shows undo feedback', async () => {
     bedListMock.mockResolvedValue({ data: { results: [{ id: 21, name: 'Beet A', field: 10 }] } });
     renderHierarchy();
 
     const bedRow = await screen.findByTestId('row-21');
-    vi.useFakeTimers();
     deleteRowViaContextMenu(bedRow);
 
-    expect(screen.queryByTestId('row-21')).not.toBeInTheDocument();
+    await waitFor(() => expect(bedDeleteMock).toHaveBeenCalledWith(21));
+    await waitFor(() => expect(screen.queryByTestId('row-21')).not.toBeInTheDocument());
     expect(screen.getByText('Beet gelöscht')).toBeInTheDocument();
     expect(screen.getByTestId('hierarchy-delete-snackbar')).toHaveAttribute('role', 'status');
     expect(screen.getByRole('button', { name: /Rückgängig: Beet gelöscht/i })).toBeInTheDocument();
-    expect(bedDeleteMock).not.toHaveBeenCalled();
-
-    vi.advanceTimersByTime(7999);
-    expect(bedDeleteMock).not.toHaveBeenCalled();
-
-    vi.advanceTimersByTime(1);
-    await Promise.resolve();
-    expect(bedDeleteMock).toHaveBeenCalledWith(21);
-    vi.useRealTimers();
   });
 
   it('restores a deleted bed when undo is clicked', async () => {
@@ -546,12 +561,13 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
     const bedRow = await screen.findByTestId('row-21');
     deleteRowViaContextMenu(bedRow);
-    expect(screen.queryByTestId('row-21')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('row-21')).not.toBeInTheDocument());
 
     await user.click(screen.getByRole('button', { name: /Rückgängig: Beet gelöscht/i }));
 
+    await waitFor(() => expect(bedCreateMock).toHaveBeenCalledWith({ name: 'Beet A', field: 10 }));
     expect(screen.getByTestId('row-21')).toBeInTheDocument();
-    expect(bedDeleteMock).not.toHaveBeenCalled();
+    expect(bedDeleteMock).toHaveBeenCalledWith(21);
   });
 
   it('restores cascading field deletion with child beds on undo', async () => {
@@ -569,17 +585,20 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     const fieldRow = await screen.findByTestId('row-field-10');
     deleteRowViaContextMenu(fieldRow);
 
-    expect(screen.queryByTestId('row-field-10')).not.toBeInTheDocument();
+    await waitFor(() => expect(fieldDeleteMock).toHaveBeenCalledWith(10));
+    await waitFor(() => expect(screen.queryByTestId('row-field-10')).not.toBeInTheDocument());
     expect(screen.queryByTestId('row-21')).not.toBeInTheDocument();
     expect(screen.queryByTestId('row-22')).not.toBeInTheDocument();
     expect(screen.getByText('Parzelle und {{count}} Beete gelöscht')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Rückgängig:/i }));
 
+    await waitFor(() => expect(fieldCreateMock).toHaveBeenCalledWith({ name: 'Nordfeld', location: 1, area_sqm: 20 }));
+    expect(bedCreateMock).toHaveBeenCalledTimes(2);
     expect(screen.getByTestId('row-field-10')).toBeInTheDocument();
     expect(screen.getByTestId('row-21')).toBeInTheDocument();
     expect(screen.getByTestId('row-22')).toBeInTheDocument();
-    expect(fieldDeleteMock).not.toHaveBeenCalled();
+    expect(fieldDeleteMock).toHaveBeenCalledWith(10);
   });
 
   it('restores cascading location deletion with child fields and beds on undo', async () => {
@@ -606,7 +625,8 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     const locationRow = await screen.findByTestId('row-location-1');
     deleteRowViaContextMenu(locationRow);
 
-    expect(screen.queryByTestId('row-location-1')).not.toBeInTheDocument();
+    await waitFor(() => expect(locationDeleteMock).toHaveBeenCalledWith(1));
+    await waitFor(() => expect(screen.queryByTestId('row-location-1')).not.toBeInTheDocument());
     expect(screen.queryByTestId('row-field-10')).not.toBeInTheDocument();
     expect(screen.queryByTestId('row-21')).not.toBeInTheDocument();
     expect(screen.getByTestId('row-field-11')).toBeInTheDocument();
@@ -614,10 +634,13 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
     await user.click(screen.getByRole('button', { name: /Rückgängig:/i }));
 
+    await waitFor(() => expect(locationCreateMock).toHaveBeenCalledWith({ name: 'Hofstelle' }));
+    expect(fieldCreateMock).toHaveBeenCalledWith({ name: 'Nordfeld', location: 301, area_sqm: 20 });
+    expect(bedCreateMock).toHaveBeenCalledWith({ name: 'Beet A', field: 201 });
     expect(screen.getByTestId('row-location-1')).toBeInTheDocument();
     expect(screen.getByTestId('row-field-10')).toBeInTheDocument();
     expect(screen.getByTestId('row-21')).toBeInTheDocument();
-    expect(locationDeleteMock).not.toHaveBeenCalled();
+    expect(locationDeleteMock).toHaveBeenCalledWith(1);
   });
 
   it('handles multiple pending deletions independently', async () => {
@@ -632,36 +655,31 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     renderHierarchy();
 
     const firstBedRow = await screen.findByTestId('row-21');
-    vi.useFakeTimers();
     deleteRowViaContextMenu(firstBedRow);
+    await waitFor(() => expect(screen.queryByTestId('row-21')).not.toBeInTheDocument());
     deleteRowViaContextMenu(screen.getByTestId('row-22'));
 
-    expect(screen.queryByTestId('row-21')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('row-22')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('row-22')).not.toBeInTheDocument());
     expect(screen.getAllByRole('button', { name: /Rückgängig:/i })).toHaveLength(2);
+    expect(bedDeleteMock).toHaveBeenCalledWith(21);
+    expect(bedDeleteMock).toHaveBeenCalledWith(22);
 
+    bedListMock.mockResolvedValue({ data: { results: [{ id: 21, name: 'Beet A', field: 10 }] } });
     fireEvent.click(screen.getAllByRole('button', { name: /Rückgängig:/i })[0]);
+    await waitFor(() => expect(bedCreateMock).toHaveBeenCalledWith({ name: 'Beet A', field: 10 }));
     expect(screen.getByTestId('row-21')).toBeInTheDocument();
     expect(screen.queryByTestId('row-22')).not.toBeInTheDocument();
-
-    vi.advanceTimersByTime(8000);
-    await Promise.resolve();
-    expect(bedDeleteMock).toHaveBeenCalledWith(22);
-    expect(bedDeleteMock).not.toHaveBeenCalledWith(21);
-    vi.useRealTimers();
   });
 
-  it('cleans pending deletion timers on unmount', async () => {
+  it('does not depend on pending deletion timers after unmount', async () => {
     bedListMock.mockResolvedValue({ data: { results: [{ id: 21, name: 'Beet A', field: 10 }] } });
     const { unmount } = renderHierarchy();
 
     const bedRow = await screen.findByTestId('row-21');
-    vi.useFakeTimers();
     deleteRowViaContextMenu(bedRow);
+    await waitFor(() => expect(bedDeleteMock).toHaveBeenCalledWith(21));
     unmount();
-    vi.advanceTimersByTime(8000);
 
-    expect(bedDeleteMock).not.toHaveBeenCalled();
-    vi.useRealTimers();
+    expect(bedDeleteMock).toHaveBeenCalledTimes(1);
   });
 });

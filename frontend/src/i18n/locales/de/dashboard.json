@@ -5,8 +5,8 @@
   },
   "emptyState": {
     "title": "Starte deine Anbauplanung",
-    "description": "Lege zuerst eine Parzelle an. Danach kannst du Kulturen und Anbaupläne erfassen.",
-    "shortDescription": "Lege zuerst eine Parzelle an.",
+    "description": "Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu. Danach kannst du Kulturen und Anbaupläne erfassen.",
+    "shortDescription": "Füge eine Parzelle auf der Seite Anbauflächen hinzu.",
     "action": "Parzelle hinzufügen"
   },
   "tasks": {

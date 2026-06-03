@@ -33,6 +33,10 @@ export { getCalculatedColumnProps } from './calculatedColumns';
 export type { DataGridColumnState } from './calculatedColumns';
 export { DeleteUndoSnackbar, DELETE_UNDO_DURATION_MS } from './DeleteUndoSnackbar';
 export { ContextMenuHint } from './ContextMenuHint';
+export { TableCopyMenuItems } from './TableCopyMenuItems';
+export { useContextMenuHint } from './useContextMenuHint';
+export { buildTsv, copyTextToClipboard, formatClipboardValue, showClipboardSnackbar } from './tableClipboard';
+export type { TableClipboardRow } from './tableClipboard';
 
 export { handleEditableCellClick, handleRowEditStop } from './handlers';
 

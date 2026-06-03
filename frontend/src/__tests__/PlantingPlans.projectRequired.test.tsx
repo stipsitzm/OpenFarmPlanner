@@ -89,7 +89,7 @@ describe("PlantingPlans project requirement state", () => {
     expect(apiMocks.bedList).not.toHaveBeenCalled();
   });
 
-  it("shows the fields-beds setup entry when no locations exist", async () => {
+  it("shows the location setup entry when no locations exist", async () => {
     render(
       <MemoryRouter>
         <PlantingPlans />
@@ -97,11 +97,8 @@ describe("PlantingPlans project requirement state", () => {
     );
 
     expect(await screen.findByText("Du kannst noch keinen Anbauplan hinzufügen.")).toBeInTheDocument();
-    expect(screen.getByText("Lege zuerst eine Parzelle an.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Parzelle hinzufügen" })).toHaveAttribute(
-      "href",
-      "/app/fields-beds?create=true",
-    );
+    expect(screen.getByText("Lege zuerst einen Standort an. Danach kannst du auf der Seite Anbauflächen eine Parzelle hinzufügen.")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Parzelle hinzufügen" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Standort hinzufügen" })).toHaveAttribute(
       "href",
       "/app/locations?create=true",
@@ -111,7 +108,7 @@ describe("PlantingPlans project requirement state", () => {
     expect(screen.queryByText("Beet fehlt")).not.toBeInTheDocument();
   });
 
-  it("opens the add-field flow when a location exists but no fields exist", async () => {
+  it("opens the fields-beds page when a location exists but no fields exist", async () => {
     apiMocks.locationList.mockResolvedValue({ data: { results: [{ id: 1, name: "Hof" }] } });
 
     render(
@@ -120,10 +117,10 @@ describe("PlantingPlans project requirement state", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("Lege als Nächstes eine Parzelle an.")).toBeInTheDocument();
+    expect(await screen.findByText("Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Parzelle hinzufügen" })).toHaveAttribute(
       "href",
-      "/app/fields-beds?create=true",
+      "/app/fields-beds",
     );
     expect(screen.queryByRole("link", { name: "Zu Anbauflächen" })).not.toBeInTheDocument();
   });

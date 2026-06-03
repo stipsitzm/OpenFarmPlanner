@@ -56,6 +56,7 @@
     "createLocationError": "Fehler beim Erstellen des Standorts.",
     "locationCreated": "Standort wurde angelegt.",
     "contextMenuHint": "Tipp: Rechtsklick auf eine Zeile öffnet weitere Aktionen.",
+    "contextMenuTableHint": "Tipp: Rechtsklick auf eine Tabellenzeile öffnet weitere Aktionen.",
     "contextMenuHintKeyboard": "Alternativ: Kontextmenütaste oder Shift+F10.",
     "unsavedMissingName": "Zeile wurde nicht gespeichert, da der Name fehlt.",
     "unsavedInvalidRowsNavigationWarning": "Es gibt eine nicht gespeicherte Zeile ohne Namen. Beim Verlassen der Seite geht sie verloren.",
@@ -91,10 +92,11 @@
   },
   "emptyAreas": {
     "title": "Noch keine Anbauflächen vorhanden",
-    "description": "Du kannst mit einer Parzelle starten und darin später Beete anlegen.",
+    "description": "Lege zuerst einen Standort an. Danach kannst du dort Parzellen und Beete erfassen.",
     "missingLocationLabel": "Standort fehlt",
     "missingFieldTitle": "Parzelle fehlt",
-    "missingFieldDescription": "Lege eine Parzelle an, um darin später Beete zu erfassen.",
+    "missingFieldDescriptionBeforeIcon": "Füge Parzellen in der sichtbaren Tabelle über das",
+    "missingFieldDescriptionAfterIcon": "Symbol beim jeweiligen Standort hinzu.",
     "actions": {
       "createLocation": "Standort hinzufügen",
       "createField": "Parzelle hinzufügen",

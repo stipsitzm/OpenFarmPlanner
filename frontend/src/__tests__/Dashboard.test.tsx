@@ -46,12 +46,10 @@ describe('Dashboard', () => {
     render(<MemoryRouter><Dashboard /></MemoryRouter>);
     expect(await screen.findByText('Projektstart')).toBeInTheDocument();
     expect(screen.getByText('OpenFarmPlanner unterstützt dich bei der strukturierten Planung von Flächen, Kulturen und Anbauzyklen. Beginne mit dem ersten Schritt deiner Anbauplanung.')).toBeInTheDocument();
-    const createFieldLinks = screen.getAllByRole('link', { name: 'Parzelle hinzufügen' });
-    expect(createFieldLinks).toHaveLength(1);
-    expect(createFieldLinks[0]).toHaveAttribute('href', '/app/fields-beds?create=true');
     const createLocationLinks = screen.getAllByRole('link', { name: 'Standort hinzufügen' });
     expect(createLocationLinks).toHaveLength(1);
     expect(createLocationLinks[0]).toHaveAttribute('href', '/app/locations?create=true');
+    expect(screen.queryByRole('link', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
     expect(screen.queryByText('Anstehende Aufgaben')).not.toBeInTheDocument();
   });
 
@@ -63,7 +61,7 @@ describe('Dashboard', () => {
     expect(await screen.findByText('Projektstart')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Parzelle hinzufügen' })).toHaveAttribute(
       'href',
-      '/app/fields-beds?create=true',
+      '/app/fields-beds',
     );
     expect(screen.queryByText('Starte deine Anbauplanung')).not.toBeInTheDocument();
   });

@@ -1,28 +1,32 @@
-import { Alert, Box, Button, ButtonGroup, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField, useMediaQuery } from '@mui/material';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Box, Button, ButtonGroup, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, TextField, useMediaQuery } from '@mui/material';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
 import { AddBedIcon } from '../components/hierarchy/AddBedIcon';
+import { HierarchyAddIcon } from '../components/hierarchy/HierarchyAddIcon';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
-import { bedAPI, fieldAPI, locationAPI, type Location } from '../api/api';
-import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
+import { locationAPI } from '../api/api';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
-import EmptyStateCard from '../components/project/EmptyStateCard';
+import EmptyStateCard, { type EmptyStateAction } from '../components/project/EmptyStateCard';
 import { getProjectSetupAction } from './requirementFlow';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { getSegmentedActionButtonSx, segmentedButtonGroupSx } from '../components/buttons/segmentedControlStyles';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, type SxProps, type Theme } from '@mui/material/styles';
 import ContentViewControls from '../components/layout/ContentViewControls';
 import { ContextMenuHint } from '../components/data-grid';
+import AddIcon from '@mui/icons-material/Add';
+import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
-const FIELDS_BEDS_CONTEXT_MENU_HINT_STORAGE_KEY = 'ofp.fieldsBedsContextMenuHintSeen';
 const NOOP_SET_TOPBAR_ACTIONS = (): void => undefined;
+const CONTENT_ALIGNED_EMPTY_STATE_SX: SxProps<Theme> = {
+  maxWidth: '100%',
+};
 
 type ViewMode = 'table' | 'graphical';
 type InteractionMode = 'view' | 'edit';
@@ -38,21 +42,22 @@ export default function FieldsBedsPage(): React.ReactElement {
     return stored === 'graphical' ? 'graphical' : 'table';
   });
   const [interactionMode, setInteractionMode] = useState<InteractionMode>('view');
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [fieldsCount, setFieldsCount] = useState(0);
-  const [bedsCount, setBedsCount] = useState(0);
   const [globalActionError, setGlobalActionError] = useState<string>('');
   const [globalActionSuccess, setGlobalActionSuccess] = useState<string>('');
-  const [hierarchyRenderKey, setHierarchyRenderKey] = useState(0);
-  const [addFieldDialogOpen, setAddFieldDialogOpen] = useState(false);
-  const [newFieldName, setNewFieldName] = useState('');
-  const [targetLocationId, setTargetLocationId] = useState<number | ''>('');
-  const [isAreaDataLoading, setIsAreaDataLoading] = useState(false);
-  const [hasAreaDataLoaded, setHasAreaDataLoaded] = useState(false);
-  const [showContextMenuHint, setShowContextMenuHint] = useState(false);
+  const [createFieldRequest, setCreateFieldRequest] = useState(0);
+  const [pendingHierarchyDeletionCount, setPendingHierarchyDeletionCount] = useState(0);
   const [addLocationDialogOpen, setAddLocationDialogOpen] = useState(false);
   const [newLocationName, setNewLocationName] = useState('');
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
+  const hierarchyData = useHierarchyData(!shouldShowProjectRequiredState);
+  const {
+    loading: isAreaDataLoading,
+    hasLoaded: hasAreaDataLoaded,
+    locations,
+    fields,
+    beds,
+    fetchData: reloadHierarchyData,
+  } = hierarchyData;
 
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
   const setTopbarContextActions = outletContext?.setTopbarContextActions ?? NOOP_SET_TOPBAR_ACTIONS;
@@ -90,76 +95,29 @@ export default function FieldsBedsPage(): React.ReactElement {
 
   useRegisterCommands('areas-view-switch', commands);
 
-  const loadLocations = useCallback(async (): Promise<void> => {
+  useEffect(() => {
     if (shouldShowProjectRequiredState) {
-      setLocations([]);
-      setFieldsCount(0);
-      setBedsCount(0);
-      setHasAreaDataLoaded(false);
-      setIsAreaDataLoading(false);
-      return;
-    }
-    setIsAreaDataLoading(true);
-    try {
-      const [locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
-        locationAPI.list(),
-        fieldAPI.list(),
-        bedAPI.list(),
-      ]);
-      setLocations(locationsResponse.data.results);
-      setFieldsCount(fieldsResponse.data.results.length);
-      setBedsCount(bedsResponse.data.results.length);
-      setHasAreaDataLoaded(true);
-    } catch (error) {
-      console.error('Error loading locations for global action:', error);
-      setHasAreaDataLoaded(true);
-    } finally {
-      setIsAreaDataLoading(false);
+      setPendingHierarchyDeletionCount(0);
     }
   }, [shouldShowProjectRequiredState]);
 
-  useEffect(() => {
-    if (shouldShowProjectRequiredState) {
+  const hasAddFieldTarget = locations.some((item) => item.id !== undefined);
+  const canUseGlobalAddField = locations.length === 1 && locations[0]?.id !== undefined;
+
+  const requestInlineFieldCreation = useCallback((): void => {
+    if (!hasAddFieldTarget) {
+      setGlobalActionError(t('hierarchy:messages.createLocationError'));
       return;
     }
-    void loadLocations();
-  }, [loadLocations, shouldShowProjectRequiredState]);
 
-  const reloadHierarchyAndLocations = useCallback(async (): Promise<void> => {
-    setHierarchyRenderKey((previous) => previous + 1);
-    await loadLocations();
-  }, [loadLocations]);
+    setViewMode('table');
+    setCreateFieldRequest((currentRequest) => currentRequest + 1);
+  }, [hasAddFieldTarget, t]);
 
-  const { addField } = useFieldOperations(
-    locations,
-    setGlobalActionError,
-    reloadHierarchyAndLocations,
-    t as never,
-  );
-  const openAddFieldDialog = useCallback((): boolean => {
-    if (locations.length === 1 && locations[0]?.id !== undefined) {
-      setTargetLocationId(locations[0].id);
-      setNewFieldName('');
-      setAddFieldDialogOpen(true);
-      return true;
-    }
-
-    const firstLocation = locations.find((location) => location.id !== undefined);
-    if (firstLocation?.id === undefined) {
-      return false;
-    }
-
-    setTargetLocationId(firstLocation.id);
-    setNewFieldName('');
-    setAddFieldDialogOpen(true);
-    return true;
-  }, [locations]);
-
-  const handleGlobalAddField = useCallback((): void => {
-    if (!openAddFieldDialog()) {
-      setGlobalActionError(t('hierarchy:messages.createLocationError'));
-    }
-  }, [openAddFieldDialog, t]);
+  const openAddLocationDialog = useCallback((): void => {
+    setNewLocationName('');
+    setAddLocationDialogOpen(true);
+  }, []);
 
   const handleCreateAdditionalLocation = useCallback(async (): Promise<void> => {
     const trimmedName = newLocationName.trim();
@@ -170,23 +128,22 @@ export default function FieldsBedsPage(): React.ReactElement {
       await locationAPI.create({ name: trimmedName });
       setAddLocationDialogOpen(false);
       setNewLocationName('');
-      await reloadHierarchyAndLocations();
+      await reloadHierarchyData();
       setGlobalActionError('');
       setGlobalActionSuccess(t('hierarchy:messages.locationCreated'));
     } catch (error) {
       console.error('Error creating additional location:', error);
       setGlobalActionError(t('hierarchy:messages.createLocationError'));
     }
-  }, [newLocationName, reloadHierarchyAndLocations, t]);
+  }, [newLocationName, reloadHierarchyData, t]);
 
-  const handleConfirmAddField = useCallback((): void => {
-    if (typeof targetLocationId !== 'number' || !newFieldName.trim()) {
+  const handleAdditionalLocationSubmit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    if (!newLocationName.trim()) {
       return;
     }
-    void addField(targetLocationId, newFieldName.trim());
-    setAddFieldDialogOpen(false);
-    setNewFieldName('');
-  }, [addField, newFieldName, targetLocationId]);
+    void handleCreateAdditionalLocation();
+  };
 
   useEffect(() => {
     if (!location.pathname.startsWith('/app/fields-beds')) {
@@ -201,7 +158,7 @@ export default function FieldsBedsPage(): React.ReactElement {
       return;
     }
 
-    openAddFieldDialog();
+    requestInlineFieldCreation();
 
     searchParams.delete('create');
     const nextSearch = searchParams.toString();
@@ -218,7 +175,7 @@ export default function FieldsBedsPage(): React.ReactElement {
     location.pathname,
     location.search,
     navigate,
-    openAddFieldDialog,
+    requestInlineFieldCreation,
     shouldShowProjectRequiredState,
   ]);
 
@@ -227,31 +184,29 @@ export default function FieldsBedsPage(): React.ReactElement {
     window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
   }, [viewMode]);
 
-  useEffect(() => {
-    if (
-      shouldShowProjectRequiredState ||
-      isAreaDataLoading ||
-      !hasAreaDataLoaded ||
-      viewMode !== 'table'
-    ) {
-      return;
-    }
-
-    if (window.localStorage.getItem(FIELDS_BEDS_CONTEXT_MENU_HINT_STORAGE_KEY) === '1') {
-      return;
-    }
-
-    window.localStorage.setItem(FIELDS_BEDS_CONTEXT_MENU_HINT_STORAGE_KEY, '1');
-    setShowContextMenuHint(true);
-  }, [hasAreaDataLoaded, isAreaDataLoading, shouldShowProjectRequiredState, viewMode]);
-
   const hasLocations = locations.length > 0;
-  const hasFields = fieldsCount > 0;
-  const hasBeds = bedsCount > 0;
-  const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && (!hasLocations || !hasFields);
+  const hasFields = fields.length > 0;
+  const hasBeds = beds.length > 0;
+  const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && !hasLocations;
   const shouldShowMissingFieldsState = hasLocations && !hasFields;
   const shouldShowMissingBedsHint = hasFields && !hasBeds;
+  const shouldRenderHierarchy = hasLocations || pendingHierarchyDeletionCount > 0;
   const createBedAction = getProjectSetupAction('beds');
+  const emptyAreasDescription = shouldShowMissingFieldsState
+    ? (
+      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+        {t('hierarchy:emptyAreas.missingFieldDescriptionBeforeIcon')}
+        <HierarchyAddIcon interactive={false} ariaHidden sx={{ bgcolor: 'transparent' }} />
+        {t('hierarchy:emptyAreas.missingFieldDescriptionAfterIcon')}
+      </Box>
+    )
+    : t('hierarchy:emptyAreas.description');
+  const emptyAreaActions = useMemo<EmptyStateAction[]>(() => {
+    if (shouldShowMissingFieldsState) {
+      return [];
+    }
+    return [{ label: t('hierarchy:actions.createLocation'), onClick: openAddLocationDialog, icon: <AddIcon fontSize="small" /> }];
+  }, [openAddLocationDialog, shouldShowMissingFieldsState, t]);
 
   useEffect(() => {
     if (viewMode === 'graphical') {
@@ -300,24 +255,34 @@ export default function FieldsBedsPage(): React.ReactElement {
   ]), [interactionMode, t, viewMode]);
 
   const contextActions = useMemo<TopbarContextAction[]>(() => {
-    const globalActions: TopbarContextAction[] = locations.length === 1 && !shouldShowProjectRequiredState
-      ? [{
-        id: 'fields-global-add-field',
-        label: 'Parzelle hinzufügen',
-        onClick: handleGlobalAddField,
-        ariaLabel: 'Parzelle hinzufügen',
-      }]
-      : [];
+    const globalActions: TopbarContextAction[] = shouldShowProjectRequiredState
+      ? []
+      : [
+        ...(canUseGlobalAddField ? [{
+          id: 'fields-global-add-field',
+          label: t('hierarchy:actions.addField'),
+          onClick: requestInlineFieldCreation,
+          ariaLabel: t('hierarchy:actions.addField'),
+        }] : []),
+        {
+          id: 'fields-global-add-location',
+          label: t('hierarchy:actions.createLocation'),
+          onClick: openAddLocationDialog,
+          ariaLabel: t('hierarchy:actions.createLocation'),
+        },
+      ];
     if (isXs) {
       return globalActions;
     }
     return [...globalActions, ...interactionModeActions, ...viewModeActions];
   }, [
-    handleGlobalAddField,
+    canUseGlobalAddField,
+    requestInlineFieldCreation,
     interactionModeActions,
     isXs,
-    locations.length,
+    openAddLocationDialog,
     shouldShowProjectRequiredState,
+    t,
     viewModeActions,
   ]);
 
@@ -357,35 +322,34 @@ export default function FieldsBedsPage(): React.ReactElement {
                 {t('hierarchy:messages.noBedsHintAfterIcon')}
               </Box>
             )}
-            actions={[{ label: t(createBedAction.labelKey), to: createBedAction.to }]}
-          />
-        ) : null}
-        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldShowAreasEmptyState ? (
-          <EmptyStateCard
-            title={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldTitle') : t('hierarchy:emptyAreas.title')}
-            description={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldDescription') : t('hierarchy:emptyAreas.description')}
-            supplement={(
+            supplement={viewMode !== 'graphical' ? (
               <ContextMenuHint
                 compact
-                message={t('hierarchy:messages.contextMenuHint')}
+                message={t('hierarchy:messages.contextMenuTableHint')}
                 secondary={t('hierarchy:messages.contextMenuHintKeyboard')}
               />
-            )}
+            ) : undefined}
+            actions={[{ label: t(createBedAction.labelKey), to: createBedAction.to }]}
+            containerSx={CONTENT_ALIGNED_EMPTY_STATE_SX}
+          />
+        ) : null}
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && (shouldShowAreasEmptyState || shouldShowMissingFieldsState) ? (
+          <EmptyStateCard
+            title={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldTitle') : t('hierarchy:emptyAreas.title')}
+            description={emptyAreasDescription}
             checklist={!hasLocations ? [{
               label: t('hierarchy:columns.location'),
               done: false,
               missingLabel: t('hierarchy:emptyAreas.missingLocationLabel'),
             }] : []}
-            actions={[
-              { label: t('hierarchy:actions.addField'), onClick: handleGlobalAddField },
-              { label: t('hierarchy:actions.addAdditionalLocation'), onClick: () => setAddLocationDialogOpen(true) },
-            ]}
+            actions={emptyAreaActions}
+            containerSx={CONTENT_ALIGNED_EMPTY_STATE_SX}
           />
         ) : null}
       </PageContainer>
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
-        {isXs && !shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState ? (
+        {isXs && !shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy ? (
           <ContentViewControls
             primaryControls={(
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.375, flexWrap: 'nowrap', minWidth: 0, whiteSpace: 'nowrap' }}>
@@ -449,81 +413,57 @@ export default function FieldsBedsPage(): React.ReactElement {
             }}
           />
         ) : null}
-        {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState && viewMode === 'graphical' ? (
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy && viewMode === 'graphical' ? (
           <GraphicalFields
             showTitle={false}
             interactionMode={interactionMode}
             onInteractionModeChange={setInteractionMode}
             showModeToggle={false}
+            hierarchyData={hierarchyData}
           />
         ) : null}
-        {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState && viewMode !== 'graphical' ? (
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy && viewMode !== 'graphical' ? (
           <>
-            {showContextMenuHint ? (
+            {hasLocations && !shouldShowMissingBedsHint ? (
               <Box sx={{ mb: 1.25 }}>
                 <ContextMenuHint
-                  message={t('hierarchy:messages.contextMenuHint')}
+                  message={t('hierarchy:messages.contextMenuTableHint')}
                   secondary={t('hierarchy:messages.contextMenuHintKeyboard')}
-                  onClose={() => setShowContextMenuHint(false)}
                 />
               </Box>
             ) : null}
-            <FieldsBedsHierarchy key={hierarchyRenderKey} showTitle={false} />
+            <FieldsBedsHierarchy
+              showTitle={false}
+              createFieldRequest={createFieldRequest}
+              onCreateFieldRequestHandled={() => setCreateFieldRequest(0)}
+              hierarchyData={hierarchyData}
+              onPendingDeletionCountChange={setPendingHierarchyDeletionCount}
+            />
           </>
         ) : null}
       </PageContainer>
-      <Dialog open={addFieldDialogOpen} onClose={() => setAddFieldDialogOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>{t('hierarchy:dialogs.addField.title')}</DialogTitle>
-        <DialogContent>
-          {locations.length > 1 ? (
+      <Dialog open={addLocationDialogOpen} onClose={() => setAddLocationDialogOpen(false)} fullWidth maxWidth="xs">
+        <Box component="form" onSubmit={handleAdditionalLocationSubmit}>
+          <DialogTitle>{t('hierarchy:dialogs.addAdditionalLocation.title')}</DialogTitle>
+          <DialogContent>
+            <Box sx={{ color: 'text.secondary', mb: 2, mt: 1 }}>
+              {t('hierarchy:dialogs.addAdditionalLocation.description')}
+            </Box>
             <TextField
-              select
               margin="dense"
               fullWidth
-              label={t('hierarchy:columns.location')}
-              value={targetLocationId}
-              onChange={(event) => setTargetLocationId(Number(event.target.value))}
-            >
-              {locations.filter((location) => location.id !== undefined).map((location) => (
-                <MenuItem key={location.id} value={location.id}>{location.name}</MenuItem>
-              ))}
-            </TextField>
-          ) : null}
-          <TextField
-            margin="dense"
-            fullWidth
-            label={t('hierarchy:dialogs.addField.nameLabel')}
-            value={newFieldName}
-            onChange={(event) => setNewFieldName(event.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddFieldDialogOpen(false)}>{t('common:actions.cancel')}</Button>
-          <Button onClick={handleConfirmAddField} variant="contained" disabled={!newFieldName.trim() || typeof targetLocationId !== 'number'}>
-            {t('hierarchy:dialogs.addField.submit')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-      <Dialog open={addLocationDialogOpen} onClose={() => setAddLocationDialogOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>{t('hierarchy:dialogs.addAdditionalLocation.title')}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ color: 'text.secondary', mb: 2, mt: 1 }}>
-            {t('hierarchy:dialogs.addAdditionalLocation.description')}
-          </Box>
-          <TextField
-            margin="dense"
-            fullWidth
-            label={t('hierarchy:dialogs.addAdditionalLocation.nameLabel')}
-            value={newLocationName}
-            onChange={(event) => setNewLocationName(event.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddLocationDialogOpen(false)}>{t('common:actions.cancel')}</Button>
-          <Button onClick={() => void handleCreateAdditionalLocation()} variant="contained" color="success" disabled={!newLocationName.trim()}>
-            {t('hierarchy:dialogs.addAdditionalLocation.submit')}
-          </Button>
-        </DialogActions>
+              label={t('hierarchy:dialogs.addAdditionalLocation.nameLabel')}
+              value={newLocationName}
+              onChange={(event) => setNewLocationName(event.target.value)}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button type="button" onClick={() => setAddLocationDialogOpen(false)}>{t('common:actions.cancel')}</Button>
+            <Button type="submit" variant="contained" color="success" disabled={!newLocationName.trim()}>
+              {t('hierarchy:dialogs.addAdditionalLocation.submit')}
+            </Button>
+          </DialogActions>
+        </Box>
       </Dialog>
     </>
   );

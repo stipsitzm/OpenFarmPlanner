@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import axios from 'axios';
 import {
   Alert,
@@ -11,6 +11,10 @@ import {
   DialogTitle,
   IconButton,
   Link,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
   Table,
   TableBody,
   TableCell,
@@ -21,18 +25,21 @@ import {
   Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
 import PageSurface from '../components/layout/PageSurface';
 import TableSurface from '../components/layout/TableSurface';
-import type { Supplier } from '../api/types';
+import type { Supplier, SupplierDeleteUndoPayload, SupplierDeleteUsage } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { useRegisterCreateActions } from '../commands/useCommandContext';
+import { DELETE_UNDO_DURATION_MS, DeleteUndoSnackbar, TableCopyMenuItems } from '../components/data-grid';
+import { extractApiErrorMessage } from '../api/errors';
 
 interface SupplierDraft {
   id?: number;
@@ -46,6 +53,21 @@ interface SupplierFieldErrors {
 }
 
 type SupplierLoadStatus = 'idle' | 'loading' | 'success' | 'error';
+
+interface PendingSupplierDeletion {
+  id: string;
+  supplierId: number;
+  supplier: Supplier;
+  suppliersBeforeDelete: Supplier[];
+  visible: boolean;
+  message: string;
+  undoPayload?: SupplierDeleteUndoPayload;
+}
+
+interface SupplierDeleteUsageDialogState {
+  supplier: Supplier;
+  usage: SupplierDeleteUsage;
+}
 
 const normalizeUrl = (input: string): string => {
   const trimmed = input.trim();
@@ -81,6 +103,15 @@ export default function Suppliers(): React.ReactElement {
   const [loadError, setLoadError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<SupplierFieldErrors>({});
   const [draft, setDraft] = useState<SupplierDraft>({ name: '', homepage_url: '' });
+  const [contextMenuState, setContextMenuState] = useState<{
+    supplier: Supplier;
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
+  const [pendingSupplierDeletions, setPendingSupplierDeletions] = useState<PendingSupplierDeletion[]>([]);
+  const [deleteUsageDialog, setDeleteUsageDialog] = useState<SupplierDeleteUsageDialogState | null>(null);
+  const [unlinkDeletingSupplierId, setUnlinkDeletingSupplierId] = useState<number | null>(null);
+  const pendingSupplierDeleteTimersRef = useRef<Map<string, number>>(new Map());
 
   const loadSuppliers = useCallback(async (): Promise<void> => {
     setSupplierLoadStatus('loading');
@@ -150,7 +181,7 @@ export default function Suppliers(): React.ReactElement {
     );
   }, [location.pathname, location.search, navigate, openCreate, shouldShowProjectRequiredState]);
 
-  const openEdit = (supplier: Supplier): void => {
+  const openEdit = useCallback((supplier: Supplier): void => {
     setDraft({
       id: supplier.id,
       name: supplier.name,
@@ -159,7 +190,7 @@ export default function Suppliers(): React.ReactElement {
     setError('');
     setFieldErrors({});
     setDialogOpen(true);
-  };
+  }, []);
 
   const canSave = useMemo(() => draft.name.trim().length > 0, [draft]);
 
@@ -214,24 +245,269 @@ export default function Suppliers(): React.ReactElement {
     }
   };
 
-  const deleteSupplier = async (supplier: Supplier): Promise<void> => {
-    if (!supplier.id) return;
-    const shouldDelete = window.confirm(t('deleteConfirm', { name: supplier.name }));
-    if (!shouldDelete) return;
+  const handleSupplierSubmit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    if (!canSave) {
+      return;
+    }
+    void saveSupplier();
+  };
 
+  const showDeleteError = useCallback((message: string): void => {
+    window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
+      detail: {
+        message,
+        severity: 'error',
+      },
+    }));
+  }, []);
+
+  const removePendingSupplierDeletion = useCallback((deletionId: string): void => {
+    setPendingSupplierDeletions((currentDeletions) =>
+      currentDeletions.filter((deletion) => deletion.id !== deletionId),
+    );
+  }, []);
+
+  const restorePendingSupplierDeletion = useCallback((deletion: PendingSupplierDeletion): void => {
+    setSuppliers((currentSuppliers) => {
+      if (currentSuppliers.some((supplier) => supplier.id === deletion.supplierId)) {
+        return currentSuppliers;
+      }
+      const currentById = new Map<number, Supplier>();
+      currentSuppliers.forEach((supplier) => {
+        if (typeof supplier.id === 'number') {
+          currentById.set(supplier.id, supplier);
+        }
+      });
+      currentById.set(deletion.supplierId, deletion.supplier);
+      const restoredSuppliers = deletion.suppliersBeforeDelete
+        .map((supplier) => (typeof supplier.id === 'number' ? currentById.get(supplier.id) : supplier))
+        .filter((supplier): supplier is Supplier => Boolean(supplier));
+      const restoredIds = new Set(restoredSuppliers.map((supplier) => supplier.id));
+      return [
+        ...restoredSuppliers,
+        ...currentSuppliers.filter((supplier) => !restoredIds.has(supplier.id)),
+      ];
+    });
+  }, []);
+
+  const finalizeSupplierDeletion = useCallback(async (deletion: PendingSupplierDeletion): Promise<void> => {
+    pendingSupplierDeleteTimersRef.current.delete(deletion.id);
+    removePendingSupplierDeletion(deletion.id);
     try {
       setError('');
-      await supplierAPI.delete(supplier.id);
-      await loadSuppliers();
+      const usageResponse = await supplierAPI.deleteUsage(deletion.supplierId);
+      if (!usageResponse.data.can_delete) {
+        restorePendingSupplierDeletion(deletion);
+        setDeleteUsageDialog({ supplier: deletion.supplier, usage: usageResponse.data });
+        return;
+      }
+      await supplierAPI.delete(deletion.supplierId);
     } catch (deleteError) {
       if (axios.isAxiosError(deleteError) && deleteError.response?.status === 404) {
         await loadSuppliers();
         return;
       }
       console.error('Error deleting supplier', deleteError);
-      setError(t('deleteError'));
+      restorePendingSupplierDeletion(deletion);
+      showDeleteError(extractApiErrorMessage(deleteError, t, t('deleteError')));
     }
-  };
+  }, [loadSuppliers, removePendingSupplierDeletion, restorePendingSupplierDeletion, showDeleteError, t]);
+
+  const restoreUnlinkedSupplierDeletion = useCallback(async (deletion: PendingSupplierDeletion): Promise<void> => {
+    if (!deletion.undoPayload) {
+      return;
+    }
+    try {
+      await supplierAPI.restoreUnlinkedDelete(deletion.undoPayload);
+      restorePendingSupplierDeletion(deletion);
+      removePendingSupplierDeletion(deletion.id);
+      await loadSuppliers();
+    } catch (restoreError) {
+      console.error('Error restoring supplier deletion', restoreError);
+      showDeleteError(extractApiErrorMessage(restoreError, t, t('restoreDeleteError')));
+    }
+  }, [loadSuppliers, removePendingSupplierDeletion, restorePendingSupplierDeletion, showDeleteError, t]);
+
+  const undoSupplierDeletion = useCallback((deletionId: string): void => {
+    const deletion = pendingSupplierDeletions.find((pendingDeletion) => pendingDeletion.id === deletionId);
+    if (!deletion) {
+      return;
+    }
+
+    if (deletion.undoPayload) {
+      void restoreUnlinkedSupplierDeletion(deletion);
+      return;
+    }
+
+    const timerId = pendingSupplierDeleteTimersRef.current.get(deletionId);
+    if (timerId !== undefined) {
+      window.clearTimeout(timerId);
+      pendingSupplierDeleteTimersRef.current.delete(deletionId);
+    }
+
+    restorePendingSupplierDeletion(deletion);
+    removePendingSupplierDeletion(deletionId);
+  }, [pendingSupplierDeletions, removePendingSupplierDeletion, restorePendingSupplierDeletion, restoreUnlinkedSupplierDeletion]);
+
+  const closeSupplierDeletionSnackbar = useCallback((deletionId: string): void => {
+    setPendingSupplierDeletions((currentDeletions) =>
+      currentDeletions
+        .filter((deletion) => !(deletion.id === deletionId && deletion.undoPayload))
+        .map((deletion) =>
+          deletion.id === deletionId ? { ...deletion, visible: false } : deletion,
+        ),
+    );
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      pendingSupplierDeleteTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      pendingSupplierDeleteTimersRef.current.clear();
+    };
+  }, []);
+
+  const deleteSupplier = useCallback(async (supplier: Supplier): Promise<void> => {
+    if (!supplier.id || pendingSupplierDeletions.some((deletion) => deletion.supplierId === supplier.id)) {
+      return;
+    }
+
+    try {
+      setError('');
+      const usageResponse = await supplierAPI.deleteUsage(supplier.id);
+      if (!usageResponse.data.can_delete) {
+        setDeleteUsageDialog({ supplier, usage: usageResponse.data });
+        return;
+      }
+    } catch (usageError) {
+      console.error('Error checking supplier usage', usageError);
+      showDeleteError(extractApiErrorMessage(usageError, t, t('deleteError')));
+      return;
+    }
+
+    const deletionId = `supplier-${supplier.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const pendingDeletion: PendingSupplierDeletion = {
+      id: deletionId,
+      supplierId: supplier.id,
+      supplier,
+      suppliersBeforeDelete: suppliers,
+      visible: true,
+      message: t('messages.deleted'),
+    };
+
+    setSuppliers((currentSuppliers) => currentSuppliers.filter((currentSupplier) => currentSupplier.id !== supplier.id));
+    setPendingSupplierDeletions((currentDeletions) => [...currentDeletions, pendingDeletion]);
+
+    const timerId = window.setTimeout(() => {
+      void finalizeSupplierDeletion(pendingDeletion);
+    }, DELETE_UNDO_DURATION_MS);
+    pendingSupplierDeleteTimersRef.current.set(deletionId, timerId);
+  }, [finalizeSupplierDeletion, pendingSupplierDeletions, showDeleteError, suppliers, t]);
+
+  const openAffectedCultures = useCallback((): void => {
+    if (!deleteUsageDialog) {
+      return;
+    }
+    const supplierId = deleteUsageDialog.supplier.id;
+    setDeleteUsageDialog(null);
+    navigate(typeof supplierId === 'number' ? `/app/cultures?supplierId=${supplierId}` : '/app/cultures');
+  }, [deleteUsageDialog, navigate]);
+
+  const unlinkAndDeleteSupplier = useCallback(async (): Promise<void> => {
+    const supplier = deleteUsageDialog?.supplier;
+    const supplierId = supplier?.id;
+    if (!supplier || typeof supplierId !== 'number') {
+      return;
+    }
+    setUnlinkDeletingSupplierId(supplierId);
+    try {
+      setError('');
+      const response = await supplierAPI.unlinkAndDelete(supplierId);
+      const deletionId = `supplier-unlink-${supplierId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const pendingDeletion: PendingSupplierDeletion = {
+        id: deletionId,
+        supplierId,
+        supplier,
+        suppliersBeforeDelete: suppliers,
+        visible: true,
+        message: t('messages.deletedWithUnlinkedCultures', {
+          count: response.data.affected_culture_count,
+        }),
+        undoPayload: response.data.undo_payload,
+      };
+
+      setSuppliers((currentSuppliers) => currentSuppliers.filter((currentSupplier) => currentSupplier.id !== supplierId));
+      setDeleteUsageDialog(null);
+      setPendingSupplierDeletions((currentDeletions) => [...currentDeletions, pendingDeletion]);
+    } catch (unlinkError) {
+      console.error('Error unlinking and deleting supplier', unlinkError);
+      showDeleteError(extractApiErrorMessage(unlinkError, t, t('deleteError')));
+    } finally {
+      setUnlinkDeletingSupplierId(null);
+    }
+  }, [deleteUsageDialog, showDeleteError, suppliers, t]);
+
+  const closeContextMenu = useCallback((): void => {
+    setContextMenuState(null);
+  }, []);
+
+  const openSupplierContextMenu = useCallback((
+    event: MouseEvent<HTMLTableRowElement>,
+    supplier: Supplier,
+  ): void => {
+    event.preventDefault();
+    setContextMenuState({
+      supplier,
+      mouseX: event.clientX + 2,
+      mouseY: event.clientY - 6,
+    });
+  }, []);
+
+  const openSupplierKeyboardContextMenu = useCallback((
+    event: KeyboardEvent<HTMLTableRowElement>,
+    supplier: Supplier,
+  ): void => {
+    const shouldOpenContextMenu = event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10');
+    if (!shouldOpenContextMenu) {
+      return;
+    }
+
+    event.preventDefault();
+    const rowRect = event.currentTarget.getBoundingClientRect();
+    setContextMenuState({
+      supplier,
+      mouseX: rowRect.left + Math.min(240, rowRect.width),
+      mouseY: rowRect.top + 12,
+    });
+  }, []);
+
+  const handleContextMenuEdit = useCallback((): void => {
+    if (!contextMenuState) {
+      return;
+    }
+    const { supplier } = contextMenuState;
+    closeContextMenu();
+    openEdit(supplier);
+  }, [closeContextMenu, contextMenuState, openEdit]);
+
+  const handleContextMenuDelete = useCallback((): void => {
+    if (!contextMenuState) {
+      return;
+    }
+    const { supplier } = contextMenuState;
+    closeContextMenu();
+    void deleteSupplier(supplier);
+  }, [closeContextMenu, contextMenuState, deleteSupplier]);
+
+  const getSupplierRowClipboardValues = useCallback((supplier: Supplier): string[] => [
+    supplier.name,
+    supplier.homepage_url ?? '',
+  ], []);
+
+  const getSupplierTableClipboardRows = useCallback((): string[][] => [
+    [t('name'), t('homepage')],
+    ...suppliers.map(getSupplierRowClipboardValues),
+  ], [getSupplierRowClipboardValues, suppliers, t]);
 
   if (shouldShowProjectRequiredState && missingProjectReason) {
     return (
@@ -287,7 +563,13 @@ export default function Suppliers(): React.ReactElement {
               </TableHead>
               <TableBody>
                 {suppliers.map((supplier) => (
-                  <TableRow key={supplier.id} hover>
+                  <TableRow
+                    key={supplier.id}
+                    hover
+                    tabIndex={0}
+                    onContextMenu={(event) => openSupplierContextMenu(event, supplier)}
+                    onKeyDown={(event) => openSupplierKeyboardContextMenu(event, supplier)}
+                  >
                     <TableCell sx={{ py: 1.25 }}>{supplier.name}</TableCell>
                     <TableCell sx={{ py: 1.25 }}>
                       {supplier.homepage_url ? (
@@ -325,42 +607,165 @@ export default function Suppliers(): React.ReactElement {
         ) : null}
       </PageSurface>
 
+      <Menu
+        open={contextMenuState !== null}
+        onClose={closeContextMenu}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenuState !== null
+            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
+            : undefined
+        }
+      >
+        <MenuItem onClick={handleContextMenuEdit}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary={t('editAction')} />
+        </MenuItem>
+        <MenuItem onClick={handleContextMenuDelete}>
+          <ListItemIcon sx={{ color: 'error.main' }}>
+            <DeleteIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary={t('deleteAction')}
+            primaryTypographyProps={{ color: 'error.main' }}
+          />
+        </MenuItem>
+        <TableCopyMenuItems
+          rowValues={contextMenuState ? getSupplierRowClipboardValues(contextMenuState.supplier) : null}
+          tableRows={getSupplierTableClipboardRows()}
+          copyRowLabel={t('common:actions.copyRow')}
+          copyTableLabel={t('common:actions.copyTable')}
+          rowCopiedMessage={t('common:messages.rowCopied')}
+          tableCopiedMessage={t('common:messages.tableCopied')}
+          copyErrorMessage={t('common:messages.copyError')}
+          includeDivider
+          onClose={closeContextMenu}
+        />
+      </Menu>
+
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{draft.id ? t('edit') : t('create')}</DialogTitle>
-        <DialogContent>
-          <TextField
-            margin="dense"
-            fullWidth
-            label={t('name')}
-            value={draft.name}
-            error={Boolean(fieldErrors.name)}
-            helperText={fieldErrors.name}
-            onChange={(e) => {
-              const value = e.target.value;
-              setDraft((prev) => ({ ...prev, name: value }));
-              setFieldErrors((prev) => ({ ...prev, name: undefined }));
-            }}
-          />
-          <TextField
-            margin="dense"
-            fullWidth
-            label={t('homepage')}
-            value={draft.homepage_url}
-            error={Boolean(fieldErrors.homepage_url)}
-            helperText={fieldErrors.homepage_url}
-            onChange={(e) => {
-              const value = e.target.value;
-              setDraft((prev) => ({ ...prev, homepage_url: value }));
-              setFieldErrors((prev) => ({ ...prev, homepage_url: undefined }));
-            }}
-          />
-          {error ? <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert> : null}
+        <Box component="form" onSubmit={handleSupplierSubmit}>
+          <DialogTitle>{draft.id ? t('edit') : t('create')}</DialogTitle>
+          <DialogContent>
+            <TextField
+              margin="dense"
+              fullWidth
+              label={t('name')}
+              value={draft.name}
+              error={Boolean(fieldErrors.name)}
+              helperText={fieldErrors.name}
+              onChange={(e) => {
+                const value = e.target.value;
+                setDraft((prev) => ({ ...prev, name: value }));
+                setFieldErrors((prev) => ({ ...prev, name: undefined }));
+              }}
+            />
+            <TextField
+              margin="dense"
+              fullWidth
+              label={t('homepage')}
+              value={draft.homepage_url}
+              error={Boolean(fieldErrors.homepage_url)}
+              helperText={fieldErrors.homepage_url}
+              onChange={(e) => {
+                const value = e.target.value;
+                setDraft((prev) => ({ ...prev, homepage_url: value }));
+                setFieldErrors((prev) => ({ ...prev, homepage_url: undefined }));
+              }}
+            />
+            {error ? <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert> : null}
+          </DialogContent>
+          <DialogActions>
+            <Button type="button" onClick={() => setDialogOpen(false)}>{t('cancel')}</Button>
+            <Button type="submit" disabled={!canSave} variant="contained">{t('save')}</Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+
+      <Dialog
+        open={deleteUsageDialog !== null}
+        onClose={() => setDeleteUsageDialog(null)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ pb: 1 }}>{t('deleteUsageDialog.title')}</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            {deleteUsageDialog
+              ? t('deleteUsageDialog.summary', { count: deleteUsageDialog.usage.total_culture_count })
+              : ''}
+          </Typography>
+          {deleteUsageDialog ? (
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'surface.surfaceSoftBorder',
+                bgcolor: 'surface.surfaceSubtleBackground',
+              }}
+            >
+              <Typography sx={{ fontWeight: 700, mb: 1 }}>
+                {deleteUsageDialog.supplier.name}
+              </Typography>
+              <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'text.secondary' }}>
+                {deleteUsageDialog.usage.culture_count > 0 ? (
+                  <Typography component="li" variant="body2">
+                    {t('deleteUsageDialog.cultureUsage', { count: deleteUsageDialog.usage.culture_count })}
+                  </Typography>
+                ) : null}
+                {deleteUsageDialog.usage.supplier_data_culture_count > 0 ? (
+                  <Typography component="li" variant="body2">
+                    {t('deleteUsageDialog.supplierDataUsage', {
+                      cultureCount: deleteUsageDialog.usage.supplier_data_culture_count,
+                      rowCount: deleteUsageDialog.usage.supplier_data_count,
+                    })}
+                  </Typography>
+                ) : null}
+                {deleteUsageDialog.usage.seed_demand_culture_count > 0 ? (
+                  <Typography component="li" variant="body2">
+                    {t('deleteUsageDialog.seedDemandUsage', { count: deleteUsageDialog.usage.seed_demand_culture_count })}
+                  </Typography>
+                ) : null}
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+                {t('deleteUsageDialog.unlinkExplanation')}
+              </Typography>
+            </Box>
+          ) : null}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>{t('cancel')}</Button>
-          <Button onClick={() => void saveSupplier()} disabled={!canSave} variant="contained">{t('save')}</Button>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, gap: 1, flexWrap: 'wrap' }}>
+          <Button onClick={openAffectedCultures} variant="outlined">
+            {t('deleteUsageDialog.openAffectedCultures')}
+          </Button>
+          <Button
+            onClick={() => void unlinkAndDeleteSupplier()}
+            color="error"
+            variant="contained"
+            disabled={unlinkDeletingSupplierId === deleteUsageDialog?.supplier.id}
+          >
+            {t('deleteUsageDialog.unlinkAndDelete')}
+          </Button>
+          <Button onClick={() => setDeleteUsageDialog(null)}>
+            {t('common:actions.cancel')}
+          </Button>
         </DialogActions>
       </Dialog>
+
+      {pendingSupplierDeletions.map((deletion, index) => (
+        <DeleteUndoSnackbar
+          key={deletion.id}
+          open={deletion.visible}
+          message={deletion.message}
+          undoLabel={t('common:actions.undo')}
+          offsetIndex={index}
+          testId="supplier-delete-snackbar"
+          onClose={() => closeSupplierDeletionSnackbar(deletion.id)}
+          onUndo={() => undoSupplierDeletion(deletion.id)}
+        />
+      ))}
     </PageContainer>
   );
 }

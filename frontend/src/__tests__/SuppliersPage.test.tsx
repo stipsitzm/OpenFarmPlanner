@@ -6,6 +6,11 @@ import Suppliers from '../pages/Suppliers';
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   create: vi.fn(),
+  update: vi.fn(),
+  delete: vi.fn(),
+  deleteUsage: vi.fn(),
+  unlinkAndDelete: vi.fn(),
+  restoreUnlinkedDelete: vi.fn(),
 }));
 
 vi.mock('../api/api', async () => {
@@ -16,6 +21,11 @@ vi.mock('../api/api', async () => {
       ...actual.supplierAPI,
       list: mocks.list,
       create: mocks.create,
+      update: mocks.update,
+      delete: mocks.delete,
+      deleteUsage: mocks.deleteUsage,
+      unlinkAndDelete: mocks.unlinkAndDelete,
+      restoreUnlinkedDelete: mocks.restoreUnlinkedDelete,
     },
   };
 });
@@ -30,7 +40,13 @@ vi.mock('../commands/useCommandContext', () => ({
 
 describe('Suppliers page empty and table states', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    mocks.list.mockReset();
+    mocks.create.mockReset();
+    mocks.update.mockReset();
+    mocks.delete.mockReset();
+    mocks.deleteUsage.mockReset();
+    mocks.unlinkAndDelete.mockReset();
+    mocks.restoreUnlinkedDelete.mockReset();
   });
 
   it('does not show the empty state while suppliers are still loading', async () => {
@@ -90,6 +106,192 @@ describe('Suppliers page empty and table states', () => {
     expect(screen.getByText('Name')).toBeInTheDocument();
     expect(screen.getByText('Webseite')).toBeInTheDocument();
     expect(screen.getByText('Aktionen')).toBeInTheDocument();
+  });
+
+  it('opens supplier row actions from the right-click context menu', async () => {
+    mocks.list.mockResolvedValue({
+      data: {
+        results: [{ id: 1, name: 'Reinsaat', homepage_url: 'https://example.com' }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <Suppliers />
+      </MemoryRouter>,
+    );
+
+    const supplierName = await screen.findByText('Reinsaat');
+    const supplierRow = supplierName.closest('tr');
+    expect(supplierRow).not.toBeNull();
+
+    fireEvent.contextMenu(supplierRow as HTMLTableRowElement);
+
+    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Bearbeiten' }));
+
+    expect(await screen.findByRole('heading', { name: 'Lieferant bearbeiten' })).toBeInTheDocument();
+  });
+
+  it('opens supplier row actions from the keyboard context menu command', async () => {
+    mocks.list.mockResolvedValue({
+      data: {
+        results: [{ id: 1, name: 'Reinsaat', homepage_url: 'https://example.com' }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <Suppliers />
+      </MemoryRouter>,
+    );
+
+    const supplierName = await screen.findByText('Reinsaat');
+    const supplierRow = supplierName.closest('tr');
+    expect(supplierRow).not.toBeNull();
+
+    fireEvent.keyDown(supplierRow as HTMLTableRowElement, { key: 'F10', shiftKey: true });
+
+    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+  });
+
+  it('deletes an unused supplier with undo feedback without a native browser confirm', async () => {
+    mocks.list.mockResolvedValue({
+      data: {
+        results: [{ id: 1, name: 'Reinsaat', homepage_url: 'https://example.com' }],
+      },
+    });
+    mocks.deleteUsage.mockResolvedValue({
+      data: {
+        can_delete: true,
+        culture_count: 0,
+        seed_demand_culture_count: 0,
+        supplier_data_culture_count: 0,
+        supplier_data_count: 0,
+        total_culture_count: 0,
+        culture_ids: [],
+      },
+    });
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    render(
+      <MemoryRouter>
+        <Suppliers />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Reinsaat');
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+
+    await waitFor(() => expect(mocks.deleteUsage).toHaveBeenCalledWith(1));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.queryByText('Reinsaat')).not.toBeInTheDocument();
+    expect(screen.getByText('Lieferant gelöscht.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rückgängig: Lieferant gelöscht.' })).toBeInTheDocument();
+
+    confirmSpy.mockRestore();
+  });
+
+  it('blocks supplier deletion when existing cultures still use it', async () => {
+    mocks.list.mockResolvedValue({
+      data: {
+        results: [{ id: 1, name: 'Reinsaat', homepage_url: 'https://example.com' }],
+      },
+    });
+    mocks.deleteUsage.mockResolvedValue({
+      data: {
+        can_delete: false,
+        culture_count: 12,
+        seed_demand_culture_count: 2,
+        supplier_data_culture_count: 5,
+        supplier_data_count: 7,
+        total_culture_count: 12,
+        culture_ids: [1, 2, 3],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <Suppliers />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Reinsaat');
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+
+    expect(await screen.findByRole('heading', { name: 'Lieferant wird noch verwendet' })).toBeInTheDocument();
+    expect(screen.getByText('Dieser Lieferant wird noch von 12 Kulturen verwendet.')).toBeInTheDocument();
+    expect(screen.getByText('12 Kulturen nutzen diesen Lieferanten direkt.')).toBeInTheDocument();
+    expect(screen.getByText('Beim Fortfahren bleiben alle Kulturen erhalten. Lediglich die Lieferantenzuordnung wird entfernt.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Zu betroffenen Kulturen' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lieferant aus allen Kulturen entfernen und löschen' })).toBeInTheDocument();
+    expect(mocks.delete).not.toHaveBeenCalled();
+    expect(screen.getAllByText('Reinsaat').length).toBeGreaterThan(0);
+  });
+
+  it('unlinks a used supplier from cultures, deletes it, and offers undo', async () => {
+    const undoPayload = {
+      supplier: {
+        id: 1,
+        name: 'Reinsaat',
+        homepage_url: 'https://example.com',
+        slug: 'reinsaat',
+        allowed_domains: ['example.com'],
+      },
+      culture_ids: [1, 2],
+      seed_demand_culture_ids: [2],
+      supplier_data: [],
+    };
+    mocks.list.mockResolvedValue({
+      data: {
+        results: [{ id: 1, name: 'Reinsaat', homepage_url: 'https://example.com' }],
+      },
+    });
+    mocks.deleteUsage.mockResolvedValue({
+      data: {
+        can_delete: false,
+        culture_count: 2,
+        seed_demand_culture_count: 1,
+        supplier_data_culture_count: 0,
+        supplier_data_count: 0,
+        total_culture_count: 2,
+        culture_ids: [1, 2],
+      },
+    });
+    mocks.unlinkAndDelete.mockResolvedValue({
+      data: {
+        affected_culture_count: 2,
+        undo_payload: undoPayload,
+      },
+    });
+    mocks.restoreUnlinkedDelete.mockResolvedValue({
+      data: {
+        supplier: { id: 1, name: 'Reinsaat', homepage_url: 'https://example.com', allowed_domains: [] },
+        restored_culture_count: 2,
+        restored_supplier_data_count: 0,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <Suppliers />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Reinsaat');
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Lieferant aus allen Kulturen entfernen und löschen' }));
+
+    await waitFor(() => expect(mocks.unlinkAndDelete).toHaveBeenCalledWith(1));
+    expect(screen.queryByText('Reinsaat')).not.toBeInTheDocument();
+    expect(screen.getByText('Lieferant gelöscht. Bei 2 Kulturen wurde die Lieferantenzuordnung entfernt.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig: Lieferant gelöscht. Bei 2 Kulturen wurde die Lieferantenzuordnung entfernt.' }));
+
+    await waitFor(() => expect(mocks.restoreUnlinkedDelete).toHaveBeenCalledWith(undoPayload));
   });
 
   it('shows backend supplier name errors under the name field', async () => {

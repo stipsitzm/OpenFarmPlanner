@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import FieldsBedsPage from '../pages/FieldsBedsPage';
 import { MemoryRouter } from 'react-router-dom';
@@ -16,7 +16,12 @@ const projectRequirementState = vi.hoisted(() => ({
 }));
 
 vi.mock('../pages/FieldsBedsHierarchy', () => ({
-  default: () => <div>Hierarchieansicht</div>,
+  default: ({ createFieldRequest }: { createFieldRequest?: number }) => (
+    <div>
+      <div>Hierarchieansicht</div>
+      <div data-testid="create-field-request">{createFieldRequest ?? 0}</div>
+    </div>
+  ),
 }));
 
 vi.mock('../pages/GraphicalFields', () => ({
@@ -115,7 +120,7 @@ describe('FieldsBedsPage', () => {
   });
 
 
-  it('opens a translated add-field dialog via query parameter instead of native prompt', async () => {
+  it('starts inline add-field editing via query parameter instead of native prompt', async () => {
     const promptSpy = vi.spyOn(window, 'prompt');
     render(
       <MemoryRouter initialEntries={['/app/fields-beds?create=true']}>
@@ -123,24 +128,11 @@ describe('FieldsBedsPage', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByRole('heading', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Name der Parzelle')).toBeInTheDocument();
+    expect(await screen.findByText('Hierarchieansicht')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('create-field-request')).toHaveTextContent('1'));
     expect(promptSpy).not.toHaveBeenCalled();
     promptSpy.mockRestore();
   });
-
-  it('prevents saving an empty field name in add-field dialog', async () => {
-    render(
-      <MemoryRouter initialEntries={['/app/fields-beds?create=true']}>
-        <FieldsBedsPage />
-      </MemoryRouter>
-    );
-
-    const nameInput = await screen.findByLabelText('Name der Parzelle');
-    fireEvent.change(nameInput, { target: { value: '   ' } });
-    expect(screen.getByRole('button', { name: 'Hinzufügen' })).toBeDisabled();
-  });
-
 
   it('shows onboarding empty-state when no area hierarchy exists', async () => {
     locationListMock.mockResolvedValue({ data: { results: [] } });
@@ -161,9 +153,14 @@ describe('FieldsBedsPage', () => {
 
     renderPage();
     expect(await screen.findByText('Parzelle fehlt')).toBeInTheDocument();
-    const matchingButtons = await screen.findAllByRole('button', { name: 'Parzelle hinzufügen' });
-    fireEvent.click(matchingButtons[matchingButtons.length - 1]);
-    expect(await screen.findByRole('heading', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
+    expect(screen.getByText((content) => (
+      content.includes('Füge Parzellen in der sichtbaren Tabelle über das')
+      && content.includes('Symbol beim jeweiligen Standort hinzu.')
+    ))).toBeInTheDocument();
+    expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
+    expect(screen.getByText('Tipp: Rechtsklick auf eine Tabellenzeile öffnet weitere Aktionen.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('create-field-request')).toHaveTextContent('0');
   });
 
   it('shows missing bed requirement when fields exist but no beds exist', async () => {

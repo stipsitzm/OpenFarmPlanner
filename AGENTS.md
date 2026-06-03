@@ -63,6 +63,16 @@ Follow existing placement patterns before creating new directories.
 - Prefer strongly typed props and avoid `any`.
 - Avoid deprecated MUI APIs; use current patterns such as `slotProps.htmlInput` instead of `inputProps`.
 
+## UI Consistency / OpenFarmPlanner Style
+- When creating or modifying UI elements, always follow the existing OpenFarmPlanner design language.
+- This applies especially to info boxes, warning boxes, validation messages, confirmation dialogs, empty states, snackbars and undo messages, context menus, hover actions, buttons, tables, DataGrid behavior, forms, and helper texts.
+- Search the codebase for existing implementations before creating new UI patterns.
+- Reuse shared components and established patterns whenever possible.
+- Do not introduce new colors, spacing, icons, typography, border styles, or interaction patterns if an equivalent OpenFarmPlanner pattern already exists.
+- Prefer extending an existing shared component over creating a page-specific variant.
+- If several similar implementations exist, prefer the one used most consistently across the app.
+- Keep wording, button order, severity levels, and interaction behavior consistent with comparable existing screens.
+
 ## Backend Rules
 - Backend packages are managed with PDM. Use `pdm` commands and do not introduce `pip install`, `requirements.txt`, or `setup.py`.
 - Follow PEP 8.

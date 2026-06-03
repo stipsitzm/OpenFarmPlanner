@@ -37,14 +37,14 @@ describe('Empty state components', () => {
           description="Füge Beete über das Plus-Symbol bei der jeweiligen Parzelle hinzu."
           actions={[
             { label: 'Anbauflächen öffnen', to: '/app/fields-beds' },
-            { label: 'Parzelle hinzufügen', to: '/app/fields-beds?create=true' },
+            { label: 'Anbauplan hinzufügen', to: '/app/planting-plans?create=true' },
           ]}
         />
       </MemoryRouter>,
     );
 
     expect(screen.queryByRole('link', { name: 'Anbauflächen öffnen' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Parzelle hinzufügen' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Anbauplan hinzufügen' })).toBeInTheDocument();
   });
 
   it('renders without requiring a router context', () => {

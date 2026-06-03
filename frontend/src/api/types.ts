@@ -18,6 +18,53 @@ export interface Supplier {
   created?: boolean;
 }
 
+export interface SupplierDeleteUsage {
+  can_delete: boolean;
+  culture_count: number;
+  seed_demand_culture_count: number;
+  supplier_data_culture_count: number;
+  supplier_data_count: number;
+  total_culture_count: number;
+  culture_ids: number[];
+}
+
+export interface SupplierDeleteUndoPayload {
+  supplier: {
+    id: number;
+    name: string;
+    homepage_url: string;
+    slug: string;
+    allowed_domains: string[];
+  };
+  culture_ids: number[];
+  seed_demand_culture_ids: number[];
+  supplier_data: Array<{
+    id: number;
+    culture_id: number;
+    supplier_name: string;
+    supplier_url: string;
+    supplier_product_name: string;
+    supplier_product_url: string;
+    packaging_sizes: SeedPackage[];
+    thousand_kernel_weight_g: string | null;
+    germination_rate: number | null;
+    price: string | null;
+    notes: string;
+    source_url: string;
+  }>;
+}
+
+export interface SupplierUnlinkDeleteResponse {
+  affected_culture_count: number;
+  undo_payload: SupplierDeleteUndoPayload;
+}
+
+export interface SupplierRestoreUnlinkedDeleteResponse {
+  supplier: Supplier;
+  restored_culture_count: number;
+  restored_supplier_data_count: number;
+}
+
 export type SeedRateUnit = 'g_per_m2' | 'g_per_lfm' | 'seeds_per_m2' | 'seeds_per_lfm' | 'seeds_per_plant';
 export type CultivationType = 'pre_cultivation' | 'direct_sowing';
 

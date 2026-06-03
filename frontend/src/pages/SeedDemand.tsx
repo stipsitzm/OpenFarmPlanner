@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   Alert,
   Box,
   CircularProgress,
   FormControl,
   Link,
+  ListItemIcon,
+  ListItemText,
+  Menu,
   MenuItem,
   Select,
   Table,
@@ -16,8 +19,10 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import { seedDemandAPI, type SeedDemand } from '../api/api';
-import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI } from '../api/api';
+import EditIcon from '@mui/icons-material/Edit';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, seedDemandAPI } from '../api/api';
+import type { SeedDemand } from '../api/types';
 import { useTranslation } from '../i18n';
 import { useCommandContextTag } from '../commands/useCommandContext';
 import PageContainer from '../components/layout/PageContainer';
@@ -26,7 +31,10 @@ import TableSurface from '../components/layout/TableSurface';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
+import { ContextMenuHint, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
 import { getFirstMissingProjectSetupStep, getProjectSetupAction, getProjectSetupActions } from './requirementFlow';
+
+const SEED_DEMAND_CONTEXT_MENU_HINT_STORAGE_KEY = 'ofp.seedDemandContextMenuHintSeen';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
@@ -45,6 +53,7 @@ const formatPackageSelection = (row: SeedDemand, t: (key: string) => string): st
 export default function SeedDemandPage(): React.ReactElement {
   useCommandContextTag('seedDemand');
   const { t } = useTranslation(['cultures', 'common']);
+  const navigate = useNavigate();
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const [rows, setRows] = useState<SeedDemand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,9 +64,18 @@ export default function SeedDemandPage(): React.ReactElement {
   const [locationCount, setLocationCount] = useState(0);
   const [fieldCount, setFieldCount] = useState(0);
   const [bedCount, setBedCount] = useState(0);
+  const [contextMenuState, setContextMenuState] = useState<{
+    row: SeedDemand;
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
   const hasPlans = planCount > 0;
   const hasSeedData = hasCulturesWithSeedData;
   const canCalculateSeedDemand = locationCount > 0 && fieldCount > 0 && bedCount > 0 && cultureCount > 0 && hasPlans && hasSeedData;
+  const { showContextMenuHint, closeContextMenuHint } = useContextMenuHint({
+    storageKey: SEED_DEMAND_CONTEXT_MENU_HINT_STORAGE_KEY,
+    enabled: !shouldShowProjectRequiredState && !isLoading && canCalculateSeedDemand && rows.length > 0,
+  });
   const firstMissingSetupStep = getFirstMissingProjectSetupStep({
     hasLocations: locationCount > 0,
     hasFields: fieldCount > 0,
@@ -165,6 +183,114 @@ export default function SeedDemandPage(): React.ReactElement {
     }
   };
 
+  const getCultureLabel = useCallback((row: SeedDemand): string => (
+    row.variety ? `${row.culture_name} (${row.variety})` : row.culture_name
+  ), []);
+
+  const getSupplierLabel = useCallback((row: SeedDemand): string => {
+    const supplierOptions = row.supplier_options ?? [];
+    if (supplierOptions.length === 0) {
+      return t('seedDemand.noSupplierAvailable');
+    }
+    const selectedSupplier = supplierOptions.find((option) => option.supplier_id === row.selected_supplier_id);
+    if (selectedSupplier) {
+      return selectedSupplier.supplier_name;
+    }
+    if (supplierOptions.length > 1) {
+      return t('seedDemand.selectSupplier');
+    }
+    return supplierOptions[0]?.supplier_name ?? row.supplier ?? '';
+  }, [t]);
+
+  const getRequiredAmountLabel = useCallback((row: SeedDemand): string => (
+    row.required_amount_value === null || row.required_amount_unit === null
+      ? '-'
+      : `${row.required_amount_value.toFixed(2)} ${formatUnit(row.required_amount_unit, t)}`
+  ), [t]);
+
+  const getPackageLabel = useCallback((row: SeedDemand): string => (
+    (row.supplier_options ?? []).length > 0
+      ? formatPackageSelection(row, t)
+      : t('seedDemand.noPackageCalculationPossible')
+  ), [t]);
+
+  const getRowClipboardValues = useCallback((row: SeedDemand): string[] => [
+    getCultureLabel(row),
+    getSupplierLabel(row),
+    getRequiredAmountLabel(row),
+    getPackageLabel(row),
+  ], [getCultureLabel, getPackageLabel, getRequiredAmountLabel, getSupplierLabel]);
+
+  const getTableClipboardRows = useCallback((): string[][] => [
+    [
+      t('seedDemand.columns.culture'),
+      t('seedDemand.columns.supplier'),
+      t('seedDemand.columns.requiredAmount'),
+      t('seedDemand.columns.packages'),
+    ],
+    ...rows.map(getRowClipboardValues),
+  ], [getRowClipboardValues, rows, t]);
+
+  const closeContextMenu = useCallback((): void => {
+    setContextMenuState(null);
+  }, []);
+
+  const openContextMenu = useCallback((
+    event: MouseEvent<HTMLTableRowElement>,
+    row: SeedDemand,
+  ): void => {
+    event.preventDefault();
+    setContextMenuState({
+      row,
+      mouseX: event.clientX + 2,
+      mouseY: event.clientY - 6,
+    });
+  }, []);
+
+  const openKeyboardContextMenu = useCallback((
+    event: KeyboardEvent<HTMLTableRowElement>,
+    row: SeedDemand,
+  ): void => {
+    const shouldOpenContextMenu = event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10');
+    if (!shouldOpenContextMenu) {
+      return;
+    }
+
+    event.preventDefault();
+    const rowRect = event.currentTarget.getBoundingClientRect();
+    setContextMenuState({
+      row,
+      mouseX: rowRect.left + Math.min(240, rowRect.width),
+      mouseY: rowRect.top + 12,
+    });
+  }, []);
+
+  const openCulture = useCallback((row: SeedDemand): void => {
+    navigate(`/app/cultures?cultureId=${row.culture_id}`);
+  }, [navigate]);
+
+  const editCulture = useCallback((row: SeedDemand): void => {
+    navigate(`/app/cultures?cultureId=${row.culture_id}&edit=true`);
+  }, [navigate]);
+
+  const handleContextMenuOpenCulture = useCallback((): void => {
+    if (!contextMenuState) {
+      return;
+    }
+    const { row } = contextMenuState;
+    closeContextMenu();
+    openCulture(row);
+  }, [closeContextMenu, contextMenuState, openCulture]);
+
+  const handleContextMenuEditCulture = useCallback((): void => {
+    if (!contextMenuState) {
+      return;
+    }
+    const { row } = contextMenuState;
+    closeContextMenu();
+    editCulture(row);
+  }, [closeContextMenu, contextMenuState, editCulture]);
+
   useEffect(() => {
     if (shouldShowProjectRequiredState) {
       setRows([]);
@@ -202,6 +328,16 @@ export default function SeedDemandPage(): React.ReactElement {
           />
         )}
 
+        {!isLoading && !error && canCalculateSeedDemand && showContextMenuHint ? (
+          <Box sx={{ mb: 1.25 }}>
+            <ContextMenuHint
+              message={t('seedDemand.contextMenu.hint')}
+              secondary={t('seedDemand.contextMenu.hintKeyboard')}
+              onClose={closeContextMenuHint}
+            />
+          </Box>
+        ) : null}
+
         {!isLoading && !error && canCalculateSeedDemand && (
           <TableSurface sizingMode="contentFit">
           <TableContainer>
@@ -222,10 +358,7 @@ export default function SeedDemandPage(): React.ReactElement {
               {rows.map((row) => {
                 const supplierOptions = row.supplier_options ?? [];
                 const supplierCount = supplierOptions.length;
-                const hasSupplierOptions = supplierCount > 0;
-                const packageInfo = hasSupplierOptions
-                  ? formatPackageSelection(row, t)
-                  : t('seedDemand.noPackageCalculationPossible');
+                const packageInfo = getPackageLabel(row);
                 const supplierOptionValues = new Set(supplierOptions.map((option) => String(option.supplier_id)));
                 const selectedSupplierValue = row.selected_supplier_id !== null && row.selected_supplier_id !== undefined
                   ? String(row.selected_supplier_id)
@@ -235,10 +368,16 @@ export default function SeedDemandPage(): React.ReactElement {
                 const singleSupplierValue = singleSupplierOption ? String(singleSupplierOption.supplier_id) : '';
 
                 return (
-                  <TableRow key={row.culture_id}>
+                  <TableRow
+                    key={row.culture_id}
+                    hover
+                    tabIndex={0}
+                    onContextMenu={(event) => openContextMenu(event, row)}
+                    onKeyDown={(event) => openKeyboardContextMenu(event, row)}
+                  >
                     <TableCell>
                       <Link component={RouterLink} to={`/app/cultures?cultureId=${row.culture_id}`} underline="hover">
-                        {row.variety ? `${row.culture_name} (${row.variety})` : row.culture_name}
+                        {getCultureLabel(row)}
                       </Link>
                     </TableCell>
                     <TableCell>
@@ -294,9 +433,7 @@ export default function SeedDemandPage(): React.ReactElement {
                       )}
                     </TableCell>
                     <TableCell align="right">
-                      {row.required_amount_value === null || row.required_amount_unit === null
-                        ? '-'
-                        : `${row.required_amount_value.toFixed(2)} ${formatUnit(row.required_amount_unit, t)}`}
+                      {getRequiredAmountLabel(row)}
                     </TableCell>
                     <TableCell>{packageInfo}</TableCell>
                   </TableRow>
@@ -309,6 +446,13 @@ export default function SeedDemandPage(): React.ReactElement {
                 <EmptyStateCard
                   title={t('seedDemand.emptyStates.noResultsTitle')}
                   description={t('seedDemand.emptyStates.noResultsDescription')}
+                  supplement={(
+                    <ContextMenuHint
+                      compact
+                      message={t('seedDemand.contextMenu.hint')}
+                      secondary={t('seedDemand.contextMenu.hintKeyboard')}
+                    />
+                  )}
                 />
               </Box>
             ) : null}
@@ -316,6 +460,41 @@ export default function SeedDemandPage(): React.ReactElement {
           </TableSurface>
         )}
       </PageSurface>
+
+      <Menu
+        open={contextMenuState !== null}
+        onClose={closeContextMenu}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenuState !== null
+            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
+            : undefined
+        }
+      >
+        <MenuItem onClick={handleContextMenuOpenCulture}>
+          <ListItemIcon>
+            <OpenInNewIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary={t('seedDemand.contextMenu.openCulture')} />
+        </MenuItem>
+        <MenuItem onClick={handleContextMenuEditCulture}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary={t('seedDemand.contextMenu.editCulture')} />
+        </MenuItem>
+        <TableCopyMenuItems
+          rowValues={contextMenuState ? getRowClipboardValues(contextMenuState.row) : null}
+          tableRows={getTableClipboardRows()}
+          copyRowLabel={t('common:actions.copyRow')}
+          copyTableLabel={t('common:actions.copyTable')}
+          rowCopiedMessage={t('common:messages.rowCopied')}
+          tableCopiedMessage={t('common:messages.tableCopied')}
+          copyErrorMessage={t('common:messages.copyError')}
+          includeDivider
+          onClose={closeContextMenu}
+        />
+      </Menu>
     </PageContainer>
   );
 }

@@ -13,6 +13,7 @@
     "cropFamily": "Familie",
     "cultivationType": "Anbauart",
     "supplier": "Lieferant",
+    "unknownSupplier": "Lieferant #{{id}}",
     "directSowing": "Direktsaat",
     "preCultivation": "Pflanzung",
     "both": "Beides",
@@ -239,12 +240,12 @@
     "progressive": {
       "locations": {
         "title": "Noch kein Saatgutbedarf berechenbar",
-        "description": "Lege zuerst eine Parzelle an, damit du Beete planen kannst.",
+        "description": "Lege zuerst einen Standort an. Danach kannst du auf der Seite Anbauflächen eine Parzelle hinzufügen.",
         "action": "Parzelle hinzufügen"
       },
       "fields": {
         "title": "Noch kein Saatgutbedarf berechenbar",
-        "description": "Lege als Nächstes eine Parzelle an, damit Beete geplant werden können.",
+        "description": "Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu.",
         "action": "Parzelle hinzufügen"
       },
       "beds": {
@@ -283,6 +284,17 @@
       "supplier": "Lieferant",
       "requiredAmount": "Gesamtbedarf",
       "packages": "Packungsgrößen"
+    },
+    "contextMenu": {
+      "hint": "Tipp: Rechtsklick auf eine Zeile öffnet weitere Aktionen.",
+      "hintKeyboard": "Alternativ: Kontextmenütaste oder Shift+F10.",
+      "openCulture": "Kultur öffnen",
+      "editCulture": "Kultur bearbeiten",
+      "copyRow": "Zeile kopieren",
+      "copyTable": "Gesamte Tabelle kopieren",
+      "rowCopied": "Zeile wurde kopiert.",
+      "tableCopied": "Tabelle wurde kopiert.",
+      "copyError": "Daten konnten nicht kopiert werden."
     }
   },
   "history": {
