@@ -1,6 +1,7 @@
 import { Box } from '@mui/material';
 import { NavLink, useLocation } from 'react-router-dom';
 import { normalizeMainRoutePath } from '../../navigation/mainNavigation';
+import { useTranslation } from '../../i18n';
 
 interface AppLogoProps {
   to?: string;
@@ -9,6 +10,7 @@ interface AppLogoProps {
 }
 
 export default function AppLogo({ to = '/app/dashboard', size = 28, showText = true }: AppLogoProps): React.ReactElement {
+  const { t } = useTranslation('navigation');
   const location = useLocation();
   const isActive = normalizeMainRoutePath(location.pathname) === '/app/dashboard';
 
@@ -40,8 +42,8 @@ export default function AppLogo({ to = '/app/dashboard', size = 28, showText = t
           boxShadow: (theme) => `0 0 0 2px ${theme.palette.navigation.focusRing}`,
         },
       }}
-      aria-label="Zur Übersicht"
-      title="Zur Übersicht"
+      aria-label={t('globalMenu.dashboardLink')}
+      title={t('globalMenu.dashboardLink')}
     >
       <Box
         component="img"

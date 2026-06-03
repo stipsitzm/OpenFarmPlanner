@@ -47,7 +47,20 @@
     "closeSidebar": "Seitenleiste schließen",
     "openSidebar": "Seitenleiste öffnen",
     "collapseSidebar": "Sidebar einklappen",
-    "expandSidebar": "Sidebar ausklappen"
+    "expandSidebar": "Sidebar ausklappen",
+    "dashboardLink": "Zur Übersicht",
+    "openMobileMenu": "Menü öffnen"
+  },
+  "pageHelp": {
+    "dashboard": "Hilfe zu Übersicht",
+    "locations": "Hilfe zu Standorte",
+    "areas": "Hilfe zu Anbauflächen",
+    "cultures": "Hilfe zu Kulturen",
+    "plantingPlans": "Hilfe zu Anbauplänen",
+    "calendar": "Hilfe zu Anbaukalender",
+    "seedDemand": "Hilfe zu Saatgutbedarf",
+    "suppliers": "Hilfe zu Lieferanten",
+    "openAria": "{{label}} öffnen"
   },
   "projectTrash": {
     "title": "Papierkorb",

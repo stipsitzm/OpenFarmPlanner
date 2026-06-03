@@ -775,16 +775,16 @@ function RootLayout(): React.ReactElement {
     };
   }, [currentPageTitle, tCommon]);
   const topbarHelpConfig = useMemo(() => {
-    if (location.pathname.startsWith('/app/dashboard')) return { pageKey: 'dashboard' as const, label: 'Hilfe zu Übersicht' };
-    if (location.pathname.startsWith('/app/locations')) return { pageKey: 'locations' as const, label: 'Hilfe zu Standorte' };
-    if (location.pathname.startsWith('/app/fields-beds')) return { pageKey: 'areas' as const, label: 'Hilfe zu Anbauflächen' };
-    if (location.pathname.startsWith('/app/cultures')) return { pageKey: 'cultures' as const, label: 'Hilfe zu Kulturen' };
-    if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { pageKey: 'plantingPlans' as const, label: 'Hilfe zu Anbauplänen' };
-    if (location.pathname.startsWith('/app/gantt-chart')) return { pageKey: 'calendar' as const, label: 'Hilfe zu Anbaukalender' };
-    if (location.pathname.startsWith('/app/seed-demand')) return { pageKey: 'seedDemand' as const, label: 'Hilfe zu Saatgutbedarf' };
-    if (location.pathname.startsWith('/app/suppliers')) return { pageKey: 'suppliers' as const, label: 'Hilfe zu Lieferanten' };
+    if (location.pathname.startsWith('/app/dashboard')) return { pageKey: 'dashboard' as const, label: t('pageHelp.dashboard') };
+    if (location.pathname.startsWith('/app/locations')) return { pageKey: 'locations' as const, label: t('pageHelp.locations') };
+    if (location.pathname.startsWith('/app/fields-beds')) return { pageKey: 'areas' as const, label: t('pageHelp.areas') };
+    if (location.pathname.startsWith('/app/cultures')) return { pageKey: 'cultures' as const, label: t('pageHelp.cultures') };
+    if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { pageKey: 'plantingPlans' as const, label: t('pageHelp.plantingPlans') };
+    if (location.pathname.startsWith('/app/gantt-chart')) return { pageKey: 'calendar' as const, label: t('pageHelp.calendar') };
+    if (location.pathname.startsWith('/app/seed-demand')) return { pageKey: 'seedDemand' as const, label: t('pageHelp.seedDemand') };
+    if (location.pathname.startsWith('/app/suppliers')) return { pageKey: 'suppliers' as const, label: t('pageHelp.suppliers') };
     return null;
-  }, [location.pathname]);
+  }, [location.pathname, t]);
   const topbarPrimaryAction = useMemo(() => {
     if (activeCreateActions.length > 0) {
       const isSingleCreateAction = activeCreateActions.length === 1;
@@ -826,8 +826,8 @@ function RootLayout(): React.ReactElement {
                 <Box
                   component={RouterLink}
                   to="/app/dashboard"
-                  aria-label="Zur Übersicht"
-                  title="Zur Übersicht"
+                  aria-label={t('globalMenu.dashboardLink')}
+                  title={t('globalMenu.dashboardLink')}
                   sx={navigationLogoLinkSx}
                 >
                   <Box
@@ -903,7 +903,7 @@ function RootLayout(): React.ReactElement {
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', bgcolor: 'surface.contentBackground' }}>
       <Box sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
         {navItems.map((item) => {
-          const srLinkLabel = item.to === '/app/dashboard' ? 'Zur Übersicht' : item.label;
+          const srLinkLabel = item.to === '/app/dashboard' ? t('globalMenu.dashboardLink') : item.label;
           return <RouterLink key={`sr-${item.to}`} to={item.to} aria-label={srLinkLabel}>{item.label}</RouterLink>;
         })}
       </Box>
@@ -914,7 +914,7 @@ function RootLayout(): React.ReactElement {
         sx={{ borderBottom: '1px solid', borderColor: 'surface.surfaceBorder', bgcolor: 'surface.topbarBackground', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
         <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: 'nowrap', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
-          {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
+          {!isDesktopUp ? <IconButton aria-label={t('globalMenu.openMobileMenu')} onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflow: 'hidden' }}>
             {!isDesktopUp ? (
               <Typography
@@ -939,7 +939,7 @@ function RootLayout(): React.ReactElement {
                 {currentPageTitle}
               </Typography>
             )}
-            {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
+            {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={t('pageHelp.openAria', { label: topbarHelpConfig.label })} tooltip={topbarHelpConfig.label} /> : null}
           </Box>
           {!isCompactTopbar ? (
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, maxWidth: '100%', flex: 1, overflow: 'hidden' }}>

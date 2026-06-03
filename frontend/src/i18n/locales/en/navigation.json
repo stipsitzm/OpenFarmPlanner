@@ -46,7 +46,20 @@
     "closeSidebar": "Close sidebar",
     "openSidebar": "Open sidebar",
     "collapseSidebar": "Collapse sidebar",
-    "expandSidebar": "Expand sidebar"
+    "expandSidebar": "Expand sidebar",
+    "dashboardLink": "Go to dashboard",
+    "openMobileMenu": "Open menu"
+  },
+  "pageHelp": {
+    "dashboard": "Help for dashboard",
+    "locations": "Help for locations",
+    "areas": "Help for growing areas",
+    "cultures": "Help for cultures",
+    "plantingPlans": "Help for planting plans",
+    "calendar": "Help for planting calendar",
+    "seedDemand": "Help for seed demand",
+    "suppliers": "Help for suppliers",
+    "openAria": "Open {{label}}"
   },
   "projectTrash": {
     "title": "Trash",
