@@ -21,7 +21,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
 
   return (
     <>
-      <Typography variant="h6" sx={{ mt: 2 }}>Zeitplanung</Typography>
+      <Typography variant="h6" sx={{ mt: 2 }}>{t('form.sectionTiming')}</Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
           <FormControl sx={{ minWidth: '180px' }}>

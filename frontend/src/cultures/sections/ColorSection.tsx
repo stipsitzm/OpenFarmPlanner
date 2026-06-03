@@ -18,7 +18,7 @@ interface ColorSectionProps {
 export function ColorSection({ formData, errors, onChange, t, defaultColor }: ColorSectionProps) {
   return (
     <>
-      <Typography variant="h6" sx={{ mt: 2 }}>Anzeigefarbe</Typography>
+      <Typography variant="h6" sx={{ mt: 2 }}>{t('form.displayColor')}</Typography>
       <TextField
         sx={{ maxWidth: '300px' }}
         type="color"
