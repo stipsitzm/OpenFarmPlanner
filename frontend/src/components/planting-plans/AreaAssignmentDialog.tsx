@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   Box,
   Button,
@@ -43,11 +43,6 @@ interface AssignmentState {
 }
 
 type BedWithHierarchy = Bed & { id: number; fieldId: number; locationId: number };
-interface DialogKeyboardControl {
-  root: HTMLElement | null;
-  focusTarget: HTMLElement | null;
-  disabled: boolean;
-}
 
 const formatArea = (value: number, locale: string): string =>
   `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} m²`;
@@ -91,21 +86,11 @@ export function AreaAssignmentDialog({
 }: AreaAssignmentDialogProps): React.ReactElement {
   const { t } = useTranslation('plantingPlans');
   const [isOpen, setIsOpen] = useState(false);
-  const [openSelect, setOpenSelect] = useState<'location' | 'field' | 'bed' | null>(null);
   const [draft, setDraft] = useState<AssignmentState>({ locationId: null, fieldId: null, bedId: bedId ?? null });
   const locationSelectRef = useRef<HTMLDivElement | null>(null);
   const fieldSelectRef = useRef<HTMLDivElement | null>(null);
-  const bedSelectRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLDivElement | null>(null);
-  const formRef = useRef<HTMLFormElement | null>(null);
-  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
   const applyButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  const stopGridEscapePropagation = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') {
-      event.stopPropagation();
-    }
-  };
 
   useEffect(() => {
     if (!hasFocus || isOpen) {
@@ -319,7 +304,6 @@ export function AreaAssignmentDialog({
       return;
     }
     await onApply(draft.bedId);
-    setOpenSelect(null);
     setIsOpen(false);
   };
 
@@ -328,148 +312,9 @@ export function AreaAssignmentDialog({
     void handleApply();
   };
 
-  const getSelectFocusTarget = (root: HTMLDivElement | null): HTMLElement | null =>
-    root?.querySelector<HTMLElement>('[role="combobox"]') ?? root;
-
-  const getKeyboardControls = useCallback((): DialogKeyboardControl[] => [
-    {
-      root: locationSelectRef.current,
-      focusTarget: getSelectFocusTarget(locationSelectRef.current),
-      disabled: selectableLocations.length === 0,
-    },
-    {
-      root: fieldSelectRef.current,
-      focusTarget: getSelectFocusTarget(fieldSelectRef.current),
-      disabled: isFieldSelectDisabled,
-    },
-    {
-      root: bedSelectRef.current,
-      focusTarget: getSelectFocusTarget(bedSelectRef.current),
-      disabled: isBedSelectDisabled,
-    },
-    {
-      root: cancelButtonRef.current,
-      focusTarget: cancelButtonRef.current,
-      disabled: false,
-    },
-    {
-      root: applyButtonRef.current,
-      focusTarget: applyButtonRef.current,
-      disabled: isApplyDisabled,
-    },
-  ].filter((control) => control.root && control.focusTarget && !control.disabled), [
-    isApplyDisabled,
-    isBedSelectDisabled,
-    isFieldSelectDisabled,
-    selectableLocations.length,
-  ]);
-
-  const focusDialogControl = useCallback((control: DialogKeyboardControl | undefined): void => {
-    if (!control?.focusTarget) {
-      return;
-    }
-
-    requestAnimationFrame(() => {
-      control.focusTarget?.focus();
-    });
-  }, []);
-
-  const handleDialogKeyDown = (event: KeyboardEvent<HTMLFormElement>): void => {
-    if (openSelect !== null) {
-      return;
-    }
-
-    if (event.key === 'Tab') {
-      const controls = getKeyboardControls();
-      if (controls.length === 0) {
-        return;
-      }
-
-      const activeElement = document.activeElement as HTMLElement | null;
-      const currentIndex = controls.findIndex((control) => (
-        Boolean(activeElement)
-        && (control.root === activeElement || control.focusTarget === activeElement || control.root?.contains(activeElement))
-      ));
-      const fallbackIndex = event.shiftKey ? controls.length : -1;
-      const normalizedIndex = currentIndex >= 0 ? currentIndex : fallbackIndex;
-      const nextIndex = event.shiftKey
-        ? (normalizedIndex - 1 + controls.length) % controls.length
-        : (normalizedIndex + 1) % controls.length;
-
-      event.preventDefault();
-      event.stopPropagation();
-      focusDialogControl(controls[nextIndex]);
-      return;
-    }
-
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      event.stopPropagation();
-      formRef.current?.requestSubmit();
-    }
-  };
-
-  const handleNativeDialogKeyDown = useCallback((event: globalThis.KeyboardEvent): void => {
-    if (!isOpen || !formRef.current || openSelect !== null) {
-      return;
-    }
-
-    if (event.key === 'Tab') {
-      const controls = getKeyboardControls();
-      if (controls.length === 0) {
-        return;
-      }
-
-      const activeElement = document.activeElement as HTMLElement | null;
-      const currentIndex = controls.findIndex((control) => (
-        Boolean(activeElement)
-        && (control.root === activeElement || control.focusTarget === activeElement || control.root?.contains(activeElement))
-      ));
-      const fallbackIndex = event.shiftKey ? controls.length : -1;
-      const normalizedIndex = currentIndex >= 0 ? currentIndex : fallbackIndex;
-      const nextIndex = event.shiftKey
-        ? (normalizedIndex - 1 + controls.length) % controls.length
-        : (normalizedIndex + 1) % controls.length;
-
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      focusDialogControl(controls[nextIndex]);
-      return;
-    }
-
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      formRef.current.requestSubmit();
-    }
-  }, [focusDialogControl, getKeyboardControls, isOpen, openSelect]);
-
   const handleCancel = (): void => {
-    setOpenSelect(null);
     setIsOpen(false);
   };
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const controls = getKeyboardControls();
-    focusDialogControl(controls[0]);
-  }, [focusDialogControl, getKeyboardControls, isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return undefined;
-    }
-
-    document.addEventListener('keydown', handleNativeDialogKeyDown, true);
-    return () => {
-      document.removeEventListener('keydown', handleNativeDialogKeyDown, true);
-    };
-  }, [handleNativeDialogKeyDown, isOpen]);
 
   return (
     <>
@@ -517,7 +362,7 @@ export function AreaAssignmentDialog({
         fullWidth
         maxWidth="sm"
       >
-        <Box ref={formRef} component="form" onSubmit={handleFormSubmit} onKeyDownCapture={handleDialogKeyDown}>
+        <Box component="form" onSubmit={handleFormSubmit}>
           <DialogTitle>{t('areaAssignment.title')}</DialogTitle>
           <DialogContent>
             <Box sx={{ pt: 1 }}>
@@ -538,17 +383,9 @@ export function AreaAssignmentDialog({
                     value={draft.locationId ?? ''}
                     label={locationLabel}
                     disabled={selectableLocations.length === 0}
-                    onOpen={() => setOpenSelect('location')}
-                    onClose={() => setOpenSelect(null)}
-                    onKeyDown={stopGridEscapePropagation}
                     onChange={(event) => {
                       handleLocationChange(Number(event.target.value));
                       requestAnimationFrame(() => locationSelectRef.current?.focus());
-                    }}
-                    MenuProps={{
-                      MenuListProps: {
-                        onKeyDown: stopGridEscapePropagation,
-                      },
                     }}
                   >
                     {selectableLocations.map((item) => (
@@ -566,17 +403,9 @@ export function AreaAssignmentDialog({
                     value={draft.fieldId ?? ''}
                     label={fieldLabel}
                     disabled={isFieldSelectDisabled}
-                    onOpen={() => setOpenSelect('field')}
-                    onClose={() => setOpenSelect(null)}
-                    onKeyDown={stopGridEscapePropagation}
                     onChange={(event) => {
                       handleFieldChange(Number(event.target.value));
                       requestAnimationFrame(() => fieldSelectRef.current?.focus());
-                    }}
-                    MenuProps={{
-                      MenuListProps: {
-                        onKeyDown: stopGridEscapePropagation,
-                      },
                     }}
                   >
                     {selectableFields.map((item) => (
@@ -588,23 +417,16 @@ export function AreaAssignmentDialog({
                 <FormControl fullWidth size="small">
                   <InputLabel id="assignment-bed-label">{t('columns.bed')}</InputLabel>
                   <Select
-                    ref={bedSelectRef}
                     id="assignment-bed"
                     labelId="assignment-bed-label"
                     value={draft.bedId ?? ''}
                     label={t('columns.bed')}
                     disabled={isBedSelectDisabled}
-                    onOpen={() => setOpenSelect('bed')}
-                    onClose={() => setOpenSelect(null)}
-                    onKeyDown={stopGridEscapePropagation}
                     onChange={(event) => {
                       handleBedChange(Number(event.target.value));
-                      requestAnimationFrame(() => bedSelectRef.current?.focus());
-                    }}
-                    MenuProps={{
-                      MenuListProps: {
-                        onKeyDown: stopGridEscapePropagation,
-                      },
+                      requestAnimationFrame(() => {
+                        applyButtonRef.current?.focus();
+                      });
                     }}
                   >
                     {selectableBeds.map((item) => (
@@ -616,7 +438,7 @@ export function AreaAssignmentDialog({
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button ref={cancelButtonRef} type="button" data-dialog-action="cancel" onClick={handleCancel}>{t('areaAssignment.cancel')}</Button>
+            <Button type="button" data-dialog-action="cancel" onClick={handleCancel}>{t('areaAssignment.cancel')}</Button>
             <Button ref={applyButtonRef} type="submit" data-dialog-action="apply" variant="contained" disabled={isApplyDisabled}>{t('areaAssignment.apply')}</Button>
           </DialogActions>
         </Box>
