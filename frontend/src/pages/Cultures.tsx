@@ -408,7 +408,7 @@ function Cultures(): React.ReactElement {
     }
     const response = await cultureAPI.history(selectedCulture.id);
     if (response.data.length <= 1) {
-      showSnackbar(t('history.emptyState.title', { defaultValue: 'Keine weiteren Versionen verfügbar.' }), 'info');
+      showSnackbar(t('history.emptyState.title'), 'info');
       return;
     }
     setHistoryItems(response.data);
@@ -1471,10 +1471,10 @@ function Cultures(): React.ReactElement {
           {historyItems.length === 0 ? (
             <Box sx={{ py: isMobile ? 0.5 : 1 }}>
               <Typography variant="body2" color="text.secondary">
-                {t('history.emptyState.title', { defaultValue: 'Keine weiteren Versionen verfügbar.' })}
+                {t('history.emptyState.title')}
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                {t('history.emptyState.description', { defaultValue: 'Für diese Sorte existiert aktuell nur diese Version.' })}
+                {t('history.emptyState.description')}
               </Typography>
             </Box>
           ) : (
@@ -1502,7 +1502,7 @@ function Cultures(): React.ReactElement {
                                 onClick={() => setHistoryOpen(false)}
                                 sx={{ fontSize: '0.78rem', color: 'text.secondary', flexShrink: 0 }}
                               >
-                                {t('history.objectTypes.openTarget', { defaultValue: 'Öffnen' })}
+                                {t('history.objectTypes.openTarget')}
                               </Link>
                             ) : null}
                           </Box>

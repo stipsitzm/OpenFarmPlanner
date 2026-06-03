@@ -307,6 +307,10 @@
     "closeButton": "Schließen",
     "unknownUser": "Unbekannter Nutzer",
     "meta": "Version vom {{timestamp}}",
+    "emptyState": {
+      "title": "Keine weiteren Versionen verfügbar.",
+      "description": "Für diese Sorte existiert aktuell nur diese Version."
+    },
     "title": {
       "withName": "{{objectType}} „{{objectName}}“ {{action}}",
       "withoutName": "{{objectType}} {{action}}"
@@ -329,7 +333,8 @@
       "mediaFile": "Medium",
       "seedPackage": "Saatgutpackung",
       "project": "Projekt",
-      "fallback": "Eintrag"
+      "fallback": "Eintrag",
+      "openTarget": "Öffnen"
     }
   },
   "shortcuts": {
