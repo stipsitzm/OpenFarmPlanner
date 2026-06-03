@@ -9,7 +9,7 @@ import { useCommandContextTag, useRegisterCommands } from '../commands/useComman
 import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
-import { bedAPI, fieldAPI, locationAPI, type Location } from '../api/api';
+import { locationAPI } from '../api/api';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard, { type EmptyStateAction } from '../components/project/EmptyStateCard';
@@ -20,6 +20,7 @@ import { useTheme } from '@mui/material/styles';
 import ContentViewControls from '../components/layout/ContentViewControls';
 import { ContextMenuHint } from '../components/data-grid';
 import AddIcon from '@mui/icons-material/Add';
+import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 const NOOP_SET_TOPBAR_ACTIONS = (): void => undefined;
@@ -38,18 +39,22 @@ export default function FieldsBedsPage(): React.ReactElement {
     return stored === 'graphical' ? 'graphical' : 'table';
   });
   const [interactionMode, setInteractionMode] = useState<InteractionMode>('view');
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [fieldsCount, setFieldsCount] = useState(0);
-  const [bedsCount, setBedsCount] = useState(0);
   const [globalActionError, setGlobalActionError] = useState<string>('');
   const [globalActionSuccess, setGlobalActionSuccess] = useState<string>('');
-  const [hierarchyRenderKey, setHierarchyRenderKey] = useState(0);
   const [createFieldRequest, setCreateFieldRequest] = useState(0);
-  const [isAreaDataLoading, setIsAreaDataLoading] = useState(false);
-  const [hasAreaDataLoaded, setHasAreaDataLoaded] = useState(false);
+  const [pendingHierarchyDeletionCount, setPendingHierarchyDeletionCount] = useState(0);
   const [addLocationDialogOpen, setAddLocationDialogOpen] = useState(false);
   const [newLocationName, setNewLocationName] = useState('');
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
+  const hierarchyData = useHierarchyData(!shouldShowProjectRequiredState);
+  const {
+    loading: isAreaDataLoading,
+    hasLoaded: hasAreaDataLoaded,
+    locations,
+    fields,
+    beds,
+    fetchData: reloadHierarchyData,
+  } = hierarchyData;
 
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
   const setTopbarContextActions = outletContext?.setTopbarContextActions ?? NOOP_SET_TOPBAR_ACTIONS;
@@ -87,45 +92,11 @@ export default function FieldsBedsPage(): React.ReactElement {
 
   useRegisterCommands('areas-view-switch', commands);
 
-  const loadLocations = useCallback(async (): Promise<void> => {
-    if (shouldShowProjectRequiredState) {
-      setLocations([]);
-      setFieldsCount(0);
-      setBedsCount(0);
-      setHasAreaDataLoaded(false);
-      setIsAreaDataLoading(false);
-      return;
-    }
-    setIsAreaDataLoading(true);
-    try {
-      const [locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
-        locationAPI.list(),
-        fieldAPI.list(),
-        bedAPI.list(),
-      ]);
-      setLocations(locationsResponse.data.results);
-      setFieldsCount(fieldsResponse.data.results.length);
-      setBedsCount(bedsResponse.data.results.length);
-      setHasAreaDataLoaded(true);
-    } catch (error) {
-      console.error('Error loading locations for global action:', error);
-      setHasAreaDataLoaded(true);
-    } finally {
-      setIsAreaDataLoading(false);
-    }
-  }, [shouldShowProjectRequiredState]);
-
   useEffect(() => {
     if (shouldShowProjectRequiredState) {
-      return;
+      setPendingHierarchyDeletionCount(0);
     }
-    void loadLocations();
-  }, [loadLocations, shouldShowProjectRequiredState]);
-
-  const reloadHierarchyAndLocations = useCallback(async (): Promise<void> => {
-    setHierarchyRenderKey((previous) => previous + 1);
-    await loadLocations();
-  }, [loadLocations]);
+  }, [shouldShowProjectRequiredState]);
 
   const hasAddFieldTarget = locations.some((item) => item.id !== undefined);
   const canUseGlobalAddField = locations.length === 1 && locations[0]?.id !== undefined;
@@ -154,14 +125,14 @@ export default function FieldsBedsPage(): React.ReactElement {
       await locationAPI.create({ name: trimmedName });
       setAddLocationDialogOpen(false);
       setNewLocationName('');
-      await reloadHierarchyAndLocations();
+      await reloadHierarchyData();
       setGlobalActionError('');
       setGlobalActionSuccess(t('hierarchy:messages.locationCreated'));
     } catch (error) {
       console.error('Error creating additional location:', error);
       setGlobalActionError(t('hierarchy:messages.createLocationError'));
     }
-  }, [newLocationName, reloadHierarchyAndLocations, t]);
+  }, [newLocationName, reloadHierarchyData, t]);
 
   const handleAdditionalLocationSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -211,11 +182,12 @@ export default function FieldsBedsPage(): React.ReactElement {
   }, [viewMode]);
 
   const hasLocations = locations.length > 0;
-  const hasFields = fieldsCount > 0;
-  const hasBeds = bedsCount > 0;
+  const hasFields = fields.length > 0;
+  const hasBeds = beds.length > 0;
   const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && !hasLocations;
   const shouldShowMissingFieldsState = hasLocations && !hasFields;
   const shouldShowMissingBedsHint = hasFields && !hasBeds;
+  const shouldRenderHierarchy = hasLocations || pendingHierarchyDeletionCount > 0;
   const createBedAction = getProjectSetupAction('beds');
   const emptyAreasDescription = shouldShowMissingFieldsState
     ? (
@@ -372,7 +344,7 @@ export default function FieldsBedsPage(): React.ReactElement {
       </PageContainer>
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
-        {isXs && !shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState ? (
+        {isXs && !shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy ? (
           <ContentViewControls
             primaryControls={(
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.375, flexWrap: 'nowrap', minWidth: 0, whiteSpace: 'nowrap' }}>
@@ -436,15 +408,16 @@ export default function FieldsBedsPage(): React.ReactElement {
             }}
           />
         ) : null}
-        {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState && viewMode === 'graphical' ? (
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy && viewMode === 'graphical' ? (
           <GraphicalFields
             showTitle={false}
             interactionMode={interactionMode}
             onInteractionModeChange={setInteractionMode}
             showModeToggle={false}
+            hierarchyData={hierarchyData}
           />
         ) : null}
-        {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState && viewMode !== 'graphical' ? (
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy && viewMode !== 'graphical' ? (
           <>
             {hasLocations && !shouldShowMissingBedsHint ? (
               <Box sx={{ mb: 1.25 }}>
@@ -455,10 +428,11 @@ export default function FieldsBedsPage(): React.ReactElement {
               </Box>
             ) : null}
             <FieldsBedsHierarchy
-              key={hierarchyRenderKey}
               showTitle={false}
               createFieldRequest={createFieldRequest}
               onCreateFieldRequestHandled={() => setCreateFieldRequest(0)}
+              hierarchyData={hierarchyData}
+              onPendingDeletionCountChange={setPendingHierarchyDeletionCount}
             />
           </>
         ) : null}

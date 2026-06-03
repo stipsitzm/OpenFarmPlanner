@@ -50,7 +50,7 @@ import {
   handleEditableCellClick,
 } from "../components/data-grid/handlers";
 import { useNavigationBlocker } from "../hooks/autosave";
-import { useHierarchyData } from "../components/hierarchy/hooks/useHierarchyData";
+import { useHierarchyData, type HierarchyDataState } from "../components/hierarchy/hooks/useHierarchyData";
 import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { usePersistentSortModel } from "../hooks/usePersistentSortModel";
@@ -77,6 +77,8 @@ interface FieldsBedsHierarchyProps {
   showTitle?: boolean;
   createFieldRequest?: number;
   onCreateFieldRequestHandled?: () => void;
+  hierarchyData?: HierarchyDataState;
+  onPendingDeletionCountChange?: (count: number) => void;
 }
 
 interface HierarchyRowAction {
@@ -301,6 +303,8 @@ function FieldsBedsHierarchy({
   showTitle = true,
   createFieldRequest = 0,
   onCreateFieldRequestHandled,
+  hierarchyData,
+  onPendingDeletionCountChange,
 }: FieldsBedsHierarchyProps): React.ReactElement {
   const LOCATION_ROW_HEIGHT = 46;
   const FIELD_ROW_HEIGHT = 42;
@@ -332,6 +336,10 @@ function FieldsBedsHierarchy({
   useCommandContextTag("areas");
 
   useEffect(() => {
+    onPendingDeletionCountChange?.(pendingDeletions.length);
+  }, [onPendingDeletionCountChange, pendingDeletions.length]);
+
+  useEffect(() => {
     if (!showTitle) {
       return;
     }
@@ -345,6 +353,7 @@ function FieldsBedsHierarchy({
   }, [showTitle]);
 
   // Data fetching
+  const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
   const {
     loading,
     error,
@@ -356,7 +365,7 @@ function FieldsBedsHierarchy({
     setBeds,
     setFields,
     fetchData,
-  } = useHierarchyData();
+  } = hierarchyData ?? internalHierarchyData;
 
   // Expansion state
   const {
@@ -1228,6 +1237,7 @@ function FieldsBedsHierarchy({
       return deletedRowIds.has(currentSelectedRowId) ? null : currentSelectedRowId;
     });
     setError("");
+    onPendingDeletionCountChange?.(pendingDeletions.length + 1);
     setPendingDeletions((currentDeletions) => [...currentDeletions, pendingDeletion]);
   }, [
     beds,
@@ -1236,6 +1246,8 @@ function FieldsBedsHierarchy({
     fields,
     getDeletionMessage,
     locations,
+    onPendingDeletionCountChange,
+    pendingDeletions.length,
     setBeds,
     setFields,
     setLocations,
