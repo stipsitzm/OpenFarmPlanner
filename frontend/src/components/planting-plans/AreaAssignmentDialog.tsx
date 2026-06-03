@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import {
   Box,
   Button,
@@ -18,6 +18,10 @@ import EditIcon from '@mui/icons-material/Edit';
 import { useTranslation } from '../../i18n';
 import type { Bed, Field, Location } from '../../api/types';
 import EmptyStateCard from '../project/EmptyStateCard';
+import {
+  collectHierarchyAvailability,
+  filterFieldOptionsByLocation,
+} from './areaHierarchySelection';
 
 const AREA_LABEL_SEPARATOR = ' | ';
 
@@ -38,6 +42,13 @@ interface AssignmentState {
   bedId: number | null;
 }
 
+type BedWithHierarchy = Bed & { id: number; fieldId: number; locationId: number };
+interface DialogKeyboardControl {
+  root: HTMLElement | null;
+  focusTarget: HTMLElement | null;
+  disabled: boolean;
+}
+
 const formatArea = (value: number, locale: string): string =>
   `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} m²`;
 
@@ -54,7 +65,7 @@ const toNumericValue = (value: unknown): number | null => {
 
 const normalizeState = (
   bedId: number | null,
-  bedsWithLocation: Array<Bed & { fieldId: number; locationId: number }>,
+  bedsWithLocation: BedWithHierarchy[],
 ): AssignmentState => {
   const selectedBed = bedsWithLocation.find((item) => item.id === bedId);
   if (!selectedBed) {
@@ -80,14 +91,18 @@ export function AreaAssignmentDialog({
 }: AreaAssignmentDialogProps): React.ReactElement {
   const { t } = useTranslation('plantingPlans');
   const [isOpen, setIsOpen] = useState(false);
+  const [openSelect, setOpenSelect] = useState<'location' | 'field' | 'bed' | null>(null);
   const [draft, setDraft] = useState<AssignmentState>({ locationId: null, fieldId: null, bedId: bedId ?? null });
   const locationSelectRef = useRef<HTMLDivElement | null>(null);
   const fieldSelectRef = useRef<HTMLDivElement | null>(null);
   const bedSelectRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLDivElement | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
+  const applyButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  const stopGridEnterPropagation = (event: KeyboardEvent): void => {
-    if (event.key === 'Enter' || event.key === 'Escape') {
+  const stopGridEscapePropagation = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') {
       event.stopPropagation();
     }
   };
@@ -123,25 +138,26 @@ export function AreaAssignmentDialog({
     [beds, fieldsById],
   );
 
-  const eligibleFieldIds = useMemo(() => new Set(bedsWithLocation.map((item) => item.fieldId)), [bedsWithLocation]);
-  const eligibleLocationIds = useMemo(
-    () => new Set(fields.filter((item) => item.id !== undefined && eligibleFieldIds.has(item.id)).map((item) => item.location)),
-    [eligibleFieldIds, fields],
+  const hierarchyAvailability = useMemo(
+    () => collectHierarchyAvailability(fields, bedsWithLocation),
+    [bedsWithLocation, fields],
   );
+
   const fieldsByLocationId = useMemo(() => {
     const grouped = new Map<number, Field[]>();
-    fields
-      .filter((item): item is Field & { id: number } => item.id !== undefined && eligibleFieldIds.has(item.id))
-      .forEach((item) => {
-        const list = grouped.get(item.location) ?? [];
-        list.push(item);
-        grouped.set(item.location, list);
+    locations
+      .filter((location): location is Location & { id: number } => location.id !== undefined)
+      .forEach((location) => {
+        grouped.set(
+          location.id,
+          filterFieldOptionsByLocation(location.id, fields, hierarchyAvailability.fieldIdsWithBeds),
+        );
       });
     return grouped;
-  }, [eligibleFieldIds, fields]);
+  }, [fields, hierarchyAvailability.fieldIdsWithBeds, locations]);
 
   const bedsByFieldId = useMemo(() => {
-    const grouped = new Map<number, Array<Bed & { id: number; fieldId: number; locationId: number }>>();
+    const grouped = new Map<number, BedWithHierarchy[]>();
     bedsWithLocation.forEach((item) => {
       const list = grouped.get(item.fieldId) ?? [];
       list.push(item);
@@ -150,20 +166,11 @@ export function AreaAssignmentDialog({
     return grouped;
   }, [bedsWithLocation]);
 
-  const bedsByLocationId = useMemo(() => {
-    const grouped = new Map<number, Array<Bed & { id: number; fieldId: number; locationId: number }>>();
-    bedsWithLocation.forEach((item) => {
-      const list = grouped.get(item.locationId) ?? [];
-      list.push(item);
-      grouped.set(item.locationId, list);
-    });
-    return grouped;
-  }, [bedsWithLocation]);
-
   const selectableLocations = useMemo(
-    () => locations.filter((item) => item.id !== undefined && eligibleLocationIds.has(item.id)),
-    [eligibleLocationIds, locations],
+    () => locations.filter((item) => item.id !== undefined && hierarchyAvailability.locationIdsWithBeds.has(item.id)),
+    [hierarchyAvailability.locationIdsWithBeds, locations],
   );
+
   const hasSingleLocation = selectableLocations.length <= 1;
 
   useEffect(() => {
@@ -180,62 +187,289 @@ export function AreaAssignmentDialog({
 
   const selectableFields = useMemo(() => {
     if (!draft.locationId) {
-      return fields.filter((item) => item.id !== undefined && eligibleFieldIds.has(item.id));
+      return [];
     }
     return fieldsByLocationId.get(draft.locationId) ?? [];
-  }, [draft.locationId, eligibleFieldIds, fields, fieldsByLocationId]);
+  }, [draft.locationId, fieldsByLocationId]);
 
   const selectableBeds = useMemo(() => {
-    if (draft.fieldId) {
-      return bedsByFieldId.get(draft.fieldId) ?? [];
+    if (!draft.fieldId) {
+      return [];
     }
-    if (draft.locationId) {
-      return bedsByLocationId.get(draft.locationId) ?? [];
+    return bedsByFieldId.get(draft.fieldId) ?? [];
+  }, [bedsByFieldId, draft.fieldId]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
     }
-    return bedsWithLocation;
-  }, [bedsByFieldId, bedsByLocationId, bedsWithLocation, draft.fieldId, draft.locationId]);
+
+    setDraft((previous) => {
+      const locationStillValid = previous.locationId !== null
+        && selectableLocations.some((item) => item.id === previous.locationId);
+      const nextLocationId = locationStillValid ? previous.locationId : null;
+      const nextFields = nextLocationId ? fieldsByLocationId.get(nextLocationId) ?? [] : [];
+      const fieldStillValid = previous.fieldId !== null
+        && nextFields.some((item) => item.id === previous.fieldId);
+      const nextFieldId = fieldStillValid ? previous.fieldId : null;
+      const nextBeds = nextFieldId ? bedsByFieldId.get(nextFieldId) ?? [] : [];
+      const bedStillValid = previous.bedId !== null
+        && nextBeds.some((item) => item.id === previous.bedId);
+
+      const nextState = {
+        locationId: nextLocationId,
+        fieldId: nextFieldId,
+        bedId: bedStillValid ? previous.bedId : null,
+      };
+
+      if (
+        nextState.locationId === previous.locationId
+        && nextState.fieldId === previous.fieldId
+        && nextState.bedId === previous.bedId
+      ) {
+        return previous;
+      }
+
+      return nextState;
+    });
+  }, [bedsByFieldId, fieldsByLocationId, isOpen, selectableLocations]);
 
   const handleLocationChange = useCallback((value: number): void => {
     const nextFields = fieldsByLocationId.get(value) ?? [];
-    const nextFieldIds = new Set(nextFields.map((item) => item.id as number));
-    const nextBeds = bedsByLocationId.get(value) ?? [];
-    const nextBedIds = new Set(nextBeds.map((item) => item.id));
+    const selectedFieldId = draft.fieldId && nextFields.some((item) => item.id === draft.fieldId)
+      ? draft.fieldId
+      : null;
 
-    setDraft((previous) => ({
+    setDraft({
       locationId: value,
-      fieldId: previous.fieldId && nextFieldIds.has(previous.fieldId) ? previous.fieldId : null,
-      bedId: previous.bedId && nextBedIds.has(previous.bedId) ? previous.bedId : null,
-    }));
-  }, [bedsByLocationId, fieldsByLocationId]);
+      fieldId: selectedFieldId,
+      bedId: null,
+    });
+  }, [draft.fieldId, fieldsByLocationId]);
 
   const handleFieldChange = useCallback((value: number): void => {
-    const selectedField = fieldsById.get(value);
-    const nextBeds = bedsByFieldId.get(value) ?? [];
-    const nextBedIds = new Set(nextBeds.map((item) => item.id));
+    if (!draft.locationId) {
+      return;
+    }
 
-    setDraft((previous) => ({
-      locationId: selectedField?.location ?? previous.locationId,
+    const selectedField = fieldsByLocationId
+      .get(draft.locationId)
+      ?.find((item) => item.id === value);
+    if (!selectedField) {
+      return;
+    }
+
+    const nextBeds = bedsByFieldId.get(value) ?? [];
+    const selectedBedId = draft.bedId && nextBeds.some((item) => item.id === draft.bedId)
+      ? draft.bedId
+      : null;
+
+    setDraft({
+      locationId: draft.locationId,
       fieldId: value,
-      bedId: previous.bedId && nextBedIds.has(previous.bedId) ? previous.bedId : null,
-    }));
-  }, [bedsByFieldId, fieldsById]);
+      bedId: selectedBedId,
+    });
+  }, [bedsByFieldId, draft.bedId, draft.locationId, fieldsByLocationId]);
 
   const handleBedChange = useCallback((value: number): void => {
-    const selectedBed = bedsWithLocation.find((item) => item.id === value);
+    if (!draft.fieldId) {
+      return;
+    }
+
+    const selectedBed = (bedsByFieldId.get(draft.fieldId) ?? []).find((item) => item.id === value);
+    if (!selectedBed) {
+      return;
+    }
+
     setDraft((previous) => ({
-      locationId: selectedBed?.locationId ?? previous.locationId,
-      fieldId: selectedBed?.fieldId ?? previous.fieldId,
+      ...previous,
       bedId: value,
     }));
-  }, [bedsWithLocation]);
+  }, [bedsByFieldId, draft.fieldId]);
+
+  const renderBedLabel = (item: BedWithHierarchy): string => {
+    const areaSqm = toNumericValue(item.area_sqm);
+    const label = areaSqm === null
+      ? item.name
+      : `${item.name} (${formatArea(areaSqm, locale)})`;
+    return label;
+  };
+
+  const renderBedOptionLabel = (item: BedWithHierarchy): string => {
+    const prefix = item.field_name ? `${item.field_name}${AREA_LABEL_SEPARATOR}` : '';
+    return `${prefix}${renderBedLabel(item)}`;
+  };
+
+  const isFieldSelectDisabled = !draft.locationId || selectableFields.length === 0;
+  const isBedSelectDisabled = !draft.fieldId || selectableBeds.length === 0;
+  const isApplyDisabled = !draft.bedId || bedsWithLocation.length === 0;
+  const locationLabel = draft.locationId
+    ? selectableFields.length === 0
+      ? t('areaAssignment.locationLabelNoFields')
+      : t('areaAssignment.locationLabelWithFields', { count: selectableFields.length })
+    : t('columns.location');
+  const fieldLabel = draft.fieldId
+    ? selectableBeds.length === 0
+      ? t('areaAssignment.fieldLabelNoBeds')
+      : t('areaAssignment.fieldLabelWithBeds', { count: selectableBeds.length })
+    : t('columns.field');
 
   const handleApply = async (): Promise<void> => {
-    if (!draft.bedId) {
+    if (isApplyDisabled || !draft.bedId) {
       return;
     }
     await onApply(draft.bedId);
+    setOpenSelect(null);
     setIsOpen(false);
   };
+
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    void handleApply();
+  };
+
+  const getSelectFocusTarget = (root: HTMLDivElement | null): HTMLElement | null =>
+    root?.querySelector<HTMLElement>('[role="combobox"]') ?? root;
+
+  const getKeyboardControls = useCallback((): DialogKeyboardControl[] => [
+    {
+      root: locationSelectRef.current,
+      focusTarget: getSelectFocusTarget(locationSelectRef.current),
+      disabled: selectableLocations.length === 0,
+    },
+    {
+      root: fieldSelectRef.current,
+      focusTarget: getSelectFocusTarget(fieldSelectRef.current),
+      disabled: isFieldSelectDisabled,
+    },
+    {
+      root: bedSelectRef.current,
+      focusTarget: getSelectFocusTarget(bedSelectRef.current),
+      disabled: isBedSelectDisabled,
+    },
+    {
+      root: cancelButtonRef.current,
+      focusTarget: cancelButtonRef.current,
+      disabled: false,
+    },
+    {
+      root: applyButtonRef.current,
+      focusTarget: applyButtonRef.current,
+      disabled: isApplyDisabled,
+    },
+  ].filter((control) => control.root && control.focusTarget && !control.disabled), [
+    isApplyDisabled,
+    isBedSelectDisabled,
+    isFieldSelectDisabled,
+    selectableLocations.length,
+  ]);
+
+  const focusDialogControl = useCallback((control: DialogKeyboardControl | undefined): void => {
+    if (!control?.focusTarget) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      control.focusTarget?.focus();
+    });
+  }, []);
+
+  const handleDialogKeyDown = (event: KeyboardEvent<HTMLFormElement>): void => {
+    if (openSelect !== null) {
+      return;
+    }
+
+    if (event.key === 'Tab') {
+      const controls = getKeyboardControls();
+      if (controls.length === 0) {
+        return;
+      }
+
+      const activeElement = document.activeElement as HTMLElement | null;
+      const currentIndex = controls.findIndex((control) => (
+        Boolean(activeElement)
+        && (control.root === activeElement || control.focusTarget === activeElement || control.root?.contains(activeElement))
+      ));
+      const fallbackIndex = event.shiftKey ? controls.length : -1;
+      const normalizedIndex = currentIndex >= 0 ? currentIndex : fallbackIndex;
+      const nextIndex = event.shiftKey
+        ? (normalizedIndex - 1 + controls.length) % controls.length
+        : (normalizedIndex + 1) % controls.length;
+
+      event.preventDefault();
+      event.stopPropagation();
+      focusDialogControl(controls[nextIndex]);
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      event.stopPropagation();
+      formRef.current?.requestSubmit();
+    }
+  };
+
+  const handleNativeDialogKeyDown = useCallback((event: globalThis.KeyboardEvent): void => {
+    if (!isOpen || !formRef.current || openSelect !== null) {
+      return;
+    }
+
+    if (event.key === 'Tab') {
+      const controls = getKeyboardControls();
+      if (controls.length === 0) {
+        return;
+      }
+
+      const activeElement = document.activeElement as HTMLElement | null;
+      const currentIndex = controls.findIndex((control) => (
+        Boolean(activeElement)
+        && (control.root === activeElement || control.focusTarget === activeElement || control.root?.contains(activeElement))
+      ));
+      const fallbackIndex = event.shiftKey ? controls.length : -1;
+      const normalizedIndex = currentIndex >= 0 ? currentIndex : fallbackIndex;
+      const nextIndex = event.shiftKey
+        ? (normalizedIndex - 1 + controls.length) % controls.length
+        : (normalizedIndex + 1) % controls.length;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      focusDialogControl(controls[nextIndex]);
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      formRef.current.requestSubmit();
+    }
+  }, [focusDialogControl, getKeyboardControls, isOpen, openSelect]);
+
+  const handleCancel = (): void => {
+    setOpenSelect(null);
+    setIsOpen(false);
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const controls = getKeyboardControls();
+    focusDialogControl(controls[0]);
+  }, [focusDialogControl, getKeyboardControls, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    document.addEventListener('keydown', handleNativeDialogKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleNativeDialogKeyDown, true);
+    };
+  }, [handleNativeDialogKeyDown, isOpen]);
 
   return (
     <>
@@ -277,35 +511,43 @@ export function AreaAssignmentDialog({
           <EditIcon fontSize="small" />
         </IconButton>
       </Box>
-      <Dialog open={isOpen} onClose={() => setIsOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{t('areaAssignment.title')}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
+      <Dialog
+        open={isOpen}
+        onClose={handleCancel}
+        fullWidth
+        maxWidth="sm"
+      >
+        <Box ref={formRef} component="form" onSubmit={handleFormSubmit} onKeyDownCapture={handleDialogKeyDown}>
+          <DialogTitle>{t('areaAssignment.title')}</DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 1 }}>
             {bedsWithLocation.length === 0 ? (
               <EmptyStateCard
-                title="Keine Anbauflächen vorhanden"
-                description="Lege zuerst Parzellen und Beete an, bevor du einem Anbauplan eine Fläche zuweist."
-                actions={[{ label: 'Zu Anbauflächen', to: '/app/fields-beds' }]}
+                title={t('areaAssignment.emptyStateTitle')}
+                description={t('areaAssignment.emptyStateDescription')}
+                actions={[{ label: t('areaAssignment.emptyStateAction'), to: '/app/fields-beds' }]}
               />
             ) : null}
-            <Stack spacing={2.5}>
-              {!hasSingleLocation && (
+            <Stack spacing={1.5} sx={{ mt: bedsWithLocation.length === 0 ? 0 : 0.5 }}>
                 <FormControl fullWidth size="small">
-                  <InputLabel id="assignment-location-label">{t('columns.location')}</InputLabel>
+                  <InputLabel id="assignment-location-label">{locationLabel}</InputLabel>
                   <Select
                     ref={locationSelectRef}
                     id="assignment-location"
                     labelId="assignment-location-label"
                     value={draft.locationId ?? ''}
-                    label={t('columns.location')}
-                    onKeyDown={stopGridEnterPropagation}
+                    label={locationLabel}
+                    disabled={selectableLocations.length === 0}
+                    onOpen={() => setOpenSelect('location')}
+                    onClose={() => setOpenSelect(null)}
+                    onKeyDown={stopGridEscapePropagation}
                     onChange={(event) => {
                       handleLocationChange(Number(event.target.value));
                       requestAnimationFrame(() => locationSelectRef.current?.focus());
                     }}
                     MenuProps={{
                       MenuListProps: {
-                        onKeyDown: stopGridEnterPropagation,
+                        onKeyDown: stopGridEscapePropagation,
                       },
                     }}
                   >
@@ -314,71 +556,70 @@ export function AreaAssignmentDialog({
                     ))}
                   </Select>
                 </FormControl>
-              )}
 
-              <FormControl fullWidth size="small">
-                <InputLabel id="assignment-field-label">{t('columns.field')}</InputLabel>
-                <Select
-                  ref={fieldSelectRef}
-                  id="assignment-field"
-                  labelId="assignment-field-label"
-                  value={draft.fieldId ?? ''}
-                  label={t('columns.field')}
-                  onKeyDown={stopGridEnterPropagation}
-                  onChange={(event) => {
-                    handleFieldChange(Number(event.target.value));
-                    requestAnimationFrame(() => fieldSelectRef.current?.focus());
-                  }}
-                  MenuProps={{
-                    MenuListProps: {
-                      onKeyDown: stopGridEnterPropagation,
-                    },
-                  }}
-                >
-                  {selectableFields.map((item) => (
-                    <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                <FormControl fullWidth size="small">
+                  <InputLabel id="assignment-field-label">{fieldLabel}</InputLabel>
+                  <Select
+                    ref={fieldSelectRef}
+                    id="assignment-field"
+                    labelId="assignment-field-label"
+                    value={draft.fieldId ?? ''}
+                    label={fieldLabel}
+                    disabled={isFieldSelectDisabled}
+                    onOpen={() => setOpenSelect('field')}
+                    onClose={() => setOpenSelect(null)}
+                    onKeyDown={stopGridEscapePropagation}
+                    onChange={(event) => {
+                      handleFieldChange(Number(event.target.value));
+                      requestAnimationFrame(() => fieldSelectRef.current?.focus());
+                    }}
+                    MenuProps={{
+                      MenuListProps: {
+                        onKeyDown: stopGridEscapePropagation,
+                      },
+                    }}
+                  >
+                    {selectableFields.map((item) => (
+                      <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-              <FormControl fullWidth size="small">
-                <InputLabel id="assignment-bed-label">{t('columns.bed')}</InputLabel>
-                <Select
-                  ref={bedSelectRef}
-                  id="assignment-bed"
-                  labelId="assignment-bed-label"
-                  value={draft.bedId ?? ''}
-                  label={t('columns.bed')}
-                  onKeyDown={stopGridEnterPropagation}
-                  onChange={(event) => {
-                    handleBedChange(Number(event.target.value));
-                    requestAnimationFrame(() => bedSelectRef.current?.focus());
-                  }}
-                  MenuProps={{
-                    MenuListProps: {
-                      onKeyDown: stopGridEnterPropagation,
-                    },
-                  }}
-                >
-                  {selectableBeds.map((item) => {
-                    const areaSqm = toNumericValue(item.area_sqm);
-                    const prefix = item.field_name ? `${item.field_name}${AREA_LABEL_SEPARATOR}` : '';
-                    const label = areaSqm === null
-                      ? `${prefix}${item.name}`
-                      : `${prefix}${item.name} (${formatArea(areaSqm, locale)})`;
-                    return (
-                      <MenuItem key={item.id} value={item.id}>{label}</MenuItem>
-                    );
-                  })}
-                </Select>
-              </FormControl>
+                <FormControl fullWidth size="small">
+                  <InputLabel id="assignment-bed-label">{t('columns.bed')}</InputLabel>
+                  <Select
+                    ref={bedSelectRef}
+                    id="assignment-bed"
+                    labelId="assignment-bed-label"
+                    value={draft.bedId ?? ''}
+                    label={t('columns.bed')}
+                    disabled={isBedSelectDisabled}
+                    onOpen={() => setOpenSelect('bed')}
+                    onClose={() => setOpenSelect(null)}
+                    onKeyDown={stopGridEscapePropagation}
+                    onChange={(event) => {
+                      handleBedChange(Number(event.target.value));
+                      requestAnimationFrame(() => bedSelectRef.current?.focus());
+                    }}
+                    MenuProps={{
+                      MenuListProps: {
+                        onKeyDown: stopGridEscapePropagation,
+                      },
+                    }}
+                  >
+                    {selectableBeds.map((item) => (
+                      <MenuItem key={item.id} value={item.id}>{renderBedOptionLabel(item)}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
             </Stack>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button type="button" data-dialog-action="cancel" onClick={() => setIsOpen(false)}>{t('areaAssignment.cancel')}</Button>
-          <Button type="button" data-dialog-action="apply" variant="contained" onClick={handleApply} disabled={!draft.bedId || bedsWithLocation.length === 0}>{t('areaAssignment.apply')}</Button>
-        </DialogActions>
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button ref={cancelButtonRef} type="button" data-dialog-action="cancel" onClick={handleCancel}>{t('areaAssignment.cancel')}</Button>
+            <Button ref={applyButtonRef} type="submit" data-dialog-action="apply" variant="contained" disabled={isApplyDisabled}>{t('areaAssignment.apply')}</Button>
+          </DialogActions>
+        </Box>
       </Dialog>
     </>
   );

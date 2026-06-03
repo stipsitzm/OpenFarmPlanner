@@ -80,6 +80,13 @@
   "areaAssignment": {
     "title": "Anbaufläche ändern",
     "editButton": "Anbaufläche bearbeiten",
+    "locationLabelWithFields": "Standort ({{count}} Parzellen)",
+    "locationLabelNoFields": "Standort (keine Parzellen)",
+    "fieldLabelWithBeds": "Parzelle ({{count}} Beete)",
+    "fieldLabelNoBeds": "Parzelle (keine Beete)",
+    "emptyStateTitle": "Keine Anbauflächen vorhanden",
+    "emptyStateDescription": "Lege zuerst Parzellen und Beete an, bevor du einem Anbauplan eine Fläche zuweist.",
+    "emptyStateAction": "Zu Anbauflächen",
     "apply": "Übernehmen",
     "cancel": "Abbrechen"
   },

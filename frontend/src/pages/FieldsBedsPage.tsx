@@ -16,7 +16,7 @@ import EmptyStateCard, { type EmptyStateAction } from '../components/project/Emp
 import { getProjectSetupAction } from './requirementFlow';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { getSegmentedActionButtonSx, segmentedButtonGroupSx } from '../components/buttons/segmentedControlStyles';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, type SxProps, type Theme } from '@mui/material/styles';
 import ContentViewControls from '../components/layout/ContentViewControls';
 import { ContextMenuHint } from '../components/data-grid';
 import AddIcon from '@mui/icons-material/Add';
@@ -24,6 +24,9 @@ import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 const NOOP_SET_TOPBAR_ACTIONS = (): void => undefined;
+const CONTENT_ALIGNED_EMPTY_STATE_SX: SxProps<Theme> = {
+  maxWidth: '100%',
+};
 
 type ViewMode = 'table' | 'graphical';
 type InteractionMode = 'view' | 'edit';
@@ -327,6 +330,7 @@ export default function FieldsBedsPage(): React.ReactElement {
               />
             ) : undefined}
             actions={[{ label: t(createBedAction.labelKey), to: createBedAction.to }]}
+            containerSx={CONTENT_ALIGNED_EMPTY_STATE_SX}
           />
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && (shouldShowAreasEmptyState || shouldShowMissingFieldsState) ? (
@@ -339,6 +343,7 @@ export default function FieldsBedsPage(): React.ReactElement {
               missingLabel: t('hierarchy:emptyAreas.missingLocationLabel'),
             }] : []}
             actions={emptyAreaActions}
+            containerSx={CONTENT_ALIGNED_EMPTY_STATE_SX}
           />
         ) : null}
       </PageContainer>

@@ -88,7 +88,18 @@ import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction, getProjectSetupActions } from "./requirementFlow";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
+import {
+  collectHierarchyAvailability,
+  filterBedOptionsBySelection,
+  filterFieldOptionsByLocation,
+} from "../components/planting-plans/areaHierarchySelection";
 import EmptyStateCard from "../components/project/EmptyStateCard";
+
+export {
+  collectHierarchyAvailability,
+  filterBedOptionsBySelection,
+  filterFieldOptionsByLocation,
+} from "../components/planting-plans/areaHierarchySelection";
 
 const AREA_LABEL_SEPARATOR = " | ";
 const DATA_GRID_HEADER_LABEL_SX = { fontWeight: 600 };
@@ -398,65 +409,6 @@ export const normalizeSelectionAfterBedChange = (
     bed: nextBedId,
   };
 };
-
-interface HierarchyAvailability {
-  fieldIdsWithBeds: Set<number>;
-  locationIdsWithBeds: Set<number>;
-}
-
-export const collectHierarchyAvailability = (
-  fields: Field[],
-  beds: Bed[],
-): HierarchyAvailability => {
-  const fieldIdsWithBeds = new Set<number>();
-  beds.forEach((bed) => {
-    if (typeof bed.field === "number") {
-      fieldIdsWithBeds.add(bed.field);
-    }
-  });
-
-  const locationIdsWithBeds = new Set<number>();
-  fields.forEach((field) => {
-    if (field.id !== undefined && fieldIdsWithBeds.has(field.id)) {
-      locationIdsWithBeds.add(field.location);
-    }
-  });
-
-  return { fieldIdsWithBeds, locationIdsWithBeds };
-};
-
-export const filterFieldOptionsByLocation = (
-  rowLocationId: number | null,
-  fields: Field[],
-  fieldIdsWithBeds: Set<number>,
-): Field[] =>
-  fields.filter((field) => {
-    if (field.id === undefined || !fieldIdsWithBeds.has(field.id)) {
-      return false;
-    }
-    return rowLocationId ? field.location === rowLocationId : true;
-  });
-
-export const filterBedOptionsBySelection = (
-  rowLocationId: number | null,
-  rowFieldId: number | null,
-  fields: Field[],
-  beds: Bed[],
-  fieldIdsWithBeds: Set<number>,
-): Bed[] =>
-  beds.filter((bed) => {
-    if (bed.id === undefined || !fieldIdsWithBeds.has(bed.field)) {
-      return false;
-    }
-    if (rowFieldId) {
-      return bed.field === rowFieldId;
-    }
-    if (rowLocationId) {
-      const linkedField = fields.find((field) => field.id === bed.field);
-      return linkedField?.location === rowLocationId;
-    }
-    return true;
-  });
 
 export const buildBedDisplayLabel = (
   locationName: string | null | undefined,
