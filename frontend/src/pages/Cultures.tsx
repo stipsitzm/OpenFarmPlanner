@@ -811,7 +811,7 @@ function Cultures(): React.ReactElement {
     updateSelectedCultureId(cultures[nextIndex]?.id, 'internal');
   }, [cultures, selectedCultureId, updateSelectedCultureId]);
 
-  const enrichmentDisabledReason = 'Für KI-Recherche muss ein Lieferant mit erlaubten Domains konfiguriert sein.';
+  const enrichmentDisabledReason = t('ai.researchDisabledReason');
 
   const handleAiMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAiMenuAnchor(event.currentTarget);
@@ -1241,7 +1241,7 @@ function Cultures(): React.ReactElement {
                   <Button
                     startIcon={<AutoAwesomeIcon />}
                     onClick={() => void handleEnrichCurrent('complete')}
-                    aria-label="Kultur vervollständigen (KI)"
+                    aria-label={t('buttons.aiComplete')}
                     disabled={Boolean(selectedCulture) && !selectedCultureNeedsCompletion}
                   >
                     {t('buttons.aiComplete')}
@@ -1265,11 +1265,11 @@ function Cultures(): React.ReactElement {
               open={Boolean(aiMenuAnchor)}
               onClose={handleAiMenuClose}
             >
-              <MenuItem aria-label="Kultur komplett neu recherchieren (KI)" onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
+              <MenuItem aria-label={t('buttons.aiReresearch')} onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
                 <ManageSearchIcon sx={{ mr: 1 }} fontSize="small" />
                 {t('buttons.aiReresearch')}
               </MenuItem>
-              <MenuItem aria-label="Alle Kulturen vervollständigen (KI)" onClick={() => setEnrichAllConfirmOpen(true)} disabled={cultures.length === 0 || enrichmentLoading || !cultures.some((culture) => canRunEnrichmentForCulture(culture))}>
+              <MenuItem aria-label={t('buttons.aiCompleteAll')} onClick={() => setEnrichAllConfirmOpen(true)} disabled={cultures.length === 0 || enrichmentLoading || !cultures.some((culture) => canRunEnrichmentForCulture(culture))}>
                 <PlaylistAddCheckIcon sx={{ mr: 1 }} fontSize="small" />
                 {t('buttons.aiCompleteAll')}
               </MenuItem>

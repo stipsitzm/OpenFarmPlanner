@@ -388,6 +388,7 @@
     "confirmAllText": "Es würden {{count}} Kulturen vervollständigt, bei denen noch Angaben fehlen. Möchten Sie fortfahren?",
     "batchNoMissing": "Es gibt keine Kulturen mit fehlenden Angaben.",
     "completeDisabledReason": "Diese Kultur ist bereits vollständig.",
+    "researchDisabledReason": "Für KI-Recherche muss ein Lieferant mit erlaubten Domains konfiguriert sein.",
     "quotaExceeded": "OpenAI-Kontingent aufgebraucht. Bitte Abrechnung/Plan prüfen und erneut versuchen.",
     "providerRateLimited": "OpenAI hat die Anfrage wegen Limitierung abgelehnt. Bitte später erneut versuchen.",
     "providerUnavailable": "OpenAI ist derzeit nicht erreichbar. Bitte später erneut versuchen.",
