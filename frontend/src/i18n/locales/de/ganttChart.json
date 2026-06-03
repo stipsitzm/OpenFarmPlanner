@@ -119,7 +119,7 @@
   },
   "emptyStates": {
     "requirementsTitle": "Noch keine Anbauplanung möglich",
-    "requirementsDescription": "Lege zuerst eine Parzelle an. Danach kannst du Beete, Kulturen und Anbaupläne erfassen.",
+    "requirementsDescription": "Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu. Danach kannst du Beete, Kulturen und Anbaupläne erfassen.",
     "actions": {
       "createLocation": "Standort hinzufügen",
       "createCulture": "Kultur hinzufügen",

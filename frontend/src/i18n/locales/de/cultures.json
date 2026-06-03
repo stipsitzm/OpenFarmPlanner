@@ -240,12 +240,12 @@
     "progressive": {
       "locations": {
         "title": "Noch kein Saatgutbedarf berechenbar",
-        "description": "Lege zuerst eine Parzelle an, damit du Beete planen kannst.",
+        "description": "Lege zuerst einen Standort an. Danach kannst du auf der Seite Anbauflächen eine Parzelle hinzufügen.",
         "action": "Parzelle hinzufügen"
       },
       "fields": {
         "title": "Noch kein Saatgutbedarf berechenbar",
-        "description": "Lege als Nächstes eine Parzelle an, damit Beete geplant werden können.",
+        "description": "Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu.",
         "action": "Parzelle hinzufügen"
       },
       "beds": {

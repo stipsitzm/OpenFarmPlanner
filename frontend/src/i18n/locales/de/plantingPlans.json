@@ -104,11 +104,11 @@
     "states": {
       "locations": {
         "title": "Du kannst noch keinen Anbauplan hinzufügen.",
-        "description": "Lege zuerst eine Parzelle an."
+        "description": "Lege zuerst einen Standort an. Danach kannst du auf der Seite Anbauflächen eine Parzelle hinzufügen."
       },
       "fields": {
         "title": "Du kannst noch keinen Anbauplan hinzufügen.",
-        "description": "Lege als Nächstes eine Parzelle an."
+        "description": "Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu."
       },
       "beds": {
         "title": "Du hast noch keine Beete angelegt.",
