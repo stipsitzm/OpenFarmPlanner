@@ -288,16 +288,28 @@ export function AreaAssignmentDialog({
   const isFieldSelectDisabled = !draft.locationId || selectableFields.length === 0;
   const isBedSelectDisabled = !draft.fieldId || selectableBeds.length === 0;
   const isApplyDisabled = !draft.bedId || bedsWithLocation.length === 0;
-  const locationLabel = draft.locationId
+  const locationAvailabilityLabel = draft.locationId
     ? selectableFields.length === 0
-      ? t('areaAssignment.locationLabelNoFields')
-      : t('areaAssignment.locationLabelWithFields', { count: selectableFields.length })
-    : t('columns.location');
-  const fieldLabel = draft.fieldId
+      ? t('areaAssignment.noFieldsLabel')
+      : t('areaAssignment.fieldsCountLabel', { count: selectableFields.length })
+    : null;
+  const fieldAvailabilityLabel = draft.fieldId
     ? selectableBeds.length === 0
-      ? t('areaAssignment.fieldLabelNoBeds')
-      : t('areaAssignment.fieldLabelWithBeds', { count: selectableBeds.length })
-    : t('columns.field');
+      ? t('areaAssignment.noBedsLabel')
+      : t('areaAssignment.bedsCountLabel', { count: selectableBeds.length })
+    : null;
+  const locationLabel = (
+    <>
+      {t('columns.location')}
+      {locationAvailabilityLabel ? <Box component="span" aria-hidden="true"> {locationAvailabilityLabel}</Box> : null}
+    </>
+  );
+  const fieldLabel = (
+    <>
+      {t('columns.field')}
+      {fieldAvailabilityLabel ? <Box component="span" aria-hidden="true"> {fieldAvailabilityLabel}</Box> : null}
+    </>
+  );
 
   const handleApply = async (): Promise<void> => {
     if (isApplyDisabled || !draft.bedId) {
