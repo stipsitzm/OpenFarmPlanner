@@ -641,7 +641,7 @@ export function CultureDetail({
                   aria-expanded={isFilterPopoverOpen}
                   aria-haspopup="dialog"
                   aria-controls={isFilterPopoverOpen ? 'culture-filters-popover' : undefined}
-                  aria-label="Erweiterte Filter öffnen"
+                  aria-label={t('filters.openAdvanced')}
                   sx={{ bgcolor: activeFilterCount > 0 ? 'action.selected' : 'transparent' }}
                 >
                   <Badge color="primary" badgeContent={activeFilterCount > 0 ? activeFilterCount : null}>
@@ -936,7 +936,7 @@ export function CultureDetail({
                             '&:hover': { bgcolor: 'rgba(15, 23, 42, 0.04)' },
                             '&:focus-visible': { outline: '2px solid rgba(37, 111, 42, 0.28)', outlineOffset: 2 },
                           }}
-                          aria-label="Kultur auswählen"
+                          aria-label={t('selectCulture')}
                         >
                           <Typography component="span" sx={{ fontSize: '1.25rem', lineHeight: 1.2, fontWeight: 600 }}>
                             {selectedCulture.name}
@@ -1414,7 +1414,7 @@ export function CultureDetail({
                       onClick={() => setMobileSelectorOpen(true)}
                       sx={{ border: 'none', background: 'transparent', p: 0, m: 0, color: 'text.secondary', textAlign: 'left', cursor: 'pointer' }}
                     >
-                      Kultur auswählen ▼
+                      {t('selectCulture')} ▼
                     </Typography>
                   ) : (
                     <Typography variant="body2" color="text.secondary">
@@ -1431,7 +1431,7 @@ export function CultureDetail({
 
       {useUnifiedMobileLayout ? (
         <Dialog fullScreen open={mobileSelectorOpen} onClose={() => setMobileSelectorOpen(false)}>
-          <DialogTitle>Kultur auswählen</DialogTitle>
+          <DialogTitle>{t('selectCulture')}</DialogTitle>
           <DialogContent sx={{ px: 1.5, pb: 2 }}>
             {selectorControl}
             <List dense sx={{ py: 0.5, px: 0.25, overflowY: 'auto' }}>
