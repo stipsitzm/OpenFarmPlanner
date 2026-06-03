@@ -61,6 +61,15 @@
     "suppliers": "Help for suppliers",
     "openAria": "Open {{label}}"
   },
+  "cultureActions": {
+    "openLibrary": "Open crop library",
+    "library": "Crop library",
+    "libraryShort": "Library",
+    "openImportExport": "Open import/export",
+    "importExport": "Import/Export",
+    "openCultureActions": "Open crop actions",
+    "actions": "Actions"
+  },
   "projectTrash": {
     "title": "Trash",
     "empty": "The trash is empty.",

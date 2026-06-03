@@ -947,18 +947,18 @@ function RootLayout(): React.ReactElement {
           {isCulturesPage ? (
             <>
               {cultureLibraryAction && !showDesktopCultureActionsOverflow ? (
-                <Tooltip title="Kulturbibliothek öffnen">
+                <Tooltip title={t('cultureActions.openLibrary')}>
                   <span>
                     <Button
                       size="small"
                       variant="outlined"
                       onClick={() => cultureLibraryAction.onClick()}
-                      aria-label="Kulturbibliothek öffnen"
+                      aria-label={t('cultureActions.openLibrary')}
                       startIcon={<PublicIcon fontSize="small" />}
                       sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: showIconOnlyCultureLibrary ? 36 : 'auto', px: showIconOnlyCultureLibrary ? 0.75 : 1.25, flexShrink: 0 }}
                       disabled={cultureLibraryAction.disabled}
                     >
-                      {!showIconOnlyCultureLibrary ? (showCompactCultureLibrary ? 'Bibliothek' : 'Kulturbibliothek') : null}
+                      {!showIconOnlyCultureLibrary ? (showCompactCultureLibrary ? t('cultureActions.libraryShort') : t('cultureActions.library')) : null}
                     </Button>
                   </span>
                 </Tooltip>
@@ -967,7 +967,7 @@ function RootLayout(): React.ReactElement {
                 <Button
                   size="small"
                   variant="outlined"
-                  aria-label="Import/Export öffnen"
+                  aria-label={t('cultureActions.openImportExport')}
                   aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
                   aria-haspopup="true"
                   aria-expanded={Boolean(cultureActionsMenuAnchor)}
@@ -975,14 +975,14 @@ function RootLayout(): React.ReactElement {
                   endIcon={!isPhone ? <KeyboardArrowDownIcon fontSize="small" /> : undefined}
                   sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
                 >
-                  {isPhone ? '⋯' : 'Import/Export'}
+                  {isPhone ? '⋯' : t('cultureActions.importExport')}
                 </Button>
               ) : null}
               {showDesktopCultureActionsOverflow ? (
                 <Button
                   size="small"
                   variant="outlined"
-                  aria-label="Kultur-Aktionen öffnen"
+                  aria-label={t('cultureActions.openCultureActions')}
                   aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
                   aria-haspopup="true"
                   aria-expanded={Boolean(cultureActionsMenuAnchor)}
@@ -990,7 +990,7 @@ function RootLayout(): React.ReactElement {
                   endIcon={<KeyboardArrowDownIcon fontSize="small" />}
                   sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: 0, px: 1, flexShrink: 0 }}
                 >
-                  Aktionen
+                  {t('cultureActions.actions')}
                 </Button>
               ) : null}
               <Menu
@@ -1218,18 +1218,18 @@ function RootLayout(): React.ReactElement {
               {isCulturesPage ? (
                 <>
                   {cultureLibraryAction ? (
-                    <Tooltip title="Kulturbibliothek öffnen">
+                    <Tooltip title={t('cultureActions.openLibrary')}>
                       <span>
                         <Button
                           size="small"
                           variant="outlined"
                           onClick={() => cultureLibraryAction.onClick()}
-                          aria-label="Kulturbibliothek öffnen"
+                          aria-label={t('cultureActions.openLibrary')}
                           startIcon={<PublicIcon fontSize="small" />}
                           sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
                           disabled={cultureLibraryAction.disabled}
                         >
-                          Bibliothek
+                          {t('cultureActions.libraryShort')}
                         </Button>
                       </span>
                     </Tooltip>
@@ -1238,14 +1238,14 @@ function RootLayout(): React.ReactElement {
                     <Button
                       size="small"
                       variant="outlined"
-                      aria-label="Import/Export öffnen"
+                      aria-label={t('cultureActions.openImportExport')}
                       aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
                       aria-haspopup="true"
                       aria-expanded={Boolean(cultureActionsMenuAnchor)}
                       onClick={handleCultureActionsMenuOpen}
                       sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
                     >
-                      Import/Export
+                      {t('cultureActions.importExport')}
                     </Button>
                   ) : null}
                   <Menu

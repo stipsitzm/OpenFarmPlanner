@@ -62,6 +62,15 @@
     "suppliers": "Hilfe zu Lieferanten",
     "openAria": "{{label}} öffnen"
   },
+  "cultureActions": {
+    "openLibrary": "Kulturbibliothek öffnen",
+    "library": "Kulturbibliothek",
+    "libraryShort": "Bibliothek",
+    "openImportExport": "Import/Export öffnen",
+    "importExport": "Import/Export",
+    "openCultureActions": "Kultur-Aktionen öffnen",
+    "actions": "Aktionen"
+  },
   "projectTrash": {
     "title": "Papierkorb",
     "empty": "Der Papierkorb ist leer.",
