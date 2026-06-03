@@ -80,10 +80,7 @@
   "areaAssignment": {
     "title": "Anbaufläche ändern",
     "editButton": "Anbaufläche bearbeiten",
-    "fieldsCountLabel": "({{count}} Parzellen)",
-    "noFieldsLabel": "(keine Parzellen)",
-    "bedsCountLabel": "({{count}} Beete)",
-    "noBedsLabel": "(keine Beete)",
+    "hierarchyHint": "Standort filtert Parzellen, Parzelle filtert Beete.",
     "emptyStateTitle": "Keine Anbauflächen vorhanden",
     "emptyStateDescription": "Lege zuerst Parzellen und Beete an, bevor du einem Anbauplan eine Fläche zuweist.",
     "emptyStateAction": "Zu Anbauflächen",

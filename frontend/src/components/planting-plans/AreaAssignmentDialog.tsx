@@ -43,6 +43,11 @@ interface AssignmentState {
 }
 
 type BedWithHierarchy = Bed & { id: number; fieldId: number; locationId: number };
+interface DialogKeyboardControl {
+  root: HTMLElement | null;
+  focusTarget: HTMLElement | null;
+  disabled: boolean;
+}
 
 const formatArea = (value: number, locale: string): string =>
   `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} m²`;
@@ -86,10 +91,13 @@ export function AreaAssignmentDialog({
 }: AreaAssignmentDialogProps): React.ReactElement {
   const { t } = useTranslation('plantingPlans');
   const [isOpen, setIsOpen] = useState(false);
+  const [openSelect, setOpenSelect] = useState<'location' | 'field' | 'bed' | null>(null);
   const [draft, setDraft] = useState<AssignmentState>({ locationId: null, fieldId: null, bedId: bedId ?? null });
   const locationSelectRef = useRef<HTMLDivElement | null>(null);
   const fieldSelectRef = useRef<HTMLDivElement | null>(null);
+  const bedSelectRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLDivElement | null>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
   const applyButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -288,28 +296,6 @@ export function AreaAssignmentDialog({
   const isFieldSelectDisabled = !draft.locationId || selectableFields.length === 0;
   const isBedSelectDisabled = !draft.fieldId || selectableBeds.length === 0;
   const isApplyDisabled = !draft.bedId || bedsWithLocation.length === 0;
-  const locationAvailabilityLabel = draft.locationId
-    ? selectableFields.length === 0
-      ? t('areaAssignment.noFieldsLabel')
-      : t('areaAssignment.fieldsCountLabel', { count: selectableFields.length })
-    : null;
-  const fieldAvailabilityLabel = draft.fieldId
-    ? selectableBeds.length === 0
-      ? t('areaAssignment.noBedsLabel')
-      : t('areaAssignment.bedsCountLabel', { count: selectableBeds.length })
-    : null;
-  const locationLabel = (
-    <>
-      {t('columns.location')}
-      {locationAvailabilityLabel ? <Box component="span" aria-hidden="true"> {locationAvailabilityLabel}</Box> : null}
-    </>
-  );
-  const fieldLabel = (
-    <>
-      {t('columns.field')}
-      {fieldAvailabilityLabel ? <Box component="span" aria-hidden="true"> {fieldAvailabilityLabel}</Box> : null}
-    </>
-  );
 
   const handleApply = async (): Promise<void> => {
     if (isApplyDisabled || !draft.bedId) {
@@ -324,9 +310,94 @@ export function AreaAssignmentDialog({
     void handleApply();
   };
 
+  const getSelectFocusTarget = (root: HTMLDivElement | null): HTMLElement | null =>
+    root?.querySelector<HTMLElement>('[role="combobox"]') ?? root;
+
+  const getKeyboardControls = useCallback((): DialogKeyboardControl[] => [
+    {
+      root: locationSelectRef.current,
+      focusTarget: getSelectFocusTarget(locationSelectRef.current),
+      disabled: selectableLocations.length === 0,
+    },
+    {
+      root: fieldSelectRef.current,
+      focusTarget: getSelectFocusTarget(fieldSelectRef.current),
+      disabled: isFieldSelectDisabled,
+    },
+    {
+      root: bedSelectRef.current,
+      focusTarget: getSelectFocusTarget(bedSelectRef.current),
+      disabled: isBedSelectDisabled,
+    },
+    {
+      root: cancelButtonRef.current,
+      focusTarget: cancelButtonRef.current,
+      disabled: false,
+    },
+    {
+      root: applyButtonRef.current,
+      focusTarget: applyButtonRef.current,
+      disabled: isApplyDisabled,
+    },
+  ].filter((control) => control.root && control.focusTarget && !control.disabled), [
+    isApplyDisabled,
+    isBedSelectDisabled,
+    isFieldSelectDisabled,
+    selectableLocations.length,
+  ]);
+
+  const focusDialogControl = useCallback((control: DialogKeyboardControl | undefined): void => {
+    if (!control?.focusTarget) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      control.focusTarget?.focus();
+    });
+  }, []);
+
+  const handleNativeTabKeyDown = useCallback((event: globalThis.KeyboardEvent): void => {
+    if (!isOpen || openSelect !== null || event.key !== 'Tab') {
+      return;
+    }
+
+    const controls = getKeyboardControls();
+    if (controls.length === 0) {
+      return;
+    }
+
+    const activeElement = document.activeElement as HTMLElement | null;
+    const currentIndex = controls.findIndex((control) => (
+      Boolean(activeElement)
+      && (control.root === activeElement || control.focusTarget === activeElement || control.root?.contains(activeElement))
+    ));
+    const fallbackIndex = event.shiftKey ? controls.length : -1;
+    const normalizedIndex = currentIndex >= 0 ? currentIndex : fallbackIndex;
+    const nextIndex = event.shiftKey
+      ? (normalizedIndex - 1 + controls.length) % controls.length
+      : (normalizedIndex + 1) % controls.length;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    focusDialogControl(controls[nextIndex]);
+  }, [focusDialogControl, getKeyboardControls, isOpen, openSelect]);
+
   const handleCancel = (): void => {
+    setOpenSelect(null);
     setIsOpen(false);
   };
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    document.addEventListener('keydown', handleNativeTabKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleNativeTabKeyDown, true);
+    };
+  }, [handleNativeTabKeyDown, isOpen]);
 
   return (
     <>
@@ -386,15 +457,20 @@ export function AreaAssignmentDialog({
               />
             ) : null}
             <Stack spacing={1.5} sx={{ mt: bedsWithLocation.length === 0 ? 0 : 0.5 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: -0.25 }}>
+                  {t('areaAssignment.hierarchyHint')}
+                </Typography>
                 <FormControl fullWidth size="small">
-                  <InputLabel id="assignment-location-label">{locationLabel}</InputLabel>
+                  <InputLabel id="assignment-location-label">{t('columns.location')}</InputLabel>
                   <Select
                     ref={locationSelectRef}
                     id="assignment-location"
                     labelId="assignment-location-label"
                     value={draft.locationId ?? ''}
-                    label={locationLabel}
+                    label={t('columns.location')}
                     disabled={selectableLocations.length === 0}
+                    onOpen={() => setOpenSelect('location')}
+                    onClose={() => setOpenSelect(null)}
                     onChange={(event) => {
                       handleLocationChange(Number(event.target.value));
                       requestAnimationFrame(() => locationSelectRef.current?.focus());
@@ -407,14 +483,16 @@ export function AreaAssignmentDialog({
                 </FormControl>
 
                 <FormControl fullWidth size="small">
-                  <InputLabel id="assignment-field-label">{fieldLabel}</InputLabel>
+                  <InputLabel id="assignment-field-label">{t('columns.field')}</InputLabel>
                   <Select
                     ref={fieldSelectRef}
                     id="assignment-field"
                     labelId="assignment-field-label"
                     value={draft.fieldId ?? ''}
-                    label={fieldLabel}
+                    label={t('columns.field')}
                     disabled={isFieldSelectDisabled}
+                    onOpen={() => setOpenSelect('field')}
+                    onClose={() => setOpenSelect(null)}
                     onChange={(event) => {
                       handleFieldChange(Number(event.target.value));
                       requestAnimationFrame(() => fieldSelectRef.current?.focus());
@@ -429,11 +507,14 @@ export function AreaAssignmentDialog({
                 <FormControl fullWidth size="small">
                   <InputLabel id="assignment-bed-label">{t('columns.bed')}</InputLabel>
                   <Select
+                    ref={bedSelectRef}
                     id="assignment-bed"
                     labelId="assignment-bed-label"
                     value={draft.bedId ?? ''}
                     label={t('columns.bed')}
                     disabled={isBedSelectDisabled}
+                    onOpen={() => setOpenSelect('bed')}
+                    onClose={() => setOpenSelect(null)}
                     onChange={(event) => {
                       handleBedChange(Number(event.target.value));
                       requestAnimationFrame(() => {
@@ -450,7 +531,7 @@ export function AreaAssignmentDialog({
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button type="button" data-dialog-action="cancel" onClick={handleCancel}>{t('areaAssignment.cancel')}</Button>
+            <Button ref={cancelButtonRef} type="button" data-dialog-action="cancel" onClick={handleCancel}>{t('areaAssignment.cancel')}</Button>
             <Button ref={applyButtonRef} type="submit" data-dialog-action="apply" variant="contained" disabled={isApplyDisabled}>{t('areaAssignment.apply')}</Button>
           </DialogActions>
         </Box>
