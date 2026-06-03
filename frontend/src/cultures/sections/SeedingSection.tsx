@@ -76,11 +76,11 @@ function SeedRateBlock({
           </FormControl>
         </Tooltip>
 
-        <Tooltip title={t('form.sowingCalculationSafetyPercentHelp', { defaultValue: 'Prozentualer Zuschlag zur berechneten Saatgutmenge.' })} arrow>
+        <Tooltip title={t('form.sowingCalculationSafetyPercentHelp')} arrow>
           <TextField
             sx={{ ...spacingFieldSx, ml: 'auto' }}
             type="number"
-            label={t('form.sowingCalculationSafetyPercentLabel', { defaultValue: 'Sicherheitszuschlag für Saatgut (%)' })}
+            label={t('form.sowingCalculationSafetyPercentLabel')}
             value={formData[safetyField] ?? ''}
             onChange={(e) => onChange(safetyField, e.target.value ? parseFloat(e.target.value) : null)}
             error={Boolean(errors[safetyField])}
@@ -142,12 +142,12 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
       )}
 
       <Box sx={fieldRowSx}>
-        <Tooltip title={t('form.thousandKernelWeightHelp', { defaultValue: 'Gewicht von 1000 Körnern in Gramm.' })} arrow>
+        <Tooltip title={t('form.thousandKernelWeightHelp')} arrow>
           <TextField
             sx={fieldSx}
             type="text"
             inputMode="decimal"
-            label={t('form.thousandKernelWeightLabel', { defaultValue: '1000-Korn-Gewicht (g)' })}
+            label={t('form.thousandKernelWeightLabel')}
             value={formData.thousand_kernel_weight_g ?? ''}
             onChange={(event) => handleThousandKernelWeightChange(event.target.value)}
             error={Boolean(errors.thousand_kernel_weight_g)}

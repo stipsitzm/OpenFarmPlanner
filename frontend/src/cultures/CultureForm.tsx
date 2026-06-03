@@ -643,8 +643,8 @@ export function CultureForm({
           {isDirty && (
             <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
               {isValid && !duplicateErrorKey
-                ? t('messages.unsavedChanges', { defaultValue: 'Ungespeicherte Änderungen' })
-                : t('messages.fixErrors', { defaultValue: 'Bitte beheben Sie die Validierungsfehler' })}
+                ? t('messages.unsavedChanges')
+                : t('messages.fixErrors')}
             </Typography>
           )}
           <Button onClick={onCancel} disabled={isSaving}>
