@@ -18,6 +18,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
   const selectedCultivationTypes = formData.cultivation_types?.length
     ? formData.cultivation_types
     : (formData.cultivation_type ? [formData.cultivation_type as CultivationType] : []);
+  const isDirectSowingOnly = selectedCultivationTypes.length === 1 && selectedCultivationTypes[0] === 'direct_sowing';
 
   return (
     <>
@@ -25,12 +26,12 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
           <FormControl sx={{ minWidth: '180px' }}>
-            <InputLabel id="anbauart-label">Anbauart</InputLabel>
+            <InputLabel id="cultivation-type-label">{t('form.cultivationType')}</InputLabel>
             <Select
-              labelId="anbauart-label"
+              labelId="cultivation-type-label"
               multiple
               value={selectedCultivationTypes}
-              label="Anbauart"
+              label={t('form.cultivationType')}
               onChange={e => {
                 const values = (e.target.value as CultivationType[]).filter(Boolean);
                 onChange('cultivation_types', values);
@@ -42,23 +43,25 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
               renderValue={(selected) => {
                 const values = selected as CultivationType[];
                 return values
-                  .map((item) => item === 'pre_cultivation' ? 'Pflanzung' : 'Direktsaat')
+                  .map((item) => item === 'pre_cultivation'
+                    ? t('form.cultivationTypePreCultivation')
+                    : t('form.cultivationTypeDirectSowing'))
                   .join(', ');
               }}
             >
               <MenuItem value="pre_cultivation">
                 <Checkbox checked={selectedCultivationTypes.includes('pre_cultivation')} />
-                <ListItemText primary="Pflanzung" />
+                <ListItemText primary={t('form.cultivationTypePreCultivation')} />
               </MenuItem>
               <MenuItem value="direct_sowing">
                 <Checkbox checked={selectedCultivationTypes.includes('direct_sowing')} />
-                <ListItemText primary="Direktsaat" />
+                <ListItemText primary={t('form.cultivationTypeDirectSowing')} />
               </MenuItem>
             </Select>
           </FormControl>
         </Box>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <Tooltip title="Wachstumszeitraum = Gesamtzeit von Saat bis Ernte." arrow>
+          <Tooltip title={t('form.growthDurationDaysHelp')} arrow>
             <TextField
               sx={smallFieldSx}
               type="number"
@@ -68,7 +71,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
               onChange={e => onChange('growth_duration_days', e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
               error={Boolean(errors.growth_duration_days)}
               helperText={errors.growth_duration_days}
-              inputProps={{ min: 1, step: 1 }}
+              slotProps={{ htmlInput: { min: 1, step: 1 } }}
             />
           </Tooltip>
           <TextField
@@ -80,16 +83,16 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
             onChange={e => onChange('harvest_duration_days', e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
             error={Boolean(errors.harvest_duration_days)}
             helperText={errors.harvest_duration_days}
-            inputProps={{ min: 0, step: 1 }}
+            slotProps={{ htmlInput: { min: 0, step: 1 } }}
           />
-          <Tooltip title={(selectedCultivationTypes.length === 1 && selectedCultivationTypes[0] === 'direct_sowing') ? 'Bei Direktsaat ist keine Anzuchtdauer erforderlich.' : ''} arrow>
+          <Tooltip title={isDirectSowingOnly ? t('form.directSowingPropagationDisabledHelp') : ''} arrow>
             <TextField
               sx={smallFieldSx}
               type="number"
-              label="Anzuchtdauer (Tage)"
-              value={(selectedCultivationTypes.length === 1 && selectedCultivationTypes[0] === 'direct_sowing') ? 0 : (formData.propagation_duration_days ?? '')}
+              label={t('form.propagationDurationDays')}
+              value={isDirectSowingOnly ? 0 : (formData.propagation_duration_days ?? '')}
               onChange={e => onChange('propagation_duration_days', e.target.value ? parseInt(e.target.value) : undefined)}
-              disabled={selectedCultivationTypes.length === 1 && selectedCultivationTypes[0] === 'direct_sowing'}
+              disabled={isDirectSowingOnly}
               error={Boolean(errors.propagation_duration_days) || ((formData.propagation_duration_days ?? 0) > (formData.growth_duration_days ?? 0))}
               helperText={
                 errors.propagation_duration_days
@@ -97,7 +100,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
                     ? t('form.propagationDurationDaysTooLong')
                     : undefined)
               }
-              inputProps={{ min: 0, step: 1 }}
+              slotProps={{ htmlInput: { min: 0, step: 1 } }}
             />
           </Tooltip>
         </Box>
