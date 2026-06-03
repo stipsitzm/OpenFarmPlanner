@@ -1,5 +1,5 @@
 import { Alert, Box, Button, ButtonGroup, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, TextField, useMediaQuery } from '@mui/material';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
@@ -21,7 +21,6 @@ import { ContextMenuHint } from '../components/data-grid';
 import AddIcon from '@mui/icons-material/Add';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
-const FIELDS_BEDS_CONTEXT_MENU_HINT_STORAGE_KEY = 'ofp.fieldsBedsContextMenuHintSeen';
 const NOOP_SET_TOPBAR_ACTIONS = (): void => undefined;
 
 type ViewMode = 'table' | 'graphical';
@@ -47,7 +46,6 @@ export default function FieldsBedsPage(): React.ReactElement {
   const [createFieldRequest, setCreateFieldRequest] = useState(0);
   const [isAreaDataLoading, setIsAreaDataLoading] = useState(false);
   const [hasAreaDataLoaded, setHasAreaDataLoaded] = useState(false);
-  const [showContextMenuHint, setShowContextMenuHint] = useState(false);
   const [addLocationDialogOpen, setAddLocationDialogOpen] = useState(false);
   const [newLocationName, setNewLocationName] = useState('');
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
@@ -164,6 +162,14 @@ export default function FieldsBedsPage(): React.ReactElement {
     }
   }, [newLocationName, reloadHierarchyAndLocations, t]);
 
+  const handleAdditionalLocationSubmit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    if (!newLocationName.trim()) {
+      return;
+    }
+    void handleCreateAdditionalLocation();
+  };
+
   useEffect(() => {
     if (!location.pathname.startsWith('/app/fields-beds')) {
       return;
@@ -203,24 +209,6 @@ export default function FieldsBedsPage(): React.ReactElement {
     window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
   }, [viewMode]);
 
-  useEffect(() => {
-    if (
-      shouldShowProjectRequiredState ||
-      isAreaDataLoading ||
-      !hasAreaDataLoaded ||
-      viewMode !== 'table'
-    ) {
-      return;
-    }
-
-    if (window.localStorage.getItem(FIELDS_BEDS_CONTEXT_MENU_HINT_STORAGE_KEY) === '1') {
-      return;
-    }
-
-    window.localStorage.setItem(FIELDS_BEDS_CONTEXT_MENU_HINT_STORAGE_KEY, '1');
-    setShowContextMenuHint(true);
-  }, [hasAreaDataLoaded, isAreaDataLoading, shouldShowProjectRequiredState, viewMode]);
-
   const hasLocations = locations.length > 0;
   const hasFields = fieldsCount > 0;
   const hasBeds = bedsCount > 0;
@@ -235,10 +223,10 @@ export default function FieldsBedsPage(): React.ReactElement {
     : t('hierarchy:emptyAreas.description');
   const emptyAreaActions = useMemo<EmptyStateAction[]>(() => {
     if (shouldShowMissingFieldsState) {
-      return [{ label: t('hierarchy:actions.addField'), onClick: requestInlineFieldCreation, icon: <AddIcon fontSize="small" /> }];
+      return [];
     }
     return [{ label: t('hierarchy:actions.createLocation'), onClick: openAddLocationDialog, icon: <AddIcon fontSize="small" /> }];
-  }, [openAddLocationDialog, requestInlineFieldCreation, shouldShowMissingFieldsState, t]);
+  }, [openAddLocationDialog, shouldShowMissingFieldsState, t]);
 
   useEffect(() => {
     if (viewMode === 'graphical') {
@@ -453,12 +441,11 @@ export default function FieldsBedsPage(): React.ReactElement {
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && !shouldShowAreasEmptyState && viewMode !== 'graphical' ? (
           <>
-            {showContextMenuHint ? (
+            {hasLocations && !shouldShowMissingBedsHint ? (
               <Box sx={{ mb: 1.25 }}>
                 <ContextMenuHint
-                  message={t('hierarchy:messages.contextMenuHint')}
+                  message={t('hierarchy:messages.contextMenuTableHint')}
                   secondary={t('hierarchy:messages.contextMenuHintKeyboard')}
-                  onClose={() => setShowContextMenuHint(false)}
                 />
               </Box>
             ) : null}
@@ -472,25 +459,27 @@ export default function FieldsBedsPage(): React.ReactElement {
         ) : null}
       </PageContainer>
       <Dialog open={addLocationDialogOpen} onClose={() => setAddLocationDialogOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>{t('hierarchy:dialogs.addAdditionalLocation.title')}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ color: 'text.secondary', mb: 2, mt: 1 }}>
-            {t('hierarchy:dialogs.addAdditionalLocation.description')}
-          </Box>
-          <TextField
-            margin="dense"
-            fullWidth
-            label={t('hierarchy:dialogs.addAdditionalLocation.nameLabel')}
-            value={newLocationName}
-            onChange={(event) => setNewLocationName(event.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddLocationDialogOpen(false)}>{t('common:actions.cancel')}</Button>
-          <Button onClick={() => void handleCreateAdditionalLocation()} variant="contained" color="success" disabled={!newLocationName.trim()}>
-            {t('hierarchy:dialogs.addAdditionalLocation.submit')}
-          </Button>
-        </DialogActions>
+        <Box component="form" onSubmit={handleAdditionalLocationSubmit}>
+          <DialogTitle>{t('hierarchy:dialogs.addAdditionalLocation.title')}</DialogTitle>
+          <DialogContent>
+            <Box sx={{ color: 'text.secondary', mb: 2, mt: 1 }}>
+              {t('hierarchy:dialogs.addAdditionalLocation.description')}
+            </Box>
+            <TextField
+              margin="dense"
+              fullWidth
+              label={t('hierarchy:dialogs.addAdditionalLocation.nameLabel')}
+              value={newLocationName}
+              onChange={(event) => setNewLocationName(event.target.value)}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button type="button" onClick={() => setAddLocationDialogOpen(false)}>{t('common:actions.cancel')}</Button>
+            <Button type="submit" variant="contained" color="success" disabled={!newLocationName.trim()}>
+              {t('hierarchy:dialogs.addAdditionalLocation.submit')}
+            </Button>
+          </DialogActions>
+        </Box>
       </Dialog>
     </>
   );

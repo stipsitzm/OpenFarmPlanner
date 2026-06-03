@@ -617,6 +617,14 @@ function RootLayout(): React.ReactElement {
     }
   };
 
+  const handleCreateProjectSubmit = (event: React.FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    if (!newProjectName.trim() || isCreatingProject) {
+      return;
+    }
+    void handleCreateProject();
+  };
+
   const handleSwitchProject = useCallback(async (projectId: number): Promise<void> => {
     setMobileProjectSwitcherOpen(false);
     handleProjectMenuClose();
@@ -1654,30 +1662,32 @@ function RootLayout(): React.ReactElement {
 
 
       <Dialog open={isCreateProjectOpen} onClose={closeCreateProjectDialog} fullWidth maxWidth="sm">
-        <DialogTitle>{t('projectSwitcher.createDialogTitle')}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label={t('projectSwitcher.createNameLabel')}
-              value={newProjectName}
-              onChange={(event) => setNewProjectName(event.target.value)}
-              autoFocus
-            />
-            <TextField
-              label={t('projectSwitcher.createDescriptionLabel')}
-              value={newProjectDescription}
-              onChange={(event) => setNewProjectDescription(event.target.value)}
-              multiline
-              minRows={2}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeCreateProjectDialog}>{t('projectSwitcher.createCancel')}</Button>
-          <Button variant="contained" onClick={() => void handleCreateProject()} disabled={!newProjectName.trim() || isCreatingProject}>
-            {t('projectSwitcher.createSubmit')}
-          </Button>
-        </DialogActions>
+        <Box component="form" onSubmit={handleCreateProjectSubmit}>
+          <DialogTitle>{t('projectSwitcher.createDialogTitle')}</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <TextField
+                label={t('projectSwitcher.createNameLabel')}
+                value={newProjectName}
+                onChange={(event) => setNewProjectName(event.target.value)}
+                autoFocus
+              />
+              <TextField
+                label={t('projectSwitcher.createDescriptionLabel')}
+                value={newProjectDescription}
+                onChange={(event) => setNewProjectDescription(event.target.value)}
+                multiline
+                minRows={2}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button type="button" onClick={closeCreateProjectDialog}>{t('projectSwitcher.createCancel')}</Button>
+            <Button type="submit" variant="contained" disabled={!newProjectName.trim() || isCreatingProject}>
+              {t('projectSwitcher.createSubmit')}
+            </Button>
+          </DialogActions>
+        </Box>
       </Dialog>
 
       <Snackbar

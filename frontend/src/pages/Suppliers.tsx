@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import axios from 'axios';
 import {
   Alert,
@@ -243,6 +243,14 @@ export default function Suppliers(): React.ReactElement {
       }
       setError(t('saveError'));
     }
+  };
+
+  const handleSupplierSubmit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    if (!canSave) {
+      return;
+    }
+    void saveSupplier();
   };
 
   const showDeleteError = useCallback((message: string): void => {
@@ -638,40 +646,42 @@ export default function Suppliers(): React.ReactElement {
       </Menu>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{draft.id ? t('edit') : t('create')}</DialogTitle>
-        <DialogContent>
-          <TextField
-            margin="dense"
-            fullWidth
-            label={t('name')}
-            value={draft.name}
-            error={Boolean(fieldErrors.name)}
-            helperText={fieldErrors.name}
-            onChange={(e) => {
-              const value = e.target.value;
-              setDraft((prev) => ({ ...prev, name: value }));
-              setFieldErrors((prev) => ({ ...prev, name: undefined }));
-            }}
-          />
-          <TextField
-            margin="dense"
-            fullWidth
-            label={t('homepage')}
-            value={draft.homepage_url}
-            error={Boolean(fieldErrors.homepage_url)}
-            helperText={fieldErrors.homepage_url}
-            onChange={(e) => {
-              const value = e.target.value;
-              setDraft((prev) => ({ ...prev, homepage_url: value }));
-              setFieldErrors((prev) => ({ ...prev, homepage_url: undefined }));
-            }}
-          />
-          {error ? <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert> : null}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>{t('cancel')}</Button>
-          <Button onClick={() => void saveSupplier()} disabled={!canSave} variant="contained">{t('save')}</Button>
-        </DialogActions>
+        <Box component="form" onSubmit={handleSupplierSubmit}>
+          <DialogTitle>{draft.id ? t('edit') : t('create')}</DialogTitle>
+          <DialogContent>
+            <TextField
+              margin="dense"
+              fullWidth
+              label={t('name')}
+              value={draft.name}
+              error={Boolean(fieldErrors.name)}
+              helperText={fieldErrors.name}
+              onChange={(e) => {
+                const value = e.target.value;
+                setDraft((prev) => ({ ...prev, name: value }));
+                setFieldErrors((prev) => ({ ...prev, name: undefined }));
+              }}
+            />
+            <TextField
+              margin="dense"
+              fullWidth
+              label={t('homepage')}
+              value={draft.homepage_url}
+              error={Boolean(fieldErrors.homepage_url)}
+              helperText={fieldErrors.homepage_url}
+              onChange={(e) => {
+                const value = e.target.value;
+                setDraft((prev) => ({ ...prev, homepage_url: value }));
+                setFieldErrors((prev) => ({ ...prev, homepage_url: undefined }));
+              }}
+            />
+            {error ? <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert> : null}
+          </DialogContent>
+          <DialogActions>
+            <Button type="button" onClick={() => setDialogOpen(false)}>{t('cancel')}</Button>
+            <Button type="submit" disabled={!canSave} variant="contained">{t('save')}</Button>
+          </DialogActions>
+        </Box>
       </Dialog>
 
       <Dialog
