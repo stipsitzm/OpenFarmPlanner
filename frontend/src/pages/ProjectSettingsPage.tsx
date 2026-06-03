@@ -335,7 +335,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
               helperText={projectNameDraft.trim().length > 0 && projectNameDraft.trim().length < 2 ? t('projectRename.minLength') : ' '}
               fullWidth
               autoFocus
-              inputProps={{ 'aria-label': t('projectRename.label') }}
+              slotProps={{ htmlInput: { 'aria-label': t('projectRename.label') } }}
             />
             <Stack direction="row" spacing={1}>
               <Button

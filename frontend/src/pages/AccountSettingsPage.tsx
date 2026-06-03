@@ -173,7 +173,7 @@ export default function AccountSettingsPage(): React.ReactElement {
                     value={displayName}
                     onChange={(event) => setDisplayName(event.target.value)}
                     fullWidth
-                    inputProps={{ maxLength: 255 }}
+                    slotProps={{ htmlInput: { maxLength: 255 } }}
                   />
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                     <Button
