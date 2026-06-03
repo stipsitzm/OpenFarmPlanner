@@ -16,16 +16,17 @@ import { getRunnableCommands, getVisibleCommands } from './commands';
 import type { CommandContextTag, CommandSpec, CreateAction } from './types';
 import type { ShortcutSpec } from '../hooks/useKeyboardShortcuts';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useTranslation } from '../i18n';
 import { CommandContext } from './commandContextShared';
 
-const CONTEXT_TITLES: Record<CommandContextTag, string> = {
-  global: 'Global',
-  cultures: 'Kulturen',
-  locations: 'Standorte',
-  areas: 'Anbauflächen',
-  plans: 'Anbaupläne',
-  calendar: 'Anbaukalender',
-  seedDemand: 'Saatgutbedarf',
+const CONTEXT_TITLE_KEYS: Record<CommandContextTag, string> = {
+  global: 'commandPalette.contextTitles.global',
+  cultures: 'commandPalette.contextTitles.cultures',
+  locations: 'commandPalette.contextTitles.locations',
+  areas: 'commandPalette.contextTitles.areas',
+  plans: 'commandPalette.contextTitles.plans',
+  calendar: 'commandPalette.contextTitles.calendar',
+  seedDemand: 'commandPalette.contextTitles.seedDemand',
 };
 
 const SHORTCUT_HINT_KEY = 'ofp.shortcutHintSeen';
@@ -37,6 +38,7 @@ const getAvailableCreateActions = (actions: CreateAction[]): CreateAction[] => a
   .sort((first, second) => (first.priority ?? 0) - (second.priority ?? 0) || first.label.localeCompare(second.label));
 
 export function CommandProvider({ children }: { children: React.ReactNode }): React.ReactElement {
+  const { t } = useTranslation('navigation');
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [createChooserOpen, setCreateChooserOpen] = useState(false);
@@ -133,7 +135,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
     }
     const label = activeCreateActions.length === 1
       ? `${activeCreateActions[0].label} (${CREATE_SHORTCUT_HINT})`
-      : `Neu erstellen... (${CREATE_SHORTCUT_HINT})`;
+      : `${t('commandPalette.createNew')} (${CREATE_SHORTCUT_HINT})`;
     return {
       id: 'global.createNew',
       label,
@@ -145,7 +147,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
       isEnabled: () => activeCreateActions.length > 0,
       action: runPrimaryCreateAction,
     };
-  }, [activeCreateActions, runPrimaryCreateAction]);
+  }, [activeCreateActions, runPrimaryCreateAction, t]);
 
   const commandsWithCreateAction = useMemo(
     () => (createCommand ? [createCommand, ...allCommands] : allCommands),
@@ -191,10 +193,10 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
       });
     });
 
-    return (Object.keys(CONTEXT_TITLES) as CommandContextTag[])
-      .map((tag) => ({ tag, title: CONTEXT_TITLES[tag], commands: grouped.get(tag) ?? [] }))
+    return (Object.keys(CONTEXT_TITLE_KEYS) as CommandContextTag[])
+      .map((tag) => ({ tag, title: t(CONTEXT_TITLE_KEYS[tag]), commands: grouped.get(tag) ?? [] }))
       .filter((group) => group.commands.length > 0);
-  }, [helpCommands]);
+  }, [helpCommands, t]);
 
   const contextValue = useMemo(
     () => ({
@@ -224,7 +226,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
       {children}
       <CommandPalette open={paletteOpen} commands={activeCommands} onClose={closePalette} />
       <Dialog open={createChooserOpen} onClose={() => setCreateChooserOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>Neu erstellen...</DialogTitle>
+        <DialogTitle>{t('commandPalette.createNew')}</DialogTitle>
         <DialogContent>
           <List dense>
             {activeCreateActions.map((action) => (
@@ -242,10 +244,10 @@ export function CommandProvider({ children }: { children: React.ReactNode }): Re
         </DialogContent>
       </Dialog>
       <Dialog open={helpOpen} onClose={() => setHelpOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle>Kontextbezogene Tastenkürzel (Alt+K)</DialogTitle>
+        <DialogTitle>{t('commandPalette.contextualShortcutsTitle')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            Shortcuts sind browser-sicher und überschreiben keine üblichen Browser-Shortcuts.
+            {t('commandPalette.contextualShortcutsDescription')}
           </Typography>
           {groupedHelpCommands.map((group) => (
             <div key={group.tag}>

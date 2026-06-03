@@ -249,26 +249,26 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
   } = props;
 
   const mobileMenuItems = [
-    <MenuItem key="mobile-section-project" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Projektaktionen</MenuItem>,
+    <MenuItem key="mobile-section-project" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.projectActions')}</MenuItem>,
     <MenuItem key="mobile-project-switcher" onClick={onOpenProjectSwitcher}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SwapHorizIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('projectSwitcher.ariaLabel')}</MenuItem>,
     <MenuItem key="mobile-project-create" onClick={onOpenCreateProject}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><AddIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.create')}</MenuItem>,
     <MenuItem key="mobile-project-settings" onClick={onOpenProjectSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.settings')}</MenuItem>,
     <MenuItem key="mobile-project-members" onClick={onOpenProjectMembers}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><GroupOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openProjectMembers')}</MenuItem>,
     <MenuItem key="mobile-project-history" onClick={() => void onOpenProjectHistory()} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
     <Divider key="mobile-divider-project-app" />,
-    <MenuItem key="mobile-section-app" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>App</MenuItem>,
-    <MenuItem key="mobile-app-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>Tastenkürzel</MenuItem>,
-    <MenuItem key="mobile-app-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>App-Hilfe</MenuItem>,
+    <MenuItem key="mobile-section-app" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.app')}</MenuItem>,
+    <MenuItem key="mobile-app-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.shortcuts')}</MenuItem>,
+    <MenuItem key="mobile-app-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.appHelp')}</MenuItem>,
     <MenuItem key="mobile-app-account-settings" onClick={onOpenAccountSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
     <Divider key="mobile-divider-app-account" />,
-    <MenuItem key="mobile-section-account" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Account</MenuItem>,
+    <MenuItem key="mobile-section-account" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.account')}</MenuItem>,
     <MenuItem key="mobile-account-logout" onClick={() => void onLogout()}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
   ];
   const desktopMenuItems = [
     <MenuItem key="desktop-history" onClick={() => void onOpenProjectHistory()} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
     <MenuItem key="desktop-account-settings" onClick={onOpenAccountSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
-    <MenuItem key="desktop-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>Tastenkürzel</MenuItem>,
-    <MenuItem key="desktop-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>App-Hilfe</MenuItem>,
+    <MenuItem key="desktop-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.shortcuts')}</MenuItem>,
+    <MenuItem key="desktop-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.appHelp')}</MenuItem>,
     <MenuItem key="desktop-logout" onClick={() => void onLogout()}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
   ];
   return <Menu id="global-actions-menu" anchorEl={anchorEl} open={open} onClose={onClose}>{isMobile ? mobileMenuItems : desktopMenuItems}</Menu>;
@@ -789,7 +789,7 @@ function RootLayout(): React.ReactElement {
     if (activeCreateActions.length > 0) {
       const isSingleCreateAction = activeCreateActions.length === 1;
       const primaryCreateAction = activeCreateActions[0];
-      const label = isSingleCreateAction ? primaryCreateAction.label : 'Neu erstellen...';
+      const label = isSingleCreateAction ? primaryCreateAction.label : t('commandPalette.createNew');
       return {
         label,
         tooltip: `${label} (${primaryCreateAction.shortcut ?? 'Alt+Shift+N'})`,
@@ -798,7 +798,7 @@ function RootLayout(): React.ReactElement {
     }
     if (location.pathname.startsWith('/app/fields-beds')) return fieldsGlobalAddAction ? { label: fieldsGlobalAddAction.label, to: '', onClick: fieldsGlobalAddAction.onClick } : null;
     return null;
-  }, [activeCreateActions, fieldsGlobalAddAction, location.pathname, runPrimaryCreateAction]);
+  }, [activeCreateActions, fieldsGlobalAddAction, location.pathname, runPrimaryCreateAction, t]);
   const handleTopbarPrimaryAction = useCallback((): void => {
     if (!topbarPrimaryAction) {
       return;
@@ -845,13 +845,13 @@ function RootLayout(): React.ReactElement {
                   </Typography>
                 </Box>
                 <Tooltip
-                  title="Seitenleiste schließen"
+                  title={t('globalMenu.closeSidebar')}
                   placement="right"
                   enterDelay={350}
                   slotProps={{ tooltip: { sx: navigationTooltipSx } }}
                 >
                   <IconButton
-                    aria-label="Sidebar einklappen"
+                    aria-label={t('globalMenu.collapseSidebar')}
                     onClick={toggleSidebarCollapsed}
                     size="small"
                     sx={getNavigationToggleButtonSx('w-resize')}
@@ -863,13 +863,13 @@ function RootLayout(): React.ReactElement {
             ) : (
               <Stack direction="row" alignItems="center" justifyContent="center" sx={{ py: 1, mb: 0.75 }}>
                 <Tooltip
-                  title="Seitenleiste öffnen"
+                  title={t('globalMenu.openSidebar')}
                   placement="right"
                   enterDelay={350}
                   slotProps={{ tooltip: { sx: navigationTooltipSx } }}
                 >
                   <IconButton
-                    aria-label="Sidebar ausklappen"
+                    aria-label={t('globalMenu.expandSidebar')}
                     onClick={toggleSidebarCollapsed}
                     size="small"
                     sx={getNavigationToggleButtonSx('e-resize')}
@@ -1546,20 +1546,20 @@ function RootLayout(): React.ReactElement {
         <DialogTitle>{t('commandPalette.shortcutsTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={1.5}>
-            <Typography variant="subtitle2">Navigation</Typography>
+            <Typography variant="subtitle2">{t('commandPalette.shortcutSections.navigation')}</Typography>
             <List dense disablePadding>
-              <ListItem><ListItemText primary="Neu erstellen" secondary="Alt+Shift+N" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.createNewShortcut')} secondary="Alt+Shift+N" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.nextPage')} secondary="Ctrl+Shift+↓" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.previousPage')} secondary="Ctrl+Shift+↑" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="Alt+V" /></ListItem>
             </List>
-            <Typography variant="subtitle2">Ansichten & Layout</Typography>
+            <Typography variant="subtitle2">{t('commandPalette.shortcutSections.viewsLayout')}</Typography>
             <List dense disablePadding>
-              <ListItem><ListItemText primary="Sidebar ein-/ausklappen" secondary="Ctrl+B" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.toggleSidebar')} secondary="Ctrl+B" /></ListItem>
             </List>
-            <Typography variant="subtitle2">Dialoge & Hilfe</Typography>
+            <Typography variant="subtitle2">{t('commandPalette.shortcutSections.dialogsHelp')}</Typography>
             <List dense disablePadding>
-              <ListItem><ListItemText primary="Seitenhilfe öffnen" secondary="Alt+H" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.openPageHelp')} secondary="Alt+H" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.label')} secondary="Alt+K" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.closeDialog')} secondary="Esc" /></ListItem>
             </List>
@@ -1574,7 +1574,7 @@ function RootLayout(): React.ReactElement {
         <DialogTitle>{t('projectSwitcher.ariaLabel')}</DialogTitle>
         <DialogContent>
           <Typography variant="caption" sx={{ display: 'block', mb: 1.25, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-            Aktives Projekt
+            {t('projectSwitcher.activeProject')}
           </Typography>
           <Paper variant="outlined" sx={{ p: 1.25, mb: 2 }}>
             <Stack direction="row" alignItems="center" spacing={1}>
@@ -1583,7 +1583,7 @@ function RootLayout(): React.ReactElement {
             </Stack>
           </Paper>
           <Typography variant="caption" sx={{ display: 'block', mb: 1.25, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-            Projekte
+            {t('projectSwitcher.projects')}
           </Typography>
           <List dense sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, py: 0 }}>
             {memberships.length === 0 ? (
