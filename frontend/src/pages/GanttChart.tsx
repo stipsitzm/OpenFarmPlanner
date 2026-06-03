@@ -42,6 +42,7 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import type { CommandSpec } from '../commands/types';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import { extractApiErrorMessage } from '../api/errors';
+import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import {
@@ -75,7 +76,6 @@ interface WeeklyYieldChartColumn {
 }
 
 type CalendarMode = 'occupancy' | 'seedlings';
-const NOOP_SET_TOPBAR_ACTIONS = (_actions: TopbarContextAction[]): void => undefined;
 
 class GanttRenderBoundary extends React.Component<
   { fallback: React.ReactNode; children: React.ReactNode },
@@ -136,10 +136,7 @@ function GanttChartPage(): React.ReactElement {
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('occupancy');
   const [editMode, setEditMode] = useState(false);
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
-  const setTopbarContextActions = useCallback((actions: TopbarContextAction[]): void => {
-    const setter = outletContext?.setTopbarContextActions ?? NOOP_SET_TOPBAR_ACTIONS;
-    setter(actions);
-  }, [outletContext]);
+  const setTopbarContextActions = outletContext?.setTopbarContextActions;
 
   const calendarCommands = useMemo<CommandSpec[]>(() => [
     {
@@ -185,12 +182,7 @@ function GanttChartPage(): React.ReactElement {
       },
     },
   ], [calendarMode, editMode, t]);
-  useEffect(() => {
-    setTopbarContextActions(topbarActions);
-    return () => {
-      setTopbarContextActions([]);
-    };
-  }, [setTopbarContextActions, topbarActions]);
+  useTopbarContextActions(setTopbarContextActions, topbarActions);
 
   const currentYear = new Date().getFullYear();
   const [displayYear] = useState(currentYear);

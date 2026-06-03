@@ -125,7 +125,7 @@ function Cultures(): React.ReactElement {
   const navigate = useNavigate();
   const { user } = useAuth();
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
-  const setTopbarContextActions = outletContext?.setTopbarContextActions ?? (() => undefined);
+  const setTopbarContextActions = outletContext?.setTopbarContextActions;
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const { selectedCultureId, updateSelectedCultureId } = useSelectedCultureSync();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;

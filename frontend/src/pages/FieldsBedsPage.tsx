@@ -11,6 +11,7 @@ import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
 import { locationAPI } from '../api/api';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
+import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard, { type EmptyStateAction } from '../components/project/EmptyStateCard';
 import { getProjectSetupAction } from './requirementFlow';
@@ -23,7 +24,6 @@ import AddIcon from '@mui/icons-material/Add';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
-const NOOP_SET_TOPBAR_ACTIONS = (): void => undefined;
 const CONTENT_ALIGNED_EMPTY_STATE_SX: SxProps<Theme> = {
   maxWidth: '100%',
 };
@@ -60,7 +60,7 @@ export default function FieldsBedsPage(): React.ReactElement {
   } = hierarchyData;
 
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
-  const setTopbarContextActions = outletContext?.setTopbarContextActions ?? NOOP_SET_TOPBAR_ACTIONS;
+  const setTopbarContextActions = outletContext?.setTopbarContextActions;
 
   useCommandContextTag('areas');
 
@@ -286,10 +286,7 @@ export default function FieldsBedsPage(): React.ReactElement {
     viewModeActions,
   ]);
 
-  useEffect(() => {
-    setTopbarContextActions(contextActions);
-    return () => setTopbarContextActions([]);
-  }, [contextActions, setTopbarContextActions]);
+  useTopbarContextActions(setTopbarContextActions, contextActions);
 
   return (
     <>
