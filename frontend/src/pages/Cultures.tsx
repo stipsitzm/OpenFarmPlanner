@@ -1587,35 +1587,35 @@ function Cultures(): React.ReactElement {
 
 
       <Dialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Tastenkürzel</DialogTitle>
+        <DialogTitle>{t('shortcuts.title')}</DialogTitle>
         <DialogContent>
           <List dense>
             <ListItem>
-              <ListItemText primary="Tastenkürzel öffnen" secondary="?" />
+              <ListItemText primary={t('shortcuts.openShortcuts')} secondary="?" />
             </ListItem>
             <ListItem>
-              <ListItemText primary="Command Palette" secondary="Ctrl+K" />
+              <ListItemText primary={t('shortcuts.commandPalette')} secondary="Ctrl+K" />
             </ListItem>
             <ListItem>
-              <ListItemText primary="Dialog schließen" secondary="Esc" />
+              <ListItemText primary={t('shortcuts.closeDialog')} secondary="Esc" />
             </ListItem>
             {aiEnrichmentEnabled && (
               <>
                 <ListItem>
-                  <ListItemText primary="KI: Kultur vervollständigen" secondary="–" />
+                  <ListItemText primary={t('shortcuts.aiComplete')} secondary="–" />
                 </ListItem>
                 <ListItem>
-                  <ListItemText primary="KI: Kultur neu recherchieren" secondary="–" />
+                  <ListItemText primary={t('shortcuts.aiReresearch')} secondary="–" />
                 </ListItem>
                 <ListItem>
-                  <ListItemText primary="KI: Alle Kulturen vervollständigen" secondary="–" />
+                  <ListItemText primary={t('shortcuts.aiCompleteAll')} secondary="–" />
                 </ListItem>
               </>
             )}
           </List>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShortcutsOpen(false)}>Schließen</Button>
+          <Button onClick={() => setShortcutsOpen(false)}>{t('history.closeButton')}</Button>
         </DialogActions>
       </Dialog>
 

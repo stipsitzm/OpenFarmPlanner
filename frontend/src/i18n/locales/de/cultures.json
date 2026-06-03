@@ -332,6 +332,15 @@
       "fallback": "Eintrag"
     }
   },
+  "shortcuts": {
+    "title": "Tastenkürzel",
+    "openShortcuts": "Tastenkürzel öffnen",
+    "commandPalette": "Command Palette",
+    "closeDialog": "Dialog schließen",
+    "aiComplete": "KI: Kultur vervollständigen",
+    "aiReresearch": "KI: Kultur neu recherchieren",
+    "aiCompleteAll": "KI: Alle Kulturen vervollständigen"
+  },
   "export": {
     "current": "Aktuelle Kultur als JSON herunterladen",
     "all": "Alle Kulturen als JSON herunterladen"
