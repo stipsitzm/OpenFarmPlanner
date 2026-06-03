@@ -1679,7 +1679,7 @@ export function EditableDataGrid<T extends EditableRow>({
                   onClick={handleDeleteClick(id)}
                   size="small"
                   sx={deleteIconButtonSx}
-                  aria-label="Löschen"
+                  aria-label={t('actions.delete')}
                 >
                   <DeleteIcon fontSize="small" />
                 </IconButton>,
