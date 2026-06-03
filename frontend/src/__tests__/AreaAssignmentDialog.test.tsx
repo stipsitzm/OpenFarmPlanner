@@ -35,6 +35,13 @@ const openSelect = async (label: string): Promise<void> => {
   await user.click(trigger);
 };
 
+const expectFocusAfterTab = async (user: ReturnType<typeof userEvent.setup>, element: HTMLElement): Promise<void> => {
+  await user.tab();
+  await waitFor(() => {
+    expect(element).toHaveFocus();
+  });
+};
+
 describe('AreaAssignmentDialog', () => {
   it('opens with current location/field/bed selection', async () => {
     render(
@@ -82,11 +89,11 @@ describe('AreaAssignmentDialog', () => {
 
     await openSelect('Beet');
     const listbox = await screen.findByRole('listbox');
-    expect(within(listbox).getByRole('option', { name: /9 Pastinake.*6 \(8,00 m²\)/ })).toBeInTheDocument();
-    expect(within(listbox).queryByRole('option', { name: /8 Karotte \+ Zwiebel.*5 \(10,00 m²\)/ })).not.toBeInTheDocument();
+    expect(within(listbox).getByRole('option', { name: '6 (8,00 m²)' })).toBeInTheDocument();
+    expect(within(listbox).queryByRole('option', { name: '5 (10,00 m²)' })).not.toBeInTheDocument();
   });
 
-  it('shows bed option labels with pipe separators', async () => {
+  it('shows bed option labels without redundant field names', async () => {
     render(
       <AreaAssignmentDialog bedId={101} beds={beds} fields={fields} locations={locations} locale="de-DE" compactLabel="x" onApply={vi.fn()} />,
     );
@@ -94,7 +101,8 @@ describe('AreaAssignmentDialog', () => {
     await openDialog();
     await openSelect('Beet');
     const listbox = await screen.findByRole('listbox');
-    expect(within(listbox).getByRole('option', { name: '8 Karotte + Zwiebel | 5 (10,00 m²)' })).toBeInTheDocument();
+    expect(within(listbox).getByRole('option', { name: '5 (10,00 m²)' })).toBeInTheDocument();
+    expect(within(listbox).queryByRole('option', { name: '8 Karotte + Zwiebel | 5 (10,00 m²)' })).not.toBeInTheDocument();
   });
 
   it('sets location and field automatically when bed changes', async () => {
@@ -108,10 +116,11 @@ describe('AreaAssignmentDialog', () => {
     await openSelect('Parzelle');
     await userEvent.setup().click(screen.getByRole('option', { name: '5 Tomate' }));
     await openSelect('Beet');
-    await userEvent.setup().click(screen.getByRole('option', { name: /5 Tomate.*12,50 m²/ }));
+    await userEvent.setup().click(screen.getByRole('option', { name: '5 (12,50 m²)' }));
 
     expect(screen.getByRole('combobox', { name: 'Standort' })).toHaveTextContent('Sonnengarten');
     expect(screen.getByRole('combobox', { name: 'Parzelle' })).toHaveTextContent('5 Tomate');
+    expect(screen.getByRole('combobox', { name: 'Beet' })).toHaveTextContent('5 (12,50 m²)');
   });
 
   it('applies the changed bed selection', async () => {
@@ -124,7 +133,7 @@ describe('AreaAssignmentDialog', () => {
     await openSelect('Parzelle');
     await userEvent.setup().click(screen.getByRole('option', { name: '9 Pastinake' }));
     await openSelect('Beet');
-    await userEvent.setup().click(screen.getByRole('option', { name: /9 Pastinake.*8,00 m²/ }));
+    await userEvent.setup().click(screen.getByRole('option', { name: '6 (8,00 m²)' }));
     await userEvent.setup().click(screen.getByRole('button', { name: 'Übernehmen' }));
 
     expect(onApply).toHaveBeenCalledWith(102);
@@ -143,7 +152,7 @@ describe('AreaAssignmentDialog', () => {
     await openSelect('Parzelle');
     await userEvent.setup().click(screen.getByRole('option', { name: '9 Pastinake' }));
     await openSelect('Beet');
-    await userEvent.setup().click(screen.getByRole('option', { name: /9 Pastinake.*8,00 m²/ }));
+    await userEvent.setup().click(screen.getByRole('option', { name: '6 (8,00 m²)' }));
     await userEvent.setup().click(screen.getByRole('button', { name: 'Abbrechen' }));
 
     expect(onApply).not.toHaveBeenCalled();
@@ -152,7 +161,7 @@ describe('AreaAssignmentDialog', () => {
     expect(screen.getByRole('combobox', { name: 'Beet' })).toHaveTextContent('5 (10,00 m²)');
   });
 
-  it('hides location selector when only one selectable location exists', async () => {
+  it('keeps the location selector visible when only one selectable location exists', async () => {
     const singleLocationFields: Field[] = [
       { id: 11, name: '8 Karotte + Zwiebel', location: 1 },
       { id: 12, name: '9 Pastinake', location: 1 },
@@ -171,7 +180,7 @@ describe('AreaAssignmentDialog', () => {
     );
 
     await openDialog();
-    expect(screen.queryByRole('combobox', { name: 'Standort' })).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Standort' })).toHaveTextContent('Regenbogenland');
     expect(screen.getByRole('combobox', { name: 'Parzelle' })).toBeInTheDocument();
   });
 
@@ -198,14 +207,10 @@ describe('AreaAssignmentDialog', () => {
     );
 
     await openDialog();
-    await user.tab();
-    expect(screen.getByRole('combobox', { name: 'Standort' })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole('combobox', { name: 'Parzelle' })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole('combobox', { name: 'Beet' })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole('button', { name: 'Abbrechen' })).toHaveFocus();
+    await expectFocusAfterTab(user, screen.getByRole('combobox', { name: 'Standort' }));
+    await expectFocusAfterTab(user, screen.getByRole('combobox', { name: 'Parzelle' }));
+    await expectFocusAfterTab(user, screen.getByRole('combobox', { name: 'Beet' }));
+    await expectFocusAfterTab(user, screen.getByRole('button', { name: 'Abbrechen' }));
     await user.keyboard('{Enter}');
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: 'Anbaufläche ändern' })).not.toBeInTheDocument();
@@ -213,10 +218,11 @@ describe('AreaAssignmentDialog', () => {
 
     await openDialog();
     const applyButton = screen.getByRole('button', { name: 'Übernehmen' });
-    for (let i = 0; i < 6 && document.activeElement !== applyButton; i += 1) {
-      await user.tab();
-    }
-    expect(applyButton).toHaveFocus();
+    await expectFocusAfterTab(user, screen.getByRole('combobox', { name: 'Standort' }));
+    await expectFocusAfterTab(user, screen.getByRole('combobox', { name: 'Parzelle' }));
+    await expectFocusAfterTab(user, screen.getByRole('combobox', { name: 'Beet' }));
+    await expectFocusAfterTab(user, screen.getByRole('button', { name: 'Abbrechen' }));
+    await expectFocusAfterTab(user, applyButton);
     await user.keyboard('{Enter}');
 
     expect(onApply).toHaveBeenCalledWith(101);
@@ -229,21 +235,28 @@ describe('AreaAssignmentDialog', () => {
     );
 
     await openDialog();
-    await user.tab();
-    await user.tab();
-    await user.tab();
-    await user.tab();
-    await user.tab();
-    expect(screen.getByRole('button', { name: 'Übernehmen' })).toHaveFocus();
+    await expectFocusAfterTab(user, screen.getByRole('combobox', { name: 'Standort' }));
+    await expectFocusAfterTab(user, screen.getByRole('combobox', { name: 'Parzelle' }));
+    await expectFocusAfterTab(user, screen.getByRole('combobox', { name: 'Beet' }));
+    await expectFocusAfterTab(user, screen.getByRole('button', { name: 'Abbrechen' }));
+    await expectFocusAfterTab(user, screen.getByRole('button', { name: 'Übernehmen' }));
 
     await user.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(screen.getByRole('button', { name: 'Abbrechen' })).toHaveFocus();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Abbrechen' })).toHaveFocus();
+    });
     await user.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(screen.getByRole('combobox', { name: 'Beet' })).toHaveFocus();
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Beet' })).toHaveFocus();
+    });
     await user.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(screen.getByRole('combobox', { name: 'Parzelle' })).toHaveFocus();
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Parzelle' })).toHaveFocus();
+    });
     await user.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(screen.getByRole('combobox', { name: 'Standort' })).toHaveFocus();
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Standort' })).toHaveFocus();
+    });
   });
 
   it('keeps tab navigation working after confirming a dropdown option with Enter', async () => {
@@ -258,7 +271,6 @@ describe('AreaAssignmentDialog', () => {
     await user.keyboard('{ArrowDown}{Enter}');
 
     expect(screen.getByRole('combobox', { name: 'Standort' })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole('combobox', { name: 'Parzelle' })).toHaveFocus();
+    await expectFocusAfterTab(user, screen.getByRole('combobox', { name: 'Parzelle' }));
   });
 });
