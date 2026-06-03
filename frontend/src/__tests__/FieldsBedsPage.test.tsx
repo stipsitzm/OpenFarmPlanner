@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import FieldsBedsPage from '../pages/FieldsBedsPage';
 import { MemoryRouter } from 'react-router-dom';
@@ -129,7 +129,7 @@ describe('FieldsBedsPage', () => {
     );
 
     expect(await screen.findByText('Hierarchieansicht')).toBeInTheDocument();
-    expect(screen.getByTestId('create-field-request')).toHaveTextContent('1');
+    await waitFor(() => expect(screen.getByTestId('create-field-request')).toHaveTextContent('1'));
     expect(promptSpy).not.toHaveBeenCalled();
     promptSpy.mockRestore();
   });
@@ -153,9 +153,10 @@ describe('FieldsBedsPage', () => {
 
     renderPage();
     expect(await screen.findByText('Parzelle fehlt')).toBeInTheDocument();
-    const matchingButtons = await screen.findAllByRole('button', { name: 'Parzelle hinzufügen' });
-    fireEvent.click(matchingButtons[matchingButtons.length - 1]);
-    expect(screen.getByTestId('create-field-request')).toHaveTextContent('1');
+    expect(screen.getByText('Füge Parzellen in der sichtbaren Tabelle über das + Symbol beim jeweiligen Standort hinzu.')).toBeInTheDocument();
+    expect(screen.getByText('Tipp: Rechtsklick auf eine Tabellenzeile öffnet weitere Aktionen.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('create-field-request')).toHaveTextContent('0');
   });
 
   it('shows missing bed requirement when fields exist but no beds exist', async () => {
