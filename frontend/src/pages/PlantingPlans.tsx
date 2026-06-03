@@ -92,6 +92,7 @@ import { collectHierarchyAvailability } from "../components/planting-plans/areaH
 import EmptyStateCard from "../components/project/EmptyStateCard";
 
 export {
+  collectHierarchyAvailability,
   filterBedOptionsBySelection,
   filterFieldOptionsByLocation,
 } from "../components/planting-plans/areaHierarchySelection";
