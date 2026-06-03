@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
 import { AddBedIcon } from '../components/hierarchy/AddBedIcon';
+import { HierarchyAddIcon } from '../components/hierarchy/HierarchyAddIcon';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
 import { useTranslation } from '../i18n';
@@ -217,9 +218,13 @@ export default function FieldsBedsPage(): React.ReactElement {
   const shouldShowMissingBedsHint = hasFields && !hasBeds;
   const createBedAction = getProjectSetupAction('beds');
   const emptyAreasDescription = shouldShowMissingFieldsState
-    ? t(locations.length > 1
-      ? 'hierarchy:emptyAreas.missingFieldDescriptionMultipleLocations'
-      : 'hierarchy:emptyAreas.missingFieldDescription')
+    ? (
+      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+        {t('hierarchy:emptyAreas.missingFieldDescriptionBeforeIcon')}
+        <HierarchyAddIcon interactive={false} ariaHidden sx={{ bgcolor: 'transparent' }} />
+        {t('hierarchy:emptyAreas.missingFieldDescriptionAfterIcon')}
+      </Box>
+    )
     : t('hierarchy:emptyAreas.description');
   const emptyAreaActions = useMemo<EmptyStateAction[]>(() => {
     if (shouldShowMissingFieldsState) {

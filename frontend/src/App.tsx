@@ -106,6 +106,7 @@ const CONTENT_ALIGNMENT_MODE = 'centered';
 const ACTION_MENU_ITEM_ICON_SX = { minWidth: 32, color: 'text.secondary' } as const;
 const ACTION_MENU_ICON_PROPS = { fontSize: 'small' } as const;
 const HIERARCHY_CREATE_LOCATION_ACTION_ID = 'fields-global-add-location';
+const TOPBAR_ACTION_GROUP_GAP = 1.25;
 const HomePage = React.lazy(() => import('./pages/public/HomePage'));
 const ImprintPage = React.lazy(() => import('./pages/public/ImprintPage'));
 const PrivacyPolicyPage = React.lazy(() => import('./pages/public/PrivacyPolicyPage'));
@@ -942,7 +943,7 @@ function RootLayout(): React.ReactElement {
           </Box>
           {!isCompactTopbar ? (
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, maxWidth: '100%', flex: 1, overflow: 'hidden' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flex: 1, justifyContent: 'flex-end', overflow: 'hidden', pr: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP, minWidth: 0, flex: 1, justifyContent: 'flex-end', overflow: 'hidden', pr: 0.5 }}>
           {isCulturesPage ? (
             <>
               {cultureLibraryAction && !showDesktopCultureActionsOverflow ? (
@@ -1104,7 +1105,7 @@ function RootLayout(): React.ReactElement {
             </Tooltip>
           ) : null}
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1, flexShrink: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP, ml: TOPBAR_ACTION_GROUP_GAP, flexShrink: 0 }}>
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
             aria-controls={projectMenuAnchor ? 'project-switcher-menu' : undefined}
@@ -1166,7 +1167,7 @@ function RootLayout(): React.ReactElement {
             </Box>
           </Box>
           ) : (
-            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.25 }}>
+            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP }}>
               {topbarPrimaryAction ? (
                 <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
                   <Button
@@ -1213,7 +1214,7 @@ function RootLayout(): React.ReactElement {
         </Toolbar>
         {isCompactTopbar && hasMobileSecondaryRow ? (
           <Box className="mobile-action-scroll" sx={{ px: 0, pb: 0.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minHeight: 36, flexWrap: 'wrap', whiteSpace: 'normal', width: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP, minHeight: 36, flexWrap: 'wrap', whiteSpace: 'normal', width: '100%' }}>
               {isCulturesPage ? (
                 <>
                   {cultureLibraryAction ? (

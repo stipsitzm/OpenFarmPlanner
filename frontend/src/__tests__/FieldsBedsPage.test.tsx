@@ -153,7 +153,9 @@ describe('FieldsBedsPage', () => {
 
     renderPage();
     expect(await screen.findByText('Parzelle fehlt')).toBeInTheDocument();
-    expect(screen.getByText('Füge Parzellen in der sichtbaren Tabelle über das + Symbol beim jeweiligen Standort hinzu.')).toBeInTheDocument();
+    expect(screen.getByText('Füge Parzellen in der sichtbaren Tabelle über das')).toBeInTheDocument();
+    expect(screen.getByText('Symbol beim jeweiligen Standort hinzu.')).toBeInTheDocument();
+    expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
     expect(screen.getByText('Tipp: Rechtsklick auf eine Tabellenzeile öffnet weitere Aktionen.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
     expect(screen.getByTestId('create-field-request')).toHaveTextContent('0');
