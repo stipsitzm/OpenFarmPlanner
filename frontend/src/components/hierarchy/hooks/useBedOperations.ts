@@ -7,7 +7,6 @@ import { bedAPI, type Bed } from '../../../api/api';
 import type { TFunction } from 'i18next';
 
 export function useBedOperations(
-  _beds: Bed[],
   setBeds: React.Dispatch<React.SetStateAction<Bed[]>>,
   setError: (error: string) => void,
   t: TFunction

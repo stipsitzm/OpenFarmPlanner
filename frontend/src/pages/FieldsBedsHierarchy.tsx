@@ -394,7 +394,7 @@ function FieldsBedsHierarchy({
 
   // Bed operations
   const { addBed, saveBed, pendingEditRow, setPendingEditRow } =
-    useBedOperations(beds, setBeds, setError, t);
+    useBedOperations(setBeds, setError, t);
   const [pendingFieldEditRow, setPendingFieldEditRow] = useState<string | number | null>(null);
 
   const hierarchyIndex = useMemo(
