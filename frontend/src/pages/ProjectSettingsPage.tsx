@@ -442,7 +442,7 @@ export default function ProjectSettingsPage() {
               <Box>
                 <Typography sx={{ fontWeight: 600 }}>{invitation.email}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {t('expiresAt', { date: new Date(invitation.expires_at).toLocaleString() })}
+                  {t('expiresAt', { date: new Date(invitation.expires_at).toLocaleString('de-DE') })}
                 </Typography>
               </Box>
               <Stack direction="row" spacing={1} alignItems="center">
