@@ -7,7 +7,7 @@ import { useTranslation } from '../i18n';
 
 type InvitationViewStatus = 'loading' | 'ready' | 'accepting' | 'success' | 'error';
 
-export default function InvitationPage(): React.ReactElement {
+export default function InvitationPage() {
   const { t } = useTranslation(['projectInvitations', 'auth']);
   const navigate = useNavigate();
   const { token } = useParams<{ token: string }>();
@@ -95,7 +95,7 @@ export default function InvitationPage(): React.ReactElement {
     openLogin();
   };
 
-  const renderInfo = (): React.ReactElement => {
+  const renderInfo = () => {
     if (status === 'loading' || status === 'accepting') {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
