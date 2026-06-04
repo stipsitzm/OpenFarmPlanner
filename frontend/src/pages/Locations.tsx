@@ -27,6 +27,7 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useRegisterCreateActions } from '../commands/useCommandContext';
+import { confirmAction } from '../utils/confirmAction';
 
 type SoilType = NonNullable<Location['soil_type']>;
 type Exposure = NonNullable<Location['exposure']>;
@@ -271,7 +272,7 @@ function Locations(): React.ReactElement {
   };
 
   const deleteLocation = async (locationId: number): Promise<void> => {
-    if (!window.confirm(t('locations:confirmDelete'))) return;
+    if (!confirmAction(t('locations:confirmDelete'))) return;
     try {
       await locationAPI.delete(locationId);
       await loadData();

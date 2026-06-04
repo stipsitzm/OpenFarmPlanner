@@ -4,6 +4,7 @@
 
 import { fieldAPI, type Location } from '../../../api/api';
 import type { TFunction } from 'i18next';
+import { confirmAction } from '../../../utils/confirmAction';
 
 export function useFieldOperations(
   locations: Location[],
@@ -45,7 +46,7 @@ export function useFieldOperations(
   };
 
   const deleteField = async (fieldId: number): Promise<void> => {
-    if (!window.confirm(t('confirm.deleteFieldWithBeds'))) {
+    if (!confirmAction(t('confirm.deleteFieldWithBeds'))) {
       return;
     }
 

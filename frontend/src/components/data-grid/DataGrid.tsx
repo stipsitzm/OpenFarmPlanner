@@ -38,6 +38,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
+import { confirmAction } from '../../utils/confirmAction';
 import { useTranslation } from '../../i18n';
 import { NotesCell } from './NotesCell';
 import { NotesDrawer } from './NotesDrawer';
@@ -1322,7 +1323,7 @@ export function EditableDataGrid<T extends EditableRow>({
       return;
     }
 
-    if (!window.confirm(deleteConfirmMessage)) return;
+    if (!confirmAction(deleteConfirmMessage)) return;
 
     const numericId = Number(id);
     if (numericId < 0) {
