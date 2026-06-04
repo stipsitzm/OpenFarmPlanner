@@ -157,7 +157,7 @@ interface ProjectMenuProps {
   t: (key: string) => string;
 }
 
-function ProjectMenu(props: ProjectMenuProps): React.ReactElement {
+function ProjectMenu(props: ProjectMenuProps) {
   const {
     anchorEl,
     open,
@@ -228,7 +228,7 @@ interface GlobalMenuProps {
   t: (key: string) => string;
 }
 
-function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
+function GlobalMenu(props: GlobalMenuProps) {
   const {
     anchorEl,
     open,
@@ -297,7 +297,7 @@ export interface RootLayoutOutletContext {
  * Root layout component with navigation.
  * Wraps all routes with the persistent navigation bar.
  */
-function RootLayout(): React.ReactElement {
+function RootLayout() {
   const { t, i18n } = useTranslation('navigation');
   useGlobalOverlayKeyboardScroll();
   const tCultures = useMemo(
@@ -1721,7 +1721,7 @@ function RootLayout(): React.ReactElement {
   );
 }
 
-function LegacyInvitationRedirect(): React.ReactElement {
+function LegacyInvitationRedirect() {
   const location = useLocation();
   const token = new URLSearchParams(location.search).get('token');
   if (!token) {
@@ -1730,7 +1730,7 @@ function LegacyInvitationRedirect(): React.ReactElement {
   return <Navigate to={buildInvitationAcceptPath(token)} replace />;
 }
 
-function TokenInvitationRedirect(): React.ReactElement {
+function TokenInvitationRedirect() {
   const location = useLocation();
   const token = location.pathname.split('/').pop();
   if (!token) {
@@ -1830,7 +1830,7 @@ function createAppRouter(basename: string) {
   });
 }
 
-function App(): React.ReactElement {
+function App() {
   // Use Vite's base URL when URL is inside that subdirectory, otherwise fall back to root.
   const configuredBase = import.meta.env.BASE_URL.replace(/\/$/, '');
   const currentPath = window.location.pathname;
