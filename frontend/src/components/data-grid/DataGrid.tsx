@@ -925,7 +925,6 @@ export function EditableDataGrid<T extends EditableRow>({
       }
     } catch (err) {
       if (isSaveErrorHandled?.(err)) {
-        console.error('Error saving data:', err);
         throw err;
       }
       // Extract user-friendly error message
