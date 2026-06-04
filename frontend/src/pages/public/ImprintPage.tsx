@@ -7,7 +7,7 @@ const imprintSections = [
   'responsiblePerson',
 ] as const;
 
-export default function ImprintPage(): React.ReactElement {
+export default function ImprintPage() {
   const { t } = useTranslation('home');
 
   return (

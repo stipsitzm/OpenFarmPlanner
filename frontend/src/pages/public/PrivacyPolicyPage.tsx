@@ -27,7 +27,7 @@ const privacySectionBulletKeys: Partial<Record<(typeof privacySections)[number],
   rights: ['access', 'rectification', 'deletion', 'restriction', 'portability', 'objection'],
 } as const;
 
-export default function PrivacyPolicyPage(): React.ReactElement {
+export default function PrivacyPolicyPage() {
   const { t, i18n } = useTranslation('home');
 
   return (

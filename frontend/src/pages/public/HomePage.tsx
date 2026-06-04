@@ -15,7 +15,7 @@ import { useTranslation } from '../../i18n';
  *
  * @returns Landing page UI.
  */
-export default function HomePage(): React.ReactElement {
+export default function HomePage() {
   const { t } = useTranslation('home');
 
   return (

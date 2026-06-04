@@ -5,7 +5,7 @@ import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
 
-export default function ResetPasswordPage(): React.ReactElement {
+export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const { confirmPasswordReset } = useAuth();
   const { t } = useTranslation('auth');

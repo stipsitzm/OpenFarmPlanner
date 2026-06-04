@@ -8,7 +8,7 @@ import { buildInvitationAcceptPath, getStoredInvitationNext, getStoredInvitation
 
 type ActivateStatus = 'idle' | 'loading' | 'success' | 'error';
 
-export default function ActivatePage(): React.ReactElement {
+export default function ActivatePage() {
   const [searchParams] = useSearchParams();
   const { uid: uidFromPath, token: tokenFromPath } = useParams<{ uid?: string; token?: string }>();
   const { activate, switchActiveProject } = useAuth();

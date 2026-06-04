@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { confirmEmailChange } from '../../auth/authApi';
 import { useTranslation } from '../../i18n';
 
-export default function ConfirmEmailChangePage(): React.ReactElement {
+export default function ConfirmEmailChangePage() {
   const { t } = useTranslation('account');
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');

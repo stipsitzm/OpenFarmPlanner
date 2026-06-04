@@ -5,7 +5,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
 
-export default function ForgotPasswordPage(): React.ReactElement {
+export default function ForgotPasswordPage() {
   const { requestPasswordReset } = useAuth();
   const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
