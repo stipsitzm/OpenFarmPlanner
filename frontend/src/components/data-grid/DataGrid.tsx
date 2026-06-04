@@ -341,7 +341,7 @@ export function EditableDataGrid<T extends EditableRow>({
   onBeforeSaveRow,
   isSaveErrorHandled,
   surfaceSizing,
-}: EditableDataGridProps<T>): React.ReactElement {
+}: EditableDataGridProps<T>) {
   const gridApiRef = useGridApiRef();
   const resolvedSurfaceSizing = surfaceSizing ?? 'contentFit';
   const isContentSizedSurface = resolvedSurfaceSizing === 'contentFit' || resolvedSurfaceSizing === 'compact';
@@ -1526,7 +1526,7 @@ export function EditableDataGrid<T extends EditableRow>({
   /**
    * Custom footer component with add button
    */
-  const CustomFooter = (): React.ReactElement => {
+  const CustomFooter = () => {
     const hasInvalidCell = hasValidationError || hasInvalidRowInEditMode;
 
     return (
