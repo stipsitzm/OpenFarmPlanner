@@ -16,7 +16,7 @@ import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import LinkIcon from '@mui/icons-material/Link';
 import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
-import type { ReactElement, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from '../../i18n';
 
 export interface MarkdownToolbarProps {
@@ -70,7 +70,7 @@ const TOOLBAR_ACTIONS: Array<{ format: MarkdownFormat; icon: ReactNode; group: '
 /**
  * Toolbar with markdown formatting buttons.
  */
-export function MarkdownToolbar({ onFormat }: MarkdownToolbarProps): ReactElement {
+export function MarkdownToolbar({ onFormat }: MarkdownToolbarProps) {
   const { t } = useTranslation('common');
 
   return (
