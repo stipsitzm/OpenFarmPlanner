@@ -21,7 +21,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { locationAPI, type Location } from '../api/api';
 import PageContainer from '../components/layout/PageContainer';
 import { useTranslation } from '../i18n';
-import { resolveLocaleFromLanguage } from '../utils/numberLocalization';
+import { formatLocalizedNumber, resolveLocaleFromLanguage } from '../utils/numberLocalization';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
@@ -98,7 +98,7 @@ const validateCoordinateRange = (value: number | null, min: number, max: number)
   value === null || (value >= min && value <= max);
 
 const formatCoordinate = (value: number, locale: string): string =>
-  new Intl.NumberFormat(locale, { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(value);
+  formatLocalizedNumber(value, locale, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 
 const toFormState = (location: Location | null): LocationFormState => ({
   name: location?.name ?? '',
