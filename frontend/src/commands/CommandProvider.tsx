@@ -37,7 +37,7 @@ const getAvailableCreateActions = (actions: CreateAction[]): CreateAction[] => a
   .filter((action) => !action.hidden && !action.disabled)
   .sort((first, second) => (first.priority ?? 0) - (second.priority ?? 0) || first.label.localeCompare(second.label));
 
-export function CommandProvider({ children }: { children: React.ReactNode }): React.ReactElement {
+export function CommandProvider({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation('navigation');
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);

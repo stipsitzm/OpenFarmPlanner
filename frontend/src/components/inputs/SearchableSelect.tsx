@@ -61,7 +61,7 @@ export function SearchableSelect<T = unknown>({
   inputValue,
   onInputChange,
   endAdornment,
-}: SearchableSelectProps<T>): React.ReactElement {
+}: SearchableSelectProps<T>) {
   const [internalInputValue, setInternalInputValue] = useState('');
   const resolvedInputValue = inputValue ?? internalInputValue;
 

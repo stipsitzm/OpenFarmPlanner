@@ -86,7 +86,7 @@ export function AreaAssignmentDialog({
   onApply,
   compactLabel,
   hasFocus = false,
-}: AreaAssignmentDialogProps): React.ReactElement {
+}: AreaAssignmentDialogProps) {
   const { t } = useTranslation('plantingPlans');
   const [isOpen, setIsOpen] = useState(false);
   const [openSelect, setOpenSelect] = useState<'location' | 'field' | 'bed' | null>(null);
