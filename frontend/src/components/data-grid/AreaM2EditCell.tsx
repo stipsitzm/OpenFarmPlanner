@@ -64,7 +64,7 @@ export interface AreaM2EditCellProps extends GridRenderEditCellParams {
   maxPlaceholder: string;
 }
 
-export function AreaM2EditCell(props: AreaM2EditCellProps): React.ReactElement {
+export function AreaM2EditCell(props: AreaM2EditCellProps) {
   const {
     id,
     value,

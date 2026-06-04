@@ -84,7 +84,7 @@ async function renderProcessedFile(file: File, cropRect?: CropRect): Promise<Fil
   return new File([jpeg], `${file.name.replace(/\.[^.]+$/, '')}.jpg`, { type: 'image/jpeg' });
 }
 
-export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loading = false, noteId, focusAttachments = false, focusRequestId = 0 }: NotesDrawerProps): React.ReactElement {
+export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loading = false, noteId, focusAttachments = false, focusRequestId = 0 }: NotesDrawerProps) {
   const { t } = useTranslation('common');
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [attachments, setAttachments] = useState<NoteAttachment[]>([]);

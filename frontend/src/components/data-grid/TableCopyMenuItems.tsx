@@ -1,7 +1,6 @@
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import { Divider, ListItemIcon, ListItemText, MenuItem } from '@mui/material';
-import type React from 'react';
 import { buildTsv, copyTextToClipboard, showClipboardSnackbar, type TableClipboardRow } from './tableClipboard';
 
 interface TableCopyMenuItemsProps {
@@ -26,7 +25,7 @@ export function TableCopyMenuItems({
   copyErrorMessage,
   includeDivider = true,
   onClose,
-}: TableCopyMenuItemsProps): React.ReactElement {
+}: TableCopyMenuItemsProps) {
   const copy = async (rows: readonly TableClipboardRow[], successMessage: string): Promise<void> => {
     try {
       await copyTextToClipboard(buildTsv(rows));
