@@ -36,7 +36,7 @@ export default function ProjectSelectionPage() {
   }, [loadDeletedProjects]);
 
   const deletedProjectsByName = useMemo(
-    () => [...deletedProjects].sort((left, right) => left.name.localeCompare(right.name)),
+    () => [...deletedProjects].sort((left, right) => left.name.localeCompare(right.name, 'de')),
     [deletedProjects],
   );
 

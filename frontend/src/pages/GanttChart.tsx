@@ -440,7 +440,7 @@ function GanttChartPage() {
       currentDate.setDate(currentDate.getDate() + 7);
     }
 
-    const sortedCultures = [...cultureMeta.values()].sort((left, right) => left.name.localeCompare(right.name));
+    const sortedCultures = [...cultureMeta.values()].sort((left, right) => left.name.localeCompare(right.name, 'de'));
     const maxYield = rows.reduce((max, row) => Math.max(max, row.totalYield), 0);
 
     return {
