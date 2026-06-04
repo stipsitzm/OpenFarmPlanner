@@ -8,7 +8,7 @@ import { useTranslation } from '../i18n';
 import { openProjectCreationFlow } from '../projects/projectCreationFlow';
 import { confirmAction } from '../utils/confirmAction';
 
-export default function ProjectSelectionPage(): React.ReactElement {
+export default function ProjectSelectionPage() {
   const { user, switchActiveProject, refreshUser } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation(['navigation', 'common']);

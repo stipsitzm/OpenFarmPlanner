@@ -31,7 +31,7 @@ const CONTENT_ALIGNED_EMPTY_STATE_SX: SxProps<Theme> = {
 type ViewMode = 'table' | 'graphical';
 type InteractionMode = 'view' | 'edit';
 
-export default function FieldsBedsPage(): React.ReactElement {
+export default function FieldsBedsPage() {
   const { t } = useTranslation(['fields', 'hierarchy', 'common']);
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down('sm'));

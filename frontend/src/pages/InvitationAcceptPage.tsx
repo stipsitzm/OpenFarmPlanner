@@ -15,7 +15,7 @@ type AcceptStatus = "loading" | "redirecting" | "success" | "error";
 
 const acceptedInvitationTokens = new Set<string>();
 
-export default function InvitationAcceptPage(): React.ReactElement {
+export default function InvitationAcceptPage() {
   const { t } = useTranslation("projectInvitations");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

@@ -12,7 +12,7 @@ interface InviteFeedback {
   text: string;
 }
 
-export default function ProjectSettingsPage(): React.ReactElement {
+export default function ProjectSettingsPage() {
   const { t } = useTranslation('projectInvitations');
   const navigate = useNavigate();
   const { user, refreshUser, activeProjectId } = useAuth();

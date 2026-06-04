@@ -32,7 +32,7 @@ export function EnrichmentLoadingDialog({
   activeStepIndex,
   steps,
   t,
-}: EnrichmentLoadingDialogProps): React.ReactElement {
+}: EnrichmentLoadingDialogProps) {
   return (
     <Dialog open={open} aria-labelledby="enrichment-loading-title" maxWidth="xs" fullWidth>
       <DialogTitle id="enrichment-loading-title">{t('ai.loadingTitle')}</DialogTitle>

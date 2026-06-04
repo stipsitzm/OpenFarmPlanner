@@ -50,7 +50,7 @@ const formatPackageSelection = (row: SeedDemand, t: (key: string) => string): st
     .join(' + ');
 };
 
-export default function SeedDemandPage(): React.ReactElement {
+export default function SeedDemandPage() {
   useCommandContextTag('seedDemand');
   const { t } = useTranslation(['cultures', 'common']);
   const navigate = useNavigate();

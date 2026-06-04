@@ -20,7 +20,7 @@ import { changePassword, requestEmailChange, updateProfile } from '../auth/authA
 import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
 
-export default function AccountSettingsPage(): React.ReactElement {
+export default function AccountSettingsPage() {
   const { user, requestAccountDeletion, refreshUser } = useAuth();
   const { t } = useTranslation('account');
   const navigate = useNavigate();

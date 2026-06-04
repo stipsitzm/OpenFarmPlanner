@@ -91,7 +91,7 @@ const isValidUrl = (url: string): boolean => {
   }
 };
 
-export default function Suppliers(): React.ReactElement {
+export default function Suppliers() {
   const { t } = useTranslation(['suppliers', 'common']);
   const location = useLocation();
   const navigate = useNavigate();
