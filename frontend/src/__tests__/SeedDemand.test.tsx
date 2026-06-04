@@ -327,7 +327,7 @@ describe('SeedDemandPage', () => {
 
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledWith(
-        'Bohne (Canadian Wonder)\tReinsaat\t184.20 seedDemand.unitGrams\t25 seedDemand.unitGrams × 8',
+        'Bohne (Canadian Wonder)\tReinsaat\t184,20 seedDemand.unitGrams\t25 seedDemand.unitGrams × 8',
       );
     });
   });
@@ -379,7 +379,7 @@ describe('SeedDemandPage', () => {
       expect(writeText).toHaveBeenCalledWith(
         [
           'seedDemand.columns.culture\tseedDemand.columns.supplier\tseedDemand.columns.requiredAmount\tseedDemand.columns.packages',
-          'Salat\tReinsaat\t0.25 seedDemand.unitGrams\tseedDemand.noPackagesAvailable',
+          'Salat\tReinsaat\t0,25 seedDemand.unitGrams\tseedDemand.noPackagesAvailable',
         ].join('\n'),
       );
     });
