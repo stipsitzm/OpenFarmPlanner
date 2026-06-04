@@ -258,7 +258,7 @@ export default function GraphicalFields({
   onInteractionModeChange,
   showModeToggle = true,
   hierarchyData,
-}: GraphicalFieldsProps): React.ReactElement {
+}: GraphicalFieldsProps) {
   const { t } = useTranslation(["fields", "common"]);
   const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
   const { loading, error, locations, fields, beds } = hierarchyData ?? internalHierarchyData;

@@ -113,7 +113,7 @@ const toFormState = (location: Location | null): LocationFormState => ({
   notes: location?.notes ?? '',
 });
 
-function Locations(): React.ReactElement {
+function Locations() {
   const { t, i18n } = useTranslation(['locations', 'common']);
   const location = useLocation();
   const navigate = useNavigate();

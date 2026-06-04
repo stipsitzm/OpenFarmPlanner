@@ -118,7 +118,7 @@ function formatIsoWeek(date: Date): string {
   return `${utcDate.getUTCFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
 }
 
-function GanttChartPage(): React.ReactElement {
+function GanttChartPage() {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   useCommandContextTag('calendar');

@@ -117,7 +117,7 @@ interface PendingCultureDeletion {
   visible: boolean;
 }
 
-function Cultures(): React.ReactElement {
+function Cultures() {
   const { t } = useTranslation(['cultures', 'common']);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
