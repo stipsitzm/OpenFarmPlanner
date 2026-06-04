@@ -38,7 +38,7 @@ function SeedRateBlock({
   errors: Record<string, string>;
   onChange: <K extends keyof Culture>(name: K, value: Culture[K]) => void;
   t: TFunction;
-}): React.ReactElement {
+}) {
   return (
     <>
       <Typography variant="subtitle1" sx={{ mt: 2 }}>{title}</Typography>

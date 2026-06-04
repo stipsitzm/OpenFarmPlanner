@@ -169,7 +169,7 @@ export function CultureDetail({
   canCreatePlan = true,
   isPublishingCulture = false,
   publishActionLabel,
-}: CultureDetailProps): React.ReactElement {
+}: CultureDetailProps) {
   const { t } = useTranslation('cultures');
   const [searchParams, setSearchParams] = useSearchParams();
   const theme = useTheme();

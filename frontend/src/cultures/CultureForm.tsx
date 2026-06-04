@@ -153,7 +153,7 @@ export function CultureForm({
   onSave,
   onCancel,
   onViewPublicLibraryMatch,
-}: CultureFormProps): React.ReactElement {
+}: CultureFormProps) {
   const { t } = useTranslation('cultures');
   const navigate = useNavigate();
   const isEdit = Boolean(culture);
