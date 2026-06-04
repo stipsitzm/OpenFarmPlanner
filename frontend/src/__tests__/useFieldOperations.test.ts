@@ -1,11 +1,12 @@
 import { mockT } from './helpers/testI18n';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useFieldOperations } from '../components/hierarchy/hooks/useFieldOperations';
 
-const { createFieldMock, deleteFieldMock } = vi.hoisted(() => ({
+const { createFieldMock, deleteFieldMock, confirmActionMock } = vi.hoisted(() => ({
   createFieldMock: vi.fn(),
   deleteFieldMock: vi.fn(),
+  confirmActionMock: vi.fn(),
 }));
 
 vi.mock('../api/api', () => ({
@@ -15,15 +16,13 @@ vi.mock('../api/api', () => ({
   },
 }));
 
-describe('useFieldOperations', () => {
-  const originalConfirm = window.confirm;
+vi.mock('../utils/confirmAction', () => ({
+  confirmAction: confirmActionMock,
+}));
 
+describe('useFieldOperations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    window.confirm = originalConfirm;
   });
 
   it('shows an error when no location exists for a new field', async () => {
@@ -107,7 +106,7 @@ describe('useFieldOperations', () => {
   });
 
   it('deletes a field only after user confirmation and reloads data', async () => {
-    window.confirm = vi.fn().mockReturnValue(true);
+    confirmActionMock.mockReturnValue(true);
 
     const setError = vi.fn();
     const fetchData = vi.fn().mockResolvedValue(undefined);
@@ -123,7 +122,7 @@ describe('useFieldOperations', () => {
   });
 
   it('skips deletion when user cancels confirmation', async () => {
-    window.confirm = vi.fn().mockReturnValue(false);
+    confirmActionMock.mockReturnValue(false);
 
     const setError = vi.fn();
     const fetchData = vi.fn();
@@ -138,7 +137,7 @@ describe('useFieldOperations', () => {
   });
 
   it('reports API errors when deleting a field fails', async () => {
-    window.confirm = vi.fn().mockReturnValue(true);
+    confirmActionMock.mockReturnValue(true);
 
     const setError = vi.fn();
     const fetchData = vi.fn();
