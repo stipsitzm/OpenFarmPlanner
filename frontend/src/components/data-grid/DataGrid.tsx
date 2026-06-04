@@ -86,7 +86,7 @@ export interface EditableDataGridRowActionHelpers<T extends EditableRow> {
 export interface EditableDataGridRowAction<T extends EditableRow> {
   id: string;
   label: string;
-  icon?: React.ReactElement;
+  icon?: React.ReactNode;
   color?: 'default' | 'error' | 'primary';
   onClick: (row: T, helpers: EditableDataGridRowActionHelpers<T>) => void;
   disabled?: boolean;
