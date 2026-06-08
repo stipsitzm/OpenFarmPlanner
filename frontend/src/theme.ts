@@ -260,6 +260,33 @@ const theme = createTheme({
             color: theme.palette.action.disabled,
           },
         }),
+        outlinedError: ({ theme }) => ({
+          color: theme.palette.error.main,
+          borderColor: theme.palette.error.main,
+          '&:hover': {
+            color: theme.palette.error.dark,
+            borderColor: theme.palette.error.dark,
+            backgroundColor: alpha(theme.palette.error.main, 0.08),
+          },
+          '&:visited': {
+            color: theme.palette.error.main,
+          },
+          '&.Mui-focusVisible': {
+            color: theme.palette.error.dark,
+            borderColor: theme.palette.error.dark,
+            outline: `2px solid ${theme.palette.error.light}`,
+            outlineOffset: 2,
+          },
+          '&:active': {
+            color: theme.palette.error.dark,
+            borderColor: theme.palette.error.dark,
+            backgroundColor: alpha(theme.palette.error.main, 0.12),
+          },
+          '&.Mui-disabled': {
+            borderColor: theme.palette.action.disabledBackground,
+            color: theme.palette.action.disabled,
+          },
+        }),
         startIcon: {
           display: 'inline-flex',
           alignItems: 'center',
