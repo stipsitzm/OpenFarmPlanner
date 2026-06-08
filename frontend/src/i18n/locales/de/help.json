@@ -258,7 +258,7 @@
     },
     "suppliers": {
       "title": "Hilfe: Lieferanten",
-      "intro": "Wenn du hier Saatgutlieferanten anlegst, kannst du bei den Kulturen Lieferantespezifische Informationen ergänzen, wie z.B. die Packungsgrößen.",
+      "intro": "Hier verwaltest du Lieferanten-Stammdaten. Kulturspezifische Artikel- und Verpackungsinformationen ergänzt du in der jeweiligen Kultur.",
       "sections": [
         {
           "title": "Bedienung",

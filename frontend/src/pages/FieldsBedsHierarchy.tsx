@@ -32,7 +32,7 @@ import type {
   GridRowsProp,
   GridRowModesModel,
 } from "@mui/x-data-grid";
-import { Box, Alert } from "@mui/material";
+import { Box, Alert, useMediaQuery } from "@mui/material";
 import Divider from "@mui/material/Divider";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -315,6 +315,8 @@ function FieldsBedsHierarchy({
   const navigate = useNavigate();
   const location = useLocation();
   const gridApiRef = useGridApiRef();
+  const isTouchLikePointer = useMediaQuery("(pointer: coarse)");
+  const isMobileViewport = useMediaQuery("(max-width:900px)");
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [selectedRowId, setSelectedRowId] = useState<string | number | null>(
     null,
@@ -1672,6 +1674,9 @@ function FieldsBedsHierarchy({
         ...DEFAULT_HIERARCHY_COLUMN_WIDTHS,
         name: nameColumnWidth,
       },
+      {
+        disablePlantingPlanHoverAction: isTouchLikePointer || isMobileViewport,
+      },
     );
   }, [
     toggleExpand,
@@ -1684,6 +1689,8 @@ function FieldsBedsHierarchy({
     rowsById,
     t,
     nameColumnWidth,
+    isTouchLikePointer,
+    isMobileViewport,
   ]);
 
   const getRowHeight = useCallback((params: GridRowHeightParams) => {
@@ -1843,7 +1850,9 @@ function FieldsBedsHierarchy({
           onClick={() => setTreeActive(true)}
           onContextMenu={handleGridContextMenu}
           onTouchStart={handleGridTouchStart}
+          onTouchMove={handleGridTouchEnd}
           onTouchEnd={handleGridTouchEnd}
+          onTouchCancel={handleGridTouchEnd}
         >
           <Box sx={{ display: "inline-block", width: "fit-content", minWidth: 320, maxWidth: "100%" }}>
           <DataGrid

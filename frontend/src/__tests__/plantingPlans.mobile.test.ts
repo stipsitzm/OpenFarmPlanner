@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { Bed } from "../api/types";
 import {
   buildAreaColumnHeaderLabel,
   buildMobileCreateForm,
@@ -7,21 +6,11 @@ import {
 } from "../pages/PlantingPlans";
 
 describe("PlantingPlans mobile create helpers", () => {
-  it("prefills selected bed and area in the mobile create form", () => {
-    const beds: Bed[] = [
-      {
-        id: 12,
-        name: "1 Lichtwurzel",
-        field: 4,
-        field_name: "11 Frucht",
-        area_sqm: 12,
-      },
-    ];
-
-    const form = buildMobileCreateForm("de-DE", beds, { bedId: 12 });
+  it("prefills selected bed but leaves area empty in the mobile create form", () => {
+    const form = buildMobileCreateForm({ bedId: 12 });
 
     expect(form.bed).toBe("12");
-    expect(form.area_m2).toBe("12");
+    expect(form.area_m2).toBe("");
     expect(form.cultivation_type).toBe("pre_cultivation");
   });
 

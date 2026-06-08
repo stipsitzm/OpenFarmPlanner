@@ -1,5 +1,6 @@
 import type { Culture } from '../api/api';
-import type { CultureSupplierDataInput } from '../api/types';
+import type { CultureSupplierData, CultureSupplierDataInput } from '../api/types';
+import { isEmptySupplierDataRow } from '../cultures/supplierDataRows';
 import {
   normalizeCultivationType,
   normalizeHarvestMethod,
@@ -14,22 +15,28 @@ export type CultureSavePayload = Culture & {
   supplier?: undefined;
 };
 
+const mapSupplierDataRowToInput = (row: CultureSupplierData): CultureSupplierDataInput => ({
+  id: row.id,
+  supplier_id: row.supplier?.id ?? row.supplier_id ?? null,
+  supplier_name_input: row.supplier_name_input,
+  supplier_name: row.supplier_name ?? row.supplier?.name,
+  supplier_product_name: row.supplier_product_name,
+  supplier_product_url: row.supplier_product_url,
+  packaging_sizes: row.packaging_sizes ?? [],
+  germination_rate: row.germination_rate ?? null,
+  price: row.price ?? null,
+  notes: row.notes ?? '',
+  source_url: row.source_url ?? '',
+});
+
 export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
   const supplierPayloadRows: CultureSupplierDataInput[] = [];
   if (Array.isArray(culture.supplier_data) && culture.supplier_data.length > 0) {
-    supplierPayloadRows.push(...culture.supplier_data.map((row) => ({
-      id: row.id,
-      supplier_id: row.supplier?.id ?? row.supplier_id ?? null,
-      supplier_name_input: row.supplier_name_input,
-      supplier_name: row.supplier_name ?? row.supplier?.name,
-      supplier_product_name: row.supplier_product_name,
-      supplier_product_url: row.supplier_product_url,
-      packaging_sizes: row.packaging_sizes ?? [],
-      germination_rate: row.germination_rate ?? null,
-      price: row.price ?? null,
-      notes: row.notes ?? '',
-      source_url: row.source_url ?? '',
-    })));
+    supplierPayloadRows.push(
+      ...culture.supplier_data
+        .filter((row) => !isEmptySupplierDataRow(row))
+        .map(mapSupplierDataRowToInput),
+    );
   } else if (culture.supplier) {
     supplierPayloadRows.push({
       supplier_id: culture.supplier.id ?? null,

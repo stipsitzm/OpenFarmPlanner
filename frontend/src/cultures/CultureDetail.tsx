@@ -1266,17 +1266,16 @@ export function CultureDetail({
               </Box>
               <Box sx={{ mt: 2.5, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
                 <Typography variant="subtitle1" component="h3" gutterBottom>
-                  {hasMultipleSupplierRows ? 'Saatgutdaten je Lieferant' : 'Lieferant'}
+                  {hasMultipleSupplierRows ? t('form.supplierDataSectionTitle') : t('form.supplier')}
                 </Typography>
                 {hasMultipleSupplierRows && (
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Diese Angaben werden je Lieferant dargestellt.
+                    {t('form.supplierDataSectionDescription')}
                   </Typography>
                 )}
                 {orderedSupplierRows.length === 0 ? (
                   <Box sx={{ gridColumn: '1 / -1', display: 'inline-flex', alignItems: 'center', gap: 0.75, color: 'text.secondary' }}>
-                    <Typography variant="body2">ℹ️</Typography>
-                    <Typography variant="body2">Keine Lieferantendaten vorhanden.</Typography>
+                    <Typography variant="body2">{t('form.noSupplierDataRows')}</Typography>
                   </Box>
                 ) : (
                   <Stack spacing={2} sx={{ gridColumn: '1 / -1' }}>
@@ -1284,10 +1283,10 @@ export function CultureDetail({
                       <Box key={row.id ?? `${row.supplier?.id ?? row.supplier_id ?? 'supplier'}-${index}`}>
                         {hasMultipleSupplierRows && index > 0 ? <Divider sx={{ mb: 2 }} /> : null}
                         <Stack spacing={1}>
-                          <Typography variant="subtitle2">{row.supplier?.name || row.supplier_name || 'Lieferant'}</Typography>
+                          <Typography variant="subtitle2">{row.supplier?.name || row.supplier_name || t('form.supplier')}</Typography>
                           {row.supplier_product_name ? (
                             <Box>
-                              <Typography variant="body2" color="text.secondary">Artikelbezeichnung</Typography>
+                              <Typography variant="body2" color="text.secondary">{t('form.supplierProductNameLabel')}</Typography>
                               <Typography variant="body1">{row.supplier_product_name}</Typography>
                             </Box>
                           ) : null}
@@ -1298,7 +1297,7 @@ export function CultureDetail({
                           )}
                           <Box>
                             <Typography variant="body2" color="text.secondary">
-                              Packungsgrößen
+                              {t('form.seedPackagesLabel')}
                             </Typography>
                             <Typography variant="body1">
                               {formatPackageSizes(row.packaging_sizes, t)}

@@ -26,6 +26,8 @@ import {
   Button,
   Typography,
   TextField,
+  FormControl,
+  InputLabel,
   Select,
   MenuItem,
   IconButton,
@@ -42,6 +44,7 @@ import { SpacingSection } from './sections/SpacingSection';
 import { SeedingSection } from './sections/SeedingSection';
 import { ColorSection } from './sections/ColorSection';
 import { NotesSection } from './sections/NotesSection';
+import { hasSupplierDataRowMissingSupplier, hasSupplierInformation } from './supplierDataRows';
 
 interface CultureFormProps {
   culture?: Culture;
@@ -204,7 +207,7 @@ export function CultureForm({
           let hasChanges = false;
           const nextRows = rows.map((row) => {
             const hasSupplier = typeof row.supplier_id === 'number' || typeof row.supplier?.id === 'number';
-            if (hasSupplier) {
+            if (hasSupplier || !hasSupplierInformation(row)) {
               return row;
             }
             hasChanges = true;
@@ -391,6 +394,7 @@ export function CultureForm({
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
       setIsDirty(true);
+      setSaveError('');
       if (name === 'name' || name === 'variety') {
         setDuplicateErrorKey('');
         setProjectDuplicateClearedKey(null);
@@ -405,6 +409,10 @@ export function CultureForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateAndSet(formData)) return;
+    if (hasSupplierDataRowMissingSupplier(formData.supplier_data)) {
+      setSaveError(t('form.supplierDataMissingSupplier'));
+      return;
+    }
     if (duplicateErrorKey || isDuplicateChecking) return;
     setIsSaving(true);
     try {
@@ -543,64 +551,70 @@ export function CultureForm({
                   const hasSelectedSupplier = typeof selectedSupplierId === 'number';
                   const isSelectedSupplierAvailable = hasSelectedSupplier && availableSupplierIds.has(selectedSupplierId);
                   const selectValue = isSelectedSupplierAvailable ? String(selectedSupplierId) : '';
-                  const showUnavailableSelectedSupplier = hasSelectedSupplier && !isSelectedSupplierAvailable;
-                  const unavailableSupplierLabel = row.supplier_name || row.supplier?.name || `${t('seedDemand.columns.supplier')} #${selectedSupplierId}`;
+                  if (supplierOptions.length === 0) {
+                    return (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: { xs: 'stretch', sm: 'center' },
+                          justifyContent: 'space-between',
+                          gap: 1,
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          border: '1px solid',
+                          borderColor: 'surface.surfaceSoftBorder',
+                          borderRadius: 1,
+                          bgcolor: 'surface.surfaceSubtleBackground',
+                          px: 1.5,
+                          py: 1.25,
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          {t('form.noSuppliers')}
+                        </Typography>
+                        <Button variant="outlined" size="small" onClick={() => navigate('/app/suppliers?create=1')}>
+                          {t('form.createSuppliers')}
+                        </Button>
+                      </Box>
+                    );
+                  }
 
                   return (
-                    <Select
-                      value={selectValue}
-                      onChange={(event) => {
-                        const selectedValue = String(event.target.value ?? '');
+                    <FormControl fullWidth size="small">
+                      <InputLabel shrink>{t('form.supplier')}</InputLabel>
+                      <Select
+                        value={selectValue}
+                        label={t('form.supplier')}
+                        renderValue={(selected) => {
+                          if (!selected) {
+                            return (
+                              <Typography component="span" color="text.secondary">
+                                {t('form.supplierPlaceholder')}
+                              </Typography>
+                            );
+                          }
+                          const selectedSupplier = supplierOptions.find((supplier) => String(supplier.id) === String(selected));
+                          return selectedSupplier?.name ?? '';
+                        }}
+                        onChange={(event) => {
+                          const selectedValue = String(event.target.value ?? '');
 
-                        if (selectedValue === '') {
+                          const parsedSupplierId = Number(selectedValue);
+                          const selectedSupplier = supplierOptions.find((supplier) => supplier.id === parsedSupplierId);
                           updateSupplierRow(supplierIndex, {
-                            supplier_id: null,
-                            supplier_name: undefined,
-                            supplier_name_input: undefined,
+                            supplier_id: parsedSupplierId,
+                            supplier_name_input: selectedSupplier ? undefined : row.supplier_name_input,
+                            supplier_name: selectedSupplier?.name ?? row.supplier_name,
                           });
-                          return;
-                        }
-
-                        if (selectedValue === '-1') {
-                          navigate('/app/suppliers?create=1');
-                          return;
-                        }
-
-                        const parsedSupplierId = Number(selectedValue);
-                        const selectedSupplier = supplierOptions.find((supplier) => supplier.id === parsedSupplierId);
-                        updateSupplierRow(supplierIndex, {
-                          supplier_id: parsedSupplierId,
-                          supplier_name_input: selectedSupplier ? undefined : row.supplier_name_input,
-                          supplier_name: selectedSupplier?.name ?? row.supplier_name,
-                        });
-                      }}
-                      displayEmpty
-                      size="small"
-                      disabled={supplierOptions.length === 0}
-                    >
-                      <MenuItem value="">{supplierOptions.length > 0 ? t('form.supplierPlaceholder') : t('form.noSuppliers')}</MenuItem>
-                      {supplierOptions.map((supplier) => (
-                        <MenuItem key={supplier.id} value={String(supplier.id)}>{supplier.name}</MenuItem>
-                      ))}
-                      {showUnavailableSelectedSupplier ? (
-                        <MenuItem value={String(selectedSupplierId)} disabled>
-                          {unavailableSupplierLabel}
-                        </MenuItem>
-                      ) : null}
-                      <MenuItem value="-1">{t('form.newSupplierOption')}</MenuItem>
-                    </Select>
+                        }}
+                        displayEmpty
+                      >
+                        {supplierOptions.map((supplier) => (
+                          <MenuItem key={supplier.id} value={String(supplier.id)}>{supplier.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   );
                 })()}
-                {supplierOptions.length === 0 ? (
-                  <>
-                    <Typography variant="body2" color="warning.main">
-                      {t('form.noSuppliersHint')}
-                    </Typography>
-                    <Button variant="outlined" onClick={() => navigate('/app/suppliers?create=1')}>
-                      {t('form.createSuppliers')}
-                    </Button>
-                  </>
-                ) : null}
                 <TextField
                   label={t('form.supplierProductNameLabel') }
                   value={row.supplier_product_name ?? ''}

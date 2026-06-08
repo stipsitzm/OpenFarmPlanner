@@ -440,6 +440,35 @@ class SeedPackageSerializer(serializers.ModelSerializer):
         return attrs
 
 
+def _has_text_value(value: object) -> bool:
+    return isinstance(value, str) and value.strip() != ''
+
+
+def _supplier_data_payload_has_supplier(row: dict[str, object]) -> bool:
+    return (
+        row.get('supplier_id') is not None
+        or row.get('supplier') is not None
+        or _has_text_value(row.get('supplier_name_input'))
+    )
+
+
+def _supplier_data_payload_has_information(row: dict[str, object]) -> bool:
+    return (
+        _has_text_value(row.get('supplier_product_name'))
+        or _has_text_value(row.get('supplier_product_url'))
+        or _has_text_value(row.get('supplier_url'))
+        or _has_text_value(row.get('notes'))
+        or _has_text_value(row.get('source_url'))
+        or row.get('germination_rate') is not None
+        or row.get('price') is not None
+        or bool(row.get('packaging_sizes'))
+    )
+
+
+def _is_empty_supplier_data_payload(row: dict[str, object]) -> bool:
+    return not _supplier_data_payload_has_supplier(row) and not _supplier_data_payload_has_information(row)
+
+
 class CultureSupplierDataSerializer(serializers.ModelSerializer):
     supplier = SupplierSerializer(read_only=True)
     supplier_id = serializers.PrimaryKeyRelatedField(
@@ -507,7 +536,7 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
             })
         project = _resolve_active_project_from_serializer(self)
         culture = self._resolve_culture_for_validation(attrs)
-        supplier = attrs.get('supplier') or (self.instance.supplier if self.instance is not None else None)
+        supplier = attrs.get('supplier') if 'supplier' in attrs else (self.instance.supplier if self.instance is not None else None)
         if project is not None and culture is not None and culture.project_id != project.id:
             raise serializers.ValidationError({'culture': 'Culture does not belong to the active project.'})
         if project is not None and supplier is not None and supplier.project_id != project.id:
@@ -538,6 +567,12 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({'supplier': 'Lieferant konnte nicht gespeichert werden.'}) from exc
             attrs['supplier'] = supplier
             attrs['supplier_name'] = supplier.name
+
+        supplier = attrs.get('supplier') if 'supplier' in attrs else (self.instance.supplier if self.instance is not None else None)
+        if supplier is None:
+            raise serializers.ValidationError({
+                'supplier_id': 'Select a supplier or remove the supplier information.',
+            })
 
         self._validate_unique_culture_supplier(attrs)
         return attrs
@@ -794,6 +829,8 @@ class CultureSerializer(serializers.ModelSerializer):
                 if not isinstance(row, dict):
                     continue
                 row_data = dict(row)
+                if _is_empty_supplier_data_payload(row_data):
+                    continue
                 serializer = CultureSupplierDataSerializer(
                     data=row_data,
                     context={**self.context, 'parent_culture': culture},
@@ -821,6 +858,8 @@ class CultureSerializer(serializers.ModelSerializer):
                     if not isinstance(row, dict):
                         continue
                     row_data = dict(row)
+                    if _is_empty_supplier_data_payload(row_data):
+                        continue
                     raw_row_id = row_data.get('id')
                     try:
                         row_id = int(raw_row_id)
@@ -1078,6 +1117,40 @@ class CultureSerializer(serializers.ModelSerializer):
             SEED_RATE_UNIT_SEEDS_PER_PLANT,
         }:
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is unsupported.'
+
+        supplier_data_input = attrs.get('supplier_data_input')
+        if isinstance(supplier_data_input, list):
+            existing_supplier_rows = {}
+            if self.instance is not None:
+                existing_supplier_rows = {row.id: row for row in self.instance.supplier_data.all()}
+
+            supplier_data_errors = {}
+            for index, row in enumerate(supplier_data_input):
+                if not isinstance(row, dict) or _is_empty_supplier_data_payload(row):
+                    continue
+
+                has_supplier = _supplier_data_payload_has_supplier(row)
+                raw_row_id = row.get('id')
+                try:
+                    row_id = int(raw_row_id)
+                except (TypeError, ValueError):
+                    row_id = None
+                if (
+                    not has_supplier
+                    and row_id is not None
+                    and row_id in existing_supplier_rows
+                    and 'supplier_id' not in row
+                    and 'supplier' not in row
+                ):
+                    has_supplier = True
+
+                if not has_supplier and _supplier_data_payload_has_information(row):
+                    supplier_data_errors[index] = {
+                        'supplier_id': 'Select a supplier or remove the supplier information.',
+                    }
+
+            if supplier_data_errors:
+                errors['supplier_data_input'] = supplier_data_errors
 
         # Handle supplier_name via get-or-create to keep imports ergonomic.
         # If supplier_id was explicitly provided (including null), respect it and

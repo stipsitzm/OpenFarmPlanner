@@ -130,13 +130,13 @@ describe('CultureForm', () => {
     );
 
     await waitFor(() => expect(supplierListMock).toHaveBeenCalled());
-    expect(screen.getByRole('combobox')).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByText('form.noSuppliersHint')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getByText('form.noSuppliers')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
     expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
   });
 
-  it('does not show create-supplier helper link when supplier options are available', async () => {
+  it('shows only real suppliers in the supplier dropdown when supplier options are available', async () => {
     supplierListMock.mockResolvedValueOnce({ data: { results: [{ id: 99, name: 'New Supplier' }] } });
 
     render(
@@ -148,7 +148,10 @@ describe('CultureForm', () => {
     );
 
     await waitFor(() => expect(screen.getByRole('combobox')).toBeInTheDocument());
-    expect(screen.queryByRole('button', { name: 'form.createNewSupplierInline' })).not.toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    expect(screen.getByRole('option', { name: 'New Supplier' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'form.supplierPlaceholder' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'form.newSupplierOption' })).not.toBeInTheDocument();
   });
 
   it('falls back to empty supplier selection when saved supplier is not in options', async () => {
@@ -385,6 +388,40 @@ describe('CultureForm', () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(await screen.findByText('messages.updateError')).toBeInTheDocument();
+  });
+
+  it('ignores empty supplier information rows when saving', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ packaging_sizes: [] }] }}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText('form.supplierDataMissingSupplier')).not.toBeInTheDocument();
+  });
+
+  it('blocks partially filled supplier information rows without a supplier', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ supplier_product_name: 'Artikel ohne Lieferant', packaging_sizes: [] }] }}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    expect(await screen.findByText('form.supplierDataMissingSupplier')).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it('keeps focus inside the dialog when opened', async () => {

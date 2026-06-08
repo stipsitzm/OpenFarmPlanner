@@ -26,6 +26,7 @@
     "rowCopied": "Zeile kopiert.",
     "tableCopied": "Tabelle kopiert.",
     "copyError": "Daten konnten nicht kopiert werden.",
+    "contextMenuTouchHint": "Tipp: Lange auf eine Tabellenzeile drücken, um weitere Aktionen zu öffnen.",
     "confirmation": "Bestätigung",
     "rowChanged": "Geändert",
     "unsavedChanges": "Sie haben ungespeicherte Änderungen in der Tabelle. Wenn Sie außerhalb einer Zeile klicken, wird gespeichert. Möchten Sie wirklich fortfahren?",

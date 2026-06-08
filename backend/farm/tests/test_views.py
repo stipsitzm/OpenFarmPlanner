@@ -726,6 +726,48 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertNotIn('culture', response.data)
         self.assertEqual(CultureSupplierData.objects.filter(culture=self.culture, supplier=supplier).count(), 1)
 
+    def test_culture_update_ignores_empty_supplier_data_rows(self):
+        payload = {
+            'id': self.culture.id,
+            'name': self.culture.name,
+            'growth_duration_days': self.culture.growth_duration_days,
+            'harvest_duration_days': self.culture.harvest_duration_days,
+            'project': self.project.id,
+            'supplier_data_input': [
+                {
+                    'packaging_sizes': [],
+                    'supplier_product_name': '',
+                    'notes': '',
+                }
+            ],
+        }
+
+        response = self.client.put(f'/openfarmplanner/api/cultures/{self.culture.id}/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(CultureSupplierData.objects.filter(culture=self.culture).count(), 0)
+
+    def test_culture_update_rejects_supplier_data_without_supplier(self):
+        payload = {
+            'id': self.culture.id,
+            'name': self.culture.name,
+            'growth_duration_days': self.culture.growth_duration_days,
+            'harvest_duration_days': self.culture.harvest_duration_days,
+            'project': self.project.id,
+            'supplier_data_input': [
+                {
+                    'supplier_product_name': 'Product without supplier',
+                    'packaging_sizes': [{'size_value': 25, 'size_unit': 'g'}],
+                }
+            ],
+        }
+
+        response = self.client.put(f'/openfarmplanner/api/cultures/{self.culture.id}/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('supplier_data_input', response.data)
+        self.assertEqual(CultureSupplierData.objects.filter(culture=self.culture).count(), 0)
+
     def test_seed_demand_uses_supplier_specific_packages_for_existing_cultures(self):
         """Supplier-scoped package sizes should appear in seed demand for existing cultures."""
         culture = Culture.objects.create(

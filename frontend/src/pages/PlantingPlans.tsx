@@ -489,16 +489,9 @@ const areRowsSemanticallyEqual = (
 };
 
 export const buildMobileCreateForm = (
-  locale: string,
-  beds: Bed[],
   prefill?: { cultureId?: number | null; bedId?: number | null },
 ): MobileCreateFormState => {
   const baseForm = createEmptyMobileCreateForm();
-  const prefilledBed =
-    typeof prefill?.bedId === "number"
-      ? beds.find((bed) => bed.id === prefill.bedId)
-      : undefined;
-  const prefilledArea = toNumericValue(prefilledBed?.area_sqm);
 
   return {
     ...baseForm,
@@ -506,14 +499,6 @@ export const buildMobileCreateForm = (
       typeof prefill?.cultureId === "number" ? String(prefill.cultureId) : "",
     bed: typeof prefill?.bedId === "number" ? String(prefill.bedId) : "",
     cultivation_type: "pre_cultivation",
-    area_m2:
-      prefilledArea !== null
-        ? formatLocalizedNumber(prefilledArea, locale, {
-            useGrouping: false,
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
-          })
-        : "",
   };
 };
 
@@ -1530,10 +1515,10 @@ function PlantingPlans() {
   ): void => {
     setMobileCreateError("");
     setMobileEditId(null);
-    setMobileCreateForm(buildMobileCreateForm(numberLocale, beds, prefill));
+    setMobileCreateForm(buildMobileCreateForm(prefill));
     setMobileLastEditedField(null);
     setIsMobileCreateOpen(true);
-  }, [beds, numberLocale]);
+  }, []);
 
   const closeMobileCreateDialog = (): void => {
     setIsMobileCreateOpen(false);
