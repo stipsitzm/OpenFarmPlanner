@@ -337,6 +337,10 @@ export function CultureForm({
     publicLibraryMatchSequenceRef.current = currentSequence;
     setPublicLibraryMatch(null);
 
+    if (isEdit) {
+      return;
+    }
+
     if (!identityKey || projectDuplicateClearedKey !== identityKey) {
       return;
     }
@@ -379,7 +383,7 @@ export function CultureForm({
       window.clearTimeout(timeoutId);
       abortController.abort();
     };
-  }, [formData.name, formData.variety, projectDuplicateClearedKey]);
+  }, [formData.name, formData.variety, isEdit, projectDuplicateClearedKey]);
 
   // Handle field changes
   // Strongly typed change handler
@@ -479,7 +483,7 @@ export function CultureForm({
               errors={displayErrors}
               onChange={handleChange}
               t={t}
-              identityHint={publicLibraryMatch && currentIdentityKey !== null && projectDuplicateClearedKey === currentIdentityKey && !duplicateErrorKey && !isDuplicateChecking ? (
+              identityHint={!isEdit && publicLibraryMatch && currentIdentityKey !== null && projectDuplicateClearedKey === currentIdentityKey && !duplicateErrorKey && !isDuplicateChecking ? (
                 <Box
                   sx={(theme) => ({
                     display: 'flex',

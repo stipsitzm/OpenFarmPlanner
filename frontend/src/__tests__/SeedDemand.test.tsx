@@ -421,6 +421,65 @@ describe('SeedDemandPage', () => {
     });
   });
 
+  it('shows missing TKG guidance instead of a seed total', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 2,
+            culture_name: 'Kresse',
+            supplier: 'Reinsaat',
+            supplier_options: [{ supplier_id: 10, supplier_name: 'Reinsaat' }],
+            selected_supplier_id: 10,
+            required_amount_value: null,
+            required_amount_unit: 'g',
+            required_amount_warning: 'missing_tkg',
+            total_grams: null,
+            package_suggestion: {
+              selection: [{ size_value: 1000, size_unit: 'seeds', count: 2 }],
+              total_amount: 2000,
+              overage: 0,
+              pack_count: 2,
+              unit: 'seeds',
+            },
+            warning: null,
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    const cultureLink = await screen.findByRole('link', { name: 'Kresse' });
+    expect(screen.getByText('seedDemand.requiredAmountMissingTkg')).toBeInTheDocument();
+    expect(screen.queryByText(/2.000,00 seedDemand.unitSeeds/)).not.toBeInTheDocument();
+
+    const row = cultureLink.closest('tr');
+    expect(row).not.toBeNull();
+    fireEvent.contextMenu(row as HTMLTableRowElement);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'common:actions.copyRow' }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(
+        'Kresse\tReinsaat\tseedDemand.requiredAmountMissingTkg\t1.000 seedDemand.unitSeeds × 2',
+      );
+    });
+  });
+
   it('does not trigger supplier auto-save on initial load', async () => {
     listMock.mockResolvedValueOnce({
       data: {

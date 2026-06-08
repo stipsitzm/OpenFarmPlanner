@@ -103,8 +103,9 @@ def test_seed_demand_supports_seed_per_m2_and_seed_packages(api_client: APIClien
     assert response.status_code == 200
 
     row = next(item for item in response.json()['results'] if item['culture_name'] == 'Beetroot')
-    assert row['required_amount_value'] == pytest.approx(90.0)
-    assert row['required_amount_unit'] == 'seeds'
+    assert row['required_amount_value'] is None
+    assert row['required_amount_unit'] == 'g'
+    assert row['required_amount_warning'] == 'missing_tkg'
     assert row['package_suggestion']['pack_count'] == 2
 
 
@@ -129,7 +130,7 @@ def test_seed_demand_converts_grams_to_seed_packages_with_tkg(api_client: APICli
     row = next(item for item in response.json()['results'] if item['culture_name'] == 'Spinach')
     assert row['required_amount_unit'] == 'g'
     assert row['required_amount_value'] == pytest.approx(100.0)
-    assert row['package_suggestion']['pack_count'] == 2
+    assert row['package_suggestion']['pack_count'] == 10
 
 
 @pytest.mark.django_db
@@ -150,8 +151,11 @@ def test_seed_demand_returns_warning_when_conversion_missing(api_client: APIClie
     assert response.status_code == 200
 
     row = next(item for item in response.json()['results'] if item['culture_name'] == 'Radish')
+    assert row['required_amount_value'] is None
+    assert row['required_amount_unit'] == 'g'
+    assert row['required_amount_warning'] == 'missing_tkg'
     assert row['package_suggestion'] is None
-    assert row['warning'] == 'Missing thousand-kernel weight for unit conversion.'
+    assert row['warning'] == 'missing_tkg'
 
 
 @pytest.mark.django_db

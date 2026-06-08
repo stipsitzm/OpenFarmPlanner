@@ -211,11 +211,14 @@ export default function SeedDemandPage() {
     return supplierOptions[0]?.supplier_name ?? row.supplier ?? '';
   }, [t]);
 
-  const getRequiredAmountLabel = useCallback((row: SeedDemand): string => (
-    row.required_amount_value === null || row.required_amount_unit === null
-      ? '-'
-      : `${formatRequiredSeedAmount(row.required_amount_value)} ${formatUnit(row.required_amount_unit, t)}`
-  ), [t]);
+  const getRequiredAmountLabel = useCallback((row: SeedDemand): string => {
+    if (row.required_amount_value === null || row.required_amount_unit === null) {
+      return row.required_amount_warning === 'missing_tkg'
+        ? t('seedDemand.requiredAmountMissingTkg')
+        : '-';
+    }
+    return `${formatRequiredSeedAmount(row.required_amount_value)} ${formatUnit('g', t)}`;
+  }, [t]);
 
   const getPackageLabel = useCallback((row: SeedDemand): string => (
     (row.supplier_options ?? []).length > 0

@@ -281,6 +281,7 @@
     "noSupplierAvailable": "Keine Lieferantendaten hinterlegt",
     "noPackagesAvailable": "Keine Packungsgrößen verfügbar",
     "noPackageCalculationPossible": "Nicht berechenbar (Daten fehlen)",
+    "requiredAmountMissingTkg": "Nicht berechenbar (TKG fehlt)",
     "unitSeeds": "Korn",
     "unitGrams": "g",
     "columns": {

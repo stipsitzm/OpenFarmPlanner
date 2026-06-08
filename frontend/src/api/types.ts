@@ -262,6 +262,7 @@ export interface SeedDemand {
   total_grams: number | null;
   required_amount_value: number | null;
   required_amount_unit: 'g' | 'seeds' | null;
+  required_amount_warning?: 'missing_tkg' | string | null;
   seed_packages?: Array<{ size_value: number; size_unit: 'g' | 'seeds' }>;
   package_suggestion?: {
     selection: Array<{ size_value: number; size_unit: 'g' | 'seeds'; count: number }>;

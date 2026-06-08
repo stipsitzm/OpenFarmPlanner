@@ -1243,7 +1243,18 @@ function PlantingPlans() {
         maxWidth: dynamicWidths.area,
         editable: true,
         renderHeader: () => (
-          <Tooltip title={t("plantingPlans:tooltips.areaInput")}>
+          <Tooltip
+            title={(
+              <Box component="span" sx={{ display: "block" }}>
+                <Box component="span" sx={{ display: "block", fontWeight: 600 }}>
+                  {t("plantingPlans:tooltips.areaInputTitle")}
+                </Box>
+                <Box component="span" sx={{ display: "block" }}>
+                  {t("plantingPlans:tooltips.areaInputDescription")}
+                </Box>
+              </Box>
+            )}
+          >
             <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>
               {t("plantingPlans:columns.areaM2")}
             </Box>
