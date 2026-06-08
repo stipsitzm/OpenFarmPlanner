@@ -35,7 +35,7 @@ describe('buildSeedlingTaskGroups', () => {
       { labelKey: 'propagationStart', value: '15.4.2026' },
       { labelKey: 'transplantDate', value: '10.5.2026' },
       { labelKey: 'propagationDuration', value: '25' },
-      { labelKey: 'areaUsage', value: '8.50 m²' },
+      { labelKey: 'areaUsage', value: '8,50 m²' },
       { labelKey: 'plantsCount', value: '40' },
     ]);
 
