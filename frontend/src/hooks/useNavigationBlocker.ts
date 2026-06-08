@@ -16,6 +16,7 @@
 
 import { useEffect } from 'react';
 import { useBlocker } from 'react-router-dom';
+import { confirmAction } from '../utils/confirmAction';
 
 /**
  * Hook to block navigation when there are unsaved changes
@@ -50,7 +51,7 @@ export function useNavigationBlocker(
   // Handle blocker state
   useEffect(() => {
     if (blocker.state === 'blocked') {
-      const proceed = window.confirm(message);
+      const proceed = confirmAction(message);
       if (proceed) {
         blocker.proceed();
       } else {

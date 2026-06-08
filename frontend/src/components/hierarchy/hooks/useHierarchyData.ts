@@ -48,9 +48,6 @@ export function useHierarchyData(enabled = true): HierarchyDataState {
       setFields(flds);
       setBeds(bds);
       setError('');
-      console.debug('[DEBUG] useHierarchyData.fetchData: locations', locs);
-      console.debug('[DEBUG] useHierarchyData.fetchData: fields', flds);
-      console.debug('[DEBUG] useHierarchyData.fetchData: beds', bds);
     } catch (err) {
       setError(t('errors.load'));
       console.error('Error fetching data:', err);

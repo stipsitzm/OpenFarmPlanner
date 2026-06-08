@@ -1,6 +1,5 @@
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { Box, Button, Portal, Snackbar, Typography } from '@mui/material';
-import type React from 'react';
 
 export const DELETE_UNDO_DURATION_MS = 8000;
 
@@ -22,7 +21,7 @@ export function DeleteUndoSnackbar({
   testId = 'delete-undo-snackbar',
   onClose,
   onUndo,
-}: DeleteUndoSnackbarProps): React.ReactElement {
+}: DeleteUndoSnackbarProps) {
   return (
     <Portal>
       <Snackbar

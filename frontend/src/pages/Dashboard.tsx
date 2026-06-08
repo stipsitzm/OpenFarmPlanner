@@ -13,7 +13,7 @@ import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import { getFirstMissingProjectSetupStep, getProjectSetupActions } from './requirementFlow';
 import { deriveLocationTasks } from './locationDerivedTasks';
 
-export default function Dashboard(): React.ReactElement {
+export default function Dashboard() {
   const { t, i18n } = useTranslation(['dashboard', 'common']);
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const [loading, setLoading] = useState(true);

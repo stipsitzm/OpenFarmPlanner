@@ -1,13 +1,14 @@
 import { mockT } from './helpers/testI18n';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useBedOperations } from '../components/hierarchy/hooks/useBedOperations';
 import type { Bed } from '../api/api';
 
-const { createBedMock, updateBedMock, deleteBedMock } = vi.hoisted(() => ({
+const { createBedMock, updateBedMock, deleteBedMock, confirmActionMock } = vi.hoisted(() => ({
   createBedMock: vi.fn(),
   updateBedMock: vi.fn(),
   deleteBedMock: vi.fn(),
+  confirmActionMock: vi.fn(),
 }));
 
 vi.mock('../api/api', () => ({
@@ -16,6 +17,10 @@ vi.mock('../api/api', () => ({
     update: updateBedMock,
     delete: deleteBedMock,
   },
+}));
+
+vi.mock('../utils/confirmAction', () => ({
+  confirmAction: confirmActionMock,
 }));
 
 function createStateHarness(initialBeds: Bed[]) {
@@ -31,14 +36,8 @@ function createStateHarness(initialBeds: Bed[]) {
 }
 
 describe('useBedOperations', () => {
-  const originalConfirm = window.confirm;
-
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    window.confirm = originalConfirm;
   });
 
   it('adds a temporary bed at the beginning with default values', () => {
@@ -46,7 +45,7 @@ describe('useBedOperations', () => {
     const setError = vi.fn();
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
+      useBedOperations(harness.setBeds, setError, mockT as never)
     );
 
     const tempId = result.current.addBed(9);
@@ -71,7 +70,7 @@ describe('useBedOperations', () => {
     createBedMock.mockResolvedValue({ data: savedBed });
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
+      useBedOperations(harness.setBeds, setError, mockT as never)
     );
 
     const response = await result.current.saveBed({
@@ -101,7 +100,7 @@ describe('useBedOperations', () => {
     createBedMock.mockResolvedValue({ data: { id: 11, name: '', field: 1, notes: '' } });
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
+      useBedOperations(harness.setBeds, setError, mockT as never)
     );
 
     await result.current.saveBed({ id: -10, field: 1 });
@@ -127,7 +126,7 @@ describe('useBedOperations', () => {
     updateBedMock.mockResolvedValue({ data: updatedBed });
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
+      useBedOperations(harness.setBeds, setError, mockT as never)
     );
 
     const response = await result.current.saveBed({ id: 11, field: 1, name: 'B-updated', area_sqm: 7, notes: 'ok' });
@@ -155,7 +154,7 @@ describe('useBedOperations', () => {
     createBedMock.mockRejectedValue(saveError);
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
+      useBedOperations(harness.setBeds, setError, mockT as never)
     );
 
     await expect(result.current.saveBed({ id: -7, field: 4, name: 'X' })).rejects.toThrow('failed');
@@ -163,13 +162,13 @@ describe('useBedOperations', () => {
   });
 
   it('does nothing when delete confirmation is cancelled', async () => {
-    window.confirm = vi.fn().mockReturnValue(false);
+    confirmActionMock.mockReturnValue(false);
 
     const harness = createStateHarness([{ id: 3, name: 'A', field: 1, notes: '' }]);
     const setError = vi.fn();
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
+      useBedOperations(harness.setBeds, setError, mockT as never)
     );
 
     await result.current.deleteBed(3);
@@ -179,7 +178,7 @@ describe('useBedOperations', () => {
   });
 
   it('removes unsaved bed locally without API call', async () => {
-    window.confirm = vi.fn().mockReturnValue(true);
+    confirmActionMock.mockReturnValue(true);
 
     const harness = createStateHarness([
       { id: -1, name: 'Temp', field: 1, notes: '' },
@@ -188,7 +187,7 @@ describe('useBedOperations', () => {
     const setError = vi.fn();
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
+      useBedOperations(harness.setBeds, setError, mockT as never)
     );
 
     await result.current.deleteBed(-1);
@@ -198,7 +197,7 @@ describe('useBedOperations', () => {
   });
 
   it('deletes persisted bed and updates local state', async () => {
-    window.confirm = vi.fn().mockReturnValue(true);
+    confirmActionMock.mockReturnValue(true);
 
     const harness = createStateHarness([
       { id: 8, name: 'Bed 8', field: 1, notes: '' },
@@ -208,7 +207,7 @@ describe('useBedOperations', () => {
     deleteBedMock.mockResolvedValue(undefined);
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
+      useBedOperations(harness.setBeds, setError, mockT as never)
     );
 
     await result.current.deleteBed(8);
@@ -219,7 +218,7 @@ describe('useBedOperations', () => {
   });
 
   it('propagates delete errors and keeps state unchanged', async () => {
-    window.confirm = vi.fn().mockReturnValue(true);
+    confirmActionMock.mockReturnValue(true);
 
     const startingBeds: Bed[] = [{ id: 21, name: 'Locked', field: 2, notes: '' }];
     const harness = createStateHarness(startingBeds);
@@ -229,7 +228,7 @@ describe('useBedOperations', () => {
     deleteBedMock.mockRejectedValue(deleteError);
 
     const { result } = renderHook(() =>
-      useBedOperations(harness.getBeds(), harness.setBeds, setError, mockT as never)
+      useBedOperations(harness.setBeds, setError, mockT as never)
     );
 
     await expect(result.current.deleteBed(21)).rejects.toThrow('cannot delete');

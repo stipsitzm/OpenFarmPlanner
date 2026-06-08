@@ -1,31 +1,23 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import type { TopbarContextAction } from '../App';
 
 export function useTopbarContextActions(
-  setActions: (actions: TopbarContextAction[]) => void,
+  setActions: ((actions: TopbarContextAction[]) => void) | undefined,
   actions: TopbarContextAction[],
 ): void {
-  const lastSignatureRef = useRef<string>('');
-
   useEffect(() => {
-    const signature = JSON.stringify(
-      actions.map((action) => ({
-        id: action.id,
-        label: action.label,
-        ariaLabel: action.ariaLabel,
-        disabled: Boolean(action.disabled),
-        active: Boolean(action.active),
-        hidden: Boolean(action.hidden),
-        groupId: action.groupId ?? '',
-        tooltip: action.tooltip ?? '',
-      })),
-    );
-    if (signature === lastSignatureRef.current) {
+    if (!setActions) {
       return;
     }
-    lastSignatureRef.current = signature;
+
     setActions(actions);
   }, [actions, setActions]);
 
-  useEffect(() => () => setActions([]), [setActions]);
+  useEffect(() => {
+    if (!setActions) {
+      return undefined;
+    }
+
+    return () => setActions([]);
+  }, [setActions]);
 }

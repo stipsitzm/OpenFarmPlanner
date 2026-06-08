@@ -8,7 +8,7 @@ import { AuthApiError } from '../../auth/authApi';
 import { useTranslation } from '../../i18n';
 import { getNextFromSearch } from '../invitationAcceptance';
 
-export default function LoginPage(): React.ReactElement {
+export default function LoginPage() {
   const { user, login, restoreAccount } = useAuth();
   const { t } = useTranslation(['auth', 'projectInvitations']);
   const navigate = useNavigate();

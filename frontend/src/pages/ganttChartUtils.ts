@@ -1,4 +1,5 @@
 import type { Bed, Culture, Field, Location, PlantingPlan } from '../api/types';
+import { formatLocalizedNumber } from '../utils/numberLocalization';
 
 export interface GanttTask {
   id: string;
@@ -137,11 +138,11 @@ export function formatGanttDate(value: Date): string {
 }
 
 export function formatAreaSquareMeters(value: number): string {
-  return `${value.toFixed(2)} m²`;
+  return `${formatLocalizedNumber(value, 'de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
 }
 
 export function formatPlantCount(value: number): string {
-  return new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(value);
+  return formatLocalizedNumber(value, 'de-DE', { maximumFractionDigits: 0 });
 }
 
 function formatCultureLabel(culture?: Culture, fallbackName?: string): string {

@@ -12,7 +12,7 @@ export function shouldShowAreaTooltip(label: string, isOverflowing: boolean): bo
   return isOverflowing || label.length > TOOLTIP_TEXT_LENGTH_THRESHOLD;
 }
 
-export function CompactAreaCell({ label, hasFocus = false }: CompactAreaCellProps): React.ReactElement {
+export function CompactAreaCell({ label, hasFocus = false }: CompactAreaCellProps) {
   const textRef = useRef<HTMLParagraphElement | null>(null);
   const triggerRef = useRef<HTMLDivElement | null>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);

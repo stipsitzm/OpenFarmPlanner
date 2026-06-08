@@ -61,7 +61,7 @@ export function SearchableSelect<T = unknown>({
   inputValue,
   onInputChange,
   endAdornment,
-}: SearchableSelectProps<T>): React.ReactElement {
+}: SearchableSelectProps<T>) {
   const [internalInputValue, setInternalInputValue] = useState('');
   const resolvedInputValue = inputValue ?? internalInputValue;
 
@@ -100,9 +100,11 @@ export function SearchableSelect<T = unknown>({
           placeholder={placeholder}
           autoFocus={autoFocus}
           sx={textFieldSx}
-          inputProps={{
-            ...params.inputProps,
-            tabIndex: inputTabIndex,
+          slotProps={{
+            htmlInput: {
+              ...params.inputProps,
+              tabIndex: inputTabIndex,
+            },
           }}
           InputProps={{
             ...params.InputProps,

@@ -51,7 +51,7 @@ export function AuthProvider({
   children,
 }: {
   children: React.ReactNode;
-}): React.ReactElement {
+}) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);

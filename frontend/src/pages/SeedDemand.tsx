@@ -33,11 +33,20 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { ContextMenuHint, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
 import { getFirstMissingProjectSetupStep, getProjectSetupAction, getProjectSetupActions } from './requirementFlow';
+import { formatLocalizedNumber } from '../utils/numberLocalization';
 
 const SEED_DEMAND_CONTEXT_MENU_HINT_STORAGE_KEY = 'ofp.seedDemandContextMenuHintSeen';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
+);
+
+const formatSeedAmount = (value: number, options?: Intl.NumberFormatOptions): string => (
+  formatLocalizedNumber(value, 'de-DE', options)
+);
+
+const formatRequiredSeedAmount = (value: number): string => (
+  formatSeedAmount(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 );
 
 const formatPackageSelection = (row: SeedDemand, t: (key: string) => string): string => {
@@ -46,11 +55,11 @@ const formatPackageSelection = (row: SeedDemand, t: (key: string) => string): st
   }
 
   return row.package_suggestion.selection
-    .map((item) => `${item.size_value} ${formatUnit(item.size_unit, t)}${item.count > 1 ? ` × ${item.count}` : ''}`)
+    .map((item) => `${formatSeedAmount(item.size_value)} ${formatUnit(item.size_unit, t)}${item.count > 1 ? ` × ${item.count}` : ''}`)
     .join(' + ');
 };
 
-export default function SeedDemandPage(): React.ReactElement {
+export default function SeedDemandPage() {
   useCommandContextTag('seedDemand');
   const { t } = useTranslation(['cultures', 'common']);
   const navigate = useNavigate();
@@ -205,7 +214,7 @@ export default function SeedDemandPage(): React.ReactElement {
   const getRequiredAmountLabel = useCallback((row: SeedDemand): string => (
     row.required_amount_value === null || row.required_amount_unit === null
       ? '-'
-      : `${row.required_amount_value.toFixed(2)} ${formatUnit(row.required_amount_unit, t)}`
+      : `${formatRequiredSeedAmount(row.required_amount_value)} ${formatUnit(row.required_amount_unit, t)}`
   ), [t]);
 
   const getPackageLabel = useCallback((row: SeedDemand): string => (

@@ -8,6 +8,7 @@
   "searchHelperText_other": "{{count}} Kulturen gefunden. Mit den Filtern können Sie weiter eingrenzen.",
   "noOptionsEnhanced": "Keine passende Kultur. Prüfen Sie Suche oder Filter.",
   "selectPrompt": "Wählen Sie eine Kultur aus der Liste aus, um Details anzuzeigen.",
+  "selectCulture": "Kultur auswählen",
   "filters": {
     "all": "Alle",
     "cropFamily": "Familie",
@@ -27,7 +28,8 @@
     "yieldMin": "Ertrag/m² min",
     "yieldMax": "Ertrag/m² max",
     "toggle": "Filter",
-    "reset": "Filter zurücksetzen"
+    "reset": "Filter zurücksetzen",
+    "openAdvanced": "Erweiterte Filter öffnen"
   },
   "emptySearch": {
     "title": "Keine Kulturen gefunden",
@@ -125,6 +127,7 @@
     "notesPlaceholder": "Zusätzliche Informationen...",
     "growthDurationDays": "Wachstumszeitraum (Tage)",
     "growthDurationDaysPlaceholder": "z.B. 56",
+    "growthDurationDaysHelp": "Wachstumszeitraum = Gesamtzeit von Saat bis Ernte.",
     "growthDurationDaysRequired": "Wachstumszeitraum ist erforderlich",
     "growthDurationDaysError": "Wachstumszeitraum muss ≥ 0 sein",
     "harvestDurationDays": "Erntezeitraum (Tage)",
@@ -180,6 +183,7 @@
     "sowingCalculationSafetyPercentError": "Sicherheitszuschlag muss zwischen 0 und 100 liegen",
     "propagationDurationDaysRequired": "Anzuchtdauer ist erforderlich",
     "propagationDurationDaysTooLong": "Anzuchtdauer darf nicht länger als die Wachstumsdauer sein",
+    "directSowingPropagationDisabledHelp": "Bei Direktsaat ist keine Anzuchtdauer erforderlich.",
     "harvestMethodRequired": "Erntemethode ist bei angegebenem Ertrag erforderlich",
     "seedingRequirementTypeRequired": "Saatgutbedarf-Typ ist erforderlich, wenn ein Saatgutbedarf angegeben ist.",
     "seedingRequirementValueRequired": "Saatgutbedarf ist erforderlich, wenn ein Saatgutbedarf-Typ angegeben ist.",
@@ -307,6 +311,10 @@
     "closeButton": "Schließen",
     "unknownUser": "Unbekannter Nutzer",
     "meta": "Version vom {{timestamp}}",
+    "emptyState": {
+      "title": "Keine weiteren Versionen verfügbar.",
+      "description": "Für diese Sorte existiert aktuell nur diese Version."
+    },
     "title": {
       "withName": "{{objectType}} „{{objectName}}“ {{action}}",
       "withoutName": "{{objectType}} {{action}}"
@@ -329,8 +337,18 @@
       "mediaFile": "Medium",
       "seedPackage": "Saatgutpackung",
       "project": "Projekt",
-      "fallback": "Eintrag"
+      "fallback": "Eintrag",
+      "openTarget": "Öffnen"
     }
+  },
+  "shortcuts": {
+    "title": "Tastenkürzel",
+    "openShortcuts": "Tastenkürzel öffnen",
+    "commandPalette": "Command Palette",
+    "closeDialog": "Dialog schließen",
+    "aiComplete": "KI: Kultur vervollständigen",
+    "aiReresearch": "KI: Kultur neu recherchieren",
+    "aiCompleteAll": "KI: Alle Kulturen vervollständigen"
   },
   "export": {
     "current": "Aktuelle Kultur als JSON herunterladen",
@@ -379,6 +397,7 @@
     "confirmAllText": "Es würden {{count}} Kulturen vervollständigt, bei denen noch Angaben fehlen. Möchten Sie fortfahren?",
     "batchNoMissing": "Es gibt keine Kulturen mit fehlenden Angaben.",
     "completeDisabledReason": "Diese Kultur ist bereits vollständig.",
+    "researchDisabledReason": "Für KI-Recherche muss ein Lieferant mit erlaubten Domains konfiguriert sein.",
     "quotaExceeded": "OpenAI-Kontingent aufgebraucht. Bitte Abrechnung/Plan prüfen und erneut versuchen.",
     "providerRateLimited": "OpenAI hat die Anfrage wegen Limitierung abgelehnt. Bitte später erneut versuchen.",
     "providerUnavailable": "OpenAI ist derzeit nicht erreichbar. Bitte später erneut versuchen.",

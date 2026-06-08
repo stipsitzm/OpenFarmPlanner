@@ -17,7 +17,7 @@ export interface PlantsCountEditCellProps extends GridRenderEditCellParams {
   onLastEditedFieldChange: (field: 'plants_count') => void;
 }
 
-export function PlantsCountEditCell(props: PlantsCountEditCellProps): React.ReactElement {
+export function PlantsCountEditCell(props: PlantsCountEditCellProps) {
   const { id, value, field, hasFocus, onLastEditedFieldChange } = props;
   const apiRef = useGridApiContext();
   

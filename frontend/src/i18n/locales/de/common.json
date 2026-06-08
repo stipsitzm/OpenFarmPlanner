@@ -75,6 +75,18 @@
       "edit": "Bearbeiten",
       "preview": "Vorschau"
     },
+    "markdownToolbar": {
+      "bold": "Fettdruck",
+      "boldTooltip": "Fettdruck (Strg+B)",
+      "italic": "Kursiv",
+      "italicTooltip": "Kursiv (Strg+I)",
+      "code": "Code",
+      "heading": "Überschrift",
+      "bulletList": "Aufzählungsliste",
+      "numberedList": "Nummerierte Liste",
+      "link": "Link einfügen",
+      "quote": "Zitat"
+    },
     "defaults": {
       "bold": "fetter Text",
       "italic": "kursiver Text",

@@ -18,7 +18,7 @@ interface NotesSectionProps {
 export function NotesSection({ formData, onChange, t }: NotesSectionProps) {
   return (
     <>
-      <Typography variant="h6" sx={{ mt: 2 }}>Notizen</Typography>
+      <Typography variant="h6" sx={{ mt: 2 }}>{t('form.notes')}</Typography>
       <TextField
         fullWidth
         multiline

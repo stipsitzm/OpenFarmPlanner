@@ -29,7 +29,7 @@ export function MobileCardList<T extends MobileCardListItem>({
   emptyState,
   detailsShowLabel,
   detailsHideLabel,
-}: MobileCardListProps<T>): React.ReactElement {
+}: MobileCardListProps<T>) {
   if (items.length === 0) {
     return <>{emptyState ?? null}</>;
   }

@@ -12,7 +12,7 @@ interface HierarchyFooterProps {
   onAddField: (locationId?: number) => void;
 }
 
-export function HierarchyFooter({ locations, onAddField }: HierarchyFooterProps): React.ReactElement {
+export function HierarchyFooter({ locations, onAddField }: HierarchyFooterProps) {
   const { t } = useTranslation('hierarchy');
   const hasMultipleLocations = locations.length > 1;
   

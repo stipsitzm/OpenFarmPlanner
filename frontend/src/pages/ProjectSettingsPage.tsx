@@ -12,7 +12,7 @@ interface InviteFeedback {
   text: string;
 }
 
-export default function ProjectSettingsPage(): React.ReactElement {
+export default function ProjectSettingsPage() {
   const { t } = useTranslation('projectInvitations');
   const navigate = useNavigate();
   const { user, refreshUser, activeProjectId } = useAuth();
@@ -335,7 +335,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
               helperText={projectNameDraft.trim().length > 0 && projectNameDraft.trim().length < 2 ? t('projectRename.minLength') : ' '}
               fullWidth
               autoFocus
-              inputProps={{ 'aria-label': t('projectRename.label') }}
+              slotProps={{ htmlInput: { 'aria-label': t('projectRename.label') } }}
             />
             <Stack direction="row" spacing={1}>
               <Button
@@ -442,7 +442,7 @@ export default function ProjectSettingsPage(): React.ReactElement {
               <Box>
                 <Typography sx={{ fontWeight: 600 }}>{invitation.email}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {t('expiresAt', { date: new Date(invitation.expires_at).toLocaleString() })}
+                  {t('expiresAt', { date: new Date(invitation.expires_at).toLocaleString('de-DE') })}
                 </Typography>
               </Box>
               <Stack direction="row" spacing={1} alignItems="center">

@@ -31,7 +31,7 @@ export function NotesCell({
   compactIndicator = false,
   onOpenAttachments,
   hasFocus = false,
-}: NotesCellProps): React.ReactElement {
+}: NotesCellProps) {
   const { t } = useTranslation('common');
   const compactTriggerRef = useRef<HTMLDivElement | null>(null);
   const notesButtonRef = useRef<HTMLButtonElement | null>(null);

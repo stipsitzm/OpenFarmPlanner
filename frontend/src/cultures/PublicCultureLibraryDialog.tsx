@@ -54,7 +54,7 @@ export function PublicCultureLibraryDialog({
   onClose,
   onSearch,
   onImport,
-}: PublicCultureLibraryDialogProps): React.ReactElement {
+}: PublicCultureLibraryDialogProps) {
   const { t } = useTranslation('cultures');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);

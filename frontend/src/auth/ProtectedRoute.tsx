@@ -2,7 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from './useAuth';
 import { useTranslation } from '../i18n';
 
-export default function ProtectedRoute(): React.ReactElement {
+export default function ProtectedRoute() {
   const { user, isLoading } = useAuth();
   const { t } = useTranslation('common');
   const location = useLocation();

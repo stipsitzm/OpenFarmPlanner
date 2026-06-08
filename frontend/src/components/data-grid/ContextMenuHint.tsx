@@ -18,7 +18,7 @@ export function ContextMenuHint({
   onClose,
   compact = false,
   sx,
-}: ContextMenuHintProps): React.ReactElement {
+}: ContextMenuHintProps) {
   const { t } = useTranslation('common');
 
   return (

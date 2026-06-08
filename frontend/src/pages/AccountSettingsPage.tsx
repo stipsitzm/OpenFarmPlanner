@@ -20,7 +20,7 @@ import { changePassword, requestEmailChange, updateProfile } from '../auth/authA
 import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
 
-export default function AccountSettingsPage(): React.ReactElement {
+export default function AccountSettingsPage() {
   const { user, requestAccountDeletion, refreshUser } = useAuth();
   const { t } = useTranslation('account');
   const navigate = useNavigate();
@@ -173,7 +173,7 @@ export default function AccountSettingsPage(): React.ReactElement {
                     value={displayName}
                     onChange={(event) => setDisplayName(event.target.value)}
                     fullWidth
-                    inputProps={{ maxLength: 255 }}
+                    slotProps={{ htmlInput: { maxLength: 255 } }}
                   />
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                     <Button

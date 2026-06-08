@@ -117,7 +117,7 @@ interface PendingCultureDeletion {
   visible: boolean;
 }
 
-function Cultures(): React.ReactElement {
+function Cultures() {
   const { t } = useTranslation(['cultures', 'common']);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -125,7 +125,7 @@ function Cultures(): React.ReactElement {
   const navigate = useNavigate();
   const { user } = useAuth();
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
-  const setTopbarContextActions = outletContext?.setTopbarContextActions ?? (() => undefined);
+  const setTopbarContextActions = outletContext?.setTopbarContextActions;
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const { selectedCultureId, updateSelectedCultureId } = useSelectedCultureSync();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
@@ -408,7 +408,7 @@ function Cultures(): React.ReactElement {
     }
     const response = await cultureAPI.history(selectedCulture.id);
     if (response.data.length <= 1) {
-      showSnackbar(t('history.emptyState.title', { defaultValue: 'Keine weiteren Versionen verfügbar.' }), 'info');
+      showSnackbar(t('history.emptyState.title'), 'info');
       return;
     }
     setHistoryItems(response.data);
@@ -811,7 +811,7 @@ function Cultures(): React.ReactElement {
     updateSelectedCultureId(cultures[nextIndex]?.id, 'internal');
   }, [cultures, selectedCultureId, updateSelectedCultureId]);
 
-  const enrichmentDisabledReason = 'Für KI-Recherche muss ein Lieferant mit erlaubten Domains konfiguriert sein.';
+  const enrichmentDisabledReason = t('ai.researchDisabledReason');
 
   const handleAiMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAiMenuAnchor(event.currentTarget);
@@ -1241,7 +1241,7 @@ function Cultures(): React.ReactElement {
                   <Button
                     startIcon={<AutoAwesomeIcon />}
                     onClick={() => void handleEnrichCurrent('complete')}
-                    aria-label="Kultur vervollständigen (KI)"
+                    aria-label={t('buttons.aiComplete')}
                     disabled={Boolean(selectedCulture) && !selectedCultureNeedsCompletion}
                   >
                     {t('buttons.aiComplete')}
@@ -1265,11 +1265,11 @@ function Cultures(): React.ReactElement {
               open={Boolean(aiMenuAnchor)}
               onClose={handleAiMenuClose}
             >
-              <MenuItem aria-label="Kultur komplett neu recherchieren (KI)" onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
+              <MenuItem aria-label={t('buttons.aiReresearch')} onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
                 <ManageSearchIcon sx={{ mr: 1 }} fontSize="small" />
                 {t('buttons.aiReresearch')}
               </MenuItem>
-              <MenuItem aria-label="Alle Kulturen vervollständigen (KI)" onClick={() => setEnrichAllConfirmOpen(true)} disabled={cultures.length === 0 || enrichmentLoading || !cultures.some((culture) => canRunEnrichmentForCulture(culture))}>
+              <MenuItem aria-label={t('buttons.aiCompleteAll')} onClick={() => setEnrichAllConfirmOpen(true)} disabled={cultures.length === 0 || enrichmentLoading || !cultures.some((culture) => canRunEnrichmentForCulture(culture))}>
                 <PlaylistAddCheckIcon sx={{ mr: 1 }} fontSize="small" />
                 {t('buttons.aiCompleteAll')}
               </MenuItem>
@@ -1471,10 +1471,10 @@ function Cultures(): React.ReactElement {
           {historyItems.length === 0 ? (
             <Box sx={{ py: isMobile ? 0.5 : 1 }}>
               <Typography variant="body2" color="text.secondary">
-                {t('history.emptyState.title', { defaultValue: 'Keine weiteren Versionen verfügbar.' })}
+                {t('history.emptyState.title')}
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                {t('history.emptyState.description', { defaultValue: 'Für diese Sorte existiert aktuell nur diese Version.' })}
+                {t('history.emptyState.description')}
               </Typography>
             </Box>
           ) : (
@@ -1502,7 +1502,7 @@ function Cultures(): React.ReactElement {
                                 onClick={() => setHistoryOpen(false)}
                                 sx={{ fontSize: '0.78rem', color: 'text.secondary', flexShrink: 0 }}
                               >
-                                {t('history.objectTypes.openTarget', { defaultValue: 'Öffnen' })}
+                                {t('history.objectTypes.openTarget')}
                               </Link>
                             ) : null}
                           </Box>
@@ -1587,35 +1587,35 @@ function Cultures(): React.ReactElement {
 
 
       <Dialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Tastenkürzel</DialogTitle>
+        <DialogTitle>{t('shortcuts.title')}</DialogTitle>
         <DialogContent>
           <List dense>
             <ListItem>
-              <ListItemText primary="Tastenkürzel öffnen" secondary="?" />
+              <ListItemText primary={t('shortcuts.openShortcuts')} secondary="?" />
             </ListItem>
             <ListItem>
-              <ListItemText primary="Command Palette" secondary="Ctrl+K" />
+              <ListItemText primary={t('shortcuts.commandPalette')} secondary="Ctrl+K" />
             </ListItem>
             <ListItem>
-              <ListItemText primary="Dialog schließen" secondary="Esc" />
+              <ListItemText primary={t('shortcuts.closeDialog')} secondary="Esc" />
             </ListItem>
             {aiEnrichmentEnabled && (
               <>
                 <ListItem>
-                  <ListItemText primary="KI: Kultur vervollständigen" secondary="–" />
+                  <ListItemText primary={t('shortcuts.aiComplete')} secondary="–" />
                 </ListItem>
                 <ListItem>
-                  <ListItemText primary="KI: Kultur neu recherchieren" secondary="–" />
+                  <ListItemText primary={t('shortcuts.aiReresearch')} secondary="–" />
                 </ListItem>
                 <ListItem>
-                  <ListItemText primary="KI: Alle Kulturen vervollständigen" secondary="–" />
+                  <ListItemText primary={t('shortcuts.aiCompleteAll')} secondary="–" />
                 </ListItem>
               </>
             )}
           </List>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShortcutsOpen(false)}>Schließen</Button>
+          <Button onClick={() => setShortcutsOpen(false)}>{t('history.closeButton')}</Button>
         </DialogActions>
       </Dialog>
 

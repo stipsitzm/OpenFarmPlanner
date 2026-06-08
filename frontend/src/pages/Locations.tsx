@@ -21,12 +21,13 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { locationAPI, type Location } from '../api/api';
 import PageContainer from '../components/layout/PageContainer';
 import { useTranslation } from '../i18n';
-import { resolveLocaleFromLanguage } from '../utils/numberLocalization';
+import { formatLocalizedNumber, resolveLocaleFromLanguage } from '../utils/numberLocalization';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useRegisterCreateActions } from '../commands/useCommandContext';
+import { confirmAction } from '../utils/confirmAction';
 
 type SoilType = NonNullable<Location['soil_type']>;
 type Exposure = NonNullable<Location['exposure']>;
@@ -97,7 +98,7 @@ const validateCoordinateRange = (value: number | null, min: number, max: number)
   value === null || (value >= min && value <= max);
 
 const formatCoordinate = (value: number, locale: string): string =>
-  new Intl.NumberFormat(locale, { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(value);
+  formatLocalizedNumber(value, locale, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 
 const toFormState = (location: Location | null): LocationFormState => ({
   name: location?.name ?? '',
@@ -112,7 +113,7 @@ const toFormState = (location: Location | null): LocationFormState => ({
   notes: location?.notes ?? '',
 });
 
-function Locations(): React.ReactElement {
+function Locations() {
   const { t, i18n } = useTranslation(['locations', 'common']);
   const location = useLocation();
   const navigate = useNavigate();
@@ -271,7 +272,7 @@ function Locations(): React.ReactElement {
   };
 
   const deleteLocation = async (locationId: number): Promise<void> => {
-    if (!window.confirm(t('locations:confirmDelete'))) return;
+    if (!confirmAction(t('locations:confirmDelete'))) return;
     try {
       await locationAPI.delete(locationId);
       await loadData();

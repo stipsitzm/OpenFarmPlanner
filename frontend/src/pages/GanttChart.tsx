@@ -42,6 +42,7 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import type { CommandSpec } from '../commands/types';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import { extractApiErrorMessage } from '../api/errors';
+import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import {
@@ -75,7 +76,6 @@ interface WeeklyYieldChartColumn {
 }
 
 type CalendarMode = 'occupancy' | 'seedlings';
-const NOOP_SET_TOPBAR_ACTIONS = (_actions: TopbarContextAction[]): void => undefined;
 
 class GanttRenderBoundary extends React.Component<
   { fallback: React.ReactNode; children: React.ReactNode },
@@ -118,7 +118,7 @@ function formatIsoWeek(date: Date): string {
   return `${utcDate.getUTCFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
 }
 
-function GanttChartPage(): React.ReactElement {
+function GanttChartPage() {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   useCommandContextTag('calendar');
@@ -136,10 +136,7 @@ function GanttChartPage(): React.ReactElement {
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('occupancy');
   const [editMode, setEditMode] = useState(false);
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
-  const setTopbarContextActions = useCallback((actions: TopbarContextAction[]): void => {
-    const setter = outletContext?.setTopbarContextActions ?? NOOP_SET_TOPBAR_ACTIONS;
-    setter(actions);
-  }, [outletContext]);
+  const setTopbarContextActions = outletContext?.setTopbarContextActions;
 
   const calendarCommands = useMemo<CommandSpec[]>(() => [
     {
@@ -185,12 +182,7 @@ function GanttChartPage(): React.ReactElement {
       },
     },
   ], [calendarMode, editMode, t]);
-  useEffect(() => {
-    setTopbarContextActions(topbarActions);
-    return () => {
-      setTopbarContextActions([]);
-    };
-  }, [setTopbarContextActions, topbarActions]);
+  useTopbarContextActions(setTopbarContextActions, topbarActions);
 
   const currentYear = new Date().getFullYear();
   const [displayYear] = useState(currentYear);
@@ -448,7 +440,7 @@ function GanttChartPage(): React.ReactElement {
       currentDate.setDate(currentDate.getDate() + 7);
     }
 
-    const sortedCultures = [...cultureMeta.values()].sort((left, right) => left.name.localeCompare(right.name));
+    const sortedCultures = [...cultureMeta.values()].sort((left, right) => left.name.localeCompare(right.name, 'de'));
     const maxYield = rows.reduce((max, row) => Math.max(max, row.totalYield), 0);
 
     return {

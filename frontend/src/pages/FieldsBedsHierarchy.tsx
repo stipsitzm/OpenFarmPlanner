@@ -305,7 +305,7 @@ function FieldsBedsHierarchy({
   onCreateFieldRequestHandled,
   hierarchyData,
   onPendingDeletionCountChange,
-}: FieldsBedsHierarchyProps): React.ReactElement {
+}: FieldsBedsHierarchyProps) {
   const LOCATION_ROW_HEIGHT = 46;
   const FIELD_ROW_HEIGHT = 42;
   const BED_ROW_HEIGHT = 36;
@@ -394,7 +394,7 @@ function FieldsBedsHierarchy({
 
   // Bed operations
   const { addBed, saveBed, pendingEditRow, setPendingEditRow } =
-    useBedOperations(beds, setBeds, setError, t);
+    useBedOperations(setBeds, setError, t);
   const [pendingFieldEditRow, setPendingFieldEditRow] = useState<string | number | null>(null);
 
   const hierarchyIndex = useMemo(

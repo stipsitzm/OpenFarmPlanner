@@ -278,7 +278,7 @@ describe('GanttChartPage', () => {
     expect(screen.getByText('Anzuchtbeginn: 19.4.2026')).toBeInTheDocument();
     expect(screen.getByText('Auspflanzung: 10.5.2026')).toBeInTheDocument();
     expect(screen.getByText('Anzuchtdauer: 21 Tage')).toBeInTheDocument();
-    expect(screen.getByText('Fläche: 8.00 m²')).toBeInTheDocument();
+    expect(screen.getByText('Fläche: 8,00 m²')).toBeInTheDocument();
     expect(screen.getByText('Pflanzenanzahl: 24')).toBeInTheDocument();
     expect(screen.queryByText(/Anbauplan/i)).not.toBeInTheDocument();
     const seedlingViewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { hidden?: boolean } | undefined;

@@ -6,11 +6,16 @@ import { SpacingSection } from '../cultures/sections/SpacingSection';
 import { SeedingSection } from '../cultures/sections/SeedingSection';
 import { HarvestSection } from '../cultures/sections/HarvestSection';
 
+const translations: Record<string, string> = {
+  'form.sowingCalculationSafetyPercentLabel': 'Sicherheitszuschlag für Saatgut (%)',
+  'form.thousandKernelWeightLabel': '1000-Korn-Gewicht (g)',
+};
+
 const t = (key: string, options?: Record<string, unknown>) => {
   if (typeof options?.defaultValue === 'string') {
     return options.defaultValue;
   }
-  return key;
+  return translations[key] ?? key;
 };
 
 describe('culture form UI sections', () => {

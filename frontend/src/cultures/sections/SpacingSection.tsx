@@ -17,7 +17,7 @@ interface SpacingSectionProps {
 export function SpacingSection({ formData, errors, onChange, t }: SpacingSectionProps) {
   return (
     <>
-      <Typography variant="h6" sx={{ mt: 2 }}>Pflanzabstände</Typography>
+      <Typography variant="h6" sx={{ mt: 2 }}>{t('form.sectionPlanting')}</Typography>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <TextField
           sx={spacingFieldSx}

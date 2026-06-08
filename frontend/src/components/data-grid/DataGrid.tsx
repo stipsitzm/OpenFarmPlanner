@@ -38,6 +38,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
+import { confirmAction } from '../../utils/confirmAction';
 import { useTranslation } from '../../i18n';
 import { NotesCell } from './NotesCell';
 import { NotesDrawer } from './NotesDrawer';
@@ -85,7 +86,7 @@ export interface EditableDataGridRowActionHelpers<T extends EditableRow> {
 export interface EditableDataGridRowAction<T extends EditableRow> {
   id: string;
   label: string;
-  icon?: React.ReactElement;
+  icon?: React.ReactNode;
   color?: 'default' | 'error' | 'primary';
   onClick: (row: T, helpers: EditableDataGridRowActionHelpers<T>) => void;
   disabled?: boolean;
@@ -340,7 +341,7 @@ export function EditableDataGrid<T extends EditableRow>({
   onBeforeSaveRow,
   isSaveErrorHandled,
   surfaceSizing,
-}: EditableDataGridProps<T>): React.ReactElement {
+}: EditableDataGridProps<T>) {
   const gridApiRef = useGridApiRef();
   const resolvedSurfaceSizing = surfaceSizing ?? 'contentFit';
   const isContentSizedSurface = resolvedSurfaceSizing === 'contentFit' || resolvedSurfaceSizing === 'compact';
@@ -924,7 +925,6 @@ export function EditableDataGrid<T extends EditableRow>({
       }
     } catch (err) {
       if (isSaveErrorHandled?.(err)) {
-        console.error('Error saving data:', err);
         throw err;
       }
       // Extract user-friendly error message
@@ -1322,7 +1322,7 @@ export function EditableDataGrid<T extends EditableRow>({
       return;
     }
 
-    if (!window.confirm(deleteConfirmMessage)) return;
+    if (!confirmAction(deleteConfirmMessage)) return;
 
     const numericId = Number(id);
     if (numericId < 0) {
@@ -1525,7 +1525,7 @@ export function EditableDataGrid<T extends EditableRow>({
   /**
    * Custom footer component with add button
    */
-  const CustomFooter = (): React.ReactElement => {
+  const CustomFooter = () => {
     const hasInvalidCell = hasValidationError || hasInvalidRowInEditMode;
 
     return (
@@ -1679,7 +1679,7 @@ export function EditableDataGrid<T extends EditableRow>({
                   onClick={handleDeleteClick(id)}
                   size="small"
                   sx={deleteIconButtonSx}
-                  aria-label="Löschen"
+                  aria-label={t('actions.delete')}
                 >
                   <DeleteIcon fontSize="small" />
                 </IconButton>,

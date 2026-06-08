@@ -5,9 +5,9 @@
 import { useState } from 'react';
 import { bedAPI, type Bed } from '../../../api/api';
 import type { TFunction } from 'i18next';
+import { confirmAction } from '../../../utils/confirmAction';
 
 export function useBedOperations(
-  _beds: Bed[],
   setBeds: React.Dispatch<React.SetStateAction<Bed[]>>,
   setError: (error: string) => void,
   t: TFunction
@@ -76,7 +76,7 @@ export function useBedOperations(
   };
 
   const deleteBed = async (bedId: number): Promise<void> => {
-    if (!window.confirm(t('confirm.deleteBed'))) return;
+    if (!confirmAction(t('confirm.deleteBed'))) return;
 
     if (bedId < 0) {
       // Remove unsaved bed from state

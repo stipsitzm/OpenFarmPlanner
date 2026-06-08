@@ -22,6 +22,7 @@ import {
   collectHierarchyAvailability,
   filterFieldOptionsByLocation,
 } from './areaHierarchySelection';
+import { formatLocalizedNumber } from '../../utils/numberLocalization';
 
 interface AreaAssignmentDialogProps {
   bedId: number | null;
@@ -48,7 +49,7 @@ interface DialogKeyboardControl {
 }
 
 const formatArea = (value: number, locale: string): string =>
-  `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} m²`;
+  `${formatLocalizedNumber(value, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
 
 const toNumericValue = (value: unknown): number | null => {
   if (typeof value === 'number') {
@@ -86,7 +87,7 @@ export function AreaAssignmentDialog({
   onApply,
   compactLabel,
   hasFocus = false,
-}: AreaAssignmentDialogProps): React.ReactElement {
+}: AreaAssignmentDialogProps) {
   const { t } = useTranslation('plantingPlans');
   const [isOpen, setIsOpen] = useState(false);
   const [openSelect, setOpenSelect] = useState<'location' | 'field' | 'bed' | null>(null);

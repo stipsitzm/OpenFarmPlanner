@@ -33,7 +33,7 @@ const renderCultureLabel = (result: ImportPreviewResult): string => (
   `${result.import_data.name}${result.import_data.variety ? ` (${result.import_data.variety})` : ''}`
 );
 
-function NewCulturesSection({ entries, t }: { entries: ImportPreviewResult[]; t: Translator }): React.ReactElement | null {
+function NewCulturesSection({ entries, t }: { entries: ImportPreviewResult[]; t: Translator }) {
   if (!entries.length) {
     return null;
   }
@@ -64,7 +64,7 @@ function UpdateCandidatesSection({
   confirmUpdates: boolean;
   onConfirmUpdatesChange: (value: boolean) => void;
   t: Translator;
-}): React.ReactElement | null {
+}) {
   if (!entries.length) {
     return null;
   }
@@ -111,7 +111,7 @@ export function CulturesImportDialog({
   onClose,
   onImportStart,
   t,
-}: CulturesImportDialogProps): React.ReactElement {
+}: CulturesImportDialogProps) {
   const newCultures = importState.previewResults.filter((result) => result.status === 'create');
   const updateCandidates = importState.previewResults.filter((result) => result.status === 'update_candidate');
 

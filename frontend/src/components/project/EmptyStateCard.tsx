@@ -31,7 +31,7 @@ export default function EmptyStateCard({
   showInfoIcon = true,
   containerSx,
   titleSx,
-}: EmptyStateCardProps): React.ReactElement {
+}: EmptyStateCardProps) {
   const locationContext = useContext(UNSAFE_LocationContext);
   const currentPathname = locationContext?.location.pathname ?? window.location.pathname;
   const visibleActions = actions.filter((action) => {

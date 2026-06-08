@@ -34,7 +34,7 @@ function groupCommands(commands: CommandSpec[]): GroupedCommands[] {
   return Array.from(grouped.entries()).map(([group, groupCommands]) => ({ group, commands: groupCommands }));
 }
 
-export function CommandPalette({ open, commands, onClose }: CommandPaletteProps): React.ReactElement {
+export function CommandPalette({ open, commands, onClose }: CommandPaletteProps) {
   const { t } = useTranslation('navigation');
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);

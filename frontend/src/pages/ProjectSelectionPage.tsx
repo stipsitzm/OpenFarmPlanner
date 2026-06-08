@@ -6,8 +6,9 @@ import { projectAPI, type ProjectPayload } from '../api/api';
 import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
 import { openProjectCreationFlow } from '../projects/projectCreationFlow';
+import { confirmAction } from '../utils/confirmAction';
 
-export default function ProjectSelectionPage(): React.ReactElement {
+export default function ProjectSelectionPage() {
   const { user, switchActiveProject, refreshUser } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation(['navigation', 'common']);
@@ -35,7 +36,7 @@ export default function ProjectSelectionPage(): React.ReactElement {
   }, [loadDeletedProjects]);
 
   const deletedProjectsByName = useMemo(
-    () => [...deletedProjects].sort((left, right) => left.name.localeCompare(right.name)),
+    () => [...deletedProjects].sort((left, right) => left.name.localeCompare(right.name, 'de')),
     [deletedProjects],
   );
 
@@ -74,7 +75,7 @@ export default function ProjectSelectionPage(): React.ReactElement {
   };
 
   const permanentlyDeleteProject = async (project: ProjectPayload): Promise<void> => {
-    if (!window.confirm(t('projectTrash.permanentConfirm', { name: project.name }))) {
+    if (!confirmAction(t('projectTrash.permanentConfirm', { name: project.name }))) {
       return;
     }
     try {

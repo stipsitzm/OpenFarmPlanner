@@ -29,7 +29,7 @@ export function SearchableSelectEditCell({
   onValueChange,
   placeholder,
   hasFocus,
-}: SearchableSelectEditCellProps): React.ReactElement {
+}: SearchableSelectEditCellProps) {
   const apiRef = useGridApiContext();
   const [inputValue, setInputValue] = useState('');
 

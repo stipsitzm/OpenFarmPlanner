@@ -17,7 +17,7 @@ interface HarvestSectionProps {
 export function HarvestSection({ formData, errors, onChange, t }: HarvestSectionProps) {
   return (
     <>
-      <Typography variant="h6" sx={{ mt: 2 }}>Ernteinformationen</Typography>
+      <Typography variant="h6" sx={{ mt: 2 }}>{t('form.sectionHarvest')}</Typography>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <FormControl sx={fieldSx} error={Boolean(errors.harvest_method)}>
           <InputLabel>{t('form.harvestMethod')}</InputLabel>

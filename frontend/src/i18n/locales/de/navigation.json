@@ -25,6 +25,8 @@
     "switchError": "Projekt konnte nicht gewechselt werden.",
     "newProjectAction": "Neues Projekt",
     "openProjectAction": "Öffnen",
+    "activeProject": "Aktives Projekt",
+    "projects": "Projekte",
     "createDialogTitle": "Projekt anlegen",
     "createNameLabel": "Projektname",
     "createDescriptionLabel": "Beschreibung",
@@ -35,6 +37,39 @@
   "projectRoles": {
     "admin": "Admin",
     "member": "Mitglied"
+  },
+  "globalMenu": {
+    "projectActions": "Projektaktionen",
+    "app": "App",
+    "shortcuts": "Tastenkürzel",
+    "appHelp": "App-Hilfe",
+    "account": "Account",
+    "closeSidebar": "Seitenleiste schließen",
+    "openSidebar": "Seitenleiste öffnen",
+    "collapseSidebar": "Sidebar einklappen",
+    "expandSidebar": "Sidebar ausklappen",
+    "dashboardLink": "Zur Übersicht",
+    "openMobileMenu": "Menü öffnen"
+  },
+  "pageHelp": {
+    "dashboard": "Hilfe zu Übersicht",
+    "locations": "Hilfe zu Standorte",
+    "areas": "Hilfe zu Anbauflächen",
+    "cultures": "Hilfe zu Kulturen",
+    "plantingPlans": "Hilfe zu Anbauplänen",
+    "calendar": "Hilfe zu Anbaukalender",
+    "seedDemand": "Hilfe zu Saatgutbedarf",
+    "suppliers": "Hilfe zu Lieferanten",
+    "openAria": "{{label}} öffnen"
+  },
+  "cultureActions": {
+    "openLibrary": "Kulturbibliothek öffnen",
+    "library": "Kulturbibliothek",
+    "libraryShort": "Bibliothek",
+    "openImportExport": "Import/Export öffnen",
+    "importExport": "Import/Export",
+    "openCultureActions": "Kultur-Aktionen öffnen",
+    "actions": "Aktionen"
   },
   "projectTrash": {
     "title": "Papierkorb",
@@ -64,8 +99,26 @@
     "emptyTitle": "Keine passenden Aktionen gefunden.",
     "emptyDescription": "Versuche einen anderen Suchbegriff oder prüfe, ob im aktuellen Kontext weitere Aktionen verfügbar sind.",
     "shortcutsTitle": "Tastenkürzel",
+    "createNew": "Neu erstellen...",
+    "createNewShortcut": "Neu erstellen",
+    "contextualShortcutsTitle": "Kontextbezogene Tastenkürzel (Alt+K)",
+    "contextualShortcutsDescription": "Shortcuts sind browser-sicher und überschreiben keine üblichen Browser-Shortcuts.",
     "currentVersion": "Aktuelle Version",
     "restoreVersion": "Zu dieser Version wechseln",
+    "contextTitles": {
+      "global": "Global",
+      "cultures": "Kulturen",
+      "locations": "Standorte",
+      "areas": "Anbauflächen",
+      "plans": "Anbaupläne",
+      "calendar": "Anbaukalender",
+      "seedDemand": "Saatgutbedarf"
+    },
+    "shortcutSections": {
+      "navigation": "Navigation",
+      "viewsLayout": "Ansichten & Layout",
+      "dialogsHelp": "Dialoge & Hilfe"
+    },
     "commands": {
       "nextPage": "Nächste Seite",
       "previousPage": "Vorherige Seite",
@@ -75,6 +128,8 @@
       "switchProjectPrefix": "Projekt wechseln",
       "openAccountSettings": "Kontoeinstellungen öffnen",
       "openVersionHistory": "Versionsverlauf öffnen",
+      "toggleSidebar": "Sidebar ein-/ausklappen",
+      "openPageHelp": "Seitenhilfe öffnen",
       "logout": "Abmelden",
       "openShortcuts": "Seitenhilfe öffnen",
       "closeDialog": "Dialog schließen"

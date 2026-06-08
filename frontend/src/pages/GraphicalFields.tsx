@@ -258,7 +258,7 @@ export default function GraphicalFields({
   onInteractionModeChange,
   showModeToggle = true,
   hierarchyData,
-}: GraphicalFieldsProps): React.ReactElement {
+}: GraphicalFieldsProps) {
   const { t } = useTranslation(["fields", "common"]);
   const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
   const { loading, error, locations, fields, beds } = hierarchyData ?? internalHierarchyData;
@@ -628,46 +628,6 @@ export default function GraphicalFields({
       })
     );
   }, [locationLayouts, stageHeight, stageWidth]);
-
-  useEffect(() => {
-    if (!import.meta.env.DEV || import.meta.env.MODE === 'test') {
-      return;
-    }
-
-    locationLayouts.forEach((layout) => {
-      const locationId = layout.location.id;
-      if (!locationId) {
-        return;
-      }
-      const contentBounds = getContentBoundsForLocation(locationId);
-      const viewport =
-        viewportByLocation[locationId] ??
-        fitBoundsToStage(
-          contentBounds,
-          { width: stageWidth, height: stageHeight },
-          getFitViewportPadding(stageWidth),
-        );
-      const sampleRects = layout.fieldViewModels.slice(0, 5).map((rect) => ({
-        id: rect.id,
-        world: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-        scaled: {
-          x: rect.x * viewport.scale + viewport.x,
-          y: rect.y * viewport.scale + viewport.y,
-          width: rect.width * viewport.scale,
-          height: rect.height * viewport.scale,
-        },
-      }));
-
-      console.debug("[GraphicalFields] viewport debug", {
-        locationId,
-        stage: { width: stageWidth, height: stageHeight },
-        contentBounds,
-        viewport,
-        fitPadding: getFitViewportPadding(stageWidth),
-        sampleRects,
-      });
-    });
-  }, [getContentBoundsForLocation, locationLayouts, viewportByLocation, stageWidth, stageHeight]);
 
   const resetViewport = (locationId: number): void => {
     setViewportByLocation((prev) => {

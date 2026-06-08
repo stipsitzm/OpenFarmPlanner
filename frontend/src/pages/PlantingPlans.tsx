@@ -192,7 +192,7 @@ const toIsoDateString = (value: unknown): string | null => {
   return null;
 };
 
-function PlantingDateEditCell(params: GridRenderEditCellParams): React.ReactElement {
+function PlantingDateEditCell(params: GridRenderEditCellParams) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const inputValue = toIsoDateString(params.value) ?? "";
 
@@ -517,7 +517,7 @@ export const buildMobileCreateForm = (
   };
 };
 
-function PlantingPlans(): React.ReactElement {
+function PlantingPlans() {
   const { t } = useTranslation(["plantingPlans", "common"]);
   const { i18n } = useTranslation();
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();

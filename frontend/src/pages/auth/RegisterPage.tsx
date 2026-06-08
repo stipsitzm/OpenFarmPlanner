@@ -7,7 +7,7 @@ import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
 import { getNextFromSearch, getTokenFromNextPath, storeInvitationRedirect } from '../invitationAcceptance';
 
-export default function RegisterPage(): React.ReactElement {
+export default function RegisterPage() {
   const { user, register, resendActivation, logout } = useAuth();
   const { t } = useTranslation(['auth', 'projectInvitations']);
   const location = useLocation();

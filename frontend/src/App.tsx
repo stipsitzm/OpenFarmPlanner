@@ -157,7 +157,7 @@ interface ProjectMenuProps {
   t: (key: string) => string;
 }
 
-function ProjectMenu(props: ProjectMenuProps): React.ReactElement {
+function ProjectMenu(props: ProjectMenuProps) {
   const {
     anchorEl,
     open,
@@ -228,7 +228,7 @@ interface GlobalMenuProps {
   t: (key: string) => string;
 }
 
-function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
+function GlobalMenu(props: GlobalMenuProps) {
   const {
     anchorEl,
     open,
@@ -249,26 +249,26 @@ function GlobalMenu(props: GlobalMenuProps): React.ReactElement {
   } = props;
 
   const mobileMenuItems = [
-    <MenuItem key="mobile-section-project" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Projektaktionen</MenuItem>,
+    <MenuItem key="mobile-section-project" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.projectActions')}</MenuItem>,
     <MenuItem key="mobile-project-switcher" onClick={onOpenProjectSwitcher}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SwapHorizIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('projectSwitcher.ariaLabel')}</MenuItem>,
     <MenuItem key="mobile-project-create" onClick={onOpenCreateProject}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><AddIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.create')}</MenuItem>,
     <MenuItem key="mobile-project-settings" onClick={onOpenProjectSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.settings')}</MenuItem>,
     <MenuItem key="mobile-project-members" onClick={onOpenProjectMembers}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><GroupOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openProjectMembers')}</MenuItem>,
     <MenuItem key="mobile-project-history" onClick={() => void onOpenProjectHistory()} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
     <Divider key="mobile-divider-project-app" />,
-    <MenuItem key="mobile-section-app" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>App</MenuItem>,
-    <MenuItem key="mobile-app-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>Tastenkürzel</MenuItem>,
-    <MenuItem key="mobile-app-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>App-Hilfe</MenuItem>,
+    <MenuItem key="mobile-section-app" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.app')}</MenuItem>,
+    <MenuItem key="mobile-app-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.shortcuts')}</MenuItem>,
+    <MenuItem key="mobile-app-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.appHelp')}</MenuItem>,
     <MenuItem key="mobile-app-account-settings" onClick={onOpenAccountSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
     <Divider key="mobile-divider-app-account" />,
-    <MenuItem key="mobile-section-account" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Account</MenuItem>,
+    <MenuItem key="mobile-section-account" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.account')}</MenuItem>,
     <MenuItem key="mobile-account-logout" onClick={() => void onLogout()}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
   ];
   const desktopMenuItems = [
     <MenuItem key="desktop-history" onClick={() => void onOpenProjectHistory()} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
     <MenuItem key="desktop-account-settings" onClick={onOpenAccountSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
-    <MenuItem key="desktop-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>Tastenkürzel</MenuItem>,
-    <MenuItem key="desktop-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>App-Hilfe</MenuItem>,
+    <MenuItem key="desktop-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.shortcuts')}</MenuItem>,
+    <MenuItem key="desktop-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.appHelp')}</MenuItem>,
     <MenuItem key="desktop-logout" onClick={() => void onLogout()}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
   ];
   return <Menu id="global-actions-menu" anchorEl={anchorEl} open={open} onClose={onClose}>{isMobile ? mobileMenuItems : desktopMenuItems}</Menu>;
@@ -297,7 +297,7 @@ export interface RootLayoutOutletContext {
  * Root layout component with navigation.
  * Wraps all routes with the persistent navigation bar.
  */
-function RootLayout(): React.ReactElement {
+function RootLayout() {
   const { t, i18n } = useTranslation('navigation');
   useGlobalOverlayKeyboardScroll();
   const tCultures = useMemo(
@@ -775,21 +775,21 @@ function RootLayout(): React.ReactElement {
     };
   }, [currentPageTitle, tCommon]);
   const topbarHelpConfig = useMemo(() => {
-    if (location.pathname.startsWith('/app/dashboard')) return { pageKey: 'dashboard' as const, label: 'Hilfe zu Übersicht' };
-    if (location.pathname.startsWith('/app/locations')) return { pageKey: 'locations' as const, label: 'Hilfe zu Standorte' };
-    if (location.pathname.startsWith('/app/fields-beds')) return { pageKey: 'areas' as const, label: 'Hilfe zu Anbauflächen' };
-    if (location.pathname.startsWith('/app/cultures')) return { pageKey: 'cultures' as const, label: 'Hilfe zu Kulturen' };
-    if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { pageKey: 'plantingPlans' as const, label: 'Hilfe zu Anbauplänen' };
-    if (location.pathname.startsWith('/app/gantt-chart')) return { pageKey: 'calendar' as const, label: 'Hilfe zu Anbaukalender' };
-    if (location.pathname.startsWith('/app/seed-demand')) return { pageKey: 'seedDemand' as const, label: 'Hilfe zu Saatgutbedarf' };
-    if (location.pathname.startsWith('/app/suppliers')) return { pageKey: 'suppliers' as const, label: 'Hilfe zu Lieferanten' };
+    if (location.pathname.startsWith('/app/dashboard')) return { pageKey: 'dashboard' as const, label: t('pageHelp.dashboard') };
+    if (location.pathname.startsWith('/app/locations')) return { pageKey: 'locations' as const, label: t('pageHelp.locations') };
+    if (location.pathname.startsWith('/app/fields-beds')) return { pageKey: 'areas' as const, label: t('pageHelp.areas') };
+    if (location.pathname.startsWith('/app/cultures')) return { pageKey: 'cultures' as const, label: t('pageHelp.cultures') };
+    if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { pageKey: 'plantingPlans' as const, label: t('pageHelp.plantingPlans') };
+    if (location.pathname.startsWith('/app/gantt-chart')) return { pageKey: 'calendar' as const, label: t('pageHelp.calendar') };
+    if (location.pathname.startsWith('/app/seed-demand')) return { pageKey: 'seedDemand' as const, label: t('pageHelp.seedDemand') };
+    if (location.pathname.startsWith('/app/suppliers')) return { pageKey: 'suppliers' as const, label: t('pageHelp.suppliers') };
     return null;
-  }, [location.pathname]);
+  }, [location.pathname, t]);
   const topbarPrimaryAction = useMemo(() => {
     if (activeCreateActions.length > 0) {
       const isSingleCreateAction = activeCreateActions.length === 1;
       const primaryCreateAction = activeCreateActions[0];
-      const label = isSingleCreateAction ? primaryCreateAction.label : 'Neu erstellen...';
+      const label = isSingleCreateAction ? primaryCreateAction.label : t('commandPalette.createNew');
       return {
         label,
         tooltip: `${label} (${primaryCreateAction.shortcut ?? 'Alt+Shift+N'})`,
@@ -798,7 +798,7 @@ function RootLayout(): React.ReactElement {
     }
     if (location.pathname.startsWith('/app/fields-beds')) return fieldsGlobalAddAction ? { label: fieldsGlobalAddAction.label, to: '', onClick: fieldsGlobalAddAction.onClick } : null;
     return null;
-  }, [activeCreateActions, fieldsGlobalAddAction, location.pathname, runPrimaryCreateAction]);
+  }, [activeCreateActions, fieldsGlobalAddAction, location.pathname, runPrimaryCreateAction, t]);
   const handleTopbarPrimaryAction = useCallback((): void => {
     if (!topbarPrimaryAction) {
       return;
@@ -826,8 +826,8 @@ function RootLayout(): React.ReactElement {
                 <Box
                   component={RouterLink}
                   to="/app/dashboard"
-                  aria-label="Zur Übersicht"
-                  title="Zur Übersicht"
+                  aria-label={t('globalMenu.dashboardLink')}
+                  title={t('globalMenu.dashboardLink')}
                   sx={navigationLogoLinkSx}
                 >
                   <Box
@@ -845,13 +845,13 @@ function RootLayout(): React.ReactElement {
                   </Typography>
                 </Box>
                 <Tooltip
-                  title="Seitenleiste schließen"
+                  title={t('globalMenu.closeSidebar')}
                   placement="right"
                   enterDelay={350}
                   slotProps={{ tooltip: { sx: navigationTooltipSx } }}
                 >
                   <IconButton
-                    aria-label="Sidebar einklappen"
+                    aria-label={t('globalMenu.collapseSidebar')}
                     onClick={toggleSidebarCollapsed}
                     size="small"
                     sx={getNavigationToggleButtonSx('w-resize')}
@@ -863,13 +863,13 @@ function RootLayout(): React.ReactElement {
             ) : (
               <Stack direction="row" alignItems="center" justifyContent="center" sx={{ py: 1, mb: 0.75 }}>
                 <Tooltip
-                  title="Seitenleiste öffnen"
+                  title={t('globalMenu.openSidebar')}
                   placement="right"
                   enterDelay={350}
                   slotProps={{ tooltip: { sx: navigationTooltipSx } }}
                 >
                   <IconButton
-                    aria-label="Sidebar ausklappen"
+                    aria-label={t('globalMenu.expandSidebar')}
                     onClick={toggleSidebarCollapsed}
                     size="small"
                     sx={getNavigationToggleButtonSx('e-resize')}
@@ -903,7 +903,7 @@ function RootLayout(): React.ReactElement {
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', bgcolor: 'surface.contentBackground' }}>
       <Box sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
         {navItems.map((item) => {
-          const srLinkLabel = item.to === '/app/dashboard' ? 'Zur Übersicht' : item.label;
+          const srLinkLabel = item.to === '/app/dashboard' ? t('globalMenu.dashboardLink') : item.label;
           return <RouterLink key={`sr-${item.to}`} to={item.to} aria-label={srLinkLabel}>{item.label}</RouterLink>;
         })}
       </Box>
@@ -914,7 +914,7 @@ function RootLayout(): React.ReactElement {
         sx={{ borderBottom: '1px solid', borderColor: 'surface.surfaceBorder', bgcolor: 'surface.topbarBackground', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
         <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: 'nowrap', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
-          {!isDesktopUp ? <IconButton aria-label="Menü öffnen" onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
+          {!isDesktopUp ? <IconButton aria-label={t('globalMenu.openMobileMenu')} onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflow: 'hidden' }}>
             {!isDesktopUp ? (
               <Typography
@@ -939,7 +939,7 @@ function RootLayout(): React.ReactElement {
                 {currentPageTitle}
               </Typography>
             )}
-            {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={`${topbarHelpConfig.label} öffnen`} tooltip={topbarHelpConfig.label} /> : null}
+            {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={t('pageHelp.openAria', { label: topbarHelpConfig.label })} tooltip={topbarHelpConfig.label} /> : null}
           </Box>
           {!isCompactTopbar ? (
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, maxWidth: '100%', flex: 1, overflow: 'hidden' }}>
@@ -947,18 +947,18 @@ function RootLayout(): React.ReactElement {
           {isCulturesPage ? (
             <>
               {cultureLibraryAction && !showDesktopCultureActionsOverflow ? (
-                <Tooltip title="Kulturbibliothek öffnen">
+                <Tooltip title={t('cultureActions.openLibrary')}>
                   <span>
                     <Button
                       size="small"
                       variant="outlined"
                       onClick={() => cultureLibraryAction.onClick()}
-                      aria-label="Kulturbibliothek öffnen"
+                      aria-label={t('cultureActions.openLibrary')}
                       startIcon={<PublicIcon fontSize="small" />}
                       sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: showIconOnlyCultureLibrary ? 36 : 'auto', px: showIconOnlyCultureLibrary ? 0.75 : 1.25, flexShrink: 0 }}
                       disabled={cultureLibraryAction.disabled}
                     >
-                      {!showIconOnlyCultureLibrary ? (showCompactCultureLibrary ? 'Bibliothek' : 'Kulturbibliothek') : null}
+                      {!showIconOnlyCultureLibrary ? (showCompactCultureLibrary ? t('cultureActions.libraryShort') : t('cultureActions.library')) : null}
                     </Button>
                   </span>
                 </Tooltip>
@@ -967,7 +967,7 @@ function RootLayout(): React.ReactElement {
                 <Button
                   size="small"
                   variant="outlined"
-                  aria-label="Import/Export öffnen"
+                  aria-label={t('cultureActions.openImportExport')}
                   aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
                   aria-haspopup="true"
                   aria-expanded={Boolean(cultureActionsMenuAnchor)}
@@ -975,14 +975,14 @@ function RootLayout(): React.ReactElement {
                   endIcon={!isPhone ? <KeyboardArrowDownIcon fontSize="small" /> : undefined}
                   sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
                 >
-                  {isPhone ? '⋯' : 'Import/Export'}
+                  {isPhone ? '⋯' : t('cultureActions.importExport')}
                 </Button>
               ) : null}
               {showDesktopCultureActionsOverflow ? (
                 <Button
                   size="small"
                   variant="outlined"
-                  aria-label="Kultur-Aktionen öffnen"
+                  aria-label={t('cultureActions.openCultureActions')}
                   aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
                   aria-haspopup="true"
                   aria-expanded={Boolean(cultureActionsMenuAnchor)}
@@ -990,7 +990,7 @@ function RootLayout(): React.ReactElement {
                   endIcon={<KeyboardArrowDownIcon fontSize="small" />}
                   sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: 0, px: 1, flexShrink: 0 }}
                 >
-                  Aktionen
+                  {t('cultureActions.actions')}
                 </Button>
               ) : null}
               <Menu
@@ -1218,18 +1218,18 @@ function RootLayout(): React.ReactElement {
               {isCulturesPage ? (
                 <>
                   {cultureLibraryAction ? (
-                    <Tooltip title="Kulturbibliothek öffnen">
+                    <Tooltip title={t('cultureActions.openLibrary')}>
                       <span>
                         <Button
                           size="small"
                           variant="outlined"
                           onClick={() => cultureLibraryAction.onClick()}
-                          aria-label="Kulturbibliothek öffnen"
+                          aria-label={t('cultureActions.openLibrary')}
                           startIcon={<PublicIcon fontSize="small" />}
                           sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
                           disabled={cultureLibraryAction.disabled}
                         >
-                          Bibliothek
+                          {t('cultureActions.libraryShort')}
                         </Button>
                       </span>
                     </Tooltip>
@@ -1238,14 +1238,14 @@ function RootLayout(): React.ReactElement {
                     <Button
                       size="small"
                       variant="outlined"
-                      aria-label="Import/Export öffnen"
+                      aria-label={t('cultureActions.openImportExport')}
                       aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
                       aria-haspopup="true"
                       aria-expanded={Boolean(cultureActionsMenuAnchor)}
                       onClick={handleCultureActionsMenuOpen}
                       sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
                     >
-                      Import/Export
+                      {t('cultureActions.importExport')}
                     </Button>
                   ) : null}
                   <Menu
@@ -1546,20 +1546,20 @@ function RootLayout(): React.ReactElement {
         <DialogTitle>{t('commandPalette.shortcutsTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={1.5}>
-            <Typography variant="subtitle2">Navigation</Typography>
+            <Typography variant="subtitle2">{t('commandPalette.shortcutSections.navigation')}</Typography>
             <List dense disablePadding>
-              <ListItem><ListItemText primary="Neu erstellen" secondary="Alt+Shift+N" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.createNewShortcut')} secondary="Alt+Shift+N" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.nextPage')} secondary="Ctrl+Shift+↓" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.previousPage')} secondary="Ctrl+Shift+↑" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="Alt+V" /></ListItem>
             </List>
-            <Typography variant="subtitle2">Ansichten & Layout</Typography>
+            <Typography variant="subtitle2">{t('commandPalette.shortcutSections.viewsLayout')}</Typography>
             <List dense disablePadding>
-              <ListItem><ListItemText primary="Sidebar ein-/ausklappen" secondary="Ctrl+B" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.toggleSidebar')} secondary="Ctrl+B" /></ListItem>
             </List>
-            <Typography variant="subtitle2">Dialoge & Hilfe</Typography>
+            <Typography variant="subtitle2">{t('commandPalette.shortcutSections.dialogsHelp')}</Typography>
             <List dense disablePadding>
-              <ListItem><ListItemText primary="Seitenhilfe öffnen" secondary="Alt+H" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.openPageHelp')} secondary="Alt+H" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.label')} secondary="Alt+K" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.closeDialog')} secondary="Esc" /></ListItem>
             </List>
@@ -1574,7 +1574,7 @@ function RootLayout(): React.ReactElement {
         <DialogTitle>{t('projectSwitcher.ariaLabel')}</DialogTitle>
         <DialogContent>
           <Typography variant="caption" sx={{ display: 'block', mb: 1.25, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-            Aktives Projekt
+            {t('projectSwitcher.activeProject')}
           </Typography>
           <Paper variant="outlined" sx={{ p: 1.25, mb: 2 }}>
             <Stack direction="row" alignItems="center" spacing={1}>
@@ -1583,7 +1583,7 @@ function RootLayout(): React.ReactElement {
             </Stack>
           </Paper>
           <Typography variant="caption" sx={{ display: 'block', mb: 1.25, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-            Projekte
+            {t('projectSwitcher.projects')}
           </Typography>
           <List dense sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, py: 0 }}>
             {memberships.length === 0 ? (
@@ -1721,7 +1721,7 @@ function RootLayout(): React.ReactElement {
   );
 }
 
-function LegacyInvitationRedirect(): React.ReactElement {
+function LegacyInvitationRedirect() {
   const location = useLocation();
   const token = new URLSearchParams(location.search).get('token');
   if (!token) {
@@ -1730,7 +1730,7 @@ function LegacyInvitationRedirect(): React.ReactElement {
   return <Navigate to={buildInvitationAcceptPath(token)} replace />;
 }
 
-function TokenInvitationRedirect(): React.ReactElement {
+function TokenInvitationRedirect() {
   const location = useLocation();
   const token = location.pathname.split('/').pop();
   if (!token) {
@@ -1830,7 +1830,7 @@ function createAppRouter(basename: string) {
   });
 }
 
-function App(): React.ReactElement {
+function App() {
   // Use Vite's base URL when URL is inside that subdirectory, otherwise fall back to root.
   const configuredBase = import.meta.env.BASE_URL.replace(/\/$/, '');
   const currentPath = window.location.pathname;

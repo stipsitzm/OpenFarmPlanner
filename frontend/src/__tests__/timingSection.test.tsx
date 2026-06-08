@@ -2,7 +2,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TimingSection } from '../cultures/sections/TimingSection';
 
-const t = (key: string) => key;
+const translations: Record<string, string> = {
+  'form.cultivationType': 'Anbauart',
+  'form.cultivationTypeDirectSowing': 'Direktsaat',
+  'form.cultivationTypePreCultivation': 'Pflanzung',
+  'form.propagationDurationDays': 'Anzuchtdauer (Tage)',
+};
+
+const t = (key: string) => translations[key] ?? key;
 
 describe('TimingSection', () => {
   it('parses growth and harvest duration inputs', () => {

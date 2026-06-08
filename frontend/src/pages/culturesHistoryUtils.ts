@@ -72,7 +72,7 @@ export function getHistoryEntryMeta(
   fallbackActorLabel?: string,
 ): string {
   const actorLabel = getHistoryActorLabel(entry, t, fallbackActorLabel);
-  const timestamp = new Date(entry.history_date).toLocaleString();
+  const timestamp = new Date(entry.history_date).toLocaleString('de-DE');
   return t('history.meta', { actor: actorLabel, timestamp });
 }
 

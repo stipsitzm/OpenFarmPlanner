@@ -24,6 +24,8 @@
     "switchError": "Project could not be switched.",
     "newProjectAction": "New project",
     "openProjectAction": "Open",
+    "activeProject": "Active project",
+    "projects": "Projects",
     "createDialogTitle": "Create project",
     "createNameLabel": "Project name",
     "createDescriptionLabel": "Description",
@@ -34,6 +36,39 @@
   "projectRoles": {
     "admin": "Admin",
     "member": "Member"
+  },
+  "globalMenu": {
+    "projectActions": "Project actions",
+    "app": "App",
+    "shortcuts": "Keyboard shortcuts",
+    "appHelp": "App help",
+    "account": "Account",
+    "closeSidebar": "Close sidebar",
+    "openSidebar": "Open sidebar",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
+    "dashboardLink": "Go to dashboard",
+    "openMobileMenu": "Open menu"
+  },
+  "pageHelp": {
+    "dashboard": "Help for dashboard",
+    "locations": "Help for locations",
+    "areas": "Help for growing areas",
+    "cultures": "Help for cultures",
+    "plantingPlans": "Help for planting plans",
+    "calendar": "Help for planting calendar",
+    "seedDemand": "Help for seed demand",
+    "suppliers": "Help for suppliers",
+    "openAria": "Open {{label}}"
+  },
+  "cultureActions": {
+    "openLibrary": "Open crop library",
+    "library": "Crop library",
+    "libraryShort": "Library",
+    "openImportExport": "Open import/export",
+    "importExport": "Import/Export",
+    "openCultureActions": "Open crop actions",
+    "actions": "Actions"
   },
   "projectTrash": {
     "title": "Trash",
@@ -63,8 +98,26 @@
     "emptyTitle": "No matching actions found.",
     "emptyDescription": "Try another search term or check whether more actions are available in the current context.",
     "shortcutsTitle": "Keyboard shortcuts",
+    "createNew": "Create new...",
+    "createNewShortcut": "Create new",
+    "contextualShortcutsTitle": "Contextual keyboard shortcuts (Alt+K)",
+    "contextualShortcutsDescription": "Shortcuts are browser-safe and do not override common browser shortcuts.",
     "currentVersion": "Current version",
     "restoreVersion": "Switch to this version",
+    "contextTitles": {
+      "global": "Global",
+      "cultures": "Cultures",
+      "locations": "Locations",
+      "areas": "Growing areas",
+      "plans": "Planting plans",
+      "calendar": "Planting calendar",
+      "seedDemand": "Seed demand"
+    },
+    "shortcutSections": {
+      "navigation": "Navigation",
+      "viewsLayout": "Views & layout",
+      "dialogsHelp": "Dialogs & help"
+    },
     "commands": {
       "nextPage": "Next page",
       "previousPage": "Previous page",
@@ -74,6 +127,8 @@
       "switchProjectPrefix": "Switch project",
       "openAccountSettings": "Open account settings",
       "openVersionHistory": "Open version history",
+      "toggleSidebar": "Toggle sidebar",
+      "openPageHelp": "Open page help",
       "logout": "Logout",
       "openShortcuts": "Open page help",
       "closeDialog": "Close dialog"
