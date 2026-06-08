@@ -638,7 +638,11 @@ export function CultureForm({
                       <MenuItem value="g">{t('form.packageUnitGram')}</MenuItem>
                       <MenuItem value="seeds">{t('form.packageUnitSeeds')}</MenuItem>
                     </Select>
-                    <IconButton onClick={() => removePackageRow(supplierIndex, packageIndex)} aria-label={t('form.removeSeedPackageAriaLabel')}>
+                    <IconButton
+                      color="error"
+                      onClick={() => removePackageRow(supplierIndex, packageIndex)}
+                      aria-label={t('form.removeSeedPackageAriaLabel')}
+                    >
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </div>

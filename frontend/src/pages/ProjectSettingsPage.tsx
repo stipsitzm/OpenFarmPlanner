@@ -420,6 +420,7 @@ export default function ProjectSettingsPage() {
                   </TextField>
                   <Button
                     size="small"
+                    variant="outlined"
                     color="error"
                     onClick={() => setPendingRemovalMember(member)}
                     disabled={!canManageMembers || isCurrentUser}
@@ -448,7 +449,7 @@ export default function ProjectSettingsPage() {
               <Stack direction="row" spacing={1} alignItems="center">
                 <Chip label={t(`status.${invitation.resolved_status}`)} size="small" />
                 {invitation.resolved_status === 'pending' ? (
-                  <Button size="small" color="error" onClick={() => void handleRevoke(invitation.id)}>
+                  <Button size="small" variant="outlined" color="error" onClick={() => void handleRevoke(invitation.id)}>
                     {t('revoke')}
                   </Button>
                 ) : null}
