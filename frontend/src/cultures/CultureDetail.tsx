@@ -1266,7 +1266,7 @@ export function CultureDetail({
               </Box>
               <Box sx={{ mt: 2.5, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
                 <Typography variant="subtitle1" component="h3" gutterBottom>
-                  {hasMultipleSupplierRows ? t('form.supplierDataSectionTitle') : t('form.supplier')}
+                  {hasMultipleSupplierRows ? t('form.supplierDataSectionTitle') : t('filters.supplier')}
                 </Typography>
                 {hasMultipleSupplierRows && (
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
