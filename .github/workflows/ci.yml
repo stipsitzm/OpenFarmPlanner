@@ -31,11 +31,11 @@ jobs:
         run: |
           set -euxo pipefail
           cd frontend
-          echo "Running test command (CI, non-watch): npm run test:coverage:ci"
+          echo "Running test command (CI, non-watch): npm run test:ci"
           echo "Applying shell hard timeout: 9m"
           echo "Test step start: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           set +e
-          timeout --foreground 9m npm run test:coverage:ci
+          timeout --foreground 9m npm run test:ci
           exit_code=$?
           set -e
           echo "Test step end: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"

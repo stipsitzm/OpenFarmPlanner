@@ -7,6 +7,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   vi.clearAllTimers();
   vi.useRealTimers();
 });
