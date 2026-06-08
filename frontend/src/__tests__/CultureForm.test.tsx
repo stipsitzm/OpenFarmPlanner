@@ -172,6 +172,54 @@ describe('CultureForm', () => {
     expect(screen.getByRole('combobox')).toHaveTextContent('form.supplierPlaceholder');
   });
 
+  it('saves the newly selected supplier in supplier data rows', async () => {
+    supplierListMock.mockResolvedValueOnce({
+      data: {
+        results: [
+          { id: 10, name: 'Lieferant2' },
+          { id: 11, name: 'Reinsaat' },
+        ],
+      },
+    });
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <CultureForm
+        culture={{
+          ...CULTURE_A,
+          supplier_data: [
+            {
+              id: 77,
+              supplier: { id: 10, name: 'Lieferant2' },
+              supplier_id: 10,
+              supplier_name: 'Lieferant2',
+              packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
+            },
+          ],
+        }}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByText('Lieferant2')).toBeInTheDocument());
+    fireEvent.mouseDown(screen.getByText('Lieferant2'));
+    fireEvent.click(screen.getByRole('option', { name: 'Reinsaat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      supplier_data: [
+        expect.objectContaining({
+          id: 77,
+          supplier: { id: 11, name: 'Reinsaat' },
+          supplier_id: 11,
+          supplier_name: 'Reinsaat',
+        }),
+      ],
+    }));
+  });
+
   it('loads all existing supplier rows when editing a culture', async () => {
     supplierListMock.mockResolvedValueOnce({
       data: {

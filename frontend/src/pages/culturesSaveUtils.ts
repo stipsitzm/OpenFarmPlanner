@@ -17,7 +17,7 @@ export type CultureSavePayload = Culture & {
 
 const mapSupplierDataRowToInput = (row: CultureSupplierData): CultureSupplierDataInput => ({
   id: row.id,
-  supplier_id: row.supplier?.id ?? row.supplier_id ?? null,
+  supplier_id: row.supplier_id ?? row.supplier?.id ?? null,
   supplier_name_input: row.supplier_name_input,
   supplier_name: row.supplier_name ?? row.supplier?.name,
   supplier_product_name: row.supplier_product_name,

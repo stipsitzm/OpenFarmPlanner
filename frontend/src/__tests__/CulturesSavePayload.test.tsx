@@ -201,6 +201,30 @@ describe('Cultures save payload', () => {
     expect(payload.supplier_data_input?.[0]?.id).toBe(77);
   });
 
+  it('prefers edited supplier_id over stale nested supplier data in supplier rows', () => {
+    const payload = buildCultureSavePayload({
+      id: 1,
+      name: 'Karotte',
+      variety: 'Nantaise',
+      supplier_data: [
+        {
+          id: 77,
+          supplier: { id: 10, name: 'Lieferant2' },
+          supplier_id: 11,
+          supplier_name: 'Reinsaat',
+          packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
+        },
+      ],
+    } as unknown as Culture);
+
+    expect(payload.supplier_data_input).toHaveLength(1);
+    expect(payload.supplier_data_input?.[0]).toEqual(expect.objectContaining({
+      id: 77,
+      supplier_id: 11,
+      supplier_name: 'Reinsaat',
+    }));
+  });
+
   it('sends all supplier rows in supplier_data_input when saving', async () => {
     saveCultureMock.mockReturnValue({
       id: 1,

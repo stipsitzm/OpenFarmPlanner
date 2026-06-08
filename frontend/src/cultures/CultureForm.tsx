@@ -602,6 +602,7 @@ export function CultureForm({
                           const selectedSupplier = supplierOptions.find((supplier) => supplier.id === parsedSupplierId);
                           updateSupplierRow(supplierIndex, {
                             supplier_id: parsedSupplierId,
+                            supplier: selectedSupplier,
                             supplier_name_input: selectedSupplier ? undefined : row.supplier_name_input,
                             supplier_name: selectedSupplier?.name ?? row.supplier_name,
                           });
