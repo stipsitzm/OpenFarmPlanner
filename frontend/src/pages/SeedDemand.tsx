@@ -274,7 +274,7 @@ export default function SeedDemandPage() {
   }, [navigate]);
 
   const editCulture = useCallback((row: SeedDemand): void => {
-    navigate(`/app/cultures?cultureId=${row.culture_id}&edit=true`);
+    navigate(`/app/cultures?cultureId=${row.culture_id}&action=edit`);
   }, [navigate]);
 
   const handleContextMenuOpenCulture = useCallback((): void => {
@@ -430,7 +430,7 @@ export default function SeedDemandPage() {
                           <Typography variant="body2" color="text.secondary">
                             {t('seedDemand.noSupplierAvailable')}
                           </Typography>
-                          <Link component={RouterLink} to={`/app/cultures?cultureId=${row.culture_id}`} underline="hover" variant="caption">
+                          <Link component={RouterLink} to={`/app/cultures?cultureId=${row.culture_id}&action=edit`} underline="hover" variant="caption">
                             {t('seedDemand.editCultureAction')}
                           </Link>
                         </Box>

@@ -637,6 +637,10 @@ describe('SeedDemandPage', () => {
       expect(screen.getByRole('link', { name: 'seedDemand.editCultureAction' })).toBeInTheDocument();
     });
 
+    expect(screen.getByRole('link', { name: 'seedDemand.editCultureAction' })).toHaveAttribute(
+      'href',
+      '/app/cultures?cultureId=4&action=edit',
+    );
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 

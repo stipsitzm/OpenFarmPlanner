@@ -290,23 +290,22 @@ function Cultures() {
     );
   }, [handleAddNew, location.pathname, location.search, navigate, shouldShowProjectRequiredState, showForm]);
 
-  const handleEdit = (culture: Culture) => {
+  const handleEdit = useCallback((culture: Culture) => {
     setEditingCulture(culture);
     setShowForm(true);
-  };
+  }, []);
 
   useEffect(() => {
     if (shouldShowProjectRequiredState || showForm || !selectedCulture) {
       return;
     }
     const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get('edit') !== 'true') {
+    if (searchParams.get('action') !== 'edit' || searchParams.get('cultureId') !== String(selectedCulture.id)) {
       return;
     }
 
-    setEditingCulture(selectedCulture);
-    setShowForm(true);
-    searchParams.delete('edit');
+    handleEdit(selectedCulture);
+    searchParams.delete('action');
     const nextSearch = searchParams.toString();
     navigate(
       {
@@ -315,7 +314,7 @@ function Cultures() {
       },
       { replace: true },
     );
-  }, [location.pathname, location.search, navigate, selectedCulture, shouldShowProjectRequiredState, showForm]);
+  }, [handleEdit, location.pathname, location.search, navigate, selectedCulture, shouldShowProjectRequiredState, showForm]);
 
   const handleDelete = (culture: Culture) => {
     setDeleteDialogCulture(culture);
