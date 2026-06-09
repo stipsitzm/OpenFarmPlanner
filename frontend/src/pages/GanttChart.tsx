@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import {
   Alert,
@@ -78,6 +78,14 @@ interface WeeklyYieldChartColumn {
 
 type CalendarMode = 'occupancy' | 'seedlings';
 
+function getCalendarModeFromViewParam(viewParam: string | null): CalendarMode {
+  return viewParam === 'seedlings' ? 'seedlings' : 'occupancy';
+}
+
+function getViewParamFromCalendarMode(mode: CalendarMode): string {
+  return mode === 'seedlings' ? 'seedlings' : 'field';
+}
+
 class GanttRenderBoundary extends React.Component<
   { fallback: React.ReactNode; children: React.ReactNode },
   { hasError: boolean }
@@ -121,6 +129,7 @@ function formatIsoWeek(date: Date): string {
 
 function GanttChartPage() {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
+  const [searchParams, setSearchParams] = useSearchParams();
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   useCommandContextTag('calendar');
   const [loading, setLoading] = useState(true);
@@ -134,10 +143,27 @@ function GanttChartPage() {
   const [weeklyYield, setWeeklyYield] = useState<YieldCalendarWeek[]>([]);
   const [ganttRenderKey, setGanttRenderKey] = useState(0);
 
-  const [calendarMode, setCalendarMode] = useState<CalendarMode>('occupancy');
+  const [calendarMode, setCalendarMode] = useState<CalendarMode>(() => getCalendarModeFromViewParam(searchParams.get('view')));
   const [editMode, setEditMode] = useState(false);
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
   const setTopbarContextActions = outletContext?.setTopbarContextActions;
+
+  useEffect(() => {
+    const nextMode = getCalendarModeFromViewParam(searchParams.get('view'));
+    setCalendarMode((currentMode) => (currentMode === nextMode ? currentMode : nextMode));
+  }, [searchParams]);
+
+  const handleCalendarModeChange = useCallback((nextMode: CalendarMode) => {
+    setCalendarMode(nextMode);
+    setSearchParams((currentSearchParams) => {
+      if (currentSearchParams.get('view') === getViewParamFromCalendarMode(nextMode)) {
+        return currentSearchParams;
+      }
+      const nextSearchParams = new URLSearchParams(currentSearchParams);
+      nextSearchParams.set('view', getViewParamFromCalendarMode(nextMode));
+      return nextSearchParams;
+    });
+  }, [setSearchParams]);
 
   const calendarCommands = useMemo<CommandSpec[]>(() => [
     {
@@ -165,7 +191,7 @@ function GanttChartPage() {
       groupId: 'calendar-mode',
       tooltip: 'Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.',
       onClick: () => {
-        setCalendarMode('occupancy');
+        handleCalendarModeChange('occupancy');
         setEditMode(false);
       },
     },
@@ -178,11 +204,11 @@ function GanttChartPage() {
       groupId: 'calendar-mode',
       tooltip: 'Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.',
       onClick: () => {
-        setCalendarMode('occupancy');
+        handleCalendarModeChange('occupancy');
         setEditMode(true);
       },
     },
-  ], [calendarMode, editMode, t]);
+  ], [calendarMode, editMode, handleCalendarModeChange, t]);
   useTopbarContextActions(setTopbarContextActions, topbarActions);
 
   const currentYear = new Date().getFullYear();
@@ -495,7 +521,7 @@ function GanttChartPage() {
               aria-label={t('ganttChart:viewSelectorAriaLabel')}
             >
               <Button
-                onClick={() => setCalendarMode('occupancy')}
+                onClick={() => handleCalendarModeChange('occupancy')}
                 aria-pressed={calendarMode === 'occupancy'}
                 variant={calendarMode === 'occupancy' ? 'contained' : 'outlined'}
                 color={calendarMode === 'occupancy' ? 'success' : 'inherit'}
@@ -504,7 +530,7 @@ function GanttChartPage() {
                 {t('ganttChart:modes.occupancy')}
               </Button>
               <Button
-                onClick={() => setCalendarMode('seedlings')}
+                onClick={() => handleCalendarModeChange('seedlings')}
                 aria-pressed={calendarMode === 'seedlings'}
                 variant={calendarMode === 'seedlings' ? 'contained' : 'outlined'}
                 color={calendarMode === 'seedlings' ? 'success' : 'inherit'}
@@ -536,7 +562,15 @@ function GanttChartPage() {
           </PageSurface>
         ) : (
           <PageSurface variant="fullWorkspace" sx={{ mt: 0.5 }}>
-          <Box className="gantt-container-wrapper" sx={{ border: '1px solid', borderColor: 'surface.surfaceSoftBorder', borderRadius: 2, bgcolor: 'surface.surfaceBackground' }}>
+          <Box
+            className={`gantt-container-wrapper gantt-container-wrapper--${calendarMode}`}
+            sx={{
+              border: '1px solid',
+              borderColor: 'surface.surfaceSoftBorder',
+              borderRadius: 2,
+              bgcolor: 'surface.surfaceBackground',
+            }}
+          >
             <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
               <GanttChart
                 key={`${calendarMode}-${ganttRenderKey}`}

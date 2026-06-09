@@ -15,10 +15,6 @@ const EDITING_ROW_BACKGROUND_ALPHA = 0.06;
 const DIRTY_CELL_BACKGROUND_ALPHA = 0.08;
 const FOCUSED_CELL_BACKGROUND_ALPHA = 0.04;
 const FOCUSED_CELL_RING_ALPHA = 0.48;
-const ERROR_CELL_FOCUS_SELECTOR = [
-  '& .MuiDataGrid-cell.ofp-cell-error:focus',
-  '& .MuiDataGrid-cell.ofp-cell-error:focus-within',
-].join(', ');
 const EDITING_ROW_CELL_SELECTOR = [
   '& .ofp-row-editing .MuiDataGrid-cell',
   '& .ofp-row-editing:hover .MuiDataGrid-cell',
@@ -44,12 +40,6 @@ const getPrimaryOverlay = (theme: Theme, opacity: number): string =>
 const getDataGridCellFocusRing = (theme: Theme): string =>
   `inset 0 0 0 2px ${alpha(theme.palette.primary.main, FOCUSED_CELL_RING_ALPHA)}`;
 
-const getErrorCellRing = (theme: Theme): string =>
-  `inset 0 0 0 2px ${theme.palette.error.main}`;
-
-const getErrorCellFocusRing = (theme: Theme): string =>
-  `${getErrorCellRing(theme)}, inset 0 0 0 4px ${alpha(theme.palette.primary.main, 0.28)}`;
-
 const EDIT_CELL_OUTLINE_SELECTOR = [
   '& .MuiDataGrid-cell--editing .MuiOutlinedInput-notchedOutline',
   '& .MuiDataGrid-cell--editing .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline',
@@ -57,15 +47,6 @@ const EDIT_CELL_OUTLINE_SELECTOR = [
   '& .MuiDataGrid-cell--editing .MuiOutlinedInput-root.Mui-error .MuiOutlinedInput-notchedOutline',
   '& .MuiDataGrid-cell--editing .MuiOutlinedInput-root.Mui-error:hover .MuiOutlinedInput-notchedOutline',
   '& .MuiDataGrid-cell--editing .MuiOutlinedInput-root.Mui-error.Mui-focused .MuiOutlinedInput-notchedOutline',
-].join(', ');
-
-const ERROR_EDIT_CELL_OUTLINE_SELECTOR = [
-  '& .MuiDataGrid-cell--editing.ofp-cell-error .MuiOutlinedInput-notchedOutline',
-  '& .MuiDataGrid-cell--editing.ofp-cell-error .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline',
-  '& .MuiDataGrid-cell--editing.ofp-cell-error .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline',
-  '& .MuiDataGrid-cell--editing.ofp-cell-error .MuiOutlinedInput-root.Mui-error .MuiOutlinedInput-notchedOutline',
-  '& .MuiDataGrid-cell--editing.ofp-cell-error .MuiOutlinedInput-root.Mui-error:hover .MuiOutlinedInput-notchedOutline',
-  '& .MuiDataGrid-cell--editing.ofp-cell-error .MuiOutlinedInput-root.Mui-error.Mui-focused .MuiOutlinedInput-notchedOutline',
 ].join(', ');
 
 const NORMAL_EDITING_CELL_SELECTOR = [
@@ -133,8 +114,20 @@ export const dataGridSx = {
   [EDIT_CELL_OUTLINE_SELECTOR]: {
     borderColor: (theme: Theme) => `${theme.palette.primary.main} !important`,
   },
-  [ERROR_EDIT_CELL_OUTLINE_SELECTOR]: {
-    borderColor: (theme: Theme) => `${theme.palette.error.main} !important`,
+  '& .MuiDataGrid-cell.Mui-error': {
+    boxShadow: 'none',
+  },
+  '& .MuiDataGrid-cell--editing .MuiFormLabel-root.Mui-error': {
+    color: 'text.secondary',
+  },
+  '& .MuiDataGrid-cell--editing .MuiFormHelperText-root.Mui-error': {
+    color: 'text.secondary',
+  },
+  '& .MuiDataGrid-cell--editing .MuiInputBase-root.Mui-error .MuiSvgIcon-root': {
+    color: 'action.active',
+  },
+  '& .MuiDataGrid-cell--editing .MuiInputBase-root.Mui-error::before, & .MuiDataGrid-cell--editing .MuiInputBase-root.Mui-error::after': {
+    borderColor: (theme: Theme) => `${theme.palette.primary.main} !important`,
   },
   '& .MuiDataGrid-cell--editing .MuiInputBase-input': {
     lineHeight: 1.4,
@@ -155,17 +148,17 @@ export const dataGridSx = {
     backgroundColor: (theme: Theme) => getPrimaryOverlay(theme, FOCUSED_CELL_BACKGROUND_ALPHA),
     boxShadow: (theme: Theme) => getDataGridCellFocusRing(theme),
   },
-  [ERROR_CELL_FOCUS_SELECTOR]: {
-    boxShadow: (theme: Theme) => getErrorCellFocusRing(theme),
-  },
   '& .MuiDataGrid-columnHeaderTitleContainer': {
     minWidth: 0,
   },
   '& .ofp-cell-error': {
-    boxShadow: (theme: Theme) => getErrorCellRing(theme),
+    boxShadow: 'none',
   },
   '& .MuiDataGrid-row:hover .ofp-cell-error': {
-    boxShadow: (theme: Theme) => getErrorCellRing(theme),
+    boxShadow: 'none',
+  },
+  '& .MuiDataGrid-cell.ofp-cell-error:focus, & .MuiDataGrid-cell.ofp-cell-error:focus-within': {
+    boxShadow: (theme: Theme) => getDataGridCellFocusRing(theme),
   },
   '& .ofp-cell-dirty': {
     backgroundColor: (theme: Theme) => getPrimaryOverlay(theme, DIRTY_CELL_BACKGROUND_ALPHA),
