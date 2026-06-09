@@ -4,7 +4,7 @@
  * Provides a numeric input for area editing with optional normalization on blur.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { TextField } from '@mui/material';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
@@ -64,7 +64,7 @@ export interface AreaM2EditCellProps extends GridRenderEditCellParams {
   maxPlaceholder: string;
 }
 
-export function AreaM2EditCell(props: AreaM2EditCellProps) {
+function AreaM2EditCellComponent(props: AreaM2EditCellProps) {
   const {
     id,
     value,
@@ -148,3 +148,14 @@ export function AreaM2EditCell(props: AreaM2EditCellProps) {
     />
   );
 }
+
+export const AreaM2EditCell = memo(AreaM2EditCellComponent, (previous, next) => (
+  previous.id === next.id
+  && previous.field === next.field
+  && previous.value === next.value
+  && previous.hasFocus === next.hasFocus
+  && previous.fallbackValue === next.fallbackValue
+  && previous.locale === next.locale
+  && previous.maxKeyword === next.maxKeyword
+  && previous.maxPlaceholder === next.maxPlaceholder
+));

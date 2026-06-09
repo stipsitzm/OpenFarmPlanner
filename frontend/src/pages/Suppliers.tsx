@@ -40,6 +40,7 @@ import EmptyStateCard from '../components/project/EmptyStateCard';
 import { useRegisterCreateActions } from '../commands/useCommandContext';
 import { DELETE_UNDO_DURATION_MS, DeleteUndoSnackbar, TableCopyMenuItems } from '../components/data-grid';
 import { extractApiErrorMessage } from '../api/errors';
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
 
 interface SupplierDraft {
   id?: number;
@@ -455,7 +456,10 @@ export default function Suppliers() {
     event: MouseEvent<HTMLTableRowElement>,
     supplier: Supplier,
   ): void => {
-    event.preventDefault();
+    if (!shouldOpenCustomContextMenu(event.target)) {
+      return;
+    }
+    suppressNativeContextMenu(event);
     setContextMenuState({
       supplier,
       mouseX: event.clientX + 2,
@@ -472,7 +476,7 @@ export default function Suppliers() {
       return;
     }
 
-    event.preventDefault();
+    suppressNativeContextMenu(event);
     const rowRect = event.currentTarget.getBoundingClientRect();
     setContextMenuState({
       supplier,
@@ -569,6 +573,7 @@ export default function Suppliers() {
                     tabIndex={0}
                     onContextMenu={(event) => openSupplierContextMenu(event, supplier)}
                     onKeyDown={(event) => openSupplierKeyboardContextMenu(event, supplier)}
+                    sx={{ WebkitTouchCallout: 'none' }}
                   >
                     <TableCell sx={{ py: 1.25 }}>{supplier.name}</TableCell>
                     <TableCell sx={{ py: 1.25 }}>

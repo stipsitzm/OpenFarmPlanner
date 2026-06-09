@@ -524,7 +524,7 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
             queryset = queryset.exclude(pk=self.instance.pk)
         if queryset.exists():
             raise serializers.ValidationError({
-                'supplier_id': 'Supplier data for this culture already exists.',
+                'supplier_id': 'supplier_data_duplicate',
             })
 
     def validate(self, attrs):
@@ -532,15 +532,15 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
         raw_initial_data = getattr(self, 'initial_data', None)
         if isinstance(raw_initial_data, dict) and 'thousand_kernel_weight_g' in raw_initial_data:
             raise serializers.ValidationError({
-                'thousand_kernel_weight_g': 'Supplier-specific thousand-kernel weight is no longer supported.',
+                'thousand_kernel_weight_g': 'supplier_specific_tkg_unsupported',
             })
         project = _resolve_active_project_from_serializer(self)
         culture = self._resolve_culture_for_validation(attrs)
         supplier = attrs.get('supplier') if 'supplier' in attrs else (self.instance.supplier if self.instance is not None else None)
         if project is not None and culture is not None and culture.project_id != project.id:
-            raise serializers.ValidationError({'culture': 'Culture does not belong to the active project.'})
+            raise serializers.ValidationError({'culture': 'culture_project_mismatch'})
         if project is not None and supplier is not None and supplier.project_id != project.id:
-            raise serializers.ValidationError({'supplier_id': 'Supplier does not belong to the active project.'})
+            raise serializers.ValidationError({'supplier_id': 'supplier_project_mismatch'})
         supplier_name_input = attrs.pop('supplier_name_input', None)
         if not attrs.get('supplier') and supplier_name_input:
             from .utils import normalize_supplier_name
@@ -571,7 +571,7 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
         supplier = attrs.get('supplier') if 'supplier' in attrs else (self.instance.supplier if self.instance is not None else None)
         if supplier is None:
             raise serializers.ValidationError({
-                'supplier_id': 'Select a supplier or remove the supplier information.',
+                'supplier_id': 'supplier_data_missing_supplier',
             })
 
         self._validate_unique_culture_supplier(attrs)
@@ -1146,7 +1146,7 @@ class CultureSerializer(serializers.ModelSerializer):
 
                 if not has_supplier and _supplier_data_payload_has_information(row):
                     supplier_data_errors[index] = {
-                        'supplier_id': 'Select a supplier or remove the supplier information.',
+                        'supplier_id': 'supplier_data_missing_supplier',
                     }
 
             if supplier_data_errors:
@@ -1200,13 +1200,13 @@ class CultureSerializer(serializers.ModelSerializer):
         supplier = attrs.get('supplier', getattr(self.instance, 'supplier', None) if self.instance else None)
         project = attrs.get('project') or _resolve_active_project_from_serializer(self)
         if project is not None and supplier is not None and supplier.project_id != project.id:
-            errors['supplier'] = 'Supplier does not belong to the active project.'
+            errors['supplier'] = 'supplier_project_mismatch'
         selected_supplier = attrs.get(
             'selected_seed_demand_supplier',
             getattr(self.instance, 'selected_seed_demand_supplier', None) if self.instance else None,
         )
         if project is not None and selected_supplier is not None and selected_supplier.project_id != project.id:
-            errors['selected_seed_demand_supplier'] = 'Selected supplier does not belong to the active project.'
+            errors['selected_seed_demand_supplier'] = 'selected_supplier_project_mismatch'
         supplier_product_url = attrs.get(
             'supplier_product_url',
             getattr(self.instance, 'supplier_product_url', None) if self.instance else None,

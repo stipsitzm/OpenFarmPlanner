@@ -34,6 +34,7 @@ import EmptyStateCard from '../components/project/EmptyStateCard';
 import { ContextMenuHint, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
 import { getFirstMissingProjectSetupStep, getProjectSetupAction, getProjectSetupActions } from './requirementFlow';
 import { formatLocalizedNumber } from '../utils/numberLocalization';
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
 
 const SEED_DEMAND_CONTEXT_MENU_HINT_STORAGE_KEY = 'ofp.seedDemandContextMenuHintSeen';
 
@@ -243,7 +244,10 @@ export default function SeedDemandPage() {
     event: MouseEvent<HTMLTableRowElement>,
     row: SeedDemand,
   ): void => {
-    event.preventDefault();
+    if (!shouldOpenCustomContextMenu(event.target)) {
+      return;
+    }
+    suppressNativeContextMenu(event);
     setContextMenuState({
       row,
       mouseX: event.clientX + 2,
@@ -260,7 +264,7 @@ export default function SeedDemandPage() {
       return;
     }
 
-    event.preventDefault();
+    suppressNativeContextMenu(event);
     const rowRect = event.currentTarget.getBoundingClientRect();
     setContextMenuState({
       row,
@@ -378,6 +382,7 @@ export default function SeedDemandPage() {
                     tabIndex={0}
                     onContextMenu={(event) => openContextMenu(event, row)}
                     onKeyDown={(event) => openKeyboardContextMenu(event, row)}
+                    sx={{ WebkitTouchCallout: 'none' }}
                   >
                     <TableCell>
                       <Link component={RouterLink} to={`/app/cultures?cultureId=${row.culture_id}`} underline="hover">

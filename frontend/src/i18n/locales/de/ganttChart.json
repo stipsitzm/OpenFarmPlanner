@@ -47,6 +47,9 @@
     "bed": "Beet",
     "location": "Standort",
     "plantsCount": "Pflanzenanzahl",
+    "totalPlantsCount": "Gesamtpflanzen",
+    "plantingPlanCount": "Anzahl Anbaupläne",
+    "involvedLocations": "Beteiligte Standorte",
     "seedRequirement": "Saatgutbedarf",
     "notes": "Hinweis"
   },
@@ -88,7 +91,8 @@
     "seedlings": "Anzuchtzeiträume für Jungpflanzen nach Kultur. Diese Ansicht ist schreibgeschützt und zeigt nur relevante Voranzuchten im aktuellen Jahr."
   },
   "seedlings": {
-    "emptyState": "Keine Jungpflanzen-Anzuchtzeiträume für dieses Jahr vorhanden."
+    "emptyState": "Keine Jungpflanzen-Anzuchtzeiträume für dieses Jahr vorhanden.",
+    "plantsUnit": "Pflanzen"
   },
   "requirements": {
     "field": {

@@ -2,10 +2,58 @@
  * Data Grid column builders shared across pages.
  */
 
-import type { GridColDef } from '@mui/x-data-grid';
+import { memo } from 'react';
+import type { GridColDef, GridRenderEditCellParams } from '@mui/x-data-grid';
 import { Box, MenuItem, TextField, Tooltip } from '@mui/material';
 import { SearchableSelectEditCell } from './SearchableSelectEditCell';
 import type { SearchableSelectOption } from './SearchableSelectEditCell';
+
+interface StandardSingleSelectEditCellProps extends GridRenderEditCellParams {
+  options: SearchableSelectOption[];
+}
+
+const StandardSingleSelectEditCell = memo(function StandardSingleSelectEditCell({
+  id,
+  field,
+  value,
+  hasFocus,
+  api,
+  options,
+}: StandardSingleSelectEditCellProps) {
+  return (
+    <TextField
+      select
+      fullWidth
+      size="small"
+      autoFocus={hasFocus}
+      value={value ?? ''}
+      slotProps={{
+        htmlInput: {
+          tabIndex: hasFocus ? 0 : -1,
+        },
+      }}
+      onChange={async (event) => {
+        await api.setEditCellValue({
+          id,
+          field,
+          value: event.target.value,
+        });
+      }}
+    >
+      {options.map((option) => (
+        <MenuItem key={option.value} value={option.value}>
+          {option.label}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
+}, (previous, next) => (
+  previous.id === next.id
+  && previous.field === next.field
+  && previous.value === next.value
+  && previous.hasFocus === next.hasFocus
+  && previous.options === next.options
+));
 
 export interface SearchableSelectColumnConfig<Row extends { [key: string]: unknown }> {
   field: keyof Row;
@@ -149,31 +197,10 @@ export const createSingleSelectColumn = <Row extends { [key: string]: unknown }>
       );
     },
     renderEditCell: (params) => (
-      <TextField
-        select
-        fullWidth
-        size="small"
-        autoFocus={params.hasFocus}
-        value={params.value ?? ''}
-        slotProps={{
-          htmlInput: {
-            tabIndex: params.hasFocus ? 0 : -1,
-          },
-        }}
-        onChange={async (event) => {
-          await params.api.setEditCellValue({
-            id: params.id,
-            field: params.field,
-            value: event.target.value,
-          });
-        }}
-      >
-        {options.map((option) => (
-          <MenuItem key={option.value} value={option.value}>
-            {option.label}
-          </MenuItem>
-        ))}
-      </TextField>
+      <StandardSingleSelectEditCell
+        {...params}
+        options={options}
+      />
     ),
     valueSetter: (value, row) => {
       const numericValue = typeof value === 'number' ? value : Number(value);

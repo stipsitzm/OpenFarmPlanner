@@ -274,14 +274,14 @@ describe('GanttChartPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Jungpflanzen' }));
 
     await waitFor(() => expect(screen.getAllByText('Tomate').length).toBeGreaterThan(0));
-    expect(screen.getByText('Standort: Hof / Feld')).toBeInTheDocument();
-    expect(screen.getByText('Beet: Beet 1')).toBeInTheDocument();
+    expect(screen.queryByText('Standort: Hof / Feld')).not.toBeInTheDocument();
+    expect(screen.queryByText('Beet: Beet 1')).not.toBeInTheDocument();
     expect(screen.getByText('Anzuchtbeginn: 19.4.2026')).toBeInTheDocument();
     expect(screen.getByText('Auspflanzung: 10.5.2026')).toBeInTheDocument();
     expect(screen.getByText('Anzuchtdauer: 21 Tage')).toBeInTheDocument();
-    expect(screen.getByText('Fläche: 8,00 m²')).toBeInTheDocument();
-    expect(screen.getByText('Pflanzenanzahl: 24')).toBeInTheDocument();
-    expect(screen.queryByText(/Anbauplan/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Fläche: 8,00 m²')).not.toBeInTheDocument();
+    expect(screen.getByText('Gesamtpflanzen: 24')).toBeInTheDocument();
+    expect(screen.getByText('Anzahl Anbaupläne: 1')).toBeInTheDocument();
     const seedlingViewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { hidden?: boolean } | undefined;
     const seedlingEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { hidden?: boolean } | undefined;
     expect(seedlingViewAction?.hidden).toBe(true);

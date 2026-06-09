@@ -53,6 +53,7 @@ import { extractApiErrorMessage } from '../../api/errors';
 import { germanDataGridLocaleText } from './localeText';
 import { TableCopyMenuItems } from './TableCopyMenuItems';
 import { formatClipboardValue, type TableClipboardRow } from './tableClipboard';
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../../utils/contextMenu';
 
 export interface EditableRow {
   id: number;
@@ -525,11 +526,15 @@ export function EditableDataGrid<T extends EditableRow>({
       return;
     }
 
+    if (rowModesModel[rowId]?.mode === GridRowModes.Edit) {
+      return;
+    }
+
     setRowModesModel((oldModel) => ({
       ...oldModel,
       [rowId]: { mode: GridRowModes.Edit, fieldToFocus: field },
     }));
-  }, [gridApiRef, notesFieldNames, rowsById]);
+  }, [gridApiRef, notesFieldNames, rowModesModel, rowsById]);
 
   const getHorizontalNavigationTarget = useCallback((
     rowId: GridRowId,
@@ -683,6 +688,17 @@ export function EditableDataGrid<T extends EditableRow>({
     }, 0);
   }, [rowsById]);
 
+  const markRowDirty = useCallback((rowKey: string): void => {
+    setDirtyRowIds((previous) => {
+      if (previous.has(rowKey)) {
+        return previous;
+      }
+      const next = new Set(previous);
+      next.add(rowKey);
+      return next;
+    });
+  }, []);
+
   const getDraftRow = useCallback((rowId: GridRowId): T | null => {
     const api = gridApiRef.current;
     if (!api) {
@@ -724,12 +740,8 @@ export function EditableDataGrid<T extends EditableRow>({
         [rowKey]: fieldErrors,
       }));
     }
-    setDirtyRowIds((previous) => {
-      const next = new Set(previous);
-      next.add(rowKey);
-      return next;
-    });
-  }, [getRowValidationErrors, gridApiRef, rowsById]);
+    markRowDirty(rowKey);
+  }, [getRowValidationErrors, gridApiRef, markRowDirty, rowsById]);
 
   const runBeforeSaveGate = useCallback(async (row: T): Promise<T | null> => {
     if (!onBeforeSaveRow) {
@@ -760,24 +772,28 @@ export function EditableDataGrid<T extends EditableRow>({
     return true;
   }, [applyDraftValues, getDraftRow, runBeforeSaveGate]);
 
-  const commitEditedRowDraftForKeyboardNavigation = useCallback((rowId: GridRowId): boolean => {
+  const commitEditedRowDraftForKeyboardNavigation = useCallback((
+    rowId: GridRowId,
+    options: { syncRows: boolean },
+  ): boolean => {
+    const rowKey = String(rowId);
+    setError((currentError) => (currentError ? '' : currentError));
+    markRowDirty(rowKey);
+
+    if (!options.syncRows) {
+      return true;
+    }
+
     const draftRow = getDraftRow(rowId);
     if (!draftRow) {
       return true;
     }
 
-    const rowKey = String(rowId);
-    setError('');
     setRows((prevRows) =>
       prevRows.map((row) => (String(row.id) === rowKey ? draftRow : row)),
     );
-    setDirtyRowIds((prev) => {
-      const next = new Set(prev);
-      next.add(rowKey);
-      return next;
-    });
     return true;
-  }, [getDraftRow]);
+  }, [getDraftRow, markRowDirty]);
 
   const navigateFromEditedCell = useCallback((
     current: { id: GridRowId; field: string },
@@ -788,18 +804,17 @@ export function EditableDataGrid<T extends EditableRow>({
       return;
     }
 
-    const canCommitCurrentDraft = commitEditedRowDraftForKeyboardNavigation(current.id);
+    const isSameRow = String(current.id) === String(target.id);
+    const canCommitCurrentDraft = commitEditedRowDraftForKeyboardNavigation(current.id, {
+      syncRows: !isSameRow,
+    });
     if (!canCommitCurrentDraft) {
       return;
     }
 
-    const isSameRow = String(current.id) === String(target.id);
-
     if (isSameRow) {
-      requestAnimationFrame(() => {
-        focusKeyboardNavigableCell(target.id, target.field, {
-          startEdit: options.startTargetEdit,
-        });
+      focusKeyboardNavigableCell(target.id, target.field, {
+        startEdit: options.startTargetEdit,
       });
       return;
     }
@@ -1280,11 +1295,7 @@ export function EditableDataGrid<T extends EditableRow>({
             [rowKey]: fieldErrors,
           }));
         }
-        setDirtyRowIds((previous) => {
-          const next = new Set(previous);
-          next.add(rowKey);
-          return next;
-        });
+        markRowDirty(rowKey);
         setRowModesModel((previousModel) => ({
           ...previousModel,
           [rowId]: {
@@ -1299,7 +1310,7 @@ export function EditableDataGrid<T extends EditableRow>({
     return () => {
       commandApiRef.current = null;
     };
-  }, [commandApiRef, fetchData, getRowValidationErrors, gridApiRef, rowModesModel, rowsById, selectedRowIds]);
+  }, [commandApiRef, fetchData, getRowValidationErrors, gridApiRef, markRowDirty, rowModesModel, rowsById, selectedRowIds]);
 
   /**
    * Handle row deletion
@@ -1473,7 +1484,7 @@ export function EditableDataGrid<T extends EditableRow>({
   };
 
   const openRowActionContextMenu = useCallback((rowId: GridRowId, event: React.MouseEvent): void => {
-    event.preventDefault();
+    suppressNativeContextMenu(event);
     setSelectedRowIds([rowId]);
     setRowActionMenuState({ rowId, mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
   }, []);
@@ -1520,6 +1531,9 @@ export function EditableDataGrid<T extends EditableRow>({
 
   const handleGridTouchStart = useCallback((event: TouchEvent<HTMLDivElement>): void => {
     if (!hasContextualRowActions || event.touches.length !== 1) {
+      return;
+    }
+    if (!shouldOpenCustomContextMenu(event.target)) {
       return;
     }
     const rowId = getRowIdFromElement(event.target);
@@ -1794,6 +1808,9 @@ export function EditableDataGrid<T extends EditableRow>({
           <Box
             ref={gridSurfaceRef}
             onContextMenu={hasContextualRowActions ? (event) => {
+              if (!shouldOpenCustomContextMenu(event.target)) {
+                return;
+              }
               const rowId = getRowIdFromElement(event.target);
               if (rowId === null || !rowsById.has(String(rowId))) {
                 return;
@@ -1810,6 +1827,9 @@ export function EditableDataGrid<T extends EditableRow>({
               width: isContentSizedSurface ? 'fit-content' : '100%',
               minWidth: isContentSizedSurface ? 0 : '100%',
               maxWidth: '100%',
+              '& [role="row"][data-id]': {
+                WebkitTouchCallout: 'none',
+              },
             }}
           >
             <DataGrid
@@ -1889,7 +1909,7 @@ export function EditableDataGrid<T extends EditableRow>({
                 rowSnapshotRef.current.set(rowKey, row as T);
               }
             }
-            setDirtyRowIds((prev) => new Set(prev).add(rowKey));
+            markRowDirty(rowKey);
             handleEditableCellClick(params, rowModesModel, setRowModesModel);
           }}
           onCellKeyDown={(params: GridCellParams<T>, event) => {
@@ -2035,6 +2055,11 @@ export function EditableDataGrid<T extends EditableRow>({
           onChange={notesEditor.setDraft}
           onSave={notesEditor.handleSave}
           onClose={notesEditor.handleClose}
+          hasUnsavedChanges={Boolean(
+            notesEditor.currentRow &&
+              notesEditor.field &&
+              notesEditor.draft !== ((notesEditor.currentRow[notesEditor.field] as string) || ''),
+          )}
           loading={notesEditor.isSaving}
           focusAttachments={notesEditor.focusAttachments}
           focusRequestId={notesEditor.focusRequestId}

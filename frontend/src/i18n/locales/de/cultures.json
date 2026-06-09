@@ -56,6 +56,14 @@
     "required": "Dieses Feld ist erforderlich.",
     "cultureNameUnique": "Eine Kultur mit diesem Namen existiert bereits."
   },
+  "errors": {
+    "supplierDataDuplicate": "Für diesen Lieferanten sind bereits Daten für diese Kultur vorhanden.",
+    "supplierDataMissingSupplier": "Bitte einen Lieferanten auswählen oder die Lieferantendaten entfernen.",
+    "supplierSpecificTkgUnsupported": "Lieferantenspezifische Tausendkorngewichte werden nicht mehr unterstützt.",
+    "supplierProjectMismatch": "Der Lieferant gehört nicht zum aktiven Projekt.",
+    "selectedSupplierProjectMismatch": "Der ausgewählte Saatgutlieferant gehört nicht zum aktiven Projekt.",
+    "cultureProjectMismatch": "Die Kultur gehört nicht zum aktiven Projekt."
+  },
   "sections": {
     "growthHarvest": "Wachstum & Ernte",
     "additionalInfo": "Weitere Informationen"

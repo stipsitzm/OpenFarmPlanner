@@ -24,6 +24,8 @@ export interface GanttTask {
   targetLocationName?: string;
   targetAreaUsage?: number;
   plantsCount?: number | null;
+  plantingPlanCount?: number;
+  involvedLocationNames?: string[];
 }
 
 export interface GanttTaskGroup {
@@ -63,7 +65,7 @@ interface OccupancyBedGroupCandidate {
 }
 
 interface SeedlingTooltipDetail {
-  labelKey: 'location' | 'bed' | 'propagationStart' | 'transplantDate' | 'propagationDuration' | 'areaUsage' | 'plantsCount';
+  labelKey: 'propagationStart' | 'transplantDate' | 'propagationDuration' | 'totalPlantsCount' | 'plantingPlanCount' | 'involvedLocations';
   value: string;
 }
 
@@ -152,14 +154,6 @@ function formatCultureLabel(culture?: Culture, fallbackName?: string): string {
   return formatCultureDisplayLabel(culture.name, culture.variety);
 }
 
-export function formatSeedlingLocationReference(task: Pick<GanttTask, 'targetLocationName' | 'targetFieldName'>): string | undefined {
-  const parts = [task.targetLocationName, task.targetFieldName]
-    .map((value) => value?.trim())
-    .filter(Boolean);
-  return parts.length > 0 ? parts.join(' / ') : undefined;
-}
-
-
 export function buildOccupancyTooltipDetails(task: Pick<
   GanttTask,
   'id' | 'startDate' | 'harvestStartDate' | 'harvestEndDate' | 'areaUsage' | 'notes'
@@ -197,24 +191,14 @@ export function buildOccupancyTooltipDetails(task: Pick<
 
 export function buildSeedlingTooltipDetails(task: Pick<
   GanttTask,
-  | 'targetLocationName'
-  | 'targetFieldName'
-  | 'targetBedName'
   | 'propagationStartDate'
   | 'transplantDate'
   | 'propagationDurationDays'
-  | 'targetAreaUsage'
   | 'plantsCount'
+  | 'plantingPlanCount'
+  | 'involvedLocationNames'
 >): SeedlingTooltipDetail[] {
-  const locationReference = formatSeedlingLocationReference(task);
-  const bedReference = task.targetBedName?.trim();
   const details: Array<SeedlingTooltipDetail | null> = [
-    locationReference
-      ? { labelKey: 'location', value: locationReference }
-      : null,
-    bedReference
-      ? { labelKey: 'bed', value: bedReference }
-      : null,
     task.propagationStartDate
       ? { labelKey: 'propagationStart', value: formatGanttDate(task.propagationStartDate) }
       : null,
@@ -224,11 +208,14 @@ export function buildSeedlingTooltipDetails(task: Pick<
     typeof task.propagationDurationDays === 'number'
       ? { labelKey: 'propagationDuration', value: `${task.propagationDurationDays}` }
       : null,
-    typeof task.targetAreaUsage === 'number'
-      ? { labelKey: 'areaUsage', value: formatAreaSquareMeters(task.targetAreaUsage) }
-      : null,
     typeof task.plantsCount === 'number' && task.plantsCount > 0
-      ? { labelKey: 'plantsCount', value: formatPlantCount(task.plantsCount) }
+      ? { labelKey: 'totalPlantsCount', value: formatPlantCount(task.plantsCount) }
+      : null,
+    typeof task.plantingPlanCount === 'number' && task.plantingPlanCount > 0
+      ? { labelKey: 'plantingPlanCount', value: formatPlantCount(task.plantingPlanCount) }
+      : null,
+    task.involvedLocationNames && task.involvedLocationNames.length > 0
+      ? { labelKey: 'involvedLocations', value: task.involvedLocationNames.join(', ') }
       : null,
   ];
 
@@ -385,9 +372,6 @@ export function buildFieldOccupancyTaskGroups({
 }
 
 export function buildSeedlingTaskGroups({
-  locations,
-  fields,
-  beds,
   plantingPlans,
   cultures,
   displayYear,
@@ -404,28 +388,8 @@ export function buildSeedlingTaskGroups({
     }
   });
 
-  const bedById = new Map<number, Bed>();
-  beds.forEach((bed) => {
-    if (bed.id) {
-      bedById.set(bed.id, bed);
-    }
-  });
-
-  const fieldById = new Map<number, Field>();
-  fields.forEach((field) => {
-    if (field.id) {
-      fieldById.set(field.id, field);
-    }
-  });
-
-  const locationById = new Map<number, Location>();
-  locations.forEach((location) => {
-    if (location.id) {
-      locationById.set(location.id, location);
-    }
-  });
-
   const groupsByCulture = new Map<string, GanttTaskGroup>();
+  const aggregatedTasksByKey = new Map<string, GanttTask>();
 
   plantingPlans.forEach((plan) => {
     if (!plan.id || !plan.planting_date) {
@@ -459,20 +423,31 @@ export function buildSeedlingTaskGroups({
       return;
     }
 
-    const bed = bedById.get(plan.bed);
-    const field = bed ? fieldById.get(bed.field) : undefined;
-    const location = field ? locationById.get(field.location) : undefined;
     const cultureLabel = formatCultureLabel(culture || { name: plan.culture_name || `Kultur ${plan.culture}`, variety: plan.culture_variety } as Culture, plan.culture_name);
     const groupId = `culture-${plan.culture}`;
     const group = groupsByCulture.get(groupId) ?? {
       id: groupId,
       name: cultureLabel,
-      description: targetDescription(location?.name, field?.name),
       tasks: [],
     };
+    const aggregateKey = [
+      plan.culture,
+      propagationStartDate.toISOString().slice(0, 10),
+      transplantDate.toISOString().slice(0, 10),
+    ].join('|');
+    const plantsCount = typeof plan.plants_count === 'number' ? plan.plants_count : null;
+    const existingTask = aggregatedTasksByKey.get(aggregateKey);
 
-    group.tasks.push({
-      id: `seedling-plan-${plan.id}`,
+    if (existingTask) {
+      existingTask.plantingPlanCount = (existingTask.plantingPlanCount ?? 0) + 1;
+      if (typeof plantsCount === 'number') {
+        existingTask.plantsCount = (existingTask.plantsCount ?? 0) + plantsCount;
+      }
+      return;
+    }
+
+    const task: GanttTask = {
+      id: `seedling-${plan.culture}-${propagationStartDate.toISOString().slice(0, 10)}-${transplantDate.toISOString().slice(0, 10)}`,
       name: cultureLabel,
       startDate: propagationStartDate,
       endDate: transplantDate,
@@ -484,14 +459,12 @@ export function buildSeedlingTaskGroups({
       propagationStartDate,
       propagationDurationDays,
       transplantDate,
-      targetBedName: bed?.name || plan.bed_name,
-      targetFieldName: field?.name,
-      targetLocationName: location?.name,
-      targetAreaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
-      areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
-      plantsCount: plan.plants_count ?? null,
-    });
+      plantsCount,
+      plantingPlanCount: 1,
+    };
 
+    group.tasks.push(task);
+    aggregatedTasksByKey.set(aggregateKey, task);
     groupsByCulture.set(groupId, group);
   });
 
@@ -501,11 +474,4 @@ export function buildSeedlingTaskGroups({
       tasks: [...group.tasks].sort((left, right) => left.startDate.getTime() - right.startDate.getTime()),
     }))
     .sort((left, right) => left.name.localeCompare(right.name, 'de'));
-}
-
-function targetDescription(locationName?: string, fieldName?: string): string | undefined {
-  if (locationName && fieldName) {
-    return `${locationName} / ${fieldName}`;
-  }
-  return locationName || fieldName;
 }

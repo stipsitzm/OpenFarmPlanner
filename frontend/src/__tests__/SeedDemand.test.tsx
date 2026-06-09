@@ -321,9 +321,13 @@ describe('SeedDemandPage', () => {
     const row = cultureLink.closest('tr');
     expect(row).not.toBeNull();
 
-    fireEvent.contextMenu(row as HTMLTableRowElement);
+    const contextMenuEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    const stopPropagationSpy = vi.spyOn(contextMenuEvent, 'stopPropagation');
+    fireEvent(row as HTMLTableRowElement, contextMenuEvent);
     expect(screen.getByRole('menuitem', { name: 'seedDemand.contextMenu.openCulture' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'seedDemand.contextMenu.editCulture' })).toBeInTheDocument();
+    expect(contextMenuEvent.defaultPrevented).toBe(true);
+    expect(stopPropagationSpy).toHaveBeenCalled();
     fireEvent.click(screen.getByRole('menuitem', { name: 'common:actions.copyRow' }));
 
     await waitFor(() => {

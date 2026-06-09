@@ -522,11 +522,15 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
     expect(screen.queryByRole('button', { name: 'Löschen' })).not.toBeInTheDocument();
 
-    fireEvent.contextMenu(screen.getByTestId('row-1'));
+    const contextMenuEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    const stopPropagationSpy = vi.spyOn(contextMenuEvent, 'stopPropagation');
+    fireEvent(screen.getByTestId('row-1'), contextMenuEvent);
 
     expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Duplizieren' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+    expect(contextMenuEvent.defaultPrevented).toBe(true);
+    expect(stopPropagationSpy).toHaveBeenCalled();
   });
 
   it('keeps row actions right-click only without a hover trigger', async () => {

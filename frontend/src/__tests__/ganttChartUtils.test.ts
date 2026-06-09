@@ -19,31 +19,26 @@ describe('buildSeedlingTaskGroups', () => {
 
   it('builds tooltip details only for available values', () => {
     const details = buildSeedlingTooltipDetails({
-      targetLocationName: 'Hof',
-      targetFieldName: 'Nordfeld',
-      targetBedName: 'Beet A',
       propagationStartDate: new Date(2026, 3, 15),
       transplantDate: new Date(2026, 4, 10),
       propagationDurationDays: 25,
-      targetAreaUsage: 8.5,
       plantsCount: 40,
+      plantingPlanCount: 3,
     });
 
     expect(details).toEqual([
-      { labelKey: 'location', value: 'Hof / Nordfeld' },
-      { labelKey: 'bed', value: 'Beet A' },
       { labelKey: 'propagationStart', value: '15.4.2026' },
       { labelKey: 'transplantDate', value: '10.5.2026' },
       { labelKey: 'propagationDuration', value: '25' },
-      { labelKey: 'areaUsage', value: '8,50 m²' },
-      { labelKey: 'plantsCount', value: '40' },
+      { labelKey: 'totalPlantsCount', value: '40' },
+      { labelKey: 'plantingPlanCount', value: '3' },
     ]);
 
     const reducedDetails = buildSeedlingTooltipDetails({
-      targetFieldName: 'Nordfeld',
+      plantingPlanCount: 1,
     });
 
-    expect(reducedDetails).toEqual([{ labelKey: 'location', value: 'Nordfeld' }]);
+    expect(reducedDetails).toEqual([{ labelKey: 'plantingPlanCount', value: '1' }]);
   });
 
   it('builds propagation windows grouped by culture', () => {
@@ -72,6 +67,7 @@ describe('buildSeedlingTaskGroups', () => {
           planting_date: '2026-05-10',
           cultivation_type: 'pre_cultivation',
           area_usage_sqm: 12,
+          plants_count: 18,
         },
       ],
     });
@@ -81,10 +77,85 @@ describe('buildSeedlingTaskGroups', () => {
     expect(groups[0].tasks).toHaveLength(1);
     expect(groups[0].tasks[0].startDate.toISOString()).toContain('2026-04-19');
     expect(groups[0].tasks[0].endDate.toISOString()).toContain('2026-05-10');
-    expect(groups[0].tasks[0].targetBedName).toBe('Beet A');
-    expect(groups[0].tasks[0].targetFieldName).toBe('Nordfeld');
-    expect(groups[0].tasks[0].targetLocationName).toBe('Hof');
-    expect(groups[0].tasks[0].plantsCount).toBeNull();
+    expect(groups[0].tasks[0].targetBedName).toBeUndefined();
+    expect(groups[0].tasks[0].targetFieldName).toBeUndefined();
+    expect(groups[0].tasks[0].targetLocationName).toBeUndefined();
+    expect(groups[0].tasks[0].targetAreaUsage).toBeUndefined();
+    expect(groups[0].tasks[0].plantsCount).toBe(18);
+    expect(groups[0].tasks[0].plantingPlanCount).toBe(1);
+  });
+
+  it('aggregates seedling requirements by culture, start date and transplant date independent of beds', () => {
+    const groups = buildSeedlingTaskGroups({
+      locations: [
+        { id: 1, name: 'Hof' },
+        { id: 2, name: 'Pacht' },
+      ],
+      fields: [
+        { id: 10, name: 'Nordfeld', location: 1 },
+        { id: 20, name: 'Südfeld', location: 2 },
+      ],
+      beds: [
+        { id: 100, name: 'Beet A', field: 10 },
+        { id: 200, name: 'Beet B', field: 20 },
+      ],
+      displayYear: 2026,
+      cultures: [
+        {
+          id: 7,
+          name: 'Gurke',
+          variety: 'RS-Gu-01.25',
+          propagation_duration_days: 28,
+          cultivation_type: 'pre_cultivation',
+        },
+      ],
+      plantingPlans: [
+        {
+          id: 1,
+          culture: 7,
+          culture_name: 'Gurke',
+          bed: 100,
+          planting_date: '2026-02-20',
+          cultivation_type: 'pre_cultivation',
+          plants_count: 20,
+        },
+        {
+          id: 2,
+          culture: 7,
+          culture_name: 'Gurke',
+          bed: 200,
+          planting_date: '2026-02-20',
+          cultivation_type: 'pre_cultivation',
+          plants_count: 34,
+        },
+        {
+          id: 3,
+          culture: 7,
+          culture_name: 'Gurke',
+          bed: 100,
+          planting_date: '2026-02-27',
+          cultivation_type: 'pre_cultivation',
+          plants_count: 12,
+        },
+      ],
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].name).toBe('Gurke (RS-Gu-01.25)');
+    expect(groups[0].description).toBeUndefined();
+    expect(groups[0].tasks).toHaveLength(2);
+    expect(groups[0].tasks[0]).toMatchObject({
+      plantsCount: 54,
+      plantingPlanCount: 2,
+    });
+    expect(groups[0].tasks[0].name).toBe('Gurke (RS-Gu-01.25)');
+    expect(groups[0].tasks[0].targetBedName).toBeUndefined();
+    expect(groups[0].tasks[0].targetFieldName).toBeUndefined();
+    expect(groups[0].tasks[0].targetLocationName).toBeUndefined();
+    expect(groups[0].tasks[1]).toMatchObject({
+      plantsCount: 12,
+      plantingPlanCount: 1,
+    });
   });
 
 

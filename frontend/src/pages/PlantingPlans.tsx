@@ -7,7 +7,7 @@
  * @returns The Planting Plans page component
  */
 
-import { useCallback, useState, useEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type {
   GridCellParams,
@@ -132,6 +132,12 @@ interface MobileCreateFormState {
   plants_count: string;
   notes: string;
 }
+
+interface CultivationTypeSelectOption {
+  value: CultivationType;
+  label: string;
+}
+
 interface AreaValidationDialogState {
   rowId: number;
   requestedArea: number;
@@ -192,7 +198,7 @@ const toIsoDateString = (value: unknown): string | null => {
   return null;
 };
 
-function PlantingDateEditCell(params: GridRenderEditCellParams) {
+const PlantingDateEditCell = memo(function PlantingDateEditCell(params: GridRenderEditCellParams) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const inputValue = toIsoDateString(params.value) ?? "";
 
@@ -201,9 +207,7 @@ function PlantingDateEditCell(params: GridRenderEditCellParams) {
       return;
     }
 
-    requestAnimationFrame(() => {
-      inputRef.current?.focus();
-    });
+    inputRef.current?.focus();
   }, [params.hasFocus]);
 
   return (
@@ -230,7 +234,56 @@ function PlantingDateEditCell(params: GridRenderEditCellParams) {
       }}
     />
   );
+});
+
+interface CultivationTypeEditCellProps extends GridRenderEditCellParams {
+  options: CultivationTypeSelectOption[];
 }
+
+const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
+  id,
+  field,
+  value,
+  hasFocus,
+  api,
+  options,
+}: CultivationTypeEditCellProps) {
+  const selectedValue = normalizeCultivationType(value) ?? "";
+
+  return (
+    <TextField
+      select
+      fullWidth
+      size="small"
+      autoFocus={hasFocus}
+      value={selectedValue}
+      slotProps={{
+        htmlInput: {
+          tabIndex: hasFocus ? 0 : -1,
+        },
+      }}
+      onChange={async (event) => {
+        await api.setEditCellValue({
+          id,
+          field,
+          value: event.target.value,
+        });
+      }}
+    >
+      {options.map((option) => (
+        <MenuItem key={option.value} value={option.value}>
+          {option.label}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
+}, (previous, next) => (
+  previous.id === next.id
+  && previous.field === next.field
+  && previous.value === next.value
+  && previous.hasFocus === next.hasFocus
+  && previous.options === next.options
+));
 
 const toDateKey = (value: unknown): number | null => {
   const buildDateKey = (year: number, month: number, day: number): number | null => {
@@ -716,6 +769,23 @@ function PlantingPlans() {
     [t],
   );
 
+  const cultivationTypeOptionsByCultureId = useMemo(() => {
+    const optionsByCultureId = new Map<number, CultivationTypeSelectOption[]>();
+    cultures.forEach((culture) => {
+      if (culture.id === undefined) {
+        return;
+      }
+      const allowedTypes = getAllowedCultivationTypesForCulture(culture);
+      optionsByCultureId.set(
+        culture.id,
+        cultivationTypeOptions.filter((option) =>
+          allowedTypes.includes(option.value as CultivationType),
+        ),
+      );
+    });
+    return optionsByCultureId;
+  }, [cultivationTypeOptions, cultures]);
+
   const fieldBedColumnLabel = useMemo(
     () =>
       t("plantingPlans:columns.fieldBed", {
@@ -753,14 +823,9 @@ function PlantingPlans() {
 
   const getCultivationTypeOptionsForRow = useMemo(
     () => (row: PlantingPlanRow) => {
-      const selectedCulture = cultures.find((culture) => culture.id === row.culture);
-      const allowedTypes = getAllowedCultivationTypesForCulture(selectedCulture);
-
-      return cultivationTypeOptions.filter((option) =>
-        allowedTypes.includes(option.value as CultivationType),
-      );
+      return cultivationTypeOptionsByCultureId.get(row.culture) ?? cultivationTypeOptions;
     },
-    [cultivationTypeOptions, cultures],
+    [cultivationTypeOptions, cultivationTypeOptionsByCultureId],
   );
 
   const dynamicWidths = useMemo(() => {
@@ -1063,34 +1128,12 @@ function PlantingPlans() {
         renderEditCell: (params) => {
           const row = params.row as PlantingPlanRow;
           const options = getCultivationTypeOptionsForRow(row);
-          const selectedValue = normalizeCultivationType(params.value) ?? "";
 
           return (
-            <TextField
-              select
-              fullWidth
-              size="small"
-              autoFocus={params.hasFocus}
-              value={selectedValue}
-              slotProps={{
-                htmlInput: {
-                  tabIndex: params.hasFocus ? 0 : -1,
-                },
-              }}
-              onChange={async (event) => {
-                await params.api.setEditCellValue({
-                  id: params.id,
-                  field: params.field,
-                  value: event.target.value,
-                });
-              }}
-            >
-              {options.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </TextField>
+            <CultivationTypeEditCell
+              {...params}
+              options={options}
+            />
           );
         },
         valueSetter: (value, row) => {
@@ -1153,6 +1196,7 @@ function PlantingPlans() {
               locale={numberLocale}
               compactLabel={label}
               hasFocus={params.hasFocus}
+              memoKey={`${String(params.id)}:${params.field}`}
               onApply={async (nextBedId) => {
                 await params.api.setEditCellValue({
                   id: params.id,
@@ -2515,6 +2559,7 @@ function PlantingPlans() {
         onChange={setMobileNotesDraft}
         onSave={saveMobileNotes}
         onClose={closeMobileNotesDialog}
+        hasUnsavedChanges={Boolean(mobileNotesTarget && mobileNotesDraft !== (mobileNotesTarget.notes || ""))}
         loading={isMobileNotesSaving}
         noteId={mobileNotesTarget?.id}
         focusAttachments

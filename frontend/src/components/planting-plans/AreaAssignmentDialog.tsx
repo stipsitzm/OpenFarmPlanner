@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   Box,
   Button,
@@ -33,6 +33,7 @@ interface AreaAssignmentDialogProps {
   onApply: (bedId: number) => Promise<void> | void;
   compactLabel: string;
   hasFocus?: boolean;
+  memoKey?: string;
 }
 
 interface AssignmentState {
@@ -78,7 +79,7 @@ const normalizeState = (
   };
 };
 
-export function AreaAssignmentDialog({
+function AreaAssignmentDialogComponent({
   bedId,
   beds,
   fields,
@@ -533,3 +534,14 @@ export function AreaAssignmentDialog({
     </>
   );
 }
+
+export const AreaAssignmentDialog = memo(AreaAssignmentDialogComponent, (previous, next) => (
+  previous.bedId === next.bedId
+  && previous.beds === next.beds
+  && previous.fields === next.fields
+  && previous.locations === next.locations
+  && previous.locale === next.locale
+  && previous.compactLabel === next.compactLabel
+  && previous.hasFocus === next.hasFocus
+  && previous.memoKey === next.memoKey
+));

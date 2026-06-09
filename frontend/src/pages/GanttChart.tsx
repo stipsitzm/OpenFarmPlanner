@@ -51,6 +51,7 @@ import {
   buildSeedlingTaskGroups,
   buildSeedlingTooltipDetails,
   formatSeedlingTooltipTitle,
+  formatPlantCount,
   parseDateString,
   type GanttTask,
   type GanttTaskGroup,
@@ -310,13 +311,13 @@ function GanttChartPage() {
   }), [beds, cultures, displayYear, fields, locations, plantingPlans]);
 
   const seedlingTaskGroups = useMemo<GanttTaskGroup[]>(() => buildSeedlingTaskGroups({
-    locations,
-    fields,
-    beds,
+    locations: [],
+    fields: [],
+    beds: [],
     plantingPlans,
     cultures,
     displayYear,
-  }), [beds, cultures, displayYear, fields, locations, plantingPlans]);
+  }), [cultures, displayYear, plantingPlans]);
 
   const startDate = useMemo(() => new Date(displayYear, 0, 1), [displayYear]);
   const endDate = useMemo(() => new Date(displayYear, 11, 31), [displayYear]);
@@ -538,7 +539,7 @@ function GanttChartPage() {
           <Box className="gantt-container-wrapper" sx={{ border: '1px solid', borderColor: 'surface.surfaceSoftBorder', borderRadius: 2, bgcolor: 'surface.surfaceBackground' }}>
             <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
               <GanttChart
-                key={ganttRenderKey}
+                key={`${calendarMode}-${ganttRenderKey}`}
                 tasks={activeTaskGroups}
                 locale={resolvedLocale}
                 localeText={ganttLocaleText}
@@ -578,7 +579,9 @@ function GanttChartPage() {
                         }}
                       >
                         <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {task.name}
+                          {typeof task.plantsCount === 'number' && task.plantsCount > 0
+                            ? `${task.name} · ${formatPlantCount(task.plantsCount)} ${t('ganttChart:seedlings.plantsUnit')}`
+                            : task.name}
                         </Typography>
                       </Box>
                     )

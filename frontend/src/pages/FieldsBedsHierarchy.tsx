@@ -65,6 +65,7 @@ import {
   DEFAULT_HIERARCHY_COLUMN_WIDTHS,
 } from "../components/hierarchy/HierarchyColumns";
 import { extractApiErrorMessage } from "../api/errors";
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from "../utils/contextMenu";
 import type { HierarchyRow } from "../components/hierarchy/utils/types";
 import {
   useCommandContextTag,
@@ -1376,6 +1377,7 @@ function FieldsBedsHierarchy({
   }, []);
 
   const handleNameCellContextMenu = useCallback((event: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>, row: HierarchyRow): void => {
+    suppressNativeContextMenu(event);
     const hasPointerCoordinates =
       "clientX" in event &&
       "clientY" in event &&
@@ -1394,6 +1396,9 @@ function FieldsBedsHierarchy({
   }, [openContextMenuForRow]);
 
   const handleGridContextMenu = useCallback((event: React.MouseEvent<HTMLElement>): void => {
+    if (!shouldOpenCustomContextMenu(event.target)) {
+      return;
+    }
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
       return;
@@ -1408,13 +1413,16 @@ function FieldsBedsHierarchy({
       return;
     }
 
-    event.preventDefault();
+    suppressNativeContextMenu(event);
     setSelectedRowId(targetRow.id);
     setTreeActive(true);
     openContextMenuForRow(targetRow, event.clientX + 2, event.clientY - 6);
   }, [openContextMenuForRow, rows]);
 
   const handleGridTouchStart = useCallback((event: React.TouchEvent<HTMLElement>): void => {
+    if (!shouldOpenCustomContextMenu(event.target)) {
+      return;
+    }
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
       return;
@@ -1936,6 +1944,11 @@ function FieldsBedsHierarchy({
         onChange={notesEditor.setDraft}
         onSave={notesEditor.handleSave}
         onClose={notesEditor.handleClose}
+        hasUnsavedChanges={Boolean(
+          notesEditor.currentRow &&
+            notesEditor.field &&
+            notesEditor.draft !== ((notesEditor.currentRow[notesEditor.field] as string) || ""),
+        )}
         loading={notesEditor.isSaving}
       />
       <Menu

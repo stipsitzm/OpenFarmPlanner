@@ -75,6 +75,12 @@
       "edit": "Bearbeiten",
       "preview": "Vorschau"
     },
+    "unsavedDialog": {
+      "title": "Ungespeicherte Notizen",
+      "message": "Die Notizen enthalten ungespeicherte Änderungen. Möchten Sie weiter bearbeiten oder die Änderungen verwerfen?",
+      "continueEditing": "Weiter bearbeiten",
+      "discardAndClose": "Änderungen verwerfen und schließen"
+    },
     "markdownToolbar": {
       "bold": "Fettdruck",
       "boldTooltip": "Fettdruck (Strg+B)",
@@ -101,7 +107,13 @@
     "noPublicCultures": "Es wurden keine öffentlichen Kulturen gefunden.",
     "bedNotFound": "Das Beet wurde nicht gefunden.",
     "fileTooLarge": "Die Datei ist zu groß (maximal 10 MB).",
-    "invalidImage": "Die hochgeladene Datei ist kein gültiges Bild."
+    "invalidImage": "Die hochgeladene Datei ist kein gültiges Bild.",
+    "supplierDataDuplicate": "Für diesen Lieferanten sind bereits Daten für diese Kultur vorhanden.",
+    "supplierDataMissingSupplier": "Bitte einen Lieferanten auswählen oder die Lieferantendaten entfernen.",
+    "supplierSpecificTkgUnsupported": "Lieferantenspezifische Tausendkorngewichte werden nicht mehr unterstützt.",
+    "supplierProjectMismatch": "Der Lieferant gehört nicht zum aktiven Projekt.",
+    "selectedSupplierProjectMismatch": "Der ausgewählte Saatgutlieferant gehört nicht zum aktiven Projekt.",
+    "cultureProjectMismatch": "Die Kultur gehört nicht zum aktiven Projekt."
   },
   "validation": {
     "required": "Dieses Feld ist erforderlich.",
