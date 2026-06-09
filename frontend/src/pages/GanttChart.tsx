@@ -45,6 +45,7 @@ import { extractApiErrorMessage } from '../api/errors';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
+import { useAuth } from '../auth/useAuth';
 import {
   buildFieldOccupancyTaskGroups,
   buildOccupancyTooltipDetails,
@@ -78,12 +79,31 @@ interface WeeklyYieldChartColumn {
 
 type CalendarMode = 'occupancy' | 'seedlings';
 
+const CALENDAR_VIEW_STORAGE_KEY = 'openFarmPlanner.ganttChart.view';
+
 function getCalendarModeFromViewParam(viewParam: string | null): CalendarMode {
   return viewParam === 'seedlings' ? 'seedlings' : 'occupancy';
 }
 
 function getViewParamFromCalendarMode(mode: CalendarMode): string {
   return mode === 'seedlings' ? 'seedlings' : 'field';
+}
+
+function isCalendarViewParam(value: string | null): value is 'field' | 'seedlings' {
+  return value === 'field' || value === 'seedlings';
+}
+
+function getCalendarViewStorageKey(activeProjectId: number | null): string {
+  return activeProjectId ? `${CALENDAR_VIEW_STORAGE_KEY}.${activeProjectId}` : CALENDAR_VIEW_STORAGE_KEY;
+}
+
+function getStoredCalendarMode(storageKey: string): CalendarMode | null {
+  const storedValue = window.localStorage.getItem(storageKey);
+  return isCalendarViewParam(storedValue) ? getCalendarModeFromViewParam(storedValue) : null;
+}
+
+function storeCalendarMode(storageKey: string, mode: CalendarMode): void {
+  window.localStorage.setItem(storageKey, getViewParamFromCalendarMode(mode));
 }
 
 class GanttRenderBoundary extends React.Component<
@@ -130,6 +150,7 @@ function formatIsoWeek(date: Date): string {
 function GanttChartPage() {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
   const [searchParams, setSearchParams] = useSearchParams();
+  const { activeProjectId, isLoading: isAuthLoading } = useAuth();
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   useCommandContextTag('calendar');
   const [loading, setLoading] = useState(true);
@@ -143,18 +164,47 @@ function GanttChartPage() {
   const [weeklyYield, setWeeklyYield] = useState<YieldCalendarWeek[]>([]);
   const [ganttRenderKey, setGanttRenderKey] = useState(0);
 
-  const [calendarMode, setCalendarMode] = useState<CalendarMode>(() => getCalendarModeFromViewParam(searchParams.get('view')));
+  const calendarViewStorageKey = useMemo(
+    () => getCalendarViewStorageKey(activeProjectId),
+    [activeProjectId],
+  );
+  const [calendarMode, setCalendarMode] = useState<CalendarMode>(() => {
+    const viewParam = searchParams.get('view');
+    return isCalendarViewParam(viewParam)
+      ? getCalendarModeFromViewParam(viewParam)
+      : getStoredCalendarMode(calendarViewStorageKey) ?? 'occupancy';
+  });
   const [editMode, setEditMode] = useState(false);
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
   const setTopbarContextActions = outletContext?.setTopbarContextActions;
 
   useEffect(() => {
-    const nextMode = getCalendarModeFromViewParam(searchParams.get('view'));
+    const viewParam = searchParams.get('view');
+    if (!isCalendarViewParam(viewParam) && isAuthLoading) {
+      return;
+    }
+
+    const nextMode = isCalendarViewParam(viewParam)
+      ? getCalendarModeFromViewParam(viewParam)
+      : getStoredCalendarMode(calendarViewStorageKey) ?? 'occupancy';
+
     setCalendarMode((currentMode) => (currentMode === nextMode ? currentMode : nextMode));
-  }, [searchParams]);
+
+    if (isCalendarViewParam(viewParam)) {
+      storeCalendarMode(calendarViewStorageKey, nextMode);
+      return;
+    }
+
+    setSearchParams((currentSearchParams) => {
+      const nextSearchParams = new URLSearchParams(currentSearchParams);
+      nextSearchParams.set('view', getViewParamFromCalendarMode(nextMode));
+      return nextSearchParams;
+    }, { replace: true });
+  }, [calendarViewStorageKey, isAuthLoading, searchParams, setSearchParams]);
 
   const handleCalendarModeChange = useCallback((nextMode: CalendarMode) => {
     setCalendarMode(nextMode);
+    storeCalendarMode(calendarViewStorageKey, nextMode);
     setSearchParams((currentSearchParams) => {
       if (currentSearchParams.get('view') === getViewParamFromCalendarMode(nextMode)) {
         return currentSearchParams;
@@ -163,7 +213,7 @@ function GanttChartPage() {
       nextSearchParams.set('view', getViewParamFromCalendarMode(nextMode));
       return nextSearchParams;
     });
-  }, [setSearchParams]);
+  }, [calendarViewStorageKey, setSearchParams]);
 
   const calendarCommands = useMemo<CommandSpec[]>(() => [
     {
