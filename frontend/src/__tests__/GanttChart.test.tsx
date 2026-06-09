@@ -126,6 +126,7 @@ describe('GanttChartPage', () => {
   it('shows field-specific guidance when no locations exist', async () => {
     mocks.planList.mockResolvedValue({ data: { results: [] } });
     mocks.cultureList.mockResolvedValue({ data: { results: [] } });
+    mocks.fieldList.mockResolvedValue({ data: { results: [] } });
     mocks.bedList.mockResolvedValue({ data: { results: [] } });
     mocks.locationList.mockResolvedValue({ data: { results: [] } });
 
