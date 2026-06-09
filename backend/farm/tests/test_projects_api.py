@@ -330,6 +330,16 @@ class ProjectsApiTests(APITestCase):
         self.assertTrue(ProjectMembership.objects.filter(project=self.project, user=self.invitee).exists())
         self.assertIsNone(self.client.session.get('pending_project_invitation_token'))
 
+    def test_pending_invitation_accept_without_session_token_is_noop(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'invitee@example.com', 'password': 'pass12345'}, format='json')
+
+        response = self.client.post('/openfarmplanner/api/project-invitations/pending/accept/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['code'], 'no_pending_invitation')
+        self.assertIsNone(response.data['project_id'])
+
     def test_pending_invitation_rejects_other_email_and_keeps_token(self) -> None:
         invitation = ProjectInvitation.objects.create(
             project=self.project,

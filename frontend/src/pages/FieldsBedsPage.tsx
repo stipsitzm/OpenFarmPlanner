@@ -40,6 +40,9 @@ const CONTENT_ALIGNED_EMPTY_STATE_SX: SxProps<Theme> = {
 type ViewMode = 'table' | 'graphical';
 type InteractionMode = 'view' | 'edit';
 
+const hasPersistedEntityId = (id: number | undefined): id is number =>
+  typeof id === 'number' && id > 0;
+
 export default function FieldsBedsPage() {
   const { t } = useTranslation(['fields', 'hierarchy', 'common']);
   const theme = useTheme();
@@ -194,12 +197,19 @@ export default function FieldsBedsPage() {
   }, [viewMode]);
 
   const hasLocations = locations.length > 0;
-  const hasFields = fields.length > 0;
-  const hasBeds = beds.length > 0;
+  const persistedFieldIds = useMemo(
+    () => new Set(fields.map((field) => field.id).filter(hasPersistedEntityId)),
+    [fields],
+  );
+  const hasFields = persistedFieldIds.size > 0;
+  const hasUnsavedFields = fields.some((field) => !hasPersistedEntityId(field.id));
+  const hasUnsavedBeds = beds.some((bed) => !hasPersistedEntityId(bed.id));
+  const hasBeds = beds.some((bed) => hasPersistedEntityId(bed.id) && persistedFieldIds.has(bed.field));
+  const hasHierarchyRows = fields.length > 0 || beds.length > 0;
   const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && !hasLocations;
   const shouldShowMissingFieldsState = hasLocations && !hasFields && createFieldRequest <= 0;
-  const shouldShowMissingBedsHint = hasFields && !hasBeds;
-  const shouldRenderHierarchy = hasFields || createFieldRequest > 0 || pendingHierarchyDeletionCount > 0;
+  const shouldShowMissingBedsHint = hasFields && !hasBeds && !hasUnsavedFields && !hasUnsavedBeds;
+  const shouldRenderHierarchy = hasHierarchyRows || createFieldRequest > 0 || pendingHierarchyDeletionCount > 0;
   const createBedAction = getProjectSetupAction('beds');
   const emptyAreasDescription = shouldShowMissingFieldsState
     ? t(locations.length === 1

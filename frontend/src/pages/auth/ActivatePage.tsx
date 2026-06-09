@@ -8,6 +8,10 @@ import { buildInvitationAcceptPath, getStoredInvitationNext, getStoredInvitation
 
 type ActivateStatus = 'idle' | 'loading' | 'success' | 'error';
 
+function getInvitationErrorCode(error: unknown): string | undefined {
+  return (error as { response?: { data?: { code?: string } } })?.response?.data?.code;
+}
+
 export default function ActivatePage() {
   const [searchParams] = useSearchParams();
   const { uid: uidFromPath, token: tokenFromPath } = useParams<{ uid?: string; token?: string }>();
@@ -57,13 +61,21 @@ export default function ActivatePage() {
         }
 
         try {
+          const pendingInvitationResponse = await projectAPI.getPendingInvitation();
+          if (pendingInvitationResponse.data.code === 'no_pending_invitation') {
+            setMessage(t('auth:activate.success'));
+            setStatus('success');
+            setTimeout(() => navigate('/app', { replace: true }), 1200);
+            return;
+          }
+
           const invitationResponse = await projectAPI.acceptPendingInvitation();
           if (invitationResponse.data.project_id) {
             await switchActiveProject(invitationResponse.data.project_id);
           }
           setMessage(t(`projectInvitations:result.${invitationResponse.data.code}`, { defaultValue: t('auth:activate.success') }));
         } catch (invitationError: unknown) {
-          const invitationCode = (invitationError as { response?: { data?: { code?: string } } })?.response?.data?.code;
+          const invitationCode = getInvitationErrorCode(invitationError);
           if (invitationCode && invitationCode !== 'no_pending_invitation') {
             setStatus('error');
             setMessage(t(`projectInvitations:result.${invitationCode}`, { defaultValue: t('auth:activate.success') }));

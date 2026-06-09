@@ -7,7 +7,7 @@
  * @returns The Gantt Chart page component
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import {
@@ -45,7 +45,7 @@ import { extractApiErrorMessage } from '../api/errors';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
-import { useAuth } from '../auth/useAuth';
+import { AuthContext } from '../auth/authContextShared';
 import {
   buildFieldOccupancyTaskGroups,
   buildOccupancyTooltipDetails,
@@ -150,7 +150,10 @@ function formatIsoWeek(date: Date): string {
 function GanttChartPage() {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
   const [searchParams, setSearchParams] = useSearchParams();
-  const { activeProjectId, isLoading: isAuthLoading } = useAuth();
+  const authContext = useContext(AuthContext);
+  const activeProjectId = authContext?.activeProjectId ?? null;
+  const isAuthLoading = authContext?.isLoading ?? false;
+  const canUseStoredCalendarView = Boolean(authContext);
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   useCommandContextTag('calendar');
   const [loading, setLoading] = useState(true);
@@ -165,14 +168,16 @@ function GanttChartPage() {
   const [ganttRenderKey, setGanttRenderKey] = useState(0);
 
   const calendarViewStorageKey = useMemo(
-    () => getCalendarViewStorageKey(activeProjectId),
-    [activeProjectId],
+    () => (canUseStoredCalendarView ? getCalendarViewStorageKey(activeProjectId) : null),
+    [activeProjectId, canUseStoredCalendarView],
   );
   const [calendarMode, setCalendarMode] = useState<CalendarMode>(() => {
     const viewParam = searchParams.get('view');
     return isCalendarViewParam(viewParam)
       ? getCalendarModeFromViewParam(viewParam)
-      : getStoredCalendarMode(calendarViewStorageKey) ?? 'occupancy';
+      : calendarViewStorageKey
+        ? getStoredCalendarMode(calendarViewStorageKey) ?? 'occupancy'
+        : 'occupancy';
   });
   const [editMode, setEditMode] = useState(false);
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
@@ -186,12 +191,16 @@ function GanttChartPage() {
 
     const nextMode = isCalendarViewParam(viewParam)
       ? getCalendarModeFromViewParam(viewParam)
-      : getStoredCalendarMode(calendarViewStorageKey) ?? 'occupancy';
+      : calendarViewStorageKey
+        ? getStoredCalendarMode(calendarViewStorageKey) ?? 'occupancy'
+        : 'occupancy';
 
     setCalendarMode((currentMode) => (currentMode === nextMode ? currentMode : nextMode));
 
     if (isCalendarViewParam(viewParam)) {
-      storeCalendarMode(calendarViewStorageKey, nextMode);
+      if (calendarViewStorageKey) {
+        storeCalendarMode(calendarViewStorageKey, nextMode);
+      }
       return;
     }
 
@@ -204,7 +213,9 @@ function GanttChartPage() {
 
   const handleCalendarModeChange = useCallback((nextMode: CalendarMode) => {
     setCalendarMode(nextMode);
-    storeCalendarMode(calendarViewStorageKey, nextMode);
+    if (calendarViewStorageKey) {
+      storeCalendarMode(calendarViewStorageKey, nextMode);
+    }
     setSearchParams((currentSearchParams) => {
       if (currentSearchParams.get('view') === getViewParamFromCalendarMode(nextMode)) {
         return currentSearchParams;

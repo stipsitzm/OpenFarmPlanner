@@ -2868,6 +2868,15 @@ class AcceptPendingProjectInvitationView(APIView):
         try:
             result = accept_pending_invitation_from_session(session=request.session, user=request.user)
         except InvitationFlowError as exc:
+            if exc.code == 'no_pending_invitation':
+                return Response(
+                    {
+                        'code': exc.code,
+                        'detail': exc.message,
+                        'project_id': None,
+                        'project': None,
+                    }
+                )
             logger.warning('Pending invitation accept failed', extra={'user_id': request.user.id, 'code': exc.code, 'path': request.path})
             return _invitation_error_response(exc)
 
