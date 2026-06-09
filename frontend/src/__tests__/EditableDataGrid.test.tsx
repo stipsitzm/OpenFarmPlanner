@@ -323,6 +323,41 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('1'));
   });
 
+  it('removes touched draft rows with Escape without saving or validating', async () => {
+    const props = baseProps((row) => (!row.name ? 'Name ist erforderlich' : null));
+    const createSpy = vi.spyOn(props.api, 'create');
+
+    render(<EditableDataGrid {...props} showDeleteAction={false} />);
+
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('1'));
+    fireEvent.click(screen.getByLabelText('Neu'));
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('2'));
+    fireEvent.click(screen.getByRole('button', { name: 'Zelle -1-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ESC -1' }));
+
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('1'));
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(screen.queryByText('messages.validationErrors')).not.toBeInTheDocument();
+    expect(screen.queryByText('Name ist erforderlich')).not.toBeInTheDocument();
+  });
+
+  it('cancels existing row edits with Escape without saving or validating', async () => {
+    const props = baseProps((row) => (!row.name ? 'Name ist erforderlich' : null));
+    const updateSpy = vi.spyOn(props.api, 'update');
+
+    render(<EditableDataGrid {...props} showDeleteAction={false} />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+    fireEvent.click(screen.getByRole('button', { name: 'ESC 1' }));
+
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('view'));
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(screen.queryByText('messages.validationErrors')).not.toBeInTheDocument();
+    expect(screen.queryByText('Name ist erforderlich')).not.toBeInTheDocument();
+  });
+
   it('moves through a new planting plan row with Tab without row validation', async () => {
     const props = baseProps((row) => {
       const missing = [

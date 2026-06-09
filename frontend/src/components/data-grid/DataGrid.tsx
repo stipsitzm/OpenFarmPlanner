@@ -18,6 +18,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type MutableRefObject, type TouchEvent } from 'react';
 import {
   DataGrid,
+  GridRowEditStopReasons,
   GridRowModes,
   getGridBooleanOperators,
   getGridDateOperators,
@@ -369,6 +370,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const pendingDeleteTimersRef = useRef<Map<string, number>>(new Map());
   const rowActionLongPressTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const rowSnapshotRef = useRef<Map<string, T>>(new Map());
+  const canceledRowIdsRef = useRef<Set<string>>(new Set());
   const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery('(max-width:900px)');
   
@@ -649,12 +651,17 @@ export function EditableDataGrid<T extends EditableRow>({
 
   const handleDiscardRowChanges = useCallback((rowId: GridRowId): void => {
     const rowKey = String(rowId);
+    canceledRowIdsRef.current.add(rowKey);
+    setError('');
     const snapshot = rowSnapshotRef.current.get(rowKey);
-    if (snapshot) {
-      setRows((prevRows) => prevRows.map((row) => (String(row.id) === rowKey ? snapshot : row)));
-    } else if (Number(rowId) < 0) {
+    const currentRow = rowsById.get(rowKey) ?? snapshot;
+
+    if (currentRow && isUnsavedDraftRow(currentRow)) {
       setRows((prevRows) => prevRows.filter((row) => String(row.id) !== rowKey));
       setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
+      rowSnapshotRef.current.delete(rowKey);
+    } else if (snapshot) {
+      setRows((prevRows) => prevRows.map((row) => (String(row.id) === rowKey ? snapshot : row)));
     }
 
     setDirtyRowIds((prev) => {
@@ -671,7 +678,10 @@ export function EditableDataGrid<T extends EditableRow>({
       ...oldModel,
       [rowId]: { mode: GridRowModes.View, ignoreModifications: true },
     }));
-  }, []);
+    window.setTimeout(() => {
+      canceledRowIdsRef.current.delete(rowKey);
+    }, 0);
+  }, [rowsById]);
 
   const getDraftRow = useCallback((rowId: GridRowId): T | null => {
     const api = gridApiRef.current;
@@ -846,6 +856,23 @@ export function EditableDataGrid<T extends EditableRow>({
   ]);
 
   const processRowUpdate = useCallback(async (newRow: T): Promise<T> => {
+    const rowKey = String(newRow.id);
+    if (canceledRowIdsRef.current.has(rowKey)) {
+      canceledRowIdsRef.current.delete(rowKey);
+      setError('');
+      setDirtyRowIds((prev) => {
+        const next = new Set(prev);
+        next.delete(rowKey);
+        return next;
+      });
+      setActiveValidationErrors((prev) => {
+        const next = { ...prev };
+        delete next[rowKey];
+        return next;
+      });
+      return rowSnapshotRef.current.get(rowKey) ?? newRow;
+    }
+
     // Clear previous error before validating
     // This ensures dropdown selections and other changes trigger fresh validation
     setError('');
@@ -861,7 +888,6 @@ export function EditableDataGrid<T extends EditableRow>({
 
     // Validate required fields
     const validationError = validateRow(rowAfterSaveGate);
-    const rowKey = String(rowAfterSaveGate.id);
     const fieldErrors = getRowValidationErrors?.(rowAfterSaveGate) ?? {};
     setActiveValidationErrors((prev) => ({
       ...prev,
@@ -1791,7 +1817,12 @@ export function EditableDataGrid<T extends EditableRow>({
           columns={columnsWithActions}
           rowModesModel={rowModesModel}
           onRowModesModelChange={setRowModesModel}
-          onRowEditStop={handleRowEditStop}
+          onRowEditStop={(params, event) => {
+            if (params.reason === GridRowEditStopReasons.escapeKeyDown) {
+              handleDiscardRowChanges(params.id);
+            }
+            handleRowEditStop(params, event);
+          }}
           processRowUpdate={processRowUpdate}
           onProcessRowUpdateError={handleProcessRowUpdateError}
           loading={loading}
@@ -1918,6 +1949,7 @@ export function EditableDataGrid<T extends EditableRow>({
             }
             if (event.key === 'Escape') {
               event.preventDefault();
+              event.defaultMuiPrevented = true;
               handleDiscardRowChanges(params.id);
               return;
             }
