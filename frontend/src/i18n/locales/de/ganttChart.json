@@ -91,11 +91,6 @@
     "emptyState": "Keine Jungpflanzen-Anzuchtzeiträume für dieses Jahr vorhanden."
   },
   "requirements": {
-    "location": {
-      "label": "Standort",
-      "missing": "Standort fehlt",
-      "done": "Standort vorhanden"
-    },
     "field": {
       "label": "Parzelle",
       "missing": "Parzelle fehlt",
@@ -121,7 +116,6 @@
     "requirementsTitle": "Noch keine Anbauplanung möglich",
     "requirementsDescription": "Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu. Danach kannst du Beete, Kulturen und Anbaupläne erfassen.",
     "actions": {
-      "createLocation": "Standort hinzufügen",
       "createCulture": "Kultur hinzufügen",
       "createField": "Parzelle hinzufügen",
       "createAreas": "Zu Anbauflächen",

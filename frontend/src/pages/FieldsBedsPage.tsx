@@ -25,7 +25,16 @@ import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 const CONTENT_ALIGNED_EMPTY_STATE_SX: SxProps<Theme> = {
-  maxWidth: '100%',
+  maxWidth: 560,
+  my: { xs: 3, md: 5 },
+  p: { xs: 2.5, sm: 3 },
+  textAlign: 'center',
+  '& > .MuiBox-root:first-of-type': {
+    justifyContent: 'center',
+  },
+  '& > .MuiBox-root:last-of-type': {
+    justifyContent: 'center',
+  },
 };
 
 type ViewMode = 'table' | 'graphical';
@@ -188,25 +197,27 @@ export default function FieldsBedsPage() {
   const hasFields = fields.length > 0;
   const hasBeds = beds.length > 0;
   const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && !hasLocations;
-  const shouldShowMissingFieldsState = hasLocations && !hasFields;
+  const shouldShowMissingFieldsState = hasLocations && !hasFields && createFieldRequest <= 0;
   const shouldShowMissingBedsHint = hasFields && !hasBeds;
-  const shouldRenderHierarchy = hasLocations || pendingHierarchyDeletionCount > 0;
+  const shouldRenderHierarchy = hasFields || createFieldRequest > 0 || pendingHierarchyDeletionCount > 0;
   const createBedAction = getProjectSetupAction('beds');
   const emptyAreasDescription = shouldShowMissingFieldsState
-    ? (
-      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-        {t('hierarchy:emptyAreas.missingFieldDescriptionBeforeIcon')}
-        <HierarchyAddIcon interactive={false} ariaHidden sx={{ bgcolor: 'transparent' }} />
-        {t('hierarchy:emptyAreas.missingFieldDescriptionAfterIcon')}
-      </Box>
-    )
-    : t('hierarchy:emptyAreas.description');
+    ? t(locations.length === 1
+      ? 'hierarchy:emptyAreas.missingFieldSingleLocationDescription'
+      : 'hierarchy:emptyAreas.missingFieldMultipleLocationsDescription')
+    : t('hierarchy:emptyAreas.missingLocationDescription');
   const emptyAreaActions = useMemo<EmptyStateAction[]>(() => {
     if (shouldShowMissingFieldsState) {
-      return [];
+      return locations.length === 1
+        ? [{
+            label: t('hierarchy:actions.addField'),
+            onClick: requestInlineFieldCreation,
+            icon: <HierarchyAddIcon interactive={false} ariaHidden sx={{ bgcolor: 'transparent' }} />,
+          }]
+        : [];
     }
     return [{ label: t('hierarchy:actions.createLocation'), onClick: openAddLocationDialog, icon: <AddIcon fontSize="small" /> }];
-  }, [openAddLocationDialog, shouldShowMissingFieldsState, t]);
+  }, [locations.length, openAddLocationDialog, requestInlineFieldCreation, shouldShowMissingFieldsState, t]);
 
   useEffect(() => {
     if (viewMode === 'graphical') {
@@ -332,13 +343,8 @@ export default function FieldsBedsPage() {
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && (shouldShowAreasEmptyState || shouldShowMissingFieldsState) ? (
           <EmptyStateCard
-            title={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldTitle') : t('hierarchy:emptyAreas.title')}
+            title={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldTitle') : t('hierarchy:emptyAreas.missingLocationTitle')}
             description={emptyAreasDescription}
-            checklist={!hasLocations ? [{
-              label: t('hierarchy:columns.location'),
-              done: false,
-              missingLabel: t('hierarchy:emptyAreas.missingLocationLabel'),
-            }] : []}
             actions={emptyAreaActions}
             containerSx={CONTENT_ALIGNED_EMPTY_STATE_SX}
           />
@@ -421,7 +427,7 @@ export default function FieldsBedsPage() {
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy && viewMode !== 'graphical' ? (
           <>
-            {hasLocations && !shouldShowMissingBedsHint ? (
+            {hasFields && !shouldShowMissingBedsHint ? (
               <Box sx={{ mb: 1.25 }}>
                 <ContextMenuHint
                   message={t('hierarchy:messages.contextMenuTableHint')}

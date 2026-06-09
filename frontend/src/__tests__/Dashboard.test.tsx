@@ -45,11 +45,9 @@ describe('Dashboard', () => {
   it('shows unified onboarding checklist for a completely empty project', async () => {
     render(<MemoryRouter><Dashboard /></MemoryRouter>);
     expect(await screen.findByText('Projektstart')).toBeInTheDocument();
-    expect(screen.getByText('OpenFarmPlanner unterstützt dich bei der strukturierten Planung von Flächen, Kulturen und Anbauzyklen. Beginne mit dem ersten Schritt deiner Anbauplanung.')).toBeInTheDocument();
-    const createLocationLinks = screen.getAllByRole('link', { name: 'Standort hinzufügen' });
-    expect(createLocationLinks).toHaveLength(1);
-    expect(createLocationLinks[0]).toHaveAttribute('href', '/app/locations?create=true');
-    expect(screen.queryByRole('link', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
+    expect(screen.getByText('OpenFarmPlanner unterstützt dich bei der strukturierten Planung von Flächen, Kulturen und Anbauzyklen. Beginne mit deiner ersten Parzelle.')).toBeInTheDocument();
+    expect(screen.queryByText('Standort hinzufügen')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Parzelle hinzufügen' })).toHaveAttribute('href', '/app/fields-beds');
     expect(screen.queryByText('Anstehende Aufgaben')).not.toBeInTheDocument();
   });
 

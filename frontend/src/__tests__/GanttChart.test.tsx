@@ -123,7 +123,7 @@ beforeEach(() => {
 });
 
 describe('GanttChartPage', () => {
-  it('shows location-specific guidance when no locations exist', async () => {
+  it('shows field-specific guidance when no locations exist', async () => {
     mocks.planList.mockResolvedValue({ data: { results: [] } });
     mocks.cultureList.mockResolvedValue({ data: { results: [] } });
     mocks.bedList.mockResolvedValue({ data: { results: [] } });
@@ -139,9 +139,9 @@ describe('GanttChartPage', () => {
 
     await waitFor(() => expect(screen.getByText('Noch keine Anbauplanung möglich')).toBeInTheDocument());
     expect(screen.getByText('Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu. Danach kannst du Beete, Kulturen und Anbaupläne erfassen.')).toBeInTheDocument();
-    expect(screen.getByText('Standort fehlt')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Standort hinzufügen' })).toHaveAttribute('href', '/app/locations?create=true');
-    expect(screen.queryByRole('link', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
+    expect(screen.getByText('Parzelle fehlt')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Parzelle hinzufügen' })).toHaveAttribute('href', '/app/fields-beds');
+    expect(screen.queryByRole('link', { name: 'Standort hinzufügen' })).not.toBeInTheDocument();
     expect(screen.queryByText('Kultur fehlt')).not.toBeInTheDocument();
     expect(screen.queryByText('Beet fehlt')).not.toBeInTheDocument();
     expect(screen.queryByText('Anbauplan fehlt')).not.toBeInTheDocument();

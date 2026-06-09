@@ -44,7 +44,6 @@
   },
   "project": "Projekt",
   "setupActions": {
-    "createLocation": "Standort hinzufügen",
     "createField": "Parzelle hinzufügen",
     "createBed": "Beet hinzufügen",
     "openAreas": "Anbauflächen öffnen",

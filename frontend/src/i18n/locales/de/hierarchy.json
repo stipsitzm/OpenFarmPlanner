@@ -92,11 +92,12 @@
   },
   "emptyAreas": {
     "title": "Noch keine Anbauflächen vorhanden",
-    "description": "Lege zuerst einen Standort an. Danach kannst du dort Parzellen und Beete erfassen.",
-    "missingLocationLabel": "Standort fehlt",
+    "description": "Der Hauptstandort ist für dieses Projekt noch nicht verfügbar. Danach kannst du dort Parzellen und Beete erfassen.",
+    "missingLocationTitle": "Standort fehlt",
+    "missingLocationDescription": "Der Hauptstandort ist für dieses Projekt noch nicht verfügbar.",
     "missingFieldTitle": "Parzelle fehlt",
-    "missingFieldDescriptionBeforeIcon": "Füge Parzellen in der sichtbaren Tabelle über das",
-    "missingFieldDescriptionAfterIcon": "Symbol beim jeweiligen Standort hinzu.",
+    "missingFieldSingleLocationDescription": "Lege zuerst eine Parzelle an, um deine Anbauflächen zu strukturieren.",
+    "missingFieldMultipleLocationsDescription": "Füge beim gewünschten Standort über das ➕-Symbol eine Parzelle hinzu.",
     "actions": {
       "createLocation": "Standort hinzufügen",
       "createField": "Parzelle hinzufügen",

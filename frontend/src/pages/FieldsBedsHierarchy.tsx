@@ -929,7 +929,6 @@ function FieldsBedsHierarchy({
             return [created.data, ...filteredFields];
           });
           setError("");
-          await fetchData();
           return {
             ...newRow,
             id: `field-${created.data.id}`,
@@ -1002,11 +1001,10 @@ function FieldsBedsHierarchy({
             return f;
           }),
         );
-        await fetchData();
         return {
           ...newRow,
           name: updated.data.name,
-          area_sqm: updated.data.area_sqm,
+          area_sqm: updatedArea,
           length_m: updated.data.length_m,
           width_m: updated.data.width_m,
           notes: updated.data.notes,
@@ -1045,7 +1043,6 @@ function FieldsBedsHierarchy({
             : locationItem,
         ),
       );
-      await fetchData();
       return {
         ...newRow,
         name: updated.data.name,
@@ -1771,6 +1768,7 @@ function FieldsBedsHierarchy({
   const contextMenuActions = contextMenuState
     ? getHierarchyRowActions(contextMenuState.row)
     : [];
+  const shouldShowHierarchyTable = fields.length > 0 || createFieldRequest > 0;
 
   const formatHierarchyValue = useCallback((value: unknown): string => {
     if (value === null || value === undefined || value === "") {
@@ -1844,78 +1842,90 @@ function FieldsBedsHierarchy({
           </Box>
         )}
 
-        <Box
-          ref={tableWrapperRef}
-          sx={{ width: "100%", maxWidth: "100%", minWidth: 1, overflowX: "auto", overflowY: "visible", display: "block" }}
-          onClick={() => setTreeActive(true)}
-          onContextMenu={handleGridContextMenu}
-          onTouchStart={handleGridTouchStart}
-          onTouchMove={handleGridTouchEnd}
-          onTouchEnd={handleGridTouchEnd}
-          onTouchCancel={handleGridTouchEnd}
-        >
-          <Box sx={{ display: "inline-block", width: "fit-content", minWidth: 320, maxWidth: "100%" }}>
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            columnHeaderHeight={HEADER_ROW_HEIGHT}
-            getRowHeight={getRowHeight}
-            getRowClassName={(params) => `ofp-hierarchy-row-${params.row.type}`}
-            rowModesModel={rowModesModel}
-            onRowModesModelChange={setRowModesModel}
-            onRowEditStop={handleHierarchyRowEditStop}
-            processRowUpdate={processRowUpdate}
-            onProcessRowUpdateError={handleProcessRowUpdateError}
-            loading={loading}
-            editMode="row"
-            autoHeight
-            hideFooter={true}
-            sortingMode="server"
-            sortModel={sortModel}
-            onSortModelChange={setSortModel}
-            isRowSelectable={() => true}
-            isCellEditable={isCellEditable}
-            sx={HIERARCHY_DATA_GRID_SX}
-            rowSelectionModel={rowSelectionModel}
-            onRowSelectionModelChange={(nextModel) =>
-              setSelectedRowId(Array.from(nextModel.ids)[0] ?? null)
-            }
-            onCellClick={(params) => {
-              const editingRowId = Object.entries(rowModesModel).find(([, mode]) => mode.mode === GridRowModes.Edit)?.[0];
-              if (editingRowId !== undefined && String(editingRowId) !== String(params.id)) {
-                discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
-              }
-              rememberRowSnapshot(params.id);
-              setSelectedRowId(params.id);
-              setTreeActive(true);
-              handleEditableCellClick(params, rowModesModel, setRowModesModel);
+        {shouldShowHierarchyTable ? (
+          <Box
+            ref={tableWrapperRef}
+            sx={{
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 1,
+              overflowX: "auto",
+              overflowY: "visible",
+              display: "block",
+              '& [role="row"][data-id]': {
+                WebkitTouchCallout: "none",
+              },
             }}
-            onCellKeyDown={(params: GridCellParams<HierarchyRow>, event: React.KeyboardEvent) => {
-              const keyboardEvent = event as React.KeyboardEvent & { defaultMuiPrevented?: boolean };
-              if (
-                keyboardEvent.key === "Escape" &&
-                rowModesModel[params.id]?.mode === GridRowModes.Edit
-              ) {
-                keyboardEvent.preventDefault();
-                keyboardEvent.defaultMuiPrevented = true;
-                discardRowEdit(params.id);
-                return;
+            onClick={() => setTreeActive(true)}
+            onContextMenu={handleGridContextMenu}
+            onTouchStart={handleGridTouchStart}
+            onTouchMove={handleGridTouchEnd}
+            onTouchEnd={handleGridTouchEnd}
+            onTouchCancel={handleGridTouchEnd}
+          >
+            <Box sx={{ display: "inline-block", width: "fit-content", minWidth: 320, maxWidth: "100%" }}>
+            <DataGrid
+              rows={rows}
+              columns={columns}
+              columnHeaderHeight={HEADER_ROW_HEIGHT}
+              getRowHeight={getRowHeight}
+              getRowClassName={(params) => `ofp-hierarchy-row-${params.row.type}`}
+              rowModesModel={rowModesModel}
+              onRowModesModelChange={setRowModesModel}
+              onRowEditStop={handleHierarchyRowEditStop}
+              processRowUpdate={processRowUpdate}
+              onProcessRowUpdateError={handleProcessRowUpdateError}
+              loading={loading}
+              editMode="row"
+              autoHeight
+              hideFooter={true}
+              sortingMode="server"
+              sortModel={sortModel}
+              onSortModelChange={setSortModel}
+              isRowSelectable={() => true}
+              isCellEditable={isCellEditable}
+              sx={HIERARCHY_DATA_GRID_SX}
+              rowSelectionModel={rowSelectionModel}
+              onRowSelectionModelChange={(nextModel) =>
+                setSelectedRowId(Array.from(nextModel.ids)[0] ?? null)
               }
-              if (keyboardEvent.key === "ContextMenu" || (keyboardEvent.shiftKey && keyboardEvent.key === "F10")) {
-                keyboardEvent.preventDefault();
-                const targetRow = rows.find((row) => row.id === params.id);
-                if (targetRow) {
-                  const targetElement = keyboardEvent.currentTarget as HTMLElement;
-                  const rect = targetElement.getBoundingClientRect();
-                  openContextMenuForRow(targetRow, rect.left + Math.min(240, rect.width), rect.top + 12);
+              onCellClick={(params) => {
+                const editingRowId = Object.entries(rowModesModel).find(([, mode]) => mode.mode === GridRowModes.Edit)?.[0];
+                if (editingRowId !== undefined && String(editingRowId) !== String(params.id)) {
+                  discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
                 }
-              }
-            }}
-            localeText={germanDataGridLocaleText}
-            apiRef={gridApiRef}
-          />
+                rememberRowSnapshot(params.id);
+                setSelectedRowId(params.id);
+                setTreeActive(true);
+                handleEditableCellClick(params, rowModesModel, setRowModesModel);
+              }}
+              onCellKeyDown={(params: GridCellParams<HierarchyRow>, event: React.KeyboardEvent) => {
+                const keyboardEvent = event as React.KeyboardEvent & { defaultMuiPrevented?: boolean };
+                if (
+                  keyboardEvent.key === "Escape" &&
+                  rowModesModel[params.id]?.mode === GridRowModes.Edit
+                ) {
+                  keyboardEvent.preventDefault();
+                  keyboardEvent.defaultMuiPrevented = true;
+                  discardRowEdit(params.id);
+                  return;
+                }
+                if (keyboardEvent.key === "ContextMenu" || (keyboardEvent.shiftKey && keyboardEvent.key === "F10")) {
+                  keyboardEvent.preventDefault();
+                  const targetRow = rows.find((row) => row.id === params.id);
+                  if (targetRow) {
+                    const targetElement = keyboardEvent.currentTarget as HTMLElement;
+                    const rect = targetElement.getBoundingClientRect();
+                    openContextMenuForRow(targetRow, rect.left + Math.min(240, rect.width), rect.top + 12);
+                  }
+                }
+              }}
+              localeText={germanDataGridLocaleText}
+              apiRef={gridApiRef}
+            />
+            </Box>
           </Box>
-        </Box>
+        ) : null}
       </Box>
 
       {/* Notes Editor Drawer */}

@@ -13,7 +13,7 @@ import { Link as RouterLink, useLocation, useNavigate, useOutletContext } from '
 import axios from 'axios';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
-import { bedAPI, cultureAPI, fieldAPI, locationAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
+import { bedAPI, cultureAPI, fieldAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
 import type {
   CultivationType,
   CultureHistoryEntry,
@@ -173,7 +173,6 @@ function Cultures() {
   const [publicLibraryInitialSelectedId, setPublicLibraryInitialSelectedId] = useState<number | null>(null);
   const [publicLibraryInitialQuery, setPublicLibraryInitialQuery] = useState('');
   const [publishingCultureId, setPublishingCultureId] = useState<number | null>(null);
-  const [hasLocations, setHasLocations] = useState(false);
   const [hasFields, setHasFields] = useState(false);
   const [hasBeds, setHasBeds] = useState(false);
   const selectedCulture = cultures.find((culture) => culture.id === selectedCultureId);
@@ -214,7 +213,6 @@ function Cultures() {
     if (shouldShowProjectRequiredState) {
       setCultures([]);
       setIsCulturesLoading(false);
-      setHasLocations(false);
       setHasFields(false);
       setHasBeds(false);
       return;
@@ -229,16 +227,13 @@ function Cultures() {
     }
     const fetchPlanRequirements = async (): Promise<void> => {
       try {
-        const [locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
-          locationAPI.list(),
+        const [fieldsResponse, bedsResponse] = await Promise.all([
           fieldAPI.list(),
           bedAPI.list(),
         ]);
-        setHasLocations(locationsResponse.data.results.length > 0);
         setHasFields(fieldsResponse.data.results.length > 0);
         setHasBeds(bedsResponse.data.results.length > 0);
       } catch {
-        setHasLocations(false);
         setHasFields(false);
         setHasBeds(false);
       }
@@ -767,7 +762,6 @@ function Cultures() {
   };
 
   const firstMissingPlanRequirement = getFirstMissingCultivationPlanRequirement({
-    hasLocations,
     hasFields,
     hasBeds,
     hasCultures: cultures.length > 0,

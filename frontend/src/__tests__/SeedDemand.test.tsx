@@ -70,9 +70,11 @@ describe('SeedDemandPage', () => {
     bedListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Beet 1' }] } });
   });
 
-  it('shows location-first progressive requirement and no table header when no locations exist', async () => {
+  it('shows field-first progressive requirement and no table header when no locations exist', async () => {
     listMock.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
     locationListMock.mockResolvedValue({ data: { results: [] } });
+    fieldListMock.mockResolvedValue({ data: { results: [] } });
+    bedListMock.mockResolvedValue({ data: { results: [] } });
 
     render(
       <MemoryRouter>
@@ -83,15 +85,14 @@ describe('SeedDemandPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('seedDemand.progressive.locations.title')).toBeInTheDocument();
+      expect(screen.getByText('seedDemand.progressive.fields.title')).toBeInTheDocument();
     });
     expect(screen.queryByText('seedDemand.columns.culture')).not.toBeInTheDocument();
     expect(screen.queryByText('Keine Einträge vorhanden')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'common:setupActions.createLocation' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'common:setupActions.createField' })).toHaveAttribute(
       'href',
-      '/app/locations?create=true',
+      '/app/fields-beds',
     );
-    expect(screen.queryByRole('link', { name: 'common:setupActions.createField' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'common:setupActions.createBed' })).not.toBeInTheDocument();
   });
 

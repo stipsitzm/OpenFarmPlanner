@@ -1850,13 +1850,11 @@ function PlantingPlans() {
       );
     }
   };
-  const hasLocations = locations.length > 0;
   const hasFields = fields.length > 0;
   const hasCultures = cultures.length > 0;
   const hasBeds = beds.length > 0;
   const hasPlans = mobileRows.length > 0;
   const firstMissingRequirement = getFirstMissingCultivationPlanRequirement({
-    hasLocations,
     hasFields,
     hasBeds,
     hasCultures,

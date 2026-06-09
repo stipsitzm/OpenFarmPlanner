@@ -29,7 +29,6 @@
     "projects": "Projekte",
     "createDialogTitle": "Projekt anlegen",
     "createNameLabel": "Projektname",
-    "createDescriptionLabel": "Beschreibung",
     "createCancel": "Abbrechen",
     "createSubmit": "Projekt anlegen",
     "createError": "Projekt konnte nicht erstellt werden."

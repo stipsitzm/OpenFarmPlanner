@@ -107,10 +107,6 @@
   "emptyStates": {
     "createBlockedTooltip": "Beete werden innerhalb von Parzellen auf der Seite Anbauflächen hinzugefügt.",
     "states": {
-      "locations": {
-        "title": "Du kannst noch keinen Anbauplan hinzufügen.",
-        "description": "Lege zuerst einen Standort an. Danach kannst du auf der Seite Anbauflächen eine Parzelle hinzufügen."
-      },
       "fields": {
         "title": "Du kannst noch keinen Anbauplan hinzufügen.",
         "description": "Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu."
@@ -129,7 +125,6 @@
       }
     },
     "actions": {
-      "createLocation": "Standort hinzufügen",
       "createField": "Parzelle hinzufügen",
       "createAreas": "Zu Anbauflächen",
       "openCultureLibrary": "Kulturbibliothek öffnen",

@@ -86,7 +86,6 @@ export default function SeedDemandPage() {
     enabled: !shouldShowProjectRequiredState && !isLoading && canCalculateSeedDemand && rows.length > 0,
   });
   const firstMissingSetupStep = getFirstMissingProjectSetupStep({
-    hasLocations: locationCount > 0,
     hasFields: fieldCount > 0,
     hasBeds: bedCount > 0,
     hasCultures: cultureCount > 0,
@@ -96,13 +95,6 @@ export default function SeedDemandPage() {
     getProjectSetupActions(step).map((action) => ({ label: t(action.labelKey), to: action.to }))
   ), [t]);
   const missingRequirement = useMemo(() => {
-    if (firstMissingSetupStep === 'locations') {
-      return {
-        title: t('seedDemand.progressive.locations.title'),
-        description: t('seedDemand.progressive.locations.description'),
-        actions: getTranslatedSetupActions(firstMissingSetupStep),
-      };
-    }
     if (firstMissingSetupStep === 'fields') {
       return {
         title: t('seedDemand.progressive.fields.title'),

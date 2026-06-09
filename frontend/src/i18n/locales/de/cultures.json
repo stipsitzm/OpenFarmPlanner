@@ -240,11 +240,6 @@
       }
     },
     "progressive": {
-      "locations": {
-        "title": "Noch kein Saatgutbedarf berechenbar",
-        "description": "Lege zuerst einen Standort an. Danach kannst du auf der Seite Anbauflächen eine Parzelle hinzufügen.",
-        "action": "Parzelle hinzufügen"
-      },
       "fields": {
         "title": "Noch kein Saatgutbedarf berechenbar",
         "description": "Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu.",
@@ -362,7 +357,6 @@
     "goToFieldsBeds": "Zu Anbauflächen",
     "createField": "Parzelle hinzufügen",
     "createPlantingPlanDisabled": {
-      "locations": "Du brauchst zuerst mindestens einen Standort, um einen Anbauplan zu erstellen.",
       "fields": "Du brauchst zuerst mindestens eine Parzelle, um einen Anbauplan zu erstellen.",
       "beds": "Du brauchst zuerst mindestens ein Beet. Beete werden innerhalb einer Parzelle auf der Seite Anbauflächen hinzugefügt.",
       "cultures": "Du brauchst zuerst mindestens eine Kultur, um einen Anbauplan zu erstellen.",

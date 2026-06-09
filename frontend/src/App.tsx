@@ -332,7 +332,6 @@ function RootLayout() {
   const [isSwitchingProject, setIsSwitchingProject] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectDescription, setNewProjectDescription] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
   const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
@@ -507,7 +506,6 @@ function RootLayout() {
   const handleOpenCreateProject = useCallback((): void => {
     setProjectMenuAnchor(null);
     setNewProjectName('');
-    setNewProjectDescription('');
     setIsCreateProjectOpen(true);
   }, []);
 
@@ -532,7 +530,6 @@ function RootLayout() {
   const closeCreateProjectDialog = (): void => {
     setIsCreateProjectOpen(false);
     setNewProjectName('');
-    setNewProjectDescription('');
   };
 
   const navigateFromGlobalMenu = (path: string): void => {
@@ -605,7 +602,7 @@ function RootLayout() {
     try {
       const response = await projectAPI.create({
         name: newProjectName.trim(),
-        description: newProjectDescription.trim(),
+        description: '',
       });
       closeCreateProjectDialog();
       navigate('/app/dashboard');
@@ -1662,23 +1659,17 @@ function RootLayout() {
       </Dialog>
 
 
-      <Dialog open={isCreateProjectOpen} onClose={closeCreateProjectDialog} fullWidth maxWidth="sm">
+      <Dialog open={isCreateProjectOpen} onClose={closeCreateProjectDialog} fullWidth maxWidth="xs">
         <Box component="form" onSubmit={handleCreateProjectSubmit}>
           <DialogTitle>{t('projectSwitcher.createDialogTitle')}</DialogTitle>
-          <DialogContent>
-            <Stack spacing={2} sx={{ mt: 1 }}>
+          <DialogContent sx={{ pt: 1, pb: 1 }}>
+            <Stack spacing={1.5} sx={{ mt: 0.5 }}>
               <TextField
                 label={t('projectSwitcher.createNameLabel')}
                 value={newProjectName}
                 onChange={(event) => setNewProjectName(event.target.value)}
                 autoFocus
-              />
-              <TextField
-                label={t('projectSwitcher.createDescriptionLabel')}
-                value={newProjectDescription}
-                onChange={(event) => setNewProjectDescription(event.target.value)}
-                multiline
-                minRows={2}
+                fullWidth
               />
             </Stack>
           </DialogContent>
