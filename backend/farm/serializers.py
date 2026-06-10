@@ -233,6 +233,7 @@ class FieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Field
         fields = '__all__'
+        validators = []
         extra_kwargs = {
             'project': {'required': False},
             'name': {'label': 'Parzelle'},
@@ -292,6 +293,7 @@ class BedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bed
         fields = '__all__'
+        validators = []
         extra_kwargs = {
             'project': {'required': False},
             'field': {'label': 'Parzelle'},
