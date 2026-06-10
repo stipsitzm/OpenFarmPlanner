@@ -121,10 +121,10 @@ describe('FieldsBedsPage', () => {
   });
 
 
-  it('starts inline add-field editing via query parameter instead of native prompt', async () => {
+  it('starts inline add-field editing via route action instead of native prompt', async () => {
     const promptSpy = vi.spyOn(window, 'prompt');
     render(
-      <MemoryRouter initialEntries={['/app/fields-beds?create=true']}>
+      <MemoryRouter initialEntries={['/app/fields-beds?action=add-parcel']}>
         <FieldsBedsPage />
       </MemoryRouter>
     );
@@ -187,8 +187,7 @@ describe('FieldsBedsPage', () => {
 
     renderPage();
     expect(await screen.findByText('Es sind noch keine Beete vorhanden.')).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu.'))).toBeInTheDocument();
-    expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
+    expect(screen.getByText('Füge Beete über das + Symbol bei der jeweiligen Parzelle hinzu.')).toBeInTheDocument();
     expect(screen.queryByText('Noch keine Anbauflächen vorhanden')).not.toBeInTheDocument();
   });
 });

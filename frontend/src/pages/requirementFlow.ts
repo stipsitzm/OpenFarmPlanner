@@ -7,7 +7,7 @@ export interface ProjectSetupAction {
 }
 
 const PROJECT_SETUP_ACTIONS: Record<ProjectSetupStep, ProjectSetupAction> = {
-  fields: { labelKey: 'common:setupActions.createField', to: '/app/fields-beds' },
+  fields: { labelKey: 'common:setupActions.createField', to: '/app/fields-beds?action=add-parcel' },
   beds: { labelKey: 'common:setupActions.openAreas', to: '/app/fields-beds' },
   cultures: { labelKey: 'common:setupActions.createCulture', to: '/app/cultures?create=true' },
   plans: { labelKey: 'common:setupActions.createPlan', to: '/app/planting-plans?create=true' },

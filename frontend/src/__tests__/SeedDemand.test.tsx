@@ -91,7 +91,7 @@ describe('SeedDemandPage', () => {
     expect(screen.queryByText('Keine Einträge vorhanden')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'common:setupActions.createField' })).toHaveAttribute(
       'href',
-      '/app/fields-beds',
+      '/app/fields-beds?action=add-parcel',
     );
     expect(screen.queryByRole('link', { name: 'common:setupActions.createBed' })).not.toBeInTheDocument();
   });
@@ -114,7 +114,7 @@ describe('SeedDemandPage', () => {
     });
     expect(screen.getByRole('link', { name: 'common:setupActions.createField' })).toHaveAttribute(
       'href',
-      '/app/fields-beds',
+      '/app/fields-beds?action=add-parcel',
     );
     expect(screen.queryByRole('link', { name: 'common:setupActions.createBed' })).not.toBeInTheDocument();
   });

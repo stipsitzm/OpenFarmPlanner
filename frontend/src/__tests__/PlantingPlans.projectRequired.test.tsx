@@ -100,7 +100,7 @@ describe("PlantingPlans project requirement state", () => {
     expect(screen.getByText("Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Parzelle hinzufügen" })).toHaveAttribute(
       "href",
-      "/app/fields-beds",
+      "/app/fields-beds?action=add-parcel",
     );
     expect(screen.queryByRole("link", { name: "Standort hinzufügen" })).not.toBeInTheDocument();
     expect(screen.queryByText("Kultur fehlt")).not.toBeInTheDocument();
@@ -119,7 +119,7 @@ describe("PlantingPlans project requirement state", () => {
     expect(await screen.findByText("Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Parzelle hinzufügen" })).toHaveAttribute(
       "href",
-      "/app/fields-beds",
+      "/app/fields-beds?action=add-parcel",
     );
     expect(screen.queryByRole("link", { name: "Zu Anbauflächen" })).not.toBeInTheDocument();
   });

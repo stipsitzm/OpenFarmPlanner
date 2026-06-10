@@ -47,7 +47,7 @@ describe('Dashboard', () => {
     expect(await screen.findByText('Projektstart')).toBeInTheDocument();
     expect(screen.getByText('OpenFarmPlanner unterstützt dich bei der strukturierten Planung von Flächen, Kulturen und Anbauzyklen. Beginne mit deiner ersten Parzelle.')).toBeInTheDocument();
     expect(screen.queryByText('Standort hinzufügen')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Parzelle hinzufügen' })).toHaveAttribute('href', '/app/fields-beds');
+    expect(screen.getByRole('link', { name: 'Parzelle hinzufügen' })).toHaveAttribute('href', '/app/fields-beds?action=add-parcel');
     expect(screen.queryByText('Anstehende Aufgaben')).not.toBeInTheDocument();
   });
 
@@ -59,7 +59,7 @@ describe('Dashboard', () => {
     expect(await screen.findByText('Projektstart')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Parzelle hinzufügen' })).toHaveAttribute(
       'href',
-      '/app/fields-beds',
+      '/app/fields-beds?action=add-parcel',
     );
     expect(screen.queryByText('Starte deine Anbauplanung')).not.toBeInTheDocument();
   });

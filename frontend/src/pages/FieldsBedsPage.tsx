@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
-import { AddBedIcon } from '../components/hierarchy/AddBedIcon';
 import { HierarchyAddIcon } from '../components/hierarchy/HierarchyAddIcon';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
@@ -24,6 +23,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
+const ADD_PARCEL_ACTION = 'add-parcel';
 const CONTENT_ALIGNED_EMPTY_STATE_SX: SxProps<Theme> = {
   maxWidth: 560,
   my: { xs: 3, md: 5 },
@@ -115,6 +115,7 @@ export default function FieldsBedsPage() {
 
   const hasAddFieldTarget = locations.some((item) => item.id !== undefined);
   const canUseGlobalAddField = locations.length === 1 && locations[0]?.id !== undefined;
+  const hasActiveFieldDraft = fields.some((field) => !hasPersistedEntityId(field.id));
 
   const requestInlineFieldCreation = useCallback((): void => {
     if (!hasAddFieldTarget) {
@@ -123,8 +124,11 @@ export default function FieldsBedsPage() {
     }
 
     setViewMode('table');
+    if (hasActiveFieldDraft || createFieldRequest > 0) {
+      return;
+    }
     setCreateFieldRequest((currentRequest) => currentRequest + 1);
-  }, [hasAddFieldTarget, t]);
+  }, [createFieldRequest, hasActiveFieldDraft, hasAddFieldTarget, t]);
 
   const openAddLocationDialog = useCallback((): void => {
     setNewLocationName('');
@@ -162,7 +166,10 @@ export default function FieldsBedsPage() {
       return;
     }
     const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get('create') !== 'true') {
+    const shouldAddParcel =
+      searchParams.get('action') === ADD_PARCEL_ACTION ||
+      searchParams.get('create') === 'true';
+    if (!shouldAddParcel) {
       return;
     }
 
@@ -172,6 +179,7 @@ export default function FieldsBedsPage() {
 
     requestInlineFieldCreation();
 
+    searchParams.delete('action');
     searchParams.delete('create');
     const nextSearch = searchParams.toString();
     navigate(
@@ -207,7 +215,7 @@ export default function FieldsBedsPage() {
   const hasBeds = beds.some((bed) => hasPersistedEntityId(bed.id) && persistedFieldIds.has(bed.field));
   const hasHierarchyRows = fields.length > 0 || beds.length > 0;
   const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && !hasLocations;
-  const shouldShowMissingFieldsState = hasLocations && !hasFields && createFieldRequest <= 0;
+  const shouldShowMissingFieldsState = hasLocations && !hasFields && !hasUnsavedFields && createFieldRequest <= 0;
   const shouldShowMissingBedsHint = hasFields && !hasBeds && !hasUnsavedFields && !hasUnsavedBeds;
   const shouldRenderHierarchy = hasHierarchyRows || createFieldRequest > 0 || pendingHierarchyDeletionCount > 0;
   const createBedAction = getProjectSetupAction('beds');
@@ -333,13 +341,7 @@ export default function FieldsBedsPage() {
         {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldShowMissingBedsHint ? (
           <EmptyStateCard
             title={t('hierarchy:messages.noBedsHintTitle')}
-            description={(
-              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                {t('hierarchy:messages.noBedsHintBeforeIcon')}
-                <AddBedIcon interactive={false} ariaHidden />
-                {t('hierarchy:messages.noBedsHintAfterIcon')}
-              </Box>
-            )}
+            description={t('hierarchy:messages.noBedsHintDescription')}
             supplement={viewMode !== 'graphical' ? (
               <ContextMenuHint
                 compact

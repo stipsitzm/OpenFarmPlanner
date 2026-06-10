@@ -37,7 +37,7 @@ describe('project setup actions', () => {
   it('uses the shared add-field route that opens the fields-beds page', () => {
     expect(getProjectSetupAction('fields')).toEqual({
       labelKey: 'common:setupActions.createField',
-      to: '/app/fields-beds',
+      to: '/app/fields-beds?action=add-parcel',
     });
   });
 

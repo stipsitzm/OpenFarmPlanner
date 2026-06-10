@@ -621,12 +621,15 @@ function FieldsBedsHierarchy({
       return;
     }
 
-    const firstLocation = locations.find((locationItem) => locationItem.id !== undefined);
-    if (firstLocation?.id !== undefined) {
-      handleAddField(firstLocation.id);
+    const hasActiveFieldDraft = fields.some((field) => typeof field.id === "number" && field.id < 0);
+    if (!hasActiveFieldDraft) {
+      const firstLocation = locations.find((locationItem) => locationItem.id !== undefined);
+      if (firstLocation?.id !== undefined) {
+        handleAddField(firstLocation.id);
+      }
     }
     onCreateFieldRequestHandled?.();
-  }, [createFieldRequest, handleAddField, loading, locations, onCreateFieldRequestHandled]);
+  }, [createFieldRequest, fields, handleAddField, loading, locations, onCreateFieldRequestHandled]);
 
   const handleCreatePlantingPlan = useCallback(
     (bedId: number): void => {
@@ -927,8 +930,9 @@ function FieldsBedsHierarchy({
 
           setFields((prevFields) => {
             const filteredFields = prevFields.filter((field) => field.id !== newRow.fieldId);
-            return [created.data, ...filteredFields];
+            return [{ ...created.data }, ...filteredFields];
           });
+          void fetchData({ showLoading: false });
           setError("");
           return {
             ...newRow,
