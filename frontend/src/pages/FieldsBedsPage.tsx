@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
 import GraphicalFields from './GraphicalFields';
+import { AddBedIcon } from '../components/hierarchy/AddBedIcon';
 import { HierarchyAddIcon } from '../components/hierarchy/HierarchyAddIcon';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import type { CommandSpec } from '../commands/types';
@@ -216,7 +217,7 @@ export default function FieldsBedsPage() {
   const hasHierarchyRows = fields.length > 0 || beds.length > 0;
   const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && !hasLocations;
   const shouldShowMissingFieldsState = hasLocations && !hasFields && !hasUnsavedFields && createFieldRequest <= 0;
-  const shouldShowMissingBedsHint = hasFields && !hasBeds && !hasUnsavedFields && !hasUnsavedBeds;
+  const shouldShowMissingBedsHint = hasFields && !hasBeds && !hasUnsavedBeds;
   const shouldRenderHierarchy = hasHierarchyRows || createFieldRequest > 0 || pendingHierarchyDeletionCount > 0;
   const createBedAction = getProjectSetupAction('beds');
   const emptyAreasDescription = shouldShowMissingFieldsState
@@ -341,7 +342,13 @@ export default function FieldsBedsPage() {
         {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldShowMissingBedsHint ? (
           <EmptyStateCard
             title={t('hierarchy:messages.noBedsHintTitle')}
-            description={t('hierarchy:messages.noBedsHintDescription')}
+            description={(
+              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+                {t('hierarchy:messages.noBedsHintBeforeIcon')}
+                <AddBedIcon interactive={false} ariaHidden />
+                {t('hierarchy:messages.noBedsHintAfterIcon')}
+              </Box>
+            )}
             supplement={viewMode !== 'graphical' ? (
               <ContextMenuHint
                 compact

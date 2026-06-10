@@ -496,6 +496,12 @@ class Field(TimestampedModel):
         ordering = ['location', 'name']
         verbose_name = 'Parzelle'
         verbose_name_plural = 'Parzellen'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['location', 'name'],
+                name='unique_field_name_per_location',
+            ),
+        ]
 
 
 class Bed(TimestampedModel):
@@ -545,6 +551,12 @@ class Bed(TimestampedModel):
 
     class Meta:
         ordering = ['field', 'name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['field', 'name'],
+                name='unique_bed_name_per_field',
+            ),
+        ]
 
 
 class BedLayout(TimestampedModel):

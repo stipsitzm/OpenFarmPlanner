@@ -1727,6 +1727,17 @@ function PlantingPlans() {
     };
   };
 
+  const buildAvailableAreaDraft = (
+    row: PlantingPlanRow,
+  ): Pick<PlantingPlanRow, "area_m2" | "plants_count"> | null => {
+    const capacity = getCapacityForRow(row);
+    if (!capacity || capacity.availableArea <= 0) {
+      return null;
+    }
+
+    return buildAreaAndPlantsDraft(row, capacity.availableArea);
+  };
+
   const applyAreaAndPlants = async (
     rowId: number,
     nextArea: number,
@@ -2198,23 +2209,22 @@ function PlantingPlans() {
 
             // Determine which field to send based on last edit
             const source = lastEditedFieldRef.current || "area_m2";
+            const autoAreaDraft = source === "area_m2" && isAutoAreaRequest(row.area_m2, t("plantingPlans:placeholders.maxKeyword"))
+              ? buildAvailableAreaDraft(row)
+              : null;
+            const areaInputValue = autoAreaDraft?.area_m2 ?? toAreaNumericValue(row.area_m2, numberLocale);
+            const plantsInputValue = autoAreaDraft?.plants_count ?? row.plants_count;
 
-            if (source === "area_m2" && isAutoAreaRequest(row.area_m2, t("plantingPlans:placeholders.maxKeyword"))) {
-              const capacity = getCapacityForRow(row);
-              if (capacity && capacity.availableArea > 0) {
-                apiData.area_input_value = Number(capacity.availableArea.toFixed(2));
-                apiData.area_input_unit = "M2";
-              }
-            } else if (source === "area_m2" && typeof row.area_m2 === "number") {
-              // User edited area directly - send as M2
-              apiData.area_input_value = row.area_m2;
+            if (source === "area_m2" && typeof areaInputValue === "number") {
+              // Persist direct and automatically applied area values through the same m² payload.
+              apiData.area_input_value = areaInputValue;
               apiData.area_input_unit = "M2";
             } else if (
               source === "plants_count" &&
-              typeof row.plants_count === "number"
+              typeof plantsInputValue === "number"
             ) {
               // User edited plants count - send as PLANTS
-              apiData.area_input_value = row.plants_count;
+              apiData.area_input_value = plantsInputValue;
               apiData.area_input_unit = "PLANTS";
             }
 
@@ -2273,13 +2283,14 @@ function PlantingPlans() {
             }
             const maxKeyword = t("plantingPlans:placeholders.maxKeyword");
             if (isAutoAreaRequest(row.area_m2, maxKeyword)) {
-              if (capacity.availableArea > 0) {
+              const availableAreaDraft = buildAvailableAreaDraft(row);
+              if (availableAreaDraft) {
                 setAreaNotice({
                   severity: "info",
                   message: t("plantingPlans:areaValidation.maxAreaApplied", { area: formatAreaM2(capacity.availableArea, numberLocale) }),
                 });
                 lastEditedFieldRef.current = "area_m2";
-                return buildAreaAndPlantsDraft(row, capacity.availableArea);
+                return availableAreaDraft;
               }
               return false;
             }

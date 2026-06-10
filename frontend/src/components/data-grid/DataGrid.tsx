@@ -54,6 +54,7 @@ import { germanDataGridLocaleText } from './localeText';
 import { TableCopyMenuItems } from './TableCopyMenuItems';
 import { formatClipboardValue, type TableClipboardRow } from './tableClipboard';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../../utils/contextMenu';
+import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from './contextMenuFocus';
 
 export interface EditableRow {
   id: number;
@@ -367,6 +368,7 @@ export function EditableDataGrid<T extends EditableRow>({
     mouseX?: number;
     mouseY?: number;
   } | null>(null);
+  const rowActionMenuOriginRef = useRef<HTMLElement | null>(null);
   const [pendingDeleteWithUndo, setPendingDeleteWithUndo] = useState<PendingDeleteWithUndo<T>[]>([]);
   const pendingDeleteTimersRef = useRef<Map<string, number>>(new Map());
   const rowActionLongPressTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
@@ -757,20 +759,20 @@ export function EditableDataGrid<T extends EditableRow>({
     return row;
   }, [onBeforeSaveRow]);
 
-  const shouldSaveRow = useCallback(async (rowId: GridRowId): Promise<boolean> => {
+  const prepareRowForSave = useCallback(async (rowId: GridRowId): Promise<T | null> => {
     const draftRow = getDraftRow(rowId);
     if (!draftRow) {
-      return true;
+      return rowsById.get(String(rowId)) as T | undefined ?? null;
     }
     const gatedRow = await runBeforeSaveGate(draftRow);
     if (!gatedRow) {
-      return false;
+      return null;
     }
     if (gatedRow !== draftRow) {
       await applyDraftValues(rowId, gatedRow);
     }
-    return true;
-  }, [applyDraftValues, getDraftRow, runBeforeSaveGate]);
+    return gatedRow;
+  }, [applyDraftValues, getDraftRow, rowsById, runBeforeSaveGate]);
 
   const commitEditedRowDraftForKeyboardNavigation = useCallback((
     rowId: GridRowId,
@@ -1003,39 +1005,31 @@ export function EditableDataGrid<T extends EditableRow>({
   }, [isSaveErrorHandled, saveErrorMessage, t]);
 
   const handleSaveRow = useCallback(async (rowId: GridRowId): Promise<void> => {
-    if (!(await shouldSaveRow(rowId))) {
-      return;
-    }
-
-    if (rowModesModel[rowId]?.mode === GridRowModes.Edit) {
-      setRowModesModel((oldModel) => ({
-        ...oldModel,
-        [rowId]: { mode: GridRowModes.View },
-      }));
-      return;
-    }
-
-    const row = rowsById.get(String(rowId)) as T | undefined;
-    if (!row) {
+    const preparedRow = await prepareRowForSave(rowId);
+    if (!preparedRow) {
       return;
     }
 
     try {
-      const savedRow = await processRowUpdate(row);
+      const savedRow = await processRowUpdate(preparedRow);
+      setRowModesModel((oldModel) => ({
+        ...oldModel,
+        [rowId]: { mode: GridRowModes.View, ignoreModifications: true },
+      }));
       setRows((prevRows) =>
-        prevRows.map((currentRow) =>
-          String(currentRow.id) === String(rowId) ? savedRow : currentRow,
-        ),
+        prevRows.some((currentRow) => String(currentRow.id) === String(rowId))
+          ? prevRows.map((currentRow) =>
+            String(currentRow.id) === String(rowId) ? savedRow : currentRow,
+          )
+          : prevRows,
       );
     } catch (error) {
       handleProcessRowUpdateError(error);
     }
   }, [
     handleProcessRowUpdateError,
+    prepareRowForSave,
     processRowUpdate,
-    rowModesModel,
-    rowsById,
-    shouldSaveRow,
   ]);
 
   const handleSaveAllDirtyRows = useCallback(async (): Promise<void> => {
@@ -1044,7 +1038,7 @@ export function EditableDataGrid<T extends EditableRow>({
       .map(([id]) => id);
     const saveableRowIds: GridRowId[] = [];
     for (const rowId of editingRowIds) {
-      if (await shouldSaveRow(rowId)) {
+      if (await prepareRowForSave(rowId)) {
         saveableRowIds.push(rowId);
       }
     }
@@ -1063,7 +1057,7 @@ export function EditableDataGrid<T extends EditableRow>({
         await handleSaveRow(rowKey);
       }
     }
-  }, [dirtyRowIds, handleSaveRow, rowModesModel, shouldSaveRow]);
+  }, [dirtyRowIds, handleSaveRow, prepareRowForSave, rowModesModel]);
 
   const handleEditSelectedRow = (): void => {
     const selectedRowId = selectedRowIds[0];
@@ -1486,13 +1480,16 @@ export function EditableDataGrid<T extends EditableRow>({
   const openRowActionContextMenu = useCallback((rowId: GridRowId, event: React.MouseEvent): void => {
     suppressNativeContextMenu(event);
     setSelectedRowIds([rowId]);
+    rowActionMenuOriginRef.current = event.currentTarget as HTMLElement;
     setRowActionMenuState({ rowId, mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
   }, []);
 
   const closeRowActionMenu = useCallback((): void => {
     setRowActionMenuState(null);
     setLongPressFeedbackRowId(null);
+    focusContextMenuOrigin(rowActionMenuOriginRef.current);
   }, []);
+  const rowActionMenuListRef = useContextMenuFocus(Boolean(rowActionMenuState), closeRowActionMenu);
 
   const menuRow = rowActionMenuState ? rowsById.get(String(rowActionMenuState.rowId)) as T | undefined : undefined;
   const shouldUseRowActions = Boolean(getRowActions || duplicateRow);
@@ -1540,11 +1537,15 @@ export function EditableDataGrid<T extends EditableRow>({
     if (rowId === null || !rowsById.has(String(rowId))) {
       return;
     }
+    const originElement = event.target instanceof HTMLElement
+      ? event.target.closest<HTMLElement>('[role="row"][data-id]')
+      : null;
     const touch = event.touches[0];
     clearRowActionLongPressTimer();
     rowActionLongPressTimerRef.current = window.setTimeout(() => {
       setSelectedRowIds([rowId]);
       setLongPressFeedbackRowId(rowId);
+      rowActionMenuOriginRef.current = originElement;
       setRowActionMenuState({ rowId, mouseX: touch.clientX + 2, mouseY: touch.clientY - 6 });
       rowActionLongPressTimerRef.current = null;
     }, ROW_ACTION_LONG_PRESS_MS);
@@ -1987,6 +1988,16 @@ export function EditableDataGrid<T extends EditableRow>({
       <Menu
         open={Boolean(rowActionMenuState)}
         onClose={closeRowActionMenu}
+        autoFocus
+        disableAutoFocusItem={false}
+        slotProps={{
+          list: {
+            autoFocus: true,
+            ref: rowActionMenuListRef,
+            onKeyDown: (event) => handleContextMenuKeyboardNavigation(event, closeRowActionMenu),
+          },
+        }}
+        onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeRowActionMenu)}
         anchorEl={rowActionMenuState?.anchorEl}
         anchorReference={(rowActionMenuState?.anchorEl ? 'anchorEl' : 'anchorPosition') as 'anchorEl' | 'anchorPosition'}
         anchorPosition={

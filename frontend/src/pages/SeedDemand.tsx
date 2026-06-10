@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -32,6 +32,7 @@ import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { ContextMenuHint, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
+import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from '../components/data-grid/contextMenuFocus';
 import { getFirstMissingProjectSetupStep, getProjectSetupAction, getProjectSetupActions } from './requirementFlow';
 import { formatLocalizedNumber } from '../utils/numberLocalization';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
@@ -79,6 +80,7 @@ export default function SeedDemandPage() {
     mouseX: number;
     mouseY: number;
   } | null>(null);
+  const contextMenuOriginRef = useRef<HTMLElement | null>(null);
   const hasPlans = planCount > 0;
   const hasSeedData = hasCulturesWithSeedData;
   const canCalculateSeedDemand = locationCount > 0 && fieldCount > 0 && bedCount > 0 && cultureCount > 0 && hasPlans && hasSeedData;
@@ -238,7 +240,9 @@ export default function SeedDemandPage() {
 
   const closeContextMenu = useCallback((): void => {
     setContextMenuState(null);
+    focusContextMenuOrigin(contextMenuOriginRef.current);
   }, []);
+  const contextMenuListRef = useContextMenuFocus(contextMenuState !== null, closeContextMenu);
 
   const openContextMenu = useCallback((
     event: MouseEvent<HTMLTableRowElement>,
@@ -248,6 +252,7 @@ export default function SeedDemandPage() {
       return;
     }
     suppressNativeContextMenu(event);
+    contextMenuOriginRef.current = event.currentTarget;
     setContextMenuState({
       row,
       mouseX: event.clientX + 2,
@@ -265,6 +270,7 @@ export default function SeedDemandPage() {
     }
 
     suppressNativeContextMenu(event);
+    contextMenuOriginRef.current = event.currentTarget;
     const rowRect = event.currentTarget.getBoundingClientRect();
     setContextMenuState({
       row,
@@ -473,6 +479,16 @@ export default function SeedDemandPage() {
       <Menu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
+        autoFocus
+        disableAutoFocusItem={false}
+        slotProps={{
+          list: {
+            autoFocus: true,
+            ref: contextMenuListRef,
+            onKeyDown: (event) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
+          },
+        }}
+        onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
         anchorReference="anchorPosition"
         anchorPosition={
           contextMenuState !== null

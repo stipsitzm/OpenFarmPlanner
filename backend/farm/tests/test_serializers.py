@@ -301,6 +301,35 @@ class SerializerBranchCoverageTest(TestCase):
 
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
+    def test_field_serializer_rejects_duplicate_name_in_same_location(self):
+        serializer = FieldSerializer(
+            data={
+                'name': self.field.name,
+                'location': self.location.id,
+                'area_sqm': '12.3',
+                'project': self.project.id,
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors['name'][0],
+            'Eine Parzelle mit diesem Namen existiert in diesem Standort bereits.',
+        )
+
+    def test_field_serializer_allows_duplicate_name_in_different_location(self):
+        other_location = Location.objects.create(name='Standort B', project=self.project)
+        serializer = FieldSerializer(
+            data={
+                'name': self.field.name,
+                'location': other_location.id,
+                'area_sqm': '12.3',
+                'project': self.project.id,
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
     def test_location_serializer_does_not_require_project_field(self):
         serializer = LocationSerializer(data={'name': 'Standort B'})
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -370,6 +399,40 @@ class SerializerBranchCoverageTest(TestCase):
                 'area_sqm': '5.0',
             }
         )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_bed_serializer_rejects_duplicate_name_in_same_field(self):
+        serializer = BedSerializer(
+            data={
+                'name': self.bed.name,
+                'field': self.field.id,
+                'area_sqm': '5.0',
+                'project': self.project.id,
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors['name'][0],
+            'Ein Beet mit diesem Namen existiert in dieser Parzelle bereits.',
+        )
+
+    def test_bed_serializer_allows_duplicate_name_in_different_field(self):
+        other_field = Field.objects.create(
+            name='Feld B',
+            location=self.location,
+            area_sqm=200,
+            project=self.project,
+        )
+        serializer = BedSerializer(
+            data={
+                'name': self.bed.name,
+                'field': other_field.id,
+                'area_sqm': '5.0',
+                'project': self.project.id,
+            }
+        )
+
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_culture_serializer_does_not_require_project_field(self):

@@ -453,6 +453,30 @@ describe("PlantingPlans save-time area validation", () => {
     await expectMaxAreaApplied();
   });
 
+  it("sends the auto-filled remaining area when the row model still contains an empty area", async () => {
+    mockRemainingAreaScenario();
+    const staleRow = {
+      id: 1,
+      bed: 101,
+      culture: 2,
+      cultivation_type: "direct_sowing",
+      planting_date: "2026-04-10",
+      harvest_date: "2026-05-10",
+      area_m2: "",
+    };
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+
+    const latestProps = commandApiSpies.gridProps.mock.calls.at(-1)?.[0];
+    expect(latestProps?.mapToApiData).toBeDefined();
+    const payload = await latestProps?.mapToApiData?.(staleRow);
+
+    expect(payload).toEqual(expect.objectContaining({
+      area_input_value: 4,
+      area_input_unit: "M2",
+    }));
+  });
+
   it("does not count same-bed rows whose German date ranges do not overlap", async () => {
     apiMocks.bedList.mockResolvedValue({ data: { results: [{ id: 101, name: "Beet 1", field: 11, area_sqm: 7 }] } });
     apiMocks.planList.mockResolvedValue({

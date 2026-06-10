@@ -29,7 +29,9 @@
     "areaMustBePositive": "Die Fläche muss größer als 0 sein.",
     "areaTooLarge": "Die eingegebene Fläche ist zu groß. Bitte einen kleineren Wert eingeben.",
     "lengthNonNegative": "Länge muss größer oder gleich 0 sein.",
-    "widthNonNegative": "Breite muss größer oder gleich 0 sein."
+    "widthNonNegative": "Breite muss größer oder gleich 0 sein.",
+    "duplicateFieldName": "Eine Parzelle mit diesem Namen existiert in diesem Standort bereits.",
+    "duplicateBedName": "Ein Beet mit diesem Namen existiert in dieser Parzelle bereits."
   },
   "confirmDelete": "Möchten Sie diesen Eintrag wirklich löschen?",
   "footer": {
@@ -47,7 +49,8 @@
     "singleLocationHint": "Standort: {{name}}",
     "invalidLocationSelection": "Bitte wählen Sie einen gültigen Standort aus.",
     "noBedsHintTitle": "Es sind noch keine Beete vorhanden.",
-    "noBedsHintDescription": "Füge Beete über das + Symbol bei der jeweiligen Parzelle hinzu.",
+    "noBedsHintBeforeIcon": "Füge Beete über das",
+    "noBedsHintAfterIcon": "Symbol bei der jeweiligen Parzelle hinzu.",
     "missingDimensionsHint": "Länge und Breite sind wichtig für Flächenberechnungen, Saatgutbedarf und Anbauplanung.",
     "missingDimensionsHintOptional": "Du kannst die Werte später ergänzen.",
     "missingDimensionsCellTooltip": "Für Flächenberechnung erforderlich.",

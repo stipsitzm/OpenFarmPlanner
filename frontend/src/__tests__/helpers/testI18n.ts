@@ -33,6 +33,8 @@ export const i18nMap: Record<string, string> = {
   'errors.saveBed': 'Fehler beim Speichern des Beets',
   'errors.deleteBed': 'Fehler beim Löschen des Beets',
   'validation.nameRequired': 'Name ist ein Pflichtfeld',
+  'validation.duplicateFieldName': 'Eine Parzelle mit diesem Namen existiert in diesem Standort bereits.',
+  'validation.duplicateBedName': 'Ein Beet mit diesem Namen existiert in dieser Parzelle bereits.',
   'hierarchy:columns.length': 'Länge (m)',
   'hierarchy:columns.width': 'Breite (m)',
   'columns.length': 'Länge (m)',

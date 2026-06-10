@@ -46,6 +46,7 @@ import {
   NotesDrawer,
   getPlainExcerpt,
 } from "../components/data-grid";
+import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from "../components/data-grid/contextMenuFocus";
 import {
   handleEditableCellClick,
 } from "../components/data-grid/handlers";
@@ -335,6 +336,7 @@ function FieldsBedsHierarchy({
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
   const touchLongPressTimeoutRef = useRef<number | null>(null);
+  const contextMenuOriginRef = useRef<HTMLElement | null>(null);
 
   useCommandContextTag("areas");
 
@@ -800,6 +802,24 @@ function FieldsBedsHierarchy({
     return sum;
   };
 
+  const hasDuplicateFieldName = useCallback((row: HierarchyRow): boolean => {
+    const normalizedName = row.name.trim();
+    return fields.some((field) =>
+      field.id !== row.fieldId &&
+      field.location === row.locationId &&
+      field.name.trim() === normalizedName,
+    );
+  }, [fields]);
+
+  const hasDuplicateBedName = useCallback((row: HierarchyRow): boolean => {
+    const normalizedName = row.name.trim();
+    return beds.some((bed) =>
+      bed.id !== row.bedId &&
+      bed.field === row.field &&
+      bed.name.trim() === normalizedName,
+    );
+  }, [beds]);
+
   const processRowUpdate = async (
     newRow: HierarchyRow,
   ): Promise<HierarchyRow> => {
@@ -815,6 +835,11 @@ function FieldsBedsHierarchy({
     setDraftValidationWarning("");
 
     if (newRow.type === "bed") {
+      if (hasDuplicateBedName(newRow)) {
+        setError(t("validation.duplicateBedName"));
+        throw new Error(t("validation.duplicateBedName"));
+      }
+
       const parsedLength = parseDimensionValue(newRow.length_m);
       const parsedWidth = parseDimensionValue(newRow.width_m);
 
@@ -880,6 +905,11 @@ function FieldsBedsHierarchy({
     }
 
     if (newRow.type === "field") {
+      if (hasDuplicateFieldName(newRow)) {
+        setError(t("validation.duplicateFieldName"));
+        throw new Error(t("validation.duplicateFieldName"));
+      }
+
       const isNewField = typeof newRow.fieldId === "number" && newRow.fieldId < 0;
       const parsedLength = parseDimensionValue(newRow.length_m);
       const parsedWidth = parseDimensionValue(newRow.width_m);
@@ -1374,9 +1404,10 @@ function FieldsBedsHierarchy({
     t,
   ]);
 
-  const openContextMenuForRow = useCallback((row: HierarchyRow, mouseX: number, mouseY: number): void => {
+  const openContextMenuForRow = useCallback((row: HierarchyRow, mouseX: number, mouseY: number, origin?: HTMLElement | null): void => {
     setSelectedRowId(row.id);
     setTreeActive(true);
+    contextMenuOriginRef.current = origin ?? null;
     setContextMenuState({ row, mouseX, mouseY });
   }, []);
 
@@ -1391,12 +1422,12 @@ function FieldsBedsHierarchy({
       Number.isFinite(event.clientY) &&
       (event.clientX !== 0 || event.clientY !== 0);
     if (hasPointerCoordinates) {
-      openContextMenuForRow(row, event.clientX + 2, event.clientY - 6);
+      openContextMenuForRow(row, event.clientX + 2, event.clientY - 6, event.currentTarget);
       return;
     }
 
     const rect = event.currentTarget.getBoundingClientRect();
-    openContextMenuForRow(row, rect.right - 8, rect.top + 12);
+    openContextMenuForRow(row, rect.right - 8, rect.top + 12, event.currentTarget);
   }, [openContextMenuForRow]);
 
   const handleGridContextMenu = useCallback((event: React.MouseEvent<HTMLElement>): void => {
@@ -1420,7 +1451,7 @@ function FieldsBedsHierarchy({
     suppressNativeContextMenu(event);
     setSelectedRowId(targetRow.id);
     setTreeActive(true);
-    openContextMenuForRow(targetRow, event.clientX + 2, event.clientY - 6);
+    openContextMenuForRow(targetRow, event.clientX + 2, event.clientY - 6, rowElement);
   }, [openContextMenuForRow, rows]);
 
   const handleGridTouchStart = useCallback((event: React.TouchEvent<HTMLElement>): void => {
@@ -1443,7 +1474,7 @@ function FieldsBedsHierarchy({
     }
 
     touchLongPressTimeoutRef.current = window.setTimeout(() => {
-      openContextMenuForRow(targetRow, touch.clientX, touch.clientY);
+      openContextMenuForRow(targetRow, touch.clientX, touch.clientY, rowElement);
     }, 550);
   }, [openContextMenuForRow, rows]);
 
@@ -1456,7 +1487,9 @@ function FieldsBedsHierarchy({
 
   const closeContextMenu = useCallback((): void => {
     setContextMenuState(null);
+    focusContextMenuOrigin(contextMenuOriginRef.current);
   }, []);
+  const contextMenuListRef = useContextMenuFocus(contextMenuState !== null, closeContextMenu);
 
   const areaCommands = useMemo<CommandSpec[]>(
     () => [
@@ -1510,7 +1543,7 @@ function FieldsBedsHierarchy({
     };
 
     const handleTreeNavigation = (event: KeyboardEvent) => {
-      if (!treeActive || !selectedRowId) {
+      if (contextMenuState !== null || !treeActive || !selectedRowId) {
         return;
       }
 
@@ -1584,7 +1617,7 @@ function FieldsBedsHierarchy({
       document.removeEventListener("mousedown", handleDocumentPointerDown);
       window.removeEventListener("keydown", handleTreeNavigation);
     };
-  }, [discardActiveRowEdit, expandedRows, rows, selectedRowId, toggleExpand, treeActive]);
+  }, [contextMenuState, discardActiveRowEdit, expandedRows, rows, selectedRowId, toggleExpand, treeActive]);
 
   useEffect(() => {
     const handleContextMenuKeyboard = (event: KeyboardEvent) => {
@@ -1600,12 +1633,13 @@ function FieldsBedsHierarchy({
       }
 
       event.preventDefault();
+      event.stopPropagation();
       const targetElement = document.querySelector(`[data-id="${String(selectedRowId)}"]`) as HTMLElement | null;
       if (!targetElement) {
         return;
       }
       const rect = targetElement.getBoundingClientRect();
-      openContextMenuForRow(selectedRow, rect.left + Math.min(240, rect.width), rect.top + 12);
+      openContextMenuForRow(selectedRow, rect.left + Math.min(240, rect.width), rect.top + 12, targetElement);
     };
 
     window.addEventListener("keydown", handleContextMenuKeyboard);
@@ -1924,11 +1958,12 @@ function FieldsBedsHierarchy({
                 }
                 if (keyboardEvent.key === "ContextMenu" || (keyboardEvent.shiftKey && keyboardEvent.key === "F10")) {
                   keyboardEvent.preventDefault();
+                  keyboardEvent.stopPropagation();
                   const targetRow = rows.find((row) => row.id === params.id);
                   if (targetRow) {
                     const targetElement = keyboardEvent.currentTarget as HTMLElement;
                     const rect = targetElement.getBoundingClientRect();
-                    openContextMenuForRow(targetRow, rect.left + Math.min(240, rect.width), rect.top + 12);
+                    openContextMenuForRow(targetRow, rect.left + Math.min(240, rect.width), rect.top + 12, targetElement);
                   }
                 }
               }}
@@ -1958,6 +1993,16 @@ function FieldsBedsHierarchy({
       <Menu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
+        autoFocus
+        disableAutoFocusItem={false}
+        slotProps={{
+          list: {
+            autoFocus: true,
+            ref: contextMenuListRef,
+            onKeyDown: (event) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
+          },
+        }}
+        onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
         anchorReference="anchorPosition"
         anchorPosition={
           contextMenuState !== null

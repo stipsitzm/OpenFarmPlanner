@@ -170,6 +170,29 @@ describe('GanttChartPage', () => {
     expect(screen.getByRole('link', { name: 'Anbauplan hinzufügen' })).toBeInTheDocument();
   });
 
+  it('shows culture-specific guidance when land hierarchy exists but no cultures exist', async () => {
+    mocks.planList.mockResolvedValue({ data: { results: [] } });
+    mocks.cultureList.mockResolvedValue({ data: { results: [] } });
+    mocks.locationList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hofstelle' }] } });
+    mocks.fieldList.mockResolvedValue({ data: { results: [{ id: 10, name: 'Nordfeld', location: 1 }] } });
+    mocks.bedList.mockResolvedValue({ data: { results: [{ id: 20, name: 'Beet 1', field: 10 }] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText('Noch keine Kulturen vorhanden')).toBeInTheDocument());
+    expect(screen.getByText('Lege jetzt deine erste Kultur an oder importiere eine Kultur aus der Kulturbibliothek. Danach kannst du Anbaupläne erstellen.')).toBeInTheDocument();
+    expect(screen.getByText('Kultur fehlt')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Kulturbibliothek öffnen' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Kultur hinzufügen' })).toBeInTheDocument();
+    expect(screen.queryByText('Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu. Danach kannst du Beete, Kulturen und Anbaupläne erfassen.')).not.toBeInTheDocument();
+  });
+
   it('shows project-required info instead of a red load error when no project is active', async () => {
     projectRequirementState.shouldShowProjectRequiredState = true;
     projectRequirementState.missingProjectReason = 'no_active_project';

@@ -39,6 +39,9 @@ from .models import (
     is_supplier_domain,
 )
 
+FIELD_NAME_DUPLICATE_MESSAGE = 'Eine Parzelle mit diesem Namen existiert in diesem Standort bereits.'
+BED_NAME_DUPLICATE_MESSAGE = 'Ein Beet mit diesem Namen existiert in dieser Parzelle bereits.'
+
 
 def _resolve_active_project_from_serializer(serializer) -> Project | None:
     """Resolve active project from serializer context or bound instance."""
@@ -265,6 +268,13 @@ class FieldSerializer(serializers.ModelSerializer):
         location = attrs.get('location') or getattr(self.instance, 'location', None)
         if project is not None and location is not None and location.project_id != project.id:
             raise serializers.ValidationError({'location': 'Location does not belong to the active project.'})
+        name = attrs.get('name') or getattr(self.instance, 'name', None)
+        if location is not None and name:
+            duplicate_fields = Field.objects.filter(location=location, name=name)
+            if self.instance is not None and self.instance.pk is not None:
+                duplicate_fields = duplicate_fields.exclude(pk=self.instance.pk)
+            if duplicate_fields.exists():
+                raise serializers.ValidationError({'name': FIELD_NAME_DUPLICATE_MESSAGE})
         return attrs
 
 
@@ -317,6 +327,13 @@ class BedSerializer(serializers.ModelSerializer):
         field = attrs.get('field') or getattr(self.instance, 'field', None)
         if project is not None and field is not None and field.project_id != project.id:
             raise serializers.ValidationError({'field': 'Field does not belong to the active project.'})
+        name = attrs.get('name') or getattr(self.instance, 'name', None)
+        if field is not None and name:
+            duplicate_beds = Bed.objects.filter(field=field, name=name)
+            if self.instance is not None and self.instance.pk is not None:
+                duplicate_beds = duplicate_beds.exclude(pk=self.instance.pk)
+            if duplicate_beds.exists():
+                raise serializers.ValidationError({'name': BED_NAME_DUPLICATE_MESSAGE})
         return attrs
 
 

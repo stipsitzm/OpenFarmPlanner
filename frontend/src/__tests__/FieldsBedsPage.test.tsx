@@ -187,7 +187,27 @@ describe('FieldsBedsPage', () => {
 
     renderPage();
     expect(await screen.findByText('Es sind noch keine Beete vorhanden.')).toBeInTheDocument();
-    expect(screen.getByText('Füge Beete über das + Symbol bei der jeweiligen Parzelle hinzu.')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu.'))).toBeInTheDocument();
+    expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
     expect(screen.queryByText('Noch keine Anbauflächen vorhanden')).not.toBeInTheDocument();
+  });
+
+  it('keeps the missing bed requirement visible while an additional field draft exists', async () => {
+    locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hofstelle' }] } });
+    fieldListMock.mockResolvedValue({
+      data: {
+        results: [
+          { id: -1, name: '', location: 1 },
+          { id: 3, name: 'Nord', location: 1 },
+        ],
+      },
+    });
+    bedListMock.mockResolvedValue({ data: { results: [] } });
+
+    renderPage();
+
+    expect(await screen.findByText('Es sind noch keine Beete vorhanden.')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu.'))).toBeInTheDocument();
+    expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
   });
 });

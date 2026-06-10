@@ -56,6 +56,8 @@ from .serializers import (
     ProjectMembershipSerializer,
     ProjectInvitationSerializer,
     InvitationTokenSerializer,
+    BED_NAME_DUPLICATE_MESSAGE,
+    FIELD_NAME_DUPLICATE_MESSAGE,
 )
 from accounts.models import UserProjectSettings
 from django.core.mail import send_mail
@@ -1114,11 +1116,17 @@ class FieldViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewS
     serializer_class = FieldSerializer
 
     def perform_create(self, serializer):
-        instance = serializer.save(project=self.request.active_project)
+        try:
+            instance = serializer.save(project=self.request.active_project)
+        except IntegrityError as exc:
+            raise DRFValidationError({'name': [FIELD_NAME_DUPLICATE_MESSAGE]}) from exc
         self.create_project_revision(f"Field created #{instance.pk}")
 
     def perform_update(self, serializer):
-        instance = serializer.save()
+        try:
+            instance = serializer.save()
+        except IntegrityError as exc:
+            raise DRFValidationError({'name': [FIELD_NAME_DUPLICATE_MESSAGE]}) from exc
         self.create_project_revision(f"Field updated #{instance.pk}")
 
     def perform_destroy(self, instance):
@@ -1142,11 +1150,17 @@ class BedViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet
     serializer_class = BedSerializer
 
     def perform_create(self, serializer):
-        instance = serializer.save(project=self.request.active_project)
+        try:
+            instance = serializer.save(project=self.request.active_project)
+        except IntegrityError as exc:
+            raise DRFValidationError({'name': [BED_NAME_DUPLICATE_MESSAGE]}) from exc
         self.create_project_revision(f"Bed created #{instance.pk}")
 
     def perform_update(self, serializer):
-        instance = serializer.save()
+        try:
+            instance = serializer.save()
+        except IntegrityError as exc:
+            raise DRFValidationError({'name': [BED_NAME_DUPLICATE_MESSAGE]}) from exc
         self.create_project_revision(f"Bed updated #{instance.pk}")
 
     def perform_destroy(self, instance):
