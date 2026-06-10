@@ -803,7 +803,10 @@ function FieldsBedsHierarchy({
   };
 
   const hasDuplicateFieldName = useCallback((row: HierarchyRow): boolean => {
-    const normalizedName = row.name.trim();
+    const normalizedName = (row.name ?? "").trim();
+    if (!normalizedName) {
+      return false;
+    }
     return fields.some((field) =>
       field.id !== row.fieldId &&
       field.location === row.locationId &&
@@ -812,7 +815,10 @@ function FieldsBedsHierarchy({
   }, [fields]);
 
   const hasDuplicateBedName = useCallback((row: HierarchyRow): boolean => {
-    const normalizedName = row.name.trim();
+    const normalizedName = (row.name ?? "").trim();
+    if (!normalizedName) {
+      return false;
+    }
     return beds.some((bed) =>
       bed.id !== row.bedId &&
       bed.field === row.field &&
@@ -1999,7 +2005,7 @@ function FieldsBedsHierarchy({
           list: {
             autoFocus: true,
             ref: contextMenuListRef,
-            onKeyDown: (event) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
+            onKeyDown: (event: React.KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
           },
         }}
         onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}

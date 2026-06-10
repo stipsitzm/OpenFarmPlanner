@@ -627,7 +627,7 @@ export default function Suppliers() {
           list: {
             autoFocus: true,
             ref: contextMenuListRef,
-            onKeyDown: (event) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
+            onKeyDown: (event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
           },
         }}
         onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}

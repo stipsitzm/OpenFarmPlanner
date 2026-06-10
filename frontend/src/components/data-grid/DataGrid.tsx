@@ -1838,11 +1838,11 @@ export function EditableDataGrid<T extends EditableRow>({
           columns={columnsWithActions}
           rowModesModel={rowModesModel}
           onRowModesModelChange={setRowModesModel}
-          onRowEditStop={(params, event) => {
+          onRowEditStop={(params, event, details) => {
             if (params.reason === GridRowEditStopReasons.escapeKeyDown) {
               handleDiscardRowChanges(params.id);
             }
-            handleRowEditStop(params, event);
+            handleRowEditStop(params, event, details);
           }}
           processRowUpdate={processRowUpdate}
           onProcessRowUpdateError={handleProcessRowUpdateError}
@@ -1994,7 +1994,7 @@ export function EditableDataGrid<T extends EditableRow>({
           list: {
             autoFocus: true,
             ref: rowActionMenuListRef,
-            onKeyDown: (event) => handleContextMenuKeyboardNavigation(event, closeRowActionMenu),
+            onKeyDown: (event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeRowActionMenu),
           },
         }}
         onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeRowActionMenu)}
