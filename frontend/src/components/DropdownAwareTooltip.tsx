@@ -15,6 +15,11 @@ const hasFloatingDropdown = (): boolean => (
   Boolean(document.querySelector(FLOATING_DROPDOWN_SELECTOR))
 );
 
+const isDropdownTrigger = (target: EventTarget | null): boolean => (
+  target instanceof HTMLElement
+  && Boolean(target.closest('[role="combobox"], [aria-haspopup="listbox"], [aria-haspopup="menu"]'))
+);
+
 function useFloatingDropdownOpen(): boolean {
   const [open, setOpen] = useState(false);
 
@@ -48,6 +53,39 @@ function useFloatingDropdownOpen(): boolean {
   return open;
 }
 
+function useDropdownInteractionSuppressed(dropdownOpen: boolean): boolean {
+  const [suppressed, setSuppressed] = useState(false);
+
+  useEffect(() => {
+    if (dropdownOpen) {
+      setSuppressed(true);
+      return;
+    }
+
+    setSuppressed(false);
+  }, [dropdownOpen]);
+
+  useEffect(() => {
+    const suppressForDropdownTrigger = (event: Event): void => {
+      if (isDropdownTrigger(event.target)) {
+        setSuppressed(true);
+      }
+    };
+
+    document.addEventListener('mousedown', suppressForDropdownTrigger, true);
+    document.addEventListener('focusin', suppressForDropdownTrigger, true);
+    document.addEventListener('keydown', suppressForDropdownTrigger, true);
+
+    return () => {
+      document.removeEventListener('mousedown', suppressForDropdownTrigger, true);
+      document.removeEventListener('focusin', suppressForDropdownTrigger, true);
+      document.removeEventListener('keydown', suppressForDropdownTrigger, true);
+    };
+  }, []);
+
+  return suppressed;
+}
+
 export function DropdownAwareTooltip({
   open,
   disableHoverListener,
@@ -56,14 +94,16 @@ export function DropdownAwareTooltip({
   ...props
 }: TooltipProps) {
   const dropdownOpen = useFloatingDropdownOpen();
+  const dropdownInteractionSuppressed = useDropdownInteractionSuppressed(dropdownOpen);
+  const shouldHideTooltip = dropdownOpen || dropdownInteractionSuppressed;
 
   return (
     <Tooltip
       {...props}
-      open={dropdownOpen ? false : open}
-      disableHoverListener={dropdownOpen || disableHoverListener}
-      disableFocusListener={dropdownOpen || disableFocusListener}
-      disableTouchListener={dropdownOpen || disableTouchListener}
+      open={shouldHideTooltip ? false : open}
+      disableHoverListener={shouldHideTooltip || disableHoverListener}
+      disableFocusListener={shouldHideTooltip || disableFocusListener}
+      disableTouchListener={shouldHideTooltip || disableTouchListener}
     />
   );
 }
