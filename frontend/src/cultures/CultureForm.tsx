@@ -37,6 +37,7 @@ import { cultureAPI, publicCultureAPI, supplierAPI } from '../api/api';
 import { useDialogKeyboardScroll } from '../hooks/useDialogKeyboardScroll';
 import { useNavigate } from 'react-router-dom';
 import { validateCulture } from './validation';
+import { normalizeSeedRateUnit } from './enumNormalization';
 import { BasicInfoSection } from './sections/BasicInfoSection';
 import { TimingSection } from './sections/TimingSection';
 import { HarvestSection } from './sections/HarvestSection';
@@ -155,16 +156,24 @@ const buildInitialFormData = (culture?: Culture): Partial<Culture> => {
         : culture.row_spacing_cm,
   };
 
+  const normalizedSeedRateUnits: Partial<Culture> = {
+    seed_rate_unit: normalizeSeedRateUnit(culture.seed_rate_unit),
+    seed_rate_direct_unit: normalizeSeedRateUnit(culture.seed_rate_direct_unit),
+    seed_rate_pre_cultivation_unit: normalizeSeedRateUnit(culture.seed_rate_pre_cultivation_unit),
+  };
+
   if (culture.supplier || !culture.seed_supplier) {
     return {
       ...culture,
       ...normalizedSpacingValues,
+      ...normalizedSeedRateUnits,
     };
   }
 
   return {
     ...culture,
     ...normalizedSpacingValues,
+    ...normalizedSeedRateUnits,
     supplier: {
       name: culture.seed_supplier,
       allowed_domains: [],
@@ -211,6 +220,7 @@ export function CultureForm({
   const [supplierOptions, setSupplierOptions] = useState<Supplier[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const dialogContentRef = useDialogKeyboardScroll(true);
   const formRef = useRef<HTMLFormElement | null>(null);
   const supplierOptionsRef = useRef<Supplier[]>([]);
@@ -272,6 +282,7 @@ export function CultureForm({
     setPublicLibraryMatch(null);
     setIsDirty(false);
     setIsValid(true);
+    setHasSubmitted(false);
     setSaveError('');
   }, [culture]);
 
@@ -287,8 +298,8 @@ export function CultureForm({
   }, [loadSuppliers]);
 
   // Validate on every change
-  const validateAndSet = (draft: Partial<Culture>) => {
-    const result = validateCulture(draft, t);
+  const validateAndSet = (draft: Partial<Culture>, mode: 'live' | 'submit' = hasSubmitted ? 'submit' : 'live') => {
+    const result = validateCulture(draft, t, mode);
     setErrors(result.errors);
     setIsValid(result.isValid);
     return result.isValid;
@@ -481,7 +492,8 @@ export function CultureForm({
   // Handle manual save (for Save button)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateAndSet(formData)) return;
+    setHasSubmitted(true);
+    if (!validateAndSet(formData, 'submit')) return;
     if (hasSupplierDataRowMissingSupplier(formData.supplier_data)) {
       setSaveError(t('form.supplierDataMissingSupplier'));
       return;
@@ -492,6 +504,7 @@ export function CultureForm({
       await saveCulture(formData);
       setSaveError('');
       setIsDirty(false);
+      setHasSubmitted(false);
     } catch (error) {
       setSaveError(extractApiErrorMessage(error, t, t('messages.updateError')));
     } finally {

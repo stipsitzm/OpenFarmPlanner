@@ -170,6 +170,7 @@
     "seedRateHelp": "Saatgutmenge und -einheit für die Bedarfsplanung",
     "seedAmountLabel": "Menge",
     "seedUnitLabel": "Einheit",
+    "seedUnitPlaceholder": "Einheit auswählen",
     "seedRateValue": "Saatgutmenge",
     "seedRateUnit": "Einheit der Saatgutmenge",
     "seedRateUnitRequired": "Wenn eine Menge angegeben wird, muss auch eine Einheit gewählt werden.",

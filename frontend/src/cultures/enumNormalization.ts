@@ -37,7 +37,7 @@ const seedRateUnitMap: Record<string, Culture['seed_rate_unit']> = {
 export function normalizeSeedRateUnit(value: unknown): Culture['seed_rate_unit'] {
   if (value === null || value === undefined) return null;
   const normalized = String(value).trim().toLowerCase();
-  if (!normalized) return null;
+  if (!normalized || normalized === '-') return null;
   return seedRateUnitMap[normalized] ?? null;
 }
 

@@ -5,7 +5,7 @@ def normalize_seed_rate_unit(value: object) -> str | None:
     if value is None:
         return None
     text = str(value).strip().lower()
-    if not text:
+    if not text or text == '-':
         return None
 
     mapping = {

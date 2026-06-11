@@ -9,6 +9,7 @@ import { HarvestSection } from '../cultures/sections/HarvestSection';
 const translations: Record<string, string> = {
   'form.sowingCalculationSafetyPercentLabel': 'Sicherheitszuschlag für Saatgut (%)',
   'form.thousandKernelWeightLabel': '1000-Korn-Gewicht (g)',
+  'form.seedUnitPlaceholder': 'Einheit auswählen',
 };
 
 const t = (key: string, options?: Record<string, unknown>) => {
@@ -108,6 +109,22 @@ describe('culture form UI sections', () => {
     expect(onChange).toHaveBeenCalledWith('thousand_kernel_weight_g', 3.9);
 
     expect(screen.getByText('Bitte wählen')).toBeInTheDocument();
+  });
+
+  it('renders an empty seed unit placeholder without a synthetic option', () => {
+    const onChange = vi.fn();
+
+    render(
+      <SeedingSection
+        formData={{ cultivation_types: ['direct_sowing'], seed_rate_direct_unit: null }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+
+    expect(screen.getByText('Einheit auswählen')).toBeInTheDocument();
+    expect(screen.queryByText('-')).not.toBeInTheDocument();
   });
 
   it('shows method blocks based on selected cultivation types', () => {

@@ -169,6 +169,21 @@ describe('Cultures save payload', () => {
     expect(payload.seed_rate_unit).toBe('g_per_m2');
   });
 
+  it('normalizes legacy dash seed rate units to empty values', () => {
+    const payload = buildCultureSavePayload({
+      id: 1,
+      name: 'Karotte',
+      variety: 'Nantaise',
+      seed_rate_unit: '-' as unknown as Culture['seed_rate_unit'],
+      seed_rate_direct_unit: '-' as unknown as Culture['seed_rate_direct_unit'],
+      seed_rate_pre_cultivation_unit: '-' as unknown as Culture['seed_rate_pre_cultivation_unit'],
+    } as Culture);
+
+    expect(payload.seed_rate_unit).toBeNull();
+    expect(payload.seed_rate_direct_unit).toBeNull();
+    expect(payload.seed_rate_pre_cultivation_unit).toBeNull();
+  });
+
   it('includes supplier_data row ids so nested records update instead of duplicate create', async () => {
     saveCultureMock.mockReturnValue({
       id: 1,

@@ -20,6 +20,12 @@ const seedRateUnitOptions: Array<{ value: SeedRateUnit; label: string }> = [
   { value: 'seeds_per_plant', label: 'Korn / Pflanze' },
 ];
 
+const toSeedRateUnitSelectValue = (value: unknown): SeedRateUnit | '' => {
+  if (value === '-' || value === null || value === undefined || value === '') {
+    return '';
+  }
+  return value as SeedRateUnit;
+};
 
 function SeedRateBlock({
   title,
@@ -59,14 +65,24 @@ function SeedRateBlock({
 
         <DropdownAwareTooltip title={t('form.seedRateHelp')} arrow>
           <FormControl sx={fieldSx} error={Boolean(errors[unitField])}>
-            <InputLabel>{t('form.seedUnitLabel', { defaultValue: 'Einheit' })}</InputLabel>
+            <InputLabel shrink>{t('form.seedUnitLabel', { defaultValue: 'Einheit' })}</InputLabel>
             <Select
-              value={formData[unitField] ?? ''}
+              value={toSeedRateUnitSelectValue(formData[unitField])}
               label={t('form.seedUnitLabel', { defaultValue: 'Einheit' })}
               onChange={(e) => onChange(unitField, (e.target.value || null) as Culture[typeof unitField])}
+              renderValue={(selected) => {
+                if (!selected) {
+                  return (
+                    <Typography component="span" color="text.secondary">
+                      {t('form.seedUnitPlaceholder', { defaultValue: 'Einheit auswählen' })}
+                    </Typography>
+                  );
+                }
+                return seedRateUnitOptions.find((option) => option.value === selected)?.label ?? '';
+              }}
+              displayEmpty
               fullWidth
             >
-              <MenuItem value="">-</MenuItem>
               {seedRateUnitOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
               ))}

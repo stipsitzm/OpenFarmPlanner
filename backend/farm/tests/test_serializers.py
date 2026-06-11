@@ -154,13 +154,53 @@ class SerializerBranchCoverageTest(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
-    def test_allows_pre_cultivation_unit_without_value(self):
+    def test_rejects_pre_cultivation_unit_without_value(self):
         serializer = CultureSerializer(
             data={
                 'name': 'Mangold',
                 'variety': 'X',
                 'cultivation_types': ['pre_cultivation'],
                 'seed_rate_pre_cultivation_unit': 'g_per_m2',
+                'project': self.project.id,
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('seed_rate_pre_cultivation_value', serializer.errors)
+
+    def test_normalizes_legacy_empty_seed_rate_unit_placeholder(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Mangold',
+                'variety': 'X',
+                'cultivation_types': ['pre_cultivation'],
+                'seed_rate_pre_cultivation_unit': '-',
+                'project': self.project.id,
+            }
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertIsNone(serializer.validated_data['seed_rate_pre_cultivation_unit'])
+
+    def test_represents_legacy_empty_seed_rate_unit_placeholder_as_null(self):
+        culture = Culture.objects.create(
+            name='Mangold',
+            variety='X',
+            cultivation_types=['pre_cultivation'],
+            seed_rate_pre_cultivation_unit='-',
+            project=self.project,
+        )
+
+        data = CultureSerializer(culture).data
+
+        self.assertIsNone(data['seed_rate_pre_cultivation_unit'])
+
+    def test_accepts_direct_sowing_seeds_per_plant_unit(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Bohne',
+                'variety': 'X',
+                'cultivation_types': ['direct_sowing'],
+                'seed_rate_direct_value': 2,
+                'seed_rate_direct_unit': 'seeds_per_plant',
                 'project': self.project.id,
             }
         )

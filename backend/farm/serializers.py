@@ -41,6 +41,7 @@ from .models import (
 
 FIELD_NAME_DUPLICATE_MESSAGE = 'Eine Parzelle mit diesem Namen existiert in diesem Standort bereits.'
 BED_NAME_DUPLICATE_MESSAGE = 'Ein Beet mit diesem Namen existiert in dieser Parzelle bereits.'
+EMPTY_SEED_RATE_UNIT_VALUES = {None, '', '-'}
 
 
 def _resolve_active_project_from_serializer(serializer) -> Project | None:
@@ -54,6 +55,16 @@ def _resolve_active_project_from_serializer(serializer) -> Project | None:
     if instance is not None and hasattr(instance, 'project'):
         return instance.project
     return None
+
+
+def _normalize_seed_rate_unit_value(value: object) -> str | None:
+    """Normalize supported seed rate units and legacy empty placeholders."""
+    if value in EMPTY_SEED_RATE_UNIT_VALUES:
+        return None
+    normalized_value = normalize_seed_rate_unit(value)
+    if normalized_value:
+        return normalized_value
+    raise serializers.ValidationError('Unsupported seed rate unit.')
 
 
 class AuditUserSerializer(serializers.Serializer):
@@ -801,6 +812,21 @@ class CultureSerializer(serializers.ModelSerializer):
 
 
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        for field_name in (
+            'seed_rate_unit',
+            'seed_rate_direct_unit',
+            'seed_rate_pre_cultivation_unit',
+        ):
+            raw_value = data.get(field_name)
+            data[field_name] = (
+                None
+                if raw_value in EMPTY_SEED_RATE_UNIT_VALUES
+                else normalize_seed_rate_unit(raw_value) or raw_value
+            )
+        return data
+
     def validate_seed_packages(self, value):
         seen: set[str] = set()
         normalized_packages = []
@@ -924,17 +950,16 @@ class CultureSerializer(serializers.ModelSerializer):
 
     def validate_seed_rate_unit(self, value):
         """Normalize legacy seed rate unit values and validate supported units."""
-        if value is None or value == '':
-            return value
+        return _normalize_seed_rate_unit_value(value)
 
-        normalized_value = normalize_seed_rate_unit(value)
-        if normalized_value:
-            value = normalized_value
+    def validate_seed_rate_direct_unit(self, value):
+        """Normalize direct-sowing seed rate units and legacy empty placeholders."""
+        return _normalize_seed_rate_unit_value(value)
 
-        allowed_values = SEED_RATE_UNITS
-        if value not in allowed_values:
-            raise serializers.ValidationError('Unsupported seed rate unit.')
-        return value
+    def validate_seed_rate_pre_cultivation_unit(self, value):
+        """Normalize pre-cultivation seed rate units and legacy empty placeholders."""
+        return _normalize_seed_rate_unit_value(value)
+
     def validate_growth_duration_days(self, value):
         if value is not None and value < 0:
             raise serializers.ValidationError('Growth duration must be non-negative.')
@@ -1072,12 +1097,7 @@ class CultureSerializer(serializers.ModelSerializer):
                         }:
                             errors['seed_rate_by_cultivation'] = 'Pre-cultivation seed rate unit is unsupported.'
                             break
-                        if method == 'direct_sowing' and unit not in {
-                            SEED_RATE_UNIT_G_PER_M2,
-                            SEED_RATE_UNIT_G_PER_LFM,
-                            SEED_RATE_UNIT_SEEDS_PER_M2,
-                            SEED_RATE_UNIT_SEEDS_PER_LFM,
-                        }:
+                        if method == 'direct_sowing' and unit not in SEED_RATE_UNITS:
                             errors['seed_rate_by_cultivation'] = 'Direct sowing seed rate unit is unsupported.'
                             break
 
@@ -1109,6 +1129,12 @@ class CultureSerializer(serializers.ModelSerializer):
             getattr(self.instance, 'seed_rate_pre_cultivation_unit', None) if self.instance else None,
         )
         active_types = set(attrs.get('cultivation_types') or cultivation_types or [])
+        direct_unit = _normalize_seed_rate_unit_value(direct_unit)
+        pre_unit = _normalize_seed_rate_unit_value(pre_unit)
+        if 'seed_rate_direct_unit' in attrs:
+            attrs['seed_rate_direct_unit'] = direct_unit
+        if 'seed_rate_pre_cultivation_unit' in attrs:
+            attrs['seed_rate_pre_cultivation_unit'] = pre_unit
 
         if 'direct_sowing' in active_types and direct_value is None and direct_unit:
             errors['seed_rate_direct_value'] = 'Direct sowing seed rate value is required when direct sowing unit is set.'
@@ -1116,16 +1142,13 @@ class CultureSerializer(serializers.ModelSerializer):
             errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is required when direct sowing value is set.'
         if direct_value is not None and direct_value <= 0:
             errors['seed_rate_direct_value'] = 'Direct sowing seed rate value must be greater than zero.'
-        if direct_unit and direct_unit not in {
-            SEED_RATE_UNIT_G_PER_M2,
-            SEED_RATE_UNIT_G_PER_LFM,
-            SEED_RATE_UNIT_SEEDS_PER_M2,
-            SEED_RATE_UNIT_SEEDS_PER_LFM,
-        }:
+        if direct_unit and direct_unit not in SEED_RATE_UNITS:
             errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is unsupported.'
 
         if 'pre_cultivation' in active_types and pre_value is not None and not pre_unit:
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is required when pre-cultivation value is set.'
+        if 'pre_cultivation' in active_types and pre_value is None and pre_unit:
+            errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value is required when pre-cultivation unit is set.'
         if pre_value is not None and pre_value <= 0:
             errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value must be greater than zero.'
         if pre_unit and pre_unit not in {
