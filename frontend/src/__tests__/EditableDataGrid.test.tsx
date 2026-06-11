@@ -3,11 +3,12 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import type { GridColDef } from '@mui/x-data-grid';
 import { AxiosError } from 'axios';
-import { EditableDataGrid } from '../components/data-grid/DataGrid';
+import { EditableDataGrid, type EditableDataGridCommandApi } from '../components/data-grid/DataGrid';
 import { createGridApiMock, createGridRow, type TestGridRow } from './helpers/factories';
 import { mockT } from './helpers/testI18n';
 
 const mockUseNavigationBlocker = vi.fn();
+const mockStopRowEditMode = vi.hoisted(() => vi.fn());
 
 vi.mock('../hooks/autosave', () => ({
   useNavigationBlocker: (...args: unknown[]) => mockUseNavigationBlocker(...args),
@@ -21,6 +22,7 @@ vi.mock('@mui/x-data-grid', async () => {
   const React = await import('react');
   const createGridApiMockRefValue = () => ({
     setEditCellValue: vi.fn().mockResolvedValue(true),
+    stopRowEditMode: mockStopRowEditMode,
   });
   const useGridApiRef = vi.fn(() => React.useRef(createGridApiMockRefValue()));
   const GridRowModes = { Edit: 'edit', View: 'view' };
@@ -105,18 +107,26 @@ vi.mock('@mui/x-data-grid', async () => {
               }
 
               return (
-                <button
-                  key={`${row.id}-${col.field}`}
-                  type="button"
-                  onClick={() => {
-                    if (apiRef?.current) {
-                      apiRef.current.state.focus.cell = { id: row.id, field: col.field };
-                    }
-                    onCellClick?.({ id: row.id, field: col.field, isEditable: col.editable !== false });
-                  }}
-                >
-                  Zelle {row.id}-{col.field}
-                </button>
+                <div key={`${row.id}-${col.field}`}>
+                  {col.renderEditCell && (
+                    <span
+                      data-testid={`edit-renderer-${row.id}-${col.field}`}
+                      data-width={col.width ?? ''}
+                      data-min-width={col.minWidth ?? ''}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (apiRef?.current) {
+                        apiRef.current.state.focus.cell = { id: row.id, field: col.field };
+                      }
+                      onCellClick?.({ id: row.id, field: col.field, isEditable: col.editable !== false });
+                    }}
+                  >
+                    Zelle {row.id}-{col.field}
+                  </button>
+                </div>
               );
             })}
             <button
@@ -126,6 +136,26 @@ vi.mock('@mui/x-data-grid', async () => {
               }
             >
               ESC {row.id}
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onCellKeyDown?.(
+                  { id: row.id, field: 'name' },
+                  {
+                    key: 'Enter',
+                    shiftKey: false,
+                    ctrlKey: false,
+                    metaKey: false,
+                    altKey: false,
+                    target: document.createElement('input'),
+                    preventDefault: vi.fn(),
+                    defaultMuiPrevented: false,
+                  },
+                )
+              }
+            >
+              Eingabe per Return {row.id}
             </button>
             <button type="button" onClick={() => commit(row, GridRowEditStopReasons.rowFocusOut)}>
               Blur speichern {row.id}
@@ -222,6 +252,24 @@ describe('EditableDataGrid', () => {
     expect(updateSpy).toHaveBeenLastCalledWith(expect.any(Number), expect.objectContaining({ area_sqm: 12 }));
   });
 
+  it('commits command draft values and stops row edit mode', async () => {
+    const props = baseProps();
+    const updateSpy = vi.spyOn(props.api, 'update');
+    const commandApiRef: { current: EditableDataGridCommandApi | null } = { current: null };
+
+    render(<EditableDataGrid {...props} commandApiRef={commandApiRef} showDeleteAction={false} />);
+
+    await waitFor(() => expect(commandApiRef.current).not.toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+
+    await commandApiRef.current?.commitDraftValues(1, { area_sqm: 5 });
+
+    await waitFor(() => expect(updateSpy).toHaveBeenCalledWith(1, expect.objectContaining({ area_sqm: 5 })));
+    expect(mockStopRowEditMode).toHaveBeenCalledWith({ id: 1, ignoreModifications: true });
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('view'));
+  });
+
   it('prevents delete when canceled and deletes when confirmed', async () => {
     const user = userEvent.setup();
     const props = baseProps();
@@ -312,6 +360,51 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(onBeforeSaveRow).toHaveBeenCalled());
     expect(updateSpy).not.toHaveBeenCalled();
     expect(screen.getByTestId('mode-1')).toHaveTextContent('edit');
+  });
+
+  it('saves transformed before-save values directly on input Enter', async () => {
+    const props = baseProps(() => null);
+    const updateSpy = vi.spyOn(props.api, 'update');
+    const onBeforeSaveRow = vi.fn((row: TestGridRow) => ({
+      ...row,
+      area_sqm: 4,
+    }));
+
+    render(
+      <EditableDataGrid
+        {...props}
+        onBeforeSaveRow={onBeforeSaveRow}
+        showDeleteAction={false}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+    fireEvent.click(screen.getByRole('button', { name: 'Eingabe per Return 1' }));
+
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalledWith(1, expect.objectContaining({ area_sqm: 4 }));
+    });
+    expect(onBeforeSaveRow).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds the shared edit renderer to date columns without changing column width', async () => {
+    render(
+      <EditableDataGrid
+        {...baseProps(() => null)}
+        columns={[
+          { field: 'name', headerName: 'Name', editable: true },
+          { field: 'planting_date', headerName: 'Pflanzdatum', type: 'date', editable: true, minWidth: 96, width: 96 },
+        ]}
+        showDeleteAction={false}
+      />,
+    );
+
+    expect(await screen.findByTestId('edit-renderer-1-planting_date')).toBeInTheDocument();
+    expect(screen.getByTestId('edit-renderer-1-planting_date')).toHaveAttribute('data-width', '96');
+    expect(screen.getByTestId('edit-renderer-1-planting_date')).toHaveAttribute('data-min-width', '96');
+    expect(screen.getByRole('button', { name: 'Zelle 1-planting_date' })).toBeInTheDocument();
   });
 
   it('discards draft rows with Escape', async () => {

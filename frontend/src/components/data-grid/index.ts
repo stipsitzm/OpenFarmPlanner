@@ -25,6 +25,7 @@ export { AreaM2EditCell } from './AreaM2EditCell';
 export type { AreaM2EditCellProps } from './AreaM2EditCell';
 export { PlantsCountEditCell } from './PlantsCountEditCell';
 export type { PlantsCountEditCellProps } from './PlantsCountEditCell';
+export { DateEditCell } from './DateEditCell';
 export { SearchableSelectEditCell } from './SearchableSelectEditCell';
 export type { SearchableSelectOption, SearchableSelectEditCellProps } from './SearchableSelectEditCell';
 export { createSearchableSelectColumn, createSingleSelectColumn } from './columns';

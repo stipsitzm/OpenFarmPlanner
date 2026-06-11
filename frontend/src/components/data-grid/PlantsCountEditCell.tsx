@@ -1,12 +1,10 @@
 /**
  * Edit cell for plants_count field in PlantingPlans grid.
  * 
- * Manages local state for immediate UI feedback and communicates
- * value changes to DataGrid via setEditCellValue in onChange handler.
- * The partner area_m2 field is computed after save via mapToRow.
+ * Keeps raw input text during editing and lets the save flow normalize it.
  */
 
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TextField } from '@mui/material';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
@@ -20,39 +18,42 @@ export interface PlantsCountEditCellProps extends GridRenderEditCellParams {
 export function PlantsCountEditCell(props: PlantsCountEditCellProps) {
   const { id, value, field, hasFocus, onLastEditedFieldChange } = props;
   const apiRef = useGridApiContext();
-  
-  // Track initial value to prevent premature updates that steal focus
-  const initialValueRef = useRef(value);
-  
-  // Local state for immediate UI feedback
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [inputValue, setInputValue] = useState<string>(
     typeof value === 'number' && !isNaN(value) ? value.toString() : ''
   );
+
+  useEffect(() => {
+    if (hasFocus) {
+      return;
+    }
+    setInputValue(typeof value === 'number' && !isNaN(value) ? value.toString() : typeof value === 'string' ? value : '');
+  }, [hasFocus, value]);
+
+  useEffect(() => {
+    if (hasFocus) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [hasFocus]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setInputValue(val);
-    
-    // Immediately update DataGrid with the new value
-    const numValue = val === '' ? null : parseInt(val);
-    
-    // Only call setEditCellValue if value actually changed from initial
-    // This prevents premature grid updates on mount that can steal focus
-    if (numValue !== initialValueRef.current) {
-      apiRef.current.setEditCellValue({
-        id,
-        field,
-        value: numValue
-      });
-    }
+    void apiRef.current.setEditCellValue({
+      id,
+      field,
+      value: val
+    });
     
     onLastEditedFieldChange('plants_count');
   };
   
   return (
     <TextField
-      type="number"
-      autoFocus={hasFocus}
+      type="text"
+      inputMode="numeric"
+      inputRef={inputRef}
       value={inputValue}
       onChange={handleChange}
       slotProps={{

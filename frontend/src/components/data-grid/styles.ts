@@ -100,7 +100,7 @@ export const dataGridSx = {
     backgroundColor: 'surface.surfaceHoverBackground',
   },
   '& .MuiDataGrid-cell--editing': {
-    overflow: 'visible',
+    overflow: 'hidden',
     backgroundColor: (theme: Theme) => getPrimaryOverlay(theme, EDITING_ROW_BACKGROUND_ALPHA),
   },
   [NORMAL_EDITING_CELL_SELECTOR]: {

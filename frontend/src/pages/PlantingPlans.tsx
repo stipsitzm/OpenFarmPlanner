@@ -164,6 +164,7 @@ const CULTIVATION_TYPE_OPTIONS = [
 
 const CULTURE_COLUMN_MAX_WIDTH = 280;
 const BED_COLUMN_MAX_WIDTH = 220;
+const DATE_COLUMN_WIDTH = 142;
 const PLANTING_PLANS_CONTEXT_MENU_HINT_STORAGE_KEY = "ofp.plantingPlansContextMenuHintSeen";
 
 const estimateColumnWidth = (
@@ -197,44 +198,6 @@ const toIsoDateString = (value: unknown): string | null => {
   }
   return null;
 };
-
-const PlantingDateEditCell = memo(function PlantingDateEditCell(params: GridRenderEditCellParams) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const inputValue = toIsoDateString(params.value) ?? "";
-
-  useEffect(() => {
-    if (!params.hasFocus) {
-      return;
-    }
-
-    inputRef.current?.focus();
-  }, [params.hasFocus]);
-
-  return (
-    <TextField
-      type="date"
-      fullWidth
-      size="small"
-      inputRef={inputRef}
-      value={inputValue}
-      slotProps={{
-        htmlInput: {
-          tabIndex: params.hasFocus ? 0 : -1,
-        },
-      }}
-      onChange={async (event) => {
-        const nextValue = event.target.value
-          ? new Date(`${event.target.value}T00:00:00`)
-          : null;
-        await params.api.setEditCellValue({
-          id: params.id,
-          field: params.field,
-          value: nextValue,
-        });
-      }}
-    />
-  );
-});
 
 interface CultivationTypeEditCellProps extends GridRenderEditCellParams {
   options: CultivationTypeSelectOption[];
@@ -858,21 +821,9 @@ function PlantingPlans() {
         110,
         150,
       ),
-      plantingDate: estimateColumnWidth(
-        [t("plantingPlans:columns.plantingDate"), "2026-12-31"],
-        110,
-        130,
-      ),
-      harvestDate: estimateColumnWidth(
-        [t("plantingPlans:columns.harvestStartDate"), "2026-12-31"],
-        112,
-        135,
-      ),
-      harvestEndDate: estimateColumnWidth(
-        [t("plantingPlans:columns.harvestEndDate"), "2026-12-31"],
-        112,
-        135,
-      ),
+      plantingDate: DATE_COLUMN_WIDTH,
+      harvestDate: DATE_COLUMN_WIDTH,
+      harvestEndDate: DATE_COLUMN_WIDTH,
       area: estimateColumnWidth(
         [
           t("plantingPlans:columns.areaM2"),
@@ -1230,10 +1181,11 @@ function PlantingPlans() {
         headerName: t("plantingPlans:columns.plantingDate"),
         flex: 0,
         minWidth: dynamicWidths.plantingDate,
+        width: dynamicWidths.plantingDate,
+        maxWidth: dynamicWidths.plantingDate,
         type: "date",
         editable: true,
         valueGetter: (value) => (value ? new Date(value) : null),
-        renderEditCell: (params) => <PlantingDateEditCell {...params} />,
         preProcessEditCellProps: (params) => {
           const hasError = !params.props.value;
           return { ...params.props, error: hasError };
@@ -1244,6 +1196,8 @@ function PlantingPlans() {
         headerName: t("plantingPlans:columns.harvestStartDate"),
         flex: 0,
         minWidth: dynamicWidths.harvestDate,
+        width: dynamicWidths.harvestDate,
+        maxWidth: dynamicWidths.harvestDate,
         ...getCalculatedColumnProps<PlantingPlanRow>({
           headerName: t("plantingPlans:columns.harvestStartDate"),
           tooltip: t("plantingPlans:tooltips.calculatedHarvestDate"),
@@ -1256,6 +1210,8 @@ function PlantingPlans() {
         headerName: t("plantingPlans:columns.harvestEndDate"),
         flex: 0,
         minWidth: dynamicWidths.harvestEndDate,
+        width: dynamicWidths.harvestEndDate,
+        maxWidth: dynamicWidths.harvestEndDate,
         ...getCalculatedColumnProps<PlantingPlanRow>({
           headerName: t("plantingPlans:columns.harvestEndDate"),
           tooltip: t("plantingPlans:tooltips.calculatedHarvestDate"),
@@ -1738,37 +1694,26 @@ function PlantingPlans() {
     return buildAreaAndPlantsDraft(row, capacity.availableArea);
   };
 
-  const applyAreaAndPlants = async (
-    rowId: number,
-    nextArea: number,
-    fallbackCultureId?: number,
-    fallbackPlantsCount?: number | null,
-  ): Promise<void> => {
-    const row = mobileRows.find((item) => item.id === rowId);
-    const draftValues = buildAreaAndPlantsDraft(row, nextArea, fallbackCultureId, fallbackPlantsCount);
+  const commitAreaValidationDialogValue = async (dialog: AreaValidationDialogState): Promise<void> => {
+    const nextArea = dialog.mode === "bedLimit" ? dialog.bedArea : dialog.availableArea;
+    const row = mobileRows.find((item) => item.id === dialog.rowId);
+    const draftValues = buildAreaAndPlantsDraft(row, nextArea, dialog.cultureId, dialog.plantsCount);
+
     lastEditedFieldRef.current = "area_m2";
-    await gridCommandApiRef.current?.setDraftValues(rowId, {
-      ...draftValues,
-    });
+    areaValidationDialogRef.current = null;
+    clearAreaValidationCloseTimer();
+    suppressAreaValidationSaveRef.current = false;
+
+    await gridCommandApiRef.current?.commitDraftValues(dialog.rowId, draftValues);
     setMobileRows((previousRows) => previousRows.map((item) =>
-      item.id === rowId
+      item.id === dialog.rowId
         ? {
           ...item,
           ...draftValues,
         }
         : item,
     ));
-  };
-
-  const applyAreaValidationDialogValue = async (dialog: AreaValidationDialogState): Promise<void> => {
-    await applyAreaAndPlants(
-      dialog.rowId,
-      dialog.mode === "bedLimit"
-        ? dialog.bedArea
-        : dialog.availableArea,
-      dialog.cultureId,
-      dialog.plantsCount,
-    );
+    setAreaValidationDialog(null);
   };
 
   const validateMobileForm = (): boolean => {
@@ -2213,7 +2158,7 @@ function PlantingPlans() {
               ? buildAvailableAreaDraft(row)
               : null;
             const areaInputValue = autoAreaDraft?.area_m2 ?? toAreaNumericValue(row.area_m2, numberLocale);
-            const plantsInputValue = autoAreaDraft?.plants_count ?? row.plants_count;
+            const plantsInputValue = autoAreaDraft?.plants_count ?? toAreaNumericValue(row.plants_count, numberLocale);
 
             if (source === "area_m2" && typeof areaInputValue === "number") {
               // Persist direct and automatically applied area values through the same m² payload.
@@ -2550,8 +2495,7 @@ function PlantingPlans() {
                 variant="contained"
                 color="success"
                 onClick={async () => {
-                  await applyAreaValidationDialogValue(areaValidationDialog);
-                  closeAreaValidationDialog();
+                  await commitAreaValidationDialogValue(areaValidationDialog);
                 }}
               >
                 {areaValidationDialog.mode === "bedLimit"
