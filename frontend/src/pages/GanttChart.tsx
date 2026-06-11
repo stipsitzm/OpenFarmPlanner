@@ -617,7 +617,6 @@ function GanttChartPage() {
                 title={t(requirementEmptyStateTitleKey)}
                 description={t(requirementEmptyStateDescriptionKey)}
                 checklist={[
-                  ...(firstMissingRequirement === 'fields' ? [{ label: t('ganttChart:requirements.field.label'), done: false, missingLabel: t('ganttChart:requirements.field.missing') }] : []),
                   ...(firstMissingRequirement === 'beds' ? [{ label: t('ganttChart:requirements.bed.label'), done: false, missingLabel: t('ganttChart:requirements.bed.missing') }] : []),
                   ...(firstMissingRequirement === 'cultures' ? [{ label: t('ganttChart:requirements.culture.label'), done: false, missingLabel: t('ganttChart:requirements.culture.missing') }] : []),
                   ...(firstMissingRequirement === 'plans' ? [{ label: t('ganttChart:requirements.plan.label'), done: false, missingLabel: t('ganttChart:requirements.plan.missing') }] : []),

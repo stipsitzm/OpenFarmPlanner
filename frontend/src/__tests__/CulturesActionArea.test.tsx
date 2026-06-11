@@ -14,6 +14,7 @@ const {
   publicCultureListMock,
   publishPublicMock,
   deleteMock,
+  undeleteMock,
 } = vi.hoisted(() => ({
   listMock: vi.fn(),
   locationListMock: vi.fn(),
@@ -22,6 +23,7 @@ const {
   publicCultureListMock: vi.fn(),
   publishPublicMock: vi.fn(),
   deleteMock: vi.fn(),
+  undeleteMock: vi.fn(),
 }));
 
 vi.mock('../api/api', async () => {
@@ -33,6 +35,7 @@ vi.mock('../api/api', async () => {
       list: listMock,
       publishPublic: publishPublicMock,
       delete: deleteMock,
+      undelete: undeleteMock,
     },
     locationAPI: {
       ...actual.locationAPI,
@@ -141,6 +144,7 @@ describe('Cultures action area', () => {
       },
     });
     deleteMock.mockResolvedValue(undefined);
+    undeleteMock.mockResolvedValue({ data: { id: 1, name: 'Tomate', variety: 'Roma' } });
 
     publicCultureListMock.mockResolvedValue({
       data: {
@@ -258,7 +262,7 @@ describe('Cultures action area', () => {
     expect(screen.queryByRole('button', { name: 'Veröffentlichen' })).not.toBeInTheDocument();
   });
 
-  it('renders a styled culture delete confirmation dialog with culture details', async () => {
+  it('renders a compact culture delete confirmation dialog', async () => {
     renderCultures('/cultures?cultureId=1');
 
     await waitFor(() => {
@@ -268,54 +272,52 @@ describe('Cultures action area', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('Kultur löschen?');
-    expect(dialog).toHaveTextContent('Tomate');
-    expect(dialog).toHaveTextContent('Roma');
-    expect(dialog).toHaveTextContent('Pflanzung');
+    expect(dialog).toHaveTextContent('„Tomate“ löschen?');
+    expect(dialog).not.toHaveTextContent('Roma');
+    expect(dialog).not.toHaveTextContent('Pflanzung');
+    expect(dialog).not.toHaveTextContent('8 Sekunden');
     expect(deleteMock).not.toHaveBeenCalled();
   });
 
-  it('optimistically removes a confirmed culture deletion and shows undo feedback', async () => {
+  it('removes a confirmed culture deletion after server delete and shows undo feedback', async () => {
     renderCultures('/cultures?cultureId=1');
 
     await waitFor(() => expect(screen.getByTestId('culture-row-1')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Kultur löschen' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Löschen' }));
 
+    await waitFor(() => expect(deleteMock).toHaveBeenCalledWith(1));
     expect(screen.queryByTestId('culture-row-1')).not.toBeInTheDocument();
     expect(screen.getByText('Kultur gelöscht')).toBeInTheDocument();
     await waitForDeleteDialogToClose();
     expect(screen.getByRole('button', { name: 'Rückgängig: Kultur gelöscht' })).toBeInTheDocument();
-    expect(deleteMock).not.toHaveBeenCalled();
   });
 
-  it('restores a confirmed culture deletion when undo is clicked', async () => {
+  it('restores a server-deleted culture when undo is clicked', async () => {
     renderCultures('/cultures?cultureId=1');
 
     await waitFor(() => expect(screen.getByTestId('culture-row-1')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Kultur löschen' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Löschen' }));
+    await waitFor(() => expect(deleteMock).toHaveBeenCalledWith(1));
     await waitForDeleteDialogToClose();
     fireEvent.click(screen.getByRole('button', { name: 'Rückgängig: Kultur gelöscht' }));
 
+    await waitFor(() => expect(undeleteMock).toHaveBeenCalledWith(1));
     expect(screen.getByTestId('culture-row-1')).toBeInTheDocument();
     expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('1');
-    expect(deleteMock).not.toHaveBeenCalled();
   });
 
-  it('finalizes a confirmed culture deletion after the 8000 ms undo window', async () => {
+  it('keeps a confirmed culture deletion on the server while the undo snackbar is visible', async () => {
     renderCultures('/cultures?cultureId=1');
 
     await waitFor(() => expect(screen.getByTestId('culture-row-1')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Kultur löschen' }));
-    vi.useFakeTimers();
     fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
 
-    vi.advanceTimersByTime(7999);
-    expect(deleteMock).not.toHaveBeenCalled();
-
-    vi.advanceTimersByTime(1);
-    await Promise.resolve();
-    expect(deleteMock).toHaveBeenCalledWith(1);
+    await waitFor(() => expect(deleteMock).toHaveBeenCalledWith(1));
+    expect(deleteMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Rückgängig: Kultur gelöscht' })).toBeInTheDocument();
   });
 
   it('keeps selection stable after confirmed delete and restores previous selection on undo', async () => {
@@ -335,12 +337,14 @@ describe('Cultures action area', () => {
     await waitFor(() => expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('1'));
     fireEvent.click(screen.getByRole('button', { name: 'Kultur löschen' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Löschen' }));
+    await waitFor(() => expect(deleteMock).toHaveBeenCalledWith(1));
 
     expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('2');
 
     await waitForDeleteDialogToClose();
     fireEvent.click(screen.getByRole('button', { name: 'Rückgängig: Kultur gelöscht' }));
 
+    await waitFor(() => expect(undeleteMock).toHaveBeenCalledWith(1));
     expect(screen.getByTestId('culture-row-1')).toBeInTheDocument();
     expect(screen.getByTestId('selected-culture-id')).toHaveTextContent('1');
   });
@@ -352,10 +356,11 @@ describe('Cultures action area', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Kultur löschen' }));
     vi.useFakeTimers();
     fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    await vi.waitFor(() => expect(deleteMock).toHaveBeenCalledWith(1));
     unmount();
     vi.advanceTimersByTime(8000);
 
-    expect(deleteMock).not.toHaveBeenCalled();
+    expect(deleteMock).toHaveBeenCalledTimes(1);
   });
 
   it('disables create planting plan button with bed-specific guidance when no beds exist', async () => {

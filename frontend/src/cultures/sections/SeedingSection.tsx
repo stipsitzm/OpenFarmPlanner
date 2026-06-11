@@ -1,8 +1,9 @@
-import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Tooltip } from '@mui/material';
+import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import type { Culture, SeedRateUnit } from '../../api/types';
 import type { TFunction } from 'i18next';
 import { fieldSx, spacingFieldSx } from './styles.tsx';
 import { fieldRowSx } from './styles.tsx';
+import { DropdownAwareTooltip } from '../../components/DropdownAwareTooltip';
 
 interface SeedingSectionProps {
   formData: Partial<Culture>;
@@ -43,7 +44,7 @@ function SeedRateBlock({
     <>
       <Typography variant="subtitle1" sx={{ mt: 2 }}>{title}</Typography>
       <Box sx={fieldRowSx}>
-        <Tooltip title={t('form.seedRateHelp')} arrow>
+        <DropdownAwareTooltip title={t('form.seedRateHelp')} arrow>
           <TextField
             sx={fieldSx}
             type="number"
@@ -54,9 +55,9 @@ function SeedRateBlock({
             helperText={errors[valueField]}
             slotProps={{ htmlInput: { min: 0.1, step: 0.1 } }}
           />
-        </Tooltip>
+        </DropdownAwareTooltip>
 
-        <Tooltip title={t('form.seedRateHelp')} arrow>
+        <DropdownAwareTooltip title={t('form.seedRateHelp')} arrow>
           <FormControl sx={fieldSx} error={Boolean(errors[unitField])}>
             <InputLabel>{t('form.seedUnitLabel', { defaultValue: 'Einheit' })}</InputLabel>
             <Select
@@ -74,9 +75,9 @@ function SeedRateBlock({
               <Typography variant="caption" color="error">{errors[unitField]}</Typography>
             )}
           </FormControl>
-        </Tooltip>
+        </DropdownAwareTooltip>
 
-        <Tooltip title={t('form.sowingCalculationSafetyPercentHelp')} arrow>
+        <DropdownAwareTooltip title={t('form.sowingCalculationSafetyPercentHelp')} arrow>
           <TextField
             sx={{ ...spacingFieldSx, ml: 'auto' }}
             type="number"
@@ -87,7 +88,7 @@ function SeedRateBlock({
             helperText={errors[safetyField]}
             slotProps={{ htmlInput: { min: 0, max: 100, step: 1 } }}
           />
-        </Tooltip>
+        </DropdownAwareTooltip>
       </Box>
     </>
   );
@@ -142,7 +143,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
       )}
 
       <Box sx={fieldRowSx}>
-        <Tooltip title={t('form.thousandKernelWeightHelp')} arrow>
+        <DropdownAwareTooltip title={t('form.thousandKernelWeightHelp')} arrow>
           <TextField
             sx={fieldSx}
             type="text"
@@ -153,7 +154,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
             error={Boolean(errors.thousand_kernel_weight_g)}
             helperText={errors.thousand_kernel_weight_g}
           />
-        </Tooltip>
+        </DropdownAwareTooltip>
       </Box>
 
     </>
