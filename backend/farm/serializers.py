@@ -810,8 +810,6 @@ class CultureSerializer(serializers.ModelSerializer):
         ).order_by('-updated_at', '-id').values_list('id', flat=True).first()
         return linked_public
 
-
-
     def to_representation(self, instance):
         data = super().to_representation(instance)
         for field_name in (
