@@ -88,19 +88,33 @@ function useDropdownInteractionSuppressed(dropdownOpen: boolean): boolean {
 
 export function DropdownAwareTooltip({
   open,
+  onOpen,
+  onClose,
   disableHoverListener,
   disableFocusListener,
   disableTouchListener,
   ...props
 }: TooltipProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const dropdownOpen = useFloatingDropdownOpen();
   const dropdownInteractionSuppressed = useDropdownInteractionSuppressed(dropdownOpen);
   const shouldHideTooltip = dropdownOpen || dropdownInteractionSuppressed;
+  const effectiveOpen = shouldHideTooltip ? false : (open ?? uncontrolledOpen);
 
   return (
     <Tooltip
       {...props}
-      open={shouldHideTooltip ? false : open}
+      open={effectiveOpen}
+      onOpen={(event) => {
+        if (!shouldHideTooltip) {
+          setUncontrolledOpen(true);
+          onOpen?.(event);
+        }
+      }}
+      onClose={(event) => {
+        setUncontrolledOpen(false);
+        onClose?.(event);
+      }}
       disableHoverListener={shouldHideTooltip || disableHoverListener}
       disableFocusListener={shouldHideTooltip || disableFocusListener}
       disableTouchListener={shouldHideTooltip || disableTouchListener}

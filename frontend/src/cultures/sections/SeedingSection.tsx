@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import type { Culture, SeedRateUnit } from '../../api/types';
 import type { TFunction } from 'i18next';
@@ -46,6 +47,8 @@ function SeedRateBlock({
   onChange: <K extends keyof Culture>(name: K, value: Culture[K]) => void;
   t: TFunction;
 }) {
+  const [unitSelectOpen, setUnitSelectOpen] = useState(false);
+
   return (
     <>
       <Typography variant="subtitle1" sx={{ mt: 2 }}>{title}</Typography>
@@ -63,13 +66,15 @@ function SeedRateBlock({
           />
         </DropdownAwareTooltip>
 
-        <DropdownAwareTooltip title={t('form.seedRateHelp')} arrow>
+        <DropdownAwareTooltip title={unitSelectOpen ? '' : t('form.seedRateHelp')} arrow>
           <FormControl sx={fieldSx} error={Boolean(errors[unitField])}>
             <InputLabel shrink>{t('form.seedUnitLabel', { defaultValue: 'Einheit' })}</InputLabel>
             <Select
               value={toSeedRateUnitSelectValue(formData[unitField])}
               label={t('form.seedUnitLabel', { defaultValue: 'Einheit' })}
               onChange={(e) => onChange(unitField, (e.target.value || null) as Culture[typeof unitField])}
+              onOpen={() => setUnitSelectOpen(true)}
+              onClose={() => setUnitSelectOpen(false)}
               renderValue={(selected) => {
                 if (!selected) {
                   return (

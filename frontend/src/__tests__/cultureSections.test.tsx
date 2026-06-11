@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ColorSection } from '../cultures/sections/ColorSection';
 import { NotesSection } from '../cultures/sections/NotesSection';
 import { SpacingSection } from '../cultures/sections/SpacingSection';
@@ -125,6 +125,30 @@ describe('culture form UI sections', () => {
 
     expect(screen.getByText('Einheit auswählen')).toBeInTheDocument();
     expect(screen.queryByText('-')).not.toBeInTheDocument();
+  });
+
+  it('hides the seed unit tooltip while the dropdown menu is open', async () => {
+    const onChange = vi.fn();
+
+    render(
+      <SeedingSection
+        formData={{ cultivation_types: ['direct_sowing'], seed_rate_direct_unit: 'g_per_m2' }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+
+    const unitSelect = screen.getByRole('combobox');
+    fireEvent.mouseOver(unitSelect);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('form.seedRateHelp');
+
+    fireEvent.mouseDown(unitSelect);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    });
   });
 
   it('shows method blocks based on selected cultivation types', () => {
