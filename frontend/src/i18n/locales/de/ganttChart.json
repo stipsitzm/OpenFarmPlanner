@@ -123,6 +123,10 @@
       "cultures": {
         "title": "Noch keine Kulturen vorhanden",
         "description": "Lege jetzt deine erste Kultur an oder importiere eine Kultur aus der Kulturbibliothek. Danach kannst du Anbaupläne erstellen."
+      },
+      "plans": {
+        "title": "Noch keine Anbaupläne vorhanden",
+        "description": "Für die vorhandenen Anbauflächen wurden noch keine Anbaupläne erstellt. Lege einen Anbauplan an, um Kulturen und Termine im Anbaukalender darzustellen."
       }
     },
     "actions": {
